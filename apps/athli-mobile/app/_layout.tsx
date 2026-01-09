@@ -171,6 +171,16 @@ function RootLayoutNav() {
           <Stack.Screen name="client/[id]/settings" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/assistant" options={{ headerShown: false }} />
           <Stack.Screen
+            name="library/workout/[id]"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: {
+                backgroundColor: themeColors.pageBackground,
+              },
+            }}
+          />
+          <Stack.Screen
             name="modals/athli-assistant-help-modal"
             options={{
               presentation: 'modal',
@@ -626,6 +636,28 @@ function RootLayoutNav() {
             options={{
               presentation: 'modal',
               gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/workout/add-exercise-to-builder-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/workout/add-section-to-builder-modal"
+            options={{
+              presentation: 'modal',
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
