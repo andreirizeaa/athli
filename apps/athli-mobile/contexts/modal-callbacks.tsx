@@ -9,17 +9,44 @@ type RepeatData = {
   monthDays?: number[];
 };
 
+// Matches web app HabitFormValues optional fields
+export type HabitOptionsData = {
+  duration?: number; // Duration in days
+  reminderTime?: string; // Time string like "07:00"
+  reminderMessage?: string;
+};
+
+export type ScheduleFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly';
+export type MonthlyOption = 'first' | 'last' | 'specific';
+
+export type ScheduleData = {
+  frequency: ScheduleFrequency;
+  selectedDays?: string[]; // For daily, weekly, biweekly
+  monthlyOption?: MonthlyOption; // For monthly
+  specificDay?: number; // For monthly with specific day (1-28)
+};
+
 type ModalCallbacksContextType = {
   setClientSelectCallback: (callback: (client: Client) => void) => void;
   setTypeSelectCallback: (callback: (type: string) => void) => void;
   setRepeatSelectCallback: (callback: (data: RepeatData) => void) => void;
   setNumberSelectCallback: (callback: (value: number | 'ever') => void) => void;
+  setHabitOptionsCallback: (callback: (data: HabitOptionsData) => void) => void;
+  setScheduleCallback: (callback: (data: ScheduleData) => void) => void;
   triggerClientSelect: (client: Client) => void;
   triggerTypeSelect: (type: string) => void;
   triggerRepeatSelect: (data: RepeatData) => void;
   triggerNumberSelect: (value: number | 'ever') => void;
+  triggerHabitOptionsSelect: (data: HabitOptionsData) => void;
+  triggerScheduleSelect: (data: ScheduleData) => void;
   getRepeatData: () => RepeatData | null;
   setRepeatData: (data: RepeatData | null) => void;
+  getHabitOptionsData: () => HabitOptionsData | null;
+  setHabitOptionsData: (data: HabitOptionsData | null) => void;
+  getScheduleData: () => ScheduleData | null;
+  setScheduleData: (data: ScheduleData | null) => void;
+  habitOptionsData: HabitOptionsData | null;
+  scheduleData: ScheduleData | null;
 };
 
 const ModalCallbacksContext = createContext<ModalCallbacksContextType | null>(null);
@@ -29,7 +56,11 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
   const [typeSelectCallback, setTypeSelectCallbackState] = useState<((type: string) => void) | null>(null);
   const [repeatSelectCallback, setRepeatSelectCallbackState] = useState<((data: RepeatData) => void) | null>(null);
   const [numberSelectCallback, setNumberSelectCallbackState] = useState<((value: number | 'ever') => void) | null>(null);
+  const [habitOptionsCallback, setHabitOptionsCallbackState] = useState<((data: HabitOptionsData) => void) | null>(null);
+  const [scheduleCallback, setScheduleCallbackState] = useState<((data: ScheduleData) => void) | null>(null);
   const [storedRepeatData, setStoredRepeatData] = useState<RepeatData | null>(null);
+  const [storedHabitOptionsData, setStoredHabitOptionsData] = useState<HabitOptionsData | null>(null);
+  const [storedScheduleData, setStoredScheduleData] = useState<ScheduleData | null>(null);
 
   const setClientSelectCallback = useCallback((callback: (client: Client) => void) => {
     setClientSelectCallbackState(() => callback);
@@ -45,6 +76,14 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
 
   const setNumberSelectCallback = useCallback((callback: (value: number | 'ever') => void) => {
     setNumberSelectCallbackState(() => callback);
+  }, []);
+
+  const setHabitOptionsCallback = useCallback((callback: (data: HabitOptionsData) => void) => {
+    setHabitOptionsCallbackState(() => callback);
+  }, []);
+
+  const setScheduleCallback = useCallback((callback: (data: ScheduleData) => void) => {
+    setScheduleCallbackState(() => callback);
   }, []);
 
   const triggerClientSelect = useCallback((client: Client) => {
@@ -84,6 +123,38 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
     }
   }, [numberSelectCallback]);
 
+  const triggerHabitOptionsSelect = useCallback((data: HabitOptionsData) => {
+    setStoredHabitOptionsData(data);
+    if (habitOptionsCallback) {
+      habitOptionsCallback(data);
+      setHabitOptionsCallbackState(null);
+    }
+  }, [habitOptionsCallback]);
+
+  const getHabitOptionsData = useCallback(() => {
+    return storedHabitOptionsData;
+  }, [storedHabitOptionsData]);
+
+  const setHabitOptionsData = useCallback((data: HabitOptionsData | null) => {
+    setStoredHabitOptionsData(data);
+  }, []);
+
+  const triggerScheduleSelect = useCallback((data: ScheduleData) => {
+    setStoredScheduleData(data);
+    if (scheduleCallback) {
+      scheduleCallback(data);
+      setScheduleCallbackState(null);
+    }
+  }, [scheduleCallback]);
+
+  const getScheduleData = useCallback(() => {
+    return storedScheduleData;
+  }, [storedScheduleData]);
+
+  const setScheduleData = useCallback((data: ScheduleData | null) => {
+    setStoredScheduleData(data);
+  }, []);
+
   return (
     <ModalCallbacksContext.Provider
       value={{
@@ -91,12 +162,22 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
         setTypeSelectCallback,
         setRepeatSelectCallback,
         setNumberSelectCallback,
+        setHabitOptionsCallback,
+        setScheduleCallback,
         triggerClientSelect,
         triggerTypeSelect,
         triggerRepeatSelect,
         triggerNumberSelect,
+        triggerHabitOptionsSelect,
+        triggerScheduleSelect,
         getRepeatData,
         setRepeatData,
+        getHabitOptionsData,
+        setHabitOptionsData,
+        getScheduleData,
+        setScheduleData,
+        habitOptionsData: storedHabitOptionsData,
+        scheduleData: storedScheduleData,
       }}
     >
       {children}

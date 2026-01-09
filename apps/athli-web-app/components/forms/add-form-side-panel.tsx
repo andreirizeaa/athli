@@ -425,7 +425,8 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
                         <span className="text-destructive">*</span>
                       </span>
                     </Label>
-                    {(checkInFrequency === 'daily' || checkInFrequency === 'weekly' || checkInFrequency === 'biweekly') && (
+                    {/* Daily - multi-select */}
+                    {checkInFrequency === 'daily' && (
                       <div className="flex gap-2 flex-wrap w-full justify-between">
                         {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
                           <div key={day} className="flex items-center gap-2">
@@ -450,6 +451,34 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
                                 newSelectedDays.add(day);
                               }
                               setSelectedDays(newSelectedDays);
+                            }}>
+                              {t(`habits.form.${day}`)}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* Weekly/Biweekly - single-select */}
+                    {(checkInFrequency === 'weekly' || checkInFrequency === 'biweekly') && (
+                      <div className="flex gap-2 flex-wrap w-full justify-between">
+                        {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
+                          <div key={day} className="flex items-center gap-2">
+                            <Checkbox
+                              checked={selectedDays.has(day)}
+                              onCheckedChange={(checked) => {
+                                // Single select: clicking always sets this day as the only selected one
+                                if (checked) {
+                                  setSelectedDays(new Set([day]));
+                                }
+                                // Don't allow unchecking the only selected day
+                              }}
+                              aria-label={t(`habits.form.${day}`)}
+                            />
+                            <Label className="text-sm font-normal cursor-pointer" onClick={() => {
+                              // Single select: clicking always sets this day as the only selected one
+                              if (!selectedDays.has(day)) {
+                                setSelectedDays(new Set([day]));
+                              }
                             }}>
                               {t(`habits.form.${day}`)}
                             </Label>

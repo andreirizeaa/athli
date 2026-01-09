@@ -55,6 +55,12 @@ import { toast } from 'sonner';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
 import { EditExerciseSidePanel } from './edit-exercise-side-panel';
 import { useTrainingData } from '../training-data-context';
+import {
+  EXERCISE_CATEGORY_OPTIONS,
+  MUSCLE_GROUP_OPTIONS,
+  EXERCISE_EQUIPMENT_OPTIONS,
+  MODALITY_OPTIONS,
+} from '@/lib/constants/training';
 
 type ColumnId = 'category' | 'muscleGroup' | 'modality' | 'equipment' | 'actions';
 
@@ -66,75 +72,6 @@ const COLUMN_ORDER: ColumnId[] = [
   'actions',
 ];
 const filteredColumnOrder = COLUMN_ORDER.filter((colId) => colId !== 'actions');
-
-
-const PROGRAM_TYPES = [
-  'Weightlifting',
-  'Bodyweight',
-  'Cardio',
-  'HIIT',
-  'CrossFit',
-  'Running',
-  'Cycling',
-  'Swimming',
-  'Yoga',
-  'Pilates',
-  'Combination',
-] as const;
-
-const PROGRAM_DIFFICULTY_LEVELS = ['All levels', 'Beginner', 'Intermediate', 'Advanced'] as const;
-
-const EXERCISE_CATEGORIES = ['Weight & Reps', 'Reps', 'Distance / Duration'] as const;
-
-const MUSCLE_GROUPS = [
-  'Chest',
-  'Back',
-  'Shoulders',
-  'Biceps',
-  'Triceps',
-  'Forearms',
-  'Abs',
-  'Obliques',
-  'Quadriceps',
-  'Hamstrings',
-  'Glutes',
-  'Calves',
-  'Traps',
-  'Lats',
-  'Delts',
-  'Full Body',
-] as const;
-
-const EQUIPMENT_OPTIONS = [
-  'Barbell',
-  'Dumbbell',
-  'Kettlebell',
-  'Cable Machine',
-  'Machine',
-  'Resistance Band',
-  'Bodyweight',
-  'Medicine Ball',
-  'TRX',
-  'Pulley',
-  'Smith Machine',
-  'Plate Loaded',
-  'Free Weights',
-] as const;
-
-const MODALITY_OPTIONS = [
-  'Strength',
-  'Power',
-  'Agility',
-  'Plyos',
-  'Mobility',
-  'Endurance',
-  'Cardio',
-  'Flexibility',
-  'Balance',
-  'Stability',
-  'Speed',
-  'Coordination',
-] as const;
 
 
 const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): string => {
@@ -679,14 +616,14 @@ const ExercisesPage = () => {
       id: 'category',
       label: t('exercises.columns.category'),
       icon: <Tag className="size-4" />,
-      options: EXERCISE_CATEGORIES.map((category) => ({ value: category, label: category })),
+      options: EXERCISE_CATEGORY_OPTIONS.map((cat) => ({ value: cat.value, label: cat.label })),
       getFilterValue: (row) => (row as any).category || '',
     },
     {
       id: 'muscleGroup',
       label: t('exercises.columns.muscleGroup'),
       icon: <User className="size-4" />,
-      options: MUSCLE_GROUPS.map((group) => ({ value: group, label: group })),
+      options: MUSCLE_GROUP_OPTIONS.map((group) => ({ value: group.value, label: group.label })),
       getFilterValue: (row) => {
         const muscleGroups = (row as any).muscleGroups || (row as any).muscleGroup?.split(',').map((g: string) => g.trim()) || [];
         const groupsArray = Array.isArray(muscleGroups) ? muscleGroups : [];
@@ -698,7 +635,7 @@ const ExercisesPage = () => {
       id: 'modality',
       label: t('exercises.columns.modality'),
       icon: <Wrench className="size-4" />,
-      options: MODALITY_OPTIONS.map((modality) => ({ value: modality, label: modality })),
+      options: MODALITY_OPTIONS.map((mod) => ({ value: mod.value, label: mod.label })),
       getFilterValue: (row) => (row as any).modality || '',
     },
     {

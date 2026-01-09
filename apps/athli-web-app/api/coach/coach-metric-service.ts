@@ -1,4 +1,5 @@
 import { apiFetch } from '@/api/api-client';
+import { type MetricScheduleData } from '@/api/client/client-metric-service';
 
 export interface Metric {
   id: string;
@@ -9,6 +10,8 @@ export interface Metric {
   value_kind: 'number' | 'percent' | 'duration' | 'score';
   min_value?: number;
   max_value?: number;
+  schedule_config?: MetricScheduleData;
+  cron_expression?: string;
   created_at: string;
   updated_at: string;
   client_id?: string;
@@ -21,6 +24,8 @@ export interface CreateMetricInput {
   value_kind?: 'number' | 'percent' | 'duration' | 'score';
   min_value?: number;
   max_value?: number;
+  schedule_config?: MetricScheduleData;
+  cron_expression?: string;
   client_id?: string;
 }
 
