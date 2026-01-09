@@ -1,20 +1,17 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View, Pressable, InteractionManager } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View, InteractionManager } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
 
 const DEFAULT_STORAGE_KEY = '@select_date_modal_selected_date';
-const MODAL_HEIGHT = 404;
 
 const WEEKDAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -102,6 +99,7 @@ const CalendarMonthPage = React.memo(({
   const daysInMonth = getDaysInMonth(monthData.year, monthData.month);
   
   const circleSize = Math.floor(cellWidth * 0.7);
+  const activeCircleSize = Math.floor(cellWidth * 0.82);
   const rows: React.ReactNode[] = [];
   
   let dayCounter = 1;
@@ -131,6 +129,8 @@ const CalendarMonthPage = React.memo(({
         const date = new Date(monthData.year, monthData.month, day);
         const isSelected = selectedDate ? isSameDay(date, selectedDate) : isToday(date);
         const isTodayDate = isToday(date);
+        const isActive = isSelected || isTodayDate;
+        const currentCircleSize = isActive ? activeCircleSize : circleSize;
         
         cells.push(
           <PressableOpacity
@@ -145,7 +145,7 @@ const CalendarMonthPage = React.memo(({
             <View
               style={[
                 styles.circleIndicator,
-                { width: circleSize, height: circleSize, borderRadius: circleSize / 2 },
+                { width: currentCircleSize, height: currentCircleSize, borderRadius: currentCircleSize / 2 },
                 isSelected && { backgroundColor: themeColors.primary },
                 isTodayDate && !isSelected && { borderWidth: 2, borderColor: themeColors.primary },
               ]}
@@ -217,13 +217,12 @@ export default function SelectDateModal() {
   const params = useLocalSearchParams<{ selectedDate?: string; storageKey?: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const pagerRef = useRef<PagerView>(null);
   const isClosingRef = useRef(false);
   
   // Get storage key from params or use default
-  const storageKey = params.storageKey || DEFAULT_STORAGE_KEY;
+  const storageKey = params.storageKey || DEFAULT_STORAGE_KEY; 
   
   const [isReady, setIsReady] = useState(false);
   const [currentPageIndex, setCurrentPageIndex] = useState(INITIAL_MONTH_INDEX);
@@ -242,6 +241,8 @@ export default function SelectDateModal() {
   const availableWidth = width - containerPadding;
   const cellWidth = Math.floor((availableWidth - gapsBetweenCells) / 7);
   const gridWidth = cellWidth * 7 + gapsBetweenCells;
+  // Calculate pager height: 5 rows of cells + gaps between rows
+  const pagerHeight = cellWidth * 5 + gapSize * 4;
 
   // Parse initial selected date
   const initialSelectedDate = useMemo(() => {
@@ -300,95 +301,75 @@ export default function SelectDateModal() {
   }, [router, storageKey]);
 
   return (
-    <View style={styles.backdrop}>
-      <Pressable style={styles.backdropTouchable} onPress={handleClose} />
-      
-      <View style={[styles.sheet, { backgroundColor: themeColors.background, paddingBottom: insets.bottom }]}>
-        <View style={styles.header}>
-          <View style={styles.headerSideLeft}>
-            <IconButton
-              icon={{ sf: 'xmark', IconComponent: X }}
-              onPress={handleClose}
-              size="md"
+    <View style={[styles.container, { backgroundColor: themeColors.background, paddingBottom: 200 }]}>
+      <View style={styles.header}>
+        <View style={styles.headerSideLeft} />
+        <Text style={[styles.title, { color: themeColors.text }]} pointerEvents="none">
+          {currentMonthTitle}
+        </Text>
+        <View style={styles.headerSideRight}>
+          <PressableOpacity
+            style={[styles.todayButton, { backgroundColor: themeColors.iconButton }]}
+            onPress={handleSelectToday}
+          >
+            <Text style={[styles.todayButtonText, { color: themeColors.text }]}>{t('calendar.today')}</Text>
+          </PressableOpacity>
+        </View>
+      </View>
+
+      {/* Weekday header row */}
+      <View style={styles.weekdayContainer}>
+        <WeekdayHeader cellWidth={cellWidth} gridWidth={gridWidth} themeColors={themeColors} />
+      </View>
+
+      <View style={[styles.pagerContainer, { width, height: pagerHeight }]}>
+        {isReady ? (
+          <PagerView
+            ref={pagerRef}
+            style={styles.pagerView}
+            initialPage={INITIAL_MONTH_INDEX}
+            onPageSelected={handlePageSelected}
+            offscreenPageLimit={1}
+          >
+            {MONTHS_DATA.map((monthData, index) => {
+              const shouldRender = Math.abs(index - currentPageIndex) <= 2;
+              
+              return (
+                <View key={monthData.id} style={styles.pageContainer} collapsable={false}>
+                  {shouldRender ? (
+                    <CalendarMonthPage
+                      monthData={monthData}
+                      selectedDate={selectedDate}
+                      onDateSelect={handleDateSelect}
+                      themeColors={themeColors}
+                      cellWidth={cellWidth}
+                      gridWidth={gridWidth}
+                    />
+                  ) : null}
+                </View>
+              );
+            })}
+          </PagerView>
+        ) : (
+          <View style={styles.pageContainer}>
+            <CalendarMonthPage
+              monthData={MONTHS_DATA[INITIAL_MONTH_INDEX]}
+              selectedDate={selectedDate}
+              onDateSelect={handleDateSelect}
+              themeColors={themeColors}
+              cellWidth={cellWidth}
+              gridWidth={gridWidth}
             />
           </View>
-          <Text style={[styles.title, { color: themeColors.text }]} pointerEvents="none">
-            {currentMonthTitle}
-          </Text>
-          <View style={styles.headerSideRight}>
-            <PressableOpacity
-              style={[styles.todayButton, { backgroundColor: themeColors.iconButton }]}
-              onPress={handleSelectToday}
-            >
-              <Text style={[styles.todayButtonText, { color: themeColors.text }]}>{t('calendar.today')}</Text>
-            </PressableOpacity>
-          </View>
-        </View>
-
-        {/* Weekday header row */}
-        <View style={styles.weekdayContainer}>
-          <WeekdayHeader cellWidth={cellWidth} gridWidth={gridWidth} themeColors={themeColors} />
-        </View>
-
-        <View style={[styles.pagerContainer, { width }]}>
-          {isReady ? (
-            <PagerView
-              ref={pagerRef}
-              style={styles.pagerView}
-              initialPage={INITIAL_MONTH_INDEX}
-              onPageSelected={handlePageSelected}
-              offscreenPageLimit={1}
-            >
-              {MONTHS_DATA.map((monthData, index) => {
-                const shouldRender = Math.abs(index - currentPageIndex) <= 2;
-                
-                return (
-                  <View key={monthData.id} style={styles.pageContainer} collapsable={false}>
-                    {shouldRender ? (
-                      <CalendarMonthPage
-                        monthData={monthData}
-                        selectedDate={selectedDate}
-                        onDateSelect={handleDateSelect}
-                        themeColors={themeColors}
-                        cellWidth={cellWidth}
-                        gridWidth={gridWidth}
-                      />
-                    ) : null}
-                  </View>
-                );
-              })}
-            </PagerView>
-          ) : (
-            <View style={styles.pageContainer}>
-              <CalendarMonthPage
-                monthData={MONTHS_DATA[INITIAL_MONTH_INDEX]}
-                selectedDate={selectedDate}
-                onDateSelect={handleDateSelect}
-                themeColors={themeColors}
-                cellWidth={cellWidth}
-                gridWidth={gridWidth}
-              />
-            </View>
-          )}
-        </View>
+        )}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
+  container: {
     flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdropTouchable: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  },
-  sheet: {
-    height: MODAL_HEIGHT,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
   },
   header: {
     flexDirection: 'row',
@@ -440,11 +421,10 @@ const styles = StyleSheet.create({
     marginRight: 0,
   },
   weekdayText: {
-    ...typography.p4,
+    ...typography.p3,
     fontWeight: '600',
   },
   pagerContainer: {
-    flex: 1,
     paddingHorizontal: 16,
   },
   pagerView: {
@@ -478,6 +458,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayText: {
-    ...typography.p3,
+    ...typography.p1,
   },
 });

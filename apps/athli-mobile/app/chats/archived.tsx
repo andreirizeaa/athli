@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -10,7 +10,7 @@ import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
 import { ChatListItem } from '@/components/chats/chat-list-item';
-import { Separator } from '@/components/separator';
+import { ScreenWrapper } from '@/components/screen-wrapper';
 import {
   getArchivedChats,
   unarchiveChat,
@@ -110,19 +110,39 @@ export default function ArchivedChatsScreen() {
   };
 
   return (
-    <View
-      style={[
-        styles.safeArea,
-        {
-          backgroundColor: themeColors.pageBackground,
-          paddingTop: insets.top,
-          paddingBottom: 0,
-          paddingLeft: insets.left,
-          paddingRight: insets.right,
-        },
-      ]}
+    <ScreenWrapper
+      contentContainerStyle={isEditMode ? styles.scrollViewContentEdit : styles.scrollViewContent}
+      overlay={
+        isEditMode ? (
+          <View
+            style={[
+              styles.bottomActions,
+              {
+                paddingBottom: insets.bottom + 60,
+              },
+            ]}
+          >
+            <PressableOpacity
+              style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+              onPress={handleUnarchivePress}
+            >
+              <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
+                {t('chats.archived.unarchive')}
+              </Text>
+            </PressableOpacity>
+            <PressableOpacity
+              style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+              onPress={handleDeletePress}
+            >
+              <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
+                {t('chats.archived.delete')}
+              </Text>
+            </PressableOpacity>
+          </View>
+        ) : undefined
+      }
     >
-      <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+      <View style={styles.header}>
         <PressableOpacity
           style={[styles.backButton, { backgroundColor: themeColors.iconButton }]}
           onPress={handleBackPress}
@@ -180,74 +200,34 @@ export default function ArchivedChatsScreen() {
         <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
       </View>
 
-      <View style={[styles.content, { backgroundColor: themeColors.pageBackground }]}>
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={themeColors.primary} />
-          </View>
-        ) : archivedChats.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
-              No archived chats
-            </Text>
-          </View>
-        ) : (
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={[
-              styles.scrollViewContent,
-              isEditMode && styles.scrollViewContentEdit,
-            ]}
-            showsVerticalScrollIndicator={false}
-          >
-            {archivedChats.map((chat) => (
-              <ChatListItem
-                key={chat.id}
-                chat={chat}
-                onPress={handleChatPress}
-                isEditMode={isEditMode}
-                isSelected={selectedChatIds.has(chat.id)}
-              />
-            ))}
-          </ScrollView>
-        )}
-      </View>
-
-      {isEditMode && (
-        <View
-          style={[
-            styles.bottomActions,
-            {
-              backgroundColor: themeColors.pageBackground,
-            },
-          ]}
-        >
-          <PressableOpacity
-            style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
-            onPress={handleUnarchivePress}
-          >
-            <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
-              {t('chats.archived.unarchive')}
-            </Text>
-          </PressableOpacity>
-          <PressableOpacity
-            style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
-            onPress={handleDeletePress}
-          >
-            <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
-              {t('chats.archived.delete')}
-            </Text>
-          </PressableOpacity>
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={themeColors.primary} />
+        </View>
+      ) : archivedChats.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
+            No archived chats
+          </Text>
+        </View>
+      ) : (
+        <View>
+          {archivedChats.map((chat) => (
+            <ChatListItem
+              key={chat.id}
+              chat={chat}
+              onPress={handleChatPress}
+              isEditMode={isEditMode}
+              isSelected={selectedChatIds.has(chat.id)}
+            />
+          ))}
         </View>
       )}
-    </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -306,19 +286,11 @@ const styles = StyleSheet.create({
     ...typography.p5,
     textAlign: 'center',
   },
-  content: {
-    flex: 1,
-    paddingTop: 0,
-    paddingBottom: 32,
-  },
-  scrollView: {
-    flex: 1,
-  },
   scrollViewContent: {
     paddingBottom: 40,
   },
   scrollViewContentEdit: {
-    paddingBottom: 100, // Extra space for bottom buttons
+    paddingBottom: 140,
   },
   loadingContainer: {
     flex: 1,
@@ -335,10 +307,13 @@ const styles = StyleSheet.create({
     ...typography.p2,
   },
   bottomActions: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 60,
     justifyContent: 'space-between',
   },
   actionButton: {

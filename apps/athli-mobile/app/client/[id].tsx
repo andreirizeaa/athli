@@ -1,18 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View, LayoutChangeEvent, Dimensions } from 'react-native';
-import { PressableOpacity } from 'pressto';
-import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
+import { Pressable, StyleSheet, Text, View, LayoutChangeEvent } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   Easing,
-  useEvent,
 } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, MoreVertical, Pencil, Archive, Activity, BarChart3, Calendar, Target, Plus, Camera, Mic, Send, MessageCircle, X, Notebook, Dumbbell, Repeat, Image as ImageIcon, File, ClipboardCheck, HelpCircle, Settings } from 'lucide-react-native';
+import { ChevronLeft, MoreVertical, Pencil, Archive, BarChart3, MessageCircle, Notebook, Dumbbell, Repeat, Image as ImageIcon, File, ClipboardCheck, HelpCircle, Settings } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -23,38 +20,15 @@ import {
   getChats,
   createNewChat,
   getChatMessages,
-  type Chat,
 } from '@/services/chats-service';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { ListRowItem } from '@/components/list-row-item';
-import { Card } from '@/components/card';
 import { Separator } from '@/components/separator';
 import { PlatformIcon } from '@/components/platform-icon';
 import { IconButton } from '@/components/icon-button';
-import { MessageInputBar } from '@/components/message/message-input-bar';
-import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
-import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
 import { ScreenWrapper } from '@/components/screen-wrapper';
 
-const AnimatedPagerView = Animated.createAnimatedComponent(PagerView);
-
 export default function ClientDetailScreen() {
-  const scrollOffset = useSharedValue(0);
-  const position = useSharedValue(0);
-
-  const onPageScroll = useEvent<any>((event) => {
-    'worklet';
-    scrollOffset.value = event.offset;
-    position.value = event.position;
-  }, ['onPageScroll']);
-
-  const borderOpacityStyle = useAnimatedStyle(() => {
-    // Show border when we are moving between pages.
-    const isSwiping = scrollOffset.value > 0.01 && scrollOffset.value < 0.99;
-    return {
-      opacity: withTiming(isSwiping ? 1 : 0, { duration: 150 }),
-    };
-  });
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors: themeColors, primaryColor } = useThemePreference();
@@ -63,9 +37,8 @@ export default function ClientDetailScreen() {
   const [client, setClient] = useState<Client | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  /* Tabs State - Simplified for scrollable page */
+  /* Tabs State */
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const pagerRef = useRef<PagerView>(null);
   const tabLayoutsRef = useRef<{ [key: number]: { x: number; width: number } }>({});
   const underlinePosition = useSharedValue(0);
   const underlineWidth = useSharedValue(0);
@@ -98,14 +71,17 @@ export default function ClientDetailScreen() {
 
   const tabs = [t('clientDetail.tabs.overview'), t('clientDetail.tabs.more')];
 
+  // Extra padding for the underline to make it slightly wider than the tab text
+  const UNDERLINE_EXTRA_WIDTH = 8;
+
   const animateUnderline = (index: number) => {
     const layout = tabLayoutsRef.current[index];
     if (layout) {
-      underlinePosition.value = withTiming(layout.x, {
+      underlinePosition.value = withTiming(layout.x - UNDERLINE_EXTRA_WIDTH / 2, {
         duration: 300,
         easing: Easing.bezier(0.4, 0.0, 0.2, 1),
       });
-      underlineWidth.value = withTiming(layout.width, {
+      underlineWidth.value = withTiming(layout.width + UNDERLINE_EXTRA_WIDTH, {
         duration: 300,
         easing: Easing.bezier(0.4, 0.0, 0.2, 1),
       });
@@ -116,16 +92,6 @@ export default function ClientDetailScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedIndex(index);
     animateUnderline(index);
-    pagerRef.current?.setPage(index);
-  };
-
-  const handlePageSelected = (event: PagerViewOnPageSelectedEvent) => {
-    const index = event.nativeEvent.position;
-    if (index !== selectedIndex) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setSelectedIndex(index);
-      animateUnderline(index);
-    }
   };
 
   const handleTabLayout = (index: number, event: LayoutChangeEvent) => {
@@ -134,8 +100,8 @@ export default function ClientDetailScreen() {
 
     // Initialize underline position on first layout
     if (index === selectedIndex && underlineWidth.value === 0) {
-      underlinePosition.value = x;
-      underlineWidth.value = width;
+      underlinePosition.value = x - UNDERLINE_EXTRA_WIDTH / 2;
+      underlineWidth.value = width + UNDERLINE_EXTRA_WIDTH;
     }
   };
 
@@ -306,7 +272,7 @@ export default function ClientDetailScreen() {
   }
 
   return (
-    <ScreenWrapper scrollable={false} contentContainerStyle={{ paddingHorizontal: 0, flexGrow: 1 }}>
+    <ScreenWrapper contentContainerStyle={{ paddingHorizontal: 0 }}>
       <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
         <IconButton
           icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
@@ -351,7 +317,6 @@ export default function ClientDetailScreen() {
         </View>
       </View>
 
-
       {/* Tabs */}
       <View style={[styles.tabsContainer, { borderBottomColor: themeColors.border }]}>
         {tabs.map((tab, index) => {
@@ -374,7 +339,7 @@ export default function ClientDetailScreen() {
                     styles.tabText,
                     {
                       color: isSelected ? themeColors.text : themeColors.mutedText,
-                      fontWeight: isSelected ? '600' : '400',
+                      fontWeight: isSelected ? '700' : '600',
                     },
                   ]}
                 >
@@ -388,221 +353,181 @@ export default function ClientDetailScreen() {
         <Animated.View
           style={[
             styles.animatedUnderline,
-            { backgroundColor: themeColors.text },
+            { backgroundColor: primaryColor },
             animatedUnderlineStyle,
           ]}
         />
       </View>
 
       {/* Tab Content */}
-      <AnimatedPagerView
-        ref={pagerRef}
-        style={{ flex: 1 }}
-        initialPage={0}
-        onPageSelected={handlePageSelected}
-        onPageScroll={onPageScroll}
-      >
-        {/* Overview Tab */}
-        <View key="overview" style={{ flex: 1 }}>
-          <ScrollView
-            style={styles.contentScrollView}
-            contentContainerStyle={styles.contentContainer}
-            showsVerticalScrollIndicator={false}
-          >
-            <View>
-              {/* Overview content will go here */}
-              <Text style={{ color: themeColors.mutedText }}>{t('clientDetail.overviewPlaceholder')}</Text>
-            </View>
-          </ScrollView>
+      {selectedIndex === 0 ? (
+        <View style={styles.contentContainer}>
+          <Text style={{ color: themeColors.mutedText }}>{t('clientDetail.overviewPlaceholder')}</Text>
         </View>
-
-        {/* More Tab */}
-        <View key="more" style={{ flex: 1, position: 'relative' }}>
-          {/* Animated Border */}
-          <Animated.View
-            style={[
-              {
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: 1,
-                backgroundColor: themeColors.border,
-                zIndex: 10,
-              },
-              borderOpacityStyle
-            ]}
+      ) : (
+        <View style={styles.optionsContainer}>
+          <ListRowItem
+            style={styles.optionRow}
+            icon={
+              <PlatformIcon
+                sf="sparkles"
+                IconComponent={MessageCircle}
+                size={iconSizes.listIcons}
+                color={iconColor}
+              />
+            }
+            title={t('clientDetail.sections.assistant')}
+            showChevron
+            chevronSize={12}
+            onPress={() => router.push(`/client/${id}/assistant`)}
           />
-          <ScrollView
-            style={styles.contentScrollView}
-            contentContainerStyle={styles.moreTabContentContainer}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.optionsContainer}>
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="sparkles"
-                    IconComponent={MessageCircle}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.assistant')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/assistant`)}
+          <Separator style={styles.separator} />
+          <ListRowItem
+            style={styles.optionRow}
+            icon={
+              <PlatformIcon
+                sf="note.text"
+                IconComponent={Notebook}
+                size={iconSizes.listIcons}
+                color={iconColor}
               />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="note.text"
-                    IconComponent={Notebook}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.notes')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/notes`)}
+            }
+            title={t('clientDetail.sections.notes')}
+            showChevron
+            chevronSize={12}
+            onPress={() => router.push(`/client/${id}/notes`)}
+          />
+          <Separator style={styles.separator} />
+          <ListRowItem
+            style={styles.optionRow}
+            icon={
+              <PlatformIcon
+                sf="figure.run"
+                IconComponent={Dumbbell}
+                size={iconSizes.listIcons}
+                color={iconColor}
               />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="figure.run"
-                    IconComponent={Dumbbell}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.training')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/training`)}
+            }
+            title={t('clientDetail.sections.training')}
+            showChevron
+            chevronSize={12}
+            onPress={() => router.push(`/client/${id}/training`)}
+          />
+          <Separator style={styles.separator} />
+          <ListRowItem
+            style={styles.optionRow}
+            icon={
+              <PlatformIcon
+                sf="chart.bar.fill"
+                IconComponent={BarChart3}
+                size={iconSizes.listIcons}
+                color={iconColor}
               />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="chart.bar.fill"
-                    IconComponent={BarChart3}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.metrics')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/metrics`)}
+            }
+            title={t('clientDetail.sections.metrics')}
+            showChevron
+            chevronSize={12}
+            onPress={() => router.push(`/client/${id}/metrics`)}
+          />
+          <Separator style={styles.separator} />
+          <ListRowItem
+            style={styles.optionRow}
+            icon={
+              <PlatformIcon
+                sf="repeat"
+                IconComponent={Repeat}
+                size={iconSizes.listIcons}
+                color={iconColor}
               />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="repeat"
-                    IconComponent={Repeat}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.habits')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/habits`)}
+            }
+            title={t('clientDetail.sections.habits')}
+            showChevron
+            chevronSize={12}
+            onPress={() => router.push(`/client/${id}/habits`)}
+          />
+          <Separator style={styles.separator} />
+          <ListRowItem
+            style={styles.optionRow}
+            icon={
+              <PlatformIcon
+                sf="photo"
+                IconComponent={ImageIcon}
+                size={iconSizes.listIcons}
+                color={iconColor}
               />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="photo"
-                    IconComponent={ImageIcon}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.photos')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/photos`)}
+            }
+            title={t('clientDetail.sections.photos')}
+            showChevron
+            chevronSize={12}
+            onPress={() => router.push(`/client/${id}/photos`)}
+          />
+          <Separator style={styles.separator} />
+          <ListRowItem
+            style={styles.optionRow}
+            icon={
+              <PlatformIcon
+                sf="doc"
+                IconComponent={File}
+                size={iconSizes.listIcons}
+                color={iconColor}
               />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="doc"
-                    IconComponent={File}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.files')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/files`)}
+            }
+            title={t('clientDetail.sections.files')}
+            showChevron
+            chevronSize={12}
+            onPress={() => router.push(`/client/${id}/files`)}
+          />
+          <Separator style={styles.separator} />
+          <ListRowItem
+            style={styles.optionRow}
+            icon={
+              <PlatformIcon
+                sf="checklist"
+                IconComponent={ClipboardCheck}
+                size={iconSizes.listIcons}
+                color={iconColor}
               />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="checklist"
-                    IconComponent={ClipboardCheck}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.checkIns')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/check-ins`)}
+            }
+            title={t('clientDetail.sections.checkIns')}
+            showChevron
+            chevronSize={12}
+            onPress={() => router.push(`/client/${id}/check-ins`)}
+          />
+          <Separator style={styles.separator} />
+          <ListRowItem
+            style={styles.optionRow}
+            icon={
+              <PlatformIcon
+                sf="questionmark.circle"
+                IconComponent={HelpCircle}
+                size={iconSizes.listIcons}
+                color={iconColor}
               />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="questionmark.circle"
-                    IconComponent={HelpCircle}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.questionnaires')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/questionaires`)}
+            }
+            title={t('clientDetail.sections.questionnaires')}
+            showChevron
+            chevronSize={12}
+            onPress={() => router.push(`/client/${id}/questionaires`)}
+          />
+          <Separator style={styles.separator} />
+          <ListRowItem
+            style={styles.optionRow}
+            icon={
+              <PlatformIcon
+                sf="gear"
+                IconComponent={Settings}
+                size={iconSizes.listIcons}
+                color={iconColor}
               />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="gear"
-                    IconComponent={Settings}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.settings')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/settings`)}
-              />
-              <Separator style={styles.separator} />
-            </View>
-          </ScrollView>
+            }
+            title={t('clientDetail.sections.settings')}
+            showChevron
+            chevronSize={12}
+            onPress={() => router.push(`/client/${id}/settings`)}
+          />
+          <Separator style={styles.separator} />
         </View>
-      </AnimatedPagerView>
+      )}
     </ScreenWrapper>
   );
 }
@@ -677,28 +602,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabText: {
-    ...typography.h7,
+    ...typography.p1,
   },
   animatedUnderline: {
     position: 'absolute',
     bottom: 0,
     left: 0,
-    height: 2,
+    height: 3,
+    borderRadius: 1.5,
     zIndex: 10,
-  },
-  contentScrollView: {
-    flex: 1,
   },
   contentContainer: {
     padding: 20,
   },
-  moreTabContentContainer: {
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: 20,
-  },
   optionsContainer: {
-    flex: 1,
+    paddingBottom: 20,
   },
   optionRow: {
     paddingHorizontal: 16,

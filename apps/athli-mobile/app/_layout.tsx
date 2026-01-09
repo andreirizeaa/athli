@@ -216,12 +216,16 @@ function RootLayoutNav() {
           <Stack.Screen
             name="modals/calendar/select-date-modal"
             options={{
-              presentation: 'transparentModal',
+              presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
               headerShown: false,
-              animation: 'slide_from_bottom',
-              contentStyle: {
-                backgroundColor: 'transparent',
-              },
+              ...(Platform.OS === 'ios' && {
+                sheetAllowedDetents: [0.50],
+                sheetGrabberVisible: true,
+              }),
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
             }}
           />
           <Stack.Screen

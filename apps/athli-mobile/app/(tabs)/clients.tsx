@@ -123,14 +123,16 @@ export default function ClientsScreen() {
   return (
     <ScreenWrapper contentContainerStyle={styles.scrollContent}>
       <View style={styles.headerSection}>
-        <View style={styles.headerRow}>
+        <View style={styles.titleRow}>
           <Text style={[styles.title, { color: themeColors.text }]}>{t('clients.title')}</Text>
-          <IconButton
-            icon={{ sf: 'paperplane', IconComponent: Send }}
-            onPress={handleShare}
-            size="md"
-            color={themeColors.text}
-          />
+          <View style={styles.headerButtonContainer}>
+            <IconButton
+              icon={{ sf: 'paperplane', IconComponent: Send }}
+              onPress={handleShare}
+              size="md"
+              color={themeColors.text}
+            />
+          </View>
         </View>
         <SearchBar
           value={searchQuery}
@@ -271,12 +273,17 @@ const styles = StyleSheet.create({
   title: {
     ...typography.h1,
     textAlign: 'left',
+    paddingRight: 52,
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  titleRow: {
+    position: 'relative',
     marginBottom: 12,
+  },
+  headerButtonContainer: {
+    position: 'absolute',
+    right: 0,
+    top: '50%',
+    transform: [{ translateY: -22 }],
   },
 });
 
