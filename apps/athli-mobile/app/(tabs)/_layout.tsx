@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
 import { MaterialIcons } from '@expo/vector-icons';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Haptics from 'expo-haptics';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import type { ComponentType } from 'react';
 
@@ -15,6 +16,7 @@ import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useAppView } from '@/contexts/useAppView';
 import { useTranslations } from '@/contexts/useTranslations';
 import { useTrainingOverlay } from '@/contexts/useTrainingOverlay';
+import { useLibraryTab, type LibraryTab } from '@/contexts/useLibraryTab';
 import { iconSizes } from '@/constants/typography';
 import {
   ChartNoAxesColumn,
@@ -39,6 +41,11 @@ type NativeTabsCoachViewProps = {
 const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewProps & { onAddPress: () => void }) => {
   const insets = useSafeAreaInsets();
 
+  const handleAddPressWithHaptic = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onAddPress();
+  };
+
   return (
     <View style={{ flex: 1 }}>
       <NativeTabs tintColor={primaryColor}>
@@ -47,14 +54,14 @@ const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewPr
           <Label>Clients</Label>
         </NativeTabs.Trigger>
 
+        <NativeTabs.Trigger name="library">
+          <Icon sf="folder.fill" />
+          <Label>Library</Label>
+        </NativeTabs.Trigger>
+
         <NativeTabs.Trigger name="chats">
           <Icon sf="bubble.left.and.text.bubble.right.fill" />
           <Label>Chats</Label>
-        </NativeTabs.Trigger>
-
-        <NativeTabs.Trigger name="files">
-          <Icon sf="folder.fill" />
-          <Label>Files</Label>
         </NativeTabs.Trigger>
 
         <NativeTabs.Trigger name="settings">
@@ -72,7 +79,7 @@ const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewPr
       {/* Transparent overlay button on top of search pill */}
       <Pressable
         style={[styles.addButtonOverlay, { bottom: insets.bottom - 16 }]}
-        onPress={onAddPress}
+        onPress={handleAddPressWithHaptic}
       />
     </View>
   );
@@ -131,6 +138,22 @@ export default function TabLayout() {
   const isInitialMount = useRef(true);
   const colorScheme = useColorScheme();
   const { showOverlay: showTrainingOverlay } = useTrainingOverlay();
+  const { currentLibraryTab } = useLibraryTab();
+
+  // Helper to get the correct modal route based on current library tab
+  const getLibraryModalRoute = (): string => {
+    const modalRoutes: Record<LibraryTab, string> = {
+      workouts: '/modals/library/add-workout-modal',
+      sections: '/modals/library/add-section-modal',
+      programs: '/modals/library/add-program-modal',
+      exercises: '/modals/library/add-exercise-modal',
+      forms: '/modals/library/add-form-modal',
+      metrics: '/modals/library/add-metric-modal',
+      habits: '/modals/library/add-habit-modal',
+      files: '/modals/files/add-file-modal',
+    };
+    return modalRoutes[currentLibraryTab];
+  };
 
   // Use useLayoutEffect for initial mount to prevent any flash of add-modal content
   useLayoutEffect(() => {
@@ -148,7 +171,7 @@ export default function TabLayout() {
       if (
         pathname === '/' ||
         pathname === '/(tabs)' ||
-        (pathname !== initialRoute && !pathname.startsWith('/clients') && !pathname.startsWith('/chats') && !pathname.startsWith('/files') && !pathname.startsWith('/settings') && !pathname.startsWith('/home') && !pathname.startsWith('/training') && !pathname.startsWith('/progress') && !pathname.startsWith('/inbox') && !pathname.startsWith('/profile') && !pathname.startsWith('/add-modal'))
+        (pathname !== initialRoute && !pathname.startsWith('/clients') && !pathname.startsWith('/chats') && !pathname.startsWith('/library') && !pathname.startsWith('/settings') && !pathname.startsWith('/home') && !pathname.startsWith('/training') && !pathname.startsWith('/progress') && !pathname.startsWith('/inbox') && !pathname.startsWith('/profile') && !pathname.startsWith('/add-modal'))
       ) {
         router.replace(initialRoute);
       }
@@ -172,9 +195,9 @@ export default function TabLayout() {
 
   const handleNativeTabsAddPress = () => {
     if (appView === 'coach') {
-      // Check for files first, then clients/chats
-      if (pathname.includes('/files')) {
-        router.push('/modals/files/add-file-modal');
+      // Check for library first, then clients/chats
+      if (pathname.includes('/library')) {
+        router.push(getLibraryModalRoute() as any);
       } else if (pathname.includes('/clients')) {
         router.push({
           pathname: '/add-modal-content',
@@ -235,10 +258,10 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="files"
+          name="library"
           options={{
-            title: t('files.title'),
-            href: appView === 'coach' ? '/files' : null,
+            title: t('library.title'),
+            href: appView === 'coach' ? '/library' : null,
           }}
         />
         <Tabs.Screen
@@ -301,8 +324,25 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const { showOverlay: showTrainingOverlay } = useTrainingOverlay();
+  const { currentLibraryTab } = useLibraryTab();
+
+  // Helper to get the correct modal route based on current library tab
+  const getLibraryModalRoute = (): string => {
+    const modalRoutes: Record<LibraryTab, string> = {
+      workouts: '/modals/library/add-workout-modal',
+      sections: '/modals/library/add-section-modal',
+      programs: '/modals/library/add-program-modal',
+      exercises: '/modals/library/add-exercise-modal',
+      forms: '/modals/library/add-form-modal',
+      metrics: '/modals/library/add-metric-modal',
+      habits: '/modals/library/add-habit-modal',
+      files: '/modals/files/add-file-modal',
+    };
+    return modalRoutes[currentLibraryTab];
+  };
 
   const handleTabPress = (name: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (name === activeRouteName) {
       return;
     }
@@ -311,6 +351,7 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   };
 
   const handleAddPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (appView === 'coach') {
       // Navigate to appropriate modal based on route
       if (activeRouteName === 'clients') {
@@ -323,8 +364,8 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
           pathname: '/add-modal-content',
           params: { route: 'chats' },
         });
-      } else if (activeRouteName === 'files') {
-        router.push('/modals/files/add-file-modal');
+      } else if (activeRouteName === 'library') {
+        router.push(getLibraryModalRoute() as any);
       }
     } else if (appView === 'athlete') {
       // Show training overlay if on training tab
@@ -371,19 +412,19 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       width: 70,
     },
     {
+      name: 'library',
+      label: t('library.title'),
+      sf: 'folder.fill',
+      mdi: 'folder',
+      IconComponent: FileText,
+      width: 60,
+    },
+    {
       name: 'chats',
       label: t('chats.title'),
       sf: 'bubble.left.and.text.bubble.right.fill',
       mdi: 'forum',
       IconComponent: MessagesSquare,
-      width: 60,
-    },
-    {
-      name: 'files',
-      label: t('files.title'),
-      sf: 'folder.fill',
-      mdi: 'folder',
-      IconComponent: FileText,
       width: 60,
     },
     {

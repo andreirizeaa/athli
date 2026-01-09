@@ -87,7 +87,7 @@ export const ChatToolbar = ({
 
   const headerBackgroundColor = themeColors.headerBackground;
   const iconColor = themeColors.text;
-  const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.6);
+  const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.95);
 
   // Determine participant info from either chat or coach
   const participantInfo: ParticipantInfo = chat
@@ -111,7 +111,7 @@ export const ChatToolbar = ({
   return (
     <View style={styles.toolbarContainer} pointerEvents="box-none">
       <BlurView
-        intensity={100}
+        intensity={30}
         tint={isDark ? 'dark' : 'light'}
         style={[styles.toolbarBlur, { backgroundColor: translucentHeaderBg }]}
       >

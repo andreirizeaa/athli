@@ -778,7 +778,7 @@ export default function Camera() {
             icon={{ sf: 'xmark', IconComponent: X }}
             onPress={handleClose}
             size="md"
-            color={iconColor}
+            scheme="light"
           />
           {(isVideoMode || isRecording) && (
             <View
@@ -808,8 +808,7 @@ export default function Camera() {
             }}
             onPress={handleFlashToggle}
             size="md"
-            color={flashEnabled ? themeColors.primaryForeground : iconColor}
-            variant={flashEnabled ? 'primary' : 'default'}
+            scheme="light"
           />
         </View>
 
@@ -820,7 +819,7 @@ export default function Camera() {
             icon={{ sf: 'photo', IconComponent: Image }}
             onPress={handlePhotoPress}
             size="md"
-            color={iconColor}
+            scheme="light"
           />
 
           {/* Record/Stop Button - Centered */}
@@ -882,7 +881,7 @@ export default function Camera() {
               icon={{ sf: 'arrow.trianglehead.2.clockwise', IconComponent: RotateCw }}
               onPress={handleRotatePress}
               size="md"
-              color={iconColor}
+              scheme="light"
             />
           </View>
         </View>

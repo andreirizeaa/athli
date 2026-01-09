@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { ChevronLeft, Ellipsis, User } from 'lucide-react-native';
@@ -7,7 +7,8 @@ import { BlurView } from 'expo-blur';
 
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { hexToRgba } from '@/utils/colorUtils';
-import { IconButton, DoubleIconButton } from '@/components/icon-button';
+import { IconButton } from '@/components/icon-button';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { type Chat } from '@/services/chats-service';
 import { type Coach } from '@/services/inbox-service';
 import { typography } from '@/constants/typography';
@@ -20,8 +21,8 @@ type ChatHeaderProps = {
   onBackPress?: () => void;
   // Optional action buttons (for coach view)
   onUserProfilePress?: () => void;
-  onEllipsisPress?: () => void;
-  actionButtonRef?: React.RefObject<View | null>;
+  // Dropdown options for the ellipsis button
+  dropdownOptions?: DropdownMenuOption[];
 };
 
 export const ChatHeader = ({
@@ -29,8 +30,7 @@ export const ChatHeader = ({
   coach,
   onBackPress,
   onUserProfilePress,
-  onEllipsisPress,
-  actionButtonRef,
+  dropdownOptions,
 }: ChatHeaderProps) => {
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
@@ -39,18 +39,18 @@ export const ChatHeader = ({
 
   const headerBackgroundColor = themeColors.headerBackground;
   const iconColor = themeColors.text;
-  const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.6);
+  const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.95);
 
   // Determine avatar and name from either chat or coach
   const avatar = chat?.clientAvatar || coach?.avatar;
   const name = chat?.clientName || coach?.name || '';
   const showBackButton = !!onBackPress;
-  const showActionButtons = !!onUserProfilePress && !!onEllipsisPress && !!actionButtonRef;
+  const showActionButtons = !!onUserProfilePress && dropdownOptions && dropdownOptions.length > 0;
 
   return (
     <View style={[styles.headerSafeArea, { paddingTop: 0 }]} pointerEvents="box-none">
       <BlurView
-        intensity={100}
+        intensity={30}
         tint={isDark ? 'dark' : 'light'}
         style={[styles.headerBlur, { paddingTop: insets.top, backgroundColor: translucentHeaderBg }]}
       >
@@ -85,16 +85,24 @@ export const ChatHeader = ({
           </Text>
 
           {showActionButtons && (
-            <DoubleIconButton
-              ref={actionButtonRef as React.RefObject<View>}
-              leftIcon={{ sf: 'person', IconComponent: User }}
-              rightIcon={{ sf: 'ellipsis', IconComponent: Ellipsis }}
-              onLeftPress={onUserProfilePress}
-              onRightPress={onEllipsisPress}
-              size="md"
-              color={iconColor}
-              scheme={isDark ? 'dark' : 'light'}
-            />
+            <View style={styles.actionButtons}>
+              <IconButton
+                icon={{ sf: 'person', IconComponent: User }}
+                onPress={onUserProfilePress}
+                size="md"
+                color={iconColor}
+                scheme={isDark ? 'dark' : 'light'}
+              />
+              <DropdownMenuWrapper options={dropdownOptions}>
+                <IconButton
+                  icon={{ sf: 'ellipsis', IconComponent: Ellipsis }}
+                  onPress={() => { }}
+                  size="md"
+                  color={iconColor}
+                  scheme={isDark ? 'dark' : 'light'}
+                />
+              </DropdownMenuWrapper>
+            </View>
           )}
         </View>
       </BlurView>
@@ -135,5 +143,10 @@ const styles = StyleSheet.create({
     ...typography.h5,
     flex: 1,
     marginRight: 12,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
 });

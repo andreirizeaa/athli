@@ -1,11 +1,11 @@
 import React from 'react';
 import type { JSX } from 'react';
 import type { GestureResponderEvent } from 'react-native';
-import { Platform, StyleSheet, Text, View } from 'react-native';
-import { PressableOpacity } from 'pressto';
+import { Platform, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import type { LucideIcon } from 'lucide-react-native';
 import { ChevronRight } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -31,9 +31,11 @@ export interface SettingsOptionProps {
   subtitleRight?: boolean;
   onPress?: (event: GestureResponderEvent) => void;
   showChevron?: boolean;
+  style?: object;
+  chevronSize?: number;
 }
 
-export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, showChevron }: SettingsOptionProps) {
+export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, showChevron, style, chevronSize }: SettingsOptionProps) {
   const { colors: themeColors } = useThemePreference();
 
   const handleOptionPress = (event: GestureResponderEvent) => {
@@ -41,13 +43,17 @@ export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, 
       return;
     }
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress(event);
   };
 
   return (
-    <PressableOpacity
-      style={styles.optionRow}
-      onPress={onPress ? () => handleOptionPress({} as GestureResponderEvent) : undefined}
+    <Pressable
+      style={[
+        styles.optionRow,
+        style,
+      ]}
+      onPress={onPress ? handleOptionPress : undefined}
     >
       <View style={styles.iconContainer}>{icon}</View>
       <View style={styles.textContainer}>
@@ -63,10 +69,10 @@ export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, 
       )}
       {showChevron && (
         <View style={styles.chevronContainer}>
-          <PlatformIcon sf="chevron.right" IconComponent={ChevronRight} size={iconSizes.navigationChevrons} color={themeColors.mutedText} />
+          <PlatformIcon sf="chevron.right" IconComponent={ChevronRight} size={chevronSize || iconSizes.navigationChevrons} color={themeColors.mutedText} />
         </View>
       )}
-    </PressableOpacity>
+    </Pressable>
   );
 }
 

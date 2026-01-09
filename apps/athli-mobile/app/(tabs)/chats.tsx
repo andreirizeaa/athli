@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -11,8 +11,9 @@ import { useTranslations } from '@/contexts/useTranslations';
 import { SearchBar } from '@/components/search-bar';
 import { ChatListItem } from '@/components/chats/chat-list-item';
 import { ArchivedItem } from '@/components/chats/archived-item';
-import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { PlatformIcon } from '@/components/platform-icon';
+import { ScreenWrapper } from '@/components/screen-wrapper';
 import {
   getChats,
   readAllChats,
@@ -33,9 +34,6 @@ export default function ChatsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
-  const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const ellipsisButtonRef = useRef<View>(null);
 
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
@@ -128,11 +126,6 @@ export default function ChatsScreen() {
     if (isEditMode) {
       setIsEditMode(false);
       setSelectedChatIds(new Set());
-    } else {
-      ellipsisButtonRef.current?.measureInWindow((x, y, width, height) => {
-        setButtonPosition({ x, y, width, height });
-        setDropdownVisible(true);
-      });
     }
   };
 
@@ -145,7 +138,6 @@ export default function ChatsScreen() {
 
   const handleSelectChatsPress = () => {
     setIsEditMode(true);
-    setDropdownVisible(false);
   };
 
   const handleArchivePress = async () => {
@@ -228,150 +220,121 @@ export default function ChatsScreen() {
     ];
 
   return (
-    <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
-      <View
-        style={[
-          styles.safeArea,
-          {
-            paddingTop: insets.top,
-            paddingBottom: 0,
-            paddingLeft: insets.left,
-            paddingRight: insets.right,
-          },
-        ]}
-      >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollViewContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.container}>
-            <View style={styles.headerSection}>
-              <View style={styles.titleRow}>
-                <Text style={[styles.title, { color: themeColors.text }]}>{t('chats.title')}</Text>
-                <View
-                  ref={ellipsisButtonRef}
-                  collapsable={false}
-                  style={styles.headerButtonContainer}
+    <ScreenWrapper
+      contentContainerStyle={styles.scrollViewContent}
+      overlay={
+        <>
+          {isEditMode && (
+            <View
+              style={[
+                styles.bottomActions,
+                {
+                  paddingBottom: insets.bottom + 60,
+                },
+              ]}
+            >
+              <PressableOpacity
+                style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+                onPress={handleArchivePress}
+              >
+                <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
+                  {t('chats.archive')}
+                </Text>
+              </PressableOpacity>
+              <PressableOpacity
+                style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+                onPress={handleDeletePress}
+              >
+                <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
+                  {t('chats.delete')}
+                </Text>
+              </PressableOpacity>
+            </View>
+          )}
+        </>
+      }
+    >
+      <View style={styles.container}>
+        <View style={styles.headerSection}>
+          <View style={styles.titleRow}>
+            <Text style={[styles.title, { color: themeColors.text }]}>{t('chats.title')}</Text>
+            <View style={styles.headerButtonContainer}>
+              {isEditMode ? (
+                <PressableOpacity
+                  style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
+                  onPress={handleEllipsisPress}
                 >
+                  <PlatformIcon
+                    sf="checkmark"
+                    IconComponent={Check}
+                    size={iconSizes.navigationChevrons}
+                    color={themeColors.text}
+                  />
+                </PressableOpacity>
+              ) : (
+                <DropdownMenuWrapper options={dropdownOptions}>
                   <PressableOpacity
                     style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
-                    onPress={handleEllipsisPress}
                   >
-                    {isEditMode ? (
-                      <PlatformIcon
-                        sf="checkmark"
-                        IconComponent={Check}
-                        size={iconSizes.navigationChevrons}
-                        color={themeColors.text}
-                      />
-                    ) : (
-                      <PlatformIcon
-                        sf="ellipsis"
-                        IconComponent={Ellipsis}
-                        size={iconSizes.navigationChevrons}
-                        color={themeColors.text}
-                      />
-                    )}
+                    <PlatformIcon
+                      sf="ellipsis"
+                      IconComponent={Ellipsis}
+                      size={iconSizes.navigationChevrons}
+                      color={themeColors.text}
+                    />
                   </PressableOpacity>
-                </View>
-              </View>
-              <SearchBar
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder={t('chats.searchPlaceholder')}
-              />
+                </DropdownMenuWrapper>
+              )}
             </View>
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={themeColors.primary} />
-              </View>
-            ) : filteredChats.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
-                  {searchQuery.trim()
-                    ? t('chats.empty.noChatsFound')
-                    : t('chats.empty.noChatsYet')}
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.chatListContainer}>
-                {!searchQuery.trim() && (
-                  <ArchivedItem onPress={handleArchivedPress} />
-                )}
-                {filteredChats.map((chat) => (
-                  <ChatListItem
-                    key={chat.id}
-                    chat={chat}
-                    onPress={handleChatPress}
-                    isEditMode={isEditMode}
-                    isSelected={selectedChatIds.has(chat.id)}
-                    onArchive={handleChatArchive}
-                    onDelete={handleChatDelete}
-                    onMarkAsRead={handleChatMarkAsRead}
-                  />
-                ))}
-              </View>
-            )}
           </View>
-        </ScrollView>
-
-        {isEditMode && (
-          <View
-            style={[
-              styles.bottomActions,
-              {
-                paddingBottom: insets.bottom + 60, // Tab bar height (49px) + safe area
-              },
-            ]}
-          >
-            <PressableOpacity
-              style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
-              onPress={handleArchivePress}
-            >
-              <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
-                {t('chats.archive')}
-              </Text>
-            </PressableOpacity>
-            <PressableOpacity
-              style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
-              onPress={handleDeletePress}
-            >
-              <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
-                {t('chats.delete')}
-              </Text>
-            </PressableOpacity>
-          </View>
-        )}
-
-        {!isEditMode && (
-          <DropdownMenu
-            visible={dropdownVisible}
-            onClose={() => setDropdownVisible(false)}
-            options={dropdownOptions}
-            anchorPosition={buttonPosition}
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('chats.searchPlaceholder')}
           />
+        </View>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={themeColors.primary} />
+          </View>
+        ) : filteredChats.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
+              {searchQuery.trim()
+                ? t('chats.empty.noChatsFound')
+                : t('chats.empty.noChatsYet')}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.chatListContainer}>
+            {!searchQuery.trim() && (
+              <ArchivedItem onPress={handleArchivedPress} />
+            )}
+            {filteredChats.map((chat) => (
+              <ChatListItem
+                key={chat.id}
+                chat={chat}
+                onPress={handleChatPress}
+                isEditMode={isEditMode}
+                isSelected={selectedChatIds.has(chat.id)}
+                onArchive={handleChatArchive}
+                onDelete={handleChatDelete}
+                onMarkAsRead={handleChatMarkAsRead}
+              />
+            ))}
+          </View>
         )}
       </View>
-    </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
   scrollViewContent: {
     paddingBottom: 40,
+    paddingTop: 16,
   },
   container: {
-    paddingTop: 16,
   },
   headerSection: {
     paddingHorizontal: 16,
@@ -379,7 +342,7 @@ const styles = StyleSheet.create({
   },
   titleRow: {
     position: 'relative',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   title: {
     ...typography.h1,
@@ -389,7 +352,8 @@ const styles = StyleSheet.create({
   headerButtonContainer: {
     position: 'absolute',
     right: 0,
-    top: 0,
+    top: '50%',
+    transform: [{ translateY: -22 }],
   },
   headerButton: {
     alignItems: 'center',

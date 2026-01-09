@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useAnimatedStyle,
+  useSharedValue,
+  withTiming,
   interpolate,
   Extrapolate,
 } from 'react-native-reanimated';
@@ -42,16 +44,34 @@ export const KeyboardAwareToolbar = ({
   const REPLY_PREVIEW_HEIGHT = 54;
   // Attachment picker row adds approximately 112px (paddingVertical 32px + icon circle 56px + gap 8px + text ~16px)
   const ATTACHMENT_PICKER_HEIGHT = 112;
-  
-  let heightAdjustment = 0;
-  if (replyPreview) heightAdjustment += REPLY_PREVIEW_HEIGHT;
-  if (attachmentPicker) heightAdjustment += ATTACHMENT_PICKER_HEIGHT;
-  
-  const adjustedClosedBaseHeight = closedBaseHeight + heightAdjustment;
-  const adjustedOpenBaseHeight = openBaseHeight + heightAdjustment;
+
+  // Animated values for smooth height transitions
+  const animatedReplyHeight = useSharedValue(0);
+  const animatedAttachmentHeight = useSharedValue(0);
+
+  // Animate height adjustments when reply preview or attachment picker appears/disappears
+  useEffect(() => {
+    animatedReplyHeight.value = withTiming(
+      replyPreview ? REPLY_PREVIEW_HEIGHT : 0,
+      { duration: 250 }
+    );
+  }, [replyPreview, animatedReplyHeight]);
+
+  useEffect(() => {
+    animatedAttachmentHeight.value = withTiming(
+      attachmentPicker ? ATTACHMENT_PICKER_HEIGHT : 0,
+      { duration: 250 }
+    );
+  }, [attachmentPicker, animatedAttachmentHeight]);
 
   const containerAnimatedStyle = useAnimatedStyle(() => {
     'worklet';
+
+    // Calculate total height adjustment from animated values
+    const heightAdjustment = animatedReplyHeight.value + animatedAttachmentHeight.value;
+
+    const adjustedClosedBaseHeight = closedBaseHeight + heightAdjustment;
+    const adjustedOpenBaseHeight = openBaseHeight + heightAdjustment;
 
     // 0 → 1 smoothly as keyboard opens/closes
     const progress = interpolate(
@@ -71,7 +91,7 @@ export const KeyboardAwareToolbar = ({
     return {
       height: baseHeight + height.value + insets.bottom,
     };
-  }, [adjustedClosedBaseHeight, adjustedOpenBaseHeight, insets.bottom]);
+  }, [closedBaseHeight, openBaseHeight, insets.bottom]);
 
   return (
     <Animated.View
