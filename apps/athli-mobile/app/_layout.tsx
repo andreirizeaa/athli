@@ -95,7 +95,7 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { primaryColor } = useThemePreference();
+  const { primaryColor, colors: themeColors } = useThemePreference();
   const segments = useSegments();
 
   // Hide status bar only for camera and preview screens (not message-image-preview since it's from a message)
@@ -116,7 +116,7 @@ function RootLayoutNav() {
         colors: {
           ...DarkTheme.colors,
           primary: primaryColor,
-          background: 'transparent',
+          background: themeColors.pageBackground,
         },
       }
       : {
@@ -124,12 +124,12 @@ function RootLayoutNav() {
         colors: {
           ...DefaultTheme.colors,
           primary: primaryColor,
-          background: 'transparent',
+          background: themeColors.pageBackground,
         },
       };
 
   return (
-    <RNView style={{ flex: 1, backgroundColor: 'transparent' }}>
+    <RNView style={{ flex: 1, backgroundColor: themeColors.pageBackground }}>
       <ThemeProvider value={navigationTheme}>
         <StatusBar
           style={colorScheme === 'dark' ? 'light' : 'dark'}
@@ -141,13 +141,22 @@ function RootLayoutNav() {
           screenOptions={{
             headerTransparent: true,
             contentStyle: {
-              backgroundColor: 'transparent',
+              backgroundColor: themeColors.pageBackground,
             },
           }}
         >
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="settings/preferences" options={{ headerShown: false }} />
-          <Stack.Screen name="client/[id]" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="client/[id]"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: {
+                backgroundColor: themeColors.pageBackground,
+              },
+            }}
+          />
           <Stack.Screen name="client/[id]/activity" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/metrics" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/training-calendar" options={{ headerShown: false }} />
@@ -161,6 +170,18 @@ function RootLayoutNav() {
           <Stack.Screen name="client/[id]/questionaires" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/settings" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/assistant" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="modals/athli-assistant-help-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
           <Stack.Screen
             name="modals/client/edit-client-details-modal"
             options={{
