@@ -1,57 +1,226 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, StyleSheet, Text, Platform, ScrollView, TextInput } from 'react-native';
-import { PressableOpacity } from 'pressto';
+import { View, StyleSheet, Text, Platform, Keyboard, TouchableWithoutFeedback, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { typography, iconSizes } from '@/constants/typography';
+import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
+import { typography } from '@/constants/typography';
 import { useTranslations } from '@/contexts/useTranslations';
-import { PlatformIcon } from '@/components/platform-icon';
 import { IconButton } from '@/components/icon-button';
-import { Card } from '@/components/card';
-import { Separator } from '@/components/separator';
+import {
+  InputBox,
+  SelectInput,
+  DateOfBirthInput,
+  HeightInput,
+  GenderInput,
+  CountrySelectorInput,
+  PhoneNumberInput,
+  type GenderValue,
+  type Country,
+  type PhoneNumber,
+} from '@/components/form-inputs';
+import { COUNTRIES } from '@/components/form-inputs/countries-data';
 import { getClients, updateClient, type Client } from '@/services/client-service';
+
+// Helper to find country by name
+const findCountryByName = (name: string): Country | null => {
+  if (!name) return null;
+  return COUNTRIES.find((c) => c.name.toLowerCase() === name.toLowerCase()) || null;
+};
+
+// Helper to parse phone number string into PhoneNumber type
+const parsePhoneNumber = (phoneString: string): PhoneNumber | null => {
+  if (!phoneString) return null;
+  
+  // Extract only digits from the phone string
+  const digits = phoneString.replace(/\D/g, '');
+  if (!digits) return null;
+  
+  // Try to find matching country by dial code
+  // Start with longer dial codes first (some countries have 4-digit codes)
+  for (let len = 4; len >= 1; len--) {
+    const possibleCode = '+' + digits.substring(0, len);
+    const country = COUNTRIES.find((c) => c.dialCode === possibleCode);
+    if (country) {
+      return {
+        country,
+        number: digits.substring(len),
+      };
+    }
+  }
+  
+  // Default to first country if no match found
+  return {
+    country: COUNTRIES[0],
+    number: digits,
+  };
+};
+
+// Helper to convert client gender to form gender value
+const mapClientGenderToFormGender = (gender: Client['gender']): GenderValue => {
+  switch (gender) {
+    case 'male':
+      return 'male';
+    case 'female':
+      return 'female';
+    case 'prefer-not-to-say':
+      return 'prefer-not-to-say';
+    default:
+      return null;
+  }
+};
+
+// Type for tracking original values
+type OriginalValues = {
+  name: string;
+  email: string;
+  category: 'online' | 'in-person' | 'hybrid';
+  dateOfBirth: Date | null;
+  height: string;
+  gender: GenderValue;
+  country: Country | null;
+  phoneNumber: PhoneNumber | null;
+};
 
 export default function EditClientDetailsModal() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams<{ id?: string | string[] }>();
+  // Handle case where id might be an array (Expo Router quirk)
+  const clientId = Array.isArray(params.id) ? params.id[0] : params.id;
   const { colors: themeColors } = useThemePreference();
+  const colorScheme = useColorScheme();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
   const [client, setClient] = useState<Client | null>(null);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [category, setCategory] = useState<'online' | 'in-person' | 'hybrid'>('online');
+  const [dateOfBirth, setDateOfBirth] = useState<Date | null>(null);
+  const [height, setHeight] = useState('');
+  const [gender, setGender] = useState<GenderValue>(null);
+  const [country, setCountry] = useState<Country | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState<PhoneNumber | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [originalValues, setOriginalValues] = useState<OriginalValues | null>(null);
 
-  // Email validation regex
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const isEmailValid = email.trim() === '' || emailRegex.test(email.trim());
+  const handleDismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
 
-  // Tick button is enabled unless a field is completely empty
-  const canComplete = firstName.trim() !== '' && lastName.trim() !== '' && email.trim() !== '' && isEmailValid;
+  // Combined validation and change detection - all in one useMemo for consistent reactivity
+  const { isFormValid, hasChanges, canComplete } = useMemo(() => {
+    // Form validation - name and email are mandatory
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    
+    // Name must not be empty
+    const nameValid = trimmedName.length > 0;
+    
+    // Email must be valid format (contains @ with text before and after)
+    const atIndex = trimmedEmail.indexOf('@');
+    const emailValid = trimmedEmail.length > 0 && atIndex > 0 && atIndex < trimmedEmail.length - 1;
+    
+    const formValid = nameValid && emailValid;
+
+    // Change detection
+    let changes = false;
+    if (originalValues) {
+      // Simple string comparisons
+      if (trimmedName !== originalValues.name.trim()) changes = true;
+      else if (trimmedEmail !== originalValues.email.trim()) changes = true;
+      else if (category !== originalValues.category) changes = true;
+      else if (height.trim() !== originalValues.height.trim()) changes = true;
+      else if (gender !== originalValues.gender) changes = true;
+      else {
+        // Date comparison
+        const currentDobTime = dateOfBirth?.getTime() ?? null;
+        const originalDobTime = originalValues.dateOfBirth?.getTime() ?? null;
+        if (currentDobTime !== originalDobTime) changes = true;
+        else {
+          // Country comparison
+          const currentCountryCode = country?.code ?? null;
+          const originalCountryCode = originalValues.country?.code ?? null;
+          if (currentCountryCode !== originalCountryCode) changes = true;
+          else {
+            // Phone comparison
+            const currentPhoneCountryCode = phoneNumber?.country?.code ?? null;
+            const originalPhoneCountryCode = originalValues.phoneNumber?.country?.code ?? null;
+            const currentPhoneNum = phoneNumber?.number ?? '';
+            const originalPhoneNum = originalValues.phoneNumber?.number ?? '';
+            if (currentPhoneCountryCode !== originalPhoneCountryCode || currentPhoneNum !== originalPhoneNum) {
+              changes = true;
+            }
+          }
+        }
+      }
+    }
+
+    return {
+      isFormValid: formValid,
+      hasChanges: changes,
+      canComplete: formValid && changes,
+    };
+  }, [name, email, category, dateOfBirth, height, gender, country, phoneNumber, originalValues]);
 
   // Load client data
   useEffect(() => {
     const loadClient = async () => {
-      if (!params.id) {
+      if (!clientId) {
         setIsLoading(false);
         return;
       }
 
       try {
         const clients = await getClients();
-        const foundClient = clients.find((c) => c.id === params.id);
+        const foundClient = clients.find((c) => c.id === clientId);
         if (foundClient) {
           setClient(foundClient);
-          setFirstName(foundClient.firstName || '');
-          setLastName(foundClient.lastName || '');
+          
+          // Combine first and last name for display
+          const fullName = [foundClient.firstName, foundClient.lastName].filter(Boolean).join(' ');
+          setName(fullName || '');
           setEmail(foundClient.email || '');
           setCategory(foundClient.type || 'online');
+          
+          // Set gender
+          const mappedGender = mapClientGenderToFormGender(foundClient.gender);
+          setGender(mappedGender);
+          
+          // Set country
+          const foundCountry = findCountryByName(foundClient.country);
+          setCountry(foundCountry);
+          
+          // Parse and set phone number
+          const parsedPhone = parsePhoneNumber(foundClient.phone);
+          setPhoneNumber(parsedPhone);
+          
+          // Calculate and set date of birth from age (approximate)
+          if (foundClient.age > 0) {
+            const today = new Date();
+            const birthYear = today.getFullYear() - foundClient.age;
+            const dob = new Date(birthYear, 0, 1); // January 1st of birth year
+            setDateOfBirth(dob);
+          }
+          
+          // Store original values for change detection
+          const calculatedDob = foundClient.age > 0 
+            ? new Date(new Date().getFullYear() - foundClient.age, 0, 1) 
+            : null;
+            
+          setOriginalValues({
+            name: fullName || '',
+            email: foundClient.email || '',
+            category: foundClient.type || 'online',
+            dateOfBirth: calculatedDob,
+            height: '', // Height not stored in client, so original is empty
+            gender: mappedGender,
+            country: foundCountry,
+            phoneNumber: parsedPhone,
+          });
         }
       } catch (error) {
         console.error('Failed to load client:', error);
@@ -61,13 +230,36 @@ export default function EditClientDetailsModal() {
     };
 
     loadClient();
-  }, [params.id]);
+  }, [clientId]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (router.canGoBack()) {
       router.back();
     }
-  };
+  }, [router]);
+
+  const handleCloseWithConfirmation = useCallback(() => {
+    // Only show discard alert if there are valid saveable changes
+    if (canComplete) {
+      Alert.alert(
+        t('clients.editClientModal.discardChangesTitle'),
+        t('clients.editClientModal.discardChangesMessage'),
+        [
+          {
+            text: t('general.cancel'),
+            style: 'cancel',
+          },
+          {
+            text: t('clients.editClientModal.discardChanges'),
+            style: 'destructive',
+            onPress: handleClose,
+          },
+        ]
+      );
+    } else {
+      handleClose();
+    }
+  }, [canComplete, handleClose, t]);
 
   const handleSave = async () => {
     if (!canComplete || isSubmitting || !client) return;
@@ -75,8 +267,8 @@ export default function EditClientDetailsModal() {
     setIsSubmitting(true);
     try {
       await updateClient(client.id, {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
+        firstName: name.trim(),
+        lastName: '',
         email: email.trim(),
         type: category,
       });
@@ -89,24 +281,48 @@ export default function EditClientDetailsModal() {
     }
   };
 
-  const getCategoryLabel = (type: 'online' | 'in-person' | 'hybrid'): string => {
-    if (type === 'in-person') return t('clients.addClientModal.inPerson');
-    if (type === 'online') return t('clients.addClientModal.online');
-    return t('clients.addClientModal.hybrid');
-  };
+  const categoryOptions = useMemo(() => [
+    { value: 'online' as const, label: t('clients.addClientModal.online') },
+    { value: 'in-person' as const, label: t('clients.addClientModal.inPerson') },
+    { value: 'hybrid' as const, label: t('clients.addClientModal.hybrid') },
+  ], [t]);
+
+  const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
+  const gradientHeight = headerHeight + 12;
 
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-        <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20, backgroundColor: themeColors.background }]}>
-          <IconButton
-            icon={{ sf: 'xmark', IconComponent: X }}
-            onPress={handleClose}
-            size="md"
-            color={themeColors.text}
+        <View style={[styles.fixedHeader, { height: headerHeight }]}>
+          <LinearGradient
+            colors={
+              colorScheme === 'dark'
+                ? ['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0)']
+                : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0)']
+            }
+            locations={[0, 0.5, 0.8, 1]}
+            style={[styles.headerGradient, { height: gradientHeight }]}
+            pointerEvents="none"
           />
-          <Text style={[styles.title, { color: themeColors.text }]}>Edit details</Text>
-          <View style={styles.closeButton} />
+          <View
+            style={[
+              styles.header,
+              {
+                paddingTop: Platform.OS === 'android' ? 12 + insets.top : 12,
+              },
+            ]}
+          >
+            <IconButton
+              icon={{ sf: 'xmark', IconComponent: X }}
+              onPress={handleClose}
+              size="md"
+              color={themeColors.text}
+            />
+            <Text style={[styles.title, { color: themeColors.text }]}>
+              {t('clients.editClientModal.title')}
+            </Text>
+            <View style={styles.closeButton} />
+          </View>
         </View>
       </View>
     );
@@ -114,124 +330,123 @@ export default function EditClientDetailsModal() {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20,
-            backgroundColor: themeColors.background,
-          },
-        ]}
-      >
-        <IconButton
-          icon={{ sf: 'xmark', IconComponent: X }}
-          onPress={handleClose}
-          size="md"
-          color={themeColors.text}
+      <TouchableWithoutFeedback onPress={handleDismissKeyboard} accessible={false}>
+        <View style={styles.container}>
+        {/* Header with blur effect */}
+        <View style={[styles.fixedHeader, { height: headerHeight }]}>
+        <LinearGradient
+          colors={
+            colorScheme === 'dark'
+              ? ['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0)']
+              : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0)']
+          }
+          locations={[0, 0.5, 0.8, 1]}
+          style={[styles.headerGradient, { height: gradientHeight }]}
+          pointerEvents="none"
         />
-        <Text style={[styles.title, { color: themeColors.text }]}>Edit details</Text>
-        <IconButton
-          icon={{ sf: 'checkmark', IconComponent: Check }}
-          onPress={handleSave}
-          size="md"
-          color={canComplete ? themeColors.primary : themeColors.mutedText}
-          disabled={!canComplete}
-          style={!canComplete ? { opacity: 0.5 } : undefined}
-        />
+        <View
+          style={[
+            styles.header,
+            {
+              paddingTop: Platform.OS === 'android' ? 12 + insets.top : 12,
+            },
+          ]}
+        >
+          <IconButton
+            icon={{ sf: 'xmark', IconComponent: X }}
+            onPress={handleCloseWithConfirmation}
+            size="md"
+            color={themeColors.text}
+          />
+          <Text style={[styles.title, { color: themeColors.text }]}>
+            {t('clients.editClientModal.title')}
+          </Text>
+          <IconButton
+            icon={{ sf: 'checkmark', IconComponent: Check }}
+            onPress={handleSave}
+            size="md"
+            variant={canComplete ? 'primary' : 'default'}
+            disabled={!canComplete}
+          />
+        </View>
       </View>
 
       {/* Content */}
-      <View style={styles.content}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Card with First Name, Last Name, Email */}
-          <Card style={[styles.inputCard, { paddingHorizontal: 16 }]}>
-            <View style={styles.inputRow}>
-              <TextInput
-                style={[styles.input, { color: themeColors.text }]}
-                placeholder={t('clients.addClientModal.firstNamePlaceholder')}
-                placeholderTextColor={themeColors.mutedText}
-                value={firstName}
-                onChangeText={setFirstName}
-                textAlignVertical="center"
-              />
-              <Text style={[styles.inputLabel, { color: themeColors.mutedText }]}>
-                {t('clients.addClientModal.firstName')}
-              </Text>
-            </View>
-            <Separator />
-            <View style={styles.inputRow}>
-              <TextInput
-                style={[styles.input, { color: themeColors.text }]}
-                placeholder={t('clients.addClientModal.lastNamePlaceholder')}
-                placeholderTextColor={themeColors.mutedText}
-                value={lastName}
-                onChangeText={setLastName}
-                textAlignVertical="center"
-              />
-              <Text style={[styles.inputLabel, { color: themeColors.mutedText }]}>
-                {t('clients.addClientModal.lastName')}
-              </Text>
-            </View>
-            <Separator />
-            <View style={styles.inputRow}>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    color: themeColors.text,
-                    borderColor: email.trim() !== '' && !isEmailValid ? '#ef4444' : 'transparent',
-                  },
-                ]}
-                placeholder={t('clients.addClientModal.emailPlaceholder')}
-                placeholderTextColor={themeColors.mutedText}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                textAlignVertical="center"
-              />
-              <Text style={[styles.inputLabel, { color: themeColors.mutedText }]}>
-                {t('clients.addClientModal.email')}
-              </Text>
-            </View>
-          </Card>
+      <KeyboardAwareScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={40}
+      >
+          <InputBox
+            label={t('clients.addClientModal.name')}
+            value={name}
+            onChangeText={setName}
+            placeholder={t('clients.addClientModal.namePlaceholder')}
+          />
 
-          {/* Toggle Group */}
-          <View style={[styles.buttonGroup, { backgroundColor: themeColors.surfaceSecondary }]}>
-            {(['online', 'in-person', 'hybrid'] as const).map((type) => {
-              const isSelected = category === type;
-              return (
-                <PressableOpacity
-                  key={type}
-                  style={[
-                    styles.buttonGroupButton,
-                    isSelected && [
-                      styles.buttonGroupButtonActive,
-                      { backgroundColor: themeColors.background },
-                    ],
-                  ]}
-                  onPress={() => setCategory(type)}
-                >
-                  <Text
-                    style={[
-                      styles.buttonGroupText,
-                      { color: isSelected ? themeColors.text : themeColors.mutedText },
-                      isSelected && styles.buttonGroupTextActive,
-                    ]}
-                  >
-                    {getCategoryLabel(type)}
-                  </Text>
-                </PressableOpacity>
-              );
-            })}
-          </View>
-        </ScrollView>
-      </View>
+          <InputBox
+            label={t('clients.addClientModal.email')}
+            value={email}
+            onChangeText={setEmail}
+            placeholder={t('clients.addClientModal.emailPlaceholder')}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+
+          <SelectInput
+            label={t('clients.editClientModal.type')}
+            value={category}
+            onChange={setCategory}
+            options={categoryOptions}
+            placeholder={t('clients.editClientModal.typePlaceholder')}
+          />
+
+          <DateOfBirthInput
+            label={t('clients.editClientModal.dateOfBirth')}
+            value={dateOfBirth}
+            onChange={setDateOfBirth}
+          />
+
+          <HeightInput
+            label={t('clients.editClientModal.height')}
+            value={height}
+            onChangeText={setHeight}
+            placeholder={t('clients.editClientModal.heightPlaceholder')}
+          />
+
+          <GenderInput
+            label={t('clients.editClientModal.gender')}
+            value={gender}
+            onChange={setGender}
+            placeholder={t('clients.editClientModal.genderPlaceholder')}
+            options={{
+              male: t('clients.editClientModal.genderMale'),
+              female: t('clients.editClientModal.genderFemale'),
+              preferNotToSay: t('clients.editClientModal.genderPreferNotToSay'),
+            }}
+          />
+
+          <CountrySelectorInput
+            label={t('clients.editClientModal.country')}
+            value={country}
+            onChange={setCountry}
+            placeholder={t('clients.editClientModal.countryPlaceholder')}
+            modalTitle={t('clients.editClientModal.countryModalTitle')}
+          />
+
+          <PhoneNumberInput
+            codeLabel={t('clients.editClientModal.code')}
+            numberLabel={t('clients.editClientModal.phoneNumber')}
+            value={phoneNumber}
+            onChange={setPhoneNumber}
+            placeholder={t('clients.editClientModal.phoneNumberPlaceholder')}
+            modalTitle={t('clients.editClientModal.countryModalTitle')}
+          />
+        </KeyboardAwareScrollView>
+        </View>
+      </TouchableWithoutFeedback>
     </View>
   );
 }
@@ -239,6 +454,19 @@ export default function EditClientDetailsModal() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  headerGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
   },
   header: {
     flexDirection: 'row',
@@ -259,68 +487,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  content: {
-    flex: 1,
-  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  inputCard: {
-    marginBottom: 16,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    minHeight: 44,
-  },
-  input: {
-    ...typography.p2,
-    flex: 1,
-    padding: 0,
-    marginRight: 12,
-    flexShrink: 1,
-  },
-  inputLabel: {
-    ...typography.p4,
-    minWidth: 80,
-    textAlign: 'right',
-    flexShrink: 0,
-  },
-  buttonGroup: {
-    flexDirection: 'row',
-    borderRadius: 28,
-    padding: 4,
-    gap: 4,
-    marginBottom: 16,
-  },
-  buttonGroupButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonGroupButtonActive: {
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  buttonGroupText: {
-    ...typography.p2,
-    fontWeight: '600',
-  },
-  buttonGroupTextActive: {
-    fontWeight: '700',
+    paddingBottom: 16,
+    gap: 12,
   },
 });
