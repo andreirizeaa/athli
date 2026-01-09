@@ -166,6 +166,7 @@ function RootLayoutNav() {
             options={{
               presentation: 'modal',
               headerShown: false,
+              gestureEnabled: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
                 gestureDirection: 'vertical',
