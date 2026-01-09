@@ -13,6 +13,7 @@ const DESTRUCTIVE_COLOR = '#EF4444';
 
 export type DropdownMenuOption = {
   label: string;
+  subtitle?: string;
   icon?: {
     sf: string;
     IconComponent: LucideIcon;
@@ -218,6 +219,9 @@ export const DropdownMenuWrapper = ({
             destructive={option.destructive}
           >
             <DropdownMenuZeego.ItemTitle>{option.label}</DropdownMenuZeego.ItemTitle>
+            {option.subtitle && (
+              <DropdownMenuZeego.ItemSubtitle>{option.subtitle}</DropdownMenuZeego.ItemSubtitle>
+            )}
             {option.icon && (
               <DropdownMenuZeego.ItemIcon
                 ios={{

@@ -1,11 +1,71 @@
 import { apiFetch } from '../api-client';
 
+export interface MetricScheduleData {
+  type: 'metric';
+  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
+  selectedDays?: string[];
+  monthlyOption?: 'first' | 'last' | 'specific';
+  specificDay?: number;
+}
+
+/**
+ * Converts metric schedule data to cron expression
+ */
+export const convertMetricScheduleToCron = (scheduleData: MetricScheduleData): string => {
+  const defaultHour = 9;
+  const defaultMinute = 0;
+
+  const dayMap: Record<string, number> = {
+    monday: 1,
+    tuesday: 2,
+    wednesday: 3,
+    thursday: 4,
+    friday: 5,
+    saturday: 6,
+    sunday: 0,
+  };
+
+  if (scheduleData.frequency === 'daily') {
+    if (scheduleData.selectedDays && scheduleData.selectedDays.length > 0) {
+      const weekdays = scheduleData.selectedDays
+        .map(day => dayMap[day] ?? 0)
+        .sort((a, b) => a - b)
+        .join(',');
+      return `${defaultMinute} ${defaultHour} * * ${weekdays}`;
+    }
+    return `${defaultMinute} ${defaultHour} * * *`;
+  } else if (scheduleData.frequency === 'weekly') {
+    const weekday = scheduleData.selectedDays && scheduleData.selectedDays.length > 0
+      ? dayMap[scheduleData.selectedDays[0]] ?? 0
+      : 0;
+    return `${defaultMinute} ${defaultHour} * * ${weekday}`;
+  } else if (scheduleData.frequency === 'biweekly') {
+    const weekday = scheduleData.selectedDays && scheduleData.selectedDays.length > 0
+      ? dayMap[scheduleData.selectedDays[0]] ?? 0
+      : 0;
+    return `${defaultMinute} ${defaultHour} * * ${weekday}`;
+  } else if (scheduleData.frequency === 'monthly') {
+    if (scheduleData.monthlyOption === 'first') {
+      return `${defaultMinute} ${defaultHour} 1 * *`;
+    } else if (scheduleData.monthlyOption === 'last') {
+      return `${defaultMinute} ${defaultHour} 28-31 * *`;
+    } else if (scheduleData.monthlyOption === 'specific' && scheduleData.specificDay) {
+      return `${defaultMinute} ${defaultHour} ${scheduleData.specificDay} * *`;
+    }
+    return `${defaultMinute} ${defaultHour} 1 * *`;
+  }
+
+  return `${defaultMinute} ${defaultHour} * * *`;
+};
+
 export interface AssignMetricData {
   metricIds?: string[];
   name?: string;
   unit?: string;
   description?: string;
   value_kind?: 'number' | 'percent' | 'duration' | 'score';
+  schedule_config?: MetricScheduleData;
+  cron_expression?: string;
 }
 
 export interface RemoveMetricData {
@@ -28,15 +88,23 @@ export interface AssignMetricsToClientsData {
   metricIds: string[];
   clientIds: string[];
   coachId: string;
+  schedule_config?: MetricScheduleData;
+  cron_expression?: string;
 }
 
 export const assignMetricsToClients = async (data: AssignMetricsToClientsData): Promise<void> => {
   await apiFetch(`/client/metrics`, {
     method: 'POST',
     headers: { 'x-coach-id': data.coachId },
-    body: JSON.stringify({ metricIds: data.metricIds, clientIds: data.clientIds }),
+    body: JSON.stringify({
+      metricIds: data.metricIds,
+      clientIds: data.clientIds,
+      schedule_config: data.schedule_config,
+      cron_expression: data.cron_expression,
+    }),
   });
 };
+
 
 /**
  * Service method to create a private metric for a client
@@ -95,6 +163,8 @@ export interface UpdateMetricData {
   name?: string;
   unit?: string;
   description?: string;
+  schedule_config?: MetricScheduleData;
+  cron_expression?: string;
   clientId: string;
   coachId: string;
 }
@@ -108,6 +178,8 @@ export const updateMetric = async (data: UpdateMetricData): Promise<void> => {
       name: data.name,
       unit: data.unit,
       description: data.description,
+      schedule_config: data.schedule_config,
+      cron_expression: data.cron_expression,
     }),
   });
 };

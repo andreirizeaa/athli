@@ -9,6 +9,7 @@ import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropd
 type SelectOption<T extends string> = {
   value: T;
   label: string;
+  subtitle?: string;
 };
 
 type SelectInputProps<T extends string> = {
@@ -17,6 +18,8 @@ type SelectInputProps<T extends string> = {
   onChange: (value: T) => void;
   options: SelectOption<T>[];
   placeholder?: string;
+  required?: boolean;
+  compact?: boolean;
 };
 
 export const SelectInput = <T extends string>({
@@ -25,6 +28,8 @@ export const SelectInput = <T extends string>({
   onChange,
   options,
   placeholder = 'Select...',
+  required,
+  compact,
 }: SelectInputProps<T>) => {
   const { colors: themeColors } = useThemePreference();
 
@@ -33,15 +38,39 @@ export const SelectInput = <T extends string>({
 
   const menuOptions: DropdownMenuOption[] = options.map((option) => ({
     label: option.label,
+    subtitle: option.subtitle,
     onPress: () => onChange(option.value),
   }));
+
+  if (compact) {
+    return (
+      <DropdownMenuWrapper options={menuOptions}>
+        <View style={styles.compactRow}>
+          <Text
+            style={[
+              styles.compactValue,
+              { color: value ? themeColors.text : themeColors.mutedText },
+            ]}
+          >
+            {displayValue}
+          </Text>
+          <ChevronDown size={16} color={themeColors.mutedText} />
+        </View>
+      </DropdownMenuWrapper>
+    );
+  }
 
   return (
     <DropdownMenuWrapper options={menuOptions}>
       <View style={[styles.inputBox, { backgroundColor: themeColors.surfaceSecondary }]}>
-        <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
-          {label}
-        </Text>
+        {label.length > 0 && (
+          <View style={styles.labelRow}>
+            <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
+              {label}
+            </Text>
+            {required && <Text style={styles.requiredAsterisk}>*</Text>}
+          </View>
+        )}
         <View style={styles.inputRow}>
           <Text
             style={[
@@ -65,9 +94,18 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 12,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
   inputBoxLabel: {
     ...typography.p4,
-    marginBottom: 2,
+  },
+  requiredAsterisk: {
+    ...typography.p4,
+    color: '#EF4444',
+    marginLeft: 2,
   },
   inputRow: {
     flexDirection: 'row',
@@ -77,6 +115,14 @@ const styles = StyleSheet.create({
   inputBoxValue: {
     ...typography.p1,
     flex: 1,
+  },
+  compactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  compactValue: {
+    ...typography.p1,
   },
 });
 

@@ -6,23 +6,23 @@ import { X } from 'lucide-react-native';
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 
-type InputBoxProps = {
+type TextAreaInputProps = {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
-  required?: boolean;
-  showCharacterCount?: boolean;
-} & Omit<TextInputProps, 'value' | 'onChangeText' | 'placeholder' | 'style'>;
+  numberOfLines?: number;
+  minHeight?: number;
+} & Omit<TextInputProps, 'value' | 'onChangeText' | 'placeholder' | 'style' | 'multiline' | 'numberOfLines'>;
 
-export type InputBoxRef = {
+export type TextAreaInputRef = {
   focus: () => void;
   blur: () => void;
   clear: () => void;
 };
 
-export const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
-  ({ label, value, onChangeText, placeholder, required, showCharacterCount, maxLength, ...textInputProps }, ref) => {
+export const TextAreaInput = forwardRef<TextAreaInputRef, TextAreaInputProps>(
+  ({ label, value, onChangeText, placeholder, numberOfLines = 4, minHeight = 80, ...textInputProps }, ref) => {
     const { colors: themeColors } = useThemePreference();
     const inputRef = useRef<TextInput>(null);
 
@@ -40,29 +40,9 @@ export const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     return (
       <View style={[styles.inputBox, { backgroundColor: themeColors.surfaceSecondary }]}>
         <View style={styles.labelRow}>
-          <View style={styles.labelLeft}>
-            <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
-              {label}
-            </Text>
-            {required && <Text style={styles.requiredAsterisk}>*</Text>}
-          </View>
-          {showCharacterCount && maxLength && (
-            <Text style={[styles.characterCount, { color: themeColors.mutedText }]}>
-              {value.length}/{maxLength}
-            </Text>
-          )}
-        </View>
-        <View style={styles.inputRow}>
-          <TextInput
-            ref={inputRef}
-            style={[styles.inputBoxInput, { color: themeColors.text }]}
-            placeholder={placeholder}
-            placeholderTextColor={themeColors.mutedText}
-            value={value}
-            onChangeText={onChangeText}
-            maxLength={maxLength}
-            {...textInputProps}
-          />
+          <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
+            {label}
+          </Text>
           {value.length > 0 && (
             <PressableOpacity
               style={styles.clearButton}
@@ -75,6 +55,18 @@ export const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
             </PressableOpacity>
           )}
         </View>
+        <TextInput
+          ref={inputRef}
+          style={[styles.inputBoxInput, { color: themeColors.text, minHeight }]}
+          placeholder={placeholder}
+          placeholderTextColor={themeColors.mutedText}
+          value={value}
+          onChangeText={onChangeText}
+          multiline
+          numberOfLines={numberOfLines}
+          textAlignVertical="top"
+          {...textInputProps}
+        />
       </View>
     );
   }
@@ -91,35 +83,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 2,
-  },
-  labelLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginBottom: 4,
   },
   inputBoxLabel: {
     ...typography.p4,
-  },
-  requiredAsterisk: {
-    ...typography.p4,
-    color: '#EF4444',
-    marginLeft: 2,
-  },
-  characterCount: {
-    ...typography.p4,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 28,
   },
   inputBoxInput: {
     ...typography.p1,
     padding: 0,
     margin: 0,
-    flex: 1,
-    height: 28,
-    textAlignVertical: 'center',
   },
   clearButton: {
     marginLeft: 12,

@@ -5,14 +5,14 @@ import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 
-export const FormsTab = () => {
+export const QuestionnairesTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
 
   return (
     <View style={styles.container}>
       <Text style={[styles.text, { color: themeColors.text }]}>
-        {t('library.tabs.forms')}
+        {t('library.tabs.questionnaires')}
       </Text>
     </View>
   );
@@ -28,3 +28,4 @@ const styles = StyleSheet.create({
     ...typography.h4,
   },
 });
+

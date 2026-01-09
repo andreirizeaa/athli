@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, type ReactNode } from 'react';
 
-export type LibraryTab = 'workouts' | 'sections' | 'programs' | 'exercises' | 'forms' | 'metrics' | 'habits' | 'files';
+export type LibraryTab = 'workouts' | 'sections' | 'programs' | 'exercises' | 'checkIns' | 'questionnaires' | 'metrics' | 'habits' | 'files';
 
 type LibraryTabContextType = {
     currentLibraryTab: LibraryTab;

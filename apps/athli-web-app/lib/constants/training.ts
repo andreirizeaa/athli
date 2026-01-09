@@ -63,7 +63,6 @@ export const EXERCISE_TYPE_OPTIONS = [
     { label: 'Weight & Reps', value: 'weight_reps' },
     { label: 'Reps Only', value: 'reps' },
     { label: 'Distance & Duration', value: 'distance_duration' },
-    { label: 'Time', value: 'time' },
 ] as const;
 
 export const CATEGORY_OPTIONS = [
@@ -107,5 +106,61 @@ export const OPTIONAL_COLUMN_OPTIONS = [
     { label: 'Incline', value: 'Incline' },
     { label: 'Height', value: 'Height' },
     { label: 'RPM', value: 'RPM' },
+] as const;
+
+export const EXERCISE_CATEGORY_OPTIONS = [
+    { label: 'Weight & Reps', value: 'Weight & Reps' },
+    { label: 'Reps', value: 'Reps' },
+    { label: 'Distance / Duration', value: 'Distance / Duration' },
+] as const;
+
+export const MUSCLE_GROUP_OPTIONS = [
+    { label: 'Chest', value: 'Chest' },
+    { label: 'Back', value: 'Back' },
+    { label: 'Shoulders', value: 'Shoulders' },
+    { label: 'Biceps', value: 'Biceps' },
+    { label: 'Triceps', value: 'Triceps' },
+    { label: 'Forearms', value: 'Forearms' },
+    { label: 'Abs', value: 'Abs' },
+    { label: 'Obliques', value: 'Obliques' },
+    { label: 'Quadriceps', value: 'Quadriceps' },
+    { label: 'Hamstrings', value: 'Hamstrings' },
+    { label: 'Glutes', value: 'Glutes' },
+    { label: 'Calves', value: 'Calves' },
+    { label: 'Traps', value: 'Traps' },
+    { label: 'Lats', value: 'Lats' },
+    { label: 'Delts', value: 'Delts' },
+    { label: 'Full Body', value: 'Full Body' },
+] as const;
+
+export const EXERCISE_EQUIPMENT_OPTIONS = [
+    { label: 'Barbell', value: 'Barbell' },
+    { label: 'Dumbbell', value: 'Dumbbell' },
+    { label: 'Kettlebell', value: 'Kettlebell' },
+    { label: 'Cable Machine', value: 'Cable Machine' },
+    { label: 'Machine', value: 'Machine' },
+    { label: 'Resistance Band', value: 'Resistance Band' },
+    { label: 'Bodyweight', value: 'Bodyweight' },
+    { label: 'Medicine Ball', value: 'Medicine Ball' },
+    { label: 'TRX', value: 'TRX' },
+    { label: 'Pulley', value: 'Pulley' },
+    { label: 'Smith Machine', value: 'Smith Machine' },
+    { label: 'Plate Loaded', value: 'Plate Loaded' },
+    { label: 'Free Weights', value: 'Free Weights' },
+] as const;
+
+export const MODALITY_OPTIONS = [
+    { label: 'Strength', value: 'Strength' },
+    { label: 'Power', value: 'Power' },
+    { label: 'Agility', value: 'Agility' },
+    { label: 'Plyos', value: 'Plyos' },
+    { label: 'Mobility', value: 'Mobility' },
+    { label: 'Endurance', value: 'Endurance' },
+    { label: 'Cardio', value: 'Cardio' },
+    { label: 'Flexibility', value: 'Flexibility' },
+    { label: 'Balance', value: 'Balance' },
+    { label: 'Stability', value: 'Stability' },
+    { label: 'Speed', value: 'Speed' },
+    { label: 'Coordination', value: 'Coordination' },
 ] as const;
 

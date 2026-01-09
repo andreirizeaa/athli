@@ -124,6 +124,18 @@ const MetricsPage = () => {
       ),
     },
     {
+      id: 'schedule',
+      label: t('metrics.schedule.frequency.label'),
+      icon: <FileText className="size-3" />,
+      sortable: true,
+      width: { class: 'w-[200px]', pixel: '200px' },
+      getSortValue: (row) => formatScheduleText(row).toLowerCase(),
+      getSearchValue: (row) => formatScheduleText(row),
+      renderCell: (row) => (
+        <span className="text-sm text-foreground">{formatScheduleText(row)}</span>
+      ),
+    },
+    {
       id: 'actions',
       label: '',
       sortable: false,
@@ -147,6 +159,51 @@ const MetricsPage = () => {
     },
   ];
 
+  const formatScheduleText = (metric: Metric): string => {
+    const schedule = metric.schedule_config;
+
+    if (!schedule || !schedule.frequency) {
+      return '-';
+    }
+
+    if (schedule.frequency === 'daily') {
+      // If all 7 days are selected, just say "Daily"
+      if (schedule.selectedDays && schedule.selectedDays.length === 7) {
+        return t('metrics.schedule.frequency.daily');
+      }
+      // Otherwise show the specific days
+      if (schedule.selectedDays && schedule.selectedDays.length > 0) {
+        const dayNames = schedule.selectedDays.map(day => t(`habits.form.${day}`)).join(', ');
+        return t('metrics.schedule.frequency.daily') + ` (${dayNames})`;
+      }
+      return t('metrics.schedule.frequency.daily');
+    } else if (schedule.frequency === 'weekly') {
+      if (schedule.selectedDays && schedule.selectedDays.length > 0) {
+        const dayName = t(`habits.form.${schedule.selectedDays[0]}`);
+        return t('metrics.schedule.frequency.weekly') + ` (${dayName})`;
+      }
+      return t('metrics.schedule.frequency.weekly');
+    } else if (schedule.frequency === 'biweekly') {
+      if (schedule.selectedDays && schedule.selectedDays.length > 0) {
+        const dayName = t(`habits.form.${schedule.selectedDays[0]}`);
+        return t('metrics.schedule.frequency.biweekly') + ` (${dayName})`;
+      }
+      return t('metrics.schedule.frequency.biweekly');
+    } else if (schedule.frequency === 'monthly') {
+      if (schedule.monthlyOption === 'first') {
+        return t('metrics.schedule.frequency.monthly') + ' (1st)';
+      } else if (schedule.monthlyOption === 'last') {
+        return t('metrics.schedule.frequency.monthly') + ' (Last)';
+      } else if (schedule.monthlyOption === 'specific' && schedule.specificDay) {
+        const suffix = schedule.specificDay === 1 ? 'st' : schedule.specificDay === 2 ? 'nd' : schedule.specificDay === 3 ? 'rd' : 'th';
+        return t('metrics.schedule.frequency.monthly') + ` (${schedule.specificDay}${suffix})`;
+      }
+      return t('metrics.schedule.frequency.monthly');
+    }
+
+    return '-';
+  };
+
   const handleOpenAddMetric = () => {
     setIsAddMetricOpen(true);
   };
@@ -165,13 +222,26 @@ const MetricsPage = () => {
     setIsEditMetricOpen(false);
   };
 
-  const handleSaveMetric = async (name: string, unit: string, description?: string) => {
+  const handleSaveMetric = async (
+    name: string,
+    unit: string,
+    description?: string,
+    _existingMetricId?: string,
+    scheduleConfig?: any,
+    cronExpression?: string
+  ) => {
     try {
       if (editingMetric) {
         // Update existing metric
         await updateMetric({
           id: editingMetric.id,
-          updates: { name, unit, description }
+          updates: {
+            name,
+            unit,
+            description,
+            schedule_config: scheduleConfig,
+            cron_expression: cronExpression
+          }
         });
         handleCloseEditMetric();
       } else {
@@ -180,7 +250,9 @@ const MetricsPage = () => {
           name,
           unit,
           description,
-          value_kind: 'number' // Default
+          value_kind: 'number', // Default
+          schedule_config: scheduleConfig,
+          cron_expression: cronExpression
         });
         handleCloseAddMetric();
       }
@@ -448,7 +520,7 @@ const MetricsPage = () => {
       <AddMetricSidePanel
         open={isAddMetricOpen}
         onOpenChange={setIsAddMetricOpen}
-        onSave={async (name, unit, description) => await handleSaveMetric(name, unit, description)}
+        onSave={handleSaveMetric}
         showLibraryTab={false}
       />
 
@@ -457,11 +529,14 @@ const MetricsPage = () => {
           open={isEditMetricOpen}
           onOpenChange={setIsEditMetricOpen}
           metric={editingMetric as any /* temporary cast if there are slight mismatches in expected props */}
-          onSave={handleSaveMetric}
+          onSave={async (name, unit, description, scheduleConfig, cronExpression) => {
+            await handleSaveMetric(name, unit, description, undefined, scheduleConfig, cronExpression);
+          }}
           onDelete={async (metricId) => {
             await deleteMetric(metricId);
             handleCloseEditMetric();
           }}
+          allowSchedule={true}
         />
       )}
 

@@ -266,9 +266,21 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="modals/shared/define-schedule-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
             name="modals/files/add-file-modal"
             options={{
               presentation: 'modal',
+              gestureEnabled: false,
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -280,6 +292,7 @@ function RootLayoutNav() {
             name="modals/library/add-workout-modal"
             options={{
               presentation: 'modal',
+              gestureEnabled: false,
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -291,6 +304,7 @@ function RootLayoutNav() {
             name="modals/library/add-section-modal"
             options={{
               presentation: 'modal',
+              gestureEnabled: false,
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -302,6 +316,7 @@ function RootLayoutNav() {
             name="modals/library/add-program-modal"
             options={{
               presentation: 'modal',
+              gestureEnabled: false,
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -313,6 +328,7 @@ function RootLayoutNav() {
             name="modals/library/add-exercise-modal"
             options={{
               presentation: 'modal',
+              gestureEnabled: false,
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -321,9 +337,22 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
-            name="modals/library/add-form-modal"
+            name="modals/library/add-check-in-modal"
             options={{
               presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/library/add-questionnaire-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -335,6 +364,7 @@ function RootLayoutNav() {
             name="modals/library/add-metric-modal"
             options={{
               presentation: 'modal',
+              gestureEnabled: false,
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -346,6 +376,19 @@ function RootLayoutNav() {
             name="modals/library/add-habit-modal"
             options={{
               presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/library/habit-options-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',

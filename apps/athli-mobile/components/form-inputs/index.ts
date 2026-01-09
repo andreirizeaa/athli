@@ -1,4 +1,5 @@
 export { InputBox, type InputBoxRef } from './input-box';
+export { TextAreaInput, type TextAreaInputRef } from './text-area-input';
 export { ButtonTabGroup } from './button-tab-group';
 export { DateOfBirthInput } from './date-of-birth-input';
 export { GenderInput, type GenderValue } from './gender-input';
