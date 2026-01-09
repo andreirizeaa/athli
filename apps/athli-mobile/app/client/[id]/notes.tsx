@@ -19,7 +19,7 @@ export default function ClientNotesScreen() {
     };
 
     const handlePlusPress = () => {
-        // TODO: Handle plus press
+        router.push('/modals/client/add-note-to-client-modal');
     };
 
     return (

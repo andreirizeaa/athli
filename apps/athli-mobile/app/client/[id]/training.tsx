@@ -151,14 +151,16 @@ export default function ClientTrainingScreen() {
         {
             label: t('clientDetail.actions.addWorkout'),
             icon: { sf: 'figure.run', IconComponent: Dumbbell },
-            onPress: () => { }
+            onPress: () => {
+                router.push('/modals/library/add-workout-modal');
+            }
         },
         {
             label: t('clientDetail.actions.addProgram'),
             icon: { sf: 'list.bullet.clipboard', IconComponent: ClipboardList },
             onPress: () => { }
         }
-    ], [t]);
+    ], [t, router]);
 
     return (
         <ScreenWrapper>
