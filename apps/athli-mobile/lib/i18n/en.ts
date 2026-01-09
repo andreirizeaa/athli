@@ -323,6 +323,14 @@ export const en = {
       discardMessage: 'You have unsaved options. Are you sure you want to discard them?',
       discard: 'Discard',
     },
+    workout: {
+      loading: 'Loading...',
+      notFound: 'Workout not found',
+      description: 'Description',
+      details: 'Details',
+      type: 'Type',
+      difficulty: 'Difficulty',
+    },
   },
   inbox: {
     title: 'Inbox',
