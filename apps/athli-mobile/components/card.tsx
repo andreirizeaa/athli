@@ -29,7 +29,7 @@ export function Card({ children, style }: CardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    borderWidth: 0.2,
+    borderWidth: 1,
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 8,

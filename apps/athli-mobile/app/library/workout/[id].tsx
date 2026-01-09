@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, Platform } from 'react-native';
-import { ChevronLeft, Check, Repeat, Plus, Dumbbell, Layers } from 'lucide-react-native';
+import { ChevronLeft, Check, Repeat, Plus, Dumbbell, Layers, Link as LinkIcon } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
 import { typography } from '@/constants/typography';
@@ -9,8 +9,12 @@ import { useTranslations } from '@/contexts/useTranslations';
 import { IconButton } from '@/components/icon-button';
 import { ScreenWrapper } from '@/components/screen-wrapper';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
-import { PressableScale } from 'pressto';
+import { PressableOpacity, PressableScale } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useModalCallbacks } from '@/contexts/modal-callbacks';
+import { ExerciseBuilderCard } from '@/components/workout/exercise-builder-card';
+import { getDefaultColumns, type WorkoutExercise } from '@/components/workout/types';
+import { Exercise } from '@/app/modals/workout/add-exercise-to-builder-modal';
 
 // Mock workout data - this would come from a service in production
 const MOCK_WORKOUTS: Record<string, { id: string; name: string; description: string; type: string; difficulty: string }> = {
@@ -37,12 +41,33 @@ export default function WorkoutDetailScreen() {
     const { t } = useTranslations();
 
     const [workout, setWorkout] = useState<typeof MOCK_WORKOUTS[string] | null>(null);
+    const [selectedExercises, setSelectedExercises] = useState<WorkoutExercise[]>([]);
+
+    const { setExerciseSelectCallback, setExercisesSelectCallback } = useModalCallbacks();
 
     useEffect(() => {
         if (id) {
             setWorkout(MOCK_WORKOUTS[id] || null);
         }
     }, [id]);
+
+    useEffect(() => {
+        setExercisesSelectCallback((exercises: Exercise[]) => {
+            const newExercises: WorkoutExercise[] = exercises.map((exercise, idx) => ({
+                id: `${exercise.exerciseId}-${Date.now()}-${idx}`,
+                exerciseId: exercise.exerciseId,
+                name: exercise.name,
+                imageUrl: exercise.imageUrl,
+                exerciseType: exercise.exerciseType,
+                sets: [{ id: Math.random().toString(), column1: '', column2: '', type: 'R' }],
+                alternatives: [],
+                tempo: '',
+                eachSide: false,
+                ...getDefaultColumns(exercise.exerciseType)
+            }));
+            setSelectedExercises(prev => [...prev, ...newExercises]);
+        });
+    }, [setExercisesSelectCallback]);
 
     const handleBackPress = () => {
         if (router.canGoBack()) {
@@ -65,11 +90,33 @@ export default function WorkoutDetailScreen() {
     };
 
     const handleAddExercise = () => {
-        router.push('/modals/workout/add-exercise-to-builder-modal');
+        router.push({
+            pathname: '/modals/workout/add-exercise-to-builder-modal',
+            params: { multiple: 'true' }
+        });
     };
 
     const handleAddSection = () => {
         router.push('/modals/workout/add-section-to-builder-modal');
+    };
+
+    const handleUpdateExercise = (index: number, updates: Partial<WorkoutExercise>) => {
+        const newExercises = [...selectedExercises];
+        newExercises[index] = { ...newExercises[index], ...updates };
+        setSelectedExercises(newExercises);
+    };
+
+    const handleDeleteExercise = (index: number) => {
+        setSelectedExercises(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const toggleSuperset = (index: number) => {
+        const newExercises = [...selectedExercises];
+        newExercises[index] = {
+            ...newExercises[index],
+            isSupersetNext: !newExercises[index].isSupersetNext
+        };
+        setSelectedExercises(newExercises);
     };
 
     const addOptions: DropdownMenuOption[] = [
@@ -157,7 +204,60 @@ export default function WorkoutDetailScreen() {
                         {t('library.workout.notFound')}
                     </Text>
                 )}
-                {/* Content area is currently empty as requested */}
+
+                {selectedExercises.map((ex, index) => {
+                    const isLinkedToPrev = index > 0 && selectedExercises[index - 1].isSupersetNext;
+                    const isLinkedToNext = ex.isSupersetNext;
+                    const isLast = index === selectedExercises.length - 1;
+
+                    return (
+                        <React.Fragment key={ex.id}>
+                            <ExerciseBuilderCard
+                                exercise={ex}
+                                onUpdateExercise={(updates) => handleUpdateExercise(index, updates)}
+                                onDelete={() => handleDeleteExercise(index)}
+                                isLinkedToPrev={isLinkedToPrev}
+                                isLinkedToNext={isLinkedToNext}
+                            />
+
+                            {!isLast && (
+                                <View style={[
+                                    styles.supersetConnector,
+                                    { borderColor: themeColors.border },
+                                    isLinkedToNext ? styles.linkedConnector : styles.unlinkedConnector
+                                ]}>
+                                    <View style={[
+                                        styles.supersetButtonContainer,
+                                        !isLinkedToNext && { width: '100%', paddingHorizontal: 0 }
+                                    ]}>
+                                        {!isLinkedToNext && <View style={[styles.connectorLine, { backgroundColor: themeColors.border }]} />}
+                                        <PressableScale
+                                            onPress={() => toggleSuperset(index)}
+                                            style={[
+                                                styles.supersetButton,
+                                                {
+                                                    backgroundColor: isLinkedToNext ? themeColors.background : themeColors.surfaceSecondary,
+                                                    borderColor: themeColors.border,
+                                                    paddingVertical: 4,
+                                                    marginHorizontal: !isLinkedToNext ? 12 : 0,
+                                                }
+                                            ]}
+                                        >
+                                            <LinkIcon {...({ size: 14, color: isLinkedToNext ? themeColors.primary : themeColors.text } as any)} />
+                                            <Text style={[
+                                                styles.supersetButtonText,
+                                                { color: isLinkedToNext ? themeColors.primary : themeColors.text }
+                                            ]}>
+                                                {isLinkedToNext ? 'Unlink' : 'Superset'}
+                                            </Text>
+                                        </PressableScale>
+                                        {!isLinkedToNext && <View style={[styles.connectorLine, { backgroundColor: themeColors.border }]} />}
+                                    </View>
+                                </View>
+                            )}
+                        </React.Fragment>
+                    );
+                })}
             </View>
         </ScreenWrapper>
     );
@@ -174,6 +274,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 12,
         height: 56,
+    },
+    headerActionContainer: {
+        width: 36,
+        height: 36,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     title: {
         ...typography.h6,
@@ -229,5 +335,47 @@ const styles = StyleSheet.create({
     },
     buttonIcon: {
         marginRight: 8,
+    },
+    supersetConnector: {
+        height: 32,
+        marginHorizontal: 0,
+        borderLeftWidth: 1,
+        borderRightWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1,
+    },
+    linkedConnector: {
+        marginTop: 0,
+        marginBottom: 0,
+        backgroundColor: 'transparent',
+    },
+    unlinkedConnector: {
+        borderLeftWidth: 0,
+        borderRightWidth: 0,
+        marginTop: -8,
+        marginBottom: 8,
+    },
+    supersetButtonContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    connectorLine: {
+        flex: 1,
+        height: 1,
+    },
+    supersetButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        borderWidth: 1,
+        gap: 6,
+    },
+    supersetButtonText: {
+        fontSize: 12,
+        fontWeight: '600',
     },
 });

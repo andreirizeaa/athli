@@ -143,3 +143,40 @@ export const HABIT_DURATION_PERIOD_OPTIONS = [
 
 export type HabitDurationPeriod = typeof HABIT_DURATION_PERIOD_OPTIONS[number]['value'];
 
+// Column Selection Options
+export const COLUMN_OPTIONS = [
+    // Reps (no units)
+    { label: 'Reps', value: 'Reps' },
+
+    // Weight units
+    { label: 'Kg', value: 'kg' },
+    { label: 'Lbs', value: 'lbs' },
+
+    // Distance units
+    { label: 'Km', value: 'km' },
+    { label: 'M', value: 'm' },
+    { label: 'Yards', value: 'yards' },
+    { label: 'Miles', value: 'miles' },
+    { label: 'Feet', value: 'feet' },
+
+    // Duration units
+    { label: 'Minutes', value: 'minutes' },
+    { label: 'Seconds', value: 'seconds' },
+
+    // None
+    { label: 'None', value: 'None' },
+
+    { label: 'Tempo', value: 'Tempo' },
+    { label: 'RIR', value: 'RIR' },
+    { label: 'RPE', value: 'RPE' },
+    { label: 'HR Zone', value: 'Heart Rate Zone' },
+    { label: 'Calories', value: 'Calories' },
+    { label: 'Watts', value: 'Watts' },
+    { label: 'Pace', value: 'Pace' },
+    { label: 'Speed', value: 'Speed' },
+    { label: 'Incline', value: 'Incline' },
+    { label: 'Height', value: 'Height' },
+    { label: 'RPM', value: 'RPM' },
+] as const;
+
+export type ColumnValue = typeof COLUMN_OPTIONS[number]['value'];
