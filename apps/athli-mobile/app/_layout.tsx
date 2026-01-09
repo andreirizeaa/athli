@@ -20,6 +20,7 @@ import { TranslationProvider } from '@/contexts/useTranslations';
 import { ModalCallbacksProvider } from '@/contexts/modal-callbacks';
 import { TrainingOverlayProvider } from '@/contexts/useTrainingOverlay';
 import { LibraryTabProvider } from '@/contexts/useLibraryTab';
+import { UnitsProvider } from '@/contexts/useUnits';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -72,15 +73,17 @@ export default function RootLayout() {
           <KeyboardProvider>
             <ThemePreferenceProvider>
               <TranslationProvider>
-                <AppViewProvider>
-                  <ModalCallbacksProvider>
-                    <TrainingOverlayProvider>
-                      <LibraryTabProvider>
-                        <RootLayoutNav />
-                      </LibraryTabProvider>
-                    </TrainingOverlayProvider>
-                  </ModalCallbacksProvider>
-                </AppViewProvider>
+                <UnitsProvider>
+                  <AppViewProvider>
+                    <ModalCallbacksProvider>
+                      <TrainingOverlayProvider>
+                        <LibraryTabProvider>
+                          <RootLayoutNav />
+                        </LibraryTabProvider>
+                      </TrainingOverlayProvider>
+                    </ModalCallbacksProvider>
+                  </AppViewProvider>
+                </UnitsProvider>
               </TranslationProvider>
             </ThemePreferenceProvider>
           </KeyboardProvider>

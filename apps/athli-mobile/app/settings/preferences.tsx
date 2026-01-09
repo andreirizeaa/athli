@@ -6,31 +6,33 @@ import {
   Text,
   View,
 } from 'react-native';
-import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import type { LucideIcon } from 'lucide-react-native';
 import {
+  ChevronDown,
   ChevronLeft,
   Languages,
   Moon,
   Palette,
   Ruler,
-  Settings,
   Sun,
 } from 'lucide-react-native';
 import { typography, iconSizes } from '@/constants/typography';
+import { THEMES } from '@/constants/theme';
 import {
   useThemePreference,
   type ColorSchemePreference,
 } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
+import { useUnits, type UnitsPreference } from '@/contexts/useUnits';
 
 import { Card } from '@/components/card';
 import { IconButton } from '@/components/icon-button';
 import { SettingsOption } from '@/components/settings-option';
 import { Separator } from '@/components/separator';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
 
 type PlatformIconProps = {
   sf: string;
@@ -51,16 +53,14 @@ export default function PreferencesScreen() {
   const {
     preference,
     setPreference,
+    preset,
     colors: themeColors,
   } = useThemePreference();
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
+  const { units, setUnits } = useUnits();
   const insets = useSafeAreaInsets();
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
-
-  const mutedSurfaceColor = themeColors.iconButton;
-  const dividerColor = themeColors.border;
-  const secondaryTextColor = themeColors.mutedText;
 
   const handleGoBack = () => {
     router.back();
@@ -74,19 +74,73 @@ export default function PreferencesScreen() {
     setPreference(mode);
   };
 
-
   const handleOpenLanguageModal = () => {
     router.push('/modals/settings/language-modal');
-  };
-
-  const handleOpenUnitsModal = () => {
-    router.push('/modals/settings/units-modal');
   };
 
   const handleOpenPaletteModal = () => {
     router.push('/modals/settings/palette-modal');
   };
 
+  const handleUnitsChange = (newUnits: UnitsPreference) => {
+    setUnits(newUnits);
+  };
+
+  // Get the display label for current theme preference
+  const getThemeLabel = (): string => {
+    switch (preference) {
+      case 'light':
+        return t('preferences.light');
+      case 'dark':
+        return t('preferences.dark');
+      case 'system':
+        return t('preferences.system');
+      default:
+        return t('preferences.system');
+    }
+  };
+
+  // Get the display label for current color palette
+  const getPaletteLabel = (): string => {
+    const theme = THEMES.find((th) => th.value === preset);
+    return theme?.name ?? 'Default';
+  };
+
+  // Get the display label for current language
+  const getLanguageLabel = (): string => {
+    const languageMap: Record<string, string> = {
+      en: 'English',
+      es: 'Español',
+      fr: 'Français',
+      de: 'Deutsch',
+      ro: 'Română',
+    };
+    return languageMap[locale] ?? 'English';
+  };
+
+  // Get the display label for units
+  const getUnitsLabel = (): string => {
+    return units === 'metric' ? t('preferences.metric') : t('preferences.imperial');
+  };
+
+  // Theme dropdown options
+  const themeOptions: DropdownMenuOption[] = [
+    {
+      label: t('preferences.light'),
+      icon: { sf: 'sun.max', IconComponent: Sun },
+      onPress: () => handleAppearanceModePress('light'),
+    },
+    {
+      label: t('preferences.dark'),
+      icon: { sf: 'moon', IconComponent: Moon },
+      onPress: () => handleAppearanceModePress('dark'),
+    },
+    {
+      label: t('preferences.system'),
+      icon: { sf: 'circle.lefthalf.filled', IconComponent: Sun },
+      onPress: () => handleAppearanceModePress('system'),
+    },
+  ];
 
   return (
     <View
@@ -113,99 +167,93 @@ export default function PreferencesScreen() {
       </View>
 
       <View style={[styles.content, { backgroundColor: themeColors.pageBackground }]}>
-        {/* Appearance */}
+        {/* Theme, Color Palette, Language, Units */}
         <Card style={{ paddingVertical: 12 }}>
-          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t('preferences.appearance')}</Text>
-          <Text style={[styles.sectionSubtitle, { color: secondaryTextColor }]}>
-            {t('preferences.chooseAppearance')}
-          </Text>
-
-          <View style={[styles.buttonGroup, { backgroundColor: mutedSurfaceColor }]}>
-            <PressableOpacity
-              style={[
-                styles.buttonGroupButton,
-                preference === 'light' && [
-                  styles.buttonGroupButtonActive,
-                  { backgroundColor: themeColors.background },
-                ],
-              ]}
-              onPress={() => handleAppearanceModePress('light')}
-            >
-              <Text
-                style={[
-                  styles.buttonGroupText,
-                  { color: preference === 'light' ? themeColors.text : themeColors.mutedText },
-                  preference === 'light' && styles.buttonGroupTextActive,
-                ]}
-              >
-                {t('preferences.light')}
-              </Text>
-            </PressableOpacity>
-            <PressableOpacity
-              style={[
-                styles.buttonGroupButton,
-                preference === 'dark' && [
-                  styles.buttonGroupButtonActive,
-                  { backgroundColor: themeColors.background },
-                ],
-              ]}
-              onPress={() => handleAppearanceModePress('dark')}
-            >
-              <Text
-                style={[
-                  styles.buttonGroupText,
-                  { color: preference === 'dark' ? themeColors.text : themeColors.mutedText },
-                  preference === 'dark' && styles.buttonGroupTextActive,
-                ]}
-              >
-                {t('preferences.dark')}
-              </Text>
-            </PressableOpacity>
-            <PressableOpacity
-              style={[
-                styles.buttonGroupButton,
-                preference === 'system' && [
-                  styles.buttonGroupButtonActive,
-                  { backgroundColor: themeColors.background },
-                ],
-              ]}
-              onPress={() => handleAppearanceModePress('system')}
-            >
-              <Text
-                style={[
-                  styles.buttonGroupText,
-                  { color: preference === 'system' ? themeColors.text : themeColors.mutedText },
-                  preference === 'system' && styles.buttonGroupTextActive,
-                ]}
-              >
-                {t('preferences.system')}
-              </Text>
-            </PressableOpacity>
-          </View>
-        </Card>
-
-        {/* Language, Units, and Color palette */}
-        <Card style={{ paddingVertical: 12 }}>
+          {/* Theme row with dropdown */}
+          <DropdownMenuWrapper options={themeOptions}>
+            <View style={styles.themeRow}>
+              <View style={styles.themeRowLeft}>
+                <View style={styles.themeIconContainer}>
+                  <PlatformIcon
+                    sf={preference === 'light' ? 'sun.max' : preference === 'dark' ? 'moon' : 'circle.lefthalf.filled'}
+                    IconComponent={preference === 'light' ? Sun : Moon}
+                    size={iconSize}
+                    color={iconColor}
+                  />
+                </View>
+                <Text style={[styles.themeRowTitle, { color: themeColors.text }]}>
+                  {t('preferences.appearance')}
+                </Text>
+              </View>
+              <View style={styles.themeRowRight}>
+                <Text style={[styles.themeValue, { color: themeColors.mutedText }]}>
+                  {getThemeLabel()}
+                </Text>
+                <PlatformIcon
+                  sf="chevron.down"
+                  IconComponent={ChevronDown}
+                  size={14}
+                  color={themeColors.mutedText}
+                />
+              </View>
+            </View>
+          </DropdownMenuWrapper>
+          <Separator />
           <SettingsOption
             icon={<PlatformIcon sf="paintpalette" IconComponent={Palette} size={iconSize} color={iconColor} />}
             title={t('preferences.colorPalette')}
+            subtitle={getPaletteLabel()}
+            subtitleRight
             showChevron
+            chevronSize={14}
             onPress={handleOpenPaletteModal}
           />
           <Separator />
           <SettingsOption
             icon={<PlatformIcon sf="globe" IconComponent={Languages} size={iconSize} color={iconColor} />}
             title={t('preferences.language')}
+            subtitle={getLanguageLabel()}
+            subtitleRight
             showChevron
+            chevronSize={14}
             onPress={handleOpenLanguageModal}
           />
           <Separator />
-          <SettingsOption
-            icon={<PlatformIcon sf="ruler" IconComponent={Ruler} size={iconSize} color={iconColor} />}
-            title={t('preferences.units')}
-            showChevron
-            onPress={handleOpenUnitsModal}
-          />
+          {/* Units row with dropdown */}
+          <DropdownMenuWrapper options={[
+            {
+              label: t('preferences.metric'),
+              icon: { sf: 'ruler', IconComponent: Ruler },
+              onPress: () => handleUnitsChange('metric'),
+            },
+            {
+              label: t('preferences.imperial'),
+              icon: { sf: 'ruler', IconComponent: Ruler },
+              onPress: () => handleUnitsChange('imperial'),
+            },
+          ]}>
+            <View style={styles.themeRow}>
+              <View style={styles.themeRowLeft}>
+                <View style={styles.themeIconContainer}>
+                  <PlatformIcon sf="ruler" IconComponent={Ruler} size={iconSize} color={iconColor} />
+                </View>
+                <Text style={[styles.themeRowTitle, { color: themeColors.text }]}>
+                  {t('preferences.units')}
+                </Text>
+              </View>
+              <View style={styles.themeRowRight}>
+                <Text style={[styles.themeValue, { color: themeColors.mutedText }]}>
+                  {getUnitsLabel()}
+                </Text>
+                <PlatformIcon
+                  sf="chevron.down"
+                  IconComponent={ChevronDown}
+                  size={14}
+                  color={themeColors.mutedText}
+                />
+              </View>
+            </View>
+          </DropdownMenuWrapper>
         </Card>
       </View>
     </View>
@@ -243,44 +291,34 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 32,
   },
-  sectionTitle: {
-    ...typography.h6,
-  },
-  sectionSubtitle: {
-    ...typography.p5,
-    marginBottom: 12,
-  },
-  buttonGroup: {
+  themeRow: {
     flexDirection: 'row',
-    borderRadius: 28,
-    padding: 4,
-    gap: 4,
-    marginTop: 12,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
   },
-  buttonGroupButton: {
+  themeRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 24,
+  },
+  themeIconContainer: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 4,
   },
-  buttonGroupButtonActive: {
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+  themeRowTitle: {
+    ...typography.p1,
   },
-  buttonGroupText: {
+  themeRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  themeValue: {
     ...typography.p2,
-    fontWeight: '600',
-  },
-  buttonGroupTextActive: {
-    fontWeight: '700',
   },
 });
 
