@@ -17,9 +17,9 @@ import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
-import { 
-    HABIT_UNIT_OPTIONS, 
-    type HabitUnit, 
+import {
+    HABIT_UNIT_OPTIONS,
+    type HabitUnit,
     type HabitPeriod,
 } from '@/constants/training';
 import { defaultHabits, type DefaultHabit } from '@/constants/habits';
@@ -119,12 +119,12 @@ export default function AddHabitModal() {
     const UNDERLINE_EXTRA_WIDTH = 8;
 
     // Unit options from constants
-    const unitOptions = useMemo(() => 
+    const unitOptions = useMemo(() =>
         HABIT_UNIT_OPTIONS.map((opt) => ({
             value: opt.value,
             label: opt.label,
         }))
-    , []);
+        , []);
 
     // Period options for ButtonTabGroup
     const periodOptions = useMemo(() => [
@@ -136,15 +136,15 @@ export default function AddHabitModal() {
     const { hasChanges, canComplete } = useMemo(() => {
         const trimmedName = name.trim();
         const trimmedAmount = amount.trim();
-        
+
         // Name, amount, and unit are required
         const formValid = trimmedName.length > 0 && trimmedAmount.length > 0 && unit !== null;
 
         // Check if any field has been modified
-        const changes = trimmedName.length > 0 || 
-                       description.trim().length > 0 ||
-                       trimmedAmount.length > 0 ||
-                       unit !== null;
+        const changes = trimmedName.length > 0 ||
+            description.trim().length > 0 ||
+            trimmedAmount.length > 0 ||
+            unit !== null;
 
         return {
             hasChanges: changes,
@@ -167,21 +167,29 @@ export default function AddHabitModal() {
     };
 
     const handleTabPress = (tabKey: TabKey) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setSelectedTab(tabKey);
-        animateUnderline(tabKey);
+        if (selectedTab !== tabKey) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setSelectedTab(tabKey);
+        }
     };
+
+    // Animate underline when selectedTab changes
+    useEffect(() => {
+        if (selectedTab) {
+            animateUnderline(selectedTab);
+        }
+    }, [selectedTab]);
 
     const handleSwipe = useCallback((direction: 'left' | 'right') => {
         const currentIndex = tabOrder.indexOf(selectedTab);
         let newIndex: number;
-        
+
         if (direction === 'left') {
             newIndex = Math.min(currentIndex + 1, tabOrder.length - 1);
         } else {
             newIndex = Math.max(currentIndex - 1, 0);
         }
-        
+
         if (newIndex !== currentIndex) {
             const newTab = tabOrder[newIndex];
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -229,7 +237,6 @@ export default function AddHabitModal() {
 
         // Switch to the New tab
         setSelectedTab('new');
-        animateUnderline('new');
     }, [setHabitOptionsData]);
 
     const handleTabLayout = (tabKey: TabKey, event: LayoutChangeEvent) => {
@@ -616,11 +623,11 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         marginHorizontal: -16,
         paddingHorizontal: 16,
-        marginBottom: 16,
         paddingTop: 16,
     },
     tabsContainer: {
         flexDirection: 'row',
+        flex: 1,
     },
     tabContainer: {
         flex: 1,
@@ -647,7 +654,7 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         paddingHorizontal: 16,
         paddingBottom: 32,
-        gap: 12,
+        gap: 16,
     },
     templatesContent: {
         flexGrow: 1,

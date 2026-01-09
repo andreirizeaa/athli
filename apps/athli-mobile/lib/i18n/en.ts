@@ -26,6 +26,7 @@ export const en = {
     more: 'More',
     today: 'Today',
     yesterday: 'Yesterday',
+    searchPlaceholder: 'Search...',
   },
   home: {
     title: 'Home',
@@ -641,7 +642,9 @@ export const en = {
       editDetails: 'Edit details',
       archiveUser: 'Archive user',
       addWorkout: 'Add Workout',
+      assignWorkout: 'Assign workout',
       addProgram: 'Add Program',
+      assignProgram: 'Assign program',
       assignMetric: 'Assign metric',
       addMetric: 'Add metric',
       logMetric: 'Log metric',
@@ -656,6 +659,16 @@ export const en = {
       addQuestionnaire: 'Add questionnaire',
       addPhoto: 'Add photo',
     },
+    settings: {
+      title: 'Settings',
+      clientActions: 'Client actions',
+      archiveClient: 'Archive client',
+      archivePrefix: 'Archive',
+      archiveClientMessage: 'This client will lose access instantly, however the data is saved and they can be unarchived later.',
+      deleteClient: 'Delete client',
+      deletePrefix: 'Delete',
+      deleteClientMessage: 'Deletes are permanent. Data will be lost and the client will lose access to the app.',
+    },
     assistant: {
       title: 'Assistant',
       helpTitle: 'Athli Assistant',
@@ -666,6 +679,8 @@ export const en = {
       assignFile: 'Assign File',
       assignMetric: 'Assign Metric',
       assignHabit: 'Assign Habit',
+      assignWorkout: 'Assign Workout',
+      assignProgram: 'Assign Program',
       placeholder: 'Content coming soon',
     },
     addPhotoModal: {
@@ -674,7 +689,10 @@ export const en = {
     },
     addNoteModal: {
       title: 'Add Note',
-      placeholder: 'Note creation coming soon',
+      noteTitle: 'Title',
+      noteTitlePlaceholder: 'Enter note title...',
+      noteBody: 'Body',
+      noteBodyPlaceholder: 'Enter note details...',
     },
   },
   shared: {

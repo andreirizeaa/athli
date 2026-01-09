@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { Platform, StyleSheet, Text, View, KeyboardAvoidingView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,6 +9,8 @@ import { typography } from '@/constants/typography';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { IconButton } from '@/components/icon-button';
+import { InputBox, TextAreaInput } from '@/components/form-inputs';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 export default function AddNoteToClientModal() {
     const router = useRouter();
@@ -16,6 +18,11 @@ export default function AddNoteToClientModal() {
     const colorScheme = useColorScheme();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
+    const [title, setTitle] = useState('');
+    const [body, setBody] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const isFormValid = title.trim().length > 0;
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -32,7 +39,10 @@ export default function AddNoteToClientModal() {
     const gradientHeight = headerHeight + 12;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={[styles.container, { backgroundColor: themeColors.background }]}
+        >
             {/* Fixed Header with gradient */}
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
@@ -67,17 +77,37 @@ export default function AddNoteToClientModal() {
                         onPress={handleSave}
                         size="md"
                         color={themeColors.text}
+                        disabled={!isFormValid}
+                        variant={isFormValid ? 'primary' : 'default'}
                     />
                 </View>
             </View>
 
             {/* Content */}
-            <View style={[styles.content, { paddingTop: headerHeight }]}>
-                <Text style={{ color: themeColors.mutedText }}>
-                    {t('clientDetail.addNoteModal.placeholder')}
-                </Text>
-            </View>
-        </View>
+            <KeyboardAwareScrollView
+                style={styles.scrollView}
+                contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
+                keyboardShouldPersistTaps="handled"
+                bottomOffset={40}
+            >
+                <InputBox
+                    label={t('clientDetail.addNoteModal.noteTitle')}
+                    value={title}
+                    onChangeText={setTitle}
+                    placeholder={t('clientDetail.addNoteModal.noteTitlePlaceholder')}
+                    required
+                />
+
+                <TextAreaInput
+                    label={t('clientDetail.addNoteModal.noteBody')}
+                    value={body}
+                    onChangeText={setBody}
+                    placeholder={t('clientDetail.addNoteModal.noteBodyPlaceholder')}
+                    numberOfLines={10}
+                    minHeight={250}
+                />
+            </KeyboardAwareScrollView>
+        </KeyboardAvoidingView>
     );
 }
 
@@ -110,11 +140,12 @@ const styles = StyleSheet.create({
         flex: 1,
         textAlign: 'center',
     },
-    content: {
+    scrollView: {
         flex: 1,
+    },
+    scrollContent: {
         paddingHorizontal: 16,
-        paddingTop: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
+        paddingBottom: 16,
+        gap: 16,
     },
 });

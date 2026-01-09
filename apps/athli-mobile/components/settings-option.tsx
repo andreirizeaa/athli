@@ -69,7 +69,7 @@ export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, 
       )}
       {showChevron && (
         <View style={styles.chevronContainer}>
-          <PlatformIcon sf="chevron.right" IconComponent={ChevronRight} size={chevronSize || iconSizes.navigationChevrons} color={themeColors.mutedText} />
+          <PlatformIcon sf="chevron.right" IconComponent={ChevronRight} size={chevronSize || iconSizes.extraSmallIcons} color={themeColors.mutedText} />
         </View>
       )}
     </Pressable>

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { typography } from '@/constants/typography';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { IconButton } from '@/components/icon-button';
+import { SearchBar } from '@/components/search-bar';
 
 export default function AssignMetricToClientModal() {
     const router = useRouter();
@@ -16,6 +17,7 @@ export default function AssignMetricToClientModal() {
     const colorScheme = useColorScheme();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
+    const [searchQuery, setSearchQuery] = useState('');
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -72,10 +74,18 @@ export default function AssignMetricToClientModal() {
             </View>
 
             {/* Content */}
-            <View style={[styles.content, { paddingTop: headerHeight }]}>
-                <Text style={{ color: themeColors.mutedText }}>
-                    {t('clientDetail.assignModals.placeholder')}
-                </Text>
+            <View style={[styles.content, { paddingTop: headerHeight + 16 }]}>
+                <SearchBar
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder={t('general.searchPlaceholder')}
+                    style={styles.searchBar}
+                />
+                <View style={styles.placeholderContainer}>
+                    <Text style={{ color: themeColors.mutedText }}>
+                        {t('clientDetail.assignModals.placeholder')}
+                    </Text>
+                </View>
             </View>
         </View>
     );
@@ -113,7 +123,12 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
         paddingHorizontal: 16,
-        paddingTop: 16,
+    },
+    searchBar: {
+        marginBottom: 16,
+    },
+    placeholderContainer: {
+        flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
     },
