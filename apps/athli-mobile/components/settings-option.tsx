@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   optionSubtitleRight: {
-    ...typography.p6,
+    ...typography.p2,
   },
 });
 
