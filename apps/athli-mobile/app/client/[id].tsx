@@ -1,13 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View, LayoutChangeEvent, Dimensions } from 'react-native';
 import { PressableOpacity } from 'pressto';
+import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+  useEvent,
+} from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, MoreVertical, Pencil, Archive, Activity, BarChart3, Calendar, Target, Plus, Camera, Mic, Send, MessageCircle, X } from 'lucide-react-native';
+import { ChevronLeft, MoreVertical, Pencil, Archive, Activity, BarChart3, Calendar, Target, Plus, Camera, Mic, Send, MessageCircle, X, Notebook, Dumbbell, Repeat, Image as ImageIcon, File, ClipboardCheck, HelpCircle, Settings } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
+import { useTranslations } from '@/contexts/useTranslations';
 import { getClients, type Client } from '@/services/client-service';
 import {
   getChats,
@@ -16,7 +26,7 @@ import {
   type Chat,
 } from '@/services/chats-service';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
-import { SettingsOption } from '@/components/settings-option';
+import { ListRowItem } from '@/components/list-row-item';
 import { Card } from '@/components/card';
 import { Separator } from '@/components/separator';
 import { PlatformIcon } from '@/components/platform-icon';
@@ -24,23 +34,45 @@ import { IconButton } from '@/components/icon-button';
 import { MessageInputBar } from '@/components/message/message-input-bar';
 import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
 import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
+import { ScreenWrapper } from '@/components/screen-wrapper';
+
+const AnimatedPagerView = Animated.createAnimatedComponent(PagerView);
 
 export default function ClientDetailScreen() {
+  const scrollOffset = useSharedValue(0);
+  const position = useSharedValue(0);
+
+  const onPageScroll = useEvent<any>((event) => {
+    'worklet';
+    scrollOffset.value = event.offset;
+    position.value = event.position;
+  }, ['onPageScroll']);
+
+  const borderOpacityStyle = useAnimatedStyle(() => {
+    // Show border when we are moving between pages.
+    const isSwiping = scrollOffset.value > 0.01 && scrollOffset.value < 0.99;
+    return {
+      opacity: withTiming(isSwiping ? 1 : 0, { duration: 150 }),
+    };
+  });
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { colors: themeColors } = useThemePreference();
+  const { colors: themeColors, primaryColor } = useThemePreference();
+  const { t } = useTranslations();
   const insets = useSafeAreaInsets();
   const [client, setClient] = useState<Client | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'assistant' | 'overview' | 'more'>('assistant');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showAttachmentPicker, setShowAttachmentPicker] = useState(false);
-  const inputRef = useRef<TextInput>(null);
+
+  /* Tabs State - Simplified for scrollable page */
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const pagerRef = useRef<PagerView>(null);
+  const tabLayoutsRef = useRef<{ [key: number]: { x: number; width: number } }>({});
+  const underlinePosition = useSharedValue(0);
+  const underlineWidth = useSharedValue(0);
 
   const iconColor = themeColors.text;
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const headerBackgroundColor = themeColors.headerBackground;
-  const hasText = searchQuery.trim().length > 0;
 
   useEffect(() => {
     const loadClient = async () => {
@@ -64,9 +96,55 @@ export default function ClientDetailScreen() {
     router.back();
   };
 
-  const handleTabPress = (tab: 'assistant' | 'overview' | 'more') => {
-    setActiveTab(tab);
+  const tabs = [t('clientDetail.tabs.overview'), t('clientDetail.tabs.more')];
+
+  const animateUnderline = (index: number) => {
+    const layout = tabLayoutsRef.current[index];
+    if (layout) {
+      underlinePosition.value = withTiming(layout.x, {
+        duration: 300,
+        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+      });
+      underlineWidth.value = withTiming(layout.width, {
+        duration: 300,
+        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+      });
+    }
   };
+
+  const handleTabPress = (index: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedIndex(index);
+    animateUnderline(index);
+    pagerRef.current?.setPage(index);
+  };
+
+  const handlePageSelected = (event: PagerViewOnPageSelectedEvent) => {
+    const index = event.nativeEvent.position;
+    if (index !== selectedIndex) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setSelectedIndex(index);
+      animateUnderline(index);
+    }
+  };
+
+  const handleTabLayout = (index: number, event: LayoutChangeEvent) => {
+    const { width, x } = event.nativeEvent.layout;
+    tabLayoutsRef.current[index] = { x, width };
+
+    // Initialize underline position on first layout
+    if (index === selectedIndex && underlineWidth.value === 0) {
+      underlinePosition.value = x;
+      underlineWidth.value = width;
+    }
+  };
+
+  const animatedUnderlineStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: underlinePosition.value }],
+      width: underlineWidth.value,
+    };
+  });
 
   const handleChatPress = async () => {
     if (!client?.id) return;
@@ -113,22 +191,9 @@ export default function ClientDetailScreen() {
     // TODO: Implement archive client action
   };
 
-  const handlePlusPress = () => {
-    if (showAttachmentPicker) {
-      // Close attachment picker (keep keyboard open)
-      setShowAttachmentPicker(false);
-    } else {
-      // Open keyboard if not already open
-      inputRef.current?.focus();
-      // Show attachment picker
-      setShowAttachmentPicker(true);
-    }
-  };
-
-
   const dropdownOptions: DropdownMenuOption[] = [
     {
-      label: 'Edit details',
+      label: t('clientDetail.actions.editDetails'),
       icon: {
         sf: 'pencil',
         IconComponent: Pencil,
@@ -136,7 +201,7 @@ export default function ClientDetailScreen() {
       onPress: handleEditDetails,
     },
     {
-      label: 'Archive user',
+      label: t('clientDetail.actions.archiveUser'),
       icon: {
         sf: 'archivebox',
         IconComponent: Archive,
@@ -176,7 +241,7 @@ export default function ClientDetailScreen() {
               ]}
             />
           </View>
-          <Text style={[styles.headerTitle, { color: themeColors.text }]}>Loading...</Text>
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('clientDetail.loading')}</Text>
           <View style={styles.headerActions}>
             <IconButton
               icon={{ sf: 'message', IconComponent: MessageCircle }}
@@ -200,18 +265,7 @@ export default function ClientDetailScreen() {
 
   if (!client) {
     return (
-      <View
-        style={[
-          styles.safeArea,
-          {
-            backgroundColor: themeColors.pageBackground,
-            paddingTop: insets.top,
-            paddingBottom: 0,
-            paddingLeft: insets.left,
-            paddingRight: insets.right,
-          },
-        ]}
-      >
+      <ScreenWrapper scrollable={false}>
         <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
           <IconButton
             icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
@@ -229,7 +283,7 @@ export default function ClientDetailScreen() {
               ]}
             />
           </View>
-          <Text style={[styles.headerTitle, { color: themeColors.text }]}>Client Not Found</Text>
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('clientDetail.notFound')}</Text>
           <View style={styles.headerActions}>
             <IconButton
               icon={{ sf: 'message', IconComponent: MessageCircle }}
@@ -247,228 +301,194 @@ export default function ClientDetailScreen() {
             </DropdownMenuWrapper>
           </View>
         </View>
-      </View>
+      </ScreenWrapper>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.pageBackground }]}>
-      <View
-        style={[
-          styles.safeArea,
-          {
-            backgroundColor: themeColors.pageBackground,
-            paddingTop: insets.top,
-            paddingBottom: 0,
-            paddingLeft: 0,
-            paddingRight: 0,
-          },
-        ]}
-      >
-        <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+    <ScreenWrapper scrollable={false} contentContainerStyle={{ paddingHorizontal: 0, flexGrow: 1 }}>
+      <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+        <IconButton
+          icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+          onPress={handleBackPress}
+          size="md"
+          color={iconColor}
+          style={{ marginRight: 12 }}
+        />
+
+        <View style={styles.avatarContainer}>
+          {client?.avatar ? (
+            <Image source={{ uri: client.avatar }} style={styles.avatar} />
+          ) : (
+            <View
+              style={[
+                styles.avatar,
+                styles.avatarPlaceholder,
+                { backgroundColor: themeColors.border },
+              ]}
+            />
+          )}
+        </View>
+
+        <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
+          {client?.fullName || t('clientDetail.loading')}
+        </Text>
+        <View style={styles.headerActions}>
           <IconButton
-            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
-            onPress={handleBackPress}
+            icon={{ sf: 'message', IconComponent: MessageCircle }}
+            onPress={handleChatPress}
             size="md"
             color={iconColor}
-            style={{ marginRight: 12 }}
           />
-
-          <View style={styles.avatarContainer}>
-            {client.avatar ? (
-              <Image source={{ uri: client.avatar }} style={styles.avatar} />
-            ) : (
-              <View
-                style={[
-                  styles.avatar,
-                  styles.avatarPlaceholder,
-                  { backgroundColor: themeColors.border },
-                ]}
-              />
-            )}
-          </View>
-
-          <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
-            {client.fullName}
-          </Text>
-          <View style={styles.headerActions}>
+          <DropdownMenuWrapper options={dropdownOptions}>
             <IconButton
-              icon={{ sf: 'message', IconComponent: MessageCircle }}
-              onPress={handleChatPress}
+              icon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
+              onPress={() => { }}
               size="md"
               color={iconColor}
             />
-            <DropdownMenuWrapper options={dropdownOptions}>
-              <IconButton
-                icon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
-                onPress={() => { }}
-                size="md"
-                color={iconColor}
-              />
-            </DropdownMenuWrapper>
-          </View>
+          </DropdownMenuWrapper>
         </View>
       </View>
 
 
       {/* Tabs */}
       <View style={[styles.tabsContainer, { borderBottomColor: themeColors.border }]}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.tab,
-            activeTab === 'assistant' && styles.tabActive,
-            { opacity: pressed ? 0.7 : 1 },
+        {tabs.map((tab, index) => {
+          const isSelected = selectedIndex === index;
+          return (
+            <View
+              key={tab}
+              style={{ flex: 1 }}
+              onLayout={(event) => handleTabLayout(index, event)}
+            >
+              <Pressable
+                style={({ pressed }) => [
+                  styles.tab,
+                  { opacity: pressed ? 0.7 : 1 },
+                ]}
+                onPress={() => handleTabPress(index)}
+              >
+                <Text
+                  style={[
+                    styles.tabText,
+                    {
+                      color: isSelected ? themeColors.text : themeColors.mutedText,
+                      fontWeight: isSelected ? '600' : '400',
+                    },
+                  ]}
+                >
+                  {tab}
+                </Text>
+              </Pressable>
+            </View>
+          );
+        })}
+        {/* Animated underline */}
+        <Animated.View
+          style={[
+            styles.animatedUnderline,
+            { backgroundColor: themeColors.text },
+            animatedUnderlineStyle,
           ]}
-          onPress={() => handleTabPress('assistant')}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'assistant' && styles.tabTextActive,
-              { color: activeTab === 'assistant' ? themeColors.text : themeColors.mutedText },
-            ]}
-          >
-            Assistant
-          </Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [
-            styles.tab,
-            activeTab === 'overview' && styles.tabActive,
-            { opacity: pressed ? 0.7 : 1 },
-          ]}
-          onPress={() => handleTabPress('overview')}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'overview' && styles.tabTextActive,
-              { color: activeTab === 'overview' ? themeColors.text : themeColors.mutedText },
-            ]}
-          >
-            Overview
-          </Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [
-            styles.tab,
-            activeTab === 'more' && styles.tabActive,
-            { opacity: pressed ? 0.7 : 1 },
-          ]}
-          onPress={() => handleTabPress('more')}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'more' && styles.tabTextActive,
-              { color: activeTab === 'more' ? themeColors.text : themeColors.mutedText },
-            ]}
-          >
-            More
-          </Text>
-        </Pressable>
+        />
       </View>
 
       {/* Tab Content */}
-      <View style={{ flex: 1 }}>
-        {/* Assistant Tab */}
-        <View style={{ flex: 1, display: activeTab === 'assistant' ? 'flex' : 'none', backgroundColor: themeColors.pageBackground }}>
+      <AnimatedPagerView
+        ref={pagerRef}
+        style={{ flex: 1 }}
+        initialPage={0}
+        onPageSelected={handlePageSelected}
+        onPageScroll={onPageScroll}
+      >
+        {/* Overview Tab */}
+        <View key="overview" style={{ flex: 1 }}>
           <ScrollView
-            style={{ flex: 1 }}
+            style={styles.contentScrollView}
             contentContainerStyle={styles.contentContainer}
             showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
           >
-            {/* Assistant content will go here */}
-          </ScrollView>
-
-          {/* Bottom bar – anchored to screen bottom, grows upward */}
-          <KeyboardAwareToolbar
-            backgroundColor={headerBackgroundColor}
-            contentStyle={{ paddingHorizontal: 16 }}
-            attachmentPicker={
-              showAttachmentPicker ? (
-                <AttachmentPickerRow backgroundColor={headerBackgroundColor} hideVideos hideCamera />
-              ) : undefined
-            }
-          >
-            <PressableOpacity
-              style={styles.iconButton}
-              onPress={handlePlusPress}
-            >
-              <PlatformIcon
-                sf={showAttachmentPicker ? "xmark.circle" : "plus"}
-                IconComponent={showAttachmentPicker ? X : Plus}
-                size={iconSizes.tabBarIcons - 2}
-                color={iconColor}
-              />
-            </PressableOpacity>
-            <View style={styles.searchBarContainer}>
-              <MessageInputBar
-                ref={inputRef}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder=""
-              />
+            <View>
+              {/* Overview content will go here */}
+              <Text style={{ color: themeColors.mutedText }}>{t('clientDetail.overviewPlaceholder')}</Text>
             </View>
-            {hasText ? (
-              <PressableOpacity
-                style={styles.sendButton}
-              >
-                <PlatformIcon
-                  sf="paperplane.circle.fill"
-                  IconComponent={Send}
-                  size={iconSizes.tabBarIconsIOS + 2}
-                  color={themeColors.primary}
-                />
-              </PressableOpacity>
-            ) : (
-              <PressableOpacity style={styles.iconButton}>
-                <PlatformIcon
-                  sf="mic"
-                  IconComponent={Mic}
-                  size={iconSizes.tabBarIcons - 2}
-                  color={iconColor}
-                />
-              </PressableOpacity>
-            )}
-          </KeyboardAwareToolbar>
+          </ScrollView>
         </View>
 
-        {/* Overview Tab */}
-        <ScrollView
-          style={[styles.contentScrollView, { display: activeTab === 'overview' ? 'flex' : 'none' }]}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          <View>
-            {/* Overview content will go here */}
-          </View>
-        </ScrollView>
-
         {/* More Tab */}
-        <ScrollView
-          style={[styles.contentScrollView, { display: activeTab === 'more' ? 'flex' : 'none' }]}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.optionsContainer}>
-            <Card>
-              <SettingsOption
+        <View key="more" style={{ flex: 1, position: 'relative' }}>
+          {/* Animated Border */}
+          <Animated.View
+            style={[
+              {
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 1,
+                backgroundColor: themeColors.border,
+                zIndex: 10,
+              },
+              borderOpacityStyle
+            ]}
+          />
+          <ScrollView
+            style={styles.contentScrollView}
+            contentContainerStyle={styles.moreTabContentContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.optionsContainer}>
+              <ListRowItem
+                style={styles.optionRow}
                 icon={
                   <PlatformIcon
-                    sf="figure.run"
-                    IconComponent={Activity}
+                    sf="sparkles"
+                    IconComponent={MessageCircle}
                     size={iconSizes.listIcons}
                     color={iconColor}
                   />
                 }
-                title="Activity"
+                title={t('clientDetail.sections.assistant')}
                 showChevron
-                onPress={() => router.push(`/client/${id}/activity`)}
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/assistant`)}
               />
-              <Separator />
-              <SettingsOption
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
+                icon={
+                  <PlatformIcon
+                    sf="note.text"
+                    IconComponent={Notebook}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title={t('clientDetail.sections.notes')}
+                showChevron
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/notes`)}
+              />
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
+                icon={
+                  <PlatformIcon
+                    sf="figure.run"
+                    IconComponent={Dumbbell}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title={t('clientDetail.sections.training')}
+                showChevron
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/training`)}
+              />
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
                 icon={
                   <PlatformIcon
                     sf="chart.bar.fill"
@@ -477,43 +497,113 @@ export default function ClientDetailScreen() {
                     color={iconColor}
                   />
                 }
-                title="Metrics"
+                title={t('clientDetail.sections.metrics')}
                 showChevron
+                chevronSize={12}
                 onPress={() => router.push(`/client/${id}/metrics`)}
               />
-              <Separator />
-              <SettingsOption
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
                 icon={
                   <PlatformIcon
-                    sf="calendar"
-                    IconComponent={Calendar}
+                    sf="repeat"
+                    IconComponent={Repeat}
                     size={iconSizes.listIcons}
                     color={iconColor}
                   />
                 }
-                title="Training Calendar"
+                title={t('clientDetail.sections.habits')}
                 showChevron
-                onPress={() => router.push(`/client/${id}/training-calendar`)}
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/habits`)}
               />
-              <Separator />
-              <SettingsOption
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
                 icon={
                   <PlatformIcon
-                    sf="target"
-                    IconComponent={Target}
+                    sf="photo"
+                    IconComponent={ImageIcon}
                     size={iconSizes.listIcons}
                     color={iconColor}
                   />
                 }
-                title="Goals & Injuries"
+                title={t('clientDetail.sections.photos')}
                 showChevron
-                onPress={() => router.push(`/client/${id}/goals-injuries`)}
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/photos`)}
               />
-            </Card>
-          </View>
-        </ScrollView>
-      </View>
-    </View>
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
+                icon={
+                  <PlatformIcon
+                    sf="doc"
+                    IconComponent={File}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title={t('clientDetail.sections.files')}
+                showChevron
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/files`)}
+              />
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
+                icon={
+                  <PlatformIcon
+                    sf="checklist"
+                    IconComponent={ClipboardCheck}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title={t('clientDetail.sections.checkIns')}
+                showChevron
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/check-ins`)}
+              />
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
+                icon={
+                  <PlatformIcon
+                    sf="questionmark.circle"
+                    IconComponent={HelpCircle}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title={t('clientDetail.sections.questionnaires')}
+                showChevron
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/questionaires`)}
+              />
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
+                icon={
+                  <PlatformIcon
+                    sf="gear"
+                    IconComponent={Settings}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title={t('clientDetail.sections.settings')}
+                showChevron
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/settings`)}
+              />
+              <Separator style={styles.separator} />
+            </View>
+          </ScrollView>
+        </View>
+      </AnimatedPagerView>
+    </ScreenWrapper>
   );
 }
 
@@ -579,34 +669,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 0,
     borderBottomWidth: 1,
-    marginVertical: 16,
+    marginTop: 16,
     backgroundColor: 'transparent',
   },
   tab: {
-    flex: 1,
     paddingBottom: 12,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  tabActive: {
-    // Removed borderBottomColor to eliminate underscore highlight
   },
   tabText: {
     ...typography.h7,
   },
-  tabTextActive: {
-    fontWeight: '600',
+  animatedUnderline: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    height: 2,
+    zIndex: 10,
   },
   contentScrollView: {
     flex: 1,
   },
   contentContainer: {
     padding: 20,
+  },
+  moreTabContentContainer: {
+    paddingHorizontal: 0,
     paddingTop: 0,
+    paddingBottom: 20,
   },
   optionsContainer: {
     flex: 1,
+  },
+  optionRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  separator: {
+    marginVertical: 0,
+    marginLeft: 0,
   },
   iconButton: {
     alignItems: 'center',

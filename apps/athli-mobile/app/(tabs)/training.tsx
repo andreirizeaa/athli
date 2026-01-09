@@ -74,7 +74,7 @@ export default function TrainingScreen() {
     const dateParam = selectedDate ? selectedDate.toISOString() : new Date().toISOString();
     router.push({
       pathname: '/modals/calendar/select-date-modal',
-      params: { selectedDate: dateParam },
+      params: { selectedDate: dateParam, storageKey: SELECTED_DATE_KEY },
     });
   };
 
@@ -232,8 +232,11 @@ export default function TrainingScreen() {
         </View>
 
         {/* Training Content - appears under calendar divider only when current date has one-off session */}
+        {/* Training Content - appears under calendar divider only when current date has one-off session */}
         {hasOneOffSessionForCurrentDate && selectedDate && (
-          <TrainingContent date={selectedDate} />
+          <View style={styles.contentContainer}>
+            <TrainingContent date={selectedDate} />
+          </View>
         )}
       </View>
     </ScreenWrapper>
@@ -243,6 +246,7 @@ export default function TrainingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: 16,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -250,6 +254,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 0,
     width: '100%',
+    paddingHorizontal: 16,
   },
   headerBottomRow: {
     width: '100%',
@@ -262,7 +267,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 1,
     alignSelf: 'stretch',
-    marginTop: 4,
+    marginTop: 0,
   },
   dateButton: {
     flexDirection: 'row',
@@ -276,6 +281,10 @@ const styles = StyleSheet.create({
   title: {
     ...typography.h1,
     textAlign: 'left',
+  },
+  contentContainer: {
+    paddingHorizontal: 16,
+    flex: 1,
   },
 });
 

@@ -2,6 +2,7 @@ import React, { useState, useRef, useMemo } from 'react';
 import { StyleSheet, Text, View, ScrollView, Dimensions, LayoutChangeEvent } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
+import * as Haptics from 'expo-haptics';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -23,8 +24,7 @@ import {
   HabitsTab,
   FilesTab,
 } from '@/components/library';
-
-type LibraryTab = 'workouts' | 'sections' | 'programs' | 'exercises' | 'forms' | 'metrics' | 'habits' | 'files';
+import { useLibraryTab, type LibraryTab } from '@/contexts/useLibraryTab';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -36,6 +36,7 @@ type TabComponent = {
 export default function LibraryScreen() {
   const { primaryColor, colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const { setCurrentLibraryTab } = useLibraryTab();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const pagerRef = useRef<PagerView>(null);
   const tabBarScrollRef = useRef<ScrollView>(null);
@@ -85,6 +86,7 @@ export default function LibraryScreen() {
   const handleTabPress = (index: number) => {
     setSelectedIndex(index);
     animateUnderline(index);
+    setCurrentLibraryTab(tabs[index]);
 
     pagerRef.current?.setPage(index);
 
@@ -101,8 +103,10 @@ export default function LibraryScreen() {
   const handlePageSelected = (event: PagerViewOnPageSelectedEvent) => {
     const index = event.nativeEvent.position;
     if (index !== selectedIndex) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setSelectedIndex(index);
       animateUnderline(index);
+      setCurrentLibraryTab(tabs[index]);
 
       // Scroll tab bar to keep selected tab visible
       const layout = tabLayoutsRef.current[index];
@@ -214,6 +218,8 @@ export default function LibraryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   title: {
     ...typography.h1,

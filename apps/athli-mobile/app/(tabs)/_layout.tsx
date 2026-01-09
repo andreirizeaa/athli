@@ -16,6 +16,7 @@ import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useAppView } from '@/contexts/useAppView';
 import { useTranslations } from '@/contexts/useTranslations';
 import { useTrainingOverlay } from '@/contexts/useTrainingOverlay';
+import { useLibraryTab, type LibraryTab } from '@/contexts/useLibraryTab';
 import { iconSizes } from '@/constants/typography';
 import {
   ChartNoAxesColumn,
@@ -137,6 +138,22 @@ export default function TabLayout() {
   const isInitialMount = useRef(true);
   const colorScheme = useColorScheme();
   const { showOverlay: showTrainingOverlay } = useTrainingOverlay();
+  const { currentLibraryTab } = useLibraryTab();
+
+  // Helper to get the correct modal route based on current library tab
+  const getLibraryModalRoute = (): string => {
+    const modalRoutes: Record<LibraryTab, string> = {
+      workouts: '/modals/library/add-workout-modal',
+      sections: '/modals/library/add-section-modal',
+      programs: '/modals/library/add-program-modal',
+      exercises: '/modals/library/add-exercise-modal',
+      forms: '/modals/library/add-form-modal',
+      metrics: '/modals/library/add-metric-modal',
+      habits: '/modals/library/add-habit-modal',
+      files: '/modals/files/add-file-modal',
+    };
+    return modalRoutes[currentLibraryTab];
+  };
 
   // Use useLayoutEffect for initial mount to prevent any flash of add-modal content
   useLayoutEffect(() => {
@@ -180,7 +197,7 @@ export default function TabLayout() {
     if (appView === 'coach') {
       // Check for library first, then clients/chats
       if (pathname.includes('/library')) {
-        router.push('/modals/files/add-file-modal');
+        router.push(getLibraryModalRoute() as any);
       } else if (pathname.includes('/clients')) {
         router.push({
           pathname: '/add-modal-content',
@@ -307,13 +324,29 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const { showOverlay: showTrainingOverlay } = useTrainingOverlay();
+  const { currentLibraryTab } = useLibraryTab();
+
+  // Helper to get the correct modal route based on current library tab
+  const getLibraryModalRoute = (): string => {
+    const modalRoutes: Record<LibraryTab, string> = {
+      workouts: '/modals/library/add-workout-modal',
+      sections: '/modals/library/add-section-modal',
+      programs: '/modals/library/add-program-modal',
+      exercises: '/modals/library/add-exercise-modal',
+      forms: '/modals/library/add-form-modal',
+      metrics: '/modals/library/add-metric-modal',
+      habits: '/modals/library/add-habit-modal',
+      files: '/modals/files/add-file-modal',
+    };
+    return modalRoutes[currentLibraryTab];
+  };
 
   const handleTabPress = (name: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (name === activeRouteName) {
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     navigation.navigate(name as never);
   };
 
@@ -332,7 +365,7 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
           params: { route: 'chats' },
         });
       } else if (activeRouteName === 'library') {
-        router.push('/modals/files/add-file-modal');
+        router.push(getLibraryModalRoute() as any);
       }
     } else if (appView === 'athlete') {
       // Show training overlay if on training tab

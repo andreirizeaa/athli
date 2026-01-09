@@ -22,6 +22,8 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   header: {
     marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   title: {
     ...typography.h1,

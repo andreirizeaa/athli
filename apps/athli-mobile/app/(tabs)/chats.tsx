@@ -332,6 +332,7 @@ export default function ChatsScreen() {
 const styles = StyleSheet.create({
   scrollViewContent: {
     paddingBottom: 40,
+    paddingTop: 16,
   },
   container: {
   },
