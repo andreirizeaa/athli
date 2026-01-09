@@ -1,5 +1,5 @@
 import React, { useRef, useImperativeHandle, forwardRef } from 'react';
-import { StyleSheet, Text, TextInput, View, TextInputProps } from 'react-native';
+import { StyleSheet, Text, TextInput, View, TextInputProps, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { X } from 'lucide-react-native';
 
@@ -13,6 +13,10 @@ type InputBoxProps = {
   placeholder?: string;
   required?: boolean;
   showCharacterCount?: boolean;
+  hideLabel?: boolean;
+  containerStyle?: StyleProp<ViewStyle>;
+  inputRowStyle?: StyleProp<ViewStyle>;
+  inputStyle?: StyleProp<TextStyle>;
 } & Omit<TextInputProps, 'value' | 'onChangeText' | 'placeholder' | 'style'>;
 
 export type InputBoxRef = {
@@ -22,7 +26,7 @@ export type InputBoxRef = {
 };
 
 export const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
-  ({ label, value, onChangeText, placeholder, required, showCharacterCount, maxLength, ...textInputProps }, ref) => {
+  ({ label, value, onChangeText, placeholder, required, showCharacterCount, hideLabel, containerStyle, inputRowStyle, inputStyle, maxLength, ...textInputProps }, ref) => {
     const { colors: themeColors } = useThemePreference();
     const inputRef = useRef<TextInput>(null);
 
@@ -38,24 +42,31 @@ export const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     }));
 
     return (
-      <View style={[styles.inputBox, { backgroundColor: themeColors.surfaceSecondary }]}>
-        <View style={styles.labelRow}>
-          <View style={styles.labelLeft}>
-            <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
-              {label}
-            </Text>
-            {required && <Text style={styles.requiredAsterisk}>*</Text>}
+      <View style={[
+        styles.inputBox,
+        { backgroundColor: themeColors.surfaceSecondary },
+        hideLabel && { paddingTop: 12, paddingBottom: 12 },
+        containerStyle
+      ]}>
+        {!hideLabel && (
+          <View style={styles.labelRow}>
+            <View style={styles.labelLeft}>
+              <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
+                {label}
+              </Text>
+              {required && <Text style={styles.requiredAsterisk}>*</Text>}
+            </View>
+            {showCharacterCount && maxLength && (
+              <Text style={[styles.characterCount, { color: themeColors.mutedText }]}>
+                {value.length}/{maxLength}
+              </Text>
+            )}
           </View>
-          {showCharacterCount && maxLength && (
-            <Text style={[styles.characterCount, { color: themeColors.mutedText }]}>
-              {value.length}/{maxLength}
-            </Text>
-          )}
-        </View>
-        <View style={styles.inputRow}>
+        )}
+        <View style={[styles.inputRow, inputRowStyle]}>
           <TextInput
             ref={inputRef}
-            style={[styles.inputBoxInput, { color: themeColors.text }]}
+            style={[styles.inputBoxInput, { color: themeColors.text }, inputStyle]}
             placeholder={placeholder}
             placeholderTextColor={themeColors.mutedText}
             value={value}

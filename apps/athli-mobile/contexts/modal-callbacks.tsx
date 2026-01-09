@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { Client } from '@/services/client-service';
 import type { DefaultMetric } from '@/constants/metrics';
 import type { DefaultHabit } from '@/constants/habits';
+import type { Exercise } from '@/app/modals/workout/add-exercise-to-builder-modal';
 
 type RepeatData = {
   type: 'weekly' | 'monthly';
@@ -38,6 +39,8 @@ type ModalCallbacksContextType = {
   setMetricSelectCallback: (callback: (metric: DefaultMetric) => void) => void;
   setHabitSelectCallback: (callback: (habit: DefaultHabit) => void) => void;
   setDateSelectCallback: (callback: (date: Date) => void) => void;
+  setExerciseSelectCallback: (callback: (exercise: Exercise) => void) => void;
+  setExercisesSelectCallback: (callback: (exercises: Exercise[]) => void) => void;
   triggerClientSelect: (client: Client) => void;
   triggerTypeSelect: (type: string) => void;
   triggerRepeatSelect: (data: RepeatData) => void;
@@ -47,6 +50,8 @@ type ModalCallbacksContextType = {
   triggerMetricSelect: (metric: DefaultMetric) => void;
   triggerHabitSelect: (habit: DefaultHabit) => void;
   triggerDateSelect: (date: Date) => void;
+  triggerExerciseSelect: (exercise: Exercise) => void;
+  triggerExercisesSelect: (exercises: Exercise[]) => void;
   getRepeatData: () => RepeatData | null;
   setRepeatData: (data: RepeatData | null) => void;
   getHabitOptionsData: () => HabitOptionsData | null;
@@ -69,6 +74,8 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
   const [metricSelectCallback, setMetricSelectCallbackState] = useState<((metric: DefaultMetric) => void) | null>(null);
   const [habitSelectCallback, setHabitSelectCallbackState] = useState<((habit: DefaultHabit) => void) | null>(null);
   const [dateSelectCallback, setDateSelectCallbackState] = useState<((date: Date) => void) | null>(null);
+  const [exerciseSelectCallbackState, setExerciseSelectCallbackState] = useState<((exercise: Exercise) => void) | null>(null);
+  const [exercisesSelectCallbackState, setExercisesSelectCallbackState] = useState<((exercises: Exercise[]) => void) | null>(null);
   const [storedRepeatData, setStoredRepeatData] = useState<RepeatData | null>(null);
   const [storedHabitOptionsData, setStoredHabitOptionsData] = useState<HabitOptionsData | null>(null);
   const [storedScheduleData, setStoredScheduleData] = useState<ScheduleData | null>(null);
@@ -107,6 +114,13 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
 
   const setDateSelectCallback = useCallback((callback: (date: Date) => void) => {
     setDateSelectCallbackState(() => callback);
+  }, []);
+
+  const setExerciseSelectCallback = useCallback((callback: (exercise: Exercise) => void) => {
+    setExerciseSelectCallbackState(() => callback);
+  }, []);
+  const setExercisesSelectCallback = useCallback((callback: (exercises: Exercise[]) => void) => {
+    setExercisesSelectCallbackState(() => callback);
   }, []);
 
   const triggerClientSelect = useCallback((client: Client) => {
@@ -191,6 +205,19 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
     }
   }, [dateSelectCallback]);
 
+  const triggerExerciseSelect = useCallback((exercise: Exercise) => {
+    if (exerciseSelectCallbackState) {
+      exerciseSelectCallbackState(exercise);
+      setExerciseSelectCallbackState(null);
+    }
+  }, [exerciseSelectCallbackState]);
+  const triggerExercisesSelect = useCallback((exercises: Exercise[]) => {
+    if (exercisesSelectCallbackState) {
+      exercisesSelectCallbackState(exercises);
+      setExercisesSelectCallbackState(null);
+    }
+  }, [exercisesSelectCallbackState]);
+
   const getScheduleData = useCallback(() => {
     return storedScheduleData;
   }, [storedScheduleData]);
@@ -217,9 +244,13 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
         triggerMetricSelect,
         triggerHabitSelect,
         triggerDateSelect,
+        triggerExerciseSelect,
+        triggerExercisesSelect,
         setMetricSelectCallback,
         setHabitSelectCallback,
         setDateSelectCallback,
+        setExerciseSelectCallback,
+        setExercisesSelectCallback,
         getRepeatData,
         setRepeatData,
         getHabitOptionsData,
