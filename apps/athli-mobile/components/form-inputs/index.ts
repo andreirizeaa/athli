@@ -8,3 +8,4 @@ export { HeightInput } from './height-input';
 export { CountrySelectorInput } from './country-selector-input';
 export { PhoneNumberInput, type PhoneNumber, formatPhoneNumber } from './phone-number-input';
 export { type Country, COUNTRIES, DEFAULT_COUNTRY } from './countries-data';
+export { SelectionInput } from './selection-input';

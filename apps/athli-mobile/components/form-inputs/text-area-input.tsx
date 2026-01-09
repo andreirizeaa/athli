@@ -13,6 +13,7 @@ type TextAreaInputProps = {
   placeholder?: string;
   numberOfLines?: number;
   minHeight?: number;
+  required?: boolean;
 } & Omit<TextInputProps, 'value' | 'onChangeText' | 'placeholder' | 'style' | 'multiline' | 'numberOfLines'>;
 
 export type TextAreaInputRef = {
@@ -22,7 +23,7 @@ export type TextAreaInputRef = {
 };
 
 export const TextAreaInput = forwardRef<TextAreaInputRef, TextAreaInputProps>(
-  ({ label, value, onChangeText, placeholder, numberOfLines = 4, minHeight = 80, ...textInputProps }, ref) => {
+  ({ label, value, onChangeText, placeholder, numberOfLines = 4, minHeight = 80, required, ...textInputProps }, ref) => {
     const { colors: themeColors } = useThemePreference();
     const inputRef = useRef<TextInput>(null);
 
@@ -40,9 +41,12 @@ export const TextAreaInput = forwardRef<TextAreaInputRef, TextAreaInputProps>(
     return (
       <View style={[styles.inputBox, { backgroundColor: themeColors.surfaceSecondary }]}>
         <View style={styles.labelRow}>
-          <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
-            {label}
-          </Text>
+          <View style={styles.labelLeft}>
+            <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
+              {label}
+            </Text>
+            {required && <Text style={styles.requiredAsterisk}>*</Text>}
+          </View>
           {value.length > 0 && (
             <PressableOpacity
               style={styles.clearButton}
@@ -85,8 +89,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 4,
   },
+  labelLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   inputBoxLabel: {
     ...typography.p4,
+  },
+  requiredAsterisk: {
+    ...typography.p4,
+    color: '#EF4444',
+    marginLeft: 2,
   },
   inputBoxInput: {
     ...typography.p1,

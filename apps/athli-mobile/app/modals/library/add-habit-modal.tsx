@@ -31,6 +31,7 @@ import { InputBox, TextAreaInput, SelectInput, ButtonTabGroup } from '@/componen
 import { Card } from '@/components/card';
 import { Separator } from '@/components/separator';
 import { SearchBar } from '@/components/search-bar';
+import { hexToRgba } from '@/utils/colorUtils';
 
 
 // Helper to format time string "HH:MM" for display (12-hour format)
@@ -180,37 +181,6 @@ export default function AddHabitModal() {
         }
     }, [selectedTab]);
 
-    const handleSwipe = useCallback((direction: 'left' | 'right') => {
-        const currentIndex = tabOrder.indexOf(selectedTab);
-        let newIndex: number;
-
-        if (direction === 'left') {
-            newIndex = Math.min(currentIndex + 1, tabOrder.length - 1);
-        } else {
-            newIndex = Math.max(currentIndex - 1, 0);
-        }
-
-        if (newIndex !== currentIndex) {
-            const newTab = tabOrder[newIndex];
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setSelectedTab(newTab);
-            animateUnderline(newTab);
-        }
-    }, [selectedTab, tabOrder]);
-
-    const swipeGesture = Gesture.Pan()
-        .activeOffsetX([-20, 20])
-        .failOffsetY([-10, 10])
-        .onEnd((event) => {
-            if (Math.abs(event.velocityX) > 500 || Math.abs(event.translationX) > 50) {
-                if (event.translationX < 0) {
-                    runOnJS(handleSwipe)('left');
-                } else {
-                    runOnJS(handleSwipe)('right');
-                }
-            }
-        });
-
     // Handle selecting a template
     const handleSelectTemplate = useCallback((habit: DefaultHabit) => {
         // Populate form fields
@@ -318,11 +288,12 @@ export default function AddHabitModal() {
             {/* Fixed Header with gradient */}
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
-                    colors={
-                        colorScheme === 'dark'
-                            ? ['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0)']
-                            : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0)']
-                    }
+                    colors={[
+                        hexToRgba(themeColors.background, 1),
+                        hexToRgba(themeColors.background, 0.85),
+                        hexToRgba(themeColors.background, 0.5),
+                        hexToRgba(themeColors.background, 0),
+                    ]}
                     locations={[0, 0.5, 0.8, 1]}
                     style={[styles.headerGradient, { height: gradientHeight }]}
                     pointerEvents="none"
@@ -354,8 +325,8 @@ export default function AddHabitModal() {
                 </View>
             </View>
 
-            {/* Scrollable Content with Swipe Gesture */}
-            <GestureDetector gesture={swipeGesture}>
+            {/* Scrollable Content */}
+            <View style={styles.gestureContainer}>
                 <KeyboardAwareScrollView
                     style={styles.scrollView}
                     contentContainerStyle={[
@@ -585,13 +556,16 @@ export default function AddHabitModal() {
                         </>
                     )}
                 </KeyboardAwareScrollView>
-            </GestureDetector>
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
+        flex: 1,
+    },
+    gestureContainer: {
         flex: 1,
     },
     fixedHeader: {

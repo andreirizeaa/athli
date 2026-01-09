@@ -30,7 +30,7 @@ export default function ClientHabitsScreen() {
     };
 
     const handleLogHabit = () => {
-        // TODO: Handle log habit
+        router.push('/modals/client/log-habit-for-client-modal');
     };
 
     return (

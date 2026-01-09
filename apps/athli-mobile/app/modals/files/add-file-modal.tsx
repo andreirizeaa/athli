@@ -16,6 +16,7 @@ import { IconButton } from '@/components/icon-button';
 import { PlatformIcon } from '@/components/platform-icon';
 import { InputBox } from '@/components/form-inputs';
 import { addFile, type AddFileData } from '@/services/file-service';
+import { hexToRgba } from '@/utils/colorUtils';
 
 type SelectedFile = {
     uri: string;
@@ -43,7 +44,7 @@ export default function AddFileModal() {
     // Form validation and change detection
     const { hasChanges, canComplete } = useMemo(() => {
         const trimmedName = fileName.trim();
-        
+
         // Name and file are required
         const formValid = trimmedName.length > 0 && selectedFile !== null;
 
@@ -201,11 +202,12 @@ export default function AddFileModal() {
                     {/* Header with gradient */}
                     <View style={[styles.fixedHeader, { height: headerHeight }]}>
                         <LinearGradient
-                            colors={
-                                colorScheme === 'dark'
-                                    ? ['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0)']
-                                    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0)']
-                            }
+                            colors={[
+                                hexToRgba(themeColors.background, 1),
+                                hexToRgba(themeColors.background, 0.85),
+                                hexToRgba(themeColors.background, 0.5),
+                                hexToRgba(themeColors.background, 0),
+                            ]}
                             locations={[0, 0.5, 0.8, 1]}
                             style={[styles.headerGradient, { height: gradientHeight }]}
                             pointerEvents="none"
@@ -344,7 +346,7 @@ export default function AddFileModal() {
                                         hitSlop={8}
                                     >
                                         <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                                            <X size={12} color={themeColors.surfaceSecondary} strokeWidth={3} />
+                                            <X {...({ size: 12, color: themeColors.surfaceSecondary, strokeWidth: 3 } as any)} />
                                         </View>
                                     </PressableOpacity>
                                 </View>

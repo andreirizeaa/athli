@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   optionTitle: {
-    ...typography.p1,
+    ...typography.p2,
   },
   optionSubtitle: {
     ...typography.p6,

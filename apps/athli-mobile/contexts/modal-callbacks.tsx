@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { Client } from '@/services/client-service';
+import type { DefaultMetric } from '@/constants/metrics';
+import type { DefaultHabit } from '@/constants/habits';
 
 type RepeatData = {
   type: 'weekly' | 'monthly';
@@ -33,12 +35,18 @@ type ModalCallbacksContextType = {
   setNumberSelectCallback: (callback: (value: number | 'ever') => void) => void;
   setHabitOptionsCallback: (callback: (data: HabitOptionsData) => void) => void;
   setScheduleCallback: (callback: (data: ScheduleData) => void) => void;
+  setMetricSelectCallback: (callback: (metric: DefaultMetric) => void) => void;
+  setHabitSelectCallback: (callback: (habit: DefaultHabit) => void) => void;
+  setDateSelectCallback: (callback: (date: Date) => void) => void;
   triggerClientSelect: (client: Client) => void;
   triggerTypeSelect: (type: string) => void;
   triggerRepeatSelect: (data: RepeatData) => void;
   triggerNumberSelect: (value: number | 'ever') => void;
   triggerHabitOptionsSelect: (data: HabitOptionsData) => void;
   triggerScheduleSelect: (data: ScheduleData) => void;
+  triggerMetricSelect: (metric: DefaultMetric) => void;
+  triggerHabitSelect: (habit: DefaultHabit) => void;
+  triggerDateSelect: (date: Date) => void;
   getRepeatData: () => RepeatData | null;
   setRepeatData: (data: RepeatData | null) => void;
   getHabitOptionsData: () => HabitOptionsData | null;
@@ -58,6 +66,9 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
   const [numberSelectCallback, setNumberSelectCallbackState] = useState<((value: number | 'ever') => void) | null>(null);
   const [habitOptionsCallback, setHabitOptionsCallbackState] = useState<((data: HabitOptionsData) => void) | null>(null);
   const [scheduleCallback, setScheduleCallbackState] = useState<((data: ScheduleData) => void) | null>(null);
+  const [metricSelectCallback, setMetricSelectCallbackState] = useState<((metric: DefaultMetric) => void) | null>(null);
+  const [habitSelectCallback, setHabitSelectCallbackState] = useState<((habit: DefaultHabit) => void) | null>(null);
+  const [dateSelectCallback, setDateSelectCallbackState] = useState<((date: Date) => void) | null>(null);
   const [storedRepeatData, setStoredRepeatData] = useState<RepeatData | null>(null);
   const [storedHabitOptionsData, setStoredHabitOptionsData] = useState<HabitOptionsData | null>(null);
   const [storedScheduleData, setStoredScheduleData] = useState<ScheduleData | null>(null);
@@ -84,6 +95,18 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
 
   const setScheduleCallback = useCallback((callback: (data: ScheduleData) => void) => {
     setScheduleCallbackState(() => callback);
+  }, []);
+
+  const setMetricSelectCallback = useCallback((callback: (metric: DefaultMetric) => void) => {
+    setMetricSelectCallbackState(() => callback);
+  }, []);
+
+  const setHabitSelectCallback = useCallback((callback: (habit: DefaultHabit) => void) => {
+    setHabitSelectCallbackState(() => callback);
+  }, []);
+
+  const setDateSelectCallback = useCallback((callback: (date: Date) => void) => {
+    setDateSelectCallbackState(() => callback);
   }, []);
 
   const triggerClientSelect = useCallback((client: Client) => {
@@ -147,6 +170,27 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
     }
   }, [scheduleCallback]);
 
+  const triggerMetricSelect = useCallback((metric: DefaultMetric) => {
+    if (metricSelectCallback) {
+      metricSelectCallback(metric);
+      setMetricSelectCallbackState(null);
+    }
+  }, [metricSelectCallback]);
+
+  const triggerHabitSelect = useCallback((habit: DefaultHabit) => {
+    if (habitSelectCallback) {
+      habitSelectCallback(habit);
+      setHabitSelectCallbackState(null);
+    }
+  }, [habitSelectCallback]);
+
+  const triggerDateSelect = useCallback((date: Date) => {
+    if (dateSelectCallback) {
+      dateSelectCallback(date);
+      setDateSelectCallbackState(null);
+    }
+  }, [dateSelectCallback]);
+
   const getScheduleData = useCallback(() => {
     return storedScheduleData;
   }, [storedScheduleData]);
@@ -170,6 +214,12 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
         triggerNumberSelect,
         triggerHabitOptionsSelect,
         triggerScheduleSelect,
+        triggerMetricSelect,
+        triggerHabitSelect,
+        triggerDateSelect,
+        setMetricSelectCallback,
+        setHabitSelectCallback,
+        setDateSelectCallback,
         getRepeatData,
         setRepeatData,
         getHabitOptionsData,

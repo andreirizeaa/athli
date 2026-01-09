@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
+import { useModalCallbacks } from '@/contexts/modal-callbacks';
 
 const DEFAULT_STORAGE_KEY = '@select_date_modal_selected_date';
 
@@ -24,30 +25,33 @@ type MonthData = {
 const MONTH_NAMES_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 // Only generate 2 years of months (1 year back, current, 1 year forward) = 36 months
-const generateMonths = (): MonthData[] => {
+const generateMonths = (allowFuture: boolean): MonthData[] => {
   const months: MonthData[] = [];
   const now = new Date();
   const currentYear = now.getFullYear();
-  
-  for (let year = currentYear - 1; year <= currentYear + 1; year++) {
+  const currentMonth = now.getMonth();
+
+  const startYear = currentYear - 1;
+  const endYear = allowFuture ? currentYear + 1 : currentYear;
+
+  for (let year = startYear; year <= endYear; year++) {
     for (let month = 0; month <= 11; month++) {
+      if (!allowFuture && year === currentYear && month > currentMonth) {
+        break;
+      }
       months.push({ year, month, id: `${year}-${month}` });
     }
   }
   return months;
 };
 
-const MONTHS_DATA = generateMonths();
-
-const getInitialMonthIndex = (): number => {
+const getInitialMonthIndex = (months: MonthData[]): number => {
   const now = new Date();
-  const index = MONTHS_DATA.findIndex(
+  const index = months.findIndex(
     (m) => m.year === now.getFullYear() && m.month === now.getMonth()
   );
-  return index >= 0 ? index : 12;
+  return index >= 0 ? index : months.length - 1;
 };
-
-const INITIAL_MONTH_INDEX = getInitialMonthIndex();
 
 const getFirstDayOfWeek = (year: number, month: number): number => {
   const day = new Date(year, month, 1).getDay();
@@ -85,6 +89,7 @@ type CalendarMonthPageProps = {
   themeColors: any;
   cellWidth: number;
   gridWidth: number;
+  allowFuture: boolean;
 };
 
 const CalendarMonthPage = React.memo(({
@@ -94,25 +99,26 @@ const CalendarMonthPage = React.memo(({
   themeColors,
   cellWidth,
   gridWidth,
+  allowFuture,
 }: CalendarMonthPageProps) => {
   const firstDay = getFirstDayOfWeek(monthData.year, monthData.month);
   const daysInMonth = getDaysInMonth(monthData.year, monthData.month);
-  
+
   const circleSize = Math.floor(cellWidth * 0.7);
   const activeCircleSize = Math.floor(cellWidth * 0.82);
   const rows: React.ReactNode[] = [];
-  
+
   let dayCounter = 1;
   const totalDays = firstDay + daysInMonth;
   const numRows = Math.ceil(totalDays / 7);
-  
+
   for (let rowIndex = 0; rowIndex < Math.min(numRows, 5); rowIndex++) {
     const cells: React.ReactNode[] = [];
-    
+
     for (let cellIndex = 0; cellIndex < 7; cellIndex++) {
       const position = rowIndex * 7 + cellIndex;
       const isLastInRow = cellIndex === 6;
-      
+
       if (position < firstDay || dayCounter > daysInMonth) {
         cells.push(
           <View
@@ -129,42 +135,65 @@ const CalendarMonthPage = React.memo(({
         const date = new Date(monthData.year, monthData.month, day);
         const isSelected = selectedDate ? isSameDay(date, selectedDate) : isToday(date);
         const isTodayDate = isToday(date);
+
+        const isFuture = !allowFuture && normalizeDate(date).getTime() > normalizeDate(new Date()).getTime();
+
         const isActive = isSelected || isTodayDate;
         const currentCircleSize = isActive ? activeCircleSize : circleSize;
-        
-        cells.push(
-          <PressableOpacity
-            key={cellIndex}
+
+        const cellContent = (
+          <View
             style={[
-              styles.dayCell,
-              { width: cellWidth, height: cellWidth },
-              isLastInRow && styles.dayCellLastInRow,
+              styles.circleIndicator,
+              { width: currentCircleSize, height: currentCircleSize, borderRadius: currentCircleSize / 2 },
+              isSelected && { backgroundColor: themeColors.primary },
+              isTodayDate && !isSelected && { borderWidth: 2, borderColor: themeColors.primary },
+              isFuture && { opacity: 0.25 },
             ]}
-            onPress={() => onDateSelect(normalizeDate(date))}
           >
-            <View
+            <Text
               style={[
-                styles.circleIndicator,
-                { width: currentCircleSize, height: currentCircleSize, borderRadius: currentCircleSize / 2 },
-                isSelected && { backgroundColor: themeColors.primary },
-                isTodayDate && !isSelected && { borderWidth: 2, borderColor: themeColors.primary },
+                styles.dayText,
+                { color: isSelected ? themeColors.primaryForeground : themeColors.text },
               ]}
             >
-              <Text
-                style={[
-                  styles.dayText,
-                  { color: isSelected ? themeColors.primaryForeground : themeColors.text },
-                ]}
-              >
-                {day}
-              </Text>
-            </View>
-          </PressableOpacity>
+              {day}
+            </Text>
+          </View>
         );
+
+        if (isFuture) {
+          cells.push(
+            <View
+              key={cellIndex}
+              style={[
+                styles.dayCell,
+                { width: cellWidth, height: cellWidth },
+                isLastInRow && styles.dayCellLastInRow,
+              ]}
+            >
+              {cellContent}
+            </View>
+          );
+        } else {
+          cells.push(
+            <PressableOpacity
+              key={cellIndex}
+              style={[
+                styles.dayCell,
+                { width: cellWidth, height: cellWidth },
+                isLastInRow && styles.dayCellLastInRow,
+              ]}
+              onPress={() => onDateSelect(normalizeDate(date))}
+            >
+              {cellContent}
+            </PressableOpacity>
+          );
+        }
         dayCounter++;
       }
     }
-    
+
     rows.push(
       <View key={rowIndex} style={[styles.calendarRow, { width: gridWidth }]}>
         {cells}
@@ -214,18 +243,23 @@ WeekdayHeader.displayName = 'WeekdayHeader';
 
 export default function SelectDateModal() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ selectedDate?: string; storageKey?: string }>();
+  const params = useLocalSearchParams<{ selectedDate?: string; storageKey?: string; allowFuture?: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const { triggerDateSelect } = useModalCallbacks();
   const { width } = useWindowDimensions();
   const pagerRef = useRef<PagerView>(null);
   const isClosingRef = useRef(false);
-  
+
   // Get storage key from params or use default
-  const storageKey = params.storageKey || DEFAULT_STORAGE_KEY; 
-  
+  const storageKey = params.storageKey || DEFAULT_STORAGE_KEY;
+  const allowFuture = params.allowFuture !== 'false';
+
+  const monthsData = useMemo(() => generateMonths(allowFuture), [allowFuture]);
+  const initialMonthIndex = useMemo(() => getInitialMonthIndex(monthsData), [monthsData]);
+
   const [isReady, setIsReady] = useState(false);
-  const [currentPageIndex, setCurrentPageIndex] = useState(INITIAL_MONTH_INDEX);
+  const [currentPageIndex, setCurrentPageIndex] = useState(initialMonthIndex);
 
   useEffect(() => {
     const handle = InteractionManager.runAfterInteractions(() => {
@@ -258,12 +292,12 @@ export default function SelectDateModal() {
   const [selectedDate, setSelectedDate] = useState<Date>(initialSelectedDate);
 
   const currentMonthTitle = useMemo(() => {
-    const monthData = MONTHS_DATA[currentPageIndex];
+    const monthData = monthsData[currentPageIndex];
     if (monthData) {
       return `${MONTH_NAMES_SHORT[monthData.month]} ${monthData.year}`;
     }
     return '';
-  }, [currentPageIndex]);
+  }, [currentPageIndex, monthsData]);
 
   const handlePageSelected = useCallback((event: PagerViewOnPageSelectedEvent) => {
     const index = event.nativeEvent.position;
@@ -276,17 +310,6 @@ export default function SelectDateModal() {
     router.back();
   }, [router]);
 
-  const handleSelectToday = useCallback(() => {
-    const today = normalizeDate(new Date());
-    const todayMonthIndex = MONTHS_DATA.findIndex(
-      (m) => m.year === today.getFullYear() && m.month === today.getMonth()
-    );
-    if (todayMonthIndex >= 0 && todayMonthIndex !== currentPageIndex) {
-      pagerRef.current?.setPage(todayMonthIndex);
-    }
-    handleDateSelect(today);
-  }, [currentPageIndex]);
-
   const handleDateSelect = useCallback((date: Date) => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
@@ -294,11 +317,23 @@ export default function SelectDateModal() {
     setSelectedDate(date);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     AsyncStorage.setItem(storageKey, date.toISOString());
+    triggerDateSelect(date);
 
     setTimeout(() => {
       router.back();
     }, 120);
-  }, [router, storageKey]);
+  }, [router, storageKey, triggerDateSelect]);
+
+  const handleSelectToday = useCallback(() => {
+    const today = normalizeDate(new Date());
+    const todayMonthIndex = monthsData.findIndex(
+      (m) => m.year === today.getFullYear() && m.month === today.getMonth()
+    );
+    if (todayMonthIndex >= 0 && todayMonthIndex !== currentPageIndex) {
+      pagerRef.current?.setPage(todayMonthIndex);
+    }
+    handleDateSelect(today);
+  }, [currentPageIndex, monthsData, handleDateSelect]);
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background, paddingBottom: 200 }]}>
@@ -327,13 +362,13 @@ export default function SelectDateModal() {
           <PagerView
             ref={pagerRef}
             style={styles.pagerView}
-            initialPage={INITIAL_MONTH_INDEX}
+            initialPage={initialMonthIndex}
             onPageSelected={handlePageSelected}
             offscreenPageLimit={1}
           >
-            {MONTHS_DATA.map((monthData, index) => {
+            {monthsData.map((monthData, index) => {
               const shouldRender = Math.abs(index - currentPageIndex) <= 2;
-              
+
               return (
                 <View key={monthData.id} style={styles.pageContainer} collapsable={false}>
                   {shouldRender ? (
@@ -344,6 +379,7 @@ export default function SelectDateModal() {
                       themeColors={themeColors}
                       cellWidth={cellWidth}
                       gridWidth={gridWidth}
+                      allowFuture={allowFuture}
                     />
                   ) : null}
                 </View>
@@ -353,12 +389,13 @@ export default function SelectDateModal() {
         ) : (
           <View style={styles.pageContainer}>
             <CalendarMonthPage
-              monthData={MONTHS_DATA[INITIAL_MONTH_INDEX]}
+              monthData={monthsData[initialMonthIndex]}
               selectedDate={selectedDate}
               onDateSelect={handleDateSelect}
               themeColors={themeColors}
               cellWidth={cellWidth}
               gridWidth={gridWidth}
+              allowFuture={allowFuture}
             />
           </View>
         )}

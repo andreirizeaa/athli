@@ -11,6 +11,7 @@ import { useTranslations } from '@/contexts/useTranslations';
 import { IconButton } from '@/components/icon-button';
 import { InputBox, TextAreaInput } from '@/components/form-inputs';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { hexToRgba } from '@/utils/colorUtils';
 
 export default function AddNoteToClientModal() {
     const router = useRouter();
@@ -46,11 +47,12 @@ export default function AddNoteToClientModal() {
             {/* Fixed Header with gradient */}
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
-                    colors={
-                        colorScheme === 'dark'
-                            ? ['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0)']
-                            : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0)']
-                    }
+                    colors={[
+                        hexToRgba(themeColors.background, 1),
+                        hexToRgba(themeColors.background, 0.85),
+                        hexToRgba(themeColors.background, 0.5),
+                        hexToRgba(themeColors.background, 0),
+                    ]}
                     locations={[0, 0.5, 0.8, 1]}
                     style={[styles.headerGradient, { height: gradientHeight }]}
                     pointerEvents="none"

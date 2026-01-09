@@ -195,6 +195,66 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="modals/client/edit-client-bio-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/edit-client-goal-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/edit-client-injury-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/add-client-goal-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/add-client-injury-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
             name="add-modal-content"
             options={{
               presentation: 'modal',
@@ -302,6 +362,54 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="modals/client/assign-metric-to-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/log-metric-for-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/log-habit-for-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/metrics-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/habits-modal"
             options={{
               presentation: 'modal',
               gestureEnabled: false,
