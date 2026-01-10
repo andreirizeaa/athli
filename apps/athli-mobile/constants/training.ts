@@ -143,6 +143,17 @@ export const HABIT_DURATION_PERIOD_OPTIONS = [
 
 export type HabitDurationPeriod = typeof HABIT_DURATION_PERIOD_OPTIONS[number]['value'];
 
+// Heart Rate Zone Options
+export const HEART_RATE_ZONE_OPTIONS = [
+    { value: 'Zone 1', label: 'Zone 1', subtitle: '50-60% of max HR' },
+    { value: 'Zone 2', label: 'Zone 2', subtitle: '60-70% of max HR' },
+    { value: 'Zone 3', label: 'Zone 3', subtitle: '70-80% of max HR' },
+    { value: 'Zone 4', label: 'Zone 4', subtitle: '80-90% of max HR' },
+    { value: 'Zone 5', label: 'Zone 5', subtitle: '90-100% of max HR' },
+] as const;
+
+export type HeartRateZone = typeof HEART_RATE_ZONE_OPTIONS[number]['value'];
+
 // Column Selection Options
 export const COLUMN_OPTIONS = [
     // Reps (no units)
