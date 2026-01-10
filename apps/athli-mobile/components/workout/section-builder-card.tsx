@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Ellipsis, ArrowUp, ArrowDown, Trash2, Save } from 'lucide-react-native';
+import { Ellipsis, ArrowUp, ArrowDown, Trash2, Save, ChevronRight } from 'lucide-react-native';
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { Card } from '@/components/card';
@@ -10,6 +10,8 @@ import { type WorkoutSection } from './types';
 import { SECTION_TYPES } from '@/constants/training';
 import { PressableScale } from 'pressto';
 
+const RED_ERROR = '#EF4444';
+
 type SectionBuilderCardProps = {
     section: WorkoutSection;
     onDelete: () => void;
@@ -18,6 +20,7 @@ type SectionBuilderCardProps = {
     canMoveDown?: boolean;
     onMoveUp?: () => void;
     onMoveDown?: () => void;
+    hasError?: boolean;
 };
 
 export const SectionBuilderCard = ({
@@ -28,6 +31,7 @@ export const SectionBuilderCard = ({
     canMoveDown,
     onMoveUp,
     onMoveDown,
+    hasError,
 }: SectionBuilderCardProps) => {
     const { colors: themeColors } = useThemePreference();
 
@@ -66,7 +70,7 @@ export const SectionBuilderCard = ({
     ];
 
     return (
-        <Card style={styles.card}>
+        <Card style={[styles.card, hasError && { borderColor: RED_ERROR, borderWidth: 2 }]}>
             <PressableScale style={styles.pressable} onPress={onEdit}>
                 <View style={styles.header}>
                     <View style={styles.headerContent}>
@@ -84,7 +88,7 @@ export const SectionBuilderCard = ({
                     </DropdownMenuWrapper>
                 </View>
 
-                {(section.exercises?.length ?? 0) > 0 && (
+                {(section.exercises?.length ?? 0) > 0 ? (
                     <>
                         <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
                         <View style={styles.exerciseList}>
@@ -98,6 +102,16 @@ export const SectionBuilderCard = ({
                                     </Text>
                                 </View>
                             ))}
+                        </View>
+                    </>
+                ) : (
+                    <>
+                        <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
+                        <View style={styles.emptyRow}>
+                            <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
+                                Add your first exercises
+                            </Text>
+                            <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
                         </View>
                     </>
                 )}
@@ -164,5 +178,16 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: '700',
         flex: 1,
+    },
+    emptyRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 12,
+        paddingLeft: 4,
+    },
+    emptyText: {
+        fontSize: 16,
+        fontStyle: 'italic',
     },
 });

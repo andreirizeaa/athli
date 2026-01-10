@@ -26,6 +26,7 @@ import {
   FilesTab,
 } from '@/components/library';
 import { useLibraryTab, type LibraryTab } from '@/contexts/useLibraryTab';
+import { SearchBar } from '@/components/search-bar';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -37,7 +38,7 @@ type TabComponent = {
 export default function LibraryScreen() {
   const { primaryColor, colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const { setCurrentLibraryTab } = useLibraryTab();
+  const { setCurrentLibraryTab, searchQuery, setSearchQuery } = useLibraryTab();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const pagerRef = useRef<PagerView>(null);
   const tabBarScrollRef = useRef<ScrollView>(null);
@@ -90,6 +91,7 @@ export default function LibraryScreen() {
     setSelectedIndex(index);
     animateUnderline(index);
     setCurrentLibraryTab(tabs[index]);
+    setSearchQuery('');
 
     pagerRef.current?.setPage(index);
 
@@ -110,6 +112,7 @@ export default function LibraryScreen() {
       setSelectedIndex(index);
       animateUnderline(index);
       setCurrentLibraryTab(tabs[index]);
+      setSearchQuery('');
 
       // Scroll tab bar to keep selected tab visible
       const layout = tabLayoutsRef.current[index];
@@ -209,7 +212,18 @@ export default function LibraryScreen() {
         >
           {tabComponents.map(({ key, component: Component }) => (
             <View key={key} style={styles.tabContentItem}>
-              <Component />
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.tabScrollContent}
+              >
+                <SearchBar
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder={t(`library.searchPlaceholders.${key}`)}
+                  style={styles.searchBar}
+                />
+                <Component />
+              </ScrollView>
             </View>
           ))}
         </PagerView>
@@ -221,18 +235,16 @@ export default function LibraryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
   },
   title: {
     ...typography.h1,
     textAlign: 'left',
+    paddingTop: 16,
     marginBottom: 16,
+    paddingHorizontal: 16,
   },
   tabBarWrapper: {
     position: 'relative',
-    marginLeft: -16,
-    marginRight: -16,
   },
   tabBarContainer: {
     flexGrow: 0,
@@ -257,7 +269,7 @@ const styles = StyleSheet.create({
     height: 1,
     opacity: 0.3,
     marginTop: 0,
-    marginBottom: 16,
+    marginBottom: 0,
   },
   animatedUnderline: {
     position: 'absolute',
@@ -272,6 +284,14 @@ const styles = StyleSheet.create({
   },
   tabContentItem: {
     flex: 1,
-    paddingHorizontal: 16,
+  },
+  tabScrollContent: {
+    paddingTop: 16,
+    paddingBottom: 40,
+    flexGrow: 1,
+  },
+  searchBar: {
+    marginBottom: 16,
+    marginHorizontal: 16,
   },
 });

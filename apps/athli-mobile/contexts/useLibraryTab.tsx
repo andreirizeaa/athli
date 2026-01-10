@@ -5,15 +5,23 @@ export type LibraryTab = 'workouts' | 'sections' | 'programs' | 'exercises' | 'c
 type LibraryTabContextType = {
     currentLibraryTab: LibraryTab;
     setCurrentLibraryTab: (tab: LibraryTab) => void;
+    searchQuery: string;
+    setSearchQuery: (query: string) => void;
 };
 
 const LibraryTabContext = createContext<LibraryTabContextType | undefined>(undefined);
 
 export function LibraryTabProvider({ children }: { children: ReactNode }) {
     const [currentLibraryTab, setCurrentLibraryTab] = useState<LibraryTab>('workouts');
+    const [searchQuery, setSearchQuery] = useState('');
 
     return (
-        <LibraryTabContext.Provider value={{ currentLibraryTab, setCurrentLibraryTab }}>
+        <LibraryTabContext.Provider value={{
+            currentLibraryTab,
+            setCurrentLibraryTab,
+            searchQuery,
+            setSearchQuery
+        }}>
             {children}
         </LibraryTabContext.Provider>
     );
