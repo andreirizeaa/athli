@@ -120,7 +120,7 @@ export const QuestionnairesTab = () => {
                   style={styles.rowWrapper}
                   onPress={() => handleQuestionnairePress(item)}
                 >
-                  <View style={[styles.rowContent, { backgroundColor: themeColors.background }]}>
+                  <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
                     <View style={styles.iconContainer}>
                       <PlatformIcon
                         sf="list.bullet.rectangle.portrait.fill"

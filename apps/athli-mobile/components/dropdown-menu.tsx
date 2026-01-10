@@ -151,11 +151,28 @@ type ContextMenuWrapperProps = {
 
 /**
  * Context menu that appears on long press (iOS/Android native context menu)
+ * Includes a custom preview with themed background for better visibility in dark mode
  */
 export const ContextMenuWrapper = ({
   options,
   children,
 }: ContextMenuWrapperProps) => {
+  const { colors: themeColors } = useThemePreference();
+
+  // Clone children with overridden background for the preview
+  const getPreviewChildren = () => {
+    if (React.isValidElement(children)) {
+      // Clone the first child and override its style with surface background
+      return React.cloneElement(children as React.ReactElement<any>, {
+        style: [
+          (children as React.ReactElement<any>).props.style,
+          { backgroundColor: themeColors.surface },
+        ],
+      });
+    }
+    return children;
+  };
+
   return (
     <ContextMenu.Root>
       <ContextMenu.Trigger>
@@ -163,6 +180,13 @@ export const ContextMenuWrapper = ({
           {children}
         </View>
       </ContextMenu.Trigger>
+      <ContextMenu.Preview>
+        {() => (
+          <View style={{ backgroundColor: themeColors.surface }}>
+            {getPreviewChildren()}
+          </View>
+        )}
+      </ContextMenu.Preview>
       <ContextMenu.Content>
         {options.map((option, index) => (
           <ContextMenu.Item

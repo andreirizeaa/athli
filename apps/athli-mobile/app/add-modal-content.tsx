@@ -2,17 +2,17 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useRouter, useLocalSearchParams, usePathname } from 'expo-router';
 import { View, StyleSheet, Text, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SymbolView } from 'expo-symbols';
+import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
 
 import { useAppView } from '@/contexts/useAppView';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { typography, iconSizes } from '@/constants/typography';
+import { typography } from '@/constants/typography';
 import { AddClientContent, type AddClientContentRef } from '@/components/clients/add-client-content';
 import { NewChatContent } from '@/components/chats/new-chat-content';
-import { PlatformIcon } from '@/components/platform-icon';
 import { IconButton } from '@/components/icon-button';
+import { hexToRgba } from '@/utils/colorUtils';
 
 export default function AddModalContent() {
   const router = useRouter();
@@ -84,39 +84,66 @@ export default function AddModalContent() {
     }
   }, [currentRoute]);
 
+  const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
+  const gradientHeight = headerHeight + 12;
+
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20, backgroundColor: themeColors.background }]}>
-        <IconButton
-          icon={{ sf: 'xmark', IconComponent: X }}
-          onPress={handleClose}
-          size="md"
-          color={themeColors.text}
+      {/* Fixed Header with Blur Gradient */}
+      <View style={[styles.fixedHeader, { height: headerHeight }]}>
+        <LinearGradient
+          colors={[
+            hexToRgba(themeColors.background, 1),
+            hexToRgba(themeColors.background, 0.85),
+            hexToRgba(themeColors.background, 0.5),
+            hexToRgba(themeColors.background, 0),
+          ]}
+          locations={[0, 0.5, 0.8, 1]}
+          style={[styles.headerGradient, { height: gradientHeight }]}
+          pointerEvents="none"
         />
-        <Text style={[styles.title, { color: themeColors.text }]}>{title}</Text>
-        {currentRoute === 'clients' ? (
+        <View
+          style={[
+            styles.header,
+            {
+              paddingTop: Platform.OS === 'android' ? 12 + insets.top : 12,
+            },
+          ]}
+        >
           <IconButton
-            icon={{ sf: 'checkmark', IconComponent: Check }}
-            onPress={handleCompleteClient}
+            icon={{ sf: 'xmark', IconComponent: X }}
+            onPress={handleClose}
             size="md"
-            color={canCompleteClient ? themeColors.primary : themeColors.mutedText}
-            disabled={!canCompleteClient}
-            style={!canCompleteClient ? { opacity: 0.5 } : undefined}
+            color={themeColors.text}
           />
-        ) : (
-          <View style={styles.closeButton} />
-        )}
+          <Text style={[styles.title, { color: themeColors.text }]}>{title}</Text>
+          {currentRoute === 'clients' ? (
+            <IconButton
+              icon={{ sf: 'checkmark', IconComponent: Check }}
+              onPress={handleCompleteClient}
+              size="md"
+              color={canCompleteClient ? themeColors.primary : themeColors.mutedText}
+              disabled={!canCompleteClient}
+              style={!canCompleteClient ? { opacity: 0.5 } : undefined}
+            />
+          ) : (
+            <View style={styles.placeholder} />
+          )}
+        </View>
       </View>
 
       {/* Content */}
       <View style={styles.content}>
         {currentRoute === 'clients' ? (
           <View style={styles.clientContentWrapper}>
-            <AddClientContent ref={clientContentRef} onClose={handleClose} />
+            <AddClientContent
+              ref={clientContentRef}
+              onClose={handleClose}
+              headerHeight={headerHeight}
+            />
           </View>
         ) : (
-          <NewChatContent onClose={handleClose} />
+          <NewChatContent onClose={handleClose} headerHeight={headerHeight} />
         )}
       </View>
     </View>
@@ -126,7 +153,19 @@ export default function AddModalContent() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    borderTopWidth: 0,
+  },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  headerGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
   },
   header: {
     flexDirection: 'row',
@@ -140,19 +179,12 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-  closeButton: {
+  placeholder: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   content: {
     flex: 1,
-  },
-  sessionContentWrapper: {
-    flex: 1,
-    paddingHorizontal: 16,
   },
   clientContentWrapper: {
     flex: 1,

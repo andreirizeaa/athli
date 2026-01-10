@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, Switch, Platform } from 'react-native';
-import { Trash2, Plus, Minus, Ellipsis, Repeat, Info, ArrowUp, ArrowDown } from 'lucide-react-native';
+import { Trash2, Plus, Ellipsis, Repeat, Info, ArrowUp, ArrowDown, Timer } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { PressableScale } from 'pressto';
 
@@ -223,6 +223,48 @@ export const ExerciseBuilderCard = ({
         { label: 'Dropset', onPress: () => handleUpdateSet(index, { type: 'D' }) },
     ];
 
+
+    const formatRestTime = (seconds?: number) => {
+        if (seconds === undefined || seconds === null || seconds === 0) return 'Rest Timer: Off';
+
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+
+        if (mins > 0) {
+            return `Rest Timer: ${mins}min ${secs > 0 ? secs + 's' : ''}`;
+        }
+        return `Rest Timer: ${secs}s`;
+    };
+
+    const getRestTimerOptions = (): DropdownMenuOption[] => {
+        const options: DropdownMenuOption[] = [
+            {
+                label: 'Off',
+                onPress: () => onUpdateExercise({ setRestSec: 0 }),
+            }
+        ];
+
+        // 5s increments up to 5min (300s)
+        for (let s = 5; s <= 300; s += 5) {
+            const m = Math.floor(s / 60);
+            const sec = s % 60;
+            let label = '';
+
+            if (m > 0) {
+                label = sec > 0 ? `${m}min ${sec}s` : `${m}min`;
+            } else {
+                label = `${s}s`;
+            }
+
+            options.push({
+                label: label,
+                onPress: () => onUpdateExercise({ setRestSec: s }),
+            });
+        }
+
+        return options;
+    };
+
     return (
         <Card style={[
             styles.card,
@@ -438,28 +480,30 @@ export const ExerciseBuilderCard = ({
                     );
                 })}
 
-                {/* Add/Remove Sets Controls */}
+                {/* Add Set Row + Rest Timer */}
                 {!hideSetControls && (
-                    <View style={styles.setsControls}>
-                        <PressableScale
-                            onPress={handleRemoveLastSet}
-                            style={[
-                                styles.controlButton,
-                                { borderColor: themeColors.border },
-                                exercise.sets.length <= 1 && styles.disabledControl
-                            ]}
-                        >
-                            <Minus {...({ size: 16, color: exercise.sets.length <= 1 ? themeColors.mutedText : themeColors.text } as any)} />
-                        </PressableScale>
-
-                        <Text style={[styles.controlLabel, { color: themeColors.text }]}>Set</Text>
-
-                        <PressableScale
-                            onPress={handleAddSet}
-                            style={[styles.controlButton, { borderColor: themeColors.primary, borderWidth: 2 }]}
-                        >
-                            <Plus {...({ size: 16, color: themeColors.primary } as any)} />
-                        </PressableScale>
+                    <View style={styles.addSetRow}>
+                        <View style={styles.setNumberContainer}>
+                            <PressableScale
+                                onPress={handleAddSet}
+                                style={[styles.addSetCircle, { borderColor: themeColors.primary }]}
+                            >
+                                <Plus {...({ size: 16, color: themeColors.primary } as any)} />
+                            </PressableScale>
+                        </View>
+                        <View style={styles.inputsRow}>
+                            {/* Empty space to match the layout */}
+                        </View>
+                        <View style={styles.restTimerContainer}>
+                            <DropdownMenuWrapper options={getRestTimerOptions()}>
+                                <View style={[styles.restTimerButton, { backgroundColor: themeColors.surfaceSecondary }]}>
+                                    <Timer {...({ size: 16, color: themeColors.primary } as any)} />
+                                    <Text style={[styles.restTimerText, { color: themeColors.primary }]}>
+                                        {formatRestTime(exercise.setRestSec)}
+                                    </Text>
+                                </View>
+                            </DropdownMenuWrapper>
+                        </View>
                     </View>
                 )}
 
@@ -661,20 +705,36 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    setsControls: {
+    addSetRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 8,
-        gap: 12,
+        marginBottom: 10,
     },
-    controlButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        borderWidth: 1.5,
+    addSetCircle: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        borderWidth: 2,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    restTimerContainer: {
+        width: 140, // Increased width for the longer text
+        alignItems: 'flex-end',
+        marginRight: 4,
+        marginLeft: 8,
+    },
+    restTimerButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+    },
+    restTimerText: {
+        ...typography.p3,
+        fontWeight: '600',
     },
     secondaryControls: {
         flexDirection: 'row',
@@ -703,13 +763,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         padding: 0,
     },
-    disabledControl: {
-        opacity: 0.5,
-    },
-    controlLabel: {
-        ...typography.p1,
-        fontWeight: '700',
-    },
+    // disabledControl and controlLabel removed
     alternativesSection: {
         marginTop: 16,
         paddingHorizontal: 4,

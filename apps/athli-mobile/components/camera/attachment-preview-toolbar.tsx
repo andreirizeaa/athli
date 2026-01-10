@@ -6,11 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 
 import { iconSizes, typography } from '@/constants/typography';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/platform-icon';
 import { MessageInputBar } from '@/components/message/message-input-bar';
-import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
 import { useDarkModeTheme } from '../dark-mode-wrapper';
 
 type AttachmentPreviewToolbarProps = {
@@ -54,44 +52,37 @@ export const AttachmentPreviewToolbar = ({
         tint="dark"
         style={[styles.blurContainer, { backgroundColor: translucentHeaderBg }]}
       >
-        <KeyboardAwareToolbar
-          closedBaseHeight={66}
-          openBaseHeight={20}
-          contentStyle={{ paddingHorizontal: 16 }}
-          backgroundColor="transparent"
+        <View
+          style={[
+            styles.container,
+            {
+              backgroundColor: 'transparent',
+              paddingBottom: insets.bottom,
+            },
+          ]}
         >
-          <View
-            style={[
-              styles.container,
-              {
-                backgroundColor: 'transparent',
-                paddingBottom: insets.bottom,
-              },
-            ]}
-          >
-            <View style={styles.content}>
-              {clientName && (
-                <View style={[styles.clientNameContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
-                  <Text style={[styles.clientNameText, { color: themeColors.text }]} numberOfLines={1}>
-                    {clientName}
-                  </Text>
-                </View>
-              )}
+          <View style={styles.content}>
+            {clientName && (
+              <View style={[styles.clientNameContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
+                <Text style={[styles.clientNameText, { color: themeColors.text }]} numberOfLines={1}>
+                  {clientName}
+                </Text>
+              </View>
+            )}
 
-              <PressableOpacity
-                style={[styles.sendButton, { backgroundColor: themeColors.primary }]}
-                onPress={onSend}
-              >
-                <PlatformIcon
-                  sf="paperplane.fill"
-                  IconComponent={Send}
-                  size={iconSizes.navigationChevrons + 2}
-                  color={themeColors.primaryForeground}
-                />
-              </PressableOpacity>
-            </View>
+            <PressableOpacity
+              style={[styles.sendButton, { backgroundColor: themeColors.primary }]}
+              onPress={onSend}
+            >
+              <PlatformIcon
+                sf="paperplane.fill"
+                IconComponent={Send}
+                size={iconSizes.navigationChevrons + 2}
+                color={themeColors.primaryForeground}
+              />
+            </PressableOpacity>
           </View>
-        </KeyboardAwareToolbar>
+        </View>
       </BlurView>
     </>
   );
