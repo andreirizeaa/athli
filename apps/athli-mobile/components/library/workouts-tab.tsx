@@ -72,7 +72,7 @@ export const WorkoutsTab = () => {
                 onPress={() => handleWorkoutPress(workout.id)}
                 style={styles.rowWrapper}
               >
-                <View style={[styles.rowContent, { backgroundColor: themeColors.background }]}>
+                <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
                   <View style={styles.iconContainer}>
                     <PlatformIcon
                       sf="dumbbell.fill"

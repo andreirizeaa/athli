@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { StyleSheet, Text, View, Platform, Alert } from 'react-native';
+import React, { useState, useMemo, useCallback } from 'react';
+import { StyleSheet, Text, View, Platform, Alert, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, UserPlus, Check } from 'lucide-react-native';
@@ -11,10 +11,14 @@ import { useTranslations } from '@/contexts/useTranslations';
 import { useModalCallbacks } from '@/contexts/modal-callbacks';
 import { SearchBar } from '@/components/search-bar';
 import { ClientSelectionList } from '@/components/clients/client-selection-list';
-import { getClients, type Client } from '@/services/client-service';
+import { type Client } from '@/services/client-service';
 import { IconButton } from '@/components/icon-button';
 import { hexToRgba } from '@/utils/colorUtils';
 import { FilledButton } from '@/components/buttons';
+
+// TODO: Replace with actual TanStack Query hook: const { data: clients, isLoading } = useClients()
+// Mock data to mimic TanStack Query behavior
+import { MOCK_CLIENTS } from '@/constants/mock-clients';
 
 export default function ClientListModal() {
     const router = useRouter();
@@ -28,16 +32,15 @@ export default function ClientListModal() {
     }>();
 
     const [searchQuery, setSearchQuery] = useState('');
-    const [clients, setClients] = useState<Client[]>([]);
     const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
+
+    // TODO: Replace with TanStack Query: const { data: clients, isLoading } = useClients()
+    // For now, use mock data directly (simulates cached TanStack Query data)
+    const clients = MOCK_CLIENTS;
+    const isLoading = false;
 
     const modalTitle = params.title || t('calendar.newSession.selectClient');
     const actionButtonText = params.buttonText || t('general.done');
-
-    // Load clients when component mounts
-    useEffect(() => {
-        getClients().then(setClients).catch(console.error);
-    }, []);
 
     // Filter clients based on search query
     const filteredClients = useMemo(() => {
@@ -46,7 +49,7 @@ export default function ClientListModal() {
         }
         const query = searchQuery.toLowerCase();
         return clients.filter(
-            (client) =>
+            (client: Client) =>
                 client.firstName.toLowerCase().includes(query) ||
                 client.lastName.toLowerCase().includes(query) ||
                 client.fullName.toLowerCase().includes(query)
@@ -59,7 +62,7 @@ export default function ClientListModal() {
             return;
         }
 
-        const selectedClients = clients.filter(c => selectedClientIds.has(c.id));
+        const selectedClients = clients.filter((c: Client) => selectedClientIds.has(c.id));
         triggerClientsSelect(selectedClients);
         router.back();
     }, [selectedClientIds, clients, triggerClientsSelect, router, t]);
@@ -115,22 +118,29 @@ export default function ClientListModal() {
 
             {/* Content */}
             <View style={styles.content}>
-                <View style={styles.listContainer}>
-                    <ClientSelectionList
-                        clients={filteredClients}
-                        selectedClientIds={selectedClientIds}
-                        onSelectionChange={setSelectedClientIds}
-                        ListHeaderComponent={
-                            <View style={[styles.listHeader, { paddingTop: headerHeight + 16 }]}>
-                                <SearchBar
-                                    value={searchQuery}
-                                    onChangeText={setSearchQuery}
-                                    placeholder={t('chats.newChat.searchPlaceholder')}
-                                />
-                            </View>
-                        }
-                    />
-                </View>
+                {/* Loading or Client List */}
+                {isLoading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color={themeColors.primary} />
+                    </View>
+                ) : (
+                    <View style={styles.listContainer}>
+                        <ClientSelectionList
+                            clients={filteredClients}
+                            selectedClientIds={selectedClientIds}
+                            onSelectionChange={setSelectedClientIds}
+                            ListHeaderComponent={
+                                <View style={[styles.searchContainer, { paddingTop: headerHeight + 16 }]}>
+                                    <SearchBar
+                                        value={searchQuery}
+                                        onChangeText={setSearchQuery}
+                                        placeholder={t('chats.newChat.searchPlaceholder')}
+                                    />
+                                </View>
+                            }
+                        />
+                    </View>
+                )}
             </View>
         </View>
     );
@@ -175,8 +185,14 @@ const styles = StyleSheet.create({
     listContainer: {
         flex: 1,
     },
-    listHeader: {
+    searchContainer: {
         paddingBottom: 12,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingBottom: 100,
     },
     bottomContainer: {
         paddingHorizontal: 16,

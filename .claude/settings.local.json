@@ -14,7 +14,9 @@
       "Bash(git checkout:*)",
       "Bash(timeout 180 npm run build:*)",
       "Bash(psql:*)",
-      "Bash(tail:*)"
+      "Bash(tail:*)",
+      "Bash(git restore:*)",
+      "WebFetch(domain:docs.expo.dev)"
     ]
   }
 }

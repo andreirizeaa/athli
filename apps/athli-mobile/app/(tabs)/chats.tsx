@@ -3,8 +3,8 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Check, Ellipsis, MailCheck, CheckCircle2, Archive, Trash2, MessageSquarePlus } from 'lucide-react-native';
-import { useModalCallbacks } from '@/contexts/modal-callbacks';
+import { Check, Ellipsis, MailCheck, CheckCircle2, Archive, Trash2 } from 'lucide-react-native';
+
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -22,9 +22,6 @@ import {
   deleteChat,
   markChatAsRead,
   getChatMessages,
-  markAllArchivedAsRead,
-  unarchiveAllChats,
-  deleteAllArchivedChats,
   type Chat,
 } from '@/services/chats-service';
 
@@ -55,15 +52,7 @@ export default function ChatsScreen() {
       setIsLoading(true);
       try {
         const fetchedChats = await getChats();
-        // Filter to only show chats that have message mock data
-        const chatsWithMessages = await Promise.all(
-          fetchedChats.map(async (chat) => {
-            const messages = await getChatMessages(chat.id);
-            return messages.length > 0 ? chat : null;
-          }),
-        );
-        const filtered = chatsWithMessages.filter((chat) => chat !== null) as Chat[];
-        setChats(filtered);
+        setChats(fetchedChats);
       } catch (error) {
         console.error('Failed to load chats:', error);
       } finally {
@@ -87,7 +76,7 @@ export default function ChatsScreen() {
       filtered = filtered.filter(
         (chat) =>
           chat.clientName.toLowerCase().includes(query) ||
-          chat.lastMessage.toLowerCase().includes(query),
+          (chat.lastMessage && chat.lastMessage.toLowerCase().includes(query)),
       );
     }
 
@@ -148,21 +137,6 @@ export default function ChatsScreen() {
     setChats(fetchedChats);
   };
 
-  const { setClientsSelectCallback } = useModalCallbacks();
-
-  const handleNewChat = () => {
-    setClientsSelectCallback((selectedClients) => {
-      console.log('Start new chats with:', selectedClients.map(c => c.fullName));
-    });
-
-    router.push({
-      pathname: '/modals/shared/client-list-modal',
-      params: {
-        title: t('chats.newChat.title'),
-        buttonText: t('general.done'),
-      }
-    });
-  };
 
   const handleSelectChatsPress = () => {
     setIsEditMode(true);
@@ -208,23 +182,6 @@ export default function ChatsScreen() {
     setChats(fetchedChats);
   };
 
-  const handleAllArchivedMarkAsRead = async () => {
-    await markAllArchivedAsRead();
-    const fetchedChats = await getChats();
-    setChats(fetchedChats);
-  };
-
-  const handleAllArchivedUnarchive = async () => {
-    await unarchiveAllChats();
-    const fetchedChats = await getChats();
-    setChats(fetchedChats);
-  };
-
-  const handleAllArchivedDelete = async () => {
-    await deleteAllArchivedChats();
-    const fetchedChats = await getChats();
-    setChats(fetchedChats);
-  };
 
   const dropdownOptions: DropdownMenuOption[] = isEditMode
     ? [
@@ -305,19 +262,7 @@ export default function ChatsScreen() {
           <View style={styles.titleRow}>
             <Text style={[styles.title, { color: themeColors.text }]}>{t('chats.title')}</Text>
             <View style={styles.headerButtonContainer}>
-              {!isEditMode && (
-                <PressableOpacity
-                  style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
-                  onPress={handleNewChat}
-                >
-                  <PlatformIcon
-                    sf="plus"
-                    IconComponent={MessageSquarePlus}
-                    size={iconSizes.navigationChevrons}
-                    color={themeColors.text}
-                  />
-                </PressableOpacity>
-              )}
+
               {isEditMode ? (
                 <PressableOpacity
                   style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
@@ -367,14 +312,7 @@ export default function ChatsScreen() {
         ) : (
           <View style={styles.chatListContainer}>
             {!searchQuery.trim() && (
-              <ArchivedItem
-                onPress={handleArchivedPress}
-                onMarkAsRead={handleAllArchivedMarkAsRead}
-                onUnarchive={handleAllArchivedUnarchive}
-                onDelete={handleAllArchivedDelete}
-                onOpen={registerOpenRow}
-                hasUnread={true} // Mocked for now
-              />
+              <ArchivedItem onPress={handleArchivedPress} />
             )}
             {filteredChats.map((chat) => (
               <ChatListItem
@@ -414,7 +352,7 @@ const styles = StyleSheet.create({
   title: {
     ...typography.h1,
     textAlign: 'left',
-    paddingRight: 104, // Space for two buttons (44+44 + gap)
+    paddingRight: 52, // Space for one button (44 + padding)
   },
   headerButtonContainer: {
     position: 'absolute',

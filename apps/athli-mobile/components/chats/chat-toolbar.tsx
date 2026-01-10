@@ -11,7 +11,6 @@ import { useThemePreference } from '@/contexts/useColorScheme';
 import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/platform-icon';
 import { MessageInputBar } from '@/components/message/message-input-bar';
-import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
 import { ReplyPreviewRow } from '@/components/chats/reply-preview-row';
 import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
 import { VoiceNoteRecordingContainer } from '@/components/chats/voice-note-recording-container';
@@ -52,6 +51,7 @@ type ChatToolbarProps = {
   onStopToggle: () => Promise<string | null | void>;
   onSendPress: (pathOverride?: string | null) => void;
   onCancelReply: () => void;
+  bottomInset?: number;
 };
 
 export const ChatToolbar = ({
@@ -79,6 +79,7 @@ export const ChatToolbar = ({
   onStopToggle,
   onSendPress,
   onCancelReply,
+  bottomInset = 0,
 }: ChatToolbarProps) => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
@@ -113,35 +114,18 @@ export const ChatToolbar = ({
       <BlurView
         intensity={30}
         tint={isDark ? 'dark' : 'light'}
-        style={[styles.toolbarBlur, { backgroundColor: translucentHeaderBg }]}
+        style={[styles.toolbarBlur, { backgroundColor: translucentHeaderBg, paddingBottom: bottomInset }]}
       >
-        <KeyboardAwareToolbar
-          backgroundColor="transparent"
-          closedBaseHeight={isMicrophoneMode ? 108 : 40}
-          openBaseHeight={isMicrophoneMode ? 80 : 12}
-          contentStyle={{ paddingHorizontal: 16 }}
-          replyPreview={
-            replyingToMessage ? (
-              <ReplyPreviewRow
-                message={replyingToMessage}
-                clientName={participantInfo.participantName}
-                onClose={onCancelReply}
-                backgroundColor={translucentHeaderBg}
-              />
-            ) : undefined
-          }
-          attachmentPicker={
-            showAttachmentPicker ? (
-              <AttachmentPickerRow
-                backgroundColor={translucentHeaderBg}
-                chatId={participantInfo.chatId}
-                clientId={participantInfo.participantId}
-                clientName={participantInfo.participantName}
-                caption={searchQuery}
-              />
-            ) : undefined
-          }
-        >
+        {replyingToMessage && (
+          <ReplyPreviewRow
+            message={replyingToMessage}
+            clientName={participantInfo.participantName}
+            onClose={onCancelReply}
+            backgroundColor={translucentHeaderBg}
+          />
+        )}
+
+        <View style={styles.content}>
           {isMicrophoneMode ? (
             <VoiceNoteRecordingContainer
               isStopped={isStopped}
@@ -216,7 +200,17 @@ export const ChatToolbar = ({
               )}
             </>
           )}
-        </KeyboardAwareToolbar>
+        </View>
+
+        {showAttachmentPicker && (
+          <AttachmentPickerRow
+            backgroundColor={translucentHeaderBg}
+            chatId={participantInfo.chatId}
+            clientId={participantInfo.participantId}
+            clientName={participantInfo.participantName}
+            caption={searchQuery}
+          />
+        )}
       </BlurView>
     </View>
   );
@@ -224,21 +218,24 @@ export const ChatToolbar = ({
 
 const styles = StyleSheet.create({
   toolbarContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
+    width: '100%',
   },
   toolbarBlur: {
     width: '100%',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingTop: 4,
   },
   iconButton: {
     alignItems: 'center',
     justifyContent: 'center',
     width: 30,
-    height: 44,
-    borderRadius: 22,
+    height: 36,
+    borderRadius: 18,
   },
   sendButton: {
     alignItems: 'center',

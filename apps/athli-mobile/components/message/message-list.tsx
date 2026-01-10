@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import EmojiPicker, { type EmojiType } from 'rn-emoji-keyboard';
 import {
-  Animated,
+  Animated as RNAnimated,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import Animated, { useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import {
   GiftedChat,
   Bubble,
@@ -69,7 +70,14 @@ interface MessageListProps {
   themeColors: ThemeColors;
   clientName: string;
   headerHeight?: number;
-  toolbarHeight?: number;
+  bottomOffset?: number;
+  keyboardHeight?: SharedValue<number>;
+  text?: string;
+  onInputTextChanged?: (text: string) => void;
+  renderChatFooter?: () => React.ReactElement | null;
+  renderInputToolbar?: (props: any) => React.ReactElement | null;
+  renderSend?: (props: any) => React.ReactElement | null;
+  renderActions?: (props: any) => React.ReactElement | null;
   onReply?: (message: ChatMessage) => void;
   onEdit?: (message: ChatMessage) => void;
   onDelete?: (message: ChatMessage) => void;
@@ -130,7 +138,14 @@ export const MessageList = ({
   themeColors,
   clientName,
   headerHeight = 0,
-  toolbarHeight = 0,
+  bottomOffset = 0,
+  keyboardHeight,
+  text = '',
+  onInputTextChanged,
+  renderChatFooter,
+  renderInputToolbar,
+  renderSend,
+  renderActions,
   onReply,
   onEdit,
   onDelete,
@@ -149,7 +164,7 @@ export const MessageList = ({
   const recipientBackgroundColor = isLightMode ? '#FFFFFF' : themeColors.surfaceSecondary;
   const { colors: fullThemeColors } = useThemePreference();
   const containerRef = useRef<View>(null);
-  const flashAnimations = useRef<Record<string, Animated.Value>>({});
+  const flashAnimations = useRef<Record<string, RNAnimated.Value>>({});
   const allSwipeablesRef = useRef<Map<string, Swipeable>>(new Map());
 
   // Convert messages to GiftedChat format (newest first, GiftedChat expects this order)
@@ -257,18 +272,18 @@ export const MessageList = ({
 
     // Flash the message by briefly changing its text color
     if (!flashAnimations.current[messageId]) {
-      flashAnimations.current[messageId] = new Animated.Value(0);
+      flashAnimations.current[messageId] = new RNAnimated.Value(0);
     }
 
     const flashAnim = flashAnimations.current[messageId];
 
-    Animated.sequence([
-      Animated.timing(flashAnim, {
+    RNAnimated.sequence([
+      RNAnimated.timing(flashAnim, {
         toValue: 1,
         duration: 160,
         useNativeDriver: false,
       }),
-      Animated.timing(flashAnim, {
+      RNAnimated.timing(flashAnim, {
         toValue: 0,
         duration: 320,
         useNativeDriver: false,
@@ -292,6 +307,15 @@ export const MessageList = ({
       .toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })
       .replace(',', '');
   };
+
+  // Animated style that adjusts container based on keyboard height
+  const animatedContainerStyle = useAnimatedStyle(() => {
+    if (!keyboardHeight) return {};
+
+    return {
+      marginBottom: keyboardHeight.value,
+    };
+  }, [keyboardHeight]);
 
   const isMessageWithinOneHour = (message: ChatMessage): boolean => {
     const now = new Date();
@@ -604,7 +628,7 @@ export const MessageList = ({
 
   // Render left action (swipe reply indicator)
   const renderLeftAction = useCallback((
-    progressAnimatedValue: Animated.AnimatedInterpolation<number>,
+    progressAnimatedValue: RNAnimated.AnimatedInterpolation<number>,
     isNextMyMessage: boolean,
     position: 'left' | 'right'
   ) => {
@@ -618,7 +642,7 @@ export const MessageList = ({
     });
 
     return (
-      <Animated.View
+      <RNAnimated.View
         style={[
           styles.swipeActionContainer,
           { transform: [{ scale: size }, { translateX: trans }] },
@@ -634,7 +658,7 @@ export const MessageList = ({
             color={themeColors.mutedText}
           />
         </View>
-      </Animated.View>
+      </RNAnimated.View>
     );
   }, [themeColors]);
 
@@ -748,34 +772,42 @@ export const MessageList = ({
 
   return (
     <>
-      <View ref={containerRef} style={[styles.fill, { backgroundColor }]}>
+      <Animated.View
+        ref={containerRef}
+        style={[
+          styles.fill,
+          { backgroundColor },
+          keyboardHeight ? animatedContainerStyle : undefined,
+        ]}
+      >
         <GiftedChat
           messages={giftedMessages as IMessage[]}
+          text={text}
+          onInputTextChanged={onInputTextChanged}
           user={{ _id: 1 }}
           renderMessage={renderMessage}
           renderDay={renderDay}
-          renderInputToolbar={() => null}
-          renderComposer={() => null}
-          renderSend={() => null}
-          renderActions={() => null}
-          renderAccessory={() => null}
-          renderFooter={() => null}
+          renderInputToolbar={renderInputToolbar || (() => null)}
+          renderChatFooter={renderChatFooter}
+          renderSend={renderSend}
+          renderActions={renderActions}
           renderAvatar={null}
+          bottomOffset={bottomOffset}
+          maxComposerHeight={100}
           minInputToolbarHeight={0}
-          isInverted={true}
           listProps={{
             showsVerticalScrollIndicator: false,
             keyboardShouldPersistTaps: 'handled' as const,
+            keyboardDismissMode: 'interactive' as const,
+            automaticallyAdjustKeyboardInsets: false,
+            automaticallyAdjustsScrollIndicatorInsets: false,
             contentContainerStyle: {
               paddingHorizontal: 8,
-              // VISUAL BOTTOM (newest message) — reserve space for toolbar
-              paddingTop: (toolbarHeight ?? 0) + 16,
-              // VISUAL TOP — reserve space for header
               paddingBottom: (headerHeight ?? 0) + 16,
             },
           }}
         />
-      </View>
+      </Animated.View>
       {/* Standalone EmojiPicker for full emoji selection (opened from plus button) */}
       <EmojiPicker
         open={emojiPickerVisible && emojiPickerMessage !== null}

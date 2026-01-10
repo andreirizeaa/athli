@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   Keyboard,
-  LayoutAnimation,
   StyleSheet,
   TextInput,
   View,
@@ -10,8 +9,6 @@ import {
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
-import { useKeyboardHandler } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   useAudioRecorder,
@@ -172,36 +169,8 @@ export default function InboxDetailScreen() {
   const lastVoiceNoteDurationMsRef = useRef(0);
   const recordingStartedAtMsRef = useRef<number | null>(null);
 
-  const keyboardHeight = useSharedValue(0);
-
-  useKeyboardHandler(
-    {
-      onMove: (event) => {
-        'worklet';
-        keyboardHeight.value = Math.max(event.height, 0);
-      },
-      onEnd: (event) => {
-        'worklet';
-        keyboardHeight.value = Math.max(event.height, 0);
-      },
-    },
-    []
-  );
-
-  const scrollWindowAnimatedStyle = useAnimatedStyle(() => {
-    'worklet';
-    return {
-      transform: [
-        {
-          translateY: -keyboardHeight.value,
-        },
-      ],
-    };
-  });
-
   useEffect(() => {
     const handleKeyboardHide = () => {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setShowAttachmentPicker(false);
     };
 
@@ -471,7 +440,6 @@ export default function InboxDetailScreen() {
   };
 
   const handleMessageReply = (message: InboxMessage) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setReplyingToMessage(message);
     setTimeout(() => {
       inputRef.current?.focus();
@@ -479,27 +447,22 @@ export default function InboxDetailScreen() {
   };
 
   const handleCancelReply = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setReplyingToMessage(null);
     Keyboard.dismiss();
   };
 
   const handlePlusPress = () => {
     if (showAttachmentPicker) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setShowAttachmentPicker(false);
       return;
     }
 
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowAttachmentPicker(true);
   };
 
   const handleMicrophonePress = async () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-
     setIsMicrophoneMode(true);
-    
+
     try {
       await startRecording();
     } catch (e) {
@@ -509,8 +472,6 @@ export default function InboxDetailScreen() {
   };
 
   const handleTrashPress = async () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-
     try {
       await audioRecorder.stop();
     } catch {}
@@ -594,8 +555,6 @@ export default function InboxDetailScreen() {
         setPreviewPath(null);
         return null;
       }
-
-      return;
     }
 
     setIsStopped(false);
@@ -748,21 +707,19 @@ export default function InboxDetailScreen() {
   return (
     <View style={[styles.container, { backgroundColor: 'transparent' }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} translucent backgroundColor="transparent" />
-      
+
       <Image
         source={isDark ? require('@/assets/chat/bg-dark.png') : require('@/assets/chat/bg-light.png')}
         style={styles.fullScreenBackgroundImage}
         contentFit="cover"
       />
-      
+
       <ChatHeader
         coach={coach}
         onBackPress={handleBackPress}
       />
 
-      <Animated.View
-        style={[{ flex: 1, backgroundColor: 'transparent' }, scrollWindowAnimatedStyle]}
-      >
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <MessageList
           messages={messages}
           backgroundColor="transparent"
@@ -776,16 +733,11 @@ export default function InboxDetailScreen() {
           onImagePress={handleImagePress}
           onVideoPress={handleVideoPress}
           headerHeight={insets.top + 60}
-          toolbarHeight={
-            (replyingToMessage ? 54 : 0) +
-            (showAttachmentPicker ? 112 : 0) +
-            (isMicrophoneMode ? 68 : 0) +
-            40 +
-            insets.bottom
-          }
+          bottomOffset={16}
         />
-      </Animated.View>
+      </View>
 
+      {/* TOOLBAR */}
       <ChatToolbar
         coach={coach}
         replyingToMessage={replyingToMessage}
@@ -810,6 +762,7 @@ export default function InboxDetailScreen() {
         onStopToggle={handleStopToggle}
         onSendPress={handleSendPress}
         onCancelReply={handleCancelReply}
+        bottomInset={insets.bottom}
       />
 
       <MessageReactionsSheet

@@ -3,6 +3,8 @@ import { StyleSheet, TextInput, View, Text } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus, X, Mic, Send, HelpCircle } from 'lucide-react-native';
 import { PressableOpacity } from 'pressto';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -11,7 +13,6 @@ import { IconButton } from '@/components/icon-button';
 import { PlatformIcon } from '@/components/platform-icon';
 import { ScreenWrapper } from '@/components/screen-wrapper';
 import { MessageInputBar } from '@/components/message/message-input-bar';
-import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
 import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
 
 export default function ClientAssistantScreen() {
@@ -19,6 +20,7 @@ export default function ClientAssistantScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const { colors: themeColors, primaryColor } = useThemePreference();
     const { t } = useTranslations();
+    const insets = useSafeAreaInsets();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [showAttachmentPicker, setShowAttachmentPicker] = useState(false);
@@ -64,64 +66,65 @@ export default function ClientAssistantScreen() {
                 />
             </View>
 
-            <View style={{ flex: 1, backgroundColor: themeColors.pageBackground }}>
+            <KeyboardAvoidingView
+                style={{ flex: 1, backgroundColor: themeColors.pageBackground }}
+                behavior="padding"
+                keyboardVerticalOffset={0}
+            >
                 {/* Placeholder for Assistant Content/Messages */}
                 <View style={styles.contentContainer}>
                     {/* Content would go here */}
                 </View>
 
                 {/* Bottom Toolbar */}
-                <KeyboardAwareToolbar
-                    backgroundColor={headerBackgroundColor}
-                    contentStyle={{ paddingHorizontal: 16 }}
-                    attachmentPicker={
-                        showAttachmentPicker ? (
-                            <AttachmentPickerRow backgroundColor={headerBackgroundColor} hideVideos hideCamera />
-                        ) : undefined
-                    }
-                >
-                    <PressableOpacity
-                        style={styles.iconButton}
-                        onPress={handlePlusPress}
-                    >
-                        <PlatformIcon
-                            sf={showAttachmentPicker ? "xmark.circle" : "plus"}
-                            IconComponent={showAttachmentPicker ? X : Plus}
-                            size={iconSizes.tabBarIcons - 2}
-                            color={iconColor}
-                        />
-                    </PressableOpacity>
-                    <View style={styles.searchBarContainer}>
-                        <MessageInputBar
-                            ref={inputRef}
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                            placeholder="Ask Assistant..."
-                        />
-                    </View>
-                    {hasText ? (
+                <View style={[styles.toolbar, { backgroundColor: headerBackgroundColor, paddingBottom: insets.bottom }]}>
+                    <View style={styles.toolbarContent}>
                         <PressableOpacity
-                            style={styles.sendButton}
+                            style={styles.iconButton}
+                            onPress={handlePlusPress}
                         >
                             <PlatformIcon
-                                sf="paperplane.circle.fill"
-                                IconComponent={Send}
-                                size={iconSizes.tabBarIconsIOS + 2}
-                                color={themeColors.primary}
-                            />
-                        </PressableOpacity>
-                    ) : (
-                        <PressableOpacity style={styles.iconButton}>
-                            <PlatformIcon
-                                sf="mic"
-                                IconComponent={Mic}
+                                sf={showAttachmentPicker ? "xmark.circle" : "plus"}
+                                IconComponent={showAttachmentPicker ? X : Plus}
                                 size={iconSizes.tabBarIcons - 2}
                                 color={iconColor}
                             />
                         </PressableOpacity>
+                        <View style={styles.searchBarContainer}>
+                            <MessageInputBar
+                                ref={inputRef}
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                                placeholder="Ask Assistant..."
+                            />
+                        </View>
+                        {hasText ? (
+                            <PressableOpacity
+                                style={styles.sendButton}
+                            >
+                                <PlatformIcon
+                                    sf="paperplane.circle.fill"
+                                    IconComponent={Send}
+                                    size={iconSizes.tabBarIconsIOS + 2}
+                                    color={themeColors.primary}
+                                />
+                            </PressableOpacity>
+                        ) : (
+                            <PressableOpacity style={styles.iconButton}>
+                                <PlatformIcon
+                                    sf="mic"
+                                    IconComponent={Mic}
+                                    size={iconSizes.tabBarIcons - 2}
+                                    color={iconColor}
+                                />
+                            </PressableOpacity>
+                        )}
+                    </View>
+                    {showAttachmentPicker && (
+                        <AttachmentPickerRow backgroundColor={headerBackgroundColor} hideVideos hideCamera />
                     )}
-                </KeyboardAwareToolbar>
-            </View>
+                </View>
+            </KeyboardAvoidingView>
         </ScreenWrapper>
     );
 }
@@ -136,6 +139,16 @@ const styles = StyleSheet.create({
     },
     contentContainer: {
         flex: 1,
+    },
+    toolbar: {
+        width: '100%',
+    },
+    toolbarContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
     },
     iconButton: {
         alignItems: 'center',

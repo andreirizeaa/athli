@@ -203,7 +203,7 @@ export const FilesTab = () => {
             >
               <ContextMenuWrapper options={dropdownOptions}>
                 <View style={styles.rowWrapper}>
-                  <View style={[styles.rowContent, { backgroundColor: themeColors.background }]}>
+                  <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
 
                     {/* Thumbnail - Pressable separately */}
                     <PressableOpacity

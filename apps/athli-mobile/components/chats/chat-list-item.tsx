@@ -189,7 +189,7 @@ export const ChatListItem = ({
             onPress={handlePress}
             style={[
               styles.rowWrapper,
-              { backgroundColor: themeColors.background }
+              { backgroundColor: themeColors.pageBackground }
             ]}
           >
             <View
