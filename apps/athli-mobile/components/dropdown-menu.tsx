@@ -156,16 +156,12 @@ export const ContextMenuWrapper = ({
   options,
   children,
 }: ContextMenuWrapperProps) => {
-  const handleTouchStart = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
   return (
     <ContextMenu.Root>
       <ContextMenu.Trigger>
-        <Pressable onPressIn={handleTouchStart}>
+        <View>
           {children}
-        </Pressable>
+        </View>
       </ContextMenu.Trigger>
       <ContextMenu.Content>
         {options.map((option, index) => (

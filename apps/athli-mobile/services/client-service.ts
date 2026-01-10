@@ -17,9 +17,6 @@ export interface Client {
  * This will be connected to the backend in the future
  */
 export const getClients = async (): Promise<Client[]> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
   // Return mock data - in the future, this will come from the backend
   return mockClients;
 
@@ -50,10 +47,10 @@ export interface UpdateClientData {
  * Service method to update an existing client
  * This will be connected to the backend in the future
  */
-export const updateClient = async (clientId: string, data: UpdateClientData): Promise<Client> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
+export const updateClient = async (
+  clientId: string,
+  data: UpdateClientData,
+): Promise<Client> => {
   // Find and update client in mock data
   const clientIndex = mockClients.findIndex((c) => c.id === clientId);
   if (clientIndex === -1) {
@@ -83,14 +80,7 @@ export const updateClient = async (clientId: string, data: UpdateClientData): Pr
   return updatedClient;
 };
 
-/**
- * Service method to add a new client
- * This will be connected to the backend in the future
- */
 export const addClient = async (data: AddClientData): Promise<Client> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
   // Create new client - in the future, this will be saved to the backend
   const newClient: Client = {
     id: `mock-${Date.now()}`,
@@ -104,15 +94,6 @@ export const addClient = async (data: AddClientData): Promise<Client> => {
     phone: '',
     country: '',
   };
-
-  // In a real implementation, this would be:
-  // const response = await fetch('/api/clients', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(data),
-  // })
-  // if (!response.ok) throw new Error('Failed to add client')
-  // return await response.json()
 
   return newClient;
 };

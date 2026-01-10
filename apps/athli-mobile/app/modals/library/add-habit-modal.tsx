@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Platform, StyleSheet, Text, View, LayoutChangeEvent, Alert } from 'react-native';
 import { PressableOpacity } from 'pressto';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check, ChevronRight } from 'lucide-react-native';
@@ -68,7 +68,16 @@ export default function AddHabitModal() {
     const insets = useSafeAreaInsets();
     const { habitOptionsData, setHabitOptionsData } = useModalCallbacks();
 
-    const [selectedTab, setSelectedTab] = useState<TabKey>('templates');
+    const params = useLocalSearchParams<{
+        editingId?: string;
+        name?: string;
+        amount?: string;
+        unit?: string;
+        period?: HabitPeriod;
+    }>();
+    const isEditing = !!params.editingId;
+
+    const [selectedTab, setSelectedTab] = useState<TabKey>(isEditing ? 'new' : 'templates');
     const underlinePosition = useSharedValue(0);
     const underlineWidth = useSharedValue(0);
     const tabLayoutsRef = useRef<{ [key: string]: { x: number; width: number } }>({});
@@ -77,11 +86,12 @@ export default function AddHabitModal() {
     const tabOrder: TabKey[] = ['templates', 'new'];
 
     // Form state
-    const [name, setName] = useState('');
+    const [name, setName] = useState(params.name || '');
     const [description, setDescription] = useState('');
-    const [amount, setAmount] = useState('');
-    const [unit, setUnit] = useState<HabitUnit | null>(null);
-    const [period, setPeriod] = useState<HabitPeriod>('daily');
+    const [amount, setAmount] = useState(params.amount || '');
+    const [unit, setUnit] = useState<HabitUnit | null>((params.unit as HabitUnit) || null);
+    const [period, setPeriod] = useState<HabitPeriod>((params.period as HabitPeriod) || 'daily');
+    const [isSaving, setIsSaving] = useState(false);
 
     // Search state for templates
     const [searchQuery, setSearchQuery] = useState('');
@@ -136,22 +146,33 @@ export default function AddHabitModal() {
     // Form validation and change detection
     const { hasChanges, canComplete } = useMemo(() => {
         const trimmedName = name.trim();
-        const trimmedAmount = amount.trim();
 
-        // Name, amount, and unit are required
-        const formValid = trimmedName.length > 0 && trimmedAmount.length > 0 && unit !== null;
+        // Validate required fields
+        const formValid = trimmedName.length > 0;
 
         // Check if any field has been modified
-        const changes = trimmedName.length > 0 ||
-            description.trim().length > 0 ||
-            trimmedAmount.length > 0 ||
-            unit !== null;
+        let changes = false;
+        if (isEditing) {
+            changes = name !== (params.name || '') ||
+                amount !== (params.amount || '') ||
+                unit !== ((params.unit as HabitUnit) || null) ||
+                period !== ((params.period as HabitPeriod) || 'daily') ||
+                description.trim().length > 0 || // Description likely starts empty
+                !!habitOptionsData;
+        } else {
+            changes = trimmedName.length > 0 ||
+                amount.trim().length > 0 ||
+                unit !== null ||
+                period !== 'daily' ||
+                description.trim().length > 0 ||
+                !!habitOptionsData;
+        }
 
         return {
             hasChanges: changes,
-            canComplete: formValid,
+            canComplete: formValid && !isSaving,
         };
-    }, [name, description, amount, unit]);
+    }, [name, description, amount, unit, period, habitOptionsData, isSaving, isEditing, params]);
 
     const animateUnderline = (tabKey: TabKey) => {
         const layout = tabLayoutsRef.current[tabKey];
@@ -313,7 +334,7 @@ export default function AddHabitModal() {
                         color={themeColors.text}
                     />
                     <Text style={[styles.title, { color: themeColors.text }]}>
-                        {t('library.addHabit.title')}
+                        {isEditing ? t('library.addHabit.editTitle') : t('library.addHabit.title')}
                     </Text>
                     <IconButton
                         icon={{ sf: 'checkmark', IconComponent: Check }}

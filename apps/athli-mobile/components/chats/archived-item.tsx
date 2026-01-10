@@ -1,75 +1,132 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Archive } from 'lucide-react-native';
+import { Archive, MailCheck, Trash2, MailOpen } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { Alert } from 'react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
+import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
+import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
+import { SwipeableRow } from '@/components/swipeable-row';
+import { PressableOpacity } from 'pressto';
 
 type ArchivedItemProps = {
   onPress: () => void;
+  onMarkAsRead?: () => void;
+  onUnarchive?: () => void;
+  onDelete?: () => void;
+  onOpen?: (close: () => void) => void;
+  hasUnread?: boolean;
 };
 
-export const ArchivedItem = ({ onPress }: ArchivedItemProps) => {
+export const ArchivedItem = ({
+  onPress,
+  onMarkAsRead,
+  onUnarchive,
+  onDelete,
+  onOpen,
+  hasUnread = false,
+}: ArchivedItemProps) => {
   const { colors: themeColors } = useThemePreference();
-  const [isPressed, setIsPressed] = useState(false);
+  const { t } = useTranslations();
 
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress();
   };
 
-  const handlePressIn = () => {
-    setIsPressed(true);
+  const handleDelete = () => {
+    if (onDelete) {
+      Alert.alert(
+        t('chats.delete'),
+        t('library.deleteConfirmMessage'),
+        [
+          { text: t('general.cancel'), style: 'cancel' },
+          {
+            text: t('general.delete'),
+            style: 'destructive',
+            onPress: onDelete
+          },
+        ]
+      );
+    }
   };
 
-  const handlePressOut = () => {
-    setIsPressed(false);
-  };
+  const dropdownOptions: DropdownMenuOption[] = [
+    ...(onMarkAsRead && hasUnread
+      ? [
+        {
+          label: t('chats.markAsRead'),
+          icon: { sf: 'checkmark.message', IconComponent: MailCheck },
+          onPress: onMarkAsRead,
+        },
+      ]
+      : []),
+    ...(onUnarchive
+      ? [
+        {
+          label: t('chats.archived.unarchive'),
+          icon: { sf: 'archivebox.fill', IconComponent: Archive },
+          onPress: onUnarchive,
+        },
+      ]
+      : []),
+    ...(onDelete
+      ? [
+        {
+          label: t('chats.delete'),
+          icon: { sf: 'trash', IconComponent: Trash2 },
+          destructive: true,
+          onPress: handleDelete,
+        },
+      ]
+      : []),
+  ];
 
   return (
-    <Pressable
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
+    <SwipeableRow
+      onDelete={handleDelete}
+      onOpen={onOpen}
+      deleteConfirmTitle={t('chats.delete')}
+      enabled={!!onDelete}
     >
-      <View
-        style={[
-          styles.rowWrapper,
-          isPressed && { backgroundColor: themeColors.surfaceSecondary },
-        ]}
-      >
-        <View style={styles.content}>
-          <View style={styles.iconContainer}>
-            <PlatformIcon
-              sf="archivebox"
-              IconComponent={Archive}
-              size={iconSizes.listIcons}
-              color={themeColors.mutedText}
+      <ContextMenuWrapper options={dropdownOptions}>
+        <PressableOpacity
+          onPress={handlePress}
+          style={styles.rowWrapper}
+        >
+          <View style={styles.content}>
+            <View style={styles.iconContainer}>
+              <PlatformIcon
+                sf="archivebox"
+                IconComponent={Archive}
+                size={iconSizes.listIcons}
+                color={themeColors.mutedText}
+              />
+            </View>
+            <View style={styles.textContainer}>
+              <Text
+                style={[styles.archivedText, { color: themeColors.mutedText }]}
+              >
+                {t('chats.archived.title')}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.separatorContainer}>
+            <View
+              style={[
+                styles.separator,
+                {
+                  backgroundColor: themeColors.mutedText,
+                  opacity: 0.3,
+                },
+              ]}
             />
           </View>
-          <View style={styles.textContainer}>
-            <Text
-              style={[styles.archivedText, { color: themeColors.mutedText }]}
-            >
-              Archived
-            </Text>
-          </View>
-        </View>
-      </View>
-      <View style={styles.separatorContainer}>
-        <View
-          style={[
-            styles.separator,
-            {
-              backgroundColor: themeColors.mutedText,
-              opacity: 0.3,
-            },
-          ]}
-        />
-      </View>
-    </Pressable>
+        </PressableOpacity>
+      </ContextMenuWrapper>
+    </SwipeableRow>
   );
 };
 

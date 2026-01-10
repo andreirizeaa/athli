@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Platform, StyleSheet, Text, View, LayoutChangeEvent, Alert } from 'react-native';
 import { PressableOpacity } from 'pressto';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check, ChevronRight } from 'lucide-react-native';
@@ -38,7 +38,15 @@ export default function AddMetricModal() {
     const insets = useSafeAreaInsets();
     const { scheduleData, setScheduleData, setScheduleCallback } = useModalCallbacks();
 
-    const [selectedTab, setSelectedTab] = useState<TabKey>('templates');
+    const params = useLocalSearchParams<{
+        editingId?: string;
+        name?: string;
+        unit?: string;
+        description?: string;
+    }>();
+    const isEditing = !!params.editingId;
+
+    const [selectedTab, setSelectedTab] = useState<TabKey>(isEditing ? 'new' : 'templates');
     const underlinePosition = useSharedValue(0);
     const underlineWidth = useSharedValue(0);
     const tabLayoutsRef = useRef<{ [key: string]: { x: number; width: number } }>({});
@@ -47,9 +55,9 @@ export default function AddMetricModal() {
     const tabOrder: TabKey[] = ['templates', 'new'];
 
     // Form state
-    const [name, setName] = useState('');
-    const [unit, setUnit] = useState('');
-    const [description, setDescription] = useState('');
+    const [name, setName] = useState(params.name || '');
+    const [unit, setUnit] = useState(params.unit || '');
+    const [description, setDescription] = useState(params.description || '');
 
     // Search state for templates
     const [searchQuery, setSearchQuery] = useState('');
@@ -144,16 +152,24 @@ export default function AddMetricModal() {
         const formValid = trimmedName.length > 0;
 
         // Check if any field has been modified
-        const changes = trimmedName.length > 0 ||
-            unit.trim().length > 0 ||
-            description.trim().length > 0 ||
-            hasLogFrequency;
+        let changes = false;
+        if (isEditing) {
+            changes = name !== (params.name || '') ||
+                unit !== (params.unit || '') ||
+                description !== (params.description || '') ||
+                hasLogFrequency;
+        } else {
+            changes = trimmedName.length > 0 ||
+                unit.trim().length > 0 ||
+                description.trim().length > 0 ||
+                hasLogFrequency;
+        }
 
         return {
             hasChanges: changes,
             canComplete: formValid,
         };
-    }, [name, unit, description, hasLogFrequency]);
+    }, [name, unit, description, hasLogFrequency, isEditing, params]);
 
     const animateUnderline = (tabKey: TabKey) => {
         const layout = tabLayoutsRef.current[tabKey];
@@ -307,7 +323,7 @@ export default function AddMetricModal() {
                         color={themeColors.text}
                     />
                     <Text style={[styles.title, { color: themeColors.text }]}>
-                        {t('library.addMetric.title')}
+                        {isEditing ? t('library.addMetric.editTitle') : t('library.addMetric.title')}
                     </Text>
                     <IconButton
                         icon={{ sf: 'checkmark', IconComponent: Check }}

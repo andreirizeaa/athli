@@ -351,7 +351,25 @@ export default function SectionBuilderScreen() {
                         <DropdownMenuWrapper options={SECTION_TYPES.map((type) => ({
                             label: type.label,
                             subtitle: type.description,
-                            onPress: () => setState(prev => ({ ...prev, sectionType: type.value as SectionType }))
+                            onPress: () => {
+                                const newType = type.value as SectionType;
+                                setState(prev => {
+                                    // If changing to amrap or timed, trim all exercises to one set each
+                                    // These section types only support one set per exercise (values per round)
+                                    if (newType === 'amrap' || newType === 'timed') {
+                                        const trimmedExercises = prev.exercises.map(ex => ({
+                                            ...ex,
+                                            sets: ex.sets.length > 0 ? [ex.sets[0]] : ex.sets,
+                                        }));
+                                        return {
+                                            ...prev,
+                                            sectionType: newType,
+                                            exercises: trimmedExercises,
+                                        };
+                                    }
+                                    return { ...prev, sectionType: newType };
+                                });
+                            }
                         }))}>
                             <View style={styles.fieldRow}>
                                 <View style={styles.labelContainer}>
