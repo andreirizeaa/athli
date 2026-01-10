@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Platform, Pressable, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, Platform, Pressable, ScrollView, Alert } from 'react-native';
 import { ChevronLeft, ChevronDown, ChevronUp, GripVertical, Check } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,9 +36,6 @@ const ROW_HEIGHT = 56;
 const ROW_GAP = 8;
 const ITEM_HEIGHT = ROW_HEIGHT + ROW_GAP;
 const SECTION_INDENT = 32;
-
-// Animation config
-const TIMING_CONFIG = { duration: 150 };
 
 // Types for the flat list representation
 type FlatItem = {
@@ -96,31 +93,47 @@ const flattenBuilderItems = (items: BuilderItem[], collapsedSections: Set<string
     return result;
 };
 
-// Convert flat list back to BuilderItems  
+// Convert flat list back to BuilderItems
 const unflattenToBuilderItems = (flatItems: FlatItem[]): BuilderItem[] => {
     const result: BuilderItem[] = [];
     const sectionExercises = new Map<string, BuilderExercise[]>();
 
+    // First pass: collect exercises that belong to sections
     flatItems.forEach((item) => {
         if (item.type === 'exercise' && item.sectionId) {
             const exercises = sectionExercises.get(item.sectionId) || [];
-            exercises.push(item.originalBuilderItem as unknown as BuilderExercise);
+
+            // Get the exercise from the original builder item
+            let exercise: BuilderExercise;
+            if ('type' in item.originalBuilderItem && item.originalBuilderItem.type === 'section') {
+                // This shouldn't happen, but handle it gracefully
+                return;
+            } else {
+                exercise = item.originalBuilderItem as BuilderExercise;
+            }
+
+            exercises.push(exercise);
             sectionExercises.set(item.sectionId, exercises);
         }
     });
 
+    // Second pass: build the result maintaining order
     flatItems.forEach((item) => {
+        // Skip exercises that belong to sections (they'll be nested)
         if (item.sectionId !== null) return;
 
         if (item.type === 'section') {
             const originalSection = item.originalBuilderItem as BuilderSection;
-            const exercises = sectionExercises.get(item.id) || originalSection.exercises;
+            // Use the collected exercises for this section, or empty array if none
+            const exercises = sectionExercises.get(item.id) || [];
             result.push({
                 ...originalSection,
                 exercises,
             });
         } else {
-            result.push(item.originalBuilderItem);
+            // Top-level exercise
+            const exercise = item.originalBuilderItem as BuilderExercise;
+            result.push(exercise);
         }
     });
 
@@ -134,6 +147,8 @@ interface DraggableRowProps {
     totalItems: number;
     onToggleSection: (id: string) => void;
     onDragComplete: (fromIndex: number, toIndex: number) => void;
+    onDragStart: (sectionId?: string) => void;
+    onDragEnd: (sectionId?: string) => void;
     draggingIndex: SharedValue<number>;
     hoverIndex: SharedValue<number>;
     themeColors: any;
@@ -145,6 +160,8 @@ const DraggableRow: React.FC<DraggableRowProps> = ({
     totalItems,
     onToggleSection,
     onDragComplete,
+    onDragStart,
+    onDragEnd,
     draggingIndex,
     hoverIndex,
     themeColors,
@@ -157,36 +174,51 @@ const DraggableRow: React.FC<DraggableRowProps> = ({
 
     const panGesture = Gesture.Pan()
         .activateAfterLongPress(200)
+        .minDistance(0)
+        .shouldCancelWhenOutside(false)
         .onStart(() => {
             'worklet';
             isDragging.value = true;
             draggingIndex.value = index;
             hoverIndex.value = index;
+            const sectionId = isSection ? item.id : undefined;
+            runOnJS(onDragStart)(sectionId);
             runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
         })
         .onUpdate((event) => {
             'worklet';
             translateY.value = event.translationY;
 
-            const displacement = Math.round(event.translationY / ITEM_HEIGHT);
+            // Calculate displacement - requires dragging past half of an item to change position
+            // This prevents immediate jumping and makes the drag feel more stable
+            const halfItemHeight = ITEM_HEIGHT / 2;
+            let displacement = 0;
+
+            if (event.translationY > halfItemHeight) {
+                displacement = Math.floor((event.translationY + halfItemHeight) / ITEM_HEIGHT);
+            } else if (event.translationY < -halfItemHeight) {
+                displacement = Math.ceil((event.translationY - halfItemHeight) / ITEM_HEIGHT);
+            }
+
             let newHoverIndex = index + displacement;
             newHoverIndex = Math.max(0, Math.min(newHoverIndex, totalItems - 1));
-            hoverIndex.value = newHoverIndex;
+
+            if (hoverIndex.value !== newHoverIndex) {
+                hoverIndex.value = newHoverIndex;
+                runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+            }
         })
         .onEnd(() => {
             'worklet';
             const finalIndex = hoverIndex.value;
             const startIndex = index;
+            const sectionId = isSection ? item.id : undefined;
 
-            // Reset the dragged item position instantly
+            // Reset the dragged item position
             translateY.value = 0;
             isDragging.value = false;
 
-            // DON'T reset draggingIndex/hoverIndex here!
-            // Keep them set so shifts stay in place until state updates
-            // Parent will reset them after state update
-
-            // Notify parent
+            // Notify parent of the completed drag
             if (finalIndex !== startIndex) {
                 runOnJS(onDragComplete)(startIndex, finalIndex);
             } else {
@@ -195,37 +227,32 @@ const DraggableRow: React.FC<DraggableRowProps> = ({
                 hoverIndex.value = -1;
             }
 
+            runOnJS(onDragEnd)(sectionId);
             runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
         });
 
-    // Style for the dragged item - instant changes, no animations
+    // Style for the dragged item
     const animatedDragStyle = useAnimatedStyle(() => {
         return {
             transform: [
                 { translateY: translateY.value },
-                { scale: isDragging.value ? 1.02 : 1 },
+                { scale: isDragging.value ? 1.05 : 1 },
             ],
+            zIndex: isDragging.value ? 9999 : 1,
+            elevation: isDragging.value ? 50 : 0,
         };
     });
 
     // Style for non-dragged items - they shift to make room
-    // zIndex is here so it applies to the outermost wrapper
     const shiftStyle = useAnimatedStyle(() => {
-        // Common properties for all items
-        const baseStyle = {
-            position: 'relative' as const,
-            zIndex: isDragging.value ? 999 : 1,
-            elevation: isDragging.value ? 20 : 0,
-        };
-
-        // When not dragging, reset instantly (no animation) to prevent flicker on drop
+        // When not dragging, no shift
         if (draggingIndex.value === -1) {
-            return { ...baseStyle, zIndex: 1, elevation: 0, transform: [{ translateY: 0 }] };
+            return { transform: [{ translateY: 0 }] };
         }
 
         // The dragged item itself doesn't shift
         if (draggingIndex.value === index) {
-            return { ...baseStyle, transform: [{ translateY: 0 }] };
+            return { transform: [{ translateY: 0 }] };
         }
 
         const draggedFrom = draggingIndex.value;
@@ -233,21 +260,24 @@ const DraggableRow: React.FC<DraggableRowProps> = ({
 
         let shift = 0;
 
-        if (draggedFrom < index && hoveredAt >= index) {
-            shift = -ITEM_HEIGHT;
-        } else if (draggedFrom > index && hoveredAt <= index) {
-            shift = ITEM_HEIGHT;
+        if (draggedFrom < hoveredAt) {
+            // Dragging down: shift items between draggedFrom and hoveredAt up
+            if (index > draggedFrom && index <= hoveredAt) {
+                shift = -ITEM_HEIGHT;
+            }
+        } else if (draggedFrom > hoveredAt) {
+            // Dragging up: shift items between hoveredAt and draggedFrom down
+            if (index >= hoveredAt && index < draggedFrom) {
+                shift = ITEM_HEIGHT;
+            }
         }
 
         return {
-            ...baseStyle,
-            zIndex: 1,
-            elevation: 0,
-            transform: [{ translateY: withTiming(shift, TIMING_CONFIG) }],
+            transform: [{ translateY: withTiming(shift, { duration: 200 }) }],
         };
     });
 
-    // Dragging card visual style - instant changes, no animations
+    // Dragging card visual style
     const draggingCardStyle = useAnimatedStyle(() => {
         return {
             shadowOpacity: isDragging.value ? 0.25 : 0,
@@ -322,30 +352,43 @@ export default function ReorderScreen() {
 
     const [flatItems, setFlatItems] = useState<FlatItem[]>([]);
     const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+    const [isScrollEnabled, setIsScrollEnabled] = useState(true);
+    const [draggingSectionId, setDraggingSectionId] = useState<string | null>(null);
 
     // Shared values for coordinating drag state
     const draggingIndex = useSharedValue(-1);
     const hoverIndex = useSharedValue(-1);
 
-    // Track pending reorders (accumulated during session)
-    const pendingReordersRef = useRef<Array<{ from: number; to: number }>>([]);
+    // Track if changes have been made
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const initialItemsRef = useRef<BuilderItem[]>([]);
 
-    // Initialize items from context
+    // Initialize items from context (only once on mount)
     useEffect(() => {
         if (reorderItems && reorderItems.length > 0) {
             const items = flattenBuilderItems(reorderItems, collapsedSections);
             setFlatItems(items);
-            pendingReordersRef.current = [];
+            initialItemsRef.current = reorderItems;
+            setHasUnsavedChanges(false);
         }
     }, [reorderItems]);
 
-    // Re-flatten when collapse state changes
+    // Update collapsed state on sections when it changes
     useEffect(() => {
         if (flatItems.length > 0) {
-            const builderItems = unflattenToBuilderItems(flatItems);
-            const items = flattenBuilderItems(builderItems, collapsedSections);
-            setFlatItems(items);
-            pendingReordersRef.current = [];
+            setFlatItems(prev => {
+                // Update the isCollapsed flag on sections
+                // Keep ALL items in state, including exercises in collapsed sections
+                return prev.map(item => {
+                    if (item.type === 'section') {
+                        return {
+                            ...item,
+                            isCollapsed: collapsedSections.has(item.id),
+                        };
+                    }
+                    return item;
+                });
+            });
         }
     }, [collapsedSections]);
 
@@ -362,35 +405,112 @@ export default function ReorderScreen() {
         });
     }, []);
 
-    // Called when a drag completes - record the reorder
+    // Called when a drag completes
     const handleDragComplete = useCallback((fromIndex: number, toIndex: number) => {
-        // Record this reorder
-        pendingReordersRef.current.push({ from: fromIndex, to: toIndex });
+        // Mark as having unsaved changes
+        setHasUnsavedChanges(true);
 
-        // Update state to reflect new order
         setFlatItems(prev => {
             const newItems = [...prev];
             const [movedItem] = newItems.splice(fromIndex, 1);
-            newItems.splice(toIndex, 0, movedItem);
+
+            // Determine section membership based on drop position
+            let newSectionId: string | null = null;
+            const itemBefore = toIndex > 0 ? newItems[toIndex - 1] : null;
+
+            // Only exercises can change section membership (sections cannot be nested)
+            if (movedItem.type === 'exercise') {
+                if (itemBefore) {
+                    if (itemBefore.type === 'section' && !itemBefore.isCollapsed) {
+                        // DRAG INTO: Dropped right after expanded section header
+                        newSectionId = itemBefore.id;
+                    } else if (itemBefore.type === 'exercise' && itemBefore.sectionId !== null) {
+                        // DRAG INTO: Dropped after an exercise that's in a section
+                        newSectionId = itemBefore.sectionId;
+                    }
+                    // DRAG OUT: If itemBefore is top-level exercise, newSectionId stays null
+                }
+                // DRAG OUT: If dropped at position 0, newSectionId stays null
+
+                // CRITICAL: Create NEW object to trigger React re-render
+                // This updates the visual indent immediately
+                const updatedItem: FlatItem = {
+                    ...movedItem,
+                    sectionId: newSectionId,
+                };
+                newItems.splice(toIndex, 0, updatedItem);
+            } else {
+                // Sections cannot be nested - just reorder
+                newItems.splice(toIndex, 0, movedItem);
+            }
+
             return newItems;
         });
 
-        // Reset shifts AFTER state update (next frame)
+        // Reset drag state
         requestAnimationFrame(() => {
             draggingIndex.value = -1;
             hoverIndex.value = -1;
         });
     }, [draggingIndex, hoverIndex]);
 
+    const handleDragStart = useCallback((sectionId?: string) => {
+        setIsScrollEnabled(false);
+
+        // If dragging a section, collapse it
+        if (sectionId) {
+            setDraggingSectionId(sectionId);
+            setCollapsedSections(prev => {
+                const next = new Set(prev);
+                next.add(sectionId);
+                return next;
+            });
+        }
+    }, []);
+
+    const handleDragEnd = useCallback((sectionId?: string) => {
+        setIsScrollEnabled(true);
+
+        // If we were dragging a section, expand it back
+        if (sectionId && draggingSectionId === sectionId) {
+            setCollapsedSections(prev => {
+                const next = new Set(prev);
+                next.delete(sectionId);
+                return next;
+            });
+            setDraggingSectionId(null);
+        }
+    }, [draggingSectionId]);
+
     const handleSave = useCallback(() => {
+        // Convert flatItems back to BuilderItems and save
         const builderItems = unflattenToBuilderItems(flatItems);
         triggerReorder(builderItems);
+        setHasUnsavedChanges(false);
         router.back();
     }, [flatItems, triggerReorder, router]);
 
     const handleBack = useCallback(() => {
-        router.back();
-    }, [router]);
+        if (hasUnsavedChanges) {
+            Alert.alert(
+                t('common.discardChanges'),
+                t('common.discardChangesMessage'),
+                [
+                    {
+                        text: t('common.discard'),
+                        style: 'destructive',
+                        onPress: () => router.back(),
+                    },
+                    {
+                        text: t('common.cancel'),
+                        style: 'cancel',
+                    },
+                ]
+            );
+        } else {
+            router.back();
+        }
+    }, [hasUnsavedChanges, router, t]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -420,6 +540,7 @@ export default function ReorderScreen() {
                         { paddingTop: insets.top, paddingBottom: insets.bottom + 40 }
                     ]}
                     showsVerticalScrollIndicator={false}
+                    scrollEnabled={isScrollEnabled}
                 >
                     {/* Header */}
                     <View style={styles.header}>
@@ -442,19 +563,31 @@ export default function ReorderScreen() {
 
                     {/* Reorderable List */}
                     <View style={styles.listContainer}>
-                        {flatItems.map((item, index) => (
-                            <DraggableRow
-                                key={item.id}
-                                item={item}
-                                index={index}
-                                totalItems={flatItems.length}
-                                onToggleSection={handleToggleSection}
-                                onDragComplete={handleDragComplete}
-                                draggingIndex={draggingIndex}
-                                hoverIndex={hoverIndex}
-                                themeColors={themeColors}
-                            />
-                        ))}
+                        {flatItems
+                            .map((item, originalIndex) => ({ item, originalIndex }))
+                            .filter(({ item }) => {
+                                // Only show exercises that are NOT in collapsed sections
+                                if (item.type === 'exercise' && item.sectionId) {
+                                    return !collapsedSections.has(item.sectionId);
+                                }
+                                // Always show sections and top-level exercises
+                                return true;
+                            })
+                            .map(({ item, originalIndex }, visualIndex) => (
+                                <DraggableRow
+                                    key={item.id}
+                                    item={item}
+                                    index={originalIndex}
+                                    totalItems={flatItems.length}
+                                    onToggleSection={handleToggleSection}
+                                    onDragComplete={handleDragComplete}
+                                    onDragStart={handleDragStart}
+                                    onDragEnd={handleDragEnd}
+                                    draggingIndex={draggingIndex}
+                                    hoverIndex={hoverIndex}
+                                    themeColors={themeColors}
+                                />
+                            ))}
                     </View>
                 </ScrollView>
             </View>
