@@ -1,5 +1,5 @@
 import { LucideIcon } from 'lucide-react-native';
-import { COLUMN_OPTIONS } from '@/constants/training';
+import { COLUMN_OPTIONS, type SectionType } from '@/constants/training';
 
 export type { ColumnValue } from '@/constants/training';
 export { COLUMN_OPTIONS };
@@ -26,6 +26,19 @@ export type WorkoutExercise = {
     eachSide?: boolean;
     isSupersetNext?: boolean;
 };
+
+export type WorkoutSection = {
+    id: string;
+    type: 'section';
+    name: string;
+    sectionType: SectionType;
+    duration?: string;
+    rounds?: string;
+    notes?: string;
+    exercises: WorkoutExercise[];
+};
+
+export type WorkoutItem = WorkoutExercise | WorkoutSection;
 
 export const getDefaultColumns = (exerciseType: string) => {
     switch (exerciseType) {
