@@ -85,6 +85,7 @@ interface MessageListProps {
   onDocumentPress?: (document: import('@/services/chats-service').DocumentAttachment) => void;
   onImagePress?: (images: import('@/services/chats-service').ImageAttachment[], senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
   onVideoPress?: (video: import('@/services/chats-service').VideoAttachment, senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
+  disableKeyboardOffset?: boolean;
 }
 
 // Extended IMessage interface for custom fields
@@ -153,6 +154,7 @@ export const MessageList = ({
   onDocumentPress,
   onImagePress,
   onVideoPress,
+  disableKeyboardOffset = false,
 }: MessageListProps) => {
   const { t } = useTranslations();
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>(messages);
@@ -354,7 +356,7 @@ export const MessageList = ({
   const handleQuickReaction = useCallback(async (message: ChatMessage, emoji: string) => {
     const isSender = message.isSent;
     const currentReaction = isSender ? message.senderReaction : message.recipientReaction;
-    
+
     // If clicking the same emoji, remove reaction
     if (emoji === currentReaction) {
       await reactTo(message.id, '', isSender);
@@ -777,7 +779,7 @@ export const MessageList = ({
         style={[
           styles.fill,
           { backgroundColor },
-          keyboardHeight ? animatedContainerStyle : undefined,
+          keyboardHeight && !disableKeyboardOffset ? animatedContainerStyle : undefined,
         ]}
       >
         <GiftedChat
@@ -798,8 +800,10 @@ export const MessageList = ({
           listProps={{
             showsVerticalScrollIndicator: false,
             keyboardShouldPersistTaps: 'handled' as const,
+            maintainVisibleContentPosition: {
+              minIndexForVisible: 0,
+            },
             keyboardDismissMode: 'interactive' as const,
-            automaticallyAdjustKeyboardInsets: false,
             automaticallyAdjustsScrollIndicatorInsets: false,
             contentContainerStyle: {
               paddingHorizontal: 8,

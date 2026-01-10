@@ -117,29 +117,21 @@ export default function ChatDetailScreen() {
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
 
-  // Toolbar background color for keyboard fill
-  const toolbarBgColor = hexToRgba(themeColors.headerBackground, 0.95);
-
   // Keyboard animation following Expo guide
   const keyboardHeight = useSharedValue(0);
 
   useKeyboardHandler(
     {
-      onMove: (event) => {
+      onStart: (event) => {
         'worklet';
         keyboardHeight.value = withTiming(event.height, {
           duration: 250,
-          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+          easing: Easing.out(Easing.quad),
         });
       },
     },
     []
   );
-
-  const keyboardSpacerStyle = useAnimatedStyle(() => ({
-    height: keyboardHeight.value,
-    backgroundColor: toolbarBgColor,
-  }));
 
   const [chat, setChat] = useState<Chat | null>(() => {
     if (chatParam) {
@@ -880,31 +872,32 @@ export default function ChatDetailScreen() {
         dropdownOptions={dropdownOptions}
       />
 
-      <KeyboardAvoidingView
+      <View
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
       >
         {/* ROW 2: SCROLL WINDOW - Fills space between header and toolbar */}
-      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-        <MessageList
-          messages={messages}
-          backgroundColor="transparent"
-          themeColors={themeColors}
-          clientName={chat.clientName}
-          keyboardHeight={keyboardHeight}
-          onReply={handleMessageReply}
-          onEdit={handleMessageEdit}
-          onDelete={handleMessageDelete}
-          onReactionPress={handleReactionPress}
-          onDocumentPress={handleDocumentPress}
-          onImagePress={handleImagePress}
-          onVideoPress={handleVideoPress}
-          headerHeight={insets.top + 60} // Safe area + header content (~60px)
-        />
+        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+          <MessageList
+            messages={messages}
+            backgroundColor="transparent"
+            themeColors={themeColors}
+            clientName={chat.clientName}
+            keyboardHeight={keyboardHeight}
+            onReply={handleMessageReply}
+            onEdit={handleMessageEdit}
+            onDelete={handleMessageDelete}
+            onReactionPress={handleReactionPress}
+            onDocumentPress={handleDocumentPress}
+            onImagePress={handleImagePress}
+            onVideoPress={handleVideoPress}
+            headerHeight={insets.top + 60}
+            bottomOffset={60 + insets.bottom}
+            disableKeyboardOffset={true}
+          />
+        </View>
       </View>
 
-      {/* ROW 3: TOOLBAR */}
+      {/* ROW 3: TOOLBAR - Absolutely positioned */}
       <ChatToolbar
         chat={chat}
         replyingToMessage={replyingToMessage}
@@ -930,8 +923,8 @@ export default function ChatDetailScreen() {
         onSendPress={handleSendPress}
         onCancelReply={handleCancelReply}
         bottomInset={insets.bottom}
+        keyboardHeight={keyboardHeight}
       />
-      </KeyboardAvoidingView>
 
       <MessageReactionsSheet
         visible={reactionsSheetVisible}
