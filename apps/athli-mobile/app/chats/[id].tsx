@@ -126,6 +126,11 @@ export default function ChatDetailScreen() {
         'worklet';
         keyboardHeight.value = event.height;
       },
+      onEnd: (event) => {
+        'worklet';
+        // Snap to final position to prevent lag at the end
+        keyboardHeight.value = event.height;
+      },
     },
     []
   );
