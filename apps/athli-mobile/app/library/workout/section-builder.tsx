@@ -21,6 +21,7 @@ import { Exercise } from '@/app/modals/workout/add-exercise-to-builder-modal';
 import {
     type BuilderExercise,
     type BuilderSection,
+    type BuilderItem,
     getDefaultColumns,
 } from '@/components/workout/workout-schema';
 import {
@@ -83,7 +84,7 @@ export default function SectionBuilderScreen() {
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
-    const { triggerSectionSelect, setExercisesSelectCallback, setExerciseSelectCallback } = useModalCallbacks();
+    const { triggerSectionSelect, setExercisesSelectCallback, setExerciseSelectCallback, setReorderCallback, setReorderItems } = useModalCallbacks();
 
     // State management
     const [state, setState] = useState<SectionBuilderState>(() => createInitialState(params));
@@ -268,6 +269,19 @@ export default function SectionBuilderScreen() {
     };
 
     const handleReorder = () => {
+        // Set up callback to receive reordered exercises
+        setReorderCallback((reorderedItems) => {
+            // Convert BuilderItem[] back to BuilderExercise[]
+            const reorderedExercises = reorderedItems as unknown as BuilderExercise[];
+            setState(prev => ({
+                ...prev,
+                exercises: reorderedExercises,
+            }));
+        });
+
+        // Store exercises as items for the reorder screen to access
+        setReorderItems(state.exercises as unknown as BuilderItem[]);
+
         router.push('/library/workout/reorder');
     };
 

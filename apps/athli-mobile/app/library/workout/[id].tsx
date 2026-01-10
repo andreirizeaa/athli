@@ -65,7 +65,7 @@ export default function WorkoutDetailScreen() {
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
 
-    const { setExercisesSelectCallback, setSectionSelectCallback, setExerciseSelectCallback } = useModalCallbacks();
+    const { setExercisesSelectCallback, setSectionSelectCallback, setExerciseSelectCallback, setReorderCallback, setReorderItems } = useModalCallbacks();
 
     // Workout state management
     const [workoutState, setWorkoutState] = useState<BuilderWorkoutState>(createEmptyWorkoutState);
@@ -182,6 +182,17 @@ export default function WorkoutDetailScreen() {
     }, [workoutState, router, t]);
 
     const handleReorder = () => {
+        // Set up callback to receive reordered items
+        setReorderCallback((reorderedItems) => {
+            setWorkoutState(prev => ({
+                ...prev,
+                items: reorderedItems,
+            }));
+        });
+
+        // Store items for the reorder screen to access
+        setReorderItems(workoutState.items);
+
         router.push('/library/workout/reorder');
     };
 
