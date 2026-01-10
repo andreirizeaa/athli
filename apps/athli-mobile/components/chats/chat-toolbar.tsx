@@ -123,7 +123,8 @@ export const ChatToolbar = ({
   // Safe-area padding only when keyboard is closed
   const safePaddingStyle = useAnimatedStyle(() => {
     const h = keyboardHeight?.value ?? 0;
-    const pb = interpolate(h, [0, 40], [bottomInset, 6], Extrapolation.CLAMP);
+    // Small padding when keyboard opens to prevent bumpiness
+    const pb = interpolate(h, [0, 40], [bottomInset, 0], Extrapolation.CLAMP);
     return {
       paddingBottom: pb,
     };
