@@ -38,6 +38,17 @@ export const AttachmentPickerRow = ({
   // Create translucent background color - more transparent since parent already has BlurView
   const translucentBg = backgroundColor ? hexToRgba(backgroundColor, 0.3) : hexToRgba(themeColors.headerBackground, 0.3);
 
+  // WhatsApp-style colors for each attachment type
+  const attachmentColors = {
+    photos: '#7F66FF',   // Purple
+    videos: '#25D366',   // Green
+    documents: '#0088CC', // Blue
+    camera: '#FF6B6B',   // Red/Coral
+  };
+
+  // Solid background for icon containers
+  const iconBgColor = themeColors.primary + '20';
+
   useEffect(() => {
     Animated.timing(slideAnim, {
       toValue: 1,
@@ -200,12 +211,12 @@ export const AttachmentPickerRow = ({
             style={styles.attachmentButton}
             onPress={handlePhotoPress}
           >
-            <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
+            <View style={[styles.iconCircle, { backgroundColor: iconBgColor }]}>
               <PlatformIcon
                 sf="photo.on.rectangle"
                 IconComponent={Image}
-                size={iconSizes.tabBarIcons}
-                color={themeColors.primary}
+                size={iconSizes.tabBarIcons + 8}
+                color={attachmentColors.photos}
               />
             </View>
             <Text style={[styles.subtitle, { color: themeColors.text }]}>Photos</Text>
@@ -216,12 +227,12 @@ export const AttachmentPickerRow = ({
               style={styles.attachmentButton}
               onPress={handleVideoPress}
             >
-              <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
+              <View style={[styles.iconCircle, { backgroundColor: iconBgColor }]}>
                 <PlatformIcon
                   sf="video"
                   IconComponent={Video}
-                  size={iconSizes.tabBarIcons}
-                  color={themeColors.primary}
+                  size={iconSizes.tabBarIcons + 8}
+                  color={attachmentColors.videos}
                 />
               </View>
               <Text style={[styles.subtitle, { color: themeColors.text }]}>Videos</Text>
@@ -232,12 +243,12 @@ export const AttachmentPickerRow = ({
             style={styles.attachmentButton}
             onPress={handleDocumentPress}
           >
-            <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
+            <View style={[styles.iconCircle, { backgroundColor: iconBgColor }]}>
               <PlatformIcon
                 sf="doc.text"
                 IconComponent={FileText}
-                size={iconSizes.tabBarIcons}
-                color={themeColors.primary}
+                size={iconSizes.tabBarIcons + 8}
+                color={attachmentColors.documents}
               />
             </View>
             <Text style={[styles.subtitle, { color: themeColors.text }]}>PDFs</Text>
@@ -248,12 +259,12 @@ export const AttachmentPickerRow = ({
               style={styles.attachmentButton}
               onPress={handleCameraPress}
             >
-              <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
+              <View style={[styles.iconCircle, { backgroundColor: iconBgColor }]}>
                 <PlatformIcon
                   sf="camera"
                   IconComponent={Camera}
-                  size={iconSizes.tabBarIcons}
-                  color={themeColors.primary}
+                  size={iconSizes.tabBarIcons + 8}
+                  color={attachmentColors.camera}
                 />
               </View>
               <Text style={[styles.subtitle, { color: themeColors.text }]}>Camera</Text>
