@@ -65,7 +65,7 @@ export default function WorkoutDetailScreen() {
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
 
-    const { setExercisesSelectCallback, setSectionSelectCallback } = useModalCallbacks();
+    const { setExercisesSelectCallback, setSectionSelectCallback, setExerciseSelectCallback } = useModalCallbacks();
 
     // Workout state management
     const [workoutState, setWorkoutState] = useState<BuilderWorkoutState>(createEmptyWorkoutState);
@@ -101,29 +101,8 @@ export default function WorkoutDetailScreen() {
         }
     }, [workoutState]);
 
-    // Handle exercise selection callback
+    // Handle section select callback
     useEffect(() => {
-        setExercisesSelectCallback((exercises: Exercise[]) => {
-            const newExercises: BuilderExercise[] = exercises.map((exercise, idx) => ({
-                id: `${exercise.exerciseId}-${Date.now()}-${idx}`,
-                exerciseId: exercise.exerciseId,
-                name: exercise.name,
-                imageUrl: exercise.imageUrl,
-                exerciseType: exercise.exerciseType,
-                sets: [{ id: Math.random().toString(), setNumber: 1, column1: '', column2: '', type: 'R' as const }],
-                alternatives: [],
-                tempo: '',
-                eachSide: false,
-                ...getDefaultColumns(exercise.exerciseType),
-                equipments: exercise.equipments,
-                bodyParts: exercise.bodyParts,
-            }));
-            setWorkoutState(prev => ({
-                ...prev,
-                items: [...prev.items, ...newExercises],
-            }));
-        });
-
         setSectionSelectCallback((section: BuilderSection) => {
             setWorkoutState(prev => {
                 const existingIndex = prev.items.findIndex(item => item.id === section.id);
@@ -135,7 +114,7 @@ export default function WorkoutDetailScreen() {
                 return { ...prev, items: [...prev.items, section] };
             });
         });
-    }, [setExercisesSelectCallback, setSectionSelectCallback]);
+    }, [setSectionSelectCallback]);
 
     const showDiscardAlert = useCallback(() => {
         Alert.alert(
@@ -203,14 +182,59 @@ export default function WorkoutDetailScreen() {
     }, [workoutState, router, t]);
 
     const handleReorder = () => {
-        // TODO: Implement reorder functionality
-        console.log('Reorder clicked');
+        router.push('/library/workout/reorder');
     };
 
     const handleAddExercise = () => {
+        setExercisesSelectCallback((exercises: Exercise[]) => {
+            const newExercises: BuilderExercise[] = exercises.map((exercise, idx) => ({
+                id: `${exercise.exerciseId}-${Date.now()}-${idx}`,
+                exerciseId: exercise.exerciseId,
+                name: exercise.name,
+                imageUrl: exercise.imageUrl,
+                exerciseType: exercise.exerciseType,
+                sets: [{ id: Math.random().toString(), setNumber: 1, column1: '', column2: '', type: 'R' as const }],
+                alternatives: [],
+                tempo: '',
+                eachSide: false,
+                ...getDefaultColumns(exercise.exerciseType),
+                equipments: exercise.equipments,
+                bodyParts: exercise.bodyParts,
+            }));
+            setWorkoutState(prev => ({
+                ...prev,
+                items: [...prev.items, ...newExercises],
+            }));
+        });
+
         router.push({
             pathname: '/modals/workout/add-exercise-to-builder-modal',
             params: { multiple: 'true' }
+        });
+    };
+
+    const handleSwapExercise = (index: number) => {
+        setExerciseSelectCallback((newExercise: Exercise) => {
+            setWorkoutState(prev => {
+                const newItems = [...prev.items];
+                const currentExercise = newItems[index] as BuilderExercise;
+
+                newItems[index] = {
+                    ...currentExercise,
+                    exerciseId: newExercise.exerciseId,
+                    name: newExercise.name,
+                    imageUrl: newExercise.imageUrl,
+                    exerciseType: newExercise.exerciseType,
+                    ...getDefaultColumns(newExercise.exerciseType),
+                };
+
+                return { ...prev, items: newItems };
+            });
+        });
+
+        router.push({
+            pathname: '/modals/workout/add-exercise-to-builder-modal',
+            params: { multiple: 'false', title: 'Swap Exercise' }
         });
     };
 
@@ -428,17 +452,27 @@ export default function WorkoutDetailScreen() {
     const canSave = isDirty;
     const items = workoutState.items;
 
+    const totalExercises = workoutState.items.reduce((acc, item) => {
+        if (isBuilderSection(item)) {
+            return acc + (item.exercises?.length || 0);
+        }
+        return acc + 1;
+    }, 0);
+
     const BottomBar = (
         <View style={[
             styles.bottomBarContainer,
             {
                 backgroundColor: themeColors.pageBackground,
-                paddingBottom: insets.bottom,
-                height: 80 + insets.bottom,
+                paddingBottom: insets.bottom + 12,
                 borderTopColor: themeColors.border,
             }
         ]}>
             <View style={styles.bottomBarContent}>
+                <View style={[styles.countCircle, { backgroundColor: themeColors.iconButton }]}>
+                    <Text style={[styles.countText, { color: themeColors.text }]}>{totalExercises}</Text>
+                </View>
+
                 <View style={styles.buttonWrapper}>
                     <PressableScale
                         style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
@@ -599,6 +633,7 @@ export default function WorkoutDetailScreen() {
                                     tempo: ex.tempo,
                                     eachSide: ex.eachSide,
                                     isSupersetNext: ex.isSupersetNext,
+                                    notes: ex.notes,
                                 }}
                                 onUpdateExercise={(updates) => handleUpdateExercise(index, updates as Partial<BuilderExercise>)}
                                 onDelete={() => handleDeleteItem(index)}
@@ -609,6 +644,7 @@ export default function WorkoutDetailScreen() {
                                 onMoveUp={() => handleMoveUp(index)}
                                 onMoveDown={() => handleMoveDown(index)}
                                 validationErrors={validationErrors}
+                                onSwap={() => handleSwapExercise(index)}
                             />
 
                             {!isLast && (
@@ -722,12 +758,26 @@ const styles = StyleSheet.create({
         elevation: 10,
     },
     bottomBarContent: {
-        flex: 1,
         flexDirection: 'row',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         paddingTop: 12,
         paddingHorizontal: 16,
         gap: 12,
+    },
+    countCircle: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        // Match action button feel
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    countText: {
+        ...typography.h6,
     },
     buttonWrapper: {
         flex: 1,

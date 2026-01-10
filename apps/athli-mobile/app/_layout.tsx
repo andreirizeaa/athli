@@ -191,6 +191,16 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="library/workout/reorder"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: {
+                backgroundColor: themeColors.pageBackground,
+              },
+            }}
+          />
+          <Stack.Screen
             name="modals/athli-assistant-help-modal"
             options={{
               presentation: 'modal',

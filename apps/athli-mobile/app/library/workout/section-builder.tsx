@@ -83,7 +83,7 @@ export default function SectionBuilderScreen() {
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
-    const { triggerSectionSelect, setExercisesSelectCallback } = useModalCallbacks();
+    const { triggerSectionSelect, setExercisesSelectCallback, setExerciseSelectCallback } = useModalCallbacks();
 
     // State management
     const [state, setState] = useState<SectionBuilderState>(() => createInitialState(params));
@@ -105,28 +105,7 @@ export default function SectionBuilderScreen() {
         }
     }, [state]);
 
-    useEffect(() => {
-        setExercisesSelectCallback((newExercises: Exercise[]) => {
-            const items: BuilderExercise[] = newExercises.map((exercise, idx) => ({
-                id: `${exercise.exerciseId}-${Date.now()}-${idx}`,
-                exerciseId: exercise.exerciseId,
-                name: exercise.name,
-                imageUrl: exercise.imageUrl,
-                exerciseType: exercise.exerciseType,
-                sets: [{ id: Math.random().toString(), setNumber: 1, column1: '', column2: '', type: 'R' as const }],
-                alternatives: [],
-                tempo: '',
-                eachSide: false,
-                ...getDefaultColumns(exercise.exerciseType),
-                equipments: exercise.equipments,
-                bodyParts: exercise.bodyParts,
-            }));
-            setState(prev => ({
-                ...prev,
-                exercises: [...prev.exercises, ...items],
-            }));
-        });
-    }, [setExercisesSelectCallback]);
+
 
     const showDiscardAlert = useCallback(() => {
         Alert.alert(
@@ -191,6 +170,28 @@ export default function SectionBuilderScreen() {
     }, [isDirty, router, showDiscardAlert]);
 
     const handleAddExercise = () => {
+        setExercisesSelectCallback((newExercises: Exercise[]) => {
+            const items: BuilderExercise[] = newExercises.map((exercise, idx) => ({
+                id: `${exercise.exerciseId}-${Date.now()}-${idx}`,
+                exerciseId: exercise.exerciseId,
+                name: exercise.name,
+                imageUrl: exercise.imageUrl,
+                exerciseType: exercise.exerciseType,
+                sets: [{ id: Math.random().toString(), setNumber: 1, column1: '', column2: '', type: 'R' as const }],
+                alternatives: [],
+                tempo: '',
+                eachSide: false,
+                ...getDefaultColumns(exercise.exerciseType),
+                equipments: exercise.equipments,
+                bodyParts: exercise.bodyParts,
+            }));
+
+            setState(prev => ({
+                ...prev,
+                exercises: [...prev.exercises, ...items],
+            }));
+        });
+
         router.push({
             pathname: '/modals/workout/add-exercise-to-builder-modal',
             params: { multiple: 'true' }
@@ -210,6 +211,31 @@ export default function SectionBuilderScreen() {
             ...prev,
             exercises: prev.exercises.filter((_, i) => i !== index),
         }));
+    };
+
+    const handleSwapExercise = (index: number) => {
+        setExerciseSelectCallback((newExercise: Exercise) => {
+            setState(prev => {
+                const newExercises = [...prev.exercises];
+                const currentExercise = newExercises[index];
+
+                newExercises[index] = {
+                    ...currentExercise,
+                    exerciseId: newExercise.exerciseId,
+                    name: newExercise.name,
+                    imageUrl: newExercise.imageUrl,
+                    exerciseType: newExercise.exerciseType,
+                    ...getDefaultColumns(newExercise.exerciseType),
+                };
+
+                return { ...prev, exercises: newExercises };
+            });
+        });
+
+        router.push({
+            pathname: '/modals/workout/add-exercise-to-builder-modal',
+            params: { multiple: 'false', title: 'Swap Exercise' }
+        });
     };
 
     const toggleSuperset = (index: number) => {
@@ -242,13 +268,15 @@ export default function SectionBuilderScreen() {
     };
 
     const handleReorder = () => {
-        console.log('Reorder mode');
+        router.push('/library/workout/reorder');
     };
 
     const canSave = isDirty && state.name.trim().length > 0;
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
+
+    const totalExercises = state.exercises.length;
 
     return (
         <View style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -438,6 +466,7 @@ export default function SectionBuilderScreen() {
                                     tempo: ex.tempo,
                                     eachSide: ex.eachSide,
                                     isSupersetNext: ex.isSupersetNext,
+                                    notes: ex.notes,
                                 }}
                                 onUpdateExercise={(updates) => handleUpdateExercise(index, updates as Partial<BuilderExercise>)}
                                 onDelete={() => handleDeleteExercise(index)}
@@ -449,6 +478,7 @@ export default function SectionBuilderScreen() {
                                 onMoveDown={() => handleMoveDown(index)}
                                 hideSetControls={state.sectionType === 'amrap' || state.sectionType === 'timed'}
                                 validationErrors={validationErrors}
+                                onSwap={() => handleSwapExercise(index)}
                             />
 
                             {!isLast && canSupersetNext && (
@@ -501,12 +531,15 @@ export default function SectionBuilderScreen() {
                 styles.bottomBarContainer,
                 {
                     backgroundColor: themeColors.pageBackground,
-                    paddingBottom: insets.bottom,
-                    height: 80 + insets.bottom,
+                    paddingBottom: insets.bottom + 12,
                     borderTopColor: themeColors.border,
                 }
             ]}>
                 <View style={styles.bottomBarContent}>
+                    <View style={[styles.countCircle, { backgroundColor: themeColors.iconButton }]}>
+                        <Text style={[styles.countText, { color: themeColors.text }]}>{totalExercises}</Text>
+                    </View>
+
                     <View style={styles.buttonWrapper}>
                         <PressableScale
                             style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
@@ -629,12 +662,26 @@ const styles = StyleSheet.create({
         elevation: 10,
     },
     bottomBarContent: {
-        flex: 1,
         flexDirection: 'row',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         paddingTop: 12,
         paddingHorizontal: 16,
         gap: 12,
+    },
+    countCircle: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        // Match action button feel
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    countText: {
+        ...typography.h6,
     },
     buttonWrapper: {
         flex: 1,
