@@ -6,6 +6,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useKeyboardHandler } from 'react-native-keyboard-controller';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -96,6 +98,20 @@ export default function InboxDetailScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useSharedValue(0);
+
+  useKeyboardHandler(
+    {
+      onStart: (event) => {
+        'worklet';
+        keyboardHeight.value = withTiming(event.height, {
+          duration: 250,
+          easing: Easing.out(Easing.quad),
+        });
+      },
+    },
+    []
+  );
 
   const [coach, setCoach] = useState<Coach | null>(() => {
     if (coachParam) {
@@ -224,7 +240,7 @@ export default function InboxDetailScreen() {
   const stopAndDiscard = async () => {
     try {
       await audioRecorder.stop();
-    } catch {}
+    } catch { }
     setIsStopped(false);
     waveformRef.current = [];
     setWaveform([]);
@@ -291,7 +307,7 @@ export default function InboxDetailScreen() {
     if (documentSent === 'true' && sentDocument) {
       try {
         const documentData = JSON.parse(sentDocument);
-        
+
         const newMessage: InboxMessage = {
           id: `inbox-${Date.now()}`,
           text: documentData.caption || '',
@@ -328,7 +344,7 @@ export default function InboxDetailScreen() {
     if (imagesSent === 'true' && sentImages) {
       try {
         const imageAttachments = JSON.parse(sentImages);
-        
+
         const newMessage: InboxMessage = {
           id: `inbox-${Date.now()}`,
           text: sentImagesCaption || '',
@@ -362,7 +378,7 @@ export default function InboxDetailScreen() {
     if (videoSent === 'true' && sentVideo) {
       try {
         const videoData = JSON.parse(sentVideo);
-        
+
         const newMessage: InboxMessage = {
           id: `inbox-${Date.now()}`,
           text: videoData.caption || '',
@@ -474,7 +490,7 @@ export default function InboxDetailScreen() {
   const handleTrashPress = async () => {
     try {
       await audioRecorder.stop();
-    } catch {}
+    } catch { }
     previewWaveRef.current?.stopPlayer?.();
 
     setPreviewPath(null);
@@ -725,6 +741,7 @@ export default function InboxDetailScreen() {
           backgroundColor="transparent"
           themeColors={themeColors}
           clientName={coach.name}
+          keyboardHeight={keyboardHeight}
           onReply={handleMessageReply}
           onEdit={handleMessageEdit}
           onDelete={handleMessageDelete}
@@ -733,7 +750,8 @@ export default function InboxDetailScreen() {
           onImagePress={handleImagePress}
           onVideoPress={handleVideoPress}
           headerHeight={insets.top + 60}
-          bottomOffset={16}
+          bottomOffset={60 + insets.bottom}
+          disableKeyboardOffset={true}
         />
       </View>
 
@@ -763,6 +781,7 @@ export default function InboxDetailScreen() {
         onSendPress={handleSendPress}
         onCancelReply={handleCancelReply}
         bottomInset={insets.bottom}
+        keyboardHeight={keyboardHeight}
       />
 
       <MessageReactionsSheet
