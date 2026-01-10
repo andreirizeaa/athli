@@ -311,13 +311,14 @@ export const MessageList = ({
   };
 
   // Animated style that adjusts container based on keyboard height
+  // Use transform to move up with keyboard (GPU-accelerated, no layout recalculation)
   const animatedContainerStyle = useAnimatedStyle(() => {
-    if (!keyboardHeight) return {};
+    if (!keyboardHeight || disableKeyboardOffset) return {};
 
     return {
-      marginBottom: keyboardHeight.value,
+      transform: [{ translateY: -keyboardHeight.value }],
     };
-  }, [keyboardHeight]);
+  }, [keyboardHeight, disableKeyboardOffset]);
 
   const isMessageWithinOneHour = (message: ChatMessage): boolean => {
     const now = new Date();
