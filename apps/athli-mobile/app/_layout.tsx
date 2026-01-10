@@ -181,6 +181,16 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="library/workout/section-builder"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: {
+                backgroundColor: themeColors.pageBackground,
+              },
+            }}
+          />
+          <Stack.Screen
             name="modals/athli-assistant-help-modal"
             options={{
               presentation: 'modal',
@@ -667,6 +677,17 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="modals/workout/add-section-to-builder-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/workout/create-section-in-builder-modal"
             options={{
               presentation: 'modal',
               headerShown: false,

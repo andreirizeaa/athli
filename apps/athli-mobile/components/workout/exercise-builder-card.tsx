@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, Switch, Platform } from 'react-native';
-import { Trash2, Plus, Minus, Ellipsis, Repeat, Info } from 'lucide-react-native';
+import { Trash2, Plus, Minus, Ellipsis, Repeat, Info, ArrowUp, ArrowDown } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { PressableScale } from 'pressto';
 
@@ -20,6 +20,11 @@ type ExerciseBuilderCardProps = {
     onDelete: () => void;
     isLinkedToPrev?: boolean;
     isLinkedToNext?: boolean;
+    canMoveUp?: boolean;
+    canMoveDown?: boolean;
+    onMoveUp?: () => void;
+    onMoveDown?: () => void;
+    hideSetControls?: boolean;
 };
 
 const RED_ERROR = '#EF4444';
@@ -61,6 +66,11 @@ export const ExerciseBuilderCard = ({
     onDelete,
     isLinkedToPrev,
     isLinkedToNext,
+    canMoveUp,
+    canMoveDown,
+    onMoveUp,
+    onMoveDown,
+    hideSetControls,
 }: ExerciseBuilderCardProps) => {
     const { colors: themeColors } = useThemePreference();
     const router = useRouter();
@@ -147,6 +157,20 @@ export const ExerciseBuilderCard = ({
     };
 
     const actionOptions: DropdownMenuOption[] = [
+        // Move options - only show if not linked to previous (i.e., top of superset or standalone)
+        ...(!isLinkedToPrev && (canMoveUp || canMoveDown) ? [
+            ...(canMoveUp ? [{
+                label: 'Move Up',
+                icon: { sf: 'arrow.up', IconComponent: ArrowUp },
+                onPress: onMoveUp!,
+            }] : []),
+            ...(canMoveDown ? [{
+                label: 'Move Down',
+                icon: { sf: 'arrow.down', IconComponent: ArrowDown },
+                onPress: onMoveDown!,
+            }] : []),
+            { separator: true },
+        ] : []),
         {
             label: 'Add Alternatives',
             icon: { sf: 'arrow.triangle.2.circlepath', IconComponent: Repeat },
@@ -342,27 +366,29 @@ export const ExerciseBuilderCard = ({
                 })}
 
                 {/* Add/Remove Sets Controls */}
-                <View style={styles.setsControls}>
-                    <PressableScale
-                        onPress={handleRemoveLastSet}
-                        style={[
-                            styles.controlButton,
-                            { borderColor: themeColors.border },
-                            exercise.sets.length <= 1 && styles.disabledControl
-                        ]}
-                    >
-                        <Minus {...({ size: 16, color: exercise.sets.length <= 1 ? themeColors.mutedText : themeColors.text } as any)} />
-                    </PressableScale>
+                {!hideSetControls && (
+                    <View style={styles.setsControls}>
+                        <PressableScale
+                            onPress={handleRemoveLastSet}
+                            style={[
+                                styles.controlButton,
+                                { borderColor: themeColors.border },
+                                exercise.sets.length <= 1 && styles.disabledControl
+                            ]}
+                        >
+                            <Minus {...({ size: 16, color: exercise.sets.length <= 1 ? themeColors.mutedText : themeColors.text } as any)} />
+                        </PressableScale>
 
-                    <Text style={[styles.controlLabel, { color: themeColors.text }]}>Set</Text>
+                        <Text style={[styles.controlLabel, { color: themeColors.text }]}>Set</Text>
 
-                    <PressableScale
-                        onPress={handleAddSet}
-                        style={[styles.controlButton, { borderColor: themeColors.primary, borderWidth: 2 }]}
-                    >
-                        <Plus {...({ size: 16, color: themeColors.primary } as any)} />
-                    </PressableScale>
-                </View>
+                        <PressableScale
+                            onPress={handleAddSet}
+                            style={[styles.controlButton, { borderColor: themeColors.primary, borderWidth: 2 }]}
+                        >
+                            <Plus {...({ size: 16, color: themeColors.primary } as any)} />
+                        </PressableScale>
+                    </View>
+                )}
 
                 <View style={styles.notesContainer}>
                     <InputBox

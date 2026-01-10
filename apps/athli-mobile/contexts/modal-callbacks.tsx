@@ -3,6 +3,7 @@ import type { Client } from '@/services/client-service';
 import type { DefaultMetric } from '@/constants/metrics';
 import type { DefaultHabit } from '@/constants/habits';
 import type { Exercise } from '@/app/modals/workout/add-exercise-to-builder-modal';
+import type { WorkoutSection } from '@/components/workout/types';
 
 type RepeatData = {
   type: 'weekly' | 'monthly';
@@ -41,6 +42,7 @@ type ModalCallbacksContextType = {
   setDateSelectCallback: (callback: (date: Date) => void) => void;
   setExerciseSelectCallback: (callback: (exercise: Exercise) => void) => void;
   setExercisesSelectCallback: (callback: (exercises: Exercise[]) => void) => void;
+  setSectionSelectCallback: (callback: (section: WorkoutSection) => void) => void;
   triggerClientSelect: (client: Client) => void;
   triggerTypeSelect: (type: string) => void;
   triggerRepeatSelect: (data: RepeatData) => void;
@@ -52,6 +54,7 @@ type ModalCallbacksContextType = {
   triggerDateSelect: (date: Date) => void;
   triggerExerciseSelect: (exercise: Exercise) => void;
   triggerExercisesSelect: (exercises: Exercise[]) => void;
+  triggerSectionSelect: (section: WorkoutSection) => void;
   getRepeatData: () => RepeatData | null;
   setRepeatData: (data: RepeatData | null) => void;
   getHabitOptionsData: () => HabitOptionsData | null;
@@ -76,6 +79,7 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
   const [dateSelectCallback, setDateSelectCallbackState] = useState<((date: Date) => void) | null>(null);
   const [exerciseSelectCallbackState, setExerciseSelectCallbackState] = useState<((exercise: Exercise) => void) | null>(null);
   const [exercisesSelectCallbackState, setExercisesSelectCallbackState] = useState<((exercises: Exercise[]) => void) | null>(null);
+  const [sectionSelectCallbackState, setSectionSelectCallbackState] = useState<((section: WorkoutSection) => void) | null>(null);
   const [storedRepeatData, setStoredRepeatData] = useState<RepeatData | null>(null);
   const [storedHabitOptionsData, setStoredHabitOptionsData] = useState<HabitOptionsData | null>(null);
   const [storedScheduleData, setStoredScheduleData] = useState<ScheduleData | null>(null);
@@ -121,6 +125,9 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
   }, []);
   const setExercisesSelectCallback = useCallback((callback: (exercises: Exercise[]) => void) => {
     setExercisesSelectCallbackState(() => callback);
+  }, []);
+  const setSectionSelectCallback = useCallback((callback: (section: WorkoutSection) => void) => {
+    setSectionSelectCallbackState(() => callback);
   }, []);
 
   const triggerClientSelect = useCallback((client: Client) => {
@@ -217,6 +224,12 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
       setExercisesSelectCallbackState(null);
     }
   }, [exercisesSelectCallbackState]);
+  const triggerSectionSelect = useCallback((section: WorkoutSection) => {
+    if (sectionSelectCallbackState) {
+      sectionSelectCallbackState(section);
+      setSectionSelectCallbackState(null);
+    }
+  }, [sectionSelectCallbackState]);
 
   const getScheduleData = useCallback(() => {
     return storedScheduleData;
@@ -246,11 +259,13 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
         triggerDateSelect,
         triggerExerciseSelect,
         triggerExercisesSelect,
+        triggerSectionSelect,
         setMetricSelectCallback,
         setHabitSelectCallback,
         setDateSelectCallback,
         setExerciseSelectCallback,
         setExercisesSelectCallback,
+        setSectionSelectCallback,
         getRepeatData,
         setRepeatData,
         getHabitOptionsData,

@@ -15,7 +15,8 @@ import { PressableOpacity, PressableScale } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useModalCallbacks } from '@/contexts/modal-callbacks';
 import { ExerciseBuilderCard } from '@/components/workout/exercise-builder-card';
-import { getDefaultColumns, type WorkoutExercise } from '@/components/workout/types';
+import { SectionBuilderCard } from '@/components/workout/section-builder-card';
+import { getDefaultColumns, type WorkoutExercise, type WorkoutItem, type WorkoutSection } from '@/components/workout/types';
 import { Exercise } from '@/app/modals/workout/add-exercise-to-builder-modal';
 import { hexToRgba } from '@/utils/colorUtils';
 
@@ -49,9 +50,9 @@ export default function WorkoutDetailScreen() {
     };
 
     const [workout, setWorkout] = useState<typeof MOCK_WORKOUTS[string] | null>(null);
-    const [selectedExercises, setSelectedExercises] = useState<WorkoutExercise[]>([]);
+    const [items, setItems] = useState<WorkoutItem[]>([]);
 
-    const { setExerciseSelectCallback, setExercisesSelectCallback } = useModalCallbacks();
+    const { setExerciseSelectCallback, setExercisesSelectCallback, setSectionSelectCallback } = useModalCallbacks();
 
     useEffect(() => {
         if (id) {
@@ -73,9 +74,21 @@ export default function WorkoutDetailScreen() {
                 eachSide: false,
                 ...getDefaultColumns(exercise.exerciseType)
             }));
-            setSelectedExercises(prev => [...prev, ...newExercises]);
+            setItems(prev => [...prev, ...newExercises]);
         });
-    }, [setExercisesSelectCallback]);
+
+        setSectionSelectCallback((section: WorkoutSection) => {
+            setItems(prev => {
+                const existingIndex = prev.findIndex(item => item.id === section.id);
+                if (existingIndex !== -1) {
+                    const newItems = [...prev];
+                    newItems[existingIndex] = section;
+                    return newItems;
+                }
+                return [...prev, section];
+            });
+        });
+    }, [setExercisesSelectCallback, setSectionSelectCallback]);
 
     const handleBackPress = () => {
         if (router.canGoBack()) {
@@ -108,35 +121,163 @@ export default function WorkoutDetailScreen() {
         router.push('/modals/workout/add-section-to-builder-modal');
     };
 
-    const handleUpdateExercise = (index: number, updates: Partial<WorkoutExercise>) => {
-        const newExercises = [...selectedExercises];
-        newExercises[index] = { ...newExercises[index], ...updates };
-        setSelectedExercises(newExercises);
+    const handleCreateSection = () => {
+        router.push('/modals/workout/create-section-in-builder-modal');
     };
 
-    const handleDeleteExercise = (index: number) => {
-        setSelectedExercises(prev => prev.filter((_, i) => i !== index));
+    const handleUpdateExercise = (index: number, updates: Partial<WorkoutExercise>) => {
+        const newItems = [...items];
+        const currentExercise = newItems[index] as WorkoutExercise;
+
+        // Apply updates to the target exercise
+        newItems[index] = { ...currentExercise, ...updates } as WorkoutExercise;
+
+        // If seths are updated, check for superset syncing
+        if (updates.sets && updates.sets.length !== currentExercise.sets.length) {
+            const targetSetCount = updates.sets.length;
+
+            // Find start of chain
+            let start = index;
+            while (start > 0) {
+                const prev = newItems[start - 1];
+                if ('type' in prev && prev.type === 'section') break;
+                if (!(prev as WorkoutExercise).isSupersetNext) break;
+                start--;
+            }
+
+            // Find end of chain
+            let end = index;
+            while (end < newItems.length - 1) {
+                const curr = newItems[end];
+                if ('type' in curr && curr.type === 'section') break;
+                if (!(curr as WorkoutExercise).isSupersetNext) break;
+
+                const next = newItems[end + 1];
+                if ('type' in next && next.type === 'section') break;
+
+                end++;
+            }
+
+            // Apply set count to all in chain (except index which is already updated)
+            for (let i = start; i <= end; i++) {
+                if (i === index) continue;
+
+                const ex = newItems[i] as WorkoutExercise;
+                let newSets = [...ex.sets];
+
+                if (newSets.length > targetSetCount) {
+                    // Truncate
+                    newSets = newSets.slice(0, targetSetCount);
+                } else {
+                    // Add sets
+                    while (newSets.length < targetSetCount) {
+                        newSets.push({
+                            id: Math.random().toString(),
+                            column1: '',
+                            column2: '',
+                            type: 'R'
+                        });
+                    }
+                }
+                newItems[i] = { ...ex, sets: newSets } as WorkoutExercise;
+            }
+        }
+
+        setItems(newItems);
+    };
+
+    const handleDeleteItem = (index: number) => {
+        setItems(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleEditSection = (index: number) => {
+        const section = items[index] as WorkoutSection;
+        router.push({
+            pathname: '/library/workout/section-builder',
+            params: {
+                name: section.name,
+                sectionType: section.sectionType,
+                duration: section.duration,
+                rounds: section.rounds,
+                notes: section.notes,
+                editingId: section.id,
+            }
+        });
     };
 
     const toggleSuperset = (index: number) => {
-        const newExercises = [...selectedExercises];
-        newExercises[index] = {
-            ...newExercises[index],
-            isSupersetNext: !newExercises[index].isSupersetNext
+        const newItems = [...items];
+        const ex = newItems[index] as WorkoutExercise;
+
+        const isLinking = !ex.isSupersetNext;
+
+        newItems[index] = {
+            ...ex,
+            isSupersetNext: isLinking
         };
-        setSelectedExercises(newExercises);
+
+        if (isLinking) {
+            // Check next item and sync sets
+            const nextIndex = index + 1;
+            if (nextIndex < newItems.length) {
+                const nextItem = newItems[nextIndex];
+                if (!('type' in nextItem)) { // It is an exercise
+                    const nextEx = nextItem as WorkoutExercise;
+                    const targetSetCount = ex.sets.length;
+
+                    // Sync B to A if set counts differ
+                    if (nextEx.sets.length !== targetSetCount) {
+                        let newSets = [...nextEx.sets];
+                        if (newSets.length > targetSetCount) {
+                            newSets = newSets.slice(0, targetSetCount);
+                        } else {
+                            while (newSets.length < targetSetCount) {
+                                newSets.push({
+                                    id: Math.random().toString(),
+                                    column1: '',
+                                    column2: '',
+                                    type: 'R'
+                                });
+                            }
+                        }
+                        newItems[nextIndex] = { ...nextEx, sets: newSets } as WorkoutExercise;
+                    }
+                }
+            }
+        }
+
+        setItems(newItems);
+    };
+
+    const handleMoveUp = (index: number) => {
+        if (index === 0) return;
+        const newItems = [...items];
+        [newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]];
+        setItems(newItems);
+    };
+
+    const handleMoveDown = (index: number) => {
+        if (index === items.length - 1) return;
+        const newItems = [...items];
+        [newItems[index], newItems[index + 1]] = [newItems[index + 1], newItems[index]];
+        setItems(newItems);
     };
 
     const addOptions: DropdownMenuOption[] = [
         {
-            label: 'Add Exercise',
-            icon: { sf: 'dumbbell.fill', IconComponent: Dumbbell },
-            onPress: handleAddExercise,
+            label: 'Create Section',
+            icon: { sf: 'square.stack.3d.down.right.fill', IconComponent: Layers },
+            onPress: handleCreateSection,
         },
         {
             label: 'Add Section',
-            icon: { sf: 'square.stack.3d.down.right.fill', IconComponent: Layers },
+            icon: { sf: 'plus', IconComponent: Plus },
             onPress: handleAddSection,
+        },
+        {
+            label: 'Add Exercise',
+            icon: { sf: 'dumbbell.fill', IconComponent: Dumbbell },
+            onPress: handleAddExercise,
         },
     ];
 
@@ -235,55 +376,86 @@ export default function WorkoutDetailScreen() {
                     </Text>
                 )}
 
-                {selectedExercises.map((ex, index) => {
-                    const isLinkedToPrev = index > 0 && selectedExercises[index - 1].isSupersetNext;
+                {items.map((item, index) => {
+                    const isLast = index === items.length - 1;
+
+                    if ('type' in item && item.type === 'section') {
+                        return (
+                            <React.Fragment key={item.id}>
+                                <SectionBuilderCard
+                                    section={item}
+                                    onDelete={() => handleDeleteItem(index)}
+                                    onEdit={() => handleEditSection(index)}
+                                    canMoveUp={index > 0}
+                                    canMoveDown={index < items.length - 1}
+                                    onMoveUp={() => handleMoveUp(index)}
+                                    onMoveDown={() => handleMoveDown(index)}
+                                />
+                                {!isLast && <View style={{ height: 16 }} />}
+                            </React.Fragment>
+                        );
+                    }
+
+                    const ex = item as WorkoutExercise;
+                    const nextItem = index < items.length - 1 ? items[index + 1] : null;
+                    const isLinkedToPrev = index > 0 && !('type' in items[index - 1]) && (items[index - 1] as WorkoutExercise).isSupersetNext;
                     const isLinkedToNext = ex.isSupersetNext;
-                    const isLast = index === selectedExercises.length - 1;
+
+                    // Can only superset if next item exists and is an exercise
+                    const canSupersetNext = nextItem && !('type' in nextItem);
 
                     return (
                         <React.Fragment key={ex.id}>
                             <ExerciseBuilderCard
                                 exercise={ex}
                                 onUpdateExercise={(updates) => handleUpdateExercise(index, updates)}
-                                onDelete={() => handleDeleteExercise(index)}
+                                onDelete={() => handleDeleteItem(index)}
                                 isLinkedToPrev={isLinkedToPrev}
                                 isLinkedToNext={isLinkedToNext}
+                                canMoveUp={index > 0}
+                                canMoveDown={index < items.length - 1}
+                                onMoveUp={() => handleMoveUp(index)}
+                                onMoveDown={() => handleMoveDown(index)}
                             />
 
                             {!isLast && (
-                                <View style={[
-                                    styles.supersetConnector,
-                                    { borderColor: themeColors.border },
-                                    isLinkedToNext ? styles.linkedConnector : styles.unlinkedConnector
-                                ]}>
+                                canSupersetNext ? (
                                     <View style={[
-                                        styles.supersetButtonContainer,
-                                        !isLinkedToNext && { width: '100%', paddingHorizontal: 0 }
+                                        styles.supersetConnector,
+                                        { borderColor: themeColors.border },
+                                        isLinkedToNext ? styles.linkedConnector : styles.unlinkedConnector
                                     ]}>
-                                        {!isLinkedToNext && <View style={[styles.connectorLine, { backgroundColor: themeColors.border }]} />}
-                                        <PressableScale
-                                            onPress={() => toggleSuperset(index)}
-                                            style={[
-                                                styles.supersetButton,
-                                                {
-                                                    backgroundColor: isLinkedToNext ? themeColors.background : themeColors.surfaceSecondary,
-                                                    borderColor: themeColors.border,
-                                                    paddingVertical: 4,
-                                                    marginHorizontal: !isLinkedToNext ? 12 : 0,
-                                                }
-                                            ]}
-                                        >
-                                            <LinkIcon {...({ size: 14, color: isLinkedToNext ? themeColors.primary : themeColors.text } as any)} />
-                                            <Text style={[
-                                                styles.supersetButtonText,
-                                                { color: isLinkedToNext ? themeColors.primary : themeColors.text }
-                                            ]}>
-                                                {isLinkedToNext ? 'Unlink' : 'Superset'}
-                                            </Text>
-                                        </PressableScale>
-                                        {!isLinkedToNext && <View style={[styles.connectorLine, { backgroundColor: themeColors.border }]} />}
+                                        <View style={[
+                                            styles.supersetButtonContainer,
+                                            !isLinkedToNext && { width: '100%', paddingHorizontal: 0 }
+                                        ]}>
+                                            {!isLinkedToNext && <View style={[styles.connectorLine, { backgroundColor: themeColors.border }]} />}
+                                            <PressableScale
+                                                onPress={() => toggleSuperset(index)}
+                                                style={[
+                                                    styles.supersetButton,
+                                                    {
+                                                        backgroundColor: isLinkedToNext ? themeColors.background : themeColors.surfaceSecondary,
+                                                        borderColor: themeColors.border,
+                                                        paddingVertical: 4,
+                                                        marginHorizontal: !isLinkedToNext ? 12 : 0,
+                                                    }
+                                                ]}
+                                            >
+                                                <LinkIcon {...({ size: 14, color: isLinkedToNext ? themeColors.primary : themeColors.text } as any)} />
+                                                <Text style={[
+                                                    styles.supersetButtonText,
+                                                    { color: isLinkedToNext ? themeColors.primary : themeColors.text }
+                                                ]}>
+                                                    {isLinkedToNext ? 'Unlink' : 'Superset'}
+                                                </Text>
+                                            </PressableScale>
+                                            {!isLinkedToNext && <View style={[styles.connectorLine, { backgroundColor: themeColors.border }]} />}
+                                        </View>
                                     </View>
-                                </View>
+                                ) : (
+                                    <View style={{ height: 16 }} />
+                                )
                             )}
                         </React.Fragment>
                     );
