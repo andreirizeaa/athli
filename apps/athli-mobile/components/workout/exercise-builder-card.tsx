@@ -13,6 +13,7 @@ import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropd
 import { InputBox } from '@/components/form-inputs';
 import { useModalCallbacks } from '@/contexts/modal-callbacks';
 import { COLUMN_OPTIONS, type WorkoutExercise, type ExerciseSet } from './types';
+import { type ExerciseValidationError, hasSetError, hasTempoError } from './validation';
 
 type ExerciseBuilderCardProps = {
     exercise: WorkoutExercise;
@@ -25,6 +26,7 @@ type ExerciseBuilderCardProps = {
     onMoveUp?: () => void;
     onMoveDown?: () => void;
     hideSetControls?: boolean;
+    validationErrors?: ExerciseValidationError[];
 };
 
 const RED_ERROR = '#EF4444';
@@ -32,7 +34,7 @@ const AMBER = '#F59E0B';
 const GREEN = '#22C55E';
 const PRIMARY = '#3B82F6'; // Default primary fallback if not from theme
 
-const TempoInput = ({ value, onChange, themeColors }: { value: string; onChange: (val: string) => void; themeColors: any }) => {
+const TempoInput = ({ value, onChange, themeColors, hasError }: { value: string; onChange: (val: string) => void; themeColors: any; hasError?: boolean }) => {
     const handleChangeText = (text: string) => {
         const cleaned = text.replace(/[^0-9]/g, '');
         const parts = cleaned.split('').slice(0, 4);
@@ -52,7 +54,8 @@ const TempoInput = ({ value, onChange, themeColors }: { value: string; onChange:
                 styles.tempoInput,
                 {
                     color: themeColors.text,
-                    borderColor: themeColors.border,
+                    borderColor: hasError ? RED_ERROR : themeColors.border,
+                    borderWidth: hasError ? 2 : 1,
                     backgroundColor: themeColors.pageBackground
                 }
             ]}
@@ -71,6 +74,7 @@ export const ExerciseBuilderCard = ({
     onMoveUp,
     onMoveDown,
     hideSetControls,
+    validationErrors = [],
 }: ExerciseBuilderCardProps) => {
     const { colors: themeColors } = useThemePreference();
     const router = useRouter();
@@ -254,6 +258,7 @@ export const ExerciseBuilderCard = ({
                         value={exercise.tempo || ''}
                         onChange={(val) => onUpdateExercise({ tempo: val })}
                         themeColors={themeColors}
+                        hasError={hasTempoError(validationErrors, exercise.id)}
                     />
                 </View>
 
@@ -302,6 +307,7 @@ export const ExerciseBuilderCard = ({
                 {/* Set Rows */}
                 {exercise.sets.map((set, index) => {
                     const typeColor = set.type === 'W' ? AMBER : set.type === 'F' ? RED_ERROR : set.type === 'D' ? PRIMARY : GREEN;
+                    const setError = hasSetError(validationErrors, exercise.id, index);
                     return (
                         <View key={set.id} style={styles.setRow}>
                             <View style={styles.setNumberContainer}>
@@ -320,7 +326,8 @@ export const ExerciseBuilderCard = ({
                                         styles.setInput,
                                         {
                                             color: themeColors.text,
-                                            borderColor: themeColors.border,
+                                            borderColor: setError.column1 ? RED_ERROR : themeColors.border,
+                                            borderWidth: setError.column1 ? 2 : 1,
                                             backgroundColor: themeColors.pageBackground
                                         }
                                     ]}
@@ -336,7 +343,8 @@ export const ExerciseBuilderCard = ({
                                         styles.setInput,
                                         {
                                             color: themeColors.text,
-                                            borderColor: themeColors.border,
+                                            borderColor: setError.column2 ? RED_ERROR : themeColors.border,
+                                            borderWidth: setError.column2 ? 2 : 1,
                                             backgroundColor: themeColors.pageBackground
                                         }
                                     ]}

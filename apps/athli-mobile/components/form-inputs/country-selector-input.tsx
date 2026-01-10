@@ -13,10 +13,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { X, ChevronDown, Check } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/contexts/useColorScheme';
 import { IconButton } from '@/components/icon-button';
 import { Separator } from '@/components/separator';
 import { SearchBar } from '@/components/search-bar';
+import { hexToRgba } from '@/utils/colorUtils';
 import { COUNTRIES, type Country } from './countries-data';
 
 export type { Country } from './countries-data';
@@ -37,7 +38,6 @@ export const CountrySelectorInput = ({
   modalTitle = 'Select Country',
 }: CountrySelectorInputProps) => {
   const { colors: themeColors } = useThemePreference();
-  const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,7 +52,7 @@ export const CountrySelectorInput = ({
   // Filter and sort countries - selected at top, then alphabetical, filtered by search
   const filteredCountries = useMemo(() => {
     let filtered = COUNTRIES;
-    
+
     // Filter by search query (name or dial code)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -61,7 +61,7 @@ export const CountrySelectorInput = ({
         country.dialCode.includes(query)
       );
     }
-    
+
     // Sort with selected country at top
     if (value) {
       const selected = filtered.find((c) => c.code === value.code);
@@ -70,7 +70,7 @@ export const CountrySelectorInput = ({
         return [selected, ...others];
       }
     }
-    
+
     return filtered;
   }, [searchQuery, value]);
 
@@ -92,7 +92,7 @@ export const CountrySelectorInput = ({
 
   const renderItem = useCallback(({ item }: { item: Country }) => {
     const isSelected = value?.code === item.code;
-    
+
     return (
       <PressableOpacity
         style={styles.countryItem}
@@ -100,7 +100,7 @@ export const CountrySelectorInput = ({
       >
         <Text style={styles.flag}>{item.flag}</Text>
         <Text style={[styles.countryName, { color: themeColors.text }]} numberOfLines={1}>
-          {item.name} <Text style={{ color: themeColors.mutedText }}>({item.dialCode})</Text>
+          {item.name}
         </Text>
         <View style={[
           styles.radioOuter,
@@ -181,11 +181,12 @@ export const CountrySelectorInput = ({
           {/* Fixed Header with blur effect */}
           <View style={[styles.fixedHeader, { height: headerHeight }]}>
             <LinearGradient
-              colors={
-                colorScheme === 'dark'
-                  ? ['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0)']
-                  : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0)']
-              }
+              colors={[
+                hexToRgba(themeColors.background, 1),
+                hexToRgba(themeColors.background, 0.85),
+                hexToRgba(themeColors.background, 0.5),
+                hexToRgba(themeColors.background, 0),
+              ]}
               locations={[0, 0.5, 0.8, 1]}
               style={[styles.headerGradient, { height: gradientHeight }]}
               pointerEvents="none"

@@ -9,18 +9,21 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { typography } from '@/constants/typography';
 import { SECTION_TYPES, type SectionType } from '@/constants/training';
 import { useThemePreference } from '@/contexts/useColorScheme';
+import { useModalCallbacks } from '@/contexts/modal-callbacks';
 import { IconButton } from '@/components/icon-button';
 import { InputBox, TextAreaInput } from '@/components/form-inputs';
 import { DropdownMenuWrapper } from '@/components/dropdown-menu';
 import { hexToRgba } from '@/utils/colorUtils';
+import { type BuilderSection } from '@/components/workout/workout-schema';
 
 export default function CreateSectionInBuilderModal() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { colors: themeColors } = useThemePreference();
+    const { triggerSectionSelect } = useModalCallbacks();
 
     const [sectionName, setSectionName] = useState('');
-    const [sectionType, setSectionType] = useState<SectionType | null>(null);
+    const [sectionType, setSectionType] = useState<SectionType>('regular');
     const [duration, setDuration] = useState('');
     const [rounds, setRounds] = useState('');
     const [notes, setNotes] = useState('');
@@ -30,25 +33,27 @@ export default function CreateSectionInBuilderModal() {
     };
 
     const handleCreate = () => {
-        if (!sectionName.trim() || !sectionType) return;
+        if (!sectionName.trim()) return;
 
-        const params = {
-            name: sectionName,
-            sectionType: sectionType as string,
-            duration: duration,
-            rounds: rounds,
-            notes: notes,
+        const sectionId = `section-${Date.now()}`;
+
+        const section: BuilderSection = {
+            id: sectionId,
+            type: 'section',
+            name: sectionName.trim(),
+            sectionType: sectionType,
+            duration: duration || undefined,
+            rounds: rounds || undefined,
+            notes: notes || undefined,
+            exercises: [],
         };
 
+        // Add section to the workout schema and return to main builder
+        triggerSectionSelect(section);
         router.dismiss();
-
-        router.push({
-            pathname: '/library/workout/section-builder',
-            params
-        });
     };
 
-    const canCreate = sectionName.trim().length > 0 && sectionType !== null;
+    const canCreate = sectionName.trim().length > 0;
 
     const sectionTypeOptions = useMemo(() =>
         SECTION_TYPES.map((type) => ({
