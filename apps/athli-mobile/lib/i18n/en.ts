@@ -20,6 +20,7 @@ export const en = {
     profile: 'Profile',
     add: 'Add',
     done: 'Done',
+    assign: 'Assign to Clients',
     reply: 'Reply',
     react: 'React',
     copy: 'Copy',
@@ -84,6 +85,11 @@ export const en = {
       habits: 'Search habits...',
       files: 'Search files...',
     },
+    exercise: 'exercise',
+    exercises: 'exercises',
+    sections: {
+      empty: 'No sections found',
+    },
     create: {
       workout: 'Create a workout',
       program: 'Create a program',
@@ -106,6 +112,7 @@ export const en = {
       saveChanges: 'Save',
       discardChanges: 'Discard',
     },
+    deleteConfirmMessage: 'Are you sure you want to delete this item? This action cannot be undone.',
     addWorkout: {
       title: 'New Workout',
       name: 'Name',
@@ -281,6 +288,7 @@ export const en = {
     },
     addMetric: {
       title: 'New Metric',
+      editTitle: 'Edit Metric',
       tabs: {
         new: 'New',
         templates: 'Templates',
@@ -303,6 +311,7 @@ export const en = {
     },
     addHabit: {
       title: 'New Habit',
+      editTitle: 'Edit Habit',
       tabs: {
         new: 'New',
         templates: 'Templates',
@@ -443,6 +452,7 @@ export const en = {
     addClient: 'Add Client',
     searchPlaceholder: 'Search clients...',
     years: 'years',
+    selectAtLeastOne: 'Please select at least one client',
     addClientModal: {
       title: 'Add Client',
       name: 'Name',
@@ -609,8 +619,8 @@ export const en = {
     readAll: 'Read all',
     markAsRead: 'Mark as read',
     selectChats: 'Select chats',
-    archive: 'Archive',
-    delete: 'Delete',
+    archive: 'Archive Chat',
+    delete: 'Delete Chat',
     filters: {
       all: 'All',
       unread: 'Unread',
@@ -640,6 +650,7 @@ export const en = {
     searchPlaceholder: 'Search for files...',
     addFile: {
       title: 'Add file',
+      editTitle: 'Edit file',
       fileName: 'File name',
       fileNamePlaceholder: 'Enter file name...',
       attachFile: 'Attach file',

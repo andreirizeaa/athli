@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Check, Ellipsis, MailCheck, CheckCircle2, Archive, Trash2 } from 'lucide-react-native';
+import { Check, Ellipsis, MailCheck, CheckCircle2, Archive, Trash2, MessageSquarePlus } from 'lucide-react-native';
+import { useModalCallbacks } from '@/contexts/modal-callbacks';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -21,6 +22,9 @@ import {
   deleteChat,
   markChatAsRead,
   getChatMessages,
+  markAllArchivedAsRead,
+  unarchiveAllChats,
+  deleteAllArchivedChats,
   type Chat,
 } from '@/services/chats-service';
 
@@ -34,6 +38,14 @@ export default function ChatsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
+  const [openRowCloseFn, setOpenRowCloseFn] = useState<(() => void) | null>(null);
+
+  const registerOpenRow = useCallback((closeFn: () => void) => {
+    if (openRowCloseFn && openRowCloseFn !== closeFn) {
+      openRowCloseFn();
+    }
+    setOpenRowCloseFn(() => closeFn);
+  }, [openRowCloseFn]);
 
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
@@ -136,6 +148,22 @@ export default function ChatsScreen() {
     setChats(fetchedChats);
   };
 
+  const { setClientsSelectCallback } = useModalCallbacks();
+
+  const handleNewChat = () => {
+    setClientsSelectCallback((selectedClients) => {
+      console.log('Start new chats with:', selectedClients.map(c => c.fullName));
+    });
+
+    router.push({
+      pathname: '/modals/shared/client-list-modal',
+      params: {
+        title: t('chats.newChat.title'),
+        buttonText: t('general.done'),
+      }
+    });
+  };
+
   const handleSelectChatsPress = () => {
     setIsEditMode(true);
   };
@@ -176,6 +204,24 @@ export default function ChatsScreen() {
 
   const handleChatMarkAsRead = async (chatId: string) => {
     await markChatAsRead(chatId);
+    const fetchedChats = await getChats();
+    setChats(fetchedChats);
+  };
+
+  const handleAllArchivedMarkAsRead = async () => {
+    await markAllArchivedAsRead();
+    const fetchedChats = await getChats();
+    setChats(fetchedChats);
+  };
+
+  const handleAllArchivedUnarchive = async () => {
+    await unarchiveAllChats();
+    const fetchedChats = await getChats();
+    setChats(fetchedChats);
+  };
+
+  const handleAllArchivedDelete = async () => {
+    await deleteAllArchivedChats();
     const fetchedChats = await getChats();
     setChats(fetchedChats);
   };
@@ -259,6 +305,19 @@ export default function ChatsScreen() {
           <View style={styles.titleRow}>
             <Text style={[styles.title, { color: themeColors.text }]}>{t('chats.title')}</Text>
             <View style={styles.headerButtonContainer}>
+              {!isEditMode && (
+                <PressableOpacity
+                  style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
+                  onPress={handleNewChat}
+                >
+                  <PlatformIcon
+                    sf="plus"
+                    IconComponent={MessageSquarePlus}
+                    size={iconSizes.navigationChevrons}
+                    color={themeColors.text}
+                  />
+                </PressableOpacity>
+              )}
               {isEditMode ? (
                 <PressableOpacity
                   style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
@@ -308,7 +367,14 @@ export default function ChatsScreen() {
         ) : (
           <View style={styles.chatListContainer}>
             {!searchQuery.trim() && (
-              <ArchivedItem onPress={handleArchivedPress} />
+              <ArchivedItem
+                onPress={handleArchivedPress}
+                onMarkAsRead={handleAllArchivedMarkAsRead}
+                onUnarchive={handleAllArchivedUnarchive}
+                onDelete={handleAllArchivedDelete}
+                onOpen={registerOpenRow}
+                hasUnread={true} // Mocked for now
+              />
             )}
             {filteredChats.map((chat) => (
               <ChatListItem
@@ -320,6 +386,7 @@ export default function ChatsScreen() {
                 onArchive={handleChatArchive}
                 onDelete={handleChatDelete}
                 onMarkAsRead={handleChatMarkAsRead}
+                onOpen={registerOpenRow}
               />
             ))}
           </View>
@@ -347,13 +414,16 @@ const styles = StyleSheet.create({
   title: {
     ...typography.h1,
     textAlign: 'left',
-    paddingRight: 52, // Space for the button (44px width + 8px margin)
+    paddingRight: 104, // Space for two buttons (44+44 + gap)
   },
   headerButtonContainer: {
     position: 'absolute',
     right: 0,
     top: '50%',
     transform: [{ translateY: -22 }],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerButton: {
     alignItems: 'center',

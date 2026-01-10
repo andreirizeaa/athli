@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Dimensions,
   Keyboard,
   StyleSheet,
@@ -813,7 +814,21 @@ export default function ChatDetailScreen() {
     {
       label: t('chats.delete'),
       icon: { sf: 'trash', IconComponent: Trash2 },
-      onPress: handleDeletePress,
+      destructive: true,
+      onPress: () => {
+        Alert.alert(
+          t('chats.delete'),
+          t('library.deleteConfirmMessage'),
+          [
+            { text: t('general.cancel'), style: 'cancel' },
+            {
+              text: t('general.delete'),
+              style: 'destructive',
+              onPress: handleDeletePress
+            },
+          ]
+        );
+      },
     },
   ];
 

@@ -252,6 +252,27 @@ export const removeReaction = async (
 };
 
 /**
+ * Service method to read all archived chats
+ */
+export const markAllArchivedAsRead = async (): Promise<void> => {
+  console.log('Marking all archived chats as read');
+};
+
+/**
+ * Service method to unarchive all chats
+ */
+export const unarchiveAllChats = async (): Promise<void> => {
+  console.log('Unarchiving all chats');
+};
+
+/**
+ * Service method to delete all archived chats
+ */
+export const deleteAllArchivedChats = async (): Promise<void> => {
+  console.log('Deleting all archived chats');
+};
+
+/**
  * Service method to create a new chat with a client
  * This will be connected to the backend in the future
  */
