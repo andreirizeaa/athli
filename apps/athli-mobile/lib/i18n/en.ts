@@ -102,7 +102,9 @@ export const en = {
       videoLinkPlaceholder: 'Youtube or Vimeo Link',
     },
     reorder: {
-      title: 'Reorder',
+      title: 'Arrange exercises',
+      saveChanges: 'Save',
+      discardChanges: 'Discard',
     },
     addWorkout: {
       title: 'New Workout',

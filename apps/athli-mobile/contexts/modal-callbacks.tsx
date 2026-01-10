@@ -3,7 +3,7 @@ import type { Client } from '@/services/client-service';
 import type { DefaultMetric } from '@/constants/metrics';
 import type { DefaultHabit } from '@/constants/habits';
 import type { Exercise } from '@/app/modals/workout/add-exercise-to-builder-modal';
-import type { BuilderSection } from '@/components/workout/workout-schema';
+import type { BuilderSection, BuilderItem } from '@/components/workout/workout-schema';
 
 type RepeatData = {
   type: 'weekly' | 'monthly';
@@ -43,6 +43,7 @@ type ModalCallbacksContextType = {
   setExerciseSelectCallback: (callback: (exercise: Exercise) => void) => void;
   setExercisesSelectCallback: (callback: (exercises: Exercise[]) => void) => void;
   setSectionSelectCallback: (callback: (section: BuilderSection) => void) => void;
+  setReorderCallback: (callback: (items: BuilderItem[]) => void) => void;
   triggerClientSelect: (client: Client) => void;
   triggerTypeSelect: (type: string) => void;
   triggerRepeatSelect: (data: RepeatData) => void;
@@ -55,6 +56,7 @@ type ModalCallbacksContextType = {
   triggerExerciseSelect: (exercise: Exercise) => void;
   triggerExercisesSelect: (exercises: Exercise[]) => void;
   triggerSectionSelect: (section: BuilderSection) => void;
+  triggerReorder: (items: BuilderItem[]) => void;
   getRepeatData: () => RepeatData | null;
   setRepeatData: (data: RepeatData | null) => void;
   getHabitOptionsData: () => HabitOptionsData | null;
@@ -63,6 +65,10 @@ type ModalCallbacksContextType = {
   setScheduleData: (data: ScheduleData | null) => void;
   habitOptionsData: HabitOptionsData | null;
   scheduleData: ScheduleData | null;
+  // Reorder items storage
+  getReorderItems: () => BuilderItem[] | null;
+  setReorderItems: (items: BuilderItem[] | null) => void;
+  reorderItems: BuilderItem[] | null;
 };
 
 const ModalCallbacksContext = createContext<ModalCallbacksContextType | null>(null);
@@ -83,6 +89,8 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
   const [storedRepeatData, setStoredRepeatData] = useState<RepeatData | null>(null);
   const [storedHabitOptionsData, setStoredHabitOptionsData] = useState<HabitOptionsData | null>(null);
   const [storedScheduleData, setStoredScheduleData] = useState<ScheduleData | null>(null);
+  const [storedReorderItems, setStoredReorderItems] = useState<BuilderItem[] | null>(null);
+  const [reorderCallbackState, setReorderCallbackState] = useState<((items: BuilderItem[]) => void) | null>(null);
 
   const setClientSelectCallback = useCallback((callback: (client: Client) => void) => {
     setClientSelectCallbackState(() => callback);
@@ -128,6 +136,10 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
   }, []);
   const setSectionSelectCallback = useCallback((callback: (section: BuilderSection) => void) => {
     setSectionSelectCallbackState(() => callback);
+  }, []);
+
+  const setReorderCallback = useCallback((callback: (items: BuilderItem[]) => void) => {
+    setReorderCallbackState(() => callback);
   }, []);
 
   const triggerClientSelect = useCallback((client: Client) => {
@@ -232,6 +244,22 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
     }
   }, [sectionSelectCallbackState]);
 
+  const triggerReorder = useCallback((items: BuilderItem[]) => {
+    if (reorderCallbackState) {
+      reorderCallbackState(items);
+      setReorderCallbackState(null);
+      setStoredReorderItems(null);
+    }
+  }, [reorderCallbackState]);
+
+  const getReorderItems = useCallback(() => {
+    return storedReorderItems;
+  }, [storedReorderItems]);
+
+  const setReorderItems = useCallback((items: BuilderItem[] | null) => {
+    setStoredReorderItems(items);
+  }, []);
+
   const getScheduleData = useCallback(() => {
     return storedScheduleData;
   }, [storedScheduleData]);
@@ -261,12 +289,14 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
         triggerExerciseSelect,
         triggerExercisesSelect,
         triggerSectionSelect,
+        triggerReorder,
         setMetricSelectCallback,
         setHabitSelectCallback,
         setDateSelectCallback,
         setExerciseSelectCallback,
         setExercisesSelectCallback,
         setSectionSelectCallback,
+        setReorderCallback,
         getRepeatData,
         setRepeatData,
         getHabitOptionsData,
@@ -275,6 +305,9 @@ export const ModalCallbacksProvider = ({ children }: { children: React.ReactNode
         setScheduleData,
         habitOptionsData: storedHabitOptionsData,
         scheduleData: storedScheduleData,
+        getReorderItems,
+        setReorderItems,
+        reorderItems: storedReorderItems,
       }}
     >
       {children}
