@@ -20,6 +20,7 @@ import { TranslationProvider } from '@/contexts/useTranslations';
 import { ModalCallbacksProvider } from '@/contexts/modal-callbacks';
 import { TrainingOverlayProvider } from '@/contexts/useTrainingOverlay';
 import { LibraryTabProvider } from '@/contexts/useLibraryTab';
+import { UnitsProvider } from '@/contexts/useUnits';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -72,15 +73,17 @@ export default function RootLayout() {
           <KeyboardProvider>
             <ThemePreferenceProvider>
               <TranslationProvider>
-                <AppViewProvider>
-                  <ModalCallbacksProvider>
-                    <TrainingOverlayProvider>
-                      <LibraryTabProvider>
-                        <RootLayoutNav />
-                      </LibraryTabProvider>
-                    </TrainingOverlayProvider>
-                  </ModalCallbacksProvider>
-                </AppViewProvider>
+                <UnitsProvider>
+                  <AppViewProvider>
+                    <ModalCallbacksProvider>
+                      <TrainingOverlayProvider>
+                        <LibraryTabProvider>
+                          <RootLayoutNav />
+                        </LibraryTabProvider>
+                      </TrainingOverlayProvider>
+                    </ModalCallbacksProvider>
+                  </AppViewProvider>
+                </UnitsProvider>
               </TranslationProvider>
             </ThemePreferenceProvider>
           </KeyboardProvider>
@@ -92,7 +95,7 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { primaryColor } = useThemePreference();
+  const { primaryColor, colors: themeColors } = useThemePreference();
   const segments = useSegments();
 
   // Hide status bar only for camera and preview screens (not message-image-preview since it's from a message)
@@ -113,7 +116,7 @@ function RootLayoutNav() {
         colors: {
           ...DarkTheme.colors,
           primary: primaryColor,
-          background: 'transparent',
+          background: themeColors.pageBackground,
         },
       }
       : {
@@ -121,12 +124,12 @@ function RootLayoutNav() {
         colors: {
           ...DefaultTheme.colors,
           primary: primaryColor,
-          background: 'transparent',
+          background: themeColors.pageBackground,
         },
       };
 
   return (
-    <RNView style={{ flex: 1, backgroundColor: 'transparent' }}>
+    <RNView style={{ flex: 1, backgroundColor: themeColors.pageBackground }}>
       <ThemeProvider value={navigationTheme}>
         <StatusBar
           style={colorScheme === 'dark' ? 'light' : 'dark'}
@@ -138,13 +141,22 @@ function RootLayoutNav() {
           screenOptions={{
             headerTransparent: true,
             contentStyle: {
-              backgroundColor: 'transparent',
+              backgroundColor: themeColors.pageBackground,
             },
           }}
         >
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="settings/preferences" options={{ headerShown: false }} />
-          <Stack.Screen name="client/[id]" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="client/[id]"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: {
+                backgroundColor: themeColors.pageBackground,
+              },
+            }}
+          />
           <Stack.Screen name="client/[id]/activity" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/metrics" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/training-calendar" options={{ headerShown: false }} />
@@ -159,10 +171,103 @@ function RootLayoutNav() {
           <Stack.Screen name="client/[id]/settings" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/assistant" options={{ headerShown: false }} />
           <Stack.Screen
+            name="library/workout/[id]"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: {
+                backgroundColor: themeColors.pageBackground,
+              },
+            }}
+          />
+          <Stack.Screen
+            name="library/workout/section-builder"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: {
+                backgroundColor: themeColors.pageBackground,
+              },
+            }}
+          />
+          <Stack.Screen
+            name="modals/athli-assistant-help-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
             name="modals/client/edit-client-details-modal"
             options={{
               presentation: 'modal',
               headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/edit-client-bio-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/edit-client-goal-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/edit-client-injury-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/add-client-goal-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/add-client-injury-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
                 gestureDirection: 'vertical',
@@ -240,6 +345,162 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="modals/client/assign-check-in-to-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/assign-questionnaire-to-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/assign-file-to-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/assign-metric-to-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/log-metric-for-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/log-habit-for-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/metrics-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/habits-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/assign-program-to-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/assign-workout-to-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/assign-habit-to-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/add-photo-to-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/add-note-to-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
             name="modals/calendar/repeat-options-modal"
             options={{
               presentation: 'modal',
@@ -262,9 +523,21 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="modals/shared/define-schedule-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
             name="modals/files/add-file-modal"
             options={{
               presentation: 'modal',
+              gestureEnabled: false,
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -276,6 +549,7 @@ function RootLayoutNav() {
             name="modals/library/add-workout-modal"
             options={{
               presentation: 'modal',
+              gestureEnabled: false,
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -287,6 +561,7 @@ function RootLayoutNav() {
             name="modals/library/add-section-modal"
             options={{
               presentation: 'modal',
+              gestureEnabled: false,
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -298,6 +573,7 @@ function RootLayoutNav() {
             name="modals/library/add-program-modal"
             options={{
               presentation: 'modal',
+              gestureEnabled: false,
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -309,6 +585,7 @@ function RootLayoutNav() {
             name="modals/library/add-exercise-modal"
             options={{
               presentation: 'modal',
+              gestureEnabled: false,
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -317,9 +594,22 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
-            name="modals/library/add-form-modal"
+            name="modals/library/add-check-in-modal"
             options={{
               presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/library/add-questionnaire-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -331,6 +621,7 @@ function RootLayoutNav() {
             name="modals/library/add-metric-modal"
             options={{
               presentation: 'modal',
+              gestureEnabled: false,
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -340,6 +631,63 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="modals/library/add-habit-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/library/habit-options-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/workout/add-exercise-to-builder-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/workout/exercise-details-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/workout/add-section-to-builder-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/workout/create-section-in-builder-modal"
             options={{
               presentation: 'modal',
               headerShown: false,

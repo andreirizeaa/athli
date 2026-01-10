@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { StyleSheet, TextInput, View, Text } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, X, Mic, Send } from 'lucide-react-native';
+import { ChevronLeft, Plus, X, Mic, Send, HelpCircle } from 'lucide-react-native';
 import { PressableOpacity } from 'pressto';
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -32,6 +32,10 @@ export default function ClientAssistantScreen() {
         router.back();
     };
 
+    const handleHelpPress = () => {
+        router.push('/modals/athli-assistant-help-modal');
+    };
+
     const handlePlusPress = () => {
         if (showAttachmentPicker) {
             setShowAttachmentPicker(false);
@@ -52,7 +56,12 @@ export default function ClientAssistantScreen() {
                     color={iconColor}
                 />
                 <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('clientDetail.assistant.title')}</Text>
-                <View style={{ width: 44 }} />
+                <IconButton
+                    icon={{ sf: 'questionmark.circle', IconComponent: HelpCircle }}
+                    onPress={handleHelpPress}
+                    size="md"
+                    color={iconColor}
+                />
             </View>
 
             <View style={{ flex: 1, backgroundColor: themeColors.pageBackground }}>

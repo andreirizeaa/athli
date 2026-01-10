@@ -12,13 +12,15 @@ import { PlatformIcon } from '@/components/platform-icon';
 const DESTRUCTIVE_COLOR = '#EF4444';
 
 export type DropdownMenuOption = {
-  label: string;
+  label?: string;
+  subtitle?: string;
   icon?: {
     sf: string;
     IconComponent: LucideIcon;
   };
-  onPress: () => void;
+  onPress?: () => void;
   destructive?: boolean;
+  separator?: boolean;
 };
 
 // =============================================================================
@@ -101,7 +103,7 @@ export const DropdownMenu = ({
           style={styles.menuItem}
           activeOpacity={0.7}
           onPress={() => {
-            option.onPress();
+            option.onPress?.();
             onClose();
           }}
         >
@@ -211,22 +213,30 @@ export const DropdownMenuWrapper = ({
         </Pressable>
       </DropdownMenuZeego.Trigger>
       <DropdownMenuZeego.Content>
-        {options.map((option, index) => (
-          <DropdownMenuZeego.Item
-            key={`item-${index}`}
-            onSelect={option.onPress}
-            destructive={option.destructive}
-          >
-            <DropdownMenuZeego.ItemTitle>{option.label}</DropdownMenuZeego.ItemTitle>
-            {option.icon && (
-              <DropdownMenuZeego.ItemIcon
-                ios={{
-                  name: option.icon.sf,
-                }}
-              />
-            )}
-          </DropdownMenuZeego.Item>
-        ))}
+        {options.map((option, index) => {
+          if (option.separator) {
+            return <DropdownMenuZeego.Separator key={`separator-${index}`} />;
+          }
+          return (
+            <DropdownMenuZeego.Item
+              key={`item-${index}`}
+              onSelect={option.onPress!}
+              destructive={option.destructive}
+            >
+              <DropdownMenuZeego.ItemTitle>{option.label}</DropdownMenuZeego.ItemTitle>
+              {option.subtitle && (
+                <DropdownMenuZeego.ItemSubtitle>{option.subtitle}</DropdownMenuZeego.ItemSubtitle>
+              )}
+              {option.icon && (
+                <DropdownMenuZeego.ItemIcon
+                  ios={{
+                    name: option.icon.sf,
+                  }}
+                />
+              )}
+            </DropdownMenuZeego.Item>
+          );
+        })}
       </DropdownMenuZeego.Content>
     </DropdownMenuZeego.Root>
   );

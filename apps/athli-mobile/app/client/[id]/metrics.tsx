@@ -21,8 +21,16 @@ export default function MetricsScreen() {
     router.back();
   };
 
-  const handlePlusPress = () => {
-    // TODO: Handle plus press
+  const handleAssignMetric = () => {
+    router.push('/modals/client/assign-metric-to-client-modal');
+  };
+
+  const handleAddMetric = () => {
+    router.push('/modals/library/add-metric-modal');
+  };
+
+  const handleLogMetric = () => {
+    router.push('/modals/client/log-metric-for-client-modal');
   };
 
   return (
@@ -39,17 +47,17 @@ export default function MetricsScreen() {
           {
             label: t('clientDetail.actions.assignMetric'),
             icon: { sf: 'checklist', IconComponent: ClipboardCheck },
-            onPress: () => { }
+            onPress: handleAssignMetric
           },
           {
             label: t('clientDetail.actions.addMetric'),
             icon: { sf: 'plus', IconComponent: Plus },
-            onPress: () => { }
+            onPress: handleAddMetric
           },
           {
             label: t('clientDetail.actions.logMetric'),
             icon: { sf: 'chart.bar', IconComponent: Activity },
-            onPress: () => { }
+            onPress: handleLogMetric
           }
         ]}>
           <IconButton

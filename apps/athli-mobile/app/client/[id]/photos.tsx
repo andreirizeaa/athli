@@ -5,6 +5,7 @@ import { ChevronLeft, Plus } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
+import { useTranslations } from '@/contexts/useTranslations';
 import { IconButton } from '@/components/icon-button';
 import { ScreenWrapper } from '@/components/screen-wrapper';
 
@@ -12,14 +13,15 @@ export default function ClientPhotosScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams<{ id: string }>();
     const { colors: themeColors } = useThemePreference();
+    const { t } = useTranslations();
     const iconColor = themeColors.text;
 
     const handleBackPress = () => {
         router.back();
     };
 
-    const handlePlusPress = () => {
-        // TODO: Handle plus press
+    const handleAddPhoto = () => {
+        router.push('/modals/client/add-photo-to-client-modal');
     };
 
     return (
@@ -31,10 +33,10 @@ export default function ClientPhotosScreen() {
                     size="md"
                     color={iconColor}
                 />
-                <Text style={[styles.headerTitle, { color: themeColors.text }]}>Photos</Text>
+                <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('clientDetail.sections.photos')}</Text>
                 <IconButton
                     icon={{ sf: 'plus', IconComponent: Plus }}
-                    onPress={handlePlusPress}
+                    onPress={handleAddPhoto}
                     size="md"
                     color={iconColor}
                 />
