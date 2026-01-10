@@ -135,6 +135,9 @@ export default function ChatDetailScreen() {
     []
   );
 
+  // Fixed toolbar height - container has static bottom padding for toolbar
+  const toolbarHeight = 60 + insets.bottom;
+
   const [chat, setChat] = useState<Chat | null>(() => {
     if (chatParam) {
       try {
@@ -874,29 +877,24 @@ export default function ChatDetailScreen() {
         dropdownOptions={dropdownOptions}
       />
 
-      <View
-        style={{ flex: 1 }}
-      >
-        {/* ROW 2: SCROLL WINDOW - Fills space between header and toolbar */}
-        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-          <MessageList
-            messages={messages}
-            backgroundColor="transparent"
-            themeColors={themeColors}
-            clientName={chat.clientName}
-            keyboardHeight={keyboardHeight}
-            onReply={handleMessageReply}
-            onEdit={handleMessageEdit}
-            onDelete={handleMessageDelete}
-            onReactionPress={handleReactionPress}
-            onDocumentPress={handleDocumentPress}
-            onImagePress={handleImagePress}
-            onVideoPress={handleVideoPress}
-            headerHeight={insets.top + 60}
-            bottomOffset={60 + insets.bottom}
-            disableKeyboardOffset={true}
-          />
-        </View>
+      {/* ROW 2: SCROLL WINDOW - Fills space between header and toolbar */}
+      <View style={{ flex: 1, backgroundColor: 'transparent', paddingBottom: toolbarHeight }}>
+        <MessageList
+          messages={messages}
+          backgroundColor="transparent"
+          themeColors={themeColors}
+          clientName={chat.clientName}
+          keyboardHeight={keyboardHeight}
+          onReply={handleMessageReply}
+          onEdit={handleMessageEdit}
+          onDelete={handleMessageDelete}
+          onReactionPress={handleReactionPress}
+          onDocumentPress={handleDocumentPress}
+          onImagePress={handleImagePress}
+          onVideoPress={handleVideoPress}
+          headerHeight={insets.top + 60}
+          bottomOffset={0}
+        />
       </View>
 
       {/* ROW 3: TOOLBAR - Absolutely positioned */}

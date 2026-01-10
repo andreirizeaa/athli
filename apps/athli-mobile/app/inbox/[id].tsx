@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { useSharedValue } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -116,6 +116,9 @@ export default function InboxDetailScreen() {
     },
     []
   );
+
+  // Fixed toolbar height - container has static bottom padding for toolbar
+  const toolbarHeight = 60 + insets.bottom;
 
   const [coach, setCoach] = useState<Coach | null>(() => {
     if (coachParam) {
@@ -739,7 +742,7 @@ export default function InboxDetailScreen() {
         onBackPress={handleBackPress}
       />
 
-      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <View style={{ flex: 1, backgroundColor: 'transparent', paddingBottom: toolbarHeight }}>
         <MessageList
           messages={messages}
           backgroundColor="transparent"
@@ -754,8 +757,7 @@ export default function InboxDetailScreen() {
           onImagePress={handleImagePress}
           onVideoPress={handleVideoPress}
           headerHeight={insets.top + 60}
-          bottomOffset={60 + insets.bottom}
-          disableKeyboardOffset={true}
+          bottomOffset={0}
         />
       </View>
 
