@@ -21,58 +21,12 @@ import { X, Upload, Check, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { editExercise, type Exercise } from '@/api/coach/coach-exercise-service';
 import { toast } from 'sonner';
-
-const EXERCISE_CATEGORIES = ['Weight & Reps', 'Reps', 'Distance / Duration'] as const;
-
-const MUSCLE_GROUPS = [
-  'Chest',
-  'Back',
-  'Shoulders',
-  'Biceps',
-  'Triceps',
-  'Forearms',
-  'Abs',
-  'Obliques',
-  'Quadriceps',
-  'Hamstrings',
-  'Glutes',
-  'Calves',
-  'Traps',
-  'Lats',
-  'Delts',
-  'Full Body',
-] as const;
-
-const EQUIPMENT_OPTIONS = [
-  'Barbell',
-  'Dumbbell',
-  'Kettlebell',
-  'Cable Machine',
-  'Machine',
-  'Resistance Band',
-  'Bodyweight',
-  'Medicine Ball',
-  'TRX',
-  'Pulley',
-  'Smith Machine',
-  'Plate Loaded',
-  'Free Weights',
-] as const;
-
-const MODALITY_OPTIONS = [
-  'Strength',
-  'Power',
-  'Agility',
-  'Plyos',
-  'Mobility',
-  'Endurance',
-  'Cardio',
-  'Flexibility',
-  'Balance',
-  'Stability',
-  'Speed',
-  'Coordination',
-] as const;
+import {
+  EXERCISE_CATEGORY_OPTIONS,
+  MUSCLE_GROUP_OPTIONS,
+  EXERCISE_EQUIPMENT_OPTIONS,
+  MODALITY_OPTIONS,
+} from '@/lib/constants/training';
 
 const extractVideoId = (url: string): { id: string; type: 'youtube' | 'vimeo' | null } => {
   if (!url.trim()) {
@@ -717,9 +671,9 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
                   <SelectValue placeholder={t('general.select')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {EXERCISE_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
+                  {EXERCISE_CATEGORY_OPTIONS.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -732,7 +686,7 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
                 {t('exercises.addExercise.muscleGroups')}
               </label>
               <MultiAsyncSelect
-                options={MUSCLE_GROUPS.map((group) => ({ label: group, value: group }))}
+                options={MUSCLE_GROUP_OPTIONS.map((group) => ({ label: group.label, value: group.value }))}
                 value={muscleGroups}
                 onValueChange={(values) => {
                   setMuscleGroups(values);
@@ -768,9 +722,9 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
                   <SelectValue placeholder={t('general.select')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {EQUIPMENT_OPTIONS.map((eq) => (
-                    <SelectItem key={eq} value={eq}>
-                      {eq}
+                  {EXERCISE_EQUIPMENT_OPTIONS.map((eq) => (
+                    <SelectItem key={eq.value} value={eq.value}>
+                      {eq.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -800,8 +754,8 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
                 </SelectTrigger>
                 <SelectContent>
                   {MODALITY_OPTIONS.map((mod) => (
-                    <SelectItem key={mod} value={mod}>
-                      {mod}
+                    <SelectItem key={mod.value} value={mod.value}>
+                      {mod.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -337,7 +337,14 @@ const ClientMetricsPage = () => {
     setIsEditMetricOpen(false);
   };
 
-  const handleSaveMetric = async (name: string, unit: string, description?: string, existingMetricId?: string) => {
+  const handleSaveMetric = async (
+    name: string,
+    unit: string,
+    description?: string,
+    existingMetricId?: string,
+    scheduleConfig?: any,
+    cronExpression?: string
+  ) => {
     if (!clientId || !user?.id) return;
 
     try {
@@ -349,6 +356,8 @@ const ClientMetricsPage = () => {
           name,
           unit,
           description,
+          schedule_config: scheduleConfig,
+          cron_expression: cronExpression,
           clientId,
           coachId: user.id
         });
@@ -356,6 +365,8 @@ const ClientMetricsPage = () => {
         // Assign existing
         await assignMetric({
           metricIds: [metricId],
+          schedule_config: scheduleConfig,
+          cron_expression: cronExpression,
           clientId,
           coachId: user.id
         });

@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { OPTIONAL_COLUMN_OPTIONS, HEART_RATE_ZONE_OPTIONS } from '@/lib/constants/training';
+import { OPTIONAL_COLUMN_OPTIONS, HEART_RATE_ZONE_OPTIONS, COLUMN_OPTIONS } from '@/lib/constants/training';
 import {
   Select,
   SelectContent,
@@ -512,7 +512,10 @@ type ExerciseWithSets = Exercise & {
   alternatives?: string[]; // Array of exercise IDs for alternative exercises
   notes?: string; // Exercise-specific notes
   eachSide?: boolean;       // Exercise-level each side toggle
+  tempo?: string;           // Exercise-level tempo (x-x-x-x format)
   optionalColumnType?: 'Optional' | 'Tempo' | 'RIR' | 'RPE' | 'Heart Rate Zone' | 'Calories' | 'Watts' | 'Pace' | 'Speed' | 'Incline' | 'Height' | 'RPM';
+  column1Label?: string;    // Column 1 label (Reps, Weight, Distance, etc.)
+  column2Label?: string;    // Column 2 label (Reps, Weight, Duration, etc.)
 };
 
 type ExerciseCardProps = {
@@ -624,11 +627,29 @@ export const ExerciseCard = ({
     repsDrops: DropsetData[];
     weightDrops: DropsetData[];
   } | null>(null);
-  const [otherColumnLabel, setOtherColumnLabel] = useState('Optional');
+  
+  // Initialize column labels based on exercise type (with default units)
+  const getDefaultColumnLabels = (exerciseType: string) => {
+    if (exerciseType === 'weight_reps') {
+      return { column1: 'Reps', column2: 'kg' };
+    } else if (exerciseType === 'reps') {
+      return { column1: 'Reps', column2: 'None' };
+    } else if (exerciseType === 'distance_duration') {
+      return { column1: 'km', column2: 'minutes' };
+    }
+    return { column1: 'Reps', column2: 'None' };
+  };
 
-  const [optionalColumnLabel, setOptionalColumnLabel] = useState(
-    (exercise as any).optionalColumnType || 'Optional'
-  );
+  const [column1Label, setColumn1Label] = useState<string>(() => {
+    const stored = (exercise as any).column1Label;
+    return stored || getDefaultColumnLabels(exercise.exerciseType).column1;
+  });
+
+  const [column2Label, setColumn2Label] = useState<string>(() => {
+    const stored = (exercise as any).column2Label;
+    return stored || getDefaultColumnLabels(exercise.exerciseType).column2;
+  });
+
   const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null);
 
 
@@ -754,11 +775,19 @@ export const ExerciseCard = ({
     setSets(nextSets);
     // Clear alternatives when main exercise changes
     setAlternatives([]);
+    
+    // Reset column labels based on new exercise type
+    const defaultLabels = getDefaultColumnLabels(selectedExercise.exerciseType);
+    setColumn1Label(defaultLabels.column1);
+    setColumn2Label(defaultLabels.column2);
+    
     onExerciseChange({
       ...exercise,
       ...selectedExercise,
       sets: nextSets,
       alternatives: [],
+      column1Label: defaultLabels.column1,
+      column2Label: defaultLabels.column2,
     });
   };
 
@@ -847,8 +876,84 @@ export const ExerciseCard = ({
     );
   };
 
-  const clearColumnValues = (field: 'other' | 'other2' | 'optional' | 'optional2') => {
-    const updated = sets.map(set => ({ ...set, [field]: '' }));
+  // Helper to map column label to field name
+  const getFieldName = (columnLabel: string): 'reps' | 'weight' | 'distance' | 'duration' | 'optional' | null => {
+    if (columnLabel === 'Reps') return 'reps';
+    if (columnLabel === 'kg' || columnLabel === 'lbs') return 'weight';
+    if (columnLabel === 'km' || columnLabel === 'm' || columnLabel === 'yards' || columnLabel === 'miles' || columnLabel === 'feet') return 'distance';
+    if (columnLabel === 'minutes' || columnLabel === 'seconds') return 'duration';
+    if (columnLabel === 'None') return null;
+    // For optional columns (Tempo, RIR, RPE, etc.)
+    return 'optional';
+  };
+
+  const clearColumnValues = (columnLabel: string) => {
+    const fieldName = getFieldName(columnLabel);
+    if (!fieldName) return; // None has no field to clear
+
+    const updated = sets.map(set => {
+      const newSet = { ...set };
+      if (fieldName === 'reps') {
+        newSet.reps = '';
+      } else if (fieldName === 'weight') {
+        newSet.weight = '';
+      } else if (fieldName === 'distance') {
+        newSet.distance = '';
+      } else if (fieldName === 'duration') {
+        newSet.duration = '';
+      } else if (fieldName === 'optional') {
+        if (newSet.optional) {
+          newSet.optional = { ...newSet.optional, prescribed: '' };
+        }
+      }
+      return newSet;
+    });
+    setSets(updated);
+    onExerciseChange({
+      ...exercise,
+      sets: updated,
+      alternatives: exercise.alternatives || [],
+    });
+  };
+
+  // Helper to get field value based on column label
+  const getFieldValue = (set: SetData, columnLabel: string): string => {
+    const fieldName = getFieldName(columnLabel);
+    if (!fieldName) return ''; // None
+    if (fieldName === 'reps') return set.reps || '';
+    if (fieldName === 'weight') return set.weight || '';
+    if (fieldName === 'distance') return set.distance || '';
+    if (fieldName === 'duration') return set.duration || '';
+    if (fieldName === 'optional') return set.optional?.prescribed || '';
+    return '';
+  };
+
+  // Helper to update field value based on column label
+  const updateFieldValue = (setIndex: number, columnLabel: string, value: string) => {
+    const fieldName = getFieldName(columnLabel);
+    if (!fieldName) return; // None has no field to update
+
+    const updated = [...sets];
+    const currentSet = updated[setIndex];
+
+    if (fieldName === 'reps') {
+      updated[setIndex] = { ...currentSet, reps: value };
+    } else if (fieldName === 'weight') {
+      updated[setIndex] = { ...currentSet, weight: value };
+    } else if (fieldName === 'distance') {
+      updated[setIndex] = { ...currentSet, distance: value };
+    } else if (fieldName === 'duration') {
+      updated[setIndex] = { ...currentSet, duration: value };
+    } else if (fieldName === 'optional') {
+      updated[setIndex] = {
+        ...currentSet,
+        optional: {
+          ...currentSet.optional,
+          prescribed: value,
+        },
+      };
+    }
+
     setSets(updated);
     onExerciseChange({
       ...exercise,
@@ -1129,6 +1234,183 @@ export const ExerciseCard = ({
     }
   };
 
+  // Helper to render a column cell based on column label
+  const renderColumnCell = (set: SetData, setIndex: number, columnLabel: string) => {
+    // Handle "None" column
+    if (columnLabel === 'None') {
+      return (
+        <TableCell className="py-0 px-0 text-center" key={`${setIndex}-none`}>
+          <div className="w-full h-10 flex items-center justify-center text-sm text-muted-foreground">-</div>
+        </TableCell>
+      );
+    }
+
+    // Handle dropset for Reps or Weight (kg/lbs) column in weight_reps exercises
+    // Both columns open the same popover (which shows both reps and weight)
+    const isWeightColumn = columnLabel === 'kg' || columnLabel === 'lbs';
+    if (
+      (columnLabel === 'Reps' || isWeightColumn) &&
+      set.type === 'dropset' &&
+      exercise.exerciseType === 'weight_reps'
+    ) {
+      const triggerId = `${setIndex}-reps`;
+      const displayValue = columnLabel === 'Reps' ? (set.reps || '-') : (set.weight || '-');
+      const hasError = columnLabel === 'Reps' 
+        ? validationErrors?.[setIndex]?.reps 
+        : validationErrors?.[setIndex]?.weight;
+      return (
+        <TableCell className="py-1 px-2" key={`${setIndex}-${columnLabel}-dropset`}>
+          <div className="flex justify-center">
+            <Popover
+              open={dropsetPopoverOpen === triggerId}
+              onOpenChange={(open) => {
+                if (open) {
+                  handleDropsetInputClick(setIndex, 'reps', triggerId);
+                } else {
+                  setDropsetPopoverOpen(null);
+                  setDropsetData(null);
+                }
+              }}
+            >
+              <PopoverTrigger asChild>
+                <div
+                  onClick={() => handleDropsetInputClick(setIndex, 'reps', triggerId)}
+                  className={cn(
+                    'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
+                    'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
+                    dropsetPopoverOpen === triggerId && 'ring-2 ring-inset ring-primary',
+                    hasError && 'text-destructive ring-2 ring-inset ring-destructive',
+                    !displayValue || displayValue === '-' ? 'text-muted-foreground' : ''
+                  )}
+                >
+                  {displayValue}
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-1" align="start">
+                {dropsetData && dropsetData.setIndex === setIndex && dropsetData.field === 'reps' && (
+                  <div className="flex flex-col gap-3 p-1">
+                    <div className="rounded-md overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/50 h-8 hover:bg-muted/50 border-none">
+                            <TableHead className="h-8 py-1 px-2 w-[40px] text-center font-medium border-0">Drop</TableHead>
+                            <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Reps</TableHead>
+                            <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Weight</TableHead>
+                            <TableHead className="h-8 py-1 px-2 w-[30px] border-0"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {dropsetData.repsDrops.map((drop, dropIdx) => (
+                            <TableRow key={dropIdx} className="h-9 border-none">
+                              <TableCell className="py-0 px-0 h-9 text-center text-muted-foreground font-medium w-[40px] border-0">
+                                {drop.dropNumber}
+                              </TableCell>
+                              <TableCell className="py-0 px-0 h-9 w-[70px]">
+                                <Input
+                                  value={drop.value}
+                                  onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'reps', val))}
+                                  className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
+                                  placeholder="-"
+                                />
+                              </TableCell>
+                              <TableCell className="py-0 px-0 h-9 w-[70px]">
+                                <Input
+                                  value={dropsetData.weightDrops[dropIdx]?.value || ''}
+                                  onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'weight', val))}
+                                  className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
+                                  placeholder="-"
+                                />
+                              </TableCell>
+                              <TableCell className="py-0 px-0 h-9 w-[30px]">
+                                <div className="flex items-center justify-center h-full">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveDrop(dropIdx)}
+                                    className="text-muted-foreground hover:text-destructive flex items-center justify-center h-6 w-6 rounded-md hover:bg-muted/50"
+                                  >
+                                    <X className="size-3" />
+                                  </button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleAddDrop} className="w-full h-7 text-xs">
+                      Add drop
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+          </div>
+        </TableCell>
+      );
+    }
+
+    // Handle failure type
+    if (set.type === 'failure' && columnLabel === 'Reps') {
+      return (
+        <TableCell className="py-0 px-0 text-center" key={`${setIndex}-failure`}>
+          <div className="w-full h-10 flex items-center justify-center text-xs text-muted-foreground">
+            To failure
+          </div>
+        </TableCell>
+      );
+    }
+
+    // Get the value for this column
+    const value = getFieldValue(set, columnLabel);
+    const fieldName = getFieldName(columnLabel);
+    const hasError = 
+      (fieldName === 'reps' && validationErrors?.[setIndex]?.reps) ||
+      (fieldName === 'weight' && validationErrors?.[setIndex]?.weight) ||
+      (fieldName === 'distance' && validationErrors?.[setIndex]?.distance) ||
+      (fieldName === 'duration' && validationErrors?.[setIndex]?.duration);
+
+    // Render based on column type
+    if (columnLabel === 'Heart Rate Zone') {
+      return (
+        <TableCell className="py-0 px-0 text-center" key={`${setIndex}-${columnLabel}`}>
+          <SelectCell
+            value={value}
+            onChange={(newValue) => updateFieldValue(setIndex, columnLabel, newValue)}
+            options={HEART_RATE_ZONE_OPTIONS as unknown as { value: string; label: string }[]}
+            displayValue={value ? value.match(/^Z(\d)/)?.[0] ? `Zone ${value.match(/^Z(\d)/)?.[1]}` : value : ''}
+            placeholder="Zone..."
+            hasError={hasError}
+          />
+        </TableCell>
+      );
+    }
+
+    // Use OptionalCell for optional columns (Tempo, RIR, RPE, etc.)
+    if (OPTIONAL_COLUMN_OPTIONS.some(opt => opt.value === columnLabel)) {
+      return (
+        <TableCell className="py-0 px-0 text-center" key={`${setIndex}-${columnLabel}`}>
+          <OptionalCell
+            columnType={columnLabel}
+            value={value}
+            onChange={(newValue) => updateFieldValue(setIndex, columnLabel, newValue)}
+            hasError={hasError}
+          />
+        </TableCell>
+      );
+    }
+
+    // Default: EditableCell for Reps, Weight, Distance, Duration
+    return (
+      <TableCell className="py-0 px-0 text-center" key={`${setIndex}-${columnLabel}`}>
+        <EditableCell
+          value={value}
+          onChange={(newValue) => updateFieldValue(setIndex, columnLabel, newValue)}
+          hasError={hasError}
+        />
+      </TableCell>
+    );
+  };
+
   const handleAddSet = (insertAfterIndex?: number) => {
     if (isSingleSetOnly) return; // Don't allow adding sets for AMRAP/Timed sections
 
@@ -1345,6 +1627,39 @@ export const ExerciseCard = ({
         )}
       </div>
 
+      {/* Each Side Toggle with Tempo Input */}
+      {(exercise.exerciseType === 'weight_reps' || exercise.exerciseType === 'reps') && (
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="each-side-toggle" className="text-sm font-normal cursor-pointer">
+              Each side
+            </Label>
+            <Switch
+              id="each-side-toggle"
+              checked={exercise.eachSide || false}
+              onCheckedChange={(checked) => {
+                onExerciseChange({
+                  ...exercise,
+                  eachSide: checked,
+                });
+              }}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Label className="text-sm font-normal">TEMPO</Label>
+            <TempoInput
+              value={exercise.tempo || ''}
+              onChange={(value) => {
+                onExerciseChange({
+                  ...exercise,
+                  tempo: value,
+                });
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {
         (exercise.exerciseType === 'weight_reps' ||
           exercise.exerciseType === 'reps' ||
@@ -1355,185 +1670,92 @@ export const ExerciseCard = ({
                 <TableHeader className="bg-transparent">
                   <TableRow className="h-8">
                     <TableHead className="text-center h-8 py-1 px-2 w-[70px] text-xs font-medium pl-1">Type</TableHead>
-                    {exercise.exerciseType === 'distance_duration' ? (
-                      <>
-                        <TableHead className="text-center h-8 py-1 px-2 text-xs font-medium">Distance</TableHead>
-                        <TableHead className="text-center h-8 py-1 px-2 text-xs font-medium">Duration</TableHead>
+                    {/* Column 1 with dropdown */}
                         <TableHead className="text-center h-8 py-1 px-2 w-[120px]">
                           <div className="flex items-center justify-center gap-0.5">
                             <Select
-                              value={otherColumnLabel}
+                          value={column1Label}
                               onValueChange={(value) => {
-                                clearColumnValues('other');
-                                setOtherColumnLabel(value);
-                              }}
-                            >
+                            clearColumnValues(column1Label);
+                            setColumn1Label(value);
+                            onExerciseChange({
+                              ...exercise,
+                              column1Label: value,
+                              alternatives: exercise.alternatives || [],
+                            });
+                          }}
+                        >
+                          {column1Label === 'Heart Rate Zone' ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
                               <SelectTrigger
                                 className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
                                 style={{ minHeight: '24px', height: '24px' }}
                               >
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent className="max-h-[200px] overflow-y-auto">
-                                {OPTIONAL_COLUMN_OPTIONS.map(opt => (
-                                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {otherColumnLabel !== 'Optional' && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  clearColumnValues('other');
-                                  setOtherColumnLabel('Optional');
-                                }}
-                                className="p-0.5 hover:bg-muted rounded"
-                                aria-label="Clear column"
-                              >
-                                <X className="size-3 text-muted-foreground hover:text-foreground" />
-                              </button>
-                            )}
-                          </div>
-                        </TableHead>
-                      </>
-                    ) : exercise.eachSide ? (
-                      <>
-                        <TableHead className="text-center h-8 py-1 px-2 text-xs font-medium">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center justify-center gap-1 cursor-pointer">
-                                <Checkbox
-                                  checked={true}
-                                  onCheckedChange={() => {
-                                    onExerciseChange({
-                                      ...exercise,
-                                      eachSide: false,
-                                    });
-                                  }}
-                                  className="h-4 w-4"
-                                />
-                                <span>L</span>
-                              </div>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Left side reps. Uncheck to disable each side tracking.<br />Ranges allowed (e.g., 8-12).</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TableHead>
-                        <TableHead className="text-center h-8 py-1 px-2 text-xs font-medium">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center justify-center gap-1 cursor-pointer">
-                                <Checkbox
-                                  checked={true}
-                                  onCheckedChange={() => {
-                                    onExerciseChange({
-                                      ...exercise,
-                                      eachSide: false,
-                                    });
-                                  }}
-                                  className="h-4 w-4"
-                                />
-                                <span>R</span>
+                                <div className="flex flex-col gap-1 text-xs">
+                                  <p>Z1 - Recovery</p>
+                                  <p>Z2 - Endurance</p>
+                                  <p>Z3 - Tempo</p>
+                                  <p>Z4 - Threshold</p>
+                                  <p>Z5 - Max</p>
                               </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Right side reps. Uncheck to disable each side tracking.<br />Ranges allowed (e.g., 8-12).</p>
                             </TooltipContent>
                           </Tooltip>
-                        </TableHead>
-                        {exercise.exerciseType === 'weight_reps' && (
-                          <TableHead className="text-center h-8 py-1 px-2 text-xs font-medium">Weight</TableHead>
-                        )}
-                        <TableHead className="text-center h-8 py-1 px-2 w-[120px]">
-                          <div className="flex items-center justify-center gap-0.5">
-                            <Select
-                              value={optionalColumnLabel}
-                              onValueChange={(value) => {
-                                clearColumnValues('optional');
-                                setOptionalColumnLabel(value);
-                                onExerciseChange({
-                                  ...exercise,
-                                  optionalColumnType: value as any,
-                                  alternatives: exercise.alternatives || [],
-                                });
-                              }}
-                            >
+                          ) : (
                               <SelectTrigger
                                 className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
                                 style={{ minHeight: '24px', height: '24px' }}
                               >
                                 <SelectValue />
                               </SelectTrigger>
+                          )}
                               <SelectContent className="max-h-[200px] overflow-y-auto">
-                                {OPTIONAL_COLUMN_OPTIONS.map(opt => (
+                            {COLUMN_OPTIONS.map(opt => (
                                   <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
-                            {optionalColumnLabel !== 'Optional' && (
+                        {column1Label !== 'None' && (
                               <button
                                 type="button"
                                 onClick={() => {
-                                  clearColumnValues('optional');
-                                  setOptionalColumnLabel('Optional');
+                              clearColumnValues(column1Label);
+                              const defaultLabels = getDefaultColumnLabels(exercise.exerciseType);
+                              setColumn1Label(defaultLabels.column1);
                                   onExerciseChange({
                                     ...exercise,
-                                    optionalColumnType: 'Optional' as any,
+                                column1Label: defaultLabels.column1,
                                     alternatives: exercise.alternatives || [],
                                   });
                                 }}
                                 className="p-0.5 hover:bg-muted rounded"
-                                aria-label="Clear column"
+                            aria-label="Reset column"
                               >
                                 <X className="size-3 text-muted-foreground hover:text-foreground" />
                               </button>
                             )}
                           </div>
                         </TableHead>
-                      </>
-                    ) : (
-                      <>
-                        <TableHead className="text-center h-8 py-1 px-2 text-xs font-medium">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center justify-center gap-1.5 cursor-pointer">
-                                <span>Enable each side</span>
-                                <Checkbox
-                                  checked={false}
-                                  onCheckedChange={() => {
-                                    onExerciseChange({
-                                      ...exercise,
-                                      eachSide: true,
-                                    });
-                                  }}
-                                  className="h-4 w-4"
-                                />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Check to enable each side tracking for reps.<br />Ranges allowed (e.g., 8-12).</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TableHead>
-                        {exercise.exerciseType === 'weight_reps' && (
-                          <TableHead className="text-center h-8 py-1 px-2 text-xs font-medium">Weight</TableHead>
-                        )}
+                    {/* Column 2 with dropdown */}
                         <TableHead className="text-center h-8 py-1 px-2 w-[120px]">
                           <div className="flex items-center justify-center gap-0.5">
                             <Select
-                              value={optionalColumnLabel}
+                          value={column2Label}
                               onValueChange={(value) => {
-                                clearColumnValues('optional');
-                                setOptionalColumnLabel(value);
+                            clearColumnValues(column2Label);
+                            setColumn2Label(value);
                                 onExerciseChange({
                                   ...exercise,
-                                  optionalColumnType: value as any,
+                              column2Label: value,
                                   alternatives: exercise.alternatives || [],
                                 });
                               }}
                             >
-                              {optionalColumnLabel === 'Heart Rate Zone' ? (
+                          {column2Label === 'Heart Rate Zone' ? (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <SelectTrigger
@@ -1562,33 +1784,32 @@ export const ExerciseCard = ({
                                 </SelectTrigger>
                               )}
                               <SelectContent className="max-h-[200px] overflow-y-auto">
-                                {OPTIONAL_COLUMN_OPTIONS.map(opt => (
+                            {COLUMN_OPTIONS.map(opt => (
                                   <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
-                            {optionalColumnLabel !== 'Optional' && (
+                        {column2Label !== 'None' && (
                               <button
                                 type="button"
                                 onClick={() => {
-                                  clearColumnValues('optional');
-                                  setOptionalColumnLabel('Optional');
+                              clearColumnValues(column2Label);
+                              const defaultLabels = getDefaultColumnLabels(exercise.exerciseType);
+                              setColumn2Label(defaultLabels.column2);
                                   onExerciseChange({
                                     ...exercise,
-                                    optionalColumnType: 'Optional' as any,
+                                column2Label: defaultLabels.column2,
                                     alternatives: exercise.alternatives || [],
                                   });
                                 }}
                                 className="p-0.5 hover:bg-muted rounded"
-                                aria-label="Clear column"
+                            aria-label="Reset column"
                               >
                                 <X className="size-3 text-muted-foreground hover:text-foreground" />
                               </button>
                             )}
                           </div>
                         </TableHead>
-                      </>
-                    )}
                     <TableHead className="text-center h-8 py-1 px-2 w-[70px] text-xs font-medium">Rest</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1619,462 +1840,11 @@ export const ExerciseCard = ({
                           }
                         />
                       </TableCell>
-                      {exercise.exerciseType === 'distance_duration' ? (
-                        <>
-                          <TableCell className="py-0 px-0 text-center">
-                            <EditableCell
-                              value={set.distance || ''}
-                              onChange={(value) => handleSetChange(index, 'distance', value)}
-                              hasError={validationErrors?.[index]?.distance}
-                            />
-                          </TableCell>
-                          <TableCell className="py-0 px-0 text-center">
-                            <EditableCell
-                              value={set.duration || ''}
-                              onChange={(value) => handleSetChange(index, 'duration', value)}
-                              hasError={validationErrors?.[index]?.duration}
-                            />
-                          </TableCell>
-                          <TableCell className="py-0 px-0 text-center">
-                            {otherColumnLabel === 'Heart Rate Zone' ? (
-                              <SelectCell
-                                value={set.other || ''}
-                                onChange={(value) => handleSetChange(index, 'other', value)}
-                                options={[
-                                  { value: 'Z1 - Recovery', label: 'Z1 - Recovery' },
-                                  { value: 'Z2 - Endurance', label: 'Z2 - Endurance' },
-                                  { value: 'Z3 - Tempo', label: 'Z3 - Tempo' },
-                                  { value: 'Z4 - Threshold', label: 'Z4 - Threshold' },
-                                  { value: 'Z5 - Max', label: 'Z5 - Max' },
-                                ]}
-                                displayValue={set.other || ''}
-                                placeholder="Zone..."
-                              />
-                            ) : (
-                              <EditableCell
-                                value={set.other || ''}
-                                onChange={(value) => handleSetChange(index, 'other', value)}
-                              />
-                            )}
-                          </TableCell>
-                        </>
-                      ) : set.type === 'dropset' && exercise.exerciseType === 'weight_reps' ? (
-                        <>
-                          <>
-                            {exercise.eachSide ? (
-                              <>
-                                {/* Left Dropset */}
-                                <TableCell className="py-1 px-2">
-                                  <div className="flex justify-center">
-                                    <Popover
-                                      open={dropsetPopoverOpen === `${index}-leftReps`}
-                                      onOpenChange={(open) => {
-                                        if (open) {
-                                          handleDropsetInputClick(index, 'leftReps', `${index}-leftReps`);
-                                        } else {
-                                          setDropsetPopoverOpen(null);
-                                          setDropsetData(null);
-                                        }
-                                      }}
-                                    >
-                                      <PopoverTrigger asChild>
-                                        <div
-                                          onClick={() => handleDropsetInputClick(index, 'leftReps', `${index}-leftReps`)}
-                                          className={cn(
-                                            'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
-                                            'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
-                                            dropsetPopoverOpen === `${index}-leftReps` && 'ring-2 ring-inset ring-primary',
-                                            validationErrors?.[index]?.reps && 'text-destructive ring-2 ring-inset ring-destructive',
-                                            !set.leftReps && 'text-muted-foreground'
-                                          )}
-                                        >
-                                          {set.leftReps || '-'}
-                                        </div>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-auto p-1" align="start">
-                                        {dropsetData && dropsetData.setIndex === index && dropsetData.field === 'leftReps' && (
-                                          <div className="flex flex-col gap-3 p-1">
-                                            <div className="rounded-md overflow-hidden">
-                                              <Table>
-                                                <TableHeader>
-                                                  <TableRow className="bg-muted/50 h-8 hover:bg-muted/50 border-none">
-                                                    <TableHead className="h-8 py-1 px-2 w-[40px] text-center font-medium border-0">Drop</TableHead>
-                                                    <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">L Reps</TableHead>
-                                                    <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Weight</TableHead>
-                                                    <TableHead className="h-8 py-1 px-2 w-[30px] border-0"></TableHead>
-                                                  </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                  {dropsetData.repsDrops.map((drop, dropIdx) => (
-                                                    <TableRow key={dropIdx} className="h-9 border-none">
-                                                      <TableCell className="py-0 px-0 h-9 text-center text-muted-foreground font-medium w-[40px] border-0">
-                                                        {drop.dropNumber}
-                                                      </TableCell>
-                                                      <TableCell className="py-0 px-0 h-9 w-[70px]">
-                                                        <Input
-                                                          value={drop.value}
-                                                          onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'reps', val))}
-                                                          className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
-                                                          placeholder="-"
-                                                        />
-                                                      </TableCell>
-                                                      <TableCell className="py-0 px-0 h-9 w-[70px]">
-                                                        <Input
-                                                          value={dropsetData.weightDrops[dropIdx]?.value || ''}
-                                                          onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'weight', val))}
-                                                          className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
-                                                          placeholder="-"
-                                                        />
-                                                      </TableCell>
-                                                      <TableCell className="py-0 px-0 h-9 w-[30px]">
-                                                        <div className="flex items-center justify-center h-full">
-                                                          <button
-                                                            type="button"
-                                                            onClick={() => handleRemoveDrop(dropIdx)}
-                                                            className="text-muted-foreground hover:text-destructive flex items-center justify-center h-6 w-6 rounded-md hover:bg-muted/50"
-                                                          >
-                                                            <X className="size-3" />
-                                                          </button>
-                                                        </div>
-                                                      </TableCell>
-                                                    </TableRow>
-                                                  ))}
-                                                </TableBody>
-                                              </Table>
-                                            </div>
-                                            <Button variant="outline" size="sm" onClick={handleAddDrop} className="w-full h-7 text-xs">
-                                              Add drop
-                                            </Button>
-                                          </div>
-                                        )}
-                                      </PopoverContent>
-                                    </Popover>
-                                  </div>
-                                </TableCell>
-
-                                {/* Right Dropset */}
-                                <TableCell className="py-1 px-2">
-                                  <div className="flex justify-center">
-                                    <Popover
-                                      open={dropsetPopoverOpen === `${index}-rightReps`}
-                                      onOpenChange={(open) => {
-                                        if (open) {
-                                          handleDropsetInputClick(index, 'rightReps', `${index}-rightReps`);
-                                        } else {
-                                          setDropsetPopoverOpen(null);
-                                          setDropsetData(null);
-                                        }
-                                      }}
-                                    >
-                                      <PopoverTrigger asChild>
-                                        <div
-                                          onClick={() => handleDropsetInputClick(index, 'rightReps', `${index}-rightReps`)}
-                                          className={cn(
-                                            'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
-                                            'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
-                                            dropsetPopoverOpen === `${index}-rightReps` && 'ring-2 ring-inset ring-primary',
-                                            validationErrors?.[index]?.reps && 'text-destructive ring-2 ring-inset ring-destructive',
-                                            !set.rightReps && 'text-muted-foreground'
-                                          )}
-                                        >
-                                          {set.rightReps || '-'}
-                                        </div>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-auto p-1" align="start">
-                                        {dropsetData && dropsetData.setIndex === index && dropsetData.field === 'rightReps' && (
-                                          <div className="flex flex-col gap-3 p-1">
-                                            <div className="rounded-md overflow-hidden">
-                                              <Table>
-                                                <TableHeader>
-                                                  <TableRow className="bg-muted/50 h-8 hover:bg-muted/50 border-none">
-                                                    <TableHead className="h-8 py-1 px-2 w-[40px] text-center font-medium border-0">Drop</TableHead>
-                                                    <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">R Reps</TableHead>
-                                                    <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Weight</TableHead>
-                                                    <TableHead className="h-8 py-1 px-2 w-[30px] border-0"></TableHead>
-                                                  </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                  {dropsetData.repsDrops.map((drop, dropIdx) => (
-                                                    <TableRow key={dropIdx} className="h-9 border-none">
-                                                      <TableCell className="py-0 px-0 h-9 text-center text-muted-foreground font-medium w-[40px] border-0">
-                                                        {drop.dropNumber}
-                                                      </TableCell>
-                                                      <TableCell className="py-0 px-0 h-9 w-[70px]">
-                                                        <Input
-                                                          value={drop.value}
-                                                          onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'reps', val))}
-                                                          className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
-                                                          placeholder="-"
-                                                        />
-                                                      </TableCell>
-                                                      <TableCell className="py-0 px-0 h-9 w-[70px]">
-                                                        <Input
-                                                          value={dropsetData.weightDrops[dropIdx]?.value || ''}
-                                                          onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'weight', val))}
-                                                          className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
-                                                          placeholder="-"
-                                                        />
-                                                      </TableCell>
-                                                      <TableCell className="py-0 px-0 h-9 w-[30px]">
-                                                        <div className="flex items-center justify-center h-full">
-                                                          <button
-                                                            type="button"
-                                                            onClick={() => handleRemoveDrop(dropIdx)}
-                                                            className="text-muted-foreground hover:text-destructive flex items-center justify-center h-6 w-6 rounded-md hover:bg-muted/50"
-                                                          >
-                                                            <X className="size-3" />
-                                                          </button>
-                                                        </div>
-                                                      </TableCell>
-                                                    </TableRow>
-                                                  ))}
-                                                </TableBody>
-                                              </Table>
-                                            </div>
-                                            <Button variant="outline" size="sm" onClick={handleAddDrop} className="w-full h-7 text-xs">
-                                              Add drop
-                                            </Button>
-                                          </div>
-                                        )}
-                                      </PopoverContent>
-                                    </Popover>
-                                  </div>
-                                </TableCell>
-
-                                {/* Weight (Disabled) */}
-                                <TableCell className="py-1 px-2">
-                                  <div
-                                    className={cn(
-                                      'w-full flex flex-col items-center justify-center text-[11px] cursor-default px-1 gap-0.5 py-1',
-                                      (!set.leftWeight && !set.rightWeight) ? 'text-muted-foreground' : 'text-foreground'
-                                    )}
-                                  >
-                                    <div className="whitespace-nowrap">L: {set.leftWeight || '-'}</div>
-                                    <div className="whitespace-nowrap">R: {set.rightWeight || '-'}</div>
-                                  </div>
-                                </TableCell>
-                              </>
-                            ) : (
-                              // Standard Dropset
-                              <>
-                                <TableCell className="py-1 px-2">
-                                  <div className="flex justify-center">
-                                    <Popover
-                                      open={dropsetPopoverOpen === `${index}-reps`}
-                                      onOpenChange={(open) => {
-                                        if (open) {
-                                          handleDropsetInputClick(index, 'reps', `${index}-reps`);
-                                        } else {
-                                          setDropsetPopoverOpen(null);
-                                          setDropsetData(null);
-                                        }
-                                      }}
-                                    >
-                                      <PopoverTrigger asChild>
-                                        <div
-                                          onClick={() => handleDropsetInputClick(index, 'reps', `${index}-reps`)}
-                                          className={cn(
-                                            'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
-                                            'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
-                                            dropsetPopoverOpen === `${index}-reps` && 'ring-2 ring-inset ring-primary',
-                                            validationErrors?.[index]?.reps && 'text-destructive ring-2 ring-inset ring-destructive',
-                                            !set.reps && 'text-muted-foreground'
-                                          )}
-                                        >
-                                          {set.reps || '-'}
-                                        </div>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-auto p-1" align="start">
-                                        {dropsetData && dropsetData.setIndex === index && dropsetData.field === 'reps' && (
-                                          <div className="flex flex-col gap-3 p-1">
-                                            <div className="rounded-md overflow-hidden">
-                                              <Table>
-                                                <TableHeader>
-                                                  <TableRow className="bg-muted/50 h-8 hover:bg-muted/50 border-none">
-                                                    <TableHead className="h-8 py-1 px-2 w-[40px] text-center font-medium border-0">Drop</TableHead>
-                                                    <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Reps</TableHead>
-                                                    <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Weight</TableHead>
-                                                    <TableHead className="h-8 py-1 px-2 w-[30px] border-0"></TableHead>
-                                                  </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                  {dropsetData.repsDrops.map((drop, dropIdx) => (
-                                                    <TableRow key={dropIdx} className="h-9 border-none">
-                                                      <TableCell className="py-0 px-0 h-9 text-center text-muted-foreground font-medium w-[40px] border-0">
-                                                        {drop.dropNumber}
-                                                      </TableCell>
-                                                      <TableCell className="py-0 px-0 h-9 w-[70px]">
-                                                        <Input
-                                                          value={drop.value}
-                                                          onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'reps', val))}
-                                                          className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
-                                                          placeholder="-"
-                                                        />
-                                                      </TableCell>
-                                                      <TableCell className="py-0 px-0 h-9 w-[70px]">
-                                                        <Input
-                                                          value={dropsetData.weightDrops[dropIdx]?.value || ''}
-                                                          onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'weight', val))}
-                                                          className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
-                                                          placeholder="-"
-                                                        />
-                                                      </TableCell>
-                                                      <TableCell className="py-0 px-0 h-9 w-[30px]">
-                                                        <div className="flex items-center justify-center h-full">
-                                                          <button
-                                                            type="button"
-                                                            onClick={() => handleRemoveDrop(dropIdx)}
-                                                            className="text-muted-foreground hover:text-destructive flex items-center justify-center h-6 w-6 rounded-md hover:bg-muted/50"
-                                                          >
-                                                            <X className="size-3" />
-                                                          </button>
-                                                        </div>
-                                                      </TableCell>
-                                                    </TableRow>
-                                                  ))}
-                                                </TableBody>
-                                              </Table>
-                                            </div>
-                                            <Button variant="outline" size="sm" onClick={handleAddDrop} className="w-full h-7 text-xs">
-                                              Add drop
-                                            </Button>
-                                          </div>
-                                        )}
-                                      </PopoverContent>
-                                    </Popover>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="py-1 px-2">
-                                  <div
-                                    onClick={() => {
-                                      // Open the same popover as reps - since it shows both reps and weight
-                                      handleDropsetInputClick(index, 'reps', `${index}-reps`);
-                                      setDropsetPopoverOpen(`${index}-reps`);
-                                    }}
-                                    className={cn(
-                                      'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
-                                      'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
-                                      dropsetPopoverOpen === `${index}-reps` && 'ring-2 ring-inset ring-primary',
-                                      validationErrors?.[index]?.weight && 'text-destructive ring-2 ring-inset ring-destructive',
-                                      !set.weight ? 'text-muted-foreground' : 'text-foreground'
-                                    )}
-                                  >
-                                    {set.weight || '-'}
-                                  </div>
-                                </TableCell>
-                              </>
-                            )}
-                            <TableCell className="py-0 px-0 text-center">
-                              <OptionalCell
-                                columnType={optionalColumnLabel}
-                                value={set.optional?.prescribed || ''}
-                                onChange={(value) => handleSetChange(index, 'optional', value)}
-                              />
-                            </TableCell>
-
-                          </>
-                        </>
-                      ) : set.type === 'failure' &&
-                        (exercise.exerciseType === 'reps' ||
-                          exercise.exerciseType === 'weight_reps') ? (
-                        <>
-                          {exercise.eachSide ? (
-                            <>
-                              <TableCell className="py-1 px-2" colSpan={2}>
-                                <div className="flex justify-center">
-                                  <span className="text-xs text-muted-foreground">To failure (each side)</span>
-                                </div>
-                              </TableCell>
-                            </>
-                          ) : (
-                            <TableCell className="py-1 px-2">
-                              <div className="flex justify-center">
-                                <span className="text-xs text-muted-foreground">To failure</span>
-                              </div>
-                            </TableCell>
-                          )}
-                          {exercise.exerciseType === 'weight_reps' && (
-                            <TableCell className="py-0 px-0 text-center">
-                              <EditableCell
-                                value={set.weight}
-                                onChange={(value) => handleSetChange(index, 'weight', value)}
-                                hasError={validationErrors?.[index]?.weight}
-                              />
-                            </TableCell>
-                          )}
-                          <TableCell className="py-0 px-0 text-center">
-                            <OptionalCell
-                              columnType={optionalColumnLabel}
-                              value={set.optional?.prescribed || ''}
-                              onChange={(value) => handleSetChange(index, 'optional', value)}
-                            />
-                          </TableCell>
-
-                        </>
-                      ) : exercise.eachSide ? (
-                        <>
-                          {/* Left Reps */}
-                          <TableCell className="py-0 px-0 text-center">
-                            <EditableCell
-                              value={set.leftReps || ''}
-                              onChange={(value) => handleSetChange(index, 'leftReps' as keyof SetData, value)}
-                              hasError={validationErrors?.[index]?.reps}
-                            />
-                          </TableCell>
-                          {/* Right Reps */}
-                          <TableCell className="py-0 px-0 text-center">
-                            <EditableCell
-                              value={set.rightReps || ''}
-                              onChange={(value) => handleSetChange(index, 'rightReps' as keyof SetData, value)}
-                              hasError={validationErrors?.[index]?.reps}
-                            />
-                          </TableCell>
-                          {exercise.exerciseType === 'weight_reps' && (
-                            <TableCell className="py-0 px-0 text-center">
-                              <EditableCell
-                                value={set.weight}
-                                onChange={(value) => handleSetChange(index, 'weight', value)}
-                                hasError={validationErrors?.[index]?.weight}
-                              />
-                            </TableCell>
-                          )}
-                          <TableCell className="py-0 px-0 text-center">
-                            <OptionalCell
-                              columnType={optionalColumnLabel}
-                              value={set.optional?.prescribed || ''}
-                              onChange={(value) => handleSetChange(index, 'optional', value)}
-                            />
-                          </TableCell>
-
-                        </>
-                      ) : (
-                        <>
-                          <TableCell className="py-0 px-0 text-center">
-                            <EditableCell
-                              value={set.reps}
-                              onChange={(value) => handleSetChange(index, 'reps', value)}
-                              hasError={validationErrors?.[index]?.reps}
-                            />
-                          </TableCell>
-                          {exercise.exerciseType === 'weight_reps' && (
-                            <TableCell className="py-0 px-0 text-center">
-                              <EditableCell
-                                value={set.weight}
-                                onChange={(value) => handleSetChange(index, 'weight', value)}
-                                hasError={validationErrors?.[index]?.weight}
-                              />
-                            </TableCell>
-                          )}
-                          <TableCell className="py-0 px-0 text-center">
-                            <OptionalCell
-                              columnType={optionalColumnLabel}
-                              value={set.optional?.prescribed || ''}
-                              onChange={(value) => handleSetChange(index, 'optional', value)}
-                            />
-                          </TableCell>
-
-                        </>
-                      )}
+                      {/* Column 1 */}
+                      {renderColumnCell(set, index, column1Label)}
+                      {/* Column 2 */}
+                      {renderColumnCell(set, index, column2Label)}
+                      {/* Rest */}
                       <TableCell className="py-0 px-2 text-center w-[70px]">
                         <EditableCell
                           value={set.rest}
@@ -2083,10 +1853,10 @@ export const ExerciseCard = ({
                           hasError={validationErrors?.[index]?.rest}
                         />
                       </TableCell>
-                    </TableRow >
+                    </TableRow>
                   ))}
-                </TableBody >
-              </Table >
+                </TableBody>
+              </Table>
             </div>
             {/* Delete buttons overlay - only show when more than 1 set */}
             {sets.length > 1 && (
@@ -2146,7 +1916,7 @@ export const ExerciseCard = ({
                 ))}
               </div>
             )}
-          </div >
+          </div>
         )
       }
 
@@ -2265,6 +2035,6 @@ export const ExerciseCard = ({
           </div>
         </DialogContent>
       </Dialog>
-    </div >
+    </div>
   );
 };

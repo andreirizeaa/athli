@@ -1,25 +1,32 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus } from 'lucide-react-native';
+import { ChevronLeft, Plus, ClipboardCheck } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
+import { useTranslations } from '@/contexts/useTranslations';
 import { IconButton } from '@/components/icon-button';
 import { ScreenWrapper } from '@/components/screen-wrapper';
+import { DropdownMenuWrapper } from '@/components/dropdown-menu';
 
 export default function ClientCheckInsScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams<{ id: string }>();
     const { colors: themeColors } = useThemePreference();
+    const { t } = useTranslations();
     const iconColor = themeColors.text;
 
     const handleBackPress = () => {
         router.back();
     };
 
-    const handlePlusPress = () => {
-        // TODO: Handle plus press
+    const handleAssignCheckIn = () => {
+        router.push('/modals/client/assign-check-in-to-client-modal');
+    };
+
+    const handleAddCheckIn = () => {
+        router.push('/modals/library/add-check-in-modal');
     };
 
     return (
@@ -31,13 +38,26 @@ export default function ClientCheckInsScreen() {
                     size="md"
                     color={iconColor}
                 />
-                <Text style={[styles.headerTitle, { color: themeColors.text }]}>Check-ins</Text>
-                <IconButton
-                    icon={{ sf: 'plus', IconComponent: Plus }}
-                    onPress={handlePlusPress}
-                    size="md"
-                    color={iconColor}
-                />
+                <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('clientDetail.sections.checkIns')}</Text>
+                <DropdownMenuWrapper options={[
+                    {
+                        label: t('clientDetail.actions.assignCheckIn'),
+                        icon: { sf: 'checklist', IconComponent: ClipboardCheck },
+                        onPress: handleAssignCheckIn
+                    },
+                    {
+                        label: t('clientDetail.actions.addCheckIn'),
+                        icon: { sf: 'plus', IconComponent: Plus },
+                        onPress: handleAddCheckIn
+                    }
+                ]}>
+                    <IconButton
+                        icon={{ sf: 'plus', IconComponent: Plus }}
+                        onPress={() => { }}
+                        size="md"
+                        color={iconColor}
+                    />
+                </DropdownMenuWrapper>
             </View>
             <View style={styles.content}>
                 <Text style={{ color: themeColors.mutedText }}>Check-ins content coming soon</Text>

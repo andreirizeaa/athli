@@ -21,8 +21,16 @@ export default function ClientHabitsScreen() {
         router.back();
     };
 
-    const handlePlusPress = () => {
-        // TODO: Handle plus press
+    const handleAssignHabit = () => {
+        router.push('/modals/client/assign-habit-to-client-modal');
+    };
+
+    const handleAddHabit = () => {
+        router.push('/modals/library/add-habit-modal');
+    };
+
+    const handleLogHabit = () => {
+        router.push('/modals/client/log-habit-for-client-modal');
     };
 
     return (
@@ -39,17 +47,17 @@ export default function ClientHabitsScreen() {
                     {
                         label: t('clientDetail.actions.assignHabit'),
                         icon: { sf: 'checklist', IconComponent: ClipboardCheck },
-                        onPress: () => { }
+                        onPress: handleAssignHabit
                     },
                     {
                         label: t('clientDetail.actions.addHabit'),
                         icon: { sf: 'plus', IconComponent: Plus },
-                        onPress: () => { }
+                        onPress: handleAddHabit
                     },
                     {
                         label: t('clientDetail.actions.logHabit'),
                         icon: { sf: 'checkmark.circle', IconComponent: CheckCircle },
-                        onPress: () => { }
+                        onPress: handleLogHabit
                     }
                 ]}>
                     <IconButton

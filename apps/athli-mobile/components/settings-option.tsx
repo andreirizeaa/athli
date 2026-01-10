@@ -69,7 +69,7 @@ export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, 
       )}
       {showChevron && (
         <View style={styles.chevronContainer}>
-          <PlatformIcon sf="chevron.right" IconComponent={ChevronRight} size={chevronSize || iconSizes.navigationChevrons} color={themeColors.mutedText} />
+          <PlatformIcon sf="chevron.right" IconComponent={ChevronRight} size={chevronSize || iconSizes.extraSmallIcons} color={themeColors.mutedText} />
         </View>
       )}
     </Pressable>
@@ -99,14 +99,14 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   optionTitle: {
-    ...typography.p1,
+    ...typography.p2,
   },
   optionSubtitle: {
     ...typography.p6,
     marginTop: 2,
   },
   optionSubtitleRight: {
-    ...typography.p6,
+    ...typography.p2,
   },
 });
 

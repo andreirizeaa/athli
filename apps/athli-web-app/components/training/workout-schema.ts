@@ -1,4 +1,6 @@
-export type ExerciseType = 'weight_reps' | 'reps' | 'distance_duration';
+/**
+ * Workout Schema - Simplified with flexible trackable fields
+ */
 
 /**
  * Workout execution status
@@ -6,22 +8,15 @@ export type ExerciseType = 'weight_reps' | 'reps' | 'distance_duration';
 export type WorkoutStatus = 'not_started' | 'in_progress' | 'completed';
 
 /**
- * Numeric metric pairs:
- * - prescribed: coach target
- * - completed: client actual (null until logged)
+ * Trackable field with label and prescribed/completed values
+ * - label: column type (e.g., 'Reps', 'kg', 'lbs', 'km', 'minutes', 'RIR', etc.)
+ * - prescribed: coach target value
+ * - completed: client actual value (null until logged)
  */
-export type MetricNumber = {
-  prescribed: number;
-  completed: number | null;
-};
-
-/**
- * Always-present optional metric (no undefined):
- * value may be null when not applicable / not set.
- */
-export type OptionalMetric = {
-  prescribed: number | null;
-  completed: number | null;
+export type TrackableField = {
+  label: string;
+  prescribed: string | null;
+  completed: string | null;
 };
 
 /**
@@ -35,78 +30,11 @@ export type ExerciseIdPair = {
 };
 
 /**
- * Common rest/type field shared by all exercise metric variants.
- * Always present:
- * - type can be null if not used
- */
-type BaseMetrics = {
-  type: 'warmUp' | 'normal' | 'failure' | 'dropset' | null;
-  restSec: number | null;
-};
-
-/**
- * -----------------------
- * Round (AMRAP / Timed)
- * -----------------------
- * One completion boolean at the payload level:
- * RoundExercisePayload.completed
- */
-type WeightRepsRoundIncomplete = BaseMetrics & {
-  exerciseType: 'weight_reps';
-  weight: { prescribed: number; completed: null };
-  reps: { prescribed: number; completed: null };
-};
-
-type WeightRepsRoundComplete = BaseMetrics & {
-  exerciseType: 'weight_reps';
-  weight: { prescribed: number; completed: number };
-  reps: { prescribed: number; completed: number };
-};
-
-type RepsRoundIncomplete = BaseMetrics & {
-  exerciseType: 'reps';
-  reps: { prescribed: number; completed: null };
-};
-
-type RepsRoundComplete = BaseMetrics & {
-  exerciseType: 'reps';
-  reps: { prescribed: number; completed: number };
-};
-
-type DistanceDurationRound = BaseMetrics & {
-  exerciseType: 'distance_duration';
-  distance: OptionalMetric;
-  durationSec: OptionalMetric;
-};
-
-/**
- * Round-level exercise payload:
- * - stable local id
- * - swaps supported
- * - notes always present (nullable)
- */
-export type RoundExercisePayload =
-  | (ExerciseIdPair & {
-    notes: string | null;
-    completed: false;
-    eachSide: boolean;
-  } & (WeightRepsRoundIncomplete | RepsRoundIncomplete | DistanceDurationRound))
-  | (ExerciseIdPair & {
-    notes: string | null;
-    completed: true;
-    eachSide: boolean;
-  } & (WeightRepsRoundComplete | RepsRoundComplete | DistanceDurationRound));
-
-/**
- * -----------------------
- * Dropset
- * -----------------------
- * Stages always have weight/reps objects (nullable values),
- * so payload shape is stable.
+ * Dropset stage with trackable fields
  */
 export type DropsetStage = {
-  weight: OptionalMetric;
-  reps: OptionalMetric;
+  trackableField1: TrackableField;
+  trackableField2: TrackableField;
   completed: boolean;
 };
 
@@ -115,91 +43,44 @@ export type DropsetPayload = {
 };
 
 /**
- * -----------------------
- * Sets (Regular / Circuits / Auxiliary)
- * -----------------------
- * One completion boolean here: BaseSet.completed
- * All fields always present; dropset is null unless type === 'dropset'
+ * Set payload - unified structure for all exercise types
  */
-type BaseSet = {
+export type SetPayload = {
   setNumber: number;
   type: 'warmUp' | 'normal' | 'failure' | 'dropset';
   restSec: number | null;
   completed: boolean;
   skipped: boolean;
-  optional: { prescribed: string | null; completed: string | null };
-};
-
-type WeightRepsSetCommon = BaseSet & {
-  exerciseType: 'weight_reps';
-  weight: MetricNumber;
-  reps: MetricNumber;
-  leftReps?: MetricNumber;
-  rightReps?: MetricNumber;
-};
-
-type WeightRepsSetNonDropset = WeightRepsSetCommon & {
-  type: 'warmUp' | 'normal' | 'failure';
-  dropset: null;
-};
-
-type WeightRepsSetDropset = WeightRepsSetCommon & {
-  type: 'dropset';
-  dropset: DropsetPayload;
-  leftDropset?: DropsetPayload;
-  rightDropset?: DropsetPayload;
-};
-
-type RepsSetCommon = BaseSet & {
-  exerciseType: 'reps';
-  reps: MetricNumber;
-  leftReps?: MetricNumber;
-  rightReps?: MetricNumber;
-};
-
-type RepsSetNonDropset = RepsSetCommon & {
-  type: 'warmUp' | 'normal' | 'failure';
-  dropset: null;
-};
-
-type RepsSetDropset = RepsSetCommon & {
-  type: 'dropset';
-  dropset: DropsetPayload;
-  leftDropset?: DropsetPayload;
-  rightDropset?: DropsetPayload;
-};
-
-type DistanceDurationSet = BaseSet & {
-  exerciseType: 'distance_duration';
-  distance: OptionalMetric;
-  durationSec: OptionalMetric;
-  dropset: null; // never relevant for distance_duration
+  trackableField1: TrackableField;
+  trackableField2: TrackableField;
+  dropset: DropsetPayload | null;
 };
 
 /**
- * Completion strictness:
- * If you want TS to enforce that completed sets must have numeric completed values,
- * we can additionally split WeightRepsSet / RepsSet into completed:true/false variants.
- * (Right now this keeps payload stable & simple; enforce invariants in runtime validation.)
+ * Round exercise payload (for AMRAP / Timed sections)
  */
-export type WeightRepsSet = WeightRepsSetNonDropset | WeightRepsSetDropset;
-export type RepsSet = RepsSetNonDropset | RepsSetDropset;
-
-export type SetPayload = WeightRepsSet | RepsSet | DistanceDurationSet;
+export type RoundExercisePayload = ExerciseIdPair & {
+  notes: string | null;
+  completed: boolean;
+  eachSide: boolean;
+  tempo: string | null;
+  trackableField1: TrackableField;
+  trackableField2: TrackableField;
+  restSec: number | null;
+};
 
 /**
  * Regular section exercise (with sets)
- * - uses ExerciseIdPair for identification
- * - alternatives always present (can be empty)
  */
 export type RegularExercisePayload = ExerciseIdPair & {
-  exerciseType: ExerciseType;
   sets: SetPayload[];
   alternatives: string[];
   notes: string | null;
   supersetId: string | null;
   eachSide: boolean;
-  optionalColumnType: string | null;
+  tempo: string | null;
+  column1Label: string;
+  column2Label: string;
 };
 
 export type SectionType = 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
@@ -241,11 +122,10 @@ export type TimedSectionPayload = {
 };
 
 /**
- * Circuits: exactly one set per exercise.
+ * Circuits: exactly one set per exercise
  */
 export type CircuitExercisePayload = Omit<RegularExercisePayload, 'sets'> & {
   set: SetPayload;
-  notes: string | null;
 };
 
 export type CircuitExerciseGroupPayload = {
@@ -281,27 +161,18 @@ export type WorkoutSectionPayload =
   | AuxiliarySectionPayload;
 
 /**
- * A workout item can be either:
- * - An exercise (top-level, possibly in supersets)
- * - A section containing exercises
- */
-export type WorkoutItem =
-  | { itemType: 'exercise'; data: RegularExercisePayload }
-  | { itemType: 'section'; data: WorkoutSectionPayload };
-
-/**
  * Pre-workout user inputs
  */
 export type WorkoutPre = {
-  readiness: number | null; // 0-10
+  readiness: number | null;
 };
 
 /**
  * Post-workout user inputs and stats
  */
 export type WorkoutPost = {
-  rating: number | null; // 1-5
-  intensity: number | null; // 0-10
+  rating: number | null;
+  intensity: number | null;
   sessionComments: string | null;
 };
 
@@ -320,7 +191,7 @@ export type WorkoutDetails = {
   description: string;
   type: string;
   difficulty: string;
-  equipment: string[]; // empty allowed
+  equipment: string[];
   totalExercises: number;
 };
 
@@ -328,21 +199,18 @@ export type WorkoutData = {
   description: string;
   type: string;
   difficulty: string;
-  equipment: string[]; // empty allowed
+  equipment: string[];
   totalExercises: number;
-  items: WorkoutItem[];
+  sections: WorkoutSectionPayload[];
   pre: WorkoutPre;
   post: WorkoutPost;
   completedSummary: WorkoutMeta;
 };
 
 export type WorkoutPayload = WorkoutData & {
-  id: string | null; // always present, null when not saved yet
+  id: string | null;
   name: string;
 };
-
-// Legacy aliases
-export type WorkoutProgramPayload = WorkoutPayload;
 
 export const DEFAULT_EXECUTION_FIELDS: Pick<WorkoutData, 'pre' | 'post' | 'completedSummary'> = {
   pre: { readiness: null },
@@ -359,3 +227,30 @@ export const DEFAULT_EXECUTION_FIELDS: Pick<WorkoutData, 'pre' | 'post' | 'compl
     totalWeightLifted: null,
   },
 };
+
+/**
+ * Helper to create a default trackable field
+ */
+export const createTrackableField = (label: string, prescribed: string | null = null): TrackableField => ({
+  label,
+  prescribed,
+  completed: null,
+});
+
+/**
+ * Helper to create a default set
+ */
+export const createDefaultSet = (
+  setNumber: number,
+  column1Label: string,
+  column2Label: string
+): SetPayload => ({
+  setNumber,
+  type: 'normal',
+  restSec: null,
+  completed: false,
+  skipped: false,
+  trackableField1: createTrackableField(column1Label),
+  trackableField2: createTrackableField(column2Label),
+  dropset: null,
+});

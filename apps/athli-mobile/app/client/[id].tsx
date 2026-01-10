@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, LayoutChangeEvent } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View, LayoutChangeEvent, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -9,7 +9,7 @@ import Animated, {
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, MoreVertical, Pencil, Archive, BarChart3, MessageCircle, Notebook, Dumbbell, Repeat, Image as ImageIcon, File, ClipboardCheck, HelpCircle, Settings } from 'lucide-react-native';
+import { ChevronLeft, Pencil, MessageCircle, Settings, ChevronRight, Plus, BarChart3, Repeat, Image as ImageIcon, File, ClipboardCheck, HelpCircle, Dumbbell, Notebook, Sparkles } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -21,12 +21,26 @@ import {
   createNewChat,
   getChatMessages,
 } from '@/services/chats-service';
-import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { ListRowItem } from '@/components/list-row-item';
 import { Separator } from '@/components/separator';
 import { PlatformIcon } from '@/components/platform-icon';
 import { IconButton } from '@/components/icon-button';
 import { ScreenWrapper } from '@/components/screen-wrapper';
+import { Card } from '@/components/card';
+import { PressableOpacity } from 'pressto';
+
+const MOCK_BIO = "Experienced marathon runner currently focused on improving 5k speed. Looking to balance high-intensity training with better recovery and nutritional consistency.";
+
+const MOCK_GOALS = [
+  { id: '1', title: 'Improve 5k Personal Best to under 20 minutes', date: '2026-03-15' },
+  { id: '2', title: 'Complete consistent strength training 2x per week', date: '2026-06-01' },
+  { id: '3', title: 'Increase daily water intake to 3L', date: null },
+];
+
+const MOCK_INJURIES = [
+  { id: '1', title: 'Left Achilles Tendonitis (Mild)', date: '2025-11-10' },
+  { id: '2', title: 'Old lower back strain (Recovered, needs warm-up)', date: '2024-05-20' },
+];
 
 export default function ClientDetailScreen() {
   const router = useRouter();
@@ -44,8 +58,6 @@ export default function ClientDetailScreen() {
   const underlineWidth = useSharedValue(0);
 
   const iconColor = themeColors.text;
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
-  const headerBackgroundColor = themeColors.headerBackground;
 
   useEffect(() => {
     const loadClient = async () => {
@@ -145,36 +157,12 @@ export default function ClientDetailScreen() {
     }
   };
 
-
   const handleEditDetails = () => {
     router.push({
       pathname: '/modals/client/edit-client-details-modal',
       params: { id: client?.id },
     });
   };
-
-  const handleArchiveClient = () => {
-    // TODO: Implement archive client action
-  };
-
-  const dropdownOptions: DropdownMenuOption[] = [
-    {
-      label: t('clientDetail.actions.editDetails'),
-      icon: {
-        sf: 'pencil',
-        IconComponent: Pencil,
-      },
-      onPress: handleEditDetails,
-    },
-    {
-      label: t('clientDetail.actions.archiveUser'),
-      icon: {
-        sf: 'archivebox',
-        IconComponent: Archive,
-      },
-      onPress: handleArchiveClient,
-    },
-  ];
 
   if (isLoading) {
     return (
@@ -203,99 +191,50 @@ export default function ClientDetailScreen() {
               style={[
                 styles.avatar,
                 styles.avatarPlaceholder,
-                { backgroundColor: themeColors.border },
+                { width: 42, height: 42, borderRadius: 21 },
               ]}
             />
           </View>
-          <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('clientDetail.loading')}</Text>
-          <View style={styles.headerActions}>
-            <IconButton
-              icon={{ sf: 'message', IconComponent: MessageCircle }}
-              onPress={handleChatPress}
-              size="md"
-              color={iconColor}
-            />
-            <DropdownMenuWrapper options={dropdownOptions}>
-              <IconButton
-                icon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
-                onPress={() => { }}
-                size="md"
-                color={iconColor}
-              />
-            </DropdownMenuWrapper>
-          </View>
+          <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
+            {t('clientDetail.loading')}
+          </Text>
         </View>
       </View>
     );
   }
 
-  if (!client) {
-    return (
-      <ScreenWrapper scrollable={false}>
-        <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
-          <IconButton
-            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
-            onPress={handleBackPress}
-            size="md"
-            color={iconColor}
-            style={{ marginRight: 12 }}
-          />
-          <View style={styles.avatarContainer}>
-            <View
-              style={[
-                styles.avatar,
-                styles.avatarPlaceholder,
-                { backgroundColor: themeColors.border },
-              ]}
-            />
-          </View>
-          <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('clientDetail.notFound')}</Text>
-          <View style={styles.headerActions}>
-            <IconButton
-              icon={{ sf: 'message', IconComponent: MessageCircle }}
-              onPress={handleChatPress}
-              size="md"
-              color={iconColor}
-            />
-            <DropdownMenuWrapper options={dropdownOptions}>
-              <IconButton
-                icon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
-                onPress={() => { }}
-                size="md"
-                color={iconColor}
-              />
-            </DropdownMenuWrapper>
-          </View>
-        </View>
-      </ScreenWrapper>
-    );
-  }
-
   return (
-    <ScreenWrapper contentContainerStyle={{ paddingHorizontal: 0 }}>
-      <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+    <ScreenWrapper
+      scrollable={true}
+    >
+      {/* Header */}
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: themeColors.pageBackground,
+            paddingTop: Platform.OS === 'ios' ? 0 : insets.top,
+          },
+        ]}
+      >
         <IconButton
           icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}
           size="md"
           color={iconColor}
-          style={{ marginRight: 12 }}
+          style={{ marginRight: 4 }}
         />
-
         <View style={styles.avatarContainer}>
           {client?.avatar ? (
             <Image source={{ uri: client.avatar }} style={styles.avatar} />
           ) : (
-            <View
-              style={[
-                styles.avatar,
-                styles.avatarPlaceholder,
-                { backgroundColor: themeColors.border },
-              ]}
-            />
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <Text style={{ color: themeColors.mutedText }}>
+                {client?.fullName?.charAt(0)}
+              </Text>
+            </View>
           )}
         </View>
-
         <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
           {client?.fullName || t('clientDetail.loading')}
         </Text>
@@ -306,228 +245,381 @@ export default function ClientDetailScreen() {
             size="md"
             color={iconColor}
           />
-          <DropdownMenuWrapper options={dropdownOptions}>
-            <IconButton
-              icon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
-              onPress={() => { }}
-              size="md"
-              color={iconColor}
-            />
-          </DropdownMenuWrapper>
+          <IconButton
+            icon={{ sf: 'pencil', IconComponent: Pencil }}
+            onPress={handleEditDetails}
+            size="md"
+            color={iconColor}
+          />
         </View>
       </View>
 
-      {/* Tabs */}
-      <View style={[styles.tabsContainer, { borderBottomColor: themeColors.border }]}>
-        {tabs.map((tab, index) => {
-          const isSelected = selectedIndex === index;
-          return (
-            <View
-              key={tab}
-              style={{ flex: 1 }}
-              onLayout={(event) => handleTabLayout(index, event)}
-            >
-              <Pressable
-                style={({ pressed }) => [
-                  styles.tab,
-                  { opacity: pressed ? 0.7 : 1 },
-                ]}
-                onPress={() => handleTabPress(index)}
+      {/* Tab Content Wrapper */}
+      <View style={styles.gestureContainer}>
+        {/* Tabs */}
+        <View style={[styles.tabsContainer, { borderBottomColor: themeColors.border }]}>
+          {tabs.map((tab, index) => {
+            const isSelected = selectedIndex === index;
+            return (
+              <View
+                key={tab}
+                onLayout={(e) => handleTabLayout(index, e)}
+                style={{ flex: 1 }}
               >
-                <Text
-                  style={[
-                    styles.tabText,
-                    {
-                      color: isSelected ? themeColors.text : themeColors.mutedText,
-                      fontWeight: isSelected ? '700' : '600',
-                    },
-                  ]}
+                <Pressable
+                  onPress={() => handleTabPress(index)}
+                  style={styles.tab}
                 >
-                  {tab}
-                </Text>
-              </Pressable>
-            </View>
-          );
-        })}
-        {/* Animated underline */}
-        <Animated.View
-          style={[
-            styles.animatedUnderline,
-            { backgroundColor: primaryColor },
-            animatedUnderlineStyle,
-          ]}
-        />
-      </View>
+                  <Text
+                    style={[
+                      styles.tabText,
+                      {
+                        color: isSelected ? themeColors.text : themeColors.mutedText,
+                        fontWeight: isSelected ? '700' : '600',
+                      },
+                    ]}
+                  >
+                    {tab}
+                  </Text>
+                </Pressable>
+              </View>
+            );
+          })}
+          {/* Animated underline */}
+          <Animated.View
+            style={[
+              styles.animatedUnderline,
+              { backgroundColor: primaryColor },
+              animatedUnderlineStyle,
+            ]}
+          />
+        </View>
 
-      {/* Tab Content */}
-      {selectedIndex === 0 ? (
-        <View style={styles.contentContainer}>
-          <Text style={{ color: themeColors.mutedText }}>{t('clientDetail.overviewPlaceholder')}</Text>
+        {/* Tab Content */}
+        <View style={{ flex: 1 }}>
+          {selectedIndex === 0 ? (
+            <View style={styles.overviewContainer}>
+              {/* Activity Card */}
+              <Card style={styles.overviewCard}>
+                <View style={styles.cardHeader}>
+                  <Text style={[styles.cardTitle, { color: themeColors.text }]}>
+                    {t('clientDetail.overview.activity')}
+                  </Text>
+                </View>
+                <Separator style={styles.cardSeparator} />
+                <View style={styles.cardContentNoPadding}>
+                  <View style={styles.rowItemStatic}>
+                    <Text style={[styles.rowText, { color: themeColors.mutedText }]}>
+                      {t('clientDetail.overview.lastActivity')}
+                    </Text>
+                    <Text style={[styles.rowValue, { color: themeColors.text }]}>24 hours ago</Text>
+                  </View>
+                  <Separator style={styles.rowSeparator} />
+                  <View style={styles.rowItemStatic}>
+                    <Text style={[styles.rowText, { color: themeColors.mutedText }]}>
+                      {t('clientDetail.overview.pastWeek')}
+                    </Text>
+                    <Text style={[styles.rowValue, { color: themeColors.text }]}>
+                      5 {t('clientDetail.overview.completed')}
+                    </Text>
+                  </View>
+                  <Separator style={styles.rowSeparator} />
+                  <View style={styles.rowItemStatic}>
+                    <Text style={[styles.rowText, { color: themeColors.mutedText }]}>
+                      {t('clientDetail.overview.pastMonth')}
+                    </Text>
+                    <Text style={[styles.rowValue, { color: themeColors.text }]}>
+                      18 {t('clientDetail.overview.completed')}
+                    </Text>
+                  </View>
+                  <Separator style={styles.rowSeparator} />
+                  <View style={styles.rowItemStatic}>
+                    <Text style={[styles.rowText, { color: themeColors.mutedText }]}>
+                      {t('clientDetail.overview.nextWeek')}
+                    </Text>
+                    <Text style={[styles.rowValue, { color: themeColors.text }]}>
+                      4 {t('clientDetail.overview.planned')}
+                    </Text>
+                  </View>
+                </View>
+              </Card>
+
+              {/* Bio Card */}
+              <Card style={styles.overviewCard}>
+                <PressableOpacity onPress={() => router.push({ pathname: '/modals/client/edit-client-bio-modal', params: { id: client?.id } })}>
+                  <View style={styles.cardHeader}>
+                    <Text style={[styles.cardTitle, { color: themeColors.text }]}>
+                      {t('clientDetail.overview.bio')}
+                    </Text>
+                    <IconButton
+                      icon={{ sf: 'pencil', IconComponent: Pencil }}
+                      onPress={() => { }}
+                      size="sm"
+                      color={themeColors.text}
+                      style={{ pointerEvents: 'none' }}
+                    />
+                  </View>
+                  <Separator style={styles.cardSeparator} />
+                  <View style={styles.cardContent}>
+                    <Text style={[styles.bioText, { color: themeColors.text }]} numberOfLines={5}>
+                      {MOCK_BIO}
+                    </Text>
+                  </View>
+                </PressableOpacity>
+              </Card>
+
+              {/* Goals Card */}
+              <Card style={styles.overviewCard}>
+                <View style={styles.cardHeader}>
+                  <Text style={[styles.cardTitle, { color: themeColors.text }]}>
+                    {t('clientDetail.overview.goals')}
+                  </Text>
+                  <IconButton
+                    icon={{ sf: 'plus', IconComponent: Plus }}
+                    onPress={() => router.push({ pathname: '/modals/client/add-client-goal-modal', params: { id: client?.id } })}
+                    size="sm"
+                    color={themeColors.text}
+                  />
+                </View>
+                <Separator style={styles.cardSeparator} />
+                <View style={styles.cardContentNoPadding}>
+                  {MOCK_GOALS.map((goal, index) => (
+                    <React.Fragment key={goal.id}>
+                      {index > 0 && <Separator style={styles.rowSeparator} />}
+                      <PressableOpacity
+                        style={styles.rowItem}
+                        onPress={() => router.push({ pathname: '/modals/client/edit-client-goal-modal', params: { id: client?.id, goalId: goal.id } })}
+                      >
+                        <View style={styles.rowContent}>
+                          <Text style={[styles.rowText, { color: themeColors.text }]} numberOfLines={1}>
+                            {goal.title}
+                          </Text>
+                          {goal.date && (
+                            <Text style={[styles.rowDate, { color: themeColors.mutedText }]}>
+                              {new Date(goal.date).toLocaleDateString(undefined, {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                              })}
+                            </Text>
+                          )}
+                        </View>
+                        <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                      </PressableOpacity>
+                    </React.Fragment>
+                  ))}
+                </View>
+              </Card>
+
+              {/* Injuries Card */}
+              <Card style={styles.overviewCard}>
+                <View style={styles.cardHeader}>
+                  <Text style={[styles.cardTitle, { color: themeColors.text }]}>
+                    {t('clientDetail.overview.injuries')}
+                  </Text>
+                  <IconButton
+                    icon={{ sf: 'plus', IconComponent: Plus }}
+                    onPress={() => router.push({ pathname: '/modals/client/add-client-injury-modal', params: { id: client?.id } })}
+                    size="sm"
+                    color={themeColors.text}
+                  />
+                </View>
+                <Separator style={styles.cardSeparator} />
+                <View style={styles.cardContentNoPadding}>
+                  {MOCK_INJURIES.map((injury, index) => (
+                    <React.Fragment key={injury.id}>
+                      {index > 0 && <Separator style={styles.rowSeparator} />}
+                      <PressableOpacity
+                        style={styles.rowItem}
+                        onPress={() => router.push({ pathname: '/modals/client/edit-client-injury-modal', params: { id: client?.id, injuryId: injury.id } })}
+                      >
+                        <View style={styles.rowContent}>
+                          <Text style={[styles.rowText, { color: themeColors.text }]} numberOfLines={1}>
+                            {injury.title}
+                          </Text>
+                          {injury.date && (
+                            <Text style={[styles.rowDate, { color: themeColors.mutedText }]}>
+                              {new Date(injury.date).toLocaleDateString(undefined, {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                              })}
+                            </Text>
+                          )}
+                        </View>
+                        <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                      </PressableOpacity>
+                    </React.Fragment>
+                  ))}
+                </View>
+              </Card>
+            </View>
+          ) : (
+            <View style={styles.optionsContainer}>
+              <ListRowItem
+                style={styles.optionRow}
+                icon={
+                  <PlatformIcon
+                    sf="sparkles"
+                    IconComponent={Sparkles}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title={t('clientDetail.sections.assistant')}
+                showChevron
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/assistant`)}
+              />
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
+                icon={
+                  <PlatformIcon
+                    sf="note.text"
+                    IconComponent={Notebook}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title={t('clientDetail.sections.notes')}
+                showChevron
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/notes`)}
+              />
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
+                icon={
+                  <PlatformIcon
+                    sf="figure.run"
+                    IconComponent={Dumbbell}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title={t('clientDetail.sections.training')}
+                showChevron
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/training`)}
+              />
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
+                icon={
+                  <PlatformIcon
+                    sf="chart.bar"
+                    IconComponent={BarChart3}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title={t('clientDetail.sections.metrics')}
+                showChevron
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/metrics`)}
+              />
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
+                icon={
+                  <PlatformIcon
+                    sf="repeat"
+                    IconComponent={Repeat}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title={t('clientDetail.sections.habits')}
+                showChevron
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/habits`)}
+              />
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
+                icon={
+                  <PlatformIcon
+                    sf="photo"
+                    IconComponent={ImageIcon}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title={t('clientDetail.sections.photos')}
+                showChevron
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/photos`)}
+              />
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
+                icon={
+                  <PlatformIcon
+                    sf="doc"
+                    IconComponent={File}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title={t('clientDetail.sections.files')}
+                showChevron
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/files`)}
+              />
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
+                icon={
+                  <PlatformIcon
+                    sf="checkmark.circle"
+                    IconComponent={ClipboardCheck}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title={t('clientDetail.sections.checkIns')}
+                showChevron
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/check-ins`)}
+              />
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
+                icon={
+                  <PlatformIcon
+                    sf="questionmark.circle"
+                    IconComponent={HelpCircle}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title={t('clientDetail.sections.questionnaires')}
+                showChevron
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/questionaires`)}
+              />
+              <Separator style={styles.separator} />
+              <ListRowItem
+                style={styles.optionRow}
+                icon={
+                  <PlatformIcon
+                    sf="gear"
+                    IconComponent={Settings}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title={t('clientDetail.sections.settings')}
+                showChevron
+                chevronSize={12}
+                onPress={() => router.push(`/client/${id}/settings`)}
+              />
+              <Separator style={styles.separator} />
+            </View>
+          )}
         </View>
-      ) : (
-        <View style={styles.optionsContainer}>
-          <ListRowItem
-            style={styles.optionRow}
-            icon={
-              <PlatformIcon
-                sf="sparkles"
-                IconComponent={MessageCircle}
-                size={iconSizes.listIcons}
-                color={iconColor}
-              />
-            }
-            title={t('clientDetail.sections.assistant')}
-            showChevron
-            chevronSize={12}
-            onPress={() => router.push(`/client/${id}/assistant`)}
-          />
-          <Separator style={styles.separator} />
-          <ListRowItem
-            style={styles.optionRow}
-            icon={
-              <PlatformIcon
-                sf="note.text"
-                IconComponent={Notebook}
-                size={iconSizes.listIcons}
-                color={iconColor}
-              />
-            }
-            title={t('clientDetail.sections.notes')}
-            showChevron
-            chevronSize={12}
-            onPress={() => router.push(`/client/${id}/notes`)}
-          />
-          <Separator style={styles.separator} />
-          <ListRowItem
-            style={styles.optionRow}
-            icon={
-              <PlatformIcon
-                sf="figure.run"
-                IconComponent={Dumbbell}
-                size={iconSizes.listIcons}
-                color={iconColor}
-              />
-            }
-            title={t('clientDetail.sections.training')}
-            showChevron
-            chevronSize={12}
-            onPress={() => router.push(`/client/${id}/training`)}
-          />
-          <Separator style={styles.separator} />
-          <ListRowItem
-            style={styles.optionRow}
-            icon={
-              <PlatformIcon
-                sf="chart.bar.fill"
-                IconComponent={BarChart3}
-                size={iconSizes.listIcons}
-                color={iconColor}
-              />
-            }
-            title={t('clientDetail.sections.metrics')}
-            showChevron
-            chevronSize={12}
-            onPress={() => router.push(`/client/${id}/metrics`)}
-          />
-          <Separator style={styles.separator} />
-          <ListRowItem
-            style={styles.optionRow}
-            icon={
-              <PlatformIcon
-                sf="repeat"
-                IconComponent={Repeat}
-                size={iconSizes.listIcons}
-                color={iconColor}
-              />
-            }
-            title={t('clientDetail.sections.habits')}
-            showChevron
-            chevronSize={12}
-            onPress={() => router.push(`/client/${id}/habits`)}
-          />
-          <Separator style={styles.separator} />
-          <ListRowItem
-            style={styles.optionRow}
-            icon={
-              <PlatformIcon
-                sf="photo"
-                IconComponent={ImageIcon}
-                size={iconSizes.listIcons}
-                color={iconColor}
-              />
-            }
-            title={t('clientDetail.sections.photos')}
-            showChevron
-            chevronSize={12}
-            onPress={() => router.push(`/client/${id}/photos`)}
-          />
-          <Separator style={styles.separator} />
-          <ListRowItem
-            style={styles.optionRow}
-            icon={
-              <PlatformIcon
-                sf="doc"
-                IconComponent={File}
-                size={iconSizes.listIcons}
-                color={iconColor}
-              />
-            }
-            title={t('clientDetail.sections.files')}
-            showChevron
-            chevronSize={12}
-            onPress={() => router.push(`/client/${id}/files`)}
-          />
-          <Separator style={styles.separator} />
-          <ListRowItem
-            style={styles.optionRow}
-            icon={
-              <PlatformIcon
-                sf="checklist"
-                IconComponent={ClipboardCheck}
-                size={iconSizes.listIcons}
-                color={iconColor}
-              />
-            }
-            title={t('clientDetail.sections.checkIns')}
-            showChevron
-            chevronSize={12}
-            onPress={() => router.push(`/client/${id}/check-ins`)}
-          />
-          <Separator style={styles.separator} />
-          <ListRowItem
-            style={styles.optionRow}
-            icon={
-              <PlatformIcon
-                sf="questionmark.circle"
-                IconComponent={HelpCircle}
-                size={iconSizes.listIcons}
-                color={iconColor}
-              />
-            }
-            title={t('clientDetail.sections.questionnaires')}
-            showChevron
-            chevronSize={12}
-            onPress={() => router.push(`/client/${id}/questionaires`)}
-          />
-          <Separator style={styles.separator} />
-          <ListRowItem
-            style={styles.optionRow}
-            icon={
-              <PlatformIcon
-                sf="gear"
-                IconComponent={Settings}
-                size={iconSizes.listIcons}
-                color={iconColor}
-              />
-            }
-            title={t('clientDetail.sections.settings')}
-            showChevron
-            chevronSize={12}
-            onPress={() => router.push(`/client/${id}/settings`)}
-          />
-          <Separator style={styles.separator} />
-        </View>
-      )}
+      </View>
     </ScreenWrapper>
   );
 }
@@ -565,6 +657,8 @@ const styles = StyleSheet.create({
   },
   avatarPlaceholder: {
     backgroundColor: '#e0e0e0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     ...typography.h5,
@@ -576,18 +670,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  actionButtonContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 22,
-    overflow: 'hidden',
-    minHeight: 44,
-  },
-  nestedButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 44,
-    height: 44,
+  gestureContainer: {
+    flex: 1,
   },
   tabsContainer: {
     flexDirection: 'row',
@@ -612,8 +696,74 @@ const styles = StyleSheet.create({
     borderRadius: 1.5,
     zIndex: 10,
   },
-  contentContainer: {
-    padding: 20,
+  overviewContainer: {
+    padding: 16,
+    paddingBottom: 40,
+    gap: 16,
+  },
+  overviewCard: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    marginBottom: 0,
+    overflow: 'hidden',
+  },
+  cardHeader: {
+    paddingLeft: 16,
+    paddingRight: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 48,
+  },
+  cardTitle: {
+    ...typography.h7,
+    fontWeight: '700',
+  },
+  cardSeparator: {
+    marginVertical: 0,
+  },
+  cardContent: {
+    padding: 16,
+  },
+  cardContentNoPadding: {
+    paddingVertical: 4,
+  },
+  bioText: {
+    ...typography.p2,
+    lineHeight: 22,
+  },
+  rowItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  rowItemStatic: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  rowContent: {
+    flex: 1,
+    gap: 2,
+  },
+  rowText: {
+    ...typography.p2,
+    marginRight: 8,
+  },
+  rowValue: {
+    ...typography.p2,
+    fontWeight: '600',
+  },
+  rowDate: {
+    ...typography.p4,
+  },
+  rowSeparator: {
+    marginHorizontal: 16,
   },
   optionsContainer: {
     paddingBottom: 20,
@@ -626,21 +776,4 @@ const styles = StyleSheet.create({
     marginVertical: 0,
     marginLeft: 0,
   },
-  iconButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 30,
-    height: 44,
-    borderRadius: 22,
-  },
-  sendButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchBarContainer: {
-    flex: 1,
-  },
 });
-
-
-

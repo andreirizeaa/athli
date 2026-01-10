@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Search, Info, Target, X, Check, Loader2 } from 'lucide-react';
+import { Search, Info, Target, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import {
   Form,
   FormControl,
@@ -24,6 +25,8 @@ import {
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { defaultMetrics, type DefaultMetric } from '@/constants/metrics';
 import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
+import { type MetricScheduleData, convertMetricScheduleToCron } from '@/api/client/client-metric-service';
+import { ScheduleSelector, type ScheduleFrequency, type MonthlyOption } from '@/components/app/schedule-selector';
 import Link from 'next/link';
 import { cn } from '@/lib/general/utils';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
@@ -37,7 +40,14 @@ type MetricFormValues = {
 type AddMetricSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (name: string, unit: string, description?: string, existingMetricId?: string) => Promise<void>;
+  onSave: (
+    name: string,
+    unit: string,
+    description?: string,
+    existingMetricId?: string,
+    scheduleConfig?: MetricScheduleData,
+    cronExpression?: string
+  ) => Promise<void>;
   clientName?: string;
   clientId?: string;
   showLibraryTab?: boolean;
@@ -61,6 +71,13 @@ export const AddMetricSidePanel = ({
   const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [selectedCoachMetrics, setSelectedCoachMetrics] = useState<Set<string>>(new Set());
+
+  // Schedule state - optional
+  const [showSchedule, setShowSchedule] = useState<boolean>(false);
+  const [logFrequency, setLogFrequency] = useState<ScheduleFrequency>('daily');
+  const [selectedDays, setSelectedDays] = useState<Set<string>>(new Set(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']));
+  const [monthlyOption, setMonthlyOption] = useState<MonthlyOption>('last');
+  const [specificDay, setSpecificDay] = useState<number>(1);
 
   const metricSchema = z.object({
     name: z.string().min(1, t('metrics.form.nameRequired')),
@@ -102,13 +119,40 @@ export const AddMetricSidePanel = ({
     setLibrarySearchQuery('');
     setAthliLibrarySearchQuery('');
     setSelectedCoachMetrics(new Set());
+    setShowSchedule(false);
+    setLogFrequency('daily');
+    setSelectedDays(new Set(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']));
+    setMonthlyOption('last');
+    setSpecificDay(1);
     onOpenChange(false);
+  };
+
+  const buildScheduleData = (): { scheduleConfig: MetricScheduleData; cronExpression: string } => {
+    const scheduleData: MetricScheduleData = {
+      type: 'metric',
+      frequency: logFrequency,
+      selectedDays: Array.from(selectedDays),
+      monthlyOption,
+      specificDay,
+    };
+
+    const cronExpression = convertMetricScheduleToCron(scheduleData);
+
+    return {
+      scheduleConfig: scheduleData,
+      cronExpression,
+    };
   };
 
   const handleSave = async (values: MetricFormValues) => {
     setIsSaving(true);
     try {
-      await onSave(values.name, values.unit || '', values.description);
+      if (showSchedule) {
+        const { scheduleConfig, cronExpression } = buildScheduleData();
+        await onSave(values.name, values.unit || '', values.description, undefined, scheduleConfig, cronExpression);
+      } else {
+        await onSave(values.name, values.unit || '', values.description);
+      }
       handleClose();
     } catch (error) {
       console.error('Failed to save metric:', error);
@@ -119,13 +163,22 @@ export const AddMetricSidePanel = ({
 
   const handleSaveFromYourLibrary = async () => {
     if (selectedCoachMetrics.size > 0) {
-      // Save all selected metrics
       setIsSaving(true);
       try {
-        for (const metricId of selectedCoachMetrics) {
-          const metric = coachMetrics.find(m => m.id === metricId);
-          if (metric) {
-            await onSave(metric.name, metric.unit, metric.description);
+        if (clientId && showSchedule) {
+          const { scheduleConfig, cronExpression } = buildScheduleData();
+          for (const metricId of selectedCoachMetrics) {
+            const metric = coachMetrics.find(m => m.id === metricId);
+            if (metric) {
+              await onSave(metric.name, metric.unit, metric.description, metricId, scheduleConfig, cronExpression);
+            }
+          }
+        } else {
+          for (const metricId of selectedCoachMetrics) {
+            const metric = coachMetrics.find(m => m.id === metricId);
+            if (metric) {
+              await onSave(metric.name, metric.unit, metric.description, metricId);
+            }
           }
         }
         handleClose();
@@ -150,7 +203,6 @@ export const AddMetricSidePanel = ({
       handleSelectAthliMetric(metric);
     }
   };
-
 
   const columns: ColumnDefinition<Metric>[] = useMemo(() => [
     {
@@ -344,27 +396,57 @@ export const AddMetricSidePanel = ({
                 </AlertDescription>
               </Alert>
             ) : (
-              <div className="flex-1 min-h-0 h-full [&_.border-t]:border-t-0">
-                <DataGrid
-                  data={coachMetrics}
-                  columns={columns}
-                  getRowId={(row) => row.id}
-                  gridKey="add-metric-library"
-                  searchPlaceholder={t('metrics.searchPlaceholder')}
-                  searchFields={[(row) => `${row.name} ${row.unit || ''}`]}
-                  enableSearch={true}
-                  enableEditColumns={false}
-                  enableExport={false}
-                  enableRowSelection={true}
-                  selectOnRowClick={true}
-                  selectedRowIds={selectedCoachMetrics}
-                  onSelectionChange={setSelectedCoachMetrics}
-                  emptyMessage={t('metrics.emptyMessage')}
-                  rowHeight="54px"
-                  compactMode={true}
-                  showPagination={false}
-                  gridPadding={false}
-                />
+              <div className="flex flex-col gap-4 flex-1 min-h-0">
+                <div className="flex-1 min-h-0 h-full [&_.border-t]:border-t-0">
+                  <DataGrid
+                    data={coachMetrics}
+                    columns={columns}
+                    getRowId={(row) => row.id}
+                    gridKey="add-metric-library"
+                    searchPlaceholder={t('metrics.searchPlaceholder')}
+                    searchFields={[(row) => `${row.name} ${row.unit || ''}`]}
+                    enableSearch={true}
+                    enableEditColumns={false}
+                    enableExport={false}
+                    enableRowSelection={true}
+                    selectOnRowClick={true}
+                    selectedRowIds={selectedCoachMetrics}
+                    onSelectionChange={setSelectedCoachMetrics}
+                    emptyMessage={t('metrics.emptyMessage')}
+                    rowHeight="54px"
+                    compactMode={true}
+                    showPagination={false}
+                    gridPadding={false}
+                  />
+                </div>
+                {selectedCoachMetrics.size > 0 && clientId && (
+                  <div className="space-y-4 border-t pt-6 mt-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="showScheduleLibrary"
+                        checked={showSchedule}
+                        onCheckedChange={(checked) => setShowSchedule(!!checked)}
+                      />
+                      <Label htmlFor="showScheduleLibrary" className="text-sm font-medium cursor-pointer">
+                        {t('metrics.schedule.addLogFrequency')}
+                      </Label>
+                    </div>
+                    {showSchedule && (
+                      <ScheduleSelector
+                        frequency={logFrequency}
+                        onFrequencyChange={setLogFrequency}
+                        selectedDays={selectedDays}
+                        onSelectedDaysChange={setSelectedDays}
+                        monthlyOption={monthlyOption}
+                        onMonthlyOptionChange={setMonthlyOption}
+                        specificDay={specificDay}
+                        onSpecificDayChange={setSpecificDay}
+                        translationPrefix="metrics.schedule"
+                        showTopBorder={false}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>
@@ -490,6 +572,33 @@ export const AddMetricSidePanel = ({
                     </FormItem>
                   )}
                 />
+                {/* Schedule section - always show for new metrics */}
+                <div className="space-y-4 pt-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="showScheduleNew"
+                      checked={showSchedule}
+                      onCheckedChange={(checked) => setShowSchedule(!!checked)}
+                    />
+                    <Label htmlFor="showScheduleNew" className="text-sm font-medium cursor-pointer">
+                      {t('metrics.schedule.addLogFrequency')}
+                    </Label>
+                  </div>
+                  {showSchedule && (
+                    <ScheduleSelector
+                      frequency={logFrequency}
+                      onFrequencyChange={setLogFrequency}
+                      selectedDays={selectedDays}
+                      onSelectedDaysChange={setSelectedDays}
+                      monthlyOption={monthlyOption}
+                      onMonthlyOptionChange={setMonthlyOption}
+                      specificDay={specificDay}
+                      onSpecificDayChange={setSpecificDay}
+                      translationPrefix="metrics.schedule"
+                      showTopBorder={false}
+                    />
+                  )}
+                </div>
               </form>
             </Form>
           </div>

@@ -2650,6 +2650,33 @@ export const enMessages = {
     noMetricsSelected: 'No metrics selected',
     searchAthletes: 'Search athletes...',
     noAthletesFound: 'No athletes found.',
+    schedule: {
+      addLogFrequency: 'Add log frequency',
+      frequency: {
+        label: 'Log frequency',
+        daily: 'Daily',
+        weekly: 'Weekly',
+        biweekly: 'Biweekly',
+        monthly: 'Monthly',
+      },
+      selectDays: 'Select days',
+      selectDay: 'Select day',
+      dayOfMonth: 'Day of month',
+      monthly: {
+        first: 'First',
+        last: 'Last',
+        specific: 'Specific',
+        selectDay: 'Select day of month',
+      },
+      explanation: {
+        daily: 'Log this metric on: {days}',
+        weekly: 'Log this metric every week on {day}',
+        biweekly: 'Log this metric every two weeks on {day}',
+        monthlyFirst: 'Log this metric on the first of each month',
+        monthlyLast: 'Log this metric on the last day of each month',
+        monthlySpecific: 'Log this metric on the {day} of each month',
+      },
+    },
   },
   referAndEarn: {
     title: 'Share Athli with your friends',
