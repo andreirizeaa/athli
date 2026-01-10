@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -117,17 +117,14 @@ export default function ChatDetailScreen() {
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
 
-  // Keyboard animation following Expo guide
+  // Keyboard animation - use onMove for frame-by-frame tracking
   const keyboardHeight = useSharedValue(0);
 
   useKeyboardHandler(
     {
-      onStart: (event) => {
+      onMove: (event) => {
         'worklet';
-        keyboardHeight.value = withTiming(event.height, {
-          duration: 250,
-          easing: Easing.out(Easing.quad),
-        });
+        keyboardHeight.value = event.height;
       },
     },
     []

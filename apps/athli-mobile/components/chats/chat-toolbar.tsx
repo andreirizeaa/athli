@@ -112,7 +112,7 @@ export const ChatToolbar = ({
         participantName: '',
       };
 
-  // Move toolbar up by keyboard height (transform = no layout thrash)
+  // Move toolbar up by keyboard height
   const toolbarAnimatedStyle = useAnimatedStyle(() => {
     const h = keyboardHeight?.value ?? 0;
     return {
@@ -123,7 +123,6 @@ export const ChatToolbar = ({
   // Safe-area padding only when keyboard is closed
   const safePaddingStyle = useAnimatedStyle(() => {
     const h = keyboardHeight?.value ?? 0;
-    // When keyboard starts opening, ease padding-bottom down to a small value
     const pb = interpolate(h, [0, 40], [bottomInset, 6], Extrapolation.CLAMP);
     return {
       paddingBottom: pb,
@@ -132,6 +131,8 @@ export const ChatToolbar = ({
 
   return (
     <Animated.View style={[styles.absoluteContainer, toolbarAnimatedStyle]} pointerEvents="box-none">
+      {/* Background extension below toolbar */}
+      <View style={[styles.backgroundExtension, { backgroundColor: translucentHeaderBg }]} />
       <BlurView
         intensity={30}
         tint={isDark ? 'dark' : 'light'}
@@ -245,6 +246,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  backgroundExtension: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    height: 1000, // Large enough to fill below toolbar
   },
   toolbarBlur: {
     width: '100%',
