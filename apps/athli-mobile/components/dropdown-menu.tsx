@@ -21,6 +21,7 @@ export type DropdownMenuOption = {
   onPress?: () => void;
   destructive?: boolean;
   separator?: boolean;
+  subActions?: DropdownMenuOption[]; // Submenu items
 };
 
 // =============================================================================
@@ -188,22 +189,61 @@ export const ContextMenuWrapper = ({
         )}
       </ContextMenu.Preview>
       <ContextMenu.Content>
-        {options.map((option, index) => (
-          <ContextMenu.Item
-            key={`item-${index}`}
-            onSelect={option.onPress}
-            destructive={option.destructive}
-          >
-            <ContextMenu.ItemTitle>{option.label}</ContextMenu.ItemTitle>
-            {option.icon && (
-              <ContextMenu.ItemIcon
-                ios={{
-                  name: option.icon.sf,
-                }}
-              />
-            )}
-          </ContextMenu.Item>
-        ))}
+        {options.map((option, index) => {
+          // If option has subActions, render a submenu
+          if (option.subActions && option.subActions.length > 0) {
+            return (
+              <ContextMenu.Sub key={`submenu-${index}`}>
+                <ContextMenu.SubTrigger>
+                  <ContextMenu.ItemTitle>{option.label}</ContextMenu.ItemTitle>
+                  {option.icon && (
+                    <ContextMenu.ItemIcon
+                      ios={{
+                        name: option.icon.sf,
+                      }}
+                    />
+                  )}
+                </ContextMenu.SubTrigger>
+                <ContextMenu.SubContent>
+                  {option.subActions.map((subOption, subIndex) => (
+                    <ContextMenu.Item
+                      key={`subitem-${index}-${subIndex}`}
+                      onSelect={subOption.onPress}
+                      destructive={subOption.destructive}
+                    >
+                      <ContextMenu.ItemTitle>{subOption.label}</ContextMenu.ItemTitle>
+                      {subOption.icon && (
+                        <ContextMenu.ItemIcon
+                          ios={{
+                            name: subOption.icon.sf,
+                          }}
+                        />
+                      )}
+                    </ContextMenu.Item>
+                  ))}
+                </ContextMenu.SubContent>
+              </ContextMenu.Sub>
+            );
+          }
+
+          // Regular menu item
+          return (
+            <ContextMenu.Item
+              key={`item-${index}`}
+              onSelect={option.onPress}
+              destructive={option.destructive}
+            >
+              <ContextMenu.ItemTitle>{option.label}</ContextMenu.ItemTitle>
+              {option.icon && (
+                <ContextMenu.ItemIcon
+                  ios={{
+                    name: option.icon.sf,
+                  }}
+                />
+              )}
+            </ContextMenu.Item>
+          );
+        })}
       </ContextMenu.Content>
     </ContextMenu.Root>
   );
