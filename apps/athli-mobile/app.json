@@ -56,7 +56,14 @@
       "expo-localization",
       "expo-background-task",
       "expo-mail-composer",
-      "expo-build-properties",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "softwareKeyboardLayoutMode": "resize"
+          }
+        }
+      ],
       "expo-dynamic-app-icon",
       "expo-quick-actions",
       [

@@ -12,6 +12,6 @@ export {
     getDefaultColumns,
 } from '@/components/workout/workout-schema';
 
-export { COLUMN_OPTIONS } from '@/constants/training';
-export type { ColumnValue } from '@/constants/training';
+export { COLUMN_OPTIONS, HEART_RATE_ZONE_OPTIONS } from '@/constants/training';
+export type { ColumnValue, HeartRateZone } from '@/constants/training';
 

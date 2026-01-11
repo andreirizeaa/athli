@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Dumbbell } from 'lucide-react-native';
@@ -6,8 +6,10 @@ import { PressableOpacity } from 'pressto';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
+import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
 import { useLibraryTab } from '@/contexts/useLibraryTab';
+import { SwipeableRow } from '@/components/swipeable-row';
 
 // Mock workout data
 const MOCK_WORKOUTS = [
@@ -28,7 +30,8 @@ const MOCK_WORKOUTS = [
 export const WorkoutsTab = () => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
-  const { searchQuery } = useLibraryTab();
+  const { t } = useTranslations();
+  const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
 
   const filteredWorkouts = useMemo(() => {
     if (!searchQuery) return MOCK_WORKOUTS;
@@ -42,11 +45,17 @@ export const WorkoutsTab = () => {
   }, [searchQuery]);
 
   const handleWorkoutPress = (workoutId: string) => {
+    closeOpenRow();
     router.push({
       pathname: '/library/workout/[id]',
       params: { id: workoutId },
     });
   };
+
+  const handleDelete = useCallback((id: string) => {
+    console.log('Delete workout:', id);
+    // In a real app, this would dispatch a delete action
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -54,40 +63,46 @@ export const WorkoutsTab = () => {
         const isLastItem = index === filteredWorkouts.length - 1;
         return (
           <View key={workout.id}>
-            <PressableOpacity
-              onPress={() => handleWorkoutPress(workout.id)}
-              style={styles.rowWrapper}
+            <SwipeableRow
+              onDelete={() => handleDelete(workout.id)}
+              onOpen={registerOpenRow}
+              deleteConfirmTitle={`${t('general.delete')} ${workout.name}?`}
             >
-              <View style={styles.rowContent}>
-                <View style={styles.iconContainer}>
-                  <PlatformIcon
-                    sf="dumbbell.fill"
-                    IconComponent={Dumbbell}
-                    size={24}
-                    color={themeColors.text}
-                  />
-                </View>
-                <View style={styles.textContent}>
-                  <Text
-                    style={[styles.workoutName, { color: themeColors.text }]}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {workout.name}
-                  </Text>
-                  <View style={styles.metaRow}>
-                    <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                      {workout.type}
-                    </Text>
-                    <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                    <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                      {workout.difficulty}
-                    </Text>
+              <PressableOpacity
+                onPress={() => handleWorkoutPress(workout.id)}
+                style={styles.rowWrapper}
+              >
+                <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
+                  <View style={styles.iconContainer}>
+                    <PlatformIcon
+                      sf="dumbbell.fill"
+                      IconComponent={Dumbbell}
+                      size={24}
+                      color={themeColors.text}
+                    />
                   </View>
+                  <View style={styles.textContent}>
+                    <Text
+                      style={[styles.workoutName, { color: themeColors.text }]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {workout.name}
+                    </Text>
+                    <View style={styles.metaRow}>
+                      <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                        {workout.type}
+                      </Text>
+                      <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                      <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                        {workout.difficulty}
+                      </Text>
+                    </View>
+                  </View>
+                  <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
                 </View>
-                <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-              </View>
-            </PressableOpacity>
+              </PressableOpacity>
+            </SwipeableRow>
 
             {!isLastItem && (
               <View style={styles.separatorContainer}>

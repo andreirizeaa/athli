@@ -21,6 +21,7 @@ export type DropdownMenuOption = {
   onPress?: () => void;
   destructive?: boolean;
   separator?: boolean;
+  subActions?: DropdownMenuOption[]; // Submenu items
 };
 
 // =============================================================================
@@ -151,39 +152,98 @@ type ContextMenuWrapperProps = {
 
 /**
  * Context menu that appears on long press (iOS/Android native context menu)
+ * Includes a custom preview with themed background for better visibility in dark mode
  */
 export const ContextMenuWrapper = ({
   options,
   children,
 }: ContextMenuWrapperProps) => {
-  const handleTouchStart = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const { colors: themeColors } = useThemePreference();
+
+  // Clone children with overridden background for the preview
+  const getPreviewChildren = () => {
+    if (React.isValidElement(children)) {
+      // Clone the first child and override its style with surface background
+      return React.cloneElement(children as React.ReactElement<any>, {
+        style: [
+          (children as React.ReactElement<any>).props.style,
+          { backgroundColor: themeColors.surface },
+        ],
+      });
+    }
+    return children;
   };
 
   return (
     <ContextMenu.Root>
       <ContextMenu.Trigger>
-        <Pressable onPressIn={handleTouchStart}>
+        <View>
           {children}
-        </Pressable>
+        </View>
       </ContextMenu.Trigger>
+      <ContextMenu.Preview>
+        {() => (
+          <View style={{ backgroundColor: themeColors.surface }}>
+            {getPreviewChildren()}
+          </View>
+        )}
+      </ContextMenu.Preview>
       <ContextMenu.Content>
-        {options.map((option, index) => (
-          <ContextMenu.Item
-            key={`item-${index}`}
-            onSelect={option.onPress}
-            destructive={option.destructive}
-          >
-            <ContextMenu.ItemTitle>{option.label}</ContextMenu.ItemTitle>
-            {option.icon && (
-              <ContextMenu.ItemIcon
-                ios={{
-                  name: option.icon.sf,
-                }}
-              />
-            )}
-          </ContextMenu.Item>
-        ))}
+        {options.map((option, index) => {
+          // If option has subActions, render a submenu
+          if (option.subActions && option.subActions.length > 0) {
+            return (
+              <ContextMenu.Sub key={`submenu-${index}`}>
+                <ContextMenu.SubTrigger>
+                  <ContextMenu.ItemTitle>{option.label}</ContextMenu.ItemTitle>
+                  {option.icon && (
+                    <ContextMenu.ItemIcon
+                      ios={{
+                        name: option.icon.sf,
+                      }}
+                    />
+                  )}
+                </ContextMenu.SubTrigger>
+                <ContextMenu.SubContent>
+                  {option.subActions.map((subOption, subIndex) => (
+                    <ContextMenu.Item
+                      key={`subitem-${index}-${subIndex}`}
+                      onSelect={subOption.onPress}
+                      destructive={subOption.destructive}
+                    >
+                      <ContextMenu.ItemTitle>{subOption.label}</ContextMenu.ItemTitle>
+                      {subOption.icon && (
+                        <ContextMenu.ItemIcon
+                          ios={{
+                            name: subOption.icon.sf,
+                          }}
+                        />
+                      )}
+                    </ContextMenu.Item>
+                  ))}
+                </ContextMenu.SubContent>
+              </ContextMenu.Sub>
+            );
+          }
+
+          // Regular menu item
+          return (
+            <ContextMenu.Item
+              key={`item-${index}`}
+              onSelect={option.onPress}
+              destructive={option.destructive}
+            >
+              <ContextMenu.ItemTitle>{option.label}</ContextMenu.ItemTitle>
+              {option.icon && (
+                <ContextMenu.ItemIcon
+                  ios={{
+                    name: option.icon.sf,
+                  }}
+                />
+              )}
+            </ContextMenu.Item>
+          );
+        })}
       </ContextMenu.Content>
     </ContextMenu.Root>
   );

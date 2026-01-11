@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +16,7 @@ import {
   unarchiveChat,
   deleteChat,
   getChatMessages,
+  markChatAsRead,
   type Chat,
 } from '@/services/chats-service';
 
@@ -29,6 +30,14 @@ export default function ArchivedChatsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
+  const [openRowCloseFn, setOpenRowCloseFn] = useState<(() => void) | null>(null);
+
+  const registerOpenRow = useCallback((closeFn: () => void) => {
+    if (openRowCloseFn && openRowCloseFn !== closeFn) {
+      openRowCloseFn();
+    }
+    setOpenRowCloseFn(() => closeFn);
+  }, [openRowCloseFn]);
 
   const unreadCountNum = unreadCount ? parseInt(unreadCount, 10) : 0;
   const mutedSurfaceColor = themeColors.surfaceSecondary;
@@ -107,6 +116,26 @@ export default function ArchivedChatsScreen() {
     }
     setIsEditMode(false);
     setSelectedChatIds(new Set());
+    const fetchedChats = await getArchivedChats();
+    setArchivedChats(fetchedChats);
+  };
+
+  const handleChatUnarchive = async (chatId: string) => {
+    await unarchiveChat(chatId);
+    const fetchedChats = await getArchivedChats();
+    setArchivedChats(fetchedChats);
+  };
+
+  const handleChatDelete = async (chatId: string) => {
+    await deleteChat(chatId);
+    const fetchedChats = await getArchivedChats();
+    setArchivedChats(fetchedChats);
+  };
+
+  const handleChatMarkAsRead = async (chatId: string) => {
+    await markChatAsRead(chatId);
+    const fetchedChats = await getArchivedChats();
+    setArchivedChats(fetchedChats);
   };
 
   return (
@@ -219,6 +248,10 @@ export default function ArchivedChatsScreen() {
               onPress={handleChatPress}
               isEditMode={isEditMode}
               isSelected={selectedChatIds.has(chat.id)}
+              onMarkAsRead={handleChatMarkAsRead}
+              onUnarchive={handleChatUnarchive}
+              onDelete={handleChatDelete}
+              onOpen={registerOpenRow}
             />
           ))}
         </View>

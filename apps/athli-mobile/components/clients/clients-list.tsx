@@ -4,10 +4,10 @@ import { Image } from 'expo-image';
 import { FlashList } from '@shopify/flash-list';
 import { ChevronRight } from 'lucide-react-native';
 
-import { typography, iconSizes } from '@/constants/typography';
+import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { PlatformIcon } from '@/components/platform-icon';
+
 import type { Client } from '@/services/client-service';
 
 type ClientsListProps = {
@@ -15,6 +15,7 @@ type ClientsListProps = {
   isLoading: boolean;
   onClientPress: (clientId: string) => void;
   showChevron?: boolean;
+  ListHeaderComponent?: React.ReactElement | null;
 };
 
 export type ClientsListRef = {
@@ -22,7 +23,7 @@ export type ClientsListRef = {
 };
 
 export const ClientsList = forwardRef<ClientsListRef, ClientsListProps>(
-  ({ clients, isLoading, onClientPress, showChevron = true }, ref) => {
+  ({ clients, isLoading, onClientPress, showChevron = true, ListHeaderComponent }, ref) => {
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const listRef = useRef<any>(null);
@@ -87,24 +88,12 @@ export const ClientsList = forwardRef<ClientsListRef, ClientsListProps>(
                 )}
               </View>
               <View style={styles.clientInfo}>
-                <View style={styles.clientHeaderRow}>
-                  <Text
-                    style={[styles.clientName, { color: themeColors.text }]}
-                    numberOfLines={1}
-                  >
-                    {item.fullName}
-                  </Text>
-                  {showChevron && (
-                    <View style={styles.chevronContainer}>
-                      <PlatformIcon
-                        sf="chevron.right"
-                        IconComponent={ChevronRight}
-                        size={iconSizes.extraSmallIcons}
-                        color={themeColors.mutedText}
-                      />
-                    </View>
-                  )}
-                </View>
+                <Text
+                  style={[styles.clientName, { color: themeColors.text }]}
+                  numberOfLines={1}
+                >
+                  {item.fullName}
+                </Text>
                 <Text
                   style={[styles.clientSubtitle, { color: themeColors.mutedText }]}
                   numberOfLines={2}
@@ -112,6 +101,9 @@ export const ClientsList = forwardRef<ClientsListRef, ClientsListProps>(
                   {formatSubtitle(item)}
                 </Text>
               </View>
+              {showChevron && (
+                <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+              )}
             </View>
           </Pressable>
           <View style={styles.separatorContainer}>
@@ -145,6 +137,7 @@ export const ClientsList = forwardRef<ClientsListRef, ClientsListProps>(
         estimatedItemSize={88}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={ListHeaderComponent}
       />
     );
   }
@@ -183,26 +176,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-start',
   },
-  clientHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 4,
-  },
   clientName: {
-    ...typography.h7,
+    ...typography.p1,
     fontWeight: '600',
-    flex: 1,
-    flexShrink: 1,
-    marginRight: 8,
+    marginBottom: 4,
   },
   clientSubtitle: {
     ...typography.p3,
-  },
-  chevronContainer: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
   },
   separatorContainer: {
     paddingLeft: 82,

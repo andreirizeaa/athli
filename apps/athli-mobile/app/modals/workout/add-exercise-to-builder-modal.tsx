@@ -127,7 +127,8 @@ export default function AddExerciseToBuilderModal() {
     const gradientHeight = headerHeight + 12;
 
     const renderExerciseItem = ({ item }: { item: Exercise }) => {
-        const isSelected = selectedIds.includes(item.exerciseId);
+        const selectedIndex = selectedIds.indexOf(item.exerciseId);
+        const isSelected = selectedIndex !== -1;
 
         const handleThumbnailPress = () => {
             router.push({
@@ -161,7 +162,9 @@ export default function AddExerciseToBuilderModal() {
                         isSelected && { backgroundColor: themeColors.primary },
                     ]}>
                         {isSelected && (
-                            <Check {...({ size: 12, color: themeColors.primaryForeground, strokeWidth: 3 } as any)} />
+                            <Text style={[styles.selectionNumber, { color: themeColors.primaryForeground }]}>
+                                {selectedIndex + 1}
+                            </Text>
                         )}
                     </View>
                 )}
@@ -280,14 +283,14 @@ const styles = StyleSheet.create({
     exerciseItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingVertical: 8,
     },
     thumbnail: {
-        width: 40,
-        height: 40,
+        width: 48,
+        height: 48,
         borderRadius: 8,
         backgroundColor: '#f0f0f0',
+        marginLeft: 16,
     },
     infoContainer: {
         flex: 1,
@@ -299,16 +302,22 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     checkbox: {
-        width: 22,
-        height: 22,
-        borderRadius: 11,
+        width: 26,
+        height: 26,
+        borderRadius: 13,
         borderWidth: 2,
         alignItems: 'center',
         justifyContent: 'center',
         marginLeft: 12,
+        marginRight: 16,
+    },
+    selectionNumber: {
+        ...typography.p1,
+        fontSize: 12,
+        fontWeight: '700',
     },
     separator: {
-        marginLeft: 68, // 16 (padding) + 40 (thumb) + 12 (gap)
+        marginLeft: 76, // 16 (padding) + 48 (thumb) + 12 (gap)
         marginRight: 16,
     },
 });

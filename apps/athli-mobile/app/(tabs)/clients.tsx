@@ -164,22 +164,12 @@ export default function ClientsScreen() {
                     )}
                   </View>
                   <View style={styles.clientInfo}>
-                    <View style={styles.clientHeaderRow}>
-                      <Text
-                        style={[styles.clientName, { color: themeColors.text }]}
-                        numberOfLines={1}
-                      >
-                        {client.fullName}
-                      </Text>
-                      <View style={styles.chevronContainer}>
-                        <PlatformIcon
-                          sf="chevron.right"
-                          IconComponent={ChevronRight}
-                          size={iconSizes.extraSmallIcons}
-                          color={themeColors.mutedText}
-                        />
-                      </View>
-                    </View>
+                    <Text
+                      style={[styles.clientName, { color: themeColors.text }]}
+                      numberOfLines={1}
+                    >
+                      {client.fullName}
+                    </Text>
                     <Text
                       style={[styles.clientSubtitle, { color: themeColors.mutedText }]}
                       numberOfLines={2}
@@ -187,6 +177,7 @@ export default function ClientsScreen() {
                       {formatSubtitle(client)}
                     </Text>
                   </View>
+                  <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
                 </View>
               </PressableOpacity>
               <View style={styles.separatorContainer}>
@@ -223,7 +214,7 @@ const styles = StyleSheet.create({
   },
   rowContent: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 16,
   },
@@ -242,26 +233,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-start',
   },
-  clientHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 4,
-  },
   clientName: {
-    ...typography.h7,
+    ...typography.p1,
     fontWeight: '600',
-    flex: 1,
-    flexShrink: 1,
-    marginRight: 8,
+    marginBottom: 4,
   },
   clientSubtitle: {
     ...typography.p3,
-  },
-  chevronContainer: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
   },
   separatorContainer: {
     paddingLeft: 82,

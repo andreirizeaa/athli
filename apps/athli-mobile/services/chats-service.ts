@@ -252,6 +252,27 @@ export const removeReaction = async (
 };
 
 /**
+ * Service method to read all archived chats
+ */
+export const markAllArchivedAsRead = async (): Promise<void> => {
+  console.log('Marking all archived chats as read');
+};
+
+/**
+ * Service method to unarchive all chats
+ */
+export const unarchiveAllChats = async (): Promise<void> => {
+  console.log('Unarchiving all chats');
+};
+
+/**
+ * Service method to delete all archived chats
+ */
+export const deleteAllArchivedChats = async (): Promise<void> => {
+  console.log('Deleting all archived chats');
+};
+
+/**
  * Service method to create a new chat with a client
  * This will be connected to the backend in the future
  */
@@ -415,9 +436,9 @@ const mockChats: Chat[] = [
     clientId: '1',
     clientName: 'John Smith',
     clientAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: 'Thanks for the workout plan! ',
-    lastMessageTime: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-    unreadCount: 2,
+    lastMessage: '',
+    lastMessageTime: new Date(),
+    unreadCount: 0,
     isFavourite: true,
     isPinned: true,
   },
@@ -569,245 +590,7 @@ const mockArchivedChats: Chat[] = [
 
 // Mock messages data for each chat
 const mockMessages: Record<string, ChatMessage[]> = {
-  '1': [
-    // Messages from 5 days ago
-    {
-      id: 'm1-0-1',
-      text: 'Hey! Just wanted to say hi and see how things are going.',
-      timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000), // 5 days, 2 hours ago
-      isSent: true,
-      isRead: true,
-    },
-    {
-      id: 'm1-0-2',
-      text: 'Hi! Things are going well, thanks for checking in.',
-      timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000 - 1 * 60 * 60 * 1000 - 45 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    // Messages from 4 days ago
-    {
-      id: 'm1-0-3',
-      text: 'How was your workout yesterday?',
-      timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000 - 3 * 60 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    {
-      id: 'm1-0-4',
-      text: 'It was great! I felt really strong.',
-      timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000 - 30 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    // Messages from 3 days ago
-    {
-      id: 'm1-0-5',
-      text: 'That\'s awesome to hear!',
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 4 * 60 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    {
-      id: 'm1-0-6',
-      text: 'I\'ve been really consistent with the program',
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 3 * 60 * 60 * 1000 - 15 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    // Messages from 2 days ago
-    {
-      id: 'm1-0-7',
-      text: 'Consistency is the most important thing',
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 5 * 60 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    {
-      id: 'm1-0-8',
-      text: 'I completely agree. I can already feel the difference',
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 4 * 60 * 60 * 1000 - 30 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    // Messages from yesterday
-    {
-      id: 'm1-0-9',
-      text: 'That\'s exactly what we want to see!',
-      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 - 6 * 60 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    {
-      id: 'm1-0-10',
-      text: 'Keep up the momentum!',
-      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 - 5 * 60 * 60 * 1000 - 45 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    // Today's messages
-    {
-      id: 'm1-1',
-      text: 'Hi! I wanted to check in about my progress.',
-      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000 - 30 * 60 * 1000), // 3.5 hours ago
-      isSent: false, // client message
-      isRead: true,
-    },
-    {
-      id: 'm1-2',
-      text: 'Great to hear from you! How are you feeling?',
-      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000 - 25 * 60 * 1000),
-      isSent: true, // user message
-      isRead: true,
-    },
-    {
-      id: 'm1-3',
-      text: 'I feel really good!',
-      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000 - 20 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    {
-      id: 'm1-4',
-      text: 'The new exercises are working great',
-      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000 - 18 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    {
-      id: 'm1-5',
-      text: 'I can already see some improvement',
-      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000 - 15 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    {
-      id: 'm1-6',
-      text: 'That\'s fantastic! Keep up the great work.',
-      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000 - 10 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    {
-      id: 'm1-7',
-      text: 'I\'ve been following the plan exactly as you suggested',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 45 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    {
-      id: 'm1-8',
-      text: 'Perfect! Consistency is key.',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 40 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    {
-      id: 'm1-9',
-      text: 'How many times per week are you training?',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 38 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    {
-      id: 'm1-10',
-      text: 'I\'m doing 4 sessions per week',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 35 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    {
-      id: 'm1-11',
-      text: 'Monday, Wednesday, Friday, and Saturday',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 33 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    {
-      id: 'm1-12',
-      text: 'That\'s an excellent schedule!',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 30 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    {
-      id: 'm1-13',
-      text: 'You\'re giving yourself good recovery time between sessions',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 28 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    {
-      id: 'm1-14',
-      text: 'Yes, I make sure to rest on the days in between',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 25 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    {
-      id: 'm1-15',
-      text: 'I also do some light stretching',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 23 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    {
-      id: 'm1-16',
-      text: 'That\'s perfect! Active recovery is important.',
-      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000 - 50 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    {
-      id: 'm1-17',
-      text: 'Keep up the great work and let me know if you have any questions',
-      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000 - 48 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    {
-      id: 'm1-18',
-      text: 'Will do! Thanks for all your help',
-      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000 - 45 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    {
-      id: 'm1-19',
-      text: 'Thanks for the workout plan!',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-      isSent: false,
-      isRead: false,
-    },
-    {
-      id: 'm1-20',
-      text: 'You\'re welcome! Let me know how it goes.',
-      timestamp: new Date(Date.now() - 3 * 60 * 1000), // 3 minutes ago
-      isSent: true,
-      isRead: false,
-      replyTo: {
-        id: 'm1-19',
-        text: 'Thanks for the workout plan!',
-        timestamp: new Date(Date.now() - 5 * 60 * 1000),
-        isSent: false,
-        isRead: false,
-      },
-    },
-    {
-      id: 'm1-21',
-      text: 'I have a question about the third exercise',
-      timestamp: new Date(Date.now() - 2 * 60 * 1000), // 2 minutes ago
-      isSent: false,
-      isRead: false,
-      replyTo: {
-        id: 'm1-20',
-        text: 'You\'re welcome! Let me know how it goes.',
-        timestamp: new Date(Date.now() - 3 * 60 * 1000),
-        isSent: true,
-        isRead: false,
-      },
-    },
-  ],
+  '1': [], // CLEARED FOR TESTING - John Smith messages removed
   '2': [
     // Messages from 3 days ago
     {

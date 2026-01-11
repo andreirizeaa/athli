@@ -2,16 +2,15 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   Keyboard,
-  LayoutAnimation,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
+import { useKeyboardHandler } from 'react-native-keyboard-controller';
+import { useSharedValue } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
-import { useKeyboardHandler } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   useAudioRecorder,
@@ -25,7 +24,7 @@ import { type IWaveformRef, PlayerState, FinishMode } from '@/components/audio';
 
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { MessageList } from '@/components/message/message-list';
+import { MessageList } from '@/components/message/message-list-flashlist';
 import { MessageReactionsSheet } from '@/components/message/message-reactions-sheet';
 import { ChatHeader } from '@/components/chats/chat-header';
 import { ChatToolbar } from '@/components/chats/chat-toolbar';
@@ -100,6 +99,28 @@ export default function InboxDetailScreen() {
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
 
+  // Keyboard animation - use onMove for frame-by-frame tracking
+  const keyboardHeight = useSharedValue(0);
+
+  useKeyboardHandler(
+    {
+      onMove: (event) => {
+        'worklet';
+        keyboardHeight.value = event.height;
+      },
+      onEnd: (event) => {
+        'worklet';
+        // Snap to final position to prevent lag at the end
+        keyboardHeight.value = event.height;
+      },
+    },
+    []
+  );
+
+  // Dynamic toolbar height - tracks actual height including reply preview and attachment picker
+  const [toolbarHeight, setToolbarHeight] = useState(60 + insets.bottom);
+  const prevToolbarHeightRef = useRef(toolbarHeight);
+
   const [coach, setCoach] = useState<Coach | null>(() => {
     if (coachParam) {
       try {
@@ -172,36 +193,8 @@ export default function InboxDetailScreen() {
   const lastVoiceNoteDurationMsRef = useRef(0);
   const recordingStartedAtMsRef = useRef<number | null>(null);
 
-  const keyboardHeight = useSharedValue(0);
-
-  useKeyboardHandler(
-    {
-      onMove: (event) => {
-        'worklet';
-        keyboardHeight.value = Math.max(event.height, 0);
-      },
-      onEnd: (event) => {
-        'worklet';
-        keyboardHeight.value = Math.max(event.height, 0);
-      },
-    },
-    []
-  );
-
-  const scrollWindowAnimatedStyle = useAnimatedStyle(() => {
-    'worklet';
-    return {
-      transform: [
-        {
-          translateY: -keyboardHeight.value,
-        },
-      ],
-    };
-  });
-
   useEffect(() => {
     const handleKeyboardHide = () => {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setShowAttachmentPicker(false);
     };
 
@@ -255,7 +248,7 @@ export default function InboxDetailScreen() {
   const stopAndDiscard = async () => {
     try {
       await audioRecorder.stop();
-    } catch {}
+    } catch { }
     setIsStopped(false);
     waveformRef.current = [];
     setWaveform([]);
@@ -322,7 +315,7 @@ export default function InboxDetailScreen() {
     if (documentSent === 'true' && sentDocument) {
       try {
         const documentData = JSON.parse(sentDocument);
-        
+
         const newMessage: InboxMessage = {
           id: `inbox-${Date.now()}`,
           text: documentData.caption || '',
@@ -359,7 +352,7 @@ export default function InboxDetailScreen() {
     if (imagesSent === 'true' && sentImages) {
       try {
         const imageAttachments = JSON.parse(sentImages);
-        
+
         const newMessage: InboxMessage = {
           id: `inbox-${Date.now()}`,
           text: sentImagesCaption || '',
@@ -393,7 +386,7 @@ export default function InboxDetailScreen() {
     if (videoSent === 'true' && sentVideo) {
       try {
         const videoData = JSON.parse(sentVideo);
-        
+
         const newMessage: InboxMessage = {
           id: `inbox-${Date.now()}`,
           text: videoData.caption || '',
@@ -471,7 +464,6 @@ export default function InboxDetailScreen() {
   };
 
   const handleMessageReply = (message: InboxMessage) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setReplyingToMessage(message);
     setTimeout(() => {
       inputRef.current?.focus();
@@ -479,27 +471,22 @@ export default function InboxDetailScreen() {
   };
 
   const handleCancelReply = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setReplyingToMessage(null);
     Keyboard.dismiss();
   };
 
   const handlePlusPress = () => {
     if (showAttachmentPicker) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setShowAttachmentPicker(false);
       return;
     }
 
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowAttachmentPicker(true);
   };
 
   const handleMicrophonePress = async () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-
     setIsMicrophoneMode(true);
-    
+
     try {
       await startRecording();
     } catch (e) {
@@ -509,11 +496,9 @@ export default function InboxDetailScreen() {
   };
 
   const handleTrashPress = async () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-
     try {
       await audioRecorder.stop();
-    } catch {}
+    } catch { }
     previewWaveRef.current?.stopPlayer?.();
 
     setPreviewPath(null);
@@ -594,8 +579,6 @@ export default function InboxDetailScreen() {
         setPreviewPath(null);
         return null;
       }
-
-      return;
     }
 
     setIsStopped(false);
@@ -737,6 +720,10 @@ export default function InboxDetailScreen() {
     );
   };
 
+  const handleToolbarHeightChange = (height: number) => {
+    setToolbarHeight(height);
+  };
+
   if (isLoading) {
     return <ChatLoadingState />;
   }
@@ -748,26 +735,25 @@ export default function InboxDetailScreen() {
   return (
     <View style={[styles.container, { backgroundColor: 'transparent' }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} translucent backgroundColor="transparent" />
-      
+
       <Image
         source={isDark ? require('@/assets/chat/bg-dark.png') : require('@/assets/chat/bg-light.png')}
         style={styles.fullScreenBackgroundImage}
         contentFit="cover"
       />
-      
+
       <ChatHeader
         coach={coach}
         onBackPress={handleBackPress}
       />
 
-      <Animated.View
-        style={[{ flex: 1, backgroundColor: 'transparent' }, scrollWindowAnimatedStyle]}
-      >
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <MessageList
           messages={messages}
           backgroundColor="transparent"
           themeColors={themeColors}
           clientName={coach.name}
+          keyboardHeight={keyboardHeight}
           onReply={handleMessageReply}
           onEdit={handleMessageEdit}
           onDelete={handleMessageDelete}
@@ -776,16 +762,11 @@ export default function InboxDetailScreen() {
           onImagePress={handleImagePress}
           onVideoPress={handleVideoPress}
           headerHeight={insets.top + 60}
-          toolbarHeight={
-            (replyingToMessage ? 54 : 0) +
-            (showAttachmentPicker ? 112 : 0) +
-            (isMicrophoneMode ? 68 : 0) +
-            40 +
-            insets.bottom
-          }
+          bottomOffset={toolbarHeight}
         />
-      </Animated.View>
+      </View>
 
+      {/* TOOLBAR */}
       <ChatToolbar
         coach={coach}
         replyingToMessage={replyingToMessage}
@@ -810,6 +791,9 @@ export default function InboxDetailScreen() {
         onStopToggle={handleStopToggle}
         onSendPress={handleSendPress}
         onCancelReply={handleCancelReply}
+        bottomInset={insets.bottom}
+        keyboardHeight={keyboardHeight}
+        onToolbarHeightChange={handleToolbarHeightChange}
       />
 
       <MessageReactionsSheet

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, Switch, Platform } from 'react-native';
-import { Trash2, Plus, Minus, Ellipsis, Repeat, Info, ArrowUp, ArrowDown } from 'lucide-react-native';
+import { Trash2, Plus, Ellipsis, Repeat, Info, ArrowUp, ArrowDown, Timer } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { PressableScale } from 'pressto';
 
@@ -12,7 +12,7 @@ import { IconButton } from '@/components/icon-button';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { InputBox } from '@/components/form-inputs';
 import { useModalCallbacks } from '@/contexts/modal-callbacks';
-import { COLUMN_OPTIONS, type WorkoutExercise, type ExerciseSet } from './types';
+import { COLUMN_OPTIONS, HEART_RATE_ZONE_OPTIONS, type WorkoutExercise, type ExerciseSet } from './types';
 import { type ExerciseValidationError, hasSetError, hasTempoError } from './validation';
 
 type ExerciseBuilderCardProps = {
@@ -27,6 +27,7 @@ type ExerciseBuilderCardProps = {
     onMoveDown?: () => void;
     hideSetControls?: boolean;
     validationErrors?: ExerciseValidationError[];
+    onSwap: () => void;
 };
 
 const RED_ERROR = '#EF4444';
@@ -75,6 +76,7 @@ export const ExerciseBuilderCard = ({
     onMoveDown,
     hideSetControls,
     validationErrors = [],
+    onSwap,
 }: ExerciseBuilderCardProps) => {
     const { colors: themeColors } = useThemePreference();
     const router = useRouter();
@@ -137,6 +139,14 @@ export const ExerciseBuilderCard = ({
         onUpdateExercise({ sets: newSets });
     };
 
+    const getHRZoneOptions = (setIndex: number, column: 'column1' | 'column2'): DropdownMenuOption[] => {
+        return HEART_RATE_ZONE_OPTIONS.map(opt => ({
+            label: opt.label,
+            subtitle: opt.subtitle,
+            onPress: () => handleUpdateSet(setIndex, { [column]: opt.value }),
+        }));
+    };
+
     const getColumnOptions = (isFirstColumn: boolean): DropdownMenuOption[] => {
         const otherValue = isFirstColumn ? exercise.column2Type : exercise.column1Type;
         return COLUMN_OPTIONS
@@ -144,10 +154,18 @@ export const ExerciseBuilderCard = ({
             .map(opt => ({
                 label: opt.label,
                 onPress: () => {
+                    const currentValue = isFirstColumn ? exercise.column1Type : exercise.column2Type;
+                    if (currentValue === opt.value) return;
+
+                    const newSets = exercise.sets.map(s => ({
+                        ...s,
+                        [isFirstColumn ? 'column1' : 'column2']: ''
+                    }));
+
                     if (isFirstColumn) {
-                        onUpdateExercise({ column1Type: opt.value });
+                        onUpdateExercise({ column1Type: opt.value, sets: newSets });
                     } else {
-                        onUpdateExercise({ column2Type: opt.value });
+                        onUpdateExercise({ column2Type: opt.value, sets: newSets });
                     }
                 },
             }));
@@ -176,8 +194,13 @@ export const ExerciseBuilderCard = ({
             { separator: true },
         ] : []),
         {
-            label: 'Add Alternatives',
+            label: 'Swap Exercise',
             icon: { sf: 'arrow.triangle.2.circlepath', IconComponent: Repeat },
+            onPress: onSwap,
+        },
+        {
+            label: 'Add Alternatives',
+            icon: { sf: 'plus', IconComponent: Plus },
             onPress: handleOpenAlternatives,
         },
         {
@@ -199,6 +222,48 @@ export const ExerciseBuilderCard = ({
         { label: 'Failure', onPress: () => handleUpdateSet(index, { type: 'F' }) },
         { label: 'Dropset', onPress: () => handleUpdateSet(index, { type: 'D' }) },
     ];
+
+
+    const formatRestTime = (seconds?: number) => {
+        if (seconds === undefined || seconds === null || seconds === 0) return 'Rest Timer: Off';
+
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+
+        if (mins > 0) {
+            return `Rest Timer: ${mins}min ${secs > 0 ? secs + 's' : ''}`;
+        }
+        return `Rest Timer: ${secs}s`;
+    };
+
+    const getRestTimerOptions = (): DropdownMenuOption[] => {
+        const options: DropdownMenuOption[] = [
+            {
+                label: 'Off',
+                onPress: () => onUpdateExercise({ setRestSec: 0 }),
+            }
+        ];
+
+        // 5s increments up to 5min (300s)
+        for (let s = 5; s <= 300; s += 5) {
+            const m = Math.floor(s / 60);
+            const sec = s % 60;
+            let label = '';
+
+            if (m > 0) {
+                label = sec > 0 ? `${m}min ${sec}s` : `${m}min`;
+            } else {
+                label = `${s}s`;
+            }
+
+            options.push({
+                label: label,
+                onPress: () => onUpdateExercise({ setRestSec: s }),
+            });
+        }
+
+        return options;
+    };
 
     return (
         <Card style={[
@@ -321,40 +386,82 @@ export const ExerciseBuilderCard = ({
                             </View>
 
                             <View style={styles.inputsRow}>
-                                <TextInput
-                                    style={[
-                                        styles.setInput,
-                                        {
-                                            color: themeColors.text,
-                                            borderColor: setError.column1 ? RED_ERROR : themeColors.border,
-                                            borderWidth: setError.column1 ? 2 : 1,
-                                            backgroundColor: themeColors.pageBackground
-                                        }
-                                    ]}
-                                    value={set.column1}
-                                    onChangeText={(text) => handleUpdateSet(index, { column1: text })}
-                                    placeholder="0"
-                                    placeholderTextColor={themeColors.mutedText}
-                                    keyboardType="numeric"
-                                />
+                                {exercise.column1Type === 'Heart Rate Zone' ? (
+                                    <View style={{ flex: 1 }}>
+                                        <DropdownMenuWrapper options={getHRZoneOptions(index, 'column1')}>
+                                            <View style={[
+                                                styles.setInput,
+                                                {
+                                                    borderColor: setError.column1 ? RED_ERROR : themeColors.border,
+                                                    borderWidth: setError.column1 ? 2 : 1,
+                                                    backgroundColor: themeColors.pageBackground,
+                                                    justifyContent: 'center',
+                                                    width: '100%'
+                                                }
+                                            ]}>
+                                                <Text style={[styles.setInputText, { color: set.column1 ? themeColors.text : themeColors.mutedText }]}>
+                                                    {set.column1 || 'Select'}
+                                                </Text>
+                                            </View>
+                                        </DropdownMenuWrapper>
+                                    </View>
+                                ) : (
+                                    <TextInput
+                                        style={[
+                                            styles.setInput,
+                                            {
+                                                color: themeColors.text,
+                                                borderColor: setError.column1 ? RED_ERROR : themeColors.border,
+                                                borderWidth: setError.column1 ? 2 : 1,
+                                                backgroundColor: themeColors.pageBackground
+                                            }
+                                        ]}
+                                        value={set.column1}
+                                        onChangeText={(text) => handleUpdateSet(index, { column1: text })}
+                                        placeholder="0"
+                                        placeholderTextColor={themeColors.mutedText}
+                                        keyboardType="numeric"
+                                    />
+                                )}
 
-                                <TextInput
-                                    style={[
-                                        styles.setInput,
-                                        {
-                                            color: themeColors.text,
-                                            borderColor: setError.column2 ? RED_ERROR : themeColors.border,
-                                            borderWidth: setError.column2 ? 2 : 1,
-                                            backgroundColor: themeColors.pageBackground
-                                        }
-                                    ]}
-                                    value={set.column2}
-                                    onChangeText={(text) => handleUpdateSet(index, { column2: text })}
-                                    placeholder="0"
-                                    placeholderTextColor={themeColors.mutedText}
-                                    keyboardType="numeric"
-                                    editable={exercise.column2Type !== 'None'}
-                                />
+                                {exercise.column2Type === 'Heart Rate Zone' ? (
+                                    <View style={{ flex: 1 }}>
+                                        <DropdownMenuWrapper options={getHRZoneOptions(index, 'column2')}>
+                                            <View style={[
+                                                styles.setInput,
+                                                {
+                                                    borderColor: setError.column2 ? RED_ERROR : themeColors.border,
+                                                    borderWidth: setError.column2 ? 2 : 1,
+                                                    backgroundColor: themeColors.pageBackground,
+                                                    justifyContent: 'center',
+                                                    width: '100%'
+                                                }
+                                            ]}>
+                                                <Text style={[styles.setInputText, { color: set.column2 ? themeColors.text : themeColors.mutedText }]}>
+                                                    {set.column2 || 'Select'}
+                                                </Text>
+                                            </View>
+                                        </DropdownMenuWrapper>
+                                    </View>
+                                ) : (
+                                    <TextInput
+                                        style={[
+                                            styles.setInput,
+                                            {
+                                                color: themeColors.text,
+                                                borderColor: setError.column2 ? RED_ERROR : themeColors.border,
+                                                borderWidth: setError.column2 ? 2 : 1,
+                                                backgroundColor: themeColors.pageBackground
+                                            }
+                                        ]}
+                                        value={set.column2}
+                                        onChangeText={(text) => handleUpdateSet(index, { column2: text })}
+                                        placeholder="0"
+                                        placeholderTextColor={themeColors.mutedText}
+                                        keyboardType="numeric"
+                                        editable={exercise.column2Type !== 'None'}
+                                    />
+                                )}
                             </View>
 
                             <View style={styles.rowAction}>
@@ -373,28 +480,30 @@ export const ExerciseBuilderCard = ({
                     );
                 })}
 
-                {/* Add/Remove Sets Controls */}
+                {/* Add Set Row + Rest Timer */}
                 {!hideSetControls && (
-                    <View style={styles.setsControls}>
-                        <PressableScale
-                            onPress={handleRemoveLastSet}
-                            style={[
-                                styles.controlButton,
-                                { borderColor: themeColors.border },
-                                exercise.sets.length <= 1 && styles.disabledControl
-                            ]}
-                        >
-                            <Minus {...({ size: 16, color: exercise.sets.length <= 1 ? themeColors.mutedText : themeColors.text } as any)} />
-                        </PressableScale>
-
-                        <Text style={[styles.controlLabel, { color: themeColors.text }]}>Set</Text>
-
-                        <PressableScale
-                            onPress={handleAddSet}
-                            style={[styles.controlButton, { borderColor: themeColors.primary, borderWidth: 2 }]}
-                        >
-                            <Plus {...({ size: 16, color: themeColors.primary } as any)} />
-                        </PressableScale>
+                    <View style={styles.addSetRow}>
+                        <View style={styles.setNumberContainer}>
+                            <PressableScale
+                                onPress={handleAddSet}
+                                style={[styles.addSetCircle, { borderColor: themeColors.primary }]}
+                            >
+                                <Plus {...({ size: 16, color: themeColors.primary } as any)} />
+                            </PressableScale>
+                        </View>
+                        <View style={styles.inputsRow}>
+                            {/* Empty space to match the layout */}
+                        </View>
+                        <View style={styles.restTimerContainer}>
+                            <DropdownMenuWrapper options={getRestTimerOptions()}>
+                                <View style={[styles.restTimerButton, { backgroundColor: themeColors.surfaceSecondary }]}>
+                                    <Timer {...({ size: 16, color: themeColors.primary } as any)} />
+                                    <Text style={[styles.restTimerText, { color: themeColors.primary }]}>
+                                        {formatRestTime(exercise.setRestSec)}
+                                    </Text>
+                                </View>
+                            </DropdownMenuWrapper>
+                        </View>
                     </View>
                 )}
 
@@ -410,18 +519,19 @@ export const ExerciseBuilderCard = ({
                             borderColor: themeColors.border,
                             borderWidth: 1,
                             borderRadius: 12,
-                            height: 48,
+                            height: 40,
                             paddingTop: 0,
                             paddingBottom: 0,
                             justifyContent: 'center',
                         }}
                         inputRowStyle={{
-                            height: 48,
+                            height: 40,
                         }}
                         inputStyle={{
                             textAlign: 'left',
-                            fontWeight: '500',
-                            height: 48,
+                            fontWeight: '400',
+                            fontSize: 13,
+                            height: 40,
                         }}
                     />
                 </View>
@@ -569,7 +679,12 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         borderWidth: 1,
         textAlign: 'center',
+        paddingHorizontal: 8,
         ...typography.p1,
+    },
+    setInputText: {
+        ...typography.p1,
+        textAlign: 'center',
     },
     rowAction: {
         width: 32,
@@ -590,20 +705,36 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    setsControls: {
+    addSetRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 8,
-        gap: 12,
+        marginBottom: 10,
     },
-    controlButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        borderWidth: 1.5,
+    addSetCircle: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        borderWidth: 2,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    restTimerContainer: {
+        width: 140, // Increased width for the longer text
+        alignItems: 'flex-end',
+        marginRight: 4,
+        marginLeft: 8,
+    },
+    restTimerButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+    },
+    restTimerText: {
+        ...typography.p3,
+        fontWeight: '600',
     },
     secondaryControls: {
         flexDirection: 'row',
@@ -632,22 +763,15 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         padding: 0,
     },
-    disabledControl: {
-        opacity: 0.5,
-    },
-    controlLabel: {
-        ...typography.p1,
-        fontWeight: '700',
-    },
+    // disabledControl and controlLabel removed
     alternativesSection: {
         marginTop: 16,
         paddingHorizontal: 4,
     },
     alternativesLabel: {
-        fontSize: 10,
-        fontWeight: '700',
+        ...typography.p3,
+        fontWeight: '600',
         marginBottom: 8,
-        letterSpacing: 0.5,
     },
     alternativeItem: {
         flexDirection: 'row',

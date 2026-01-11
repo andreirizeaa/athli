@@ -9,6 +9,7 @@ import { InputBox, ButtonTabGroup } from '@/components/form-inputs';
 type AddClientContentProps = {
   onClose: () => void;
   onClientAdded?: () => void;
+  headerHeight?: number;
 };
 
 export type AddClientContentRef = {
@@ -19,7 +20,7 @@ export type AddClientContentRef = {
 type ClientCategory = 'online' | 'in-person' | 'hybrid';
 
 export const AddClientContent = forwardRef<AddClientContentRef, AddClientContentProps>(
-  ({ onClose, onClientAdded }, ref) => {
+  ({ onClose, onClientAdded, headerHeight = 56 }, ref) => {
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const [name, setName] = useState('');
@@ -71,7 +72,7 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
     return (
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
         showsVerticalScrollIndicator={false}
       >
         <InputBox
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingBottom: 16,
     gap: 12,
   },
 });
