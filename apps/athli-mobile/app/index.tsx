@@ -1,16 +1,14 @@
 import { Redirect } from 'expo-router';
-import { useCoachProfileStore, useClientProfileStore } from '@/stores';
+import { getStoredUserId } from '@/services/auth/supabase-auth';
 
 export default function Index() {
-  const coachProfile = useCoachProfileStore((state) => state.profile);
-  const clientProfile = useClientProfileStore((state) => state.profile);
+  const userId = getStoredUserId();
 
   console.log('🔵 [Index] Checking authentication state...');
-  console.log('🔵 [Index] Coach profile:', coachProfile?.id);
-  console.log('🔵 [Index] Client profile:', clientProfile?.id);
+  console.log('🔵 [Index] Stored user ID:', userId);
 
-  // If user is authenticated (has a profile), go to main app
-  if (coachProfile || clientProfile) {
+  // If user is authenticated (has a stored user ID), go to main app
+  if (userId) {
     console.log('🟢 [Index] User authenticated, redirecting to /(tabs)');
     return <Redirect href="/(tabs)" />;
   }
