@@ -90,6 +90,16 @@ export async function ensureClientProfile(coachId: string): Promise<UserProfile>
 }
 
 /**
+ * Ensure coach profile exists for current user
+ */
+export async function ensureCoachProfile(): Promise<UserProfile> {
+    const data = await apiFetch('/user/ensure-coach-profile', {
+        method: 'POST',
+    });
+    return data.data.user;
+}
+
+/**
  * Fetch user by ID (public endpoint, no authentication required)
  * Used for fetching coach information on invite pages
  */

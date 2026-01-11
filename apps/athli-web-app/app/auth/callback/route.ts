@@ -76,16 +76,31 @@ export async function GET(request: NextRequest) {
         const redirectPath = requestUrl.searchParams.get('redirect') || '/home';
 
         // For new Google OAuth users, set user_type based on context
+        console.log('=== CHECKING USER_TYPE ===');
+        console.log('session.user.user_metadata:', JSON.stringify(session.user.user_metadata, null, 2));
+        console.log('session.user.user_metadata?.user_type:', session.user.user_metadata?.user_type);
+
         if (!session.user.user_metadata?.user_type) {
           const userType = coachId ? 'client' : 'coach';
-          await supabase.auth.updateUser({
+          console.log('=== CALLING updateUser with user_type:', userType, '===');
+
+          const { data: updateData, error: updateError } = await supabase.auth.updateUser({
             data: {
               user_type: userType,
               ...(coachId && { coach_id: coachId }),
             }
           });
 
-          // Client profile creation will be handled by /auth/new-client route
+          if (updateError) {
+            console.error('updateUser ERROR:', updateError);
+          } else {
+            console.log('updateUser SUCCESS:', JSON.stringify(updateData, null, 2));
+          }
+
+          // Profile creation is handled by the database trigger (on_auth_user_updated)
+          // which fires when user_type is set via updateUser()
+        } else {
+          console.log('=== SKIPPING updateUser - user_type already set ===');
         }
 
         // Check if this was an email change

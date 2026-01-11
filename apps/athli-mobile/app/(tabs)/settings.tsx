@@ -6,7 +6,6 @@ import { SymbolView } from 'expo-symbols';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { LucideIcon } from 'lucide-react-native';
 import {
-  ArrowLeftRight,
   Cog,
   FileText,
   IdCard,
@@ -21,7 +20,7 @@ import {
 } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useAppView } from '@/stores';
 import { useTranslations } from '@/stores';
 import { Card } from '@/components/ui/card';
@@ -53,21 +52,15 @@ export default function SettingsScreen() {
   const { colors: themeColors } = useThemePreference();
   const { appView, setAppView } = useAppView();
   const { t } = useTranslations();
+  const coachProfile = useCoachProfileStore((state) => state.profile);
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
 
   const isAthleteView = appView === 'athlete';
+  const isCoach = !!coachProfile;
 
   const handleOpenPreferences = () => {
     router.push({ pathname: '/settings/preferences' });
-  };
-
-  const handleToggleView = () => {
-    const newView = appView === 'athlete' ? 'coach' : 'athlete';
-    setAppView(newView);
-    // Navigate to default page for the new view
-    const defaultRoute = newView === 'coach' ? '/clients' : '/training';
-    router.replace(defaultRoute);
   };
 
   const handleOpenWebURL = (url: string) => {
@@ -100,6 +93,10 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleLogout = () => {
+    router.push('/modals/auth/logout-confirmation-modal');
+  };
+
   return (
     <ScreenWrapper contentContainerStyle={styles.scrollContent}>
       <View style={styles.headerSection}>
@@ -109,24 +106,6 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.contentContainer}>
-        {/* View Switching Card */}
-        <Card>
-          <SettingsOption
-            icon={
-              <PlatformIcon
-                sf="arrow.left.arrow.right"
-                mdi="swap-horiz"
-                IconComponent={ArrowLeftRight}
-                size={iconSize - 2}
-                color={iconColor}
-              />
-            }
-            title={isAthleteView ? t('profile.viewCoachesArea') : t('settings.viewAthletesArea')}
-            showChevron
-            onPress={handleToggleView}
-          />
-        </Card>
-
         {/* Profile Card - Only shown in athlete view */}
         {isAthleteView && (
           <Card>
@@ -219,13 +198,18 @@ export default function SettingsScreen() {
           <SettingsOption
             icon={<PlatformIcon sf="rectangle.portrait.and.arrow.right" mdi="logout" IconComponent={LogOut} size={iconSize} color={iconColor} />}
             title={t('profile.logout')}
+            onPress={handleLogout}
           />
-          <Separator />
-          <SettingsOption
-            icon={<PlatformIcon sf="person.badge.minus" mdi="person-remove" IconComponent={UserMinus} size={iconSize} color={iconColor} />}
-            title={t('profile.deleteAccount')}
-            onPress={handleOpenDeleteAccount}
-          />
+          {!isCoach && (
+            <>
+              <Separator />
+              <SettingsOption
+                icon={<PlatformIcon sf="person.badge.minus" mdi="person-remove" IconComponent={UserMinus} size={iconSize} color={iconColor} />}
+                title={t('profile.deleteAccount')}
+                onPress={handleOpenDeleteAccount}
+              />
+            </>
+          )}
         </Card>
       </View>
     </ScreenWrapper>

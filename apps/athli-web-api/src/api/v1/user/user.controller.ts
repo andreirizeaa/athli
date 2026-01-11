@@ -55,6 +55,20 @@ export class UserController {
   });
 
   /**
+   * Ensure coach profile exists for current user
+   */
+  ensureCoachProfile = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+
+    const user = await userService.ensureCoachProfile(userId);
+
+    success(res, {
+      message: 'Coach profile ready',
+      data: { user },
+    });
+  });
+
+  /**
    * Get user by ID (public endpoint, no authentication required)
    */
   fetchUser = asyncHandler(async (req: Request, res: Response) => {

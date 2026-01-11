@@ -10,7 +10,7 @@ import 'react-native-reanimated';
 import { PressablesConfig } from 'pressto';
 import * as Haptics from 'expo-haptics';
 
-import { useColorScheme, useThemePreference } from '@/stores';
+import { useColorScheme, useThemePreference, useCoachProfileStore, useClientProfileStore } from '@/stores';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { useTranslationsStore } from '@/stores/useTranslationsStore';
 import { useUnitsStore } from '@/stores/useUnitsStore';
@@ -18,6 +18,8 @@ import { useColorScheme as useNativeColorScheme } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { restoreSession } from '@/services/auth/supabase-auth';
+import type { CoachProfile, ClientProfile } from '@/types/profile';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -57,8 +59,8 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <PressablesConfig
-          animationType="spring"
-          animationConfig={{ damping: 30, stiffness: 200 }}
+          animationType="timing"
+          animationConfig={{ duration: 150 }}
           config={{ minScale: 0.96, activeOpacity: 0.7 }}
           globalHandlers={{
             onPress: () => Haptics.selectionAsync(),
@@ -78,6 +80,8 @@ function RootLayoutNav() {
   const { primaryColor, colors: themeColors } = useThemePreference();
   const segments = useSegments();
   const systemScheme = useNativeColorScheme() ?? 'light';
+  const setCoachProfile = useCoachProfileStore((state) => state.setProfile);
+  const setClientProfile = useClientProfileStore((state) => state.setProfile);
 
   // Initialize stores on mount
   useEffect(() => {
@@ -85,6 +89,26 @@ function RootLayoutNav() {
     useTranslationsStore.getState().initialize();
     useUnitsStore.getState().initialize();
   }, []);
+
+  // Restore auth session on mount
+  useEffect(() => {
+    const restoreAuthSession = async () => {
+      try {
+        const authResult = await restoreSession();
+        if (authResult && authResult.profile) {
+          if (authResult.profileType === 'coach') {
+            setCoachProfile(authResult.profile as CoachProfile);
+          } else if (authResult.profileType === 'client') {
+            setClientProfile(authResult.profile as ClientProfile);
+          }
+        }
+      } catch (error) {
+        console.error('Error restoring session:', error);
+      }
+    };
+
+    restoreAuthSession();
+  }, [setCoachProfile, setClientProfile]);
 
   // Listen to system color scheme changes
   useEffect(() => {
@@ -147,7 +171,7 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
-            name="auth/sign-in"
+            name="auth/email-sign-in"
             options={{
               headerShown: false,
               presentation: 'card',
@@ -370,6 +394,21 @@ function RootLayoutNav() {
               headerShown: false,
               ...(Platform.OS === 'ios' && {
                 sheetAllowedDetents: [0.50],
+                sheetGrabberVisible: true,
+              }),
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/auth/logout-confirmation-modal"
+            options={{
+              presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'ios' && {
+                sheetAllowedDetents: [0.35],
                 sheetGrabberVisible: true,
               }),
               ...(Platform.OS === 'android' && {

@@ -16,7 +16,8 @@
       "Bash(psql:*)",
       "Bash(tail:*)",
       "Bash(git restore:*)",
-      "WebFetch(domain:docs.expo.dev)"
+      "WebFetch(domain:docs.expo.dev)",
+      "WebFetch(domain:react-native-google-signin.github.io)"
     ]
   }
 }

@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -14,6 +15,7 @@ import {
   ChevronDown,
   ChevronLeft,
   Languages,
+  LogOut,
   Moon,
   Palette,
   Ruler,
@@ -24,6 +26,8 @@ import { THEMES } from '@/constants/theme';
 import {
   useThemePreference,
   type ColorSchemePreference,
+  useCoachProfileStore,
+  useClientProfileStore,
 } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useUnits, type UnitsPreference } from '@/stores';
@@ -33,6 +37,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { SettingsOption } from '@/components/ui/settings-option';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
+import { signOut } from '@/services/auth/supabase-auth';
 
 type PlatformIconProps = {
   sf: string;
@@ -61,6 +66,8 @@ export default function PreferencesScreen() {
   const insets = useSafeAreaInsets();
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
+  const clearCoachProfile = useCoachProfileStore((state) => state.clearProfile);
+  const clearClientProfile = useClientProfileStore((state) => state.clearProfile);
 
   const handleGoBack = () => {
     router.back();
@@ -84,6 +91,38 @@ export default function PreferencesScreen() {
 
   const handleUnitsChange = (newUnits: UnitsPreference) => {
     setUnits(newUnits);
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      t('auth.logout'),
+      t('auth.logoutConfirmation'),
+      [
+        {
+          text: t('general.cancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('auth.logout'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut();
+              clearCoachProfile();
+              clearClientProfile();
+              router.replace('/welcome');
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert(
+                t('auth.logoutError'),
+                t('auth.logoutErrorMessage'),
+                [{ text: t('general.ok') }]
+              );
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Get the display label for current theme preference
@@ -167,6 +206,16 @@ export default function PreferencesScreen() {
       </View>
 
       <View style={[styles.content, { backgroundColor: themeColors.pageBackground }]}>
+        {/* Account Section */}
+        <Card style={{ paddingVertical: 12, marginBottom: 16 }}>
+          <SettingsOption
+            icon={<PlatformIcon sf="rectangle.portrait.and.arrow.right" IconComponent={LogOut} size={iconSize} color={iconColor} />}
+            title={t('auth.logout')}
+            showChevron={false}
+            onPress={handleLogout}
+          />
+        </Card>
+
         {/* Theme, Color Palette, Language, Units */}
         <Card style={{ paddingVertical: 12 }}>
           {/* Theme row with dropdown */}

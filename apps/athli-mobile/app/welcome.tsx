@@ -1,7 +1,7 @@
 import { StyleSheet, View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { PressableOpacity } from 'pressto';
+import { PressableScale } from 'pressto';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations } from '@/stores';
@@ -27,19 +27,19 @@ export default function WelcomeScreen() {
         </View>
 
         <View style={styles.buttonContainer}>
-          <PressableOpacity
+          <PressableScale
             style={[styles.filledButton, { backgroundColor: themeColors.text }]}
             onPress={handleGetStartedPress}
           >
             <Text style={[styles.filledButtonText, { color: themeColors.pageBackground }]}>{t('welcome.getStarted')}</Text>
-          </PressableOpacity>
+          </PressableScale>
 
-          <PressableOpacity
+          <PressableScale
             style={[styles.outlinedButton, { borderColor: themeColors.text }]}
             onPress={handleSignInPress}
           >
             <Text style={[styles.outlinedButtonText, { color: themeColors.text }]}>{t('welcome.alreadyHaveAccount')}</Text>
-          </PressableOpacity>
+          </PressableScale>
         </View>
       </View>
     </SafeAreaView>
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
   filledButton: {
     width: '100%',
     height: 55,
-    borderRadius: 28,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   outlinedButton: {
     width: '100%',
     height: 55,
-    borderRadius: 28,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,

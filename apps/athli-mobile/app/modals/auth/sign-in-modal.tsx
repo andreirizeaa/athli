@@ -1,16 +1,100 @@
-import { StyleSheet, View, Text, Image, Platform } from 'react-native';
+import { StyleSheet, View, Text, Image, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { PressableOpacity } from 'pressto';
+import { useState } from 'react';
+import { PressableScale, PressableOpacity } from 'pressto';
 import { Ionicons } from '@expo/vector-icons';
 import { X } from 'lucide-react-native';
-import { useThemePreference, useTranslations } from '@/stores';
+import { useThemePreference, useTranslations, useCoachProfileStore, useClientProfileStore } from '@/stores';
 import { typography } from '@/constants/typography';
 import { IconButton } from '@/components/ui/icon-button';
+import { AuthLoadingOverlay } from '@/components/auth/auth-loading-overlay';
+import { authenticateUser } from '@/services/auth/supabase-auth';
+import type { CoachProfile, ClientProfile } from '@/types/profile';
 
 export default function SignInModal() {
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const router = useRouter();
+    const [isLoading, setIsLoading] = useState(false);
+    const setCoachProfile = useCoachProfileStore((state) => state.setProfile);
+    const setClientProfile = useClientProfileStore((state) => state.setProfile);
+
+    const handleAuthSuccess = (profileType: 'coach' | 'client', profile: CoachProfile | ClientProfile) => {
+        console.log('🟢 [Sign-In Modal] Auth success! ProfileType:', profileType);
+        console.log('🟢 [Sign-In Modal] Setting profile in store...');
+
+        if (profileType === 'coach') {
+            setCoachProfile(profile as CoachProfile);
+            console.log('🟢 [Sign-In Modal] Coach profile set');
+        } else {
+            setClientProfile(profile as ClientProfile);
+            console.log('🟢 [Sign-In Modal] Client profile set');
+        }
+
+        console.log('🟢 [Sign-In Modal] Navigating to main app...');
+        // Use replace to navigate to the main app and clear the navigation stack
+        router.replace('/(tabs)');
+        console.log('🟢 [Sign-In Modal] Navigation complete');
+    };
+
+    const handleAuthError = (error: any) => {
+        console.log('🔴 [Sign-In Modal] Auth error:', error);
+
+        // Don't show alerts for user cancellations
+        const isCancelled =
+            error.message?.includes('cancelled') ||
+            error.message?.includes('canceled');
+
+        if (isCancelled) {
+            console.log('🟡 [Sign-In Modal] User cancelled sign-in, no alert shown');
+            return;
+        }
+
+        if (error.message === 'NO_PROFILE_FOUND') {
+            console.log('🔴 [Sign-In Modal] Showing NO_PROFILE_FOUND alert');
+            Alert.alert(
+                t('auth.noAccountFound'),
+                t('auth.noAccountFoundMessage'),
+                [{ text: t('general.ok') }]
+            );
+        } else {
+            console.log('🔴 [Sign-In Modal] Showing generic error alert');
+            Alert.alert(
+                t('auth.signInError'),
+                error.message || t('auth.signInErrorMessage'),
+                [{ text: t('general.ok') }]
+            );
+        }
+    };
+
+    const handleGoogleSignIn = async () => {
+        console.log('🔵 [Sign-In Modal] Google Sign-In button pressed');
+        setIsLoading(true);
+        try {
+            console.log('🔵 [Sign-In Modal] Calling authenticateUser...');
+            const result = await authenticateUser('google');
+            console.log('🔵 [Sign-In Modal] authenticateUser returned:', result);
+            handleAuthSuccess(result.profileType!, result.profile as any);
+        } catch (error) {
+            console.error('🔴 [Sign-In Modal] Caught error:', error);
+            handleAuthError(error);
+        } finally {
+            console.log('🔵 [Sign-In Modal] Setting loading to false');
+            setIsLoading(false);
+        }
+    };
+
+    const handleAppleSignIn = async () => {
+        setIsLoading(true);
+        try {
+            const result = await authenticateUser('apple');
+            handleAuthSuccess(result.profileType!, result.profile as any);
+        } catch (error) {
+            handleAuthError(error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleTermsOfServicePress = () => {
         // TODO: Navigate to Terms of Service
@@ -24,6 +108,8 @@ export default function SignInModal() {
 
     return (
         <View style={styles.container}>
+            <AuthLoadingOverlay visible={isLoading} />
+
             <View style={styles.header}>
                 <View style={styles.headerSideLeft} />
                 <Text style={[styles.title, { color: themeColors.text }]}>{t('auth.signInModalTitle')}</Text>
@@ -39,11 +125,10 @@ export default function SignInModal() {
 
             <View style={styles.buttonContainer}>
                 {Platform.OS === 'ios' && (
-                    <PressableOpacity
+                    <PressableScale
                         style={[styles.button, { backgroundColor: '#000000', borderColor: '#000000' }]}
-                        onPress={() => {
-                            // TODO: Apple Sign In
-                        }}
+                        onPress={handleAppleSignIn}
+                        enabled={!isLoading}
                     >
                         <Image
                             source={require('@/assets/icons/apple.png')}
@@ -53,14 +138,13 @@ export default function SignInModal() {
                         <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
                             {t('auth.signInWithApple')}
                         </Text>
-                    </PressableOpacity>
+                    </PressableScale>
                 )}
 
-                <PressableOpacity
+                <PressableScale
                     style={[styles.button, { borderColor: themeColors.text }]}
-                    onPress={() => {
-                        // TODO: Google Sign In
-                    }}
+                    onPress={handleGoogleSignIn}
+                    enabled={!isLoading}
                 >
                     <Image
                         source={require('@/assets/icons/google.png')}
@@ -70,16 +154,17 @@ export default function SignInModal() {
                     <Text style={[styles.buttonText, { color: themeColors.text }]}>
                         {t('auth.signInWithGoogle')}
                     </Text>
-                </PressableOpacity>
+                </PressableScale>
 
-                <PressableOpacity
+                <PressableScale
                     style={[styles.button, { borderColor: themeColors.text }]}
                     onPress={() => {
                         router.back();
                         setTimeout(() => {
-                            router.push('/auth/sign-in');
+                            router.push('/auth/email-sign-in');
                         }, 100);
                     }}
+                    enabled={!isLoading}
                 >
                     <View style={styles.iconContainer}>
                         <Ionicons name="mail-outline" size={24} color={themeColors.text} />
@@ -87,7 +172,7 @@ export default function SignInModal() {
                     <Text style={[styles.buttonText, { color: themeColors.text }]}>
                         {t('auth.signInWithEmail')}
                     </Text>
-                </PressableOpacity>
+                </PressableScale>
             </View>
 
             <View style={styles.termsContainer}>
@@ -147,7 +232,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         height: 55,
-        borderRadius: 28,
+        borderRadius: 18,
         paddingHorizontal: 20,
         borderWidth: 1,
         backgroundColor: 'transparent',
