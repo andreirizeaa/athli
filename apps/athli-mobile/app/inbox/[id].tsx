@@ -24,7 +24,7 @@ import { type IWaveformRef, PlayerState, FinishMode } from '@/components/audio';
 
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { MessageList } from '@/components/message/message-list';
+import { MessageList } from '@/components/message/message-list-flashlist';
 import { MessageReactionsSheet } from '@/components/message/message-reactions-sheet';
 import { ChatHeader } from '@/components/chats/chat-header';
 import { ChatToolbar } from '@/components/chats/chat-toolbar';
@@ -742,7 +742,7 @@ export default function InboxDetailScreen() {
         onBackPress={handleBackPress}
       />
 
-      <View style={{ flex: 1, backgroundColor: 'transparent', paddingBottom: toolbarHeight }}>
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <MessageList
           messages={messages}
           backgroundColor="transparent"
@@ -757,7 +757,7 @@ export default function InboxDetailScreen() {
           onImagePress={handleImagePress}
           onVideoPress={handleVideoPress}
           headerHeight={insets.top + 60}
-          bottomOffset={0}
+          bottomOffset={toolbarHeight}
         />
       </View>
 

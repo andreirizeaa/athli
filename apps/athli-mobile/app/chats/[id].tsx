@@ -3,14 +3,12 @@ import {
   Alert,
   Dimensions,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { useSharedValue } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -30,7 +28,7 @@ import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { hexToRgba } from '@/utils/colorUtils';
 import { useTranslations } from '@/contexts/useTranslations';
 import { type DropdownMenuOption } from '@/components/dropdown-menu';
-import { MessageList } from '@/components/message/message-list';
+import { MessageList } from '@/components/message/message-list-flashlist';
 import { MessageReactionsSheet } from '@/components/message/message-reactions-sheet';
 import { ReplyPreviewRow } from '@/components/chats/reply-preview-row';
 import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
@@ -878,7 +876,7 @@ export default function ChatDetailScreen() {
       />
 
       {/* ROW 2: SCROLL WINDOW - Fills space between header and toolbar */}
-      <View style={{ flex: 1, backgroundColor: 'transparent', paddingBottom: toolbarHeight }}>
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <MessageList
           messages={messages}
           backgroundColor="transparent"
@@ -893,7 +891,7 @@ export default function ChatDetailScreen() {
           onImagePress={handleImagePress}
           onVideoPress={handleVideoPress}
           headerHeight={insets.top + 60}
-          bottomOffset={0}
+          bottomOffset={toolbarHeight}
         />
       </View>
 
