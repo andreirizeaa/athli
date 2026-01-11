@@ -11,6 +11,8 @@ export { useUnitsStore, type UnitsPreference } from './useUnitsStore';
 export { useAppViewStore, type AppView } from './useAppViewStore';
 export { useLibraryTabStore, type LibraryTab } from './useLibraryTabStore';
 export { useTrainingOverlayStore } from './useTrainingOverlayStore';
+export { useCoachProfileStore } from './useCoachProfileStore';
+export { useClientProfileStore } from './useClientProfileStore';
 export {
   useModalCallbacksStore,
   type HabitOptionsData,

@@ -1,18 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, Keyboard, Pressable } from 'react-native';
+import { StyleSheet, View, Text, Keyboard, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Eye, EyeOff } from 'lucide-react-native';
-import { PressableOpacity } from 'pressto';
+import { PressableOpacity, PressableScale } from 'pressto';
 import { BlurView } from 'expo-blur';
 import Animated, { useAnimatedStyle, useSharedValue, interpolate, Extrapolation, withTiming } from 'react-native-reanimated';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference, useTranslations, useColorScheme } from '@/stores';
+import { useThemePreference, useTranslations, useColorScheme, useCoachProfileStore, useClientProfileStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, type InputBoxRef } from '@/components/ui/form-inputs/input-box';
 import { hexToRgba } from '@/utils/colorUtils';
+import { AuthLoadingOverlay } from '@/components/auth/auth-loading-overlay';
+import { authenticateUser } from '@/services/auth/supabase-auth';
+import type { CoachProfile, ClientProfile } from '@/types/profile';
 
 export default function EmailSignInScreen() {
     const router = useRouter();
@@ -26,9 +29,13 @@ export default function EmailSignInScreen() {
     const [password, setPassword] = useState('');
     const [focusedField, setFocusedField] = useState<'email' | 'password'>('email');
     const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const emailRef = useRef<InputBoxRef>(null);
     const passwordRef = useRef<InputBoxRef>(null);
+
+    const setCoachProfile = useCoachProfileStore((state) => state.setProfile);
+    const setClientProfile = useClientProfileStore((state) => state.setProfile);
 
     const keyboardHeight = useSharedValue(0);
 
@@ -62,10 +69,56 @@ export default function EmailSignInScreen() {
         router.back();
     };
 
-    const handleSignIn = () => {
+    const handleAuthSuccess = (profileType: 'coach' | 'client', profile: CoachProfile | ClientProfile) => {
+        if (profileType === 'coach') {
+            setCoachProfile(profile as CoachProfile);
+        } else {
+            setClientProfile(profile as ClientProfile);
+        }
+
+        router.back();
+        // TODO: Navigate to appropriate app section based on profile type
+    };
+
+    const handleAuthError = (error: any) => {
+        // Don't show alerts for user cancellations
+        const isCancelled =
+            error.message?.includes('cancelled') ||
+            error.message?.includes('canceled');
+
+        if (isCancelled) {
+            return;
+        }
+
+        if (error.message === 'NO_PROFILE_FOUND') {
+            Alert.alert(
+                t('auth.noAccountFound'),
+                t('auth.noAccountFoundMessage'),
+                [{ text: t('general.ok') }]
+            );
+        } else {
+            Alert.alert(
+                t('auth.signInError'),
+                error.message || t('auth.signInErrorMessage'),
+                [{ text: t('general.ok') }]
+            );
+        }
+    };
+
+    const handleSignIn = async () => {
         if (!email || !password) return;
-        // TODO: Implement email/password sign in
+
         Keyboard.dismiss();
+        setIsLoading(true);
+
+        try {
+            const result = await authenticateUser('email', { email, password });
+            handleAuthSuccess(result.profileType!, result.profile as any);
+        } catch (error) {
+            handleAuthError(error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleContinue = () => {
@@ -111,6 +164,8 @@ export default function EmailSignInScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: themeColors.pageBackground, paddingTop: insets.top }]}>
+            <AuthLoadingOverlay visible={isLoading} />
+
             <View style={styles.header}>
                 <IconButton
                     icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
@@ -183,9 +238,9 @@ export default function EmailSignInScreen() {
                     ]}
                 >
                     <View style={styles.toolbarContent}>
-                        <Pressable
+                        <PressableScale
                             onPress={handleContinue}
-                            disabled={!isButtonEnabled}
+                            enabled={isButtonEnabled}
                         >
                             <Animated.View style={[styles.toolbarButton, animatedButtonStyle]}>
                                 <Animated.Text
@@ -197,7 +252,7 @@ export default function EmailSignInScreen() {
                                     {buttonText}
                                 </Animated.Text>
                             </Animated.View>
-                        </Pressable>
+                        </PressableScale>
                     </View>
                 </BlurView>
             </Animated.View>
@@ -256,7 +311,7 @@ const styles = StyleSheet.create({
     toolbarButton: {
         width: '100%',
         height: 55,
-        borderRadius: 28,
+        borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
     },

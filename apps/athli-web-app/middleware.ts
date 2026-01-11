@@ -1,12 +1,21 @@
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const publicRoutes = ['/auth/login', '/auth/register', '/auth/forgot-password'];
-const restrictedAuthRoutes = ['/auth/reset-password', '/auth/verify-email'];
+const publicRoutes = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/forgot-password',
+  '/client/invite',  // Client invite pages (public)
+  '/coach/referral', // Coach referral pages (public)
+];
+const restrictedAuthRoutes = ['/auth/reset-password', '/auth/verify-email', '/auth/new-client'];
 // OAuth callback must be publicly accessible for OAuth providers to redirect to
 const oauthCallbackRoutes = ['/auth/callback'];
+// Routes that require authentication
+const protectedRoutes = ['/home', '/athletes', '/training', '/forms', '/todo', '/inbox', '/settings'];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public routes
@@ -32,7 +41,52 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Allow all other routes through - client-side auth will handle redirects
+  // Check authentication for protected routes
+  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route)) || pathname === '/';
+
+  if (isProtectedRoute) {
+    // Create a response to pass to the Supabase client
+    let response = NextResponse.next({
+      request: {
+        headers: request.headers,
+      },
+    });
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) =>
+              request.cookies.set(name, value)
+            );
+            response = NextResponse.next({
+              request,
+            });
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            );
+          },
+        },
+      }
+    );
+
+    // Refresh session if expired - required for Server Components
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // If no user and trying to access protected route, redirect to login
+    if (!user) {
+      return NextResponse.redirect(new URL('/auth/login', request.url));
+    }
+
+    return response;
+  }
+
+  // Allow all other routes through
   return NextResponse.next();
 }
 
