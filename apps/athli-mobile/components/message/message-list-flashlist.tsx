@@ -35,7 +35,7 @@ interface MessageListProps {
   themeColors: ThemeColors;
   clientName: string;
   headerHeight?: number;
-  toolbarHeight?: number;
+  bottomOffset?: number;
   keyboardHeight?: SharedValue<number>;
   onReply?: (message: ChatMessage) => void;
   onEdit?: (message: ChatMessage) => void;
@@ -481,7 +481,7 @@ export const MessageList = ({
   themeColors,
   clientName,
   headerHeight = 0,
-  toolbarHeight = 0,
+  bottomOffset = 0,
   keyboardHeight,
   onReply,
   onEdit,
@@ -500,7 +500,7 @@ export const MessageList = ({
   const didInitialScroll = useRef(false);
   const initialScrollAttemptsRef = useRef(0);
   const pinnedToBottomRef = useRef(true);
-  const prevToolbarHeightRef = useRef<number | null>(null);
+  const prevBottomOffsetRef = useRef<number | null>(null);
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>(messages);
   const [isHorizontalDragActive, setIsHorizontalDragActive] = useState(false);
   const colorScheme = useColorScheme();
@@ -586,10 +586,15 @@ export const MessageList = ({
     }, 600);
   };
 
-  // NEWEST first for inverted list
-  const data = useMemo(() => [...localMessages].reverse(), [localMessages]);
+  // Normal list (NOT inverted): chronological order (oldest first)
+  // Index 0 (oldest) = TOP, last index (newest) = BOTTOM (above toolbar)
+  const data = useMemo(() => {
+    const sorted = [...localMessages].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    return sorted;
+  }, [localMessages]);
 
   const BASE_GAP = 6;
+  const GROUPED_GAP = 2; // Tight gap for messages within 2 minutes from same sender
   const EXTRA_ON_SENDER_CHANGE = 10;
 
   const isSameDay = (a: Date, b: Date) =>
@@ -729,36 +734,26 @@ export const MessageList = ({
     return options;
   };
 
-  const tryInitialScrollToBottom = () => {
-    if (messages.length === 0) return;
-    if (contentHeightRef.current <= 0) return;
-    if (layoutHeightRef.current <= 0) return;
+  const scrollToBottom = (animated = false) => {
+    if (data.length === 0) return;
 
-    const isOverflowing = contentHeightRef.current > layoutHeightRef.current + 1;
-    if (!isOverflowing) {
-      didInitialScroll.current = true;
-      initialScrollAttemptsRef.current = 0;
-      return;
-    }
-
-    if (!didInitialScroll.current && initialScrollAttemptsRef.current < 3) {
-      initialScrollAttemptsRef.current += 1;
-      requestAnimationFrame(() => {
-        listRef.current?.scrollToOffset({ offset: 0, animated: false });
-        offsetYRef.current = 0;
-        didInitialScroll.current = true;
-      });
-    }
+    // Small delay to ensure FlashList has rendered
+    setTimeout(() => {
+      listRef.current?.scrollToEnd({ animated });
+    }, 50);
   };
 
   const handleContentSizeChange = (_width: number, height: number) => {
     contentHeightRef.current = height;
-    tryInitialScrollToBottom();
+
+    // Auto-scroll on content size change if pinned to bottom
+    if (pinnedToBottomRef.current) {
+      scrollToBottom(false);
+    }
   };
 
   const handleLayout = (event: LayoutChangeEvent) => {
     layoutHeightRef.current = event.nativeEvent.layout.height;
-    tryInitialScrollToBottom();
   };
 
   useEffect(() => {
@@ -769,60 +764,77 @@ export const MessageList = ({
     }
   }, [data.length]);
 
+  // Initial scroll to bottom on mount
   useEffect(() => {
-    if (!pinnedToBottomRef.current) return;
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToOffset({ offset: 0, animated: false });
-      offsetYRef.current = 0;
-    });
-  }, [messages.length]);
+    if (data.length > 0 && !didInitialScroll.current) {
+      didInitialScroll.current = true;
+      pinnedToBottomRef.current = true;
+      scrollToBottom(false);
+    }
+  }, [data.length]);
 
+  // Scroll to bottom when new message is sent by user
   useEffect(() => {
     const previousLength = prevMessagesLengthRef.current;
     if (messages.length > previousLength) {
       const lastMessage = messages[messages.length - 1];
       if (lastMessage?.isSent) {
-        requestAnimationFrame(() => {
-          listRef.current?.scrollToOffset({ offset: 0, animated: true });
-          offsetYRef.current = 0;
-          pinnedToBottomRef.current = true;
-        });
+        pinnedToBottomRef.current = true;
+        scrollToBottom(true);
+      } else if (pinnedToBottomRef.current) {
+        // If pinned and receiving message, scroll without animation
+        scrollToBottom(false);
       }
     }
     prevMessagesLengthRef.current = messages.length;
   }, [messages]);
 
+  // Handle toolbar height changes
   useEffect(() => {
-    if (prevToolbarHeightRef.current === null) {
-      prevToolbarHeightRef.current = toolbarHeight;
+    if (prevBottomOffsetRef.current === null) {
+      prevBottomOffsetRef.current = bottomOffset;
       return;
     }
 
-    prevToolbarHeightRef.current = toolbarHeight;
-    if (!pinnedToBottomRef.current) return;
+    const changed = prevBottomOffsetRef.current !== bottomOffset;
+    prevBottomOffsetRef.current = bottomOffset;
 
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToOffset({ offset: 0, animated: false });
-      offsetYRef.current = 0;
-    });
-  }, [toolbarHeight]);
+    if (changed && pinnedToBottomRef.current) {
+      scrollToBottom(false);
+    }
+  }, [bottomOffset]);
 
   const renderItem = ({ item, index }: { item: ChatMessage; index: number }) => {
-    // In inverted list: lower index = newer (visually below), higher index = older (visually above)
-    const newer = index > 0 ? data[index - 1] : null;
-    const older = index + 1 < data.length ? data[index + 1] : null;
+    // Normal list (NOT inverted): chronological order
+    // Index 0 (oldest) = TOP of screen, last index (newest) = BOTTOM of screen
+    const older = index > 0 ? data[index - 1] : null; // Previous index = older in time
+    const newer = index + 1 < data.length ? data[index + 1] : null; // Next index = newer in time
 
-    const sameSenderAsOlder = !!older && older.isSent === item.isSent;
-
-    // Gap ABOVE this message (between this and the older message)
-    const gap =
-      !older
-        ? 0
-        : BASE_GAP + (sameSenderAsOlder ? 0 : EXTRA_ON_SENDER_CHANGE);
-
-    // Determine if this is last in sender run (show tail)
     const sameSenderAsNewer = !!newer && newer.isSent === item.isSent;
-    const isLastInSenderRun = !sameSenderAsNewer;
+
+    // Check if messages are within 2 minutes (for grouping)
+    const isGroupedWithNewer = sameSenderAsNewer && newer &&
+      Math.abs(item.timestamp.getTime() - newer.timestamp.getTime()) < 2 * 60 * 1000;
+
+    // Gap ABOVE this message (marginTop creates space above in normal list)
+    // Gap is between this message and the OLDER message above it
+    let gap = 0;
+    if (older) {
+      const sameSenderAsOlder = !!older && older.isSent === item.isSent;
+      const isGroupedWithOlder = sameSenderAsOlder && Math.abs(item.timestamp.getTime() - older.timestamp.getTime()) < 2 * 60 * 1000;
+
+      if (sameSenderAsOlder) {
+        // Same sender: use grouped gap if within 2 mins, otherwise base gap
+        gap = isGroupedWithOlder ? GROUPED_GAP : BASE_GAP;
+      } else {
+        // Different sender: base gap + extra
+        gap = BASE_GAP + EXTRA_ON_SENDER_CHANGE;
+      }
+    }
+
+    // Determine if this is LAST in sender run (show tail corner, no bottom border radius)
+    // Last = the one that is NOT grouped with the NEWER (next) message
+    const isLastInSenderRun = !isGroupedWithNewer;
 
     const showDatePill = !older || !isSameDay(older.timestamp, item.timestamp);
     const itemDayKey = dayKey(item.timestamp);
@@ -967,28 +979,26 @@ export const MessageList = ({
           keyExtractor={(m) => m.id}
           renderItem={renderItem}
           estimatedItemSize={80}
-          inverted
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           scrollEnabled={!isHorizontalDragActive}
-          contentContainerStyle={[
-            styles.contentContainer,
-            {
-              // In inverted FlatList: paddingTop = visual bottom (newest messages), paddingBottom = visual top (under header)
-              // VISUAL BOTTOM (newest message) — reserve space for toolbar
-              paddingTop: toolbarHeight + 16,
-              // VISUAL TOP — reserve space for header + sticky pill room
-              paddingBottom: headerHeight + 16 + STICKY_EXTRA,
-            },
-          ]}
-          maintainVisibleContentPosition={{
-            minIndexForVisible: 0,
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            // Normal list: paddingTop = space at top (header), paddingBottom = space at bottom (toolbar)
+            paddingTop: headerHeight + 16 + STICKY_EXTRA,
+            paddingBottom: bottomOffset,
+            flexGrow: 1,
+            justifyContent: 'flex-end', // Align messages to bottom when few messages
           }}
           onContentSizeChange={handleContentSizeChange}
           onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
             const y = e.nativeEvent.contentOffset.y;
+            const contentHeight = e.nativeEvent.contentSize.height;
+            const layoutHeight = e.nativeEvent.layoutMeasurement.height;
             offsetYRef.current = y;
-            pinnedToBottomRef.current = y <= 40;
+            // Pinned to bottom when scrolled near the end
+            const distanceFromBottom = contentHeight - layoutHeight - y;
+            pinnedToBottomRef.current = distanceFromBottom <= 40;
           }}
           scrollEventThrottle={16}
           onScrollBeginDrag={() => showSticky()}
@@ -1021,10 +1031,12 @@ export const MessageList = ({
 const STICKY_EXTRA = 32; // Extra space for sticky header pill height
 
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
+  fill: {
+    flex: 1,
+  },
   contentContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    flexGrow: 1,
   },
   messageWrapper: {
     maxWidth: '100%',
