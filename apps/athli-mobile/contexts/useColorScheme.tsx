@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import {
+  Appearance,
   type ColorSchemeName,
   useColorScheme as useNativeColorScheme,
 } from 'react-native';
@@ -82,6 +83,18 @@ export const ThemePreferenceProvider = ({ children }: { children: ReactNode }) =
   };
 
   const effectiveScheme = resolveEffectiveScheme(preference, systemScheme);
+
+  // Force the system color scheme to match the app's theme
+  // This affects keyboard appearance, native menus, and other system UI
+  useEffect(() => {
+    if (preference === 'system') {
+      // Reset to system default when in system mode
+      Appearance.setColorScheme(null);
+    } else {
+      // Force the selected theme
+      Appearance.setColorScheme(preference);
+    }
+  }, [preference]);
 
   const activePreset = useMemo(
     () => THEMES.find((theme) => theme.value === preset) ?? THEMES[0],

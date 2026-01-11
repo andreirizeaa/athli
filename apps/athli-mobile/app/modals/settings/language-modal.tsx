@@ -1,17 +1,32 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  Platform,
+} from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { PressableOpacity } from 'pressto';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Check, X } from 'lucide-react-native';
-import { Platform } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { X, Check } from 'lucide-react-native';
 
-import { typography, iconSizes } from '@/constants/typography';
+import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { LANGUAGES } from '@/constants/languages';
-import { PlatformIcon } from '@/components/platform-icon';
 import { IconButton } from '@/components/icon-button';
+import { Separator } from '@/components/separator';
+import { SearchBar } from '@/components/search-bar';
+import { hexToRgba } from '@/utils/colorUtils';
+
+type Language = {
+  code: string;
+  name: string;
+  nativeName: string;
+  flag: string;
+};
 
 export default function LanguageModal() {
   const router = useRouter();
@@ -19,132 +34,209 @@ export default function LanguageModal() {
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
   const [selectedLanguageCode, setSelectedLanguageCode] = useState<string>('en');
+  const [searchQuery, setSearchQuery] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const listRef = useRef<any>(null);
 
-  const dividerColor = themeColors.border;
-  const iconColor = themeColors.text;
+  // Scroll to top when search query changes
+  useEffect(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [searchQuery]);
 
-  const handleClose = () => {
+  // Filter and sort languages - selected at top, then alphabetical, filtered by search
+  const filteredLanguages = useMemo(() => {
+    let filtered = LANGUAGES;
+
+    // Filter by search query (name, nativeName)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = LANGUAGES.filter((language) =>
+        language.name.toLowerCase().includes(query) ||
+        language.nativeName.toLowerCase().includes(query)
+      );
+    }
+
+    // Sort with selected language at top
+    if (selectedLanguageCode) {
+      const selected = filtered.find((l) => l.code === selectedLanguageCode);
+      const others = filtered.filter((l) => l.code !== selectedLanguageCode);
+      if (selected) {
+        return [selected, ...others];
+      }
+    }
+
+    return filtered;
+  }, [searchQuery, selectedLanguageCode]);
+
+  const handleClose = useCallback(() => {
     router.back();
-  };
+  }, [router]);
 
-  const handleSelectLanguage = (code: string) => {
+  const handleSelectLanguage = useCallback((code: string) => {
     setSelectedLanguageCode(code);
     // TODO: Implement language change logic
-    handleClose();
-  };
+    router.back();
+  }, [router]);
+
+  const renderItem = useCallback(({ item }: { item: Language }) => {
+    const isSelected = item.code === selectedLanguageCode;
+
+    return (
+      <PressableOpacity
+        style={styles.languageItem}
+        onPress={() => handleSelectLanguage(item.code)}
+      >
+        <Text style={styles.flag}>{item.flag}</Text>
+        <Text style={[styles.languageName, { color: themeColors.text }]} numberOfLines={1}>
+          {item.nativeName}
+        </Text>
+        <View style={[
+          styles.radioOuter,
+          { borderColor: isSelected ? themeColors.primary : themeColors.border },
+          isSelected && { backgroundColor: themeColors.primary },
+        ]}>
+          {isSelected && (
+            <Check {...({ size: 12, color: themeColors.primaryForeground, strokeWidth: 3 } as any)} />
+          )}
+        </View>
+      </PressableOpacity>
+    );
+  }, [selectedLanguageCode, themeColors, handleSelectLanguage]);
+
+  const renderSeparator = useCallback(() => (
+    <Separator style={styles.separator} />
+  ), []);
+
+  const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
+  const gradientHeight = headerHeight + 12;
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20, backgroundColor: themeColors.background }]}>
-        <IconButton
-          icon={{ sf: 'xmark', IconComponent: X }}
-          onPress={handleClose}
-          size="md"
-          color={iconColor}
+    <View style={[styles.modalContainer, { backgroundColor: themeColors.background }]}>
+      {/* Language List */}
+      <View style={styles.listContainer}>
+        <FlashList
+          ref={listRef as any}
+          data={filteredLanguages}
+          renderItem={renderItem}
+          ItemSeparatorComponent={renderSeparator}
+          ListHeaderComponent={
+            <View style={[styles.listHeader, { paddingTop: headerHeight + 16 }]}>
+              <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder={t('preferences.searchLanguages')}
+              />
+            </View>
+          }
+          // @ts-ignore - estimatedItemSize is a valid FlashList prop but types may be outdated
+          estimatedItemSize={52}
+          keyExtractor={(item) => item.code}
+          contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
         />
-        <Text style={[styles.title, { color: themeColors.text }]}>{t('preferences.selectLanguage')}</Text>
-        <View style={styles.closeButton} />
       </View>
 
-      {/* Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {LANGUAGES.map((language, index) => {
-          const isSelected = language.code === selectedLanguageCode;
-
-          return (
-            <View key={language.code}>
-              <PressableOpacity
-                style={styles.languageRow}
-                onPress={() => handleSelectLanguage(language.code)}
-              >
-                <View style={styles.languageInfo}>
-                  <Text style={styles.languageFlag}>{language.flag}</Text>
-                  <View style={styles.languageTextContainer}>
-                    <Text
-                      style={[
-                        styles.languageNativeName,
-                        { color: themeColors.text },
-                      ]}
-                    >
-                      {language.nativeName}
-                    </Text>
-                  </View>
-                </View>
-
-                {isSelected && (
-                  <PlatformIcon
-                    sf="checkmark"
-                    IconComponent={Check}
-                    size={iconSizes.modalIcons}
-                    color={themeColors.primary}
-                  />
-                )}
-              </PressableOpacity>
-
-              {index !== LANGUAGES.length - 1 && (
-                <View style={[styles.modalDivider, { backgroundColor: dividerColor }]} />
-              )}
-            </View>
-          );
-        })}
-      </ScrollView>
+      {/* Fixed Header with blur effect */}
+      <View style={[styles.fixedHeader, { height: headerHeight }]}>
+        <LinearGradient
+          colors={[
+            hexToRgba(themeColors.background, 1),
+            hexToRgba(themeColors.background, 0.85),
+            hexToRgba(themeColors.background, 0.5),
+            hexToRgba(themeColors.background, 0),
+          ]}
+          locations={[0, 0.5, 0.8, 1]}
+          style={[styles.headerGradient, { height: gradientHeight }]}
+          pointerEvents="none"
+        />
+        <View
+          style={[
+            styles.modalHeader,
+            {
+              paddingTop: Platform.OS === 'android' ? 12 + insets.top : 12,
+            },
+          ]}
+        >
+          <IconButton
+            icon={{ sf: 'xmark', IconComponent: X }}
+            onPress={handleClose}
+            size="md"
+            color={themeColors.text}
+          />
+          <Text style={[styles.modalTitle, { color: themeColors.text }]}>
+            {t('preferences.selectLanguage')}
+          </Text>
+          <View style={styles.headerPlaceholder} />
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  modalContainer: {
     flex: 1,
-    borderTopWidth: 0,
   },
-  header: {
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  headerGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 12,
   },
-  title: {
+  modalTitle: {
     ...typography.h6,
     flex: 1,
     textAlign: 'center',
   },
-  closeButton: {
+  headerPlaceholder: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+  },
+  listHeader: {
+    paddingBottom: 12,
+  },
+  listContainer: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 40,
+  },
+  languageItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  flag: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  languageName: {
+    ...typography.p2,
+    flex: 1,
+  },
+  radioOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
-  languageRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-  },
-  languageInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-  },
-  languageFlag: {
-    ...typography.h6,
-    marginRight: 12,
-  },
-  languageTextContainer: {
-    flexShrink: 1,
-  },
-  languageNativeName: {
-    ...typography.p2,
-    marginTop: 2,
-  },
-  modalDivider: {
-    height: 1,
+  separator: {
+    marginLeft: 36,
   },
 });

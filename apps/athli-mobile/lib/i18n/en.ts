@@ -685,6 +685,8 @@ export const en = {
     metricUnits: 'kg / m / cm',
     imperialUnits: 'lbs / ft / in',
     colorPalette: 'Color palette',
+    searchPalettes: 'Search palettes...',
+    searchLanguages: 'Search languages...',
   },
   clientDetail: {
     tabs: {
