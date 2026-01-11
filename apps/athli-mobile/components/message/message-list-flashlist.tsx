@@ -18,7 +18,7 @@ import Reanimated, { useAnimatedStyle, SharedValue } from 'react-native-reanimat
 
 import { typography } from '@/constants/typography';
 import { type ThemeColors } from '@/constants/theme';
-import { type ChatMessage } from '@/services/chats-service';
+import { type ChatMessage, reactTo } from '@/services/chats-service';
 import { type DropdownMenuOption, ContextMenuWrapper } from '@/components/dropdown-menu';
 import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
@@ -519,6 +519,51 @@ export const MessageList = ({
     onReactionPress?.(message);
   };
 
+  const handleQuickReaction = async (message: ChatMessage, emoji: string) => {
+    const isSender = message.isSent;
+
+    // Get current user's reaction
+    const currentReaction = isSender
+      ? message.senderReaction
+      : message.recipientReaction;
+
+    // If clicking the same emoji, remove reaction
+    const isRemoving = emoji === currentReaction;
+    const newEmoji = isRemoving ? '' : emoji;
+
+    // Update locally first for instant feedback
+    setLocalMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.id === message.id) {
+          return {
+            ...msg,
+            ...(isSender ? { senderReaction: isRemoving ? undefined : emoji } : { recipientReaction: isRemoving ? undefined : emoji }),
+          };
+        }
+        return msg;
+      })
+    );
+
+    // Send to backend
+    try {
+      await reactTo(message.id, newEmoji, isSender);
+    } catch (error) {
+      console.error('Failed to react to message:', error);
+      // Revert on error
+      setLocalMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.id === message.id) {
+            return {
+              ...msg,
+              ...(isSender ? { senderReaction: currentReaction } : { recipientReaction: currentReaction }),
+            };
+          }
+          return msg;
+        })
+      );
+    }
+  };
+
   const handlePressOut = () => {
     // Empty handler for SwipeToReplyBubble - no longer needed for long press
   };
@@ -712,6 +757,37 @@ export const MessageList = ({
         label: t('general.copy'),
         icon: { sf: 'doc.on.doc', IconComponent: Copy },
         onPress: () => handleCopy(message),
+      },
+      // React submenu with common emojis
+      {
+        label: 'React',
+        icon: { sf: 'face.smiling', IconComponent: Reply },
+        subActions: [
+          {
+            label: '👍',
+            onPress: () => handleQuickReaction(message, '👍'),
+          },
+          {
+            label: '❤️',
+            onPress: () => handleQuickReaction(message, '❤️'),
+          },
+          {
+            label: '😂',
+            onPress: () => handleQuickReaction(message, '😂'),
+          },
+          {
+            label: '😮',
+            onPress: () => handleQuickReaction(message, '😮'),
+          },
+          {
+            label: '😢',
+            onPress: () => handleQuickReaction(message, '😢'),
+          },
+          {
+            label: '🙏',
+            onPress: () => handleQuickReaction(message, '🙏'),
+          },
+        ],
       },
     ];
 
