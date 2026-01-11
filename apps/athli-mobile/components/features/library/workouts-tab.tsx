@@ -203,23 +203,12 @@ export const WorkoutsTab = () => {
                     >
                       {workout.name}
                     </Text>
-                    {showMetaRow && (
-                      <View style={styles.metaRow}>
-                        {hasType && (
-                          <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                            {typeLabel}
-                          </Text>
-                        )}
-                        {hasType && hasDifficulty && (
-                          <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                        )}
-                        {hasDifficulty && (
-                          <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                            {difficultyLabel}
-                          </Text>
-                        )}
-                      </View>
-                    )}
+                    <Text style={[styles.exerciseCount, { color: themeColors.mutedText }]}>
+                      {workout.totalExercises === 0
+                        ? 'Empty'
+                        : `${workout.totalExercises} ${workout.totalExercises === 1 ? t('library.exercise') : t('library.exercises')}`
+                      }
+                    </Text>
                   </View>
                   <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
                 </View>
@@ -274,6 +263,10 @@ const styles = StyleSheet.create({
   workoutName: {
     ...typography.p1,
     fontWeight: '600',
+    marginBottom: 2,
+  },
+  exerciseCount: {
+    ...typography.p3,
     marginBottom: 4,
   },
   metaRow: {

@@ -195,17 +195,12 @@ export const SectionsTab = () => {
                       <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
                         {getSectionTypeLabel(item.sectionType as SectionType)}
                       </Text>
-                      {getSectionTypeInfo(item) && (
-                        <>
-                          <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                          <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                            {getSectionTypeInfo(item)}
-                          </Text>
-                        </>
-                      )}
                       <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
                       <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                        {item.totalExercises} {item.totalExercises === 1 ? t('library.exercise') : t('library.exercises')}
+                        {item.totalExercises === 0
+                          ? 'Empty'
+                          : `${item.totalExercises} ${item.totalExercises === 1 ? t('library.exercise') : t('library.exercises')}`
+                        }
                       </Text>
                     </View>
                   </View>
