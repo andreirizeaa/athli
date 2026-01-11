@@ -5,19 +5,17 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Send } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { useQuery } from '@tanstack/react-query';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
-import { useClientsStore } from '@/stores';
-import { type Client } from '@/services/client-service';
+import { getClients, type Athlete } from '@/services/coach/coach-client-service';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { SearchBar } from '@/components/ui/search-bar';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { EmptyState } from '@/components/ui/empty-state';
-
-const noClientsAvatar = require('@/assets/avatars/no-clients-avatar.png');
 
 // Fuzzy search function - checks if query matches name (allowing for character skipping)
 const fuzzyMatch = (text: string, query: string): boolean => {
@@ -47,9 +45,23 @@ export default function ClientsScreen() {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const [searchQuery, setSearchQuery] = useState('');
+  const coachProfile = useCoachProfileStore((state) => state.profile);
+  const isAuthenticated = !!coachProfile;
 
-  // Get clients from Zustand store
-  const clients = useClientsStore((state) => state.clients);
+  // Fetch clients directly with TanStack Query
+  const { data: clients = [], isLoading, isError } = useQuery({
+    queryKey: ['clients'],
+    queryFn: async () => {
+      console.log('[ClientsScreen] Fetching clients...');
+      const data = await getClients();
+      console.log('[ClientsScreen] Received clients:', data.length, 'items');
+      return data;
+    },
+    enabled: isAuthenticated,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+  });
 
   // Filter clients based on search query
   const filteredClients = useMemo(() => {
@@ -71,12 +83,21 @@ export default function ClientsScreen() {
     });
   }, [clients, searchQuery]);
 
+  console.log('[ClientsScreen] Render:', {
+    isAuthenticated,
+    isLoading,
+    isError,
+    totalClients: clients.length,
+    filteredClients: filteredClients.length,
+    searchQuery
+  });
+
   const handleClientPress = (clientId: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(`/client/${clientId}`);
   };
 
-  const formatSubtitle = (client: Client): string => {
+  const formatSubtitle = (client: Athlete): string => {
     const parts: string[] = [];
 
     if (client.age) {
@@ -132,7 +153,6 @@ export default function ClientsScreen() {
       {/* Empty State */}
       {filteredClients.length === 0 && (
         <EmptyState
-          image={noClientsAvatar}
           message={t('clients.empty')}
         />
       )}
@@ -140,64 +160,64 @@ export default function ClientsScreen() {
       {/* Client List */}
       <View style={styles.listContainer}>
         {filteredClients.map((client, index) => {
-            const isLastItem = index === filteredClients.length - 1;
-            return (
-              <View key={client.id}>
-                <PressableOpacity
-                  onPress={() => handleClientPress(client.id)}
-                  style={styles.rowWrapper}
-                >
-                  <View style={styles.rowContent}>
-                    <View style={styles.avatarContainer}>
-                      <View style={styles.avatarCircle}>
-                        {client.avatarUrl ? (
-                          <Image
-                            source={{ uri: client.avatarUrl }}
-                            style={styles.avatarImage}
-                            contentFit="cover"
-                            contentPosition="center"
-                            cachePolicy="memory-disk"
-                          />
-                        ) : (
-                          <View
-                            style={[
-                              styles.avatarImage,
-                              styles.avatarPlaceholder,
-                              { backgroundColor: themeColors.border },
-                            ]}
-                          />
-                        )}
-                      </View>
+          const isLastItem = index === filteredClients.length - 1;
+          return (
+            <View key={client.id}>
+              <PressableOpacity
+                onPress={() => handleClientPress(client.id)}
+                style={styles.rowWrapper}
+              >
+                <View style={styles.rowContent}>
+                  <View style={styles.avatarContainer}>
+                    <View style={styles.avatarCircle}>
+                      {client.avatarUrl ? (
+                        <Image
+                          source={{ uri: client.avatarUrl }}
+                          style={styles.avatarImage}
+                          contentFit="cover"
+                          contentPosition="center"
+                          cachePolicy="memory-disk"
+                        />
+                      ) : (
+                        <View
+                          style={[
+                            styles.avatarImage,
+                            styles.avatarPlaceholder,
+                            { backgroundColor: themeColors.border },
+                          ]}
+                        />
+                      )}
                     </View>
-                    <View style={styles.clientInfo}>
-                      <Text
-                        style={[styles.clientName, { color: themeColors.text }]}
-                        numberOfLines={1}
-                      >
-                        {client.name}
-                      </Text>
-                      <Text
-                        style={[styles.clientSubtitle, { color: themeColors.mutedText }]}
-                        numberOfLines={2}
-                      >
-                        {formatSubtitle(client)}
-                      </Text>
-                    </View>
-                    <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
                   </View>
-                </PressableOpacity>
-                <View style={styles.separatorContainer}>
-                  <View
-                    style={[
-                      styles.separator,
-                      { backgroundColor: themeColors.mutedText, opacity: 0.3 },
-                    ]}
-                  />
+                  <View style={styles.clientInfo}>
+                    <Text
+                      style={[styles.clientName, { color: themeColors.text }]}
+                      numberOfLines={1}
+                    >
+                      {client.name}
+                    </Text>
+                    <Text
+                      style={[styles.clientSubtitle, { color: themeColors.mutedText }]}
+                      numberOfLines={2}
+                    >
+                      {formatSubtitle(client)}
+                    </Text>
+                  </View>
+                  <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
                 </View>
-                {isLastItem && <View style={{ height: 60 }} />}
+              </PressableOpacity>
+              <View style={styles.separatorContainer}>
+                <View
+                  style={[
+                    styles.separator,
+                    { backgroundColor: themeColors.mutedText, opacity: 0.3 },
+                  ]}
+                />
               </View>
-            );
-          })}
+              {isLastItem && <View style={{ height: 60 }} />}
+            </View>
+          );
+        })}
       </View>
     </ScreenWrapper>
   );

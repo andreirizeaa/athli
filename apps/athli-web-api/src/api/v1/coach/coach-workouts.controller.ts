@@ -21,7 +21,7 @@ const mapWorkoutResponse = (workout: any) => {
         // Top level fields (prefer DB columns, fallback to legacy workout_data)
         description: description || workout_data?.description || '',
         type: type || workout_data?.type || '',
-        difficulty: difficulty || workout_data?.difficulty || 'intermediate',
+        difficulty: difficulty || workout_data?.difficulty || '',
         equipment: equipment || workout_data?.equipment || [],
         totalExercises: total_exercises ?? workout_data?.totalExercises ?? 0,
 

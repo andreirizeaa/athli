@@ -4,21 +4,19 @@ import { ChevronRight, FileText, Image as ImageIcon, Video as VideoIcon, Play, U
 import { useRouter, useFocusEffect } from 'expo-router';
 import { PressableOpacity } from 'pressto';
 import { Image } from 'expo-image';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { useLibraryTab, useLibraryStore } from '@/stores';
+import { useLibraryTab } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { useModalCallbacks } from '@/stores';
 import { getAllFiles, getFileTypeFromMime, deleteFile } from '@/services/coach/coach-file-service';
 import { EmptyState } from '@/components/ui/empty-state';
-
-const noFilesAvatar = require('@/assets/avatars/no-files-avatar.png');
 
 export const FilesTab = () => {
   const { colors: themeColors } = useThemePreference();
@@ -26,19 +24,49 @@ export const FilesTab = () => {
   const router = useRouter();
   const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
+  const coachProfile = useCoachProfileStore((state) => state.profile);
+  const isAuthenticated = !!coachProfile;
 
-  // Get files from Zustand store
-  const getFilteredFiles = useLibraryStore((state) => state.getFilteredFiles);
-  const filteredFiles = useMemo(
-    () => getFilteredFiles(searchQuery),
-    [getFilteredFiles, searchQuery]
-  );
+  // Fetch files directly with TanStack Query
+  const { data: files = [], isLoading, isError } = useQuery({
+    queryKey: ['files'],
+    queryFn: async () => {
+      console.log('[FilesTab] Fetching files...');
+      const data = await getAllFiles();
+      console.log('[FilesTab] Received files:', data.length, 'items');
+      return data;
+    },
+    enabled: isAuthenticated,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+  });
+
+  // Filter files based on search query
+  const filteredFiles = useMemo(() => {
+    if (!searchQuery.trim()) return files;
+    const lowerQuery = searchQuery.toLowerCase();
+    return files.filter(file =>
+      file.filename.toLowerCase().includes(lowerQuery) ||
+      file.mime_type?.toLowerCase().includes(lowerQuery) ||
+      getFileTypeFromMime(file.mime_type).toLowerCase().includes(lowerQuery)
+    );
+  }, [files, searchQuery]);
+
+  console.log('[FilesTab] Render:', {
+    isAuthenticated,
+    isLoading,
+    isError,
+    totalFiles: files.length,
+    filteredFiles: filteredFiles.length,
+    searchQuery
+  });
 
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteFile({ fileId: id }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['files'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['files'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (error: Error) => {
@@ -65,12 +93,27 @@ export const FilesTab = () => {
     });
   };
 
-  const handleThumbnailPress = (item: typeof filteredFiles[0]) => {
+  const handleThumbnailPress = async (item: typeof filteredFiles[0]) => {
     closeOpenRow();
+
+    // Get signed URL for preview
+    let uri = item.file_path;
+    if (thumbnailUrls[item.id]) {
+      uri = thumbnailUrls[item.id];
+    } else {
+      try {
+        const { url } = await import('@/services/coach/coach-file-service').then(m => m.getFileUrl(item.id));
+        uri = url;
+        setThumbnailUrls(prev => ({ ...prev, [item.id]: url }));
+      } catch (error) {
+        console.error('Failed to fetch file URL:', error);
+      }
+    }
+
     router.push({
       pathname: '/library/file-preview',
       params: {
-        uri: item.file_path,
+        uri,
         name: item.filename,
         type: getFileTypeFromMime(item.mime_type),
         mimeType: item.mime_type || '',
@@ -93,21 +136,6 @@ export const FilesTab = () => {
     });
   };
 
-  const handleDelete = useCallback((item: typeof filteredFiles[0]) => {
-    Alert.alert(
-      `${t('general.delete')} ${item.filename}?`,
-      t('library.deleteConfirmMessage'),
-      [
-        { text: t('general.cancel'), style: 'cancel' },
-        {
-          text: t('general.delete'),
-          style: 'destructive',
-          onPress: () => deleteMutation.mutate(item.id)
-        },
-      ]
-    );
-  }, [deleteMutation, t]);
-
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -116,10 +144,58 @@ export const FilesTab = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
+  // Helper to get formatted file type label
+  const getFormattedFileTypeLabel = (mimeType: string | null | undefined): string => {
+    const fileType = getFileTypeFromMime(mimeType);
+    const labels: Record<string, string> = {
+      'image': 'Image',
+      'video': 'Video',
+      'pdf': 'PDF',
+      'document': 'Document',
+      'other': 'File',
+    };
+    return labels[fileType] || 'File';
+  };
+
+  const [thumbnailUrls, setThumbnailUrls] = React.useState<Record<string, string>>({});
+  const [loadingThumbnails, setLoadingThumbnails] = React.useState<Record<string, boolean>>({});
+
+  // Fetch signed URLs for image/video thumbnails
+  React.useEffect(() => {
+    const fetchThumbnails = async () => {
+      for (const file of filteredFiles) {
+        const fileType = getFileTypeFromMime(file.mime_type);
+        if ((fileType === 'image' || fileType === 'video') && !thumbnailUrls[file.id] && !loadingThumbnails[file.id]) {
+          setLoadingThumbnails(prev => ({ ...prev, [file.id]: true }));
+          try {
+            const { url } = await import('@/services/coach/coach-file-service').then(m => m.getFileUrl(file.id));
+            setThumbnailUrls(prev => ({ ...prev, [file.id]: url }));
+          } catch (error) {
+            console.error('Failed to fetch thumbnail URL for file:', file.id, error);
+          } finally {
+            setLoadingThumbnails(prev => ({ ...prev, [file.id]: false }));
+          }
+        }
+      }
+    };
+
+    fetchThumbnails();
+  }, [filteredFiles]);
+
   const renderThumbnail = (item: typeof filteredFiles[0]) => {
     const fileType = getFileTypeFromMime(item.mime_type);
     if (fileType === 'image' || fileType === 'video') {
-      const uri = item.file_path;
+      const uri = thumbnailUrls[item.id];
+      const isLoading = loadingThumbnails[item.id];
+
+      if (isLoading || !uri) {
+        return (
+          <View style={[styles.imageThumbnailContainer, { backgroundColor: themeColors.surfaceSecondary, justifyContent: 'center', alignItems: 'center' }]}>
+            <Text style={{ color: themeColors.mutedText, fontSize: 10 }}>...</Text>
+          </View>
+        );
+      }
+
       return (
         <View style={styles.imageThumbnailContainer}>
           <Image
@@ -158,7 +234,6 @@ export const FilesTab = () => {
       {/* Empty State */}
       {filteredFiles.length === 0 && (
         <EmptyState
-          image={noFilesAvatar}
           message={t('library.empty.files')}
         />
       )}
@@ -176,14 +251,14 @@ export const FilesTab = () => {
             label: `${t('general.delete')} File`,
             icon: { sf: 'trash', IconComponent: Trash2 },
             destructive: true,
-            onPress: () => handleDelete(item),
+            onPress: () => deleteMutation.mutateAsync(item.id),
           }
         ];
 
         return (
           <View key={item.id}>
             <SwipeableRow
-              onDelete={() => handleDelete(item)}
+              onDelete={() => deleteMutation.mutateAsync(item.id)}
               onOpen={registerOpenRow}
               deleteConfirmTitle={`${t('general.delete')} ${item.filename}?`}
             >
@@ -210,7 +285,7 @@ export const FilesTab = () => {
                         </Text>
                         <View style={styles.metaRow}>
                           <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                            {getFileTypeFromMime(item.mime_type)}
+                            {getFormattedFileTypeLabel(item.mime_type)}
                           </Text>
                           {item.size && (
                             <>

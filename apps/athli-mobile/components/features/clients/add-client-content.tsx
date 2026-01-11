@@ -38,9 +38,9 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
     // TanStack Query mutation
     const addClientMutation = useMutation({
       mutationFn: addClient,
-      onSuccess: () => {
-        // Invalidate clients query to refetch the list
-        queryClient.invalidateQueries({ queryKey: ['clients'] });
+      onSuccess: async () => {
+        // Refetch to update the cache and trigger Zustand store update
+        await queryClient.refetchQueries({ queryKey: ['clients'] });
 
         // Success haptic feedback
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

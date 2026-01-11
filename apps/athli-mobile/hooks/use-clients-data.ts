@@ -22,19 +22,24 @@ import {
 /**
  * Hook to fetch and sync client data
  * Call this ONCE in the root layout
+ * @param isAuthenticated - Whether the user is authenticated
  */
-export function useClientsData() {
+export function useClientsData(isAuthenticated: boolean = false) {
   const setClients = useClientsStore((state) => state.setClients);
 
   const clientsQuery = useQuery({
     queryKey: ['clients'],
     queryFn: getClients,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // Always consider data stale to ensure fresh data
+    enabled: isAuthenticated,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   // Sync to Zustand when data changes
   useEffect(() => {
     if (clientsQuery.data) {
+      console.log('[useClientsData] Syncing clients to store:', clientsQuery.data.length, 'items');
       setClients(clientsQuery.data);
     }
   }, [clientsQuery.data, setClients]);

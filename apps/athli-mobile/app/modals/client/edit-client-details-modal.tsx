@@ -96,9 +96,9 @@ export default function EditClientDetailsModal() {
   const updateMutation = useMutation({
     mutationFn: (data: { id: string; updates: UpdateClientData }) =>
       updateClient(data.id, data.updates),
-    onSuccess: () => {
-      // Invalidate clients query to refetch the list
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+    onSuccess: async () => {
+      // Refetch to update the cache and trigger Zustand store update
+      await queryClient.refetchQueries({ queryKey: ['clients'] });
 
       // Success haptic feedback
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

@@ -3,21 +3,20 @@ import { StyleSheet, Text, View, Alert } from 'react-native';
 import { ChevronRight, CheckCircle, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableOpacity } from 'pressto';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { useLibraryTab, useLibraryStore } from '@/stores';
+import { useLibraryTab } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { useModalCallbacks } from '@/stores';
-import { deleteHabit, duplicateHabit } from '@/services/coach/coach-habit-service';
+import { getAllHabits, deleteHabit, duplicateHabit } from '@/services/coach/coach-habit-service';
 import { EmptyState } from '@/components/ui/empty-state';
-
-const noHabitsAvatar = require('@/assets/avatars/no-habits-avatar.png');
+import { HABIT_UNIT_OPTIONS, HABIT_PERIOD_OPTIONS } from '@/constants/training';
 
 export const HabitsTab = () => {
   const { colors: themeColors } = useThemePreference();
@@ -25,19 +24,49 @@ export const HabitsTab = () => {
   const router = useRouter();
   const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
+  const coachProfile = useCoachProfileStore((state) => state.profile);
+  const isAuthenticated = !!coachProfile;
 
-  // Get habits from Zustand store
-  const getFilteredHabits = useLibraryStore((state) => state.getFilteredHabits);
-  const filteredHabits = useMemo(
-    () => getFilteredHabits(searchQuery),
-    [getFilteredHabits, searchQuery]
-  );
+  // Fetch habits directly with TanStack Query
+  const { data: habits = [], isLoading, isError } = useQuery({
+    queryKey: ['habits'],
+    queryFn: async () => {
+      console.log('[HabitsTab] Fetching habits...');
+      const data = await getAllHabits();
+      console.log('[HabitsTab] Received habits:', data.length, 'items');
+      return data;
+    },
+    enabled: isAuthenticated,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+  });
+
+  // Filter habits based on search query
+  const filteredHabits = useMemo(() => {
+    if (!searchQuery.trim()) return habits;
+    const lowerQuery = searchQuery.toLowerCase();
+    return habits.filter(habit =>
+      habit.name.toLowerCase().includes(lowerQuery) ||
+      habit.unit?.toLowerCase().includes(lowerQuery) ||
+      habit.period?.toLowerCase().includes(lowerQuery)
+    );
+  }, [habits, searchQuery]);
+
+  console.log('[HabitsTab] Render:', {
+    isAuthenticated,
+    isLoading,
+    isError,
+    totalHabits: habits.length,
+    filteredHabits: filteredHabits.length,
+    searchQuery
+  });
 
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteHabit({ id }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['habits'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['habits'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (error: Error) => {
@@ -53,8 +82,8 @@ export const HabitsTab = () => {
   // Duplicate mutation
   const duplicateMutation = useMutation({
     mutationFn: (id: string) => duplicateHabit(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['habits'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['habits'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (error: Error) => {
@@ -97,27 +126,27 @@ export const HabitsTab = () => {
     });
   };
 
-  const handleDelete = useCallback((item: typeof filteredHabits[0]) => {
-    Alert.alert(
-      `${t('general.delete')} ${item.name}?`,
-      t('library.deleteConfirmMessage'),
-      [
-        { text: t('general.cancel'), style: 'cancel' },
-        {
-          text: t('general.delete'),
-          style: 'destructive',
-          onPress: () => deleteMutation.mutate(item.id)
-        },
-      ]
-    );
-  }, [deleteMutation, t]);
+  // Helper to get formatted label for unit
+  const getUnitLabel = (value: string | null | undefined): string => {
+    if (!value) return '';
+    const option = HABIT_UNIT_OPTIONS.find(opt => opt.value === value);
+    return option?.label || value;
+  };
+
+  // Helper to get formatted label for period
+  const getPeriodLabel = (value: string | null | undefined): string => {
+    if (!value) return '';
+    if (value === 'daily') return t('library.addHabit.daily');
+    if (value === 'weekly') return t('library.addHabit.weekly');
+    const option = HABIT_PERIOD_OPTIONS.find(opt => opt.value === value);
+    return option?.label || value;
+  };
 
   return (
     <View style={styles.container}>
       {/* Empty State */}
       {filteredHabits.length === 0 && (
         <EmptyState
-          image={noHabitsAvatar}
           message={t('library.empty.habits')}
         />
       )}
@@ -125,6 +154,8 @@ export const HabitsTab = () => {
       {/* Habits List */}
       {filteredHabits.map((item, index) => {
         const isLastItem = index === filteredHabits.length - 1;
+        const unitLabel = getUnitLabel(item.unit);
+        const periodLabel = getPeriodLabel(item.period);
 
         const dropdownOptions: DropdownMenuOption[] = [
           {
@@ -136,14 +167,14 @@ export const HabitsTab = () => {
             label: `${t('general.delete')} Habit`,
             icon: { sf: 'trash', IconComponent: Trash2 },
             destructive: true,
-            onPress: () => handleDelete(item),
+            onPress: () => deleteMutation.mutateAsync(item.id),
           }
         ];
 
         return (
           <View key={item.id}>
             <SwipeableRow
-              onDelete={() => handleDelete(item)}
+              onDelete={() => deleteMutation.mutateAsync(item.id)}
               onOpen={registerOpenRow}
               deleteConfirmTitle={`${t('general.delete')} ${item.name}?`}
             >
@@ -167,11 +198,11 @@ export const HabitsTab = () => {
                       </Text>
                       <View style={styles.metaRow}>
                         <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                          {item.amount} {item.unit}
+                          {item.amount} {unitLabel}
                         </Text>
                         <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
                         <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
-                          {item.period === 'daily' ? t('library.addHabit.daily') : t('library.addHabit.weekly')}
+                          {periodLabel}
                         </Text>
                       </View>
                     </View>

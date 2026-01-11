@@ -17,6 +17,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import {
   getChats,
+  getArchivedChats,
   readAllChats,
   archiveChat,
   deleteChat,
@@ -86,10 +87,15 @@ export default function ChatsScreen() {
     );
   }, [chats, searchQuery]);
 
-  const handleArchivedPress = () => {
+  const handleArchivedPress = async () => {
+    // Pre-fetch archived chats to prevent empty flash on navigation
+    const archivedChats = await getArchivedChats();
     router.push({
       pathname: '/chats/archived',
-      params: { unreadCount: totalUnreadCount.toString() },
+      params: {
+        unreadCount: totalUnreadCount.toString(),
+        archivedChats: JSON.stringify(archivedChats),
+      },
     });
   };
 

@@ -3,21 +3,19 @@ import { StyleSheet, Text, View, Alert } from 'react-native';
 import { ChevronRight, ClipboardList, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableOpacity } from 'pressto';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { useLibraryTab, useLibraryStore } from '@/stores';
+import { useLibraryTab } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { useModalCallbacks } from '@/stores';
-import { deleteQuestionnaire, duplicateQuestionnaire } from '@/services/coach/coach-questionnaire-service';
+import { getQuestionnaires, deleteQuestionnaire, duplicateQuestionnaire } from '@/services/coach/coach-questionnaire-service';
 import { EmptyState } from '@/components/ui/empty-state';
-
-const noFormsAvatar = require('@/assets/avatars/no-forms-avatar.png');
 
 export const QuestionnairesTab = () => {
   const { colors: themeColors } = useThemePreference();
@@ -26,19 +24,47 @@ export const QuestionnairesTab = () => {
   const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
   const { setClientsSelectCallback } = useModalCallbacks();
   const queryClient = useQueryClient();
+  const coachProfile = useCoachProfileStore((state) => state.profile);
+  const isAuthenticated = !!coachProfile;
 
-  // Get questionnaires from Zustand store
-  const getFilteredQuestionnaires = useLibraryStore((state) => state.getFilteredQuestionnaires);
-  const filteredQuestionnaires = useMemo(
-    () => getFilteredQuestionnaires(searchQuery),
-    [getFilteredQuestionnaires, searchQuery]
-  );
+  // Fetch questionnaires directly with TanStack Query
+  const { data: questionnaires = [], isLoading, isError } = useQuery({
+    queryKey: ['questionnaires'],
+    queryFn: async () => {
+      console.log('[QuestionnairesTab] Fetching questionnaires...');
+      const data = await getQuestionnaires();
+      console.log('[QuestionnairesTab] Received questionnaires:', data.length, 'items');
+      return data;
+    },
+    enabled: isAuthenticated,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+  });
+
+  // Filter questionnaires based on search query
+  const filteredQuestionnaires = useMemo(() => {
+    if (!searchQuery.trim()) return questionnaires;
+    const lowerQuery = searchQuery.toLowerCase();
+    return questionnaires.filter(questionnaire =>
+      questionnaire.name.toLowerCase().includes(lowerQuery)
+    );
+  }, [questionnaires, searchQuery]);
+
+  console.log('[QuestionnairesTab] Render:', {
+    isAuthenticated,
+    isLoading,
+    isError,
+    totalQuestionnaires: questionnaires.length,
+    filteredQuestionnaires: filteredQuestionnaires.length,
+    searchQuery
+  });
 
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteQuestionnaire(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['questionnaires'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['questionnaires'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (error: Error) => {
@@ -55,8 +81,8 @@ export const QuestionnairesTab = () => {
   const duplicateMutation = useMutation({
     mutationFn: ({ id, original }: { id: string; original: typeof filteredQuestionnaires[0] }) =>
       duplicateQuestionnaire(id, original),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['questionnaires'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['questionnaires'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (error: Error) => {
@@ -76,6 +102,7 @@ export const QuestionnairesTab = () => {
       params: {
         editingId: item.id,
         name: item.name,
+        description: item.description || '',
       },
     });
   };
@@ -93,27 +120,11 @@ export const QuestionnairesTab = () => {
     });
   };
 
-  const handleDelete = useCallback((item: typeof filteredQuestionnaires[0]) => {
-    Alert.alert(
-      `${t('general.delete')} ${item.name}?`,
-      t('library.deleteConfirmMessage'),
-      [
-        { text: t('general.cancel'), style: 'cancel' },
-        {
-          text: t('general.delete'),
-          style: 'destructive',
-          onPress: () => deleteMutation.mutate(item.id)
-        },
-      ]
-    );
-  }, [deleteMutation, t]);
-
   return (
     <View style={styles.container}>
       {/* Empty State */}
       {filteredQuestionnaires.length === 0 && (
         <EmptyState
-          image={noFormsAvatar}
           message={t('library.empty.questionnaires')}
         />
       )}
@@ -132,14 +143,14 @@ export const QuestionnairesTab = () => {
             label: `${t('general.delete')} Questionnaire`,
             icon: { sf: 'trash', IconComponent: Trash2 },
             destructive: true,
-            onPress: () => handleDelete(item),
+            onPress: () => deleteMutation.mutateAsync(item.id),
           }
         ];
 
         return (
           <View key={item.id}>
             <SwipeableRow
-              onDelete={() => handleDelete(item)}
+              onDelete={() => deleteMutation.mutateAsync(item.id)}
               onOpen={registerOpenRow}
               deleteConfirmTitle={`${t('general.delete')} ${item.name}?`}
             >

@@ -21,7 +21,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { restoreSession } from '@/services/auth/supabase-auth';
 import type { CoachProfile, ClientProfile } from '@/types/profile';
 import QueryProvider from '@/providers/query-provider';
-import { DataInitializer } from '@/components/providers/data-initializer';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -88,7 +87,7 @@ function RootLayoutNav() {
   const setClientProfile = useClientProfileStore((state) => state.setProfile);
 
   // Initialize data fetching (runs once after auth is restored)
-  DataInitializer();
+  // This must be rendered as a component, not called as a function
 
   // Initialize stores on mount
   useEffect(() => {
@@ -185,7 +184,13 @@ function RootLayoutNav() {
               animation: 'slide_from_right',
             }}
           />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="(tabs)"
+            options={{
+              headerShown: false,
+              animation: 'none',
+            }}
+          />
           <Stack.Screen name="settings/preferences" options={{ headerShown: false }} />
           <Stack.Screen
             name="client/[id]"
@@ -532,18 +537,6 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
-            name="modals/client/assign-program-to-client-modal"
-            options={{
-              presentation: 'modal',
-              gestureEnabled: false,
-              headerShown: false,
-              ...(Platform.OS === 'android' && {
-                animation: 'slide_from_bottom',
-                gestureDirection: 'vertical',
-              }),
-            }}
-          />
-          <Stack.Screen
             name="modals/client/assign-workout-to-client-modal"
             options={{
               presentation: 'modal',
@@ -662,18 +655,6 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="modals/library/add-section-modal"
-            options={{
-              presentation: 'modal',
-              gestureEnabled: false,
-              headerShown: false,
-              ...(Platform.OS === 'android' && {
-                animation: 'slide_from_bottom',
-                gestureDirection: 'vertical',
-              }),
-            }}
-          />
-          <Stack.Screen
-            name="modals/library/add-program-modal"
             options={{
               presentation: 'modal',
               gestureEnabled: false,

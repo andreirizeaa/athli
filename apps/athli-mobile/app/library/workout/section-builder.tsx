@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { StyleSheet, Text, View, Platform, TextInput, Alert } from 'react-native';
+import { StyleSheet, Text, View, Platform, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { ChevronLeft, Check, Plus, Repeat, ChevronDown, Link as LinkIcon } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
@@ -28,6 +30,7 @@ import {
     type ExerciseValidationError,
     validateExercises,
 } from '@/components/features/workout/validation';
+import { createSection, updateSection, getSectionById } from '@/services/coach/coach-section-service';
 
 type SectionBuilderState = {
     name: string;
@@ -78,6 +81,8 @@ export default function SectionBuilderScreen() {
         rounds?: string;
         notes?: string;
         editingId?: string;
+        sectionId?: string; // For library sections (save to API)
+        saveToLibrary?: string; // Flag to indicate this is a library section
         exercises?: string;
     }>();
 
@@ -85,18 +90,62 @@ export default function SectionBuilderScreen() {
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
     const { triggerSectionSelect, setExercisesSelectCallback, setExerciseSelectCallback, setReorderCallback, setReorderItems } = useModalCallbacks();
+    const queryClient = useQueryClient();
+
+    // Determine if this is a library section (save to API) or workout builder section (return to parent)
+    const isLibrarySection = params.saveToLibrary === 'true' || params.sectionId !== undefined;
 
     // State management
     const [state, setState] = useState<SectionBuilderState>(() => createInitialState(params));
     const initialStateRef = useRef<SectionBuilderState | null>(null);
     const [isDirty, setIsDirty] = useState(false);
     const [validationErrors, setValidationErrors] = useState<ExerciseValidationError[]>([]);
+    const [isLoadingData, setIsLoadingData] = useState(false);
 
-    // Initialize ref on mount
+    // Load section data from API when editing
     useEffect(() => {
-        const initial = createInitialState(params);
-        initialStateRef.current = JSON.parse(JSON.stringify(initial));
-    }, []);
+        const loadSectionData = async () => {
+            if (params.sectionId) {
+                setIsLoadingData(true);
+                try {
+                    const sectionData = await getSectionById(params.sectionId);
+                    if (sectionData.section_data && sectionData.section_data.items) {
+                        // Map API data to section builder state
+                        const exercises: BuilderExercise[] = sectionData.section_data.items
+                            .filter((item: any) => item.itemType === 'exercise')
+                            .map((item: any) => item.data);
+
+                        const loadedState = {
+                            name: sectionData.name,
+                            sectionType: sectionData.section_type as SectionType,
+                            duration: '', // API might not store these
+                            rounds: '',
+                            notes: sectionData.description || '',
+                            exercises,
+                        };
+
+                        setState(loadedState);
+                        // Set initial state ref immediately after loading
+                        initialStateRef.current = JSON.parse(JSON.stringify(loadedState));
+                    }
+                } catch (error) {
+                    console.error('Failed to load section data:', error);
+                    Alert.alert(
+                        t('general.error'),
+                        t('general.errorLoading'),
+                        [{ text: t('general.ok') }]
+                    );
+                } finally {
+                    setIsLoadingData(false);
+                }
+            } else if (!initialStateRef.current) {
+                // For new sections (not loaded from API), set initial state ref from params
+                initialStateRef.current = JSON.parse(JSON.stringify(state));
+            }
+        };
+
+        loadSectionData();
+    }, [params.sectionId, t]);
 
     // Track dirty state
     useEffect(() => {
@@ -106,7 +155,82 @@ export default function SectionBuilderScreen() {
         }
     }, [state]);
 
+    // Sync metadata changes when returning from edit modal
+    useFocusEffect(
+        useCallback(() => {
+            // Only sync if this is a library section (has sectionId)
+            if (isLibrarySection && params.sectionId) {
+                // Get the latest section data from the query cache
+                const cachedSections = queryClient.getQueryData<any[]>(['sections']);
+                if (cachedSections) {
+                    const updatedSection = cachedSections.find(s => s.id === params.sectionId);
+                    if (updatedSection) {
+                        // Check if metadata has changed
+                        const metadataChanged =
+                            updatedSection.program !== state.name ||
+                            updatedSection.description !== state.notes ||
+                            updatedSection.sectionType !== state.sectionType;
 
+                        if (metadataChanged) {
+                            // Update only the metadata, preserve exercises
+                            setState(prev => {
+                                const newState = {
+                                    ...prev,
+                                    name: updatedSection.program,
+                                    notes: updatedSection.description || '',
+                                    sectionType: updatedSection.sectionType,
+                                };
+                                // Also update the initialStateRef so metadata sync doesn't count as a change
+                                if (initialStateRef.current) {
+                                    initialStateRef.current = JSON.parse(JSON.stringify(newState));
+                                }
+                                return newState;
+                            });
+                        }
+                    }
+                }
+            }
+        }, [isLibrarySection, params.sectionId, queryClient, state.name, state.notes, state.sectionType])
+    );
+
+    // Mutations for library sections (API saves)
+    const createSectionMutation = useMutation({
+        mutationFn: (sectionData: any) => createSection(sectionData),
+        onSuccess: async () => {
+            await queryClient.refetchQueries({ queryKey: ['sections'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            if (router.canGoBack()) {
+                router.back();
+            }
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
+
+    const updateSectionMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string; data: any }) => updateSection(id, data),
+        onSuccess: async () => {
+            await queryClient.refetchQueries({ queryKey: ['sections'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            if (router.canGoBack()) {
+                router.back();
+            }
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
 
     const showDiscardAlert = useCallback(() => {
         Alert.alert(
@@ -147,20 +271,44 @@ export default function SectionBuilderScreen() {
         // Clear any previous errors
         setValidationErrors([]);
 
-        const section: BuilderSection = {
-            id: params.editingId || `section-${Date.now()}`,
-            type: 'section',
-            name: state.name,
-            sectionType: state.sectionType,
-            duration: state.duration,
-            rounds: state.rounds,
-            notes: state.notes,
-            exercises: state.exercises,
-        };
+        if (isLibrarySection) {
+            // Save to API as a library section
+            const sectionPayload = {
+                name: state.name,
+                description: state.notes,
+                sectionType: state.sectionType,
+                items: state.exercises.map(exercise => ({
+                    itemType: 'exercise' as const,
+                    data: exercise,
+                })),
+            };
 
-        triggerSectionSelect(section);
-        router.back();
-    }, [state, params.editingId, triggerSectionSelect, router, t]);
+            console.log('Saving section payload:', JSON.stringify(sectionPayload, null, 2));
+
+            if (params.sectionId) {
+                // Update existing section
+                updateSectionMutation.mutate({ id: params.sectionId, data: sectionPayload });
+            } else {
+                // Create new section
+                createSectionMutation.mutate(sectionPayload);
+            }
+        } else {
+            // Return to parent (workout builder) via callback
+            const section: BuilderSection = {
+                id: params.editingId || `section-${Date.now()}`,
+                type: 'section',
+                name: state.name,
+                sectionType: state.sectionType,
+                duration: state.duration,
+                rounds: state.rounds,
+                notes: state.notes,
+                exercises: state.exercises,
+            };
+
+            triggerSectionSelect(section);
+            router.back();
+        }
+    }, [state, params.editingId, params.sectionId, isLibrarySection, createSectionMutation, updateSectionMutation, triggerSectionSelect, router, t]);
 
     const handleBack = useCallback(() => {
         if (isDirty) {
@@ -169,6 +317,7 @@ export default function SectionBuilderScreen() {
             router.back();
         }
     }, [isDirty, router, showDiscardAlert]);
+
 
     const handleAddExercise = () => {
         setExercisesSelectCallback((newExercises: Exercise[]) => {
@@ -319,22 +468,27 @@ export default function SectionBuilderScreen() {
                 bottomOffset={40}
             >
                 <View style={styles.header}>
-                    <IconButton
-                        icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
-                        onPress={handleBack}
-                        size="md"
-                        color={themeColors.text}
-                    />
-                    <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>
-                        {params.editingId ? t('library.section.editSection') : t('library.section.newSection')}
-                    </Text>
-                    <IconButton
-                        icon={{ sf: 'checkmark', IconComponent: Check }}
-                        onPress={handleSave}
-                        size="md"
-                        variant={canSave ? 'primary' : 'default'}
-                        disabled={!canSave}
-                    />
+                    <View style={styles.headerLeft}>
+                        <IconButton
+                            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+                            onPress={handleBack}
+                            size="md"
+                            color={themeColors.text}
+                        />
+                        <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>
+                            {state.name || t('library.section.newSection')}
+                        </Text>
+                    </View>
+                    <View style={styles.headerRight}>
+                        <IconButton
+                            icon={{ sf: 'checkmark', IconComponent: Check }}
+                            onPress={handleSave}
+                            size="md"
+                            variant={canSave ? 'primary' : 'default'}
+                            disabled={!canSave}
+                            loading={createSectionMutation.isPending || updateSectionMutation.isPending}
+                        />
+                    </View>
                 </View>
 
                 {/* Section Details */}
@@ -465,13 +619,20 @@ export default function SectionBuilderScreen() {
 
                 <View style={[styles.fullWidthDivider, { backgroundColor: themeColors.border }]} />
 
-                {state.exercises.length === 0 && (
+                {isLoadingData ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color={themeColors.primary} />
+                        <Text style={[styles.loadingText, { color: themeColors.mutedText }]}>
+                            {t('library.section.loading')}
+                        </Text>
+                    </View>
+                ) : state.exercises.length === 0 ? (
                     <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
                         {t('library.section.addExercisesHint')}
                     </Text>
-                )}
+                ) : null}
 
-                {state.exercises.map((ex, index) => {
+                {!isLoadingData && state.exercises.map((ex, index) => {
                     const isLinkedToPrev = index > 0 && state.exercises[index - 1].isSupersetNext;
                     const isLinkedToNext = ex.isSupersetNext;
                     const isLast = index === state.exercises.length - 1;
@@ -673,16 +834,35 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         height: 56,
     },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        gap: 8,
+    },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
     title: {
         ...typography.h6,
         flex: 1,
-        textAlign: 'center',
-        marginHorizontal: 8,
     },
     emptyText: {
         ...typography.p2,
         textAlign: 'center',
         marginTop: 32,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 60,
+        gap: 12,
+    },
+    loadingText: {
+        ...typography.p2,
     },
     bottomBarContainer: {
         borderTopWidth: StyleSheet.hairlineWidth,

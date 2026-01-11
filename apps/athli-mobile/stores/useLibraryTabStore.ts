@@ -3,7 +3,6 @@ import { create } from 'zustand';
 export type LibraryTab =
   | 'workouts'
   | 'sections'
-  | 'programs'
   | 'exercises'
   | 'checkIns'
   | 'questionnaires'

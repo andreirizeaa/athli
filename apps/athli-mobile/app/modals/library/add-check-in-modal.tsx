@@ -40,6 +40,8 @@ export default function AddCheckInModal() {
 
     const params = useLocalSearchParams<{
         editingId?: string;
+        name?: string;
+        description?: string;
     }>();
     const isEditing = !!params.editingId;
 
@@ -51,17 +53,18 @@ export default function AddCheckInModal() {
     // Tab order for swipe navigation
     const tabOrder: TabKey[] = ['templates', 'new'];
 
-    // Form state
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
+    // Form state - Initialize with params for immediate display
+    const [name, setName] = useState(params.name || '');
+    const [description, setDescription] = useState(params.description || '');
 
     // TanStack Query
     const queryClient = useQueryClient();
 
     const saveMutation = useMutation({
         mutationFn: isEditing ? editCheckInDetails : addCheckIn,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['checkIns'] });
+        onSuccess: async () => {
+            // Refetch to update the cache and trigger Zustand store update
+            await queryClient.refetchQueries({ queryKey: ['checkIns'] });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             handleClose();
         },
@@ -179,16 +182,23 @@ export default function AddCheckInModal() {
         // Only name is required, schedule is optional
         const formValid = trimmedName.length > 0;
 
-        // Check if any field has been modified
-        const changes = trimmedName.length > 0 ||
-            description.trim().length > 0 ||
-            hasSchedule;
+        // Check if any field has been modified from original values
+        let changes = false;
+        if (isEditing) {
+            changes = name !== (params.name || '') ||
+                description !== (params.description || '') ||
+                hasSchedule;
+        } else {
+            changes = trimmedName.length > 0 ||
+                description.trim().length > 0 ||
+                hasSchedule;
+        }
 
         return {
             hasChanges: changes,
             canComplete: formValid && !saveMutation.isPending,
         };
-    }, [name, description, hasSchedule, saveMutation.isPending]);
+    }, [name, description, hasSchedule, saveMutation.isPending, isEditing, params]);
 
     const animateUnderline = (tabKey: TabKey) => {
         const layout = tabLayoutsRef.current[tabKey];

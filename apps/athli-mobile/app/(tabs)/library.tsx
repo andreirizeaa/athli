@@ -17,7 +17,6 @@ import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import {
   WorkoutsTab,
   SectionsTab,
-  ProgramsTab,
   ExercisesTab,
   CheckInsTab,
   QuestionnairesTab,
@@ -49,7 +48,6 @@ export default function LibraryScreen() {
   const tabs: LibraryTab[] = [
     'workouts',
     'sections',
-    'programs',
     'exercises',
     'checkIns',
     'questionnaires',
@@ -61,7 +59,6 @@ export default function LibraryScreen() {
   const tabComponents = useMemo(() => [
     { key: 'workouts', component: WorkoutsTab },
     { key: 'sections', component: SectionsTab },
-    { key: 'programs', component: ProgramsTab },
     { key: 'exercises', component: ExercisesTab },
     { key: 'checkIns', component: CheckInsTab },
     { key: 'questionnaires', component: QuestionnairesTab },

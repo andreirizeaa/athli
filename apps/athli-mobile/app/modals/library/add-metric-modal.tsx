@@ -66,8 +66,9 @@ export default function AddMetricModal() {
 
     const saveMutation = useMutation({
         mutationFn: isEditing ? updateMetric : createMetric,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['metrics'] });
+        onSuccess: async () => {
+            // Refetch to update the cache and trigger Zustand store update
+            await queryClient.refetchQueries({ queryKey: ['metrics'] });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             handleClose();
         },

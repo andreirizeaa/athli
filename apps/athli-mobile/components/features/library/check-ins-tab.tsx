@@ -3,21 +3,19 @@ import { StyleSheet, Text, View, Alert } from 'react-native';
 import { ChevronRight, Calendar, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableOpacity } from 'pressto';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { useModalCallbacks } from '@/stores';
-import { useLibraryStore } from '@/stores';
-import { useLibraryMutations } from '@/hooks/use-library-data';
+import { getCheckIns, deleteCheckIn, duplicateCheckIn } from '@/services/coach/coach-check-in-service';
 import { EmptyState } from '@/components/ui/empty-state';
-
-const noFormsAvatar = require('@/assets/avatars/no-forms-avatar.png');
 
 export const CheckInsTab = () => {
   const { colors: themeColors } = useThemePreference();
@@ -25,13 +23,78 @@ export const CheckInsTab = () => {
   const router = useRouter();
   const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
   const { setClientsSelectCallback } = useModalCallbacks();
+  const queryClient = useQueryClient();
+  const coachProfile = useCoachProfileStore((state) => state.profile);
+  const isAuthenticated = !!coachProfile;
 
-  // Get check-ins from Zustand store
-  const getFilteredCheckIns = useLibraryStore((state) => state.getFilteredCheckIns);
-  const filteredCheckIns = useMemo(() => getFilteredCheckIns(searchQuery), [getFilteredCheckIns, searchQuery]);
+  // Fetch check-ins directly with TanStack Query
+  const { data: checkIns = [], isLoading, isError } = useQuery({
+    queryKey: ['checkIns'],
+    queryFn: async () => {
+      console.log('[CheckInsTab] Fetching check-ins...');
+      const data = await getCheckIns();
+      console.log('[CheckInsTab] Received check-ins:', data.length, 'items');
+      return data;
+    },
+    enabled: isAuthenticated,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+  });
 
-  // Get mutations
-  const { deleteCheckIn: deleteMutation, duplicateCheckIn: duplicateMutation } = useLibraryMutations();
+  // Filter check-ins based on search query
+  const filteredCheckIns = useMemo(() => {
+    if (!searchQuery.trim()) return checkIns;
+    const lowerQuery = searchQuery.toLowerCase();
+    return checkIns.filter(checkIn =>
+      checkIn.name.toLowerCase().includes(lowerQuery) ||
+      checkIn.schedule_config?.frequency?.toLowerCase().includes(lowerQuery)
+    );
+  }, [checkIns, searchQuery]);
+
+  console.log('[CheckInsTab] Render:', {
+    isAuthenticated,
+    isLoading,
+    isError,
+    totalCheckIns: checkIns.length,
+    filteredCheckIns: filteredCheckIns.length,
+    searchQuery
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteCheckIn(id),
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['checkIns'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorDeleting'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  // Duplicate mutation
+  const duplicateMutation = useMutation({
+    mutationFn: ({ id, original }: { id: string; original: typeof filteredCheckIns[0] }) =>
+      duplicateCheckIn(id, original),
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['checkIns'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorDuplicating'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
 
   const handleCheckInPress = (item: typeof filteredCheckIns[0]) => {
     closeOpenRow();
@@ -40,6 +103,7 @@ export const CheckInsTab = () => {
       params: {
         editingId: item.id,
         name: item.name,
+        description: item.description || '',
       },
     });
   };
@@ -57,42 +121,11 @@ export const CheckInsTab = () => {
     });
   };
 
-  const handleDelete = useCallback(
-    (item: typeof filteredCheckIns[0]) => {
-      Alert.alert(
-        `${t('general.delete')} ${item.name}?`,
-        t('library.deleteConfirmMessage'),
-        [
-          { text: t('general.cancel'), style: 'cancel' },
-          {
-            text: t('general.delete'),
-            style: 'destructive',
-            onPress: () => {
-              deleteMutation.mutate(item.id, {
-                onSuccess: () => {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                },
-                onError: (error: Error) => {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                  Alert.alert(t('general.error'), error.message || t('general.errorDeleting'), [
-                    { text: t('general.ok') },
-                  ]);
-                },
-              });
-            },
-          },
-        ]
-      );
-    },
-    [deleteMutation, t]
-  );
-
   return (
     <View style={styles.container}>
       {/* Empty State */}
       {filteredCheckIns.length === 0 && (
         <EmptyState
-          image={noFormsAvatar}
           message={t('library.empty.checkIns')}
         />
       )}
@@ -111,14 +144,14 @@ export const CheckInsTab = () => {
             label: `${t('general.delete')} Check-in`,
             icon: { sf: 'trash', IconComponent: Trash2 },
             destructive: true,
-            onPress: () => handleDelete(item),
+            onPress: () => deleteMutation.mutateAsync(item.id),
           }
         ];
 
         return (
           <View key={item.id}>
             <SwipeableRow
-              onDelete={() => handleDelete(item)}
+              onDelete={() => deleteMutation.mutateAsync(item.id)}
               onOpen={registerOpenRow}
               deleteConfirmTitle={`${t('general.delete')} ${item.name}?`}
             >

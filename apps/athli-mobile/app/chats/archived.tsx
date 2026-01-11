@@ -22,12 +22,33 @@ import {
 
 export default function ArchivedChatsScreen() {
   const router = useRouter();
-  const { unreadCount } = useLocalSearchParams<{ unreadCount?: string }>();
+  const { unreadCount, archivedChats: archivedChatsParam } = useLocalSearchParams<{
+    unreadCount?: string;
+    archivedChats?: string;
+  }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
-  const [archivedChats, setArchivedChats] = useState<Chat[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
+  // Parse initial chats from params to prevent flash
+  const initialChats = React.useMemo(() => {
+    if (archivedChatsParam) {
+      try {
+        const parsed = JSON.parse(archivedChatsParam);
+        // Convert date strings back to Date objects
+        return parsed.map((chat: any) => ({
+          ...chat,
+          lastMessageTime: chat.lastMessageTime ? new Date(chat.lastMessageTime) : new Date(),
+        })) as Chat[];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }, [archivedChatsParam]);
+
+  const [archivedChats, setArchivedChats] = useState<Chat[]>(initialChats);
+  const [isLoading, setIsLoading] = useState(!archivedChatsParam); // Only show loading if no initial data
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
   const [openRowCloseFn, setOpenRowCloseFn] = useState<(() => void) | null>(null);
@@ -43,21 +64,24 @@ export default function ArchivedChatsScreen() {
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
 
+  // Only fetch if no initial data was provided
   useEffect(() => {
-    const loadArchivedChats = async () => {
-      setIsLoading(true);
-      try {
-        const fetchedChats = await getArchivedChats();
-        setArchivedChats(fetchedChats);
-      } catch (error) {
-        console.error('Failed to load archived chats:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (!archivedChatsParam) {
+      const loadArchivedChats = async () => {
+        setIsLoading(true);
+        try {
+          const fetchedChats = await getArchivedChats();
+          setArchivedChats(fetchedChats);
+        } catch (error) {
+          console.error('Failed to load archived chats:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
 
-    loadArchivedChats();
-  }, []);
+      loadArchivedChats();
+    }
+  }, [archivedChatsParam]);
 
   const handleBackPress = () => {
     router.back();

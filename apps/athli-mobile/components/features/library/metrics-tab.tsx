@@ -3,21 +3,19 @@ import { StyleSheet, Text, View, Alert } from 'react-native';
 import { ChevronRight, Activity, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableOpacity } from 'pressto';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { useLibraryTab, useLibraryStore } from '@/stores';
+import { useLibraryTab } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { useModalCallbacks } from '@/stores';
-import { deleteMetric, duplicateMetric } from '@/services/coach/coach-metric-service';
+import { getAllMetrics, deleteMetric, duplicateMetric } from '@/services/coach/coach-metric-service';
 import { EmptyState } from '@/components/ui/empty-state';
-
-const noMetricsAvatar = require('@/assets/avatars/no-metrics-avatar.png');
 
 export const MetricsTab = () => {
   const { colors: themeColors } = useThemePreference();
@@ -25,19 +23,49 @@ export const MetricsTab = () => {
   const router = useRouter();
   const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
+  const coachProfile = useCoachProfileStore((state) => state.profile);
+  const isAuthenticated = !!coachProfile;
 
-  // Get metrics from Zustand store
-  const getFilteredMetrics = useLibraryStore((state) => state.getFilteredMetrics);
-  const filteredMetrics = useMemo(
-    () => getFilteredMetrics(searchQuery),
-    [getFilteredMetrics, searchQuery]
-  );
+  // Fetch metrics directly with TanStack Query
+  const { data: metrics = [], isLoading, isError } = useQuery({
+    queryKey: ['metrics'],
+    queryFn: async () => {
+      console.log('[MetricsTab] Fetching metrics...');
+      const data = await getAllMetrics();
+      console.log('[MetricsTab] Received metrics:', data.length, 'items');
+      return data;
+    },
+    enabled: isAuthenticated,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+  });
+
+  // Filter metrics based on search query
+  const filteredMetrics = useMemo(() => {
+    if (!searchQuery.trim()) return metrics;
+    const lowerQuery = searchQuery.toLowerCase();
+    return metrics.filter(metric =>
+      metric.name.toLowerCase().includes(lowerQuery) ||
+      metric.unit?.toLowerCase().includes(lowerQuery) ||
+      metric.description?.toLowerCase().includes(lowerQuery)
+    );
+  }, [metrics, searchQuery]);
+
+  console.log('[MetricsTab] Render:', {
+    isAuthenticated,
+    isLoading,
+    isError,
+    totalMetrics: metrics.length,
+    filteredMetrics: filteredMetrics.length,
+    searchQuery
+  });
 
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteMetric(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['metrics'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['metrics'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (error: Error) => {
@@ -53,8 +81,8 @@ export const MetricsTab = () => {
   // Duplicate mutation
   const duplicateMutation = useMutation({
     mutationFn: (id: string) => duplicateMetric(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['metrics'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['metrics'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (error: Error) => {
@@ -95,27 +123,11 @@ export const MetricsTab = () => {
     });
   };
 
-  const handleDelete = useCallback((item: typeof filteredMetrics[0]) => {
-    Alert.alert(
-      `${t('general.delete')} ${item.name}?`,
-      t('library.deleteConfirmMessage'),
-      [
-        { text: t('general.cancel'), style: 'cancel' },
-        {
-          text: t('general.delete'),
-          style: 'destructive',
-          onPress: () => deleteMutation.mutate(item.id)
-        },
-      ]
-    );
-  }, [deleteMutation, t]);
-
   return (
     <View style={styles.container}>
       {/* Empty State */}
       {filteredMetrics.length === 0 && (
         <EmptyState
-          image={noMetricsAvatar}
           message={t('library.empty.metrics')}
         />
       )}
@@ -134,14 +146,14 @@ export const MetricsTab = () => {
             label: `${t('general.delete')} Metric`,
             icon: { sf: 'trash', IconComponent: Trash2 },
             destructive: true,
-            onPress: () => handleDelete(item),
+            onPress: () => deleteMutation.mutateAsync(item.id),
           }
         ];
 
         return (
           <View key={item.id}>
             <SwipeableRow
-              onDelete={() => handleDelete(item)}
+              onDelete={() => deleteMutation.mutateAsync(item.id)}
               onOpen={registerOpenRow}
               deleteConfirmTitle={`${t('general.delete')} ${item.name}?`}
             >

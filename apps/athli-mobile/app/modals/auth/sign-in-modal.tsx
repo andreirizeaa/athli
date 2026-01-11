@@ -126,16 +126,22 @@ export default function SignInModal() {
             <View style={styles.buttonContainer}>
                 {Platform.OS === 'ios' && (
                     <PressableScale
-                        style={[styles.button, { backgroundColor: '#000000', borderColor: '#000000' }]}
+                        style={[
+                            styles.button,
+                            {
+                                backgroundColor: themeColors.text,
+                                borderColor: themeColors.text
+                            }
+                        ]}
                         onPress={handleAppleSignIn}
                         enabled={!isLoading}
                     >
                         <Image
                             source={require('@/assets/icons/apple.png')}
-                            style={[styles.icon, { tintColor: '#FFFFFF' }]}
+                            style={[styles.icon, { tintColor: themeColors.pageBackground }]}
                             resizeMode="contain"
                         />
-                        <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
+                        <Text style={[styles.buttonText, { color: themeColors.pageBackground }]}>
                             {t('auth.signInWithApple')}
                         </Text>
                     </PressableScale>
