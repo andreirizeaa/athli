@@ -1,8 +1,10 @@
-import React, { useCallback, useMemo, useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { StyleSheet, Text, View, Alert } from 'react-native';
 import { ChevronRight, Layers } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableOpacity } from 'pressto';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
@@ -10,131 +12,147 @@ import { useTranslations } from '@/stores';
 import { type SectionType, SECTION_TYPES } from '@/constants/training';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { useLibraryTab } from '@/stores';
+import { useLibraryTab, useLibraryStore } from '@/stores';
+import { deleteSections, duplicateSection, starSections, archiveSections } from '@/services/coach/coach-section-service';
+import { EmptyState } from '@/components/ui/empty-state';
 
-// Mock section data
-const MOCK_SECTIONS: {
-  id: string;
-  name: string;
-  sectionType: SectionType;
-  duration?: string;
-  rounds?: string;
-  notes?: string;
-  exerciseCount: number;
-}[] = [
-    {
-      id: 'section-1',
-      name: 'Warm Up',
-      sectionType: 'regular',
-      notes: 'Dynamic stretching and light cardio',
-      exerciseCount: 4,
-    },
-    {
-      id: 'section-2',
-      name: 'AMRAP Finisher',
-      sectionType: 'amrap',
-      duration: '12',
-      notes: 'Complete as many rounds as possible',
-      exerciseCount: 3,
-    },
-    {
-      id: 'section-3',
-      name: 'Timed Intervals',
-      sectionType: 'timed',
-      rounds: '5',
-      notes: '40 seconds work, 20 seconds rest',
-      exerciseCount: 5,
-    },
-    {
-      id: 'section-4',
-      name: 'Circuit Training',
-      sectionType: 'circuits',
-      rounds: '4',
-      notes: 'Minimal rest between exercises',
-      exerciseCount: 6,
-    },
-    {
-      id: 'section-5',
-      name: 'Upper Body Strength',
-      sectionType: 'regular',
-      notes: 'Focus on progressive overload',
-      exerciseCount: 5,
-    },
-    {
-      id: 'section-6',
-      name: 'Core Conditioning',
-      sectionType: 'timed',
-      rounds: '3',
-      notes: 'Core stability and endurance',
-      exerciseCount: 4,
-    },
-  ];
+const noTrainingAvatar = require('@/assets/avatars/no-training-avatar.png');
 
 export const SectionsTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const router = useRouter();
   const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
+  const queryClient = useQueryClient();
 
-  const filteredSections = useMemo(() => {
-    if (!searchQuery) return MOCK_SECTIONS;
-    const query = searchQuery.toLowerCase();
-    return MOCK_SECTIONS.filter(
-      (section) =>
-        section.name.toLowerCase().includes(query) ||
-        section.sectionType.toLowerCase().includes(query)
-    );
-  }, [searchQuery]);
+  // Get sections from Zustand store
+  const getFilteredSections = useLibraryStore((state) => state.getFilteredSections);
+  const filteredSections = useMemo(
+    () => getFilteredSections(searchQuery),
+    [getFilteredSections, searchQuery]
+  );
 
-  const handleSectionPress = (section: typeof MOCK_SECTIONS[0]) => {
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteSections(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sections'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorDeleting'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  // Duplicate mutation
+  const duplicateMutation = useMutation({
+    mutationFn: (id: string) => duplicateSection(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sections'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorDuplicating'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  // Star mutation
+  const starMutation = useMutation({
+    mutationFn: ({ id, starred }: { id: string; starred: boolean }) => starSections(id, starred),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sections'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorUpdating'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  // Archive mutation
+  const archiveMutation = useMutation({
+    mutationFn: ({ id, archived }: { id: string; archived: boolean }) => archiveSections(id, archived),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sections'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorUpdating'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  // Already filtered above
+
+  const handleSectionPress = (section: typeof filteredSections[0]) => {
     closeOpenRow();
     router.push({
       pathname: '/library/workout/section-builder',
       params: {
-        name: section.name,
+        name: section.program,
         sectionType: section.sectionType,
-        duration: section.duration || '',
-        rounds: section.rounds || '',
-        notes: section.notes || '',
+        duration: '',
+        rounds: '',
+        notes: section.description || '',
         editingId: section.id,
-        exercises: JSON.stringify([]), // Empty for now, could be populated with mock exercises
+        exercises: JSON.stringify([]),
       },
     });
   };
 
   const handleDelete = useCallback((id: string) => {
-    console.log('Delete section:', id);
-    // In a real app, this would dispatch a delete action
-  }, []);
+    Alert.alert(
+      t('general.confirmDelete'),
+      t('general.confirmDeleteMessage'),
+      [
+        { text: t('general.cancel'), style: 'cancel' },
+        {
+          text: t('general.delete'),
+          style: 'destructive',
+          onPress: () => deleteMutation.mutate(id)
+        },
+      ]
+    );
+  }, [deleteMutation, t]);
 
   const getSectionTypeLabel = (type: SectionType) => {
     return SECTION_TYPES.find((t) => t.value === type)?.label || type;
   };
 
-  const getSectionTypeInfo = (section: typeof MOCK_SECTIONS[0]) => {
-    switch (section.sectionType) {
-      case 'amrap':
-        return section.duration ? `${section.duration} min` : '';
-      case 'timed':
-      case 'circuits':
-        return section.rounds ? `${section.rounds} rounds` : '';
-      default:
-        return '';
-    }
+  const getSectionTypeInfo = (section: typeof filteredSections[0]) => {
+    // API doesn't return duration/rounds info in list view
+    return '';
   };
-
-  if (filteredSections.length === 0) {
-    return (
-      <View style={styles.emptyContainer}>
-        <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
-          {t('library.sections.empty')}
-        </Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
+      {/* Empty State */}
+      {filteredSections.length === 0 && (
+        <EmptyState
+          image={noTrainingAvatar}
+          message={t('library.empty.sections')}
+        />
+      )}
+
+      {/* Section List */}
       {filteredSections.map((item, index) => {
         const isLastItem = index === filteredSections.length - 1;
         return (
@@ -142,7 +160,7 @@ export const SectionsTab = () => {
             <SwipeableRow
               onDelete={() => handleDelete(item.id)}
               onOpen={registerOpenRow}
-              deleteConfirmTitle={`${t('general.delete')} ${item.name}?`}
+              deleteConfirmTitle={`${t('general.delete')} ${item.program}?`}
             >
               <PressableOpacity
                 style={styles.rowWrapper}
@@ -159,11 +177,11 @@ export const SectionsTab = () => {
                   </View>
                   <View style={styles.textContent}>
                     <Text style={[styles.sectionName, { color: themeColors.text }]} numberOfLines={1}>
-                      {item.name}
+                      {item.program}
                     </Text>
                     <View style={styles.sectionMeta}>
                       <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                        {getSectionTypeLabel(item.sectionType)}
+                        {getSectionTypeLabel(item.sectionType as SectionType)}
                       </Text>
                       {getSectionTypeInfo(item) && (
                         <>
@@ -175,7 +193,7 @@ export const SectionsTab = () => {
                       )}
                       <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
                       <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                        {item.exerciseCount} {item.exerciseCount === 1 ? t('library.exercise') : t('library.exercises')}
+                        {item.totalExercises} {item.totalExercises === 1 ? t('library.exercise') : t('library.exercises')}
                       </Text>
                     </View>
                   </View>
@@ -262,5 +280,20 @@ const styles = StyleSheet.create({
   emptyText: {
     ...typography.p2,
     textAlign: 'center',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    ...typography.p2,
+    marginTop: 12,
+  },
+  errorText: {
+    ...typography.p2,
+    textAlign: 'center',
+    paddingHorizontal: 32,
   },
 });

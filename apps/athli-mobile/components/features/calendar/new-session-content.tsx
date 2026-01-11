@@ -335,9 +335,9 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
               <View style={styles.rowButtonContent}>
                 {selectedClient ? (
                   <View style={styles.clientRow}>
-                    {selectedClient.avatar ? (
+                    {selectedClient.avatarUrl ? (
                       <ExpoImage
-                        source={{ uri: selectedClient.avatar }}
+                        source={{ uri: selectedClient.avatarUrl }}
                         style={styles.clientAvatar}
                       />
                     ) : (
@@ -350,7 +350,7 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
                       />
                     )}
                     <Text style={[styles.clientName, { color: themeColors.text }]}>
-                      {selectedClient.fullName}
+                      {selectedClient.name}
                     </Text>
                   </View>
                 ) : (

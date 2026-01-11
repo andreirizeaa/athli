@@ -24,6 +24,7 @@ export default function AddModalContent() {
   const insets = useSafeAreaInsets();
   const clientContentRef = useRef<AddClientContentRef>(null);
   const [canCompleteClient, setCanCompleteClient] = useState(false);
+  const [isLoadingClient, setIsLoadingClient] = useState(false);
 
   // Determine which content to show based on route param or pathname
   const getCurrentRoute = (): 'clients' | 'chats' => {
@@ -67,20 +68,22 @@ export default function AddModalContent() {
     }
   };
 
-  // Check canComplete for clients route
+  // Check canComplete and loading state for clients route
   useEffect(() => {
     if (currentRoute === 'clients') {
-      const checkCanComplete = () => {
+      const checkState = () => {
         if (clientContentRef.current) {
           setCanCompleteClient(clientContentRef.current.canComplete);
+          setIsLoadingClient(clientContentRef.current.isLoading);
         }
       };
       // Check immediately and then periodically
-      checkCanComplete();
-      const interval = setInterval(checkCanComplete, 200);
+      checkState();
+      const interval = setInterval(checkState, 200);
       return () => clearInterval(interval);
     } else {
       setCanCompleteClient(false);
+      setIsLoadingClient(false);
     }
   }, [currentRoute]);
 
@@ -122,9 +125,9 @@ export default function AddModalContent() {
               icon={{ sf: 'checkmark', IconComponent: Check }}
               onPress={handleCompleteClient}
               size="md"
-              color={canCompleteClient ? themeColors.primary : themeColors.mutedText}
+              variant={canCompleteClient ? 'primary' : 'default'}
               disabled={!canCompleteClient}
-              style={!canCompleteClient ? { opacity: 0.5 } : undefined}
+              loading={isLoadingClient}
             />
           ) : (
             <View style={styles.placeholder} />

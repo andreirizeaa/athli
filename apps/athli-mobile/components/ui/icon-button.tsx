@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleSheet, View, ViewStyle, ActivityIndicator } from 'react-native';
 import { PressableScale } from 'pressto';
 import type { LucideIcon } from 'lucide-react-native';
 import { PlatformIcon } from './platform-icon';
@@ -26,6 +26,7 @@ export type IconButtonProps = {
   scheme?: IconButtonScheme;
   variant?: IconButtonVariant;
   disabled?: boolean;
+  loading?: boolean;
   style?: ViewStyle;
 };
 
@@ -65,6 +66,7 @@ export const IconButton = ({
   scheme = 'auto',
   variant = 'default',
   disabled = false,
+  loading = false,
   style,
 }: IconButtonProps) => {
   const { preset, colors: themeColors } = useThemePreference();
@@ -87,14 +89,18 @@ export const IconButton = ({
           height: buttonSize,
           borderRadius,
           backgroundColor: background,
-          opacity: disabled ? 0.5 : 1,
+          opacity: disabled && !loading ? 0.5 : 1,
         },
         style,
       ]}
       onPress={onPress}
-      enabled={!disabled}
+      enabled={!disabled && !loading}
     >
-      <PlatformIcon sf={icon.sf} IconComponent={icon.IconComponent} size={iconSize} color={iconColor} />
+      {loading ? (
+        <ActivityIndicator size="small" color={iconColor} />
+      ) : (
+        <PlatformIcon sf={icon.sf} IconComponent={icon.IconComponent} size={iconSize} color={iconColor} />
+      )}
     </PressableScale>
   );
 };

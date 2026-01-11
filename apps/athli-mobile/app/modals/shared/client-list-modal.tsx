@@ -52,7 +52,7 @@ export default function ClientListModal() {
             (client: Client) =>
                 client.firstName.toLowerCase().includes(query) ||
                 client.lastName.toLowerCase().includes(query) ||
-                client.fullName.toLowerCase().includes(query)
+                client.name.toLowerCase().includes(query)
         );
     }, [clients, searchQuery]);
 

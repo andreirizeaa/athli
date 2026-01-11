@@ -20,6 +20,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { restoreSession } from '@/services/auth/supabase-auth';
 import type { CoachProfile, ClientProfile } from '@/types/profile';
+import QueryProvider from '@/providers/query-provider';
+import { DataInitializer } from '@/components/providers/data-initializer';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -58,18 +60,20 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <PressablesConfig
-          animationType="timing"
-          animationConfig={{ duration: 150 }}
-          config={{ minScale: 0.96, activeOpacity: 0.7 }}
-          globalHandlers={{
-            onPress: () => Haptics.selectionAsync(),
-          }}
-        >
-          <KeyboardProvider>
-            <RootLayoutNav />
-          </KeyboardProvider>
-        </PressablesConfig>
+        <QueryProvider>
+          <PressablesConfig
+            animationType="timing"
+            animationConfig={{ duration: 150 }}
+            config={{ minScale: 0.96, activeOpacity: 0.7 }}
+            globalHandlers={{
+              onPress: () => Haptics.selectionAsync(),
+            }}
+          >
+            <KeyboardProvider>
+              <RootLayoutNav />
+            </KeyboardProvider>
+          </PressablesConfig>
+        </QueryProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
@@ -82,6 +86,9 @@ function RootLayoutNav() {
   const systemScheme = useNativeColorScheme() ?? 'light';
   const setCoachProfile = useCoachProfileStore((state) => state.setProfile);
   const setClientProfile = useClientProfileStore((state) => state.setProfile);
+
+  // Initialize data fetching (runs once after auth is restored)
+  DataInitializer();
 
   // Initialize stores on mount
   useEffect(() => {

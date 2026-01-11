@@ -17,7 +17,19 @@
       "Bash(tail:*)",
       "Bash(git restore:*)",
       "WebFetch(domain:docs.expo.dev)",
-      "WebFetch(domain:react-native-google-signin.github.io)"
+      "WebFetch(domain:react-native-google-signin.github.io)",
+      "Bash(for file in components/features/library/{check-ins,exercises,files,habits,metrics,programs,questionnaires,sections,workouts}-tab.tsx)",
+      "Bash(do echo \"Checking $file...\")",
+      "Bash(done)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(npm run type-check:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(lsof:*)",
+      "Bash(kill:*)",
+      "Bash(PORT=3002 npm run dev:*)",
+      "Bash(awk:*)",
+      "Bash(curl:*)",
+      "Bash(npx expo prebuild:*)"
     ]
   }
 }

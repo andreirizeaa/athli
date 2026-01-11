@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Platform, StyleSheet, Text, View, Keyboard, TouchableWithoutFeedback, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
@@ -13,6 +15,7 @@ import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SelectInput } from '@/components/ui/form-inputs';
 import { hexToRgba } from '@/utils/colorUtils';
+import { createSection, updateSection } from '@/services/coach/coach-section-service';
 
 export default function AddSectionModal() {
     const router = useRouter();
@@ -21,10 +24,35 @@ export default function AddSectionModal() {
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
 
+    const params = useLocalSearchParams<{
+        editingId?: string;
+    }>();
+    const isEditing = !!params.editingId;
+
     // Form state
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [sectionType, setSectionType] = useState<SectionType | null>(null);
+
+    // TanStack Query
+    const queryClient = useQueryClient();
+
+    const saveMutation = useMutation({
+        mutationFn: isEditing ? updateSection : createSection,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['sections'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            handleClose();
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
 
     const handleDismissKeyboard = () => {
         Keyboard.dismiss();
@@ -54,9 +82,9 @@ export default function AddSectionModal() {
         return {
             isFormValid: formValid,
             hasChanges: changes,
-            canComplete: formValid,
+            canComplete: formValid && !saveMutation.isPending,
         };
-    }, [name, description, sectionType]);
+    }, [name, description, sectionType, saveMutation.isPending]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -90,15 +118,18 @@ export default function AddSectionModal() {
     const handleSave = useCallback(() => {
         if (!canComplete) return;
 
-        // TODO: Implement save functionality
-        // const sectionData = {
-        //     name: name.trim(),
-        //     description: description.trim(),
-        //     type: sectionType,
-        // };
+        const sectionData: any = {
+            name: name.trim(),
+            description: description.trim(),
+            type: sectionType,
+        };
 
-        handleClose();
-    }, [canComplete, name, description, sectionType, handleClose]);
+        if (isEditing && params.editingId) {
+            sectionData.id = params.editingId;
+        }
+
+        saveMutation.mutate(sectionData);
+    }, [canComplete, name, description, sectionType, isEditing, params.editingId, saveMutation]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -143,6 +174,7 @@ export default function AddSectionModal() {
                                 size="md"
                                 variant={canComplete ? 'primary' : 'default'}
                                 disabled={!canComplete}
+                                loading={saveMutation.isPending}
                             />
                         </View>
                     </View>

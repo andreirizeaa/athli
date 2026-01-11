@@ -46,20 +46,27 @@ export const ClientSelectionList = ({
                 onPress={() => handlePress(item.id)}
             >
                 <View style={styles.avatarContainer}>
-                    {item.avatar ? (
-                        <Image source={{ uri: item.avatar }} style={styles.avatar} />
-                    ) : (
-                        <View
-                            style={[
-                                styles.avatar,
-                                styles.avatarPlaceholder,
-                                { backgroundColor: themeColors.border },
-                            ]}
-                        />
-                    )}
+                    <View style={styles.avatarCircle}>
+                        {item.avatarUrl ? (
+                            <Image
+                                source={{ uri: item.avatarUrl }}
+                                style={styles.avatarImage}
+                                contentFit="cover"
+                                contentPosition="center"
+                            />
+                        ) : (
+                            <View
+                                style={[
+                                    styles.avatarImage,
+                                    styles.avatarPlaceholder,
+                                    { backgroundColor: themeColors.border },
+                                ]}
+                            />
+                        )}
+                    </View>
                 </View>
                 <Text style={[styles.clientName, { color: themeColors.text }]} numberOfLines={1}>
-                    {item.fullName}
+                    {item.name}
                 </Text>
                 <View style={[
                     styles.radioOuter,
@@ -117,8 +124,19 @@ const styles = StyleSheet.create({
     },
     avatarContainer: {
         marginRight: 12,
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    avatar: {
+    avatarCircle: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        overflow: 'hidden',
+        backgroundColor: '#f0f0f0',
+    },
+    avatarImage: {
         width: 44,
         height: 44,
         borderRadius: 22,

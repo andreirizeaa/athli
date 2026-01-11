@@ -1,48 +1,105 @@
 import React, { useMemo, useCallback } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Dumbbell } from 'lucide-react-native';
 import { PressableOpacity } from 'pressto';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
-import { useLibraryTab } from '@/stores';
+import { useLibraryTab, useLibraryStore } from '@/stores';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
+import { deleteWorkouts, duplicateWorkout, starWorkouts, archiveWorkouts } from '@/services/coach/coach-workout-service';
+import { EmptyState } from '@/components/ui/empty-state';
 
-// Mock workout data
-const MOCK_WORKOUTS = [
-  {
-    id: 'workout-1',
-    name: 'Full Body Strength Training',
-    type: 'Weightlifting',
-    difficulty: 'Intermediate',
-  },
-  {
-    id: 'workout-2',
-    name: 'HIIT Cardio Blast',
-    type: 'HIIT',
-    difficulty: 'Advanced',
-  },
-];
+const noTrainingAvatar = require('@/assets/avatars/no-training-avatar.png');
 
 export const WorkoutsTab = () => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
+  const queryClient = useQueryClient();
 
-  const filteredWorkouts = useMemo(() => {
-    if (!searchQuery) return MOCK_WORKOUTS;
-    const query = searchQuery.toLowerCase();
-    return MOCK_WORKOUTS.filter(
-      (workout) =>
-        workout.name.toLowerCase().includes(query) ||
-        workout.type.toLowerCase().includes(query) ||
-        workout.difficulty.toLowerCase().includes(query)
-    );
-  }, [searchQuery]);
+  // Get workouts from Zustand store
+  const getFilteredWorkouts = useLibraryStore((state) => state.getFilteredWorkouts);
+  const filteredWorkouts = useMemo(
+    () => getFilteredWorkouts(searchQuery),
+    [getFilteredWorkouts, searchQuery]
+  );
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteWorkouts(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workouts'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorDeleting'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  // Duplicate mutation
+  const duplicateMutation = useMutation({
+    mutationFn: (id: string) => duplicateWorkout(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workouts'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorDuplicating'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  // Star mutation
+  const starMutation = useMutation({
+    mutationFn: ({ id, starred }: { id: string; starred: boolean }) => starWorkouts(id, starred),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workouts'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorUpdating'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  // Archive mutation
+  const archiveMutation = useMutation({
+    mutationFn: ({ id, archived }: { id: string; archived: boolean }) => archiveWorkouts(id, archived),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workouts'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorUpdating'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  // Already filtered above
 
   const handleWorkoutPress = (workoutId: string) => {
     closeOpenRow();
@@ -53,12 +110,31 @@ export const WorkoutsTab = () => {
   };
 
   const handleDelete = useCallback((id: string) => {
-    console.log('Delete workout:', id);
-    // In a real app, this would dispatch a delete action
-  }, []);
+    Alert.alert(
+      t('general.confirmDelete'),
+      t('general.confirmDeleteMessage'),
+      [
+        { text: t('general.cancel'), style: 'cancel' },
+        {
+          text: t('general.delete'),
+          style: 'destructive',
+          onPress: () => deleteMutation.mutate(id)
+        },
+      ]
+    );
+  }, [deleteMutation, t]);
 
   return (
     <View style={styles.container}>
+      {/* Empty State */}
+      {filteredWorkouts.length === 0 && (
+        <EmptyState
+          image={noTrainingAvatar}
+          message={t('library.empty.workouts')}
+        />
+      )}
+
+      {/* Workout List */}
       {filteredWorkouts.map((workout, index) => {
         const isLastItem = index === filteredWorkouts.length - 1;
         return (
@@ -171,5 +247,20 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 1,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    ...typography.p2,
+    marginTop: 12,
+  },
+  errorText: {
+    ...typography.p2,
+    textAlign: 'center',
+    paddingHorizontal: 32,
   },
 });

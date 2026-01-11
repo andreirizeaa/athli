@@ -3,22 +3,21 @@ import { StyleSheet, Text, View, Alert } from 'react-native';
 import { ChevronRight, ClipboardList, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableOpacity } from 'pressto';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { useLibraryTab } from '@/stores';
+import { useLibraryTab, useLibraryStore } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { useModalCallbacks } from '@/stores';
+import { deleteQuestionnaire, duplicateQuestionnaire } from '@/services/coach/coach-questionnaire-service';
+import { EmptyState } from '@/components/ui/empty-state';
 
-// Mock data
-const MOCK_QUESTIONNAIRES = [
-  { id: '1', name: 'Initial Assessment', type: 'Onboarding', questions: 15 },
-  { id: '2', name: 'Lifestyle Audit', type: 'Nutrition', questions: 22 },
-  { id: '3', name: 'Equipment Checklist', type: 'Training', questions: 8 },
-];
+const noFormsAvatar = require('@/assets/avatars/no-forms-avatar.png');
 
 export const QuestionnairesTab = () => {
   const { colors: themeColors } = useThemePreference();
@@ -26,16 +25,51 @@ export const QuestionnairesTab = () => {
   const router = useRouter();
   const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
   const { setClientsSelectCallback } = useModalCallbacks();
+  const queryClient = useQueryClient();
 
-  const filteredQuestionnaires = useMemo(() => {
-    if (!searchQuery) return MOCK_QUESTIONNAIRES;
-    const query = searchQuery.toLowerCase();
-    return MOCK_QUESTIONNAIRES.filter(
-      (item) => item.name.toLowerCase().includes(query)
-    );
-  }, [searchQuery]);
+  // Get questionnaires from Zustand store
+  const getFilteredQuestionnaires = useLibraryStore((state) => state.getFilteredQuestionnaires);
+  const filteredQuestionnaires = useMemo(
+    () => getFilteredQuestionnaires(searchQuery),
+    [getFilteredQuestionnaires, searchQuery]
+  );
 
-  const handleQuestionnairePress = (item: typeof MOCK_QUESTIONNAIRES[0]) => {
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteQuestionnaire(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['questionnaires'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorDeleting'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  // Duplicate mutation
+  const duplicateMutation = useMutation({
+    mutationFn: ({ id, original }: { id: string; original: typeof filteredQuestionnaires[0] }) =>
+      duplicateQuestionnaire(id, original),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['questionnaires'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorDuplicating'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  const handleQuestionnairePress = (item: typeof filteredQuestionnaires[0]) => {
     closeOpenRow();
     router.push({
       pathname: '/modals/library/add-questionnaire-modal',
@@ -46,9 +80,9 @@ export const QuestionnairesTab = () => {
     });
   };
 
-  const handleAssign = (item: typeof MOCK_QUESTIONNAIRES[0]) => {
+  const handleAssign = (item: typeof filteredQuestionnaires[0]) => {
     setClientsSelectCallback((selectedClients) => {
-      console.log(`Assigned ${item.name} to clients:`, selectedClients.map(c => c.fullName));
+      console.log(`Assigned ${item.name} to clients:`, selectedClients.map(c => c.name));
     });
     router.push({
       pathname: '/modals/shared/client-list-modal',
@@ -59,12 +93,7 @@ export const QuestionnairesTab = () => {
     });
   };
 
-  const deleteQuestionnaire = (id: string) => {
-    console.log('Delete questionnaire:', id);
-    // In a real app, this would dispatch a delete action
-  };
-
-  const handleDelete = useCallback((item: typeof MOCK_QUESTIONNAIRES[0]) => {
+  const handleDelete = useCallback((item: typeof filteredQuestionnaires[0]) => {
     Alert.alert(
       `${t('general.delete')} ${item.name}?`,
       t('library.deleteConfirmMessage'),
@@ -73,24 +102,23 @@ export const QuestionnairesTab = () => {
         {
           text: t('general.delete'),
           style: 'destructive',
-          onPress: () => deleteQuestionnaire(item.id)
+          onPress: () => deleteMutation.mutate(item.id)
         },
       ]
     );
-  }, [t]);
-
-  if (filteredQuestionnaires.length === 0) {
-    return (
-      <View style={styles.emptyContainer}>
-        <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
-          {t('library.sections.empty').replace('sections', 'questionnaires')}
-        </Text>
-      </View>
-    );
-  }
+  }, [deleteMutation, t]);
 
   return (
     <View style={styles.container}>
+      {/* Empty State */}
+      {filteredQuestionnaires.length === 0 && (
+        <EmptyState
+          image={noFormsAvatar}
+          message={t('library.empty.questionnaires')}
+        />
+      )}
+
+      {/* Questionnaire List */}
       {filteredQuestionnaires.map((item, index) => {
         const isLastItem = index === filteredQuestionnaires.length - 1;
 
@@ -104,7 +132,7 @@ export const QuestionnairesTab = () => {
             label: `${t('general.delete')} Questionnaire`,
             icon: { sf: 'trash', IconComponent: Trash2 },
             destructive: true,
-            onPress: () => deleteQuestionnaire(item.id),
+            onPress: () => handleDelete(item),
           }
         ];
 
@@ -134,13 +162,11 @@ export const QuestionnairesTab = () => {
                         {item.name}
                       </Text>
                       <View style={styles.metaRow}>
-                        <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                          {item.type}
-                        </Text>
-                        <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                        <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
-                          {item.questions} questions
-                        </Text>
+                        {item.questionCount !== undefined && (
+                          <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
+                            {item.questionCount} {item.questionCount === 1 ? 'question' : 'questions'}
+                          </Text>
+                        )}
                       </View>
                     </View>
                     <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
@@ -226,5 +252,20 @@ const styles = StyleSheet.create({
   emptyText: {
     ...typography.p2,
     textAlign: 'center',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    ...typography.p2,
+    marginTop: 12,
+  },
+  errorText: {
+    ...typography.p2,
+    textAlign: 'center',
+    paddingHorizontal: 32,
   },
 });

@@ -1,95 +1,88 @@
 import React, { useCallback, useMemo, useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { ChevronRight, FileText, Image as ImageIcon, Video as VideoIcon, Play } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { StyleSheet, Text, View, Alert } from 'react-native';
+import { ChevronRight, FileText, Image as ImageIcon, Video as VideoIcon, Play, UserPlus, Trash2 } from 'lucide-react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { PressableOpacity } from 'pressto';
 import { Image } from 'expo-image';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { useLibraryTab } from '@/stores';
+import { useLibraryTab, useLibraryStore } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
-import { UserPlus, Trash2 } from 'lucide-react-native';
 import { useModalCallbacks } from '@/stores';
-import * as Haptics from 'expo-haptics';
-import { Alert } from 'react-native';
+import { getAllFiles, getFileTypeFromMime, deleteFile } from '@/services/coach/coach-file-service';
+import { EmptyState } from '@/components/ui/empty-state';
 
-// Mock data
-const MOCK_FILES = [
-  {
-    id: '1',
-    name: 'Before Transformation',
-    type: 'image',
-    uri: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=150',
-    date: new Date().toISOString(),
-    size: 1024 * 1024 * 2 // 2MB
-  },
-  {
-    id: '2',
-    name: 'Squat Technique',
-    type: 'video',
-    uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    duration: 120,
-    thumbnail: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=150'
-  },
-  {
-    id: '3',
-    name: 'Nutrition Guide 2024',
-    type: 'document',
-    uri: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-    mimeType: 'application/pdf',
-    size: 1024 * 500 // 500KB
-  },
-];
+const noFilesAvatar = require('@/assets/avatars/no-files-avatar.png');
 
 export const FilesTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const router = useRouter();
   const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
+  const queryClient = useQueryClient();
 
-  const filteredFiles = useMemo(() => {
-    if (!searchQuery) return MOCK_FILES;
-    const query = searchQuery.toLowerCase();
-    return MOCK_FILES.filter(
-      (item) =>
-        item.name.toLowerCase().includes(query)
-    );
-  }, [searchQuery]);
+  // Get files from Zustand store
+  const getFilteredFiles = useLibraryStore((state) => state.getFilteredFiles);
+  const filteredFiles = useMemo(
+    () => getFilteredFiles(searchQuery),
+    [getFilteredFiles, searchQuery]
+  );
 
-  const handleFilePress = (item: typeof MOCK_FILES[0]) => {
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteFile({ fileId: id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['files'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorDeleting'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  // Already filtered above
+
+  const handleFilePress = (item: typeof filteredFiles[0]) => {
     closeOpenRow();
     router.push({
       pathname: '/modals/files/add-file-modal',
       params: {
         editingId: item.id,
-        name: item.name,
-        type: item.type,
+        name: item.filename,
+        type: getFileTypeFromMime(item.mime_type),
       },
     });
   };
 
-  const handleThumbnailPress = (item: typeof MOCK_FILES[0]) => {
+  const handleThumbnailPress = (item: typeof filteredFiles[0]) => {
     closeOpenRow();
     router.push({
       pathname: '/library/file-preview',
       params: {
-        uri: item.uri,
-        name: item.name,
-        type: item.type,
-        mimeType: item.mimeType || '',
+        uri: item.file_path,
+        name: item.filename,
+        type: getFileTypeFromMime(item.mime_type),
+        mimeType: item.mime_type || '',
       },
     });
   };
 
   const { setClientsSelectCallback } = useModalCallbacks();
 
-  const handleAssign = (item: typeof MOCK_FILES[0]) => {
+  const handleAssign = (item: typeof filteredFiles[0]) => {
     setClientsSelectCallback((selectedClients) => {
-      console.log(`Assigned ${item.name} to clients:`, selectedClients.map(c => c.fullName));
+      console.log(`Assigned ${item.filename} to clients:`, selectedClients.map(c => c.name));
     });
     router.push({
       pathname: '/modals/shared/client-list-modal',
@@ -100,25 +93,20 @@ export const FilesTab = () => {
     });
   };
 
-  const deleteFile = (id: string) => {
-    console.log('Delete file:', id);
-    // In a real app, this would dispatch a delete action
-  };
-
-  const handleDelete = useCallback((item: typeof MOCK_FILES[0]) => {
+  const handleDelete = useCallback((item: typeof filteredFiles[0]) => {
     Alert.alert(
-      `${t('general.delete')} ${item.name}?`,
+      `${t('general.delete')} ${item.filename}?`,
       t('library.deleteConfirmMessage'),
       [
         { text: t('general.cancel'), style: 'cancel' },
         {
           text: t('general.delete'),
           style: 'destructive',
-          onPress: () => deleteFile(item.id)
+          onPress: () => deleteMutation.mutate(item.id)
         },
       ]
     );
-  }, [t]);
+  }, [deleteMutation, t]);
 
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -128,19 +116,10 @@ export const FilesTab = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
-  if (filteredFiles.length === 0) {
-    return (
-      <View style={styles.emptyContainer}>
-        <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
-          {t('library.sections.empty').replace('sections', 'files')}
-        </Text>
-      </View>
-    );
-  }
-
-  const renderThumbnail = (item: typeof MOCK_FILES[0]) => {
-    if (item.type === 'image' || (item.type === 'video' && item.thumbnail)) {
-      const uri = item.type === 'image' ? item.uri : item.thumbnail;
+  const renderThumbnail = (item: typeof filteredFiles[0]) => {
+    const fileType = getFileTypeFromMime(item.mime_type);
+    if (fileType === 'image' || fileType === 'video') {
+      const uri = item.file_path;
       return (
         <View style={styles.imageThumbnailContainer}>
           <Image
@@ -149,7 +128,7 @@ export const FilesTab = () => {
             contentFit="cover"
             transition={200}
           />
-          {item.type === 'video' && (
+          {fileType === 'video' && (
             <View style={styles.playOverlay}>
               <Play {...({ color: "#FFFFFF", size: 12 } as any)} />
             </View>
@@ -158,11 +137,9 @@ export const FilesTab = () => {
       );
     }
 
-    // Fallback icons
-    let IconComponent = FileText;
-    let sf = 'doc.text';
-    if (item.type === 'image') { IconComponent = ImageIcon; sf = 'photo'; }
-    else if (item.type === 'video') { IconComponent = VideoIcon; sf = 'video'; }
+    // Fallback icons for pdf and other types
+    const IconComponent = fileType === 'pdf' ? FileText : FileText;
+    const sf = fileType === 'pdf' ? 'doc.text' : 'doc.text';
 
     return (
       <View style={[styles.iconThumbnailContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
@@ -178,6 +155,15 @@ export const FilesTab = () => {
 
   return (
     <View style={styles.container}>
+      {/* Empty State */}
+      {filteredFiles.length === 0 && (
+        <EmptyState
+          image={noFilesAvatar}
+          message={t('library.empty.files')}
+        />
+      )}
+
+      {/* Files List */}
       {filteredFiles.map((item, index) => {
         const isLastItem = index === filteredFiles.length - 1;
         const dropdownOptions: DropdownMenuOption[] = [
@@ -190,7 +176,7 @@ export const FilesTab = () => {
             label: `${t('general.delete')} File`,
             icon: { sf: 'trash', IconComponent: Trash2 },
             destructive: true,
-            onPress: () => deleteFile(item.id),
+            onPress: () => handleDelete(item),
           }
         ];
 
@@ -199,7 +185,7 @@ export const FilesTab = () => {
             <SwipeableRow
               onDelete={() => handleDelete(item)}
               onOpen={registerOpenRow}
-              deleteConfirmTitle={`${t('general.delete')} ${item.name}?`}
+              deleteConfirmTitle={`${t('general.delete')} ${item.filename}?`}
             >
               <ContextMenuWrapper options={dropdownOptions}>
                 <View style={styles.rowWrapper}>
@@ -220,17 +206,17 @@ export const FilesTab = () => {
                     >
                       <View style={styles.textContent}>
                         <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
-                          {item.name}
+                          {item.filename}
                         </Text>
                         <View style={styles.metaRow}>
                           <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                            {item.type === 'image' ? 'Image' : item.type === 'video' ? 'Video' : 'Document'}
+                            {getFileTypeFromMime(item.mime_type)}
                           </Text>
-                          {(item.size || item.duration) && (
+                          {item.size && (
                             <>
                               <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
                               <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                                {item.size ? formatSize(item.size) : `${item.duration}s`}
+                                {formatSize(item.size)}
                               </Text>
                             </>
                           )}
@@ -348,5 +334,20 @@ const styles = StyleSheet.create({
   emptyText: {
     ...typography.p2,
     textAlign: 'center',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    ...typography.p2,
+    marginTop: 12,
+  },
+  errorText: {
+    ...typography.p2,
+    textAlign: 'center',
+    paddingHorizontal: 32,
   },
 });

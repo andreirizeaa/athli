@@ -1,47 +1,73 @@
-import React, { useCallback, useMemo, useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { ChevronRight, Activity } from 'lucide-react-native';
+import React, { useCallback, useMemo } from 'react';
+import { StyleSheet, Text, View, Alert } from 'react-native';
+import { ChevronRight, Activity, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableOpacity } from 'pressto';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { useLibraryTab } from '@/stores';
+import { useLibraryTab, useLibraryStore } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
-import { UserPlus, Trash2 } from 'lucide-react-native';
 import { useModalCallbacks } from '@/stores';
-import * as Haptics from 'expo-haptics';
-import { Alert } from 'react-native';
+import { deleteMetric, duplicateMetric } from '@/services/coach/coach-metric-service';
+import { EmptyState } from '@/components/ui/empty-state';
 
-// Mock data
-const MOCK_METRICS = [
-  { id: '1', name: 'Body Weight', unit: 'kg', description: 'Weekly check-in' },
-  { id: '2', name: 'Sleep Score', unit: '%', description: 'Daily recovery tracking' },
-  { id: '3', name: 'Daily Steps', unit: 'steps', description: 'General activity' },
-  { id: '4', name: 'Resting Heart Rate', unit: 'bpm', description: 'Cardiovascular health' },
-  { id: '5', name: 'Water Intake', unit: 'ml', description: 'Hydration tracking' },
-];
+const noMetricsAvatar = require('@/assets/avatars/no-metrics-avatar.png');
 
 export const MetricsTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const router = useRouter();
   const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
+  const queryClient = useQueryClient();
 
-  const filteredMetrics = useMemo(() => {
-    if (!searchQuery) return MOCK_METRICS;
-    const query = searchQuery.toLowerCase();
-    return MOCK_METRICS.filter(
-      (item) =>
-        item.name.toLowerCase().includes(query) ||
-        item.unit.toLowerCase().includes(query)
-    );
-  }, [searchQuery]);
+  // Get metrics from Zustand store
+  const getFilteredMetrics = useLibraryStore((state) => state.getFilteredMetrics);
+  const filteredMetrics = useMemo(
+    () => getFilteredMetrics(searchQuery),
+    [getFilteredMetrics, searchQuery]
+  );
 
-  const handleMetricPress = (item: typeof MOCK_METRICS[0]) => {
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteMetric(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['metrics'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorDeleting'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  // Duplicate mutation
+  const duplicateMutation = useMutation({
+    mutationFn: (id: string) => duplicateMetric(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['metrics'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorDuplicating'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  const handleMetricPress = (item: typeof filteredMetrics[0]) => {
     closeOpenRow();
     router.push({
       pathname: '/modals/library/add-metric-modal',
@@ -56,9 +82,9 @@ export const MetricsTab = () => {
 
   const { setClientsSelectCallback } = useModalCallbacks();
 
-  const handleAssign = (item: typeof MOCK_METRICS[0]) => {
+  const handleAssign = (item: typeof filteredMetrics[0]) => {
     setClientsSelectCallback((selectedClients) => {
-      console.log(`Assigned ${item.name} to clients:`, selectedClients.map(c => c.fullName));
+      console.log(`Assigned ${item.name} to clients:`, selectedClients.map(c => c.name));
     });
     router.push({
       pathname: '/modals/shared/client-list-modal',
@@ -69,12 +95,7 @@ export const MetricsTab = () => {
     });
   };
 
-  const deleteMetric = (id: string) => {
-    console.log('Delete metric:', id);
-    // In a real app, this would dispatch a delete action
-  };
-
-  const handleDelete = useCallback((item: typeof MOCK_METRICS[0]) => {
+  const handleDelete = useCallback((item: typeof filteredMetrics[0]) => {
     Alert.alert(
       `${t('general.delete')} ${item.name}?`,
       t('library.deleteConfirmMessage'),
@@ -83,24 +104,23 @@ export const MetricsTab = () => {
         {
           text: t('general.delete'),
           style: 'destructive',
-          onPress: () => deleteMetric(item.id)
+          onPress: () => deleteMutation.mutate(item.id)
         },
       ]
     );
-  }, [t]);
-
-  if (filteredMetrics.length === 0) {
-    return (
-      <View style={styles.emptyContainer}>
-        <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
-          {t('library.sections.empty').replace('sections', 'metrics')}
-        </Text>
-      </View>
-    );
-  }
+  }, [deleteMutation, t]);
 
   return (
     <View style={styles.container}>
+      {/* Empty State */}
+      {filteredMetrics.length === 0 && (
+        <EmptyState
+          image={noMetricsAvatar}
+          message={t('library.empty.metrics')}
+        />
+      )}
+
+      {/* Metrics List */}
       {filteredMetrics.map((item, index) => {
         const isLastItem = index === filteredMetrics.length - 1;
 
@@ -114,7 +134,7 @@ export const MetricsTab = () => {
             label: `${t('general.delete')} Metric`,
             icon: { sf: 'trash', IconComponent: Trash2 },
             destructive: true,
-            onPress: () => deleteMetric(item.id),
+            onPress: () => handleDelete(item),
           }
         ];
 
@@ -247,5 +267,20 @@ const styles = StyleSheet.create({
   emptyText: {
     ...typography.p2,
     textAlign: 'center',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    ...typography.p2,
+    marginTop: 12,
+  },
+  errorText: {
+    ...typography.p2,
+    textAlign: 'center',
+    paddingHorizontal: 32,
   },
 });

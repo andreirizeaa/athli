@@ -42,7 +42,7 @@ export default function ClientSettingsScreen() {
     };
 
     const handleArchiveClient = () => {
-        const clientName = client?.fullName || '';
+        const clientName = client?.name || '';
         Alert.alert(
             `${t('clientDetail.settings.archivePrefix') || 'Archive'} ${clientName}?`,
             t('clientDetail.settings.archiveClientMessage'),
@@ -54,7 +54,7 @@ export default function ClientSettingsScreen() {
     };
 
     const handleDeleteClient = () => {
-        const clientName = client?.fullName || '';
+        const clientName = client?.name || '';
         Alert.alert(
             `${t('clientDetail.settings.deletePrefix') || 'Delete'} ${clientName}?`,
             t('clientDetail.settings.deleteClientMessage'),

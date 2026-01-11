@@ -44,15 +44,11 @@ export const ClientsList = forwardRef<ClientsListRef, ClientsListProps>(
         parts.push(`${client.age} ${t('clients.years')}`);
       }
 
-      if (client.gender && client.gender !== 'prefer-not-to-say') {
-        parts.push(client.gender);
-      }
-
-      if (client.type) {
+      if (client.coachingType) {
         const typeLabel =
-          client.type === 'in-person'
+          client.coachingType === 'in-person'
             ? t('clients.addClientModal.inPerson')
-            : client.type === 'online'
+            : client.coachingType === 'online'
               ? t('clients.addClientModal.online')
               : t('clients.addClientModal.hybrid');
         parts.push(typeLabel);
@@ -75,24 +71,32 @@ export const ClientsList = forwardRef<ClientsListRef, ClientsListProps>(
           >
             <View style={styles.rowContent}>
               <View style={styles.avatarContainer}>
-                {item.avatar ? (
-                  <Image source={{ uri: item.avatar }} style={styles.avatar} />
-                ) : (
-                  <View
-                    style={[
-                      styles.avatar,
-                      styles.avatarPlaceholder,
-                      { backgroundColor: themeColors.border },
-                    ]}
-                  />
-                )}
+                <View style={styles.avatarCircle}>
+                  {item.avatarUrl ? (
+                    <Image
+                      source={{ uri: item.avatarUrl }}
+                      style={styles.avatarImage}
+                      contentFit="cover"
+                      contentPosition="center"
+                      cachePolicy="memory-disk"
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.avatarImage,
+                        styles.avatarPlaceholder,
+                        { backgroundColor: themeColors.border },
+                      ]}
+                    />
+                  )}
+                </View>
               </View>
               <View style={styles.clientInfo}>
                 <Text
                   style={[styles.clientName, { color: themeColors.text }]}
                   numberOfLines={1}
                 >
-                  {item.fullName}
+                  {item.name}
                 </Text>
                 <Text
                   style={[styles.clientSubtitle, { color: themeColors.mutedText }]}
@@ -163,8 +167,19 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     marginRight: 12,
+    width: 56,
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  avatar: {
+  avatarCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
+  },
+  avatarImage: {
     width: 54,
     height: 54,
     borderRadius: 27,
