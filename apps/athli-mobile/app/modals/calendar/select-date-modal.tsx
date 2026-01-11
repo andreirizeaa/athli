@@ -3,7 +3,7 @@ import { StyleSheet, Text, useWindowDimensions, View, InteractionManager } from 
 import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Storage } from '@/lib/storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
@@ -316,7 +316,7 @@ export default function SelectDateModal() {
 
     setSelectedDate(date);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    AsyncStorage.setItem(storageKey, date.toISOString());
+    Storage.setItem(storageKey, date.toISOString());
     triggerDateSelect(date);
 
     setTimeout(() => {

@@ -4,7 +4,7 @@ import {
   type ColorSchemeName,
   useColorScheme as useNativeColorScheme,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Storage } from '@/lib/storage';
 
 import {
   DEFAULT_THEME,
@@ -40,12 +40,10 @@ export const ThemePreferenceProvider = ({ children }: { children: ReactNode }) =
   const systemScheme = useNativeColorScheme();
 
   useEffect(() => {
-    const loadPreferences = async () => {
+    const loadPreferences = () => {
       try {
-        const [savedPreference, savedPreset] = await Promise.all([
-          AsyncStorage.getItem(THEME_PREFERENCE_KEY),
-          AsyncStorage.getItem(COLOR_PALETTE_KEY),
-        ]);
+        const savedPreference = Storage.getItem(THEME_PREFERENCE_KEY);
+        const savedPreset = Storage.getItem(COLOR_PALETTE_KEY);
 
         if (savedPreference && (savedPreference === 'light' || savedPreference === 'dark' || savedPreference === 'system')) {
           setPreferenceState(savedPreference as ColorSchemePreference);
@@ -65,19 +63,19 @@ export const ThemePreferenceProvider = ({ children }: { children: ReactNode }) =
     loadPreferences();
   }, []);
 
-  const setPreference = async (newPreference: ColorSchemePreference) => {
+  const setPreference = (newPreference: ColorSchemePreference) => {
     setPreferenceState(newPreference);
     try {
-      await AsyncStorage.setItem(THEME_PREFERENCE_KEY, newPreference);
+      Storage.setItem(THEME_PREFERENCE_KEY, newPreference);
     } catch (error) {
       // Ignore errors
     }
   };
 
-  const setPreset = async (newPreset: PresetValue) => {
+  const setPreset = (newPreset: PresetValue) => {
     setPresetState(newPreset);
     try {
-      await AsyncStorage.setItem(COLOR_PALETTE_KEY, newPreset);
+      Storage.setItem(COLOR_PALETTE_KEY, newPreset);
     } catch (error) {
       // Ignore errors
     }
