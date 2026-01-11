@@ -26,7 +26,7 @@ export {
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  initialRouteName: 'index',
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -138,6 +138,22 @@ function RootLayoutNav() {
             },
           }}
         >
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="welcome"
+            options={{
+              headerShown: false,
+              animation: 'fade',
+            }}
+          />
+          <Stack.Screen
+            name="auth/sign-in"
+            options={{
+              headerShown: false,
+              presentation: 'card',
+              animation: 'slide_from_right',
+            }}
+          />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="settings/preferences" options={{ headerShown: false }} />
           <Stack.Screen
@@ -334,6 +350,21 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="modals/calendar/select-date-modal"
+            options={{
+              presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'ios' && {
+                sheetAllowedDetents: [0.50],
+                sheetGrabberVisible: true,
+              }),
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/auth/sign-in-modal"
             options={{
               presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
               headerShown: false,

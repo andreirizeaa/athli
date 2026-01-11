@@ -5,7 +5,7 @@
  */
 
 // Export stores
-export { useThemeStore, useColorScheme, type ColorSchemePreference } from './useThemeStore';
+export { useThemeStore, type ColorSchemePreference } from './useThemeStore';
 export { useTranslationsStore } from './useTranslationsStore';
 export { useUnitsStore, type UnitsPreference } from './useUnitsStore';
 export { useAppViewStore, type AppView } from './useAppViewStore';
@@ -19,10 +19,13 @@ export {
   type ScheduleData,
 } from './useModalCallbacksStore';
 
+// Re-export useColorScheme from useThemeStore
+export { useColorScheme } from './useThemeStore';
+
 // Backward compatibility hooks
 // These hooks match the old Context API hooks for easy migration
 
-import { useThemeStore, useColorScheme as getColorScheme } from './useThemeStore';
+import { useThemeStore } from './useThemeStore';
 import { useTranslationsStore } from './useTranslationsStore';
 import { useUnitsStore } from './useUnitsStore';
 import { useAppViewStore } from './useAppViewStore';
@@ -137,6 +140,3 @@ export const useModalCallbacks = () => {
     reorderItems: store.storedReorderItems,
   };
 };
-
-// Export the color scheme hook explicitly
-export { getColorScheme as useColorScheme };

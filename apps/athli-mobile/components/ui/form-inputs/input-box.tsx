@@ -17,6 +17,7 @@ type InputBoxProps = {
   containerStyle?: StyleProp<ViewStyle>;
   inputRowStyle?: StyleProp<ViewStyle>;
   inputStyle?: StyleProp<TextStyle>;
+  rightIcon?: React.ReactNode;
 } & Omit<TextInputProps, 'value' | 'onChangeText' | 'placeholder' | 'style'>;
 
 export type InputBoxRef = {
@@ -26,7 +27,7 @@ export type InputBoxRef = {
 };
 
 export const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
-  ({ label, value, onChangeText, placeholder, required, showCharacterCount, hideLabel, containerStyle, inputRowStyle, inputStyle, maxLength, ...textInputProps }, ref) => {
+  ({ label, value, onChangeText, placeholder, required, showCharacterCount, hideLabel, containerStyle, inputRowStyle, inputStyle, maxLength, rightIcon, ...textInputProps }, ref) => {
     const { colors: themeColors } = useThemePreference();
     const inputRef = useRef<TextInput>(null);
 
@@ -74,6 +75,7 @@ export const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
             maxLength={maxLength}
             {...textInputProps}
           />
+          {rightIcon && <View style={styles.rightIconContainer}>{rightIcon}</View>}
           {value.length > 0 && (
             <PressableOpacity
               style={styles.clearButton}
@@ -131,6 +133,9 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 28,
     textAlignVertical: 'center',
+  },
+  rightIconContainer: {
+    marginLeft: 12,
   },
   clearButton: {
     marginLeft: 12,
