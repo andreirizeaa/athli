@@ -35,6 +35,12 @@ export const unstable_settings = {
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
+// Configure splash screen to fade out
+SplashScreen.setOptions({
+  duration: 500,
+  fade: true,
+});
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
@@ -46,12 +52,7 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
+  // Don't render anything until fonts are loaded
   if (!loaded) {
     return null;
   }
@@ -89,11 +90,14 @@ function RootLayoutNav() {
   // Initialize data fetching (runs once after auth is restored)
   // This must be rendered as a component, not called as a function
 
-  // Initialize stores on mount
+  // Initialize stores on mount and hide splash screen
   useEffect(() => {
     useThemeStore.getState().initialize();
     useTranslationsStore.getState().initialize();
     useUnitsStore.getState().initialize();
+
+    // Hide splash screen after stores are initialized and route is determined
+    SplashScreen.hideAsync();
   }, []);
 
   // Restore auth session on mount

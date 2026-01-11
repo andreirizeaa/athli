@@ -101,7 +101,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         foregroundImage: "./assets/app-icons/adaptive-icon.png",
         monochromeImage: "./assets/app-icons/adaptive-icon.png",
         backgroundImage: "./assets/app-icons/adaptive-icon.png",
-        backgroundColor: "#0180F3"
+        backgroundColor: "#000000"
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
@@ -181,11 +181,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         {
           image: "./assets/app-icons/splash-icon-light.png",
           resizeMode: "contain",
-          backgroundColor: "#0180F3",
+          backgroundColor: "#000000",
           imageWidth: 200,
           dark: {
             image: "./assets/app-icons/splash-icon-dark.png",
-            backgroundColor: "#0180F3"
+            backgroundColor: "#000000"
           }
         }
       ]
