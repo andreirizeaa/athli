@@ -6,12 +6,12 @@ import { ChevronLeft, Archive, UserMinus } from 'lucide-react-native';
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { ScreenWrapper } from '@/components/screen-wrapper';
-import { Card } from '@/components/card';
-import { SettingsOption } from '@/components/settings-option';
-import { PlatformIcon } from '@/components/platform-icon';
-import { Separator } from '@/components/separator';
+import { IconButton } from '@/components/ui/icon-button';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { Card } from '@/components/ui/card';
+import { SettingsOption } from '@/components/ui/settings-option';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { Separator } from '@/components/ui/separator';
 import { getClients, type Client } from '@/services/client-service';
 
 export default function ClientSettingsScreen() {

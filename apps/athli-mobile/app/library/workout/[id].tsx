@@ -8,13 +8,13 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
+import { IconButton } from '@/components/ui/icon-button';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { PressableScale } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useModalCallbacks } from '@/contexts/modal-callbacks';
-import { ExerciseBuilderCard } from '@/components/workout/exercise-builder-card';
-import { SectionBuilderCard } from '@/components/workout/section-builder-card';
+import { ExerciseBuilderCard } from '@/components/features/workout/exercise-builder-card';
+import { SectionBuilderCard } from '@/components/features/workout/section-builder-card';
 import { hexToRgba } from '@/utils/colorUtils';
 import { Exercise } from '@/app/modals/workout/add-exercise-to-builder-modal';
 import {
@@ -27,11 +27,11 @@ import {
     getDefaultColumns,
     isBuilderSection,
     buildWorkoutPayload,
-} from '@/components/workout/workout-schema';
+} from '@/components/features/workout/workout-schema';
 import {
     type ExerciseValidationError,
     validateWorkoutItems,
-} from '@/components/workout/validation';
+} from '@/components/features/workout/validation';
 
 // Mock workout data - this would come from a service in production
 const MOCK_WORKOUTS: Record<string, { id: string; name: string; description: string; type: string; difficulty: string }> = {

@@ -9,10 +9,10 @@ import { PressableOpacity } from 'pressto';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { typography } from '@/constants/typography';
 import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { SearchBar } from '@/components/search-bar';
+import { IconButton } from '@/components/ui/icon-button';
+import { SearchBar } from '@/components/ui/search-bar';
 import { defaultMetrics, type DefaultMetric } from '@/constants/metrics';
-import { Separator } from '@/components/separator';
+import { Separator } from '@/components/ui/separator';
 import { useModalCallbacks } from '@/contexts/modal-callbacks';
 import { hexToRgba } from '@/utils/colorUtils';
 

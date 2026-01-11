@@ -8,7 +8,7 @@ import { X, Check } from 'lucide-react-native';
 import { typography } from '@/constants/typography';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
+import { IconButton } from '@/components/ui/icon-button';
 import { hexToRgba } from '@/utils/colorUtils';
 
 export default function AddPhotoToClientModal() {

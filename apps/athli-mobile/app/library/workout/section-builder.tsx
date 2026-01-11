@@ -8,13 +8,13 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { InputBox, TextAreaInput } from '@/components/form-inputs';
-import { DropdownMenuWrapper } from '@/components/dropdown-menu';
+import { IconButton } from '@/components/ui/icon-button';
+import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
+import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';
 import { PressableScale } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useModalCallbacks } from '@/contexts/modal-callbacks';
-import { ExerciseBuilderCard } from '@/components/workout/exercise-builder-card';
+import { ExerciseBuilderCard } from '@/components/features/workout/exercise-builder-card';
 import { hexToRgba } from '@/utils/colorUtils';
 import { type SectionType, SECTION_TYPES } from '@/constants/training';
 import { Exercise } from '@/app/modals/workout/add-exercise-to-builder-modal';
@@ -23,11 +23,11 @@ import {
     type BuilderSection,
     type BuilderItem,
     getDefaultColumns,
-} from '@/components/workout/workout-schema';
+} from '@/components/features/workout/workout-schema';
 import {
     type ExerciseValidationError,
     validateExercises,
-} from '@/components/workout/validation';
+} from '@/components/features/workout/validation';
 
 type SectionBuilderState = {
     name: string;

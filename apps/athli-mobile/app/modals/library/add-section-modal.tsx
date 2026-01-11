@@ -10,8 +10,8 @@ import { typography } from '@/constants/typography';
 import { SECTION_TYPES, type SectionType } from '@/constants/training';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { InputBox, TextAreaInput, SelectInput } from '@/components/form-inputs';
+import { IconButton } from '@/components/ui/icon-button';
+import { InputBox, TextAreaInput, SelectInput } from '@/components/ui/form-inputs';
 import { hexToRgba } from '@/utils/colorUtils';
 
 export default function AddSectionModal() {

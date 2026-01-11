@@ -8,12 +8,12 @@ import { ChevronDown, ChevronLeft, Plus, Dumbbell, ClipboardList } from 'lucide-
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { PlatformIcon } from '@/components/platform-icon';
-import { SwipeableCalendar } from '@/components/calendar/swipeable-calendar';
+import { IconButton } from '@/components/ui/icon-button';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { SwipeableCalendar } from '@/components/features/calendar/swipeable-calendar';
 import { formatDateDDMMYYYY } from '@/lib/utils/date-formatters';
-import { ScreenWrapper } from '@/components/screen-wrapper';
-import { DropdownMenuWrapper } from '@/components/dropdown-menu';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';
 
 const SELECTED_DATE_KEY = '@select_date_modal_selected_date_client';
 

@@ -12,9 +12,9 @@ import { typography } from '@/constants/typography';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { useModalCallbacks, type ScheduleData, type ScheduleFrequency, type MonthlyOption } from '@/contexts/modal-callbacks';
-import { IconButton } from '@/components/icon-button';
-import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
-import { Separator } from '@/components/separator';
+import { IconButton } from '@/components/ui/icon-button';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
+import { Separator } from '@/components/ui/separator';
 import { hexToRgba } from '@/utils/colorUtils';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;

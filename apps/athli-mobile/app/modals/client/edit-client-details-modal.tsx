@@ -9,7 +9,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { typography } from '@/constants/typography';
 import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
+import { IconButton } from '@/components/ui/icon-button';
 import {
   InputBox,
   SelectInput,
@@ -21,8 +21,8 @@ import {
   type GenderValue,
   type Country,
   type PhoneNumber,
-} from '@/components/form-inputs';
-import { COUNTRIES } from '@/components/form-inputs/countries-data';
+} from '@/components/ui/form-inputs';
+import { COUNTRIES } from '@/components/ui/form-inputs/countries-data';
 import { getClients, updateClient, type Client } from '@/services/client-service';
 import { hexToRgba } from '@/utils/colorUtils';
 

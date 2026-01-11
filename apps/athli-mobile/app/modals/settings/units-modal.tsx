@@ -8,8 +8,8 @@ import { Check, X } from 'lucide-react-native';
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { PlatformIcon } from '@/components/platform-icon';
-import { IconButton } from '@/components/icon-button';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { IconButton } from '@/components/ui/icon-button';
 
 export default function UnitsModal() {
   const router = useRouter();

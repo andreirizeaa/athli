@@ -19,11 +19,11 @@ import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useAppView } from '@/contexts/useAppView';
 import { useTranslations } from '@/contexts/useTranslations';
-import { Card } from '@/components/card';
-import { SettingsOption } from '@/components/settings-option';
-import { Separator } from '@/components/separator';
-import { PlatformIcon } from '@/components/platform-icon';
-import { ScreenWrapper } from '@/components/screen-wrapper';
+import { Card } from '@/components/ui/card';
+import { SettingsOption } from '@/components/ui/settings-option';
+import { Separator } from '@/components/ui/separator';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 
 export default function ProfileTabScreen() {
   const router = useRouter();

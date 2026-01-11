@@ -24,10 +24,10 @@ import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useAppView } from '@/contexts/useAppView';
 import { useTranslations } from '@/contexts/useTranslations';
-import { Card } from '@/components/card';
-import { SettingsOption } from '@/components/settings-option';
-import { Separator } from '@/components/separator';
-import { ScreenWrapper } from '@/components/screen-wrapper';
+import { Card } from '@/components/ui/card';
+import { SettingsOption } from '@/components/ui/settings-option';
+import { Separator } from '@/components/ui/separator';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 
 type PlatformIconProps = {
   sf: string;
@@ -234,7 +234,7 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingBottom: 60,
+    paddingBottom: 120,
     paddingTop: 16,
   },
   headerSection: {

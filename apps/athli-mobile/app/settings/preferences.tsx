@@ -28,11 +28,11 @@ import {
 import { useTranslations } from '@/contexts/useTranslations';
 import { useUnits, type UnitsPreference } from '@/contexts/useUnits';
 
-import { Card } from '@/components/card';
-import { IconButton } from '@/components/icon-button';
-import { SettingsOption } from '@/components/settings-option';
-import { Separator } from '@/components/separator';
-import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
+import { Card } from '@/components/ui/card';
+import { IconButton } from '@/components/ui/icon-button';
+import { SettingsOption } from '@/components/ui/settings-option';
+import { Separator } from '@/components/ui/separator';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 
 type PlatformIconProps = {
   sf: string;

@@ -1,18 +1,14 @@
-import { type ChatMessage, type DocumentAttachment, type ImageAttachment, type VideoAttachment, type AudioAttachment } from './chats-service';
+import type {
+  Coach,
+  InboxMessage,
+  DocumentAttachment,
+  ImageAttachment,
+  VideoAttachment,
+  AudioAttachment,
+} from '@/types';
 
-export interface Coach {
-  id: string;
-  name: string;
-  avatar?: string;
-  lastMessage?: string;
-  lastMessageTime?: Date;
-  unreadCount?: number;
-}
-
-export interface InboxMessage extends ChatMessage {
-  // Same structure as ChatMessage
-  // isSent: true for client messages, false for coach messages
-}
+// Re-export types for backward compatibility
+export type { Coach, InboxMessage };
 
 /**
  * Service method to get list of available coaches

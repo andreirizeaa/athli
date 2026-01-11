@@ -20,10 +20,10 @@ import { formTemplates, type FormTemplate } from '@/constants/forms';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { useModalCallbacks, type ScheduleData } from '@/contexts/modal-callbacks';
-import { IconButton } from '@/components/icon-button';
-import { InputBox, TextAreaInput } from '@/components/form-inputs';
-import { Separator } from '@/components/separator';
-import { SearchBar } from '@/components/search-bar';
+import { IconButton } from '@/components/ui/icon-button';
+import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
+import { Separator } from '@/components/ui/separator';
+import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
 
 type TabKey = 'new' | 'templates';

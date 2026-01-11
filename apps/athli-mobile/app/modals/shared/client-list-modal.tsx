@@ -9,12 +9,12 @@ import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { useModalCallbacks } from '@/contexts/modal-callbacks';
-import { SearchBar } from '@/components/search-bar';
-import { ClientSelectionList } from '@/components/clients/client-selection-list';
+import { SearchBar } from '@/components/ui/search-bar';
+import { ClientSelectionList } from '@/components/features/clients/client-selection-list';
 import { type Client } from '@/services/client-service';
-import { IconButton } from '@/components/icon-button';
+import { IconButton } from '@/components/ui/icon-button';
 import { hexToRgba } from '@/utils/colorUtils';
-import { FilledButton } from '@/components/buttons';
+import { FilledButton } from '@/components/ui/buttons';
 
 // TODO: Replace with actual TanStack Query hook: const { data: clients, isLoading } = useClients()
 // Mock data to mimic TanStack Query behavior

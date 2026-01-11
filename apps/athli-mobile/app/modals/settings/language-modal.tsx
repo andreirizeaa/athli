@@ -16,9 +16,9 @@ import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { LANGUAGES } from '@/constants/languages';
-import { IconButton } from '@/components/icon-button';
-import { Separator } from '@/components/separator';
-import { SearchBar } from '@/components/search-bar';
+import { IconButton } from '@/components/ui/icon-button';
+import { Separator } from '@/components/ui/separator';
+import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
 
 type Language = {

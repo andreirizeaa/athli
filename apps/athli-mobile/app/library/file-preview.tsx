@@ -11,8 +11,8 @@ import { useEvent } from 'expo';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
-import { IconButton } from '@/components/icon-button';
-import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/ui/icon-button';
+import { PlatformIcon } from '@/components/ui/platform-icon';
 import { hexToRgba } from '@/utils/colorUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

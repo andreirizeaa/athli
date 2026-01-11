@@ -9,9 +9,9 @@ import { useAppView } from '@/contexts/useAppView';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { typography } from '@/constants/typography';
-import { AddClientContent, type AddClientContentRef } from '@/components/clients/add-client-content';
-import { NewChatContent } from '@/components/chats/new-chat-content';
-import { IconButton } from '@/components/icon-button';
+import { AddClientContent, type AddClientContentRef } from '@/components/features/clients/add-client-content';
+import { NewChatContent } from '@/components/features/chats/new-chat-content';
+import { IconButton } from '@/components/ui/icon-button';
 import { hexToRgba } from '@/utils/colorUtils';
 
 export default function AddModalContent() {
