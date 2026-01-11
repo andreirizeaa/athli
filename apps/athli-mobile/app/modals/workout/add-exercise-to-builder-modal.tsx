@@ -10,10 +10,10 @@ import { PressableOpacity, PressableScale } from 'pressto';
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { SearchBar } from '@/components/search-bar';
-import { Card } from '@/components/card';
-import { Separator } from '@/components/separator';
+import { IconButton } from '@/components/ui/icon-button';
+import { SearchBar } from '@/components/ui/search-bar';
+import { Card } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { hexToRgba } from '@/utils/colorUtils';
 import { useModalCallbacks } from '@/contexts/modal-callbacks';
 

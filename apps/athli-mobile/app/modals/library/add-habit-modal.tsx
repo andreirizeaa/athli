@@ -26,11 +26,11 @@ import { defaultHabits, type DefaultHabit } from '@/constants/habits';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { useModalCallbacks, type HabitOptionsData } from '@/contexts/modal-callbacks';
-import { IconButton } from '@/components/icon-button';
-import { InputBox, TextAreaInput, SelectInput, ButtonTabGroup } from '@/components/form-inputs';
-import { Card } from '@/components/card';
-import { Separator } from '@/components/separator';
-import { SearchBar } from '@/components/search-bar';
+import { IconButton } from '@/components/ui/icon-button';
+import { InputBox, TextAreaInput, SelectInput, ButtonTabGroup } from '@/components/ui/form-inputs';
+import { Card } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
 
 

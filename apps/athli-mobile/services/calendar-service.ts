@@ -1,52 +1,24 @@
-// =========================
-// Types (your existing + canonical)
-// =========================
+import type {
+  RepeatData,
+  ScheduleSessionData,
+  Weekday,
+  CanonicalRepeatData,
+  ScheduleSessionRequest,
+  GoogleEventInsert,
+  GraphEventCreate,
+  CalendarProvider,
+} from '@/types';
 
-// Frontend-friendly interface (keeps existing structure)
-export interface RepeatData {
-  type: 'weekly' | 'monthly';
-  every?: number;
-  for?: number | 'ever';
-  weekdays?: string[];
-  monthDays?: number[];
-}
-
-export interface ScheduleSessionData {
-  clientId: string;
-  type: string;
-  date: Date;
-  fromTime: Date;
-  toTime: Date;
-  meetingInfo?: string;
-  repeat?: RepeatData | null;
-}
-
-// Canonical backend format
-type Weekday = 'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU';
-
-type CanonicalRepeatData =
-  | {
-      type: 'weekly';
-      intervalWeeks: 1 | 2 | 3 | 4;
-      weekdays: Weekday[];
-      end: { mode: 'afterWeeks'; weeks: number } | { mode: 'never' };
-    }
-  | {
-      type: 'monthly';
-      intervalMonths: number; // 1..12
-      monthDays: number[]; // 1..31
-      end: { mode: 'afterMonths'; months: number } | { mode: 'never' };
-    };
-
-export type ScheduleSessionRequest = {
-  clientId: string;
-  sessionType: string;
-  title?: string;
-  description?: string;
-  timeZone: string; // IANA timezone, e.g. "Europe/London"
-  startLocal: string; // "YYYY-MM-DDTHH:mm:ss"
-  endLocal: string; // "YYYY-MM-DDTHH:mm:ss"
-  repeat?: CanonicalRepeatData | null;
+// Re-export types for backward compatibility
+export type {
+  RepeatData,
+  ScheduleSessionData,
+  Weekday,
+  CanonicalRepeatData,
+  ScheduleSessionRequest,
+  GoogleEventInsert,
+  GraphEventCreate,
+  CalendarProvider,
 };
 
 // =========================
@@ -189,16 +161,6 @@ function utcUntilFromLocalStartPlusMonths(startLocal: string, months: number): s
 // Provider payload builders
 // =========================
 
-// ---- Google Calendar payload shape (minimal)
-export type GoogleEventInsert = {
-  summary?: string;
-  description?: string;
-  start: { dateTime: string; timeZone: string };
-  end: { dateTime: string; timeZone: string };
-  attendees?: Array<{ email: string }>;
-  recurrence?: string[]; // ["RRULE:..."]
-};
-
 function buildGoogleRecurrenceLines(payload: ScheduleSessionRequest): string[] | undefined {
   const r = payload.repeat;
   if (!r) return undefined;
@@ -240,24 +202,6 @@ export function buildGoogleEventPayload(args: {
 }
 
 // ---- Outlook / Microsoft Graph payload shape (minimal)
-type GraphDateTimeTimeZone = { dateTime: string; timeZone: string };
-
-export type GraphEventCreate = {
-  subject: string;
-  body?: { contentType: 'HTML' | 'text'; content: string };
-  start: GraphDateTimeTimeZone;
-  end: GraphDateTimeTimeZone;
-  attendees: Array<{ type: 'required'; emailAddress: { address: string; name?: string } }>;
-  recurrence?: {
-    pattern:
-      | { type: 'weekly'; interval: number; daysOfWeek: string[]; firstDayOfWeek?: string }
-      | { type: 'absoluteMonthly'; interval: number; dayOfMonth: number };
-    range:
-      | { type: 'noEnd'; startDate: string; recurrenceTimeZone?: string }
-      | { type: 'endDate'; startDate: string; endDate: string; recurrenceTimeZone?: string };
-  };
-};
-
 function weekdayToGraphDay(w: Weekday): string {
   switch (w) {
     case 'MO':

@@ -10,10 +10,10 @@ import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { getClients, type Client } from '@/services/client-service';
-import { PlatformIcon } from '@/components/platform-icon';
-import { IconButton } from '@/components/icon-button';
-import { SearchBar } from '@/components/search-bar';
-import { ScreenWrapper } from '@/components/screen-wrapper';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { IconButton } from '@/components/ui/icon-button';
+import { SearchBar } from '@/components/ui/search-bar';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 
 // Fuzzy search function - checks if query matches name (allowing for character skipping)
 const fuzzyMatch = (text: string, query: string): boolean => {
@@ -199,7 +199,7 @@ export default function ClientsScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingBottom: 16,
+    paddingBottom: 60,
     paddingTop: 16,
   },
   headerSection: {

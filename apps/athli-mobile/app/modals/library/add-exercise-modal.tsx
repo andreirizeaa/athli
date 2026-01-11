@@ -19,8 +19,8 @@ import {
 } from '@/constants/training';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { InputBox, TextAreaInput, SelectInput } from '@/components/form-inputs';
+import { IconButton } from '@/components/ui/icon-button';
+import { InputBox, TextAreaInput, SelectInput } from '@/components/ui/form-inputs';
 
 // YouTube/Vimeo URL validation helper
 const isValidVideoUrl = (url: string): boolean => {

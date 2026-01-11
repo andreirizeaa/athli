@@ -21,12 +21,12 @@ import {
   createNewChat,
   getChatMessages,
 } from '@/services/chats-service';
-import { ListRowItem } from '@/components/list-row-item';
-import { Separator } from '@/components/separator';
-import { PlatformIcon } from '@/components/platform-icon';
-import { IconButton } from '@/components/icon-button';
-import { ScreenWrapper } from '@/components/screen-wrapper';
-import { Card } from '@/components/card';
+import { ListRowItem } from '@/components/ui/list-row-item';
+import { Separator } from '@/components/ui/separator';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { IconButton } from '@/components/ui/icon-button';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { Card } from '@/components/ui/card';
 import { PressableOpacity } from 'pressto';
 
 const MOCK_BIO = "Experienced marathon runner currently focused on improving 5k speed. Looking to balance high-intensity training with better recovery and nutritional consistency.";

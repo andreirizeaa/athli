@@ -7,7 +7,7 @@ import { X, Check } from 'lucide-react-native';
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
+import { IconButton } from '@/components/ui/icon-button';
 
 export default function AddProgramModal() {
     const router = useRouter();

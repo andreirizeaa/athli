@@ -17,9 +17,9 @@ import { Check, X } from 'lucide-react-native';
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { Card } from '@/components/card';
-import { IconButton } from '@/components/icon-button';
-import { Separator } from '@/components/separator';
+import { Card } from '@/components/ui/card';
+import { IconButton } from '@/components/ui/icon-button';
+import { Separator } from '@/components/ui/separator';
 import { editPersonalDetails } from '@/services/personal-details-service';
 
 type FieldType = 'name' | 'age' | 'gender' | 'height' | 'weight';

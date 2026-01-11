@@ -6,8 +6,8 @@ import { ChevronLeft, Plus } from 'lucide-react-native';
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { ScreenWrapper } from '@/components/screen-wrapper';
+import { IconButton } from '@/components/ui/icon-button';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 
 export default function ClientPhotosScreen() {
     const router = useRouter();

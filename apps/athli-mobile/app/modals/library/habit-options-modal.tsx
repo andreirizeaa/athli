@@ -17,8 +17,8 @@ import {
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { useModalCallbacks, type HabitOptionsData } from '@/contexts/modal-callbacks';
-import { IconButton } from '@/components/icon-button';
-import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
+import { IconButton } from '@/components/ui/icon-button';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 
 // Helper to create a date from time string "HH:MM"
 const parseTimeString = (timeStr: string): Date => {

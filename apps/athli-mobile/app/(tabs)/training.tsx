@@ -9,12 +9,12 @@ import { typography, iconSizes, headingFontFamily } from '@/constants/typography
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { useTrainingOverlay } from '@/contexts/useTrainingOverlay';
-import { PlatformIcon } from '@/components/platform-icon';
-import { SwipeableCalendar } from '@/components/calendar/swipeable-calendar';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { SwipeableCalendar } from '@/components/features/calendar/swipeable-calendar';
 import { formatDateDDMMYYYY } from '@/lib/utils/date-formatters';
-import { TrainingAddOptions } from '@/components/training/training-add-options';
-import { TrainingContent } from '@/components/training/training-content';
-import { ScreenWrapper } from '@/components/screen-wrapper';
+import { TrainingAddOptions } from '@/components/features/training/training-add-options';
+import { TrainingContent } from '@/components/features/training/training-content';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 
 const SELECTED_DATE_KEY = '@select_date_modal_selected_date';
 

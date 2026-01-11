@@ -8,11 +8,11 @@ import { Check, X, ChevronRight, ChevronDown } from 'lucide-react-native';
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { Card } from '@/components/card';
-import { Separator } from '@/components/separator';
-import { PlatformIcon } from '@/components/platform-icon';
-import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
+import { IconButton } from '@/components/ui/icon-button';
+import { Card } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { useModalCallbacks } from '@/contexts/modal-callbacks';
 
 type RepeatData = {

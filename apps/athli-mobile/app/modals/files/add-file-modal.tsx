@@ -12,9 +12,9 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { PlatformIcon } from '@/components/platform-icon';
-import { InputBox } from '@/components/form-inputs';
+import { IconButton } from '@/components/ui/icon-button';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { InputBox } from '@/components/ui/form-inputs';
 import { addFile, type AddFileData } from '@/services/file-service';
 import { hexToRgba } from '@/utils/colorUtils';
 

@@ -9,9 +9,9 @@ import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { useModalCallbacks } from '@/contexts/modal-callbacks';
-import { IconButton } from '@/components/icon-button';
-import { Card } from '@/components/card';
-import { Separator } from '@/components/separator';
+import { IconButton } from '@/components/ui/icon-button';
+import { Card } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 
 export default function NumberSelectModal() {
   const router = useRouter();

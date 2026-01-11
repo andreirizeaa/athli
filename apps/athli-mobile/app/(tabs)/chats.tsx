@@ -9,12 +9,12 @@ import { Check, Ellipsis, MailCheck, CheckCircle2, Archive, Trash2 } from 'lucid
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { SearchBar } from '@/components/search-bar';
-import { ChatListItem } from '@/components/chats/chat-list-item';
-import { ArchivedItem } from '@/components/chats/archived-item';
-import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
-import { PlatformIcon } from '@/components/platform-icon';
-import { ScreenWrapper } from '@/components/screen-wrapper';
+import { SearchBar } from '@/components/ui/search-bar';
+import { ChatListItem } from '@/components/features/chats/chat-list-item';
+import { ArchivedItem } from '@/components/features/chats/archived-item';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import {
   getChats,
   readAllChats,
@@ -336,7 +336,7 @@ export default function ChatsScreen() {
 
 const styles = StyleSheet.create({
   scrollViewContent: {
-    paddingBottom: 40,
+    paddingBottom: 120,
     paddingTop: 16,
   },
   container: {

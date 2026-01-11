@@ -6,8 +6,8 @@ import { ChevronLeft } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
-import { PlatformIcon } from '@/components/platform-icon';
-import { IconButton } from '@/components/icon-button';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { IconButton } from '@/components/ui/icon-button';
 
 export default function TrainingCalendarScreen() {
   const router = useRouter();

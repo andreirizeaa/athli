@@ -1,18 +1,7 @@
-export interface File {
-  id: string;
-  name: string;
-  uri: string;
-  type: 'photo' | 'video' | 'pdf';
-  size?: number;
-  createdAt: Date;
-}
+import type { File, AddFileData } from '@/types';
 
-export interface AddFileData {
-  name: string;
-  uri: string;
-  type: 'photo' | 'video' | 'pdf';
-  size?: number;
-}
+// Re-export types for backward compatibility
+export type { File, AddFileData };
 
 /**
  * Service method to add a new file

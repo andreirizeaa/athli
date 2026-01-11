@@ -20,7 +20,7 @@ import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
-import { IconButton } from '@/components/icon-button';
+import { IconButton } from '@/components/ui/icon-button';
 import { useTranslations } from '@/contexts/useTranslations';
 import { hexToRgba } from '@/utils/colorUtils';
 import { useModalCallbacks } from '@/contexts/modal-callbacks';
@@ -29,7 +29,7 @@ import {
     type BuilderSection,
     type BuilderExercise,
     isBuilderSection,
-} from '@/components/workout/workout-schema';
+} from '@/components/features/workout/workout-schema';
 
 // Row height constants
 const ROW_HEIGHT = 56;

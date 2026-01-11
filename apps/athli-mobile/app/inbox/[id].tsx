@@ -20,16 +20,16 @@ import {
   setAudioModeAsync,
 } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
-import { type IWaveformRef, PlayerState, FinishMode } from '@/components/audio';
+import { type IWaveformRef, PlayerState, FinishMode } from '@/components/features/audio';
 
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { MessageList } from '@/components/message/message-list-flashlist';
-import { MessageReactionsSheet } from '@/components/message/message-reactions-sheet';
-import { ChatHeader } from '@/components/chats/chat-header';
-import { ChatToolbar } from '@/components/chats/chat-toolbar';
-import { ChatLoadingState } from '@/components/chats/chat-loading-state';
-import { stopAllWaveformPlayers } from '@/components/message/message-audio-preview';
+import { MessageList } from '@/components/features/message/message-list-flashlist';
+import { MessageReactionsSheet } from '@/components/features/message/message-reactions-sheet';
+import { ChatHeader } from '@/components/features/chats/chat-header';
+import { ChatToolbar } from '@/components/features/chats/chat-toolbar';
+import { ChatLoadingState } from '@/components/features/chats/chat-loading-state';
+import { stopAllWaveformPlayers } from '@/components/features/message/message-audio-preview';
 import {
   getCoach,
   getCoaches,
