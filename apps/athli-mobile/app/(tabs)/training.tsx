@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useRouter, useFocusEffect } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Storage } from '@/lib/storage';
 import { ChevronDown } from 'lucide-react-native';
 
 import { typography, iconSizes, headingFontFamily } from '@/constants/typography';
@@ -81,9 +81,9 @@ export default function TrainingScreen() {
   // Listen for when we return from the modal and check if date was updated
   useFocusEffect(
     useCallback(() => {
-      const checkSelectedDate = async () => {
+      const checkSelectedDate = () => {
         try {
-          const storedDate = await AsyncStorage.getItem(SELECTED_DATE_KEY);
+          const storedDate = Storage.getItem(SELECTED_DATE_KEY);
           if (storedDate) {
             const date = new Date(storedDate);
             if (!isNaN(date.getTime())) {
@@ -94,7 +94,7 @@ export default function TrainingScreen() {
               setCurrentMonth(date.getMonth());
               setCurrentYear(date.getFullYear());
               // Clear the stored date after reading it
-              await AsyncStorage.removeItem(SELECTED_DATE_KEY);
+              Storage.removeItem(SELECTED_DATE_KEY);
             }
           }
         } catch (error) {

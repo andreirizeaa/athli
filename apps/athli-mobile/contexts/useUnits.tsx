@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Storage } from '@/lib/storage';
 
 export type UnitsPreference = 'metric' | 'imperial';
 
@@ -17,9 +17,9 @@ export const UnitsProvider = ({ children }: { children: ReactNode }) => {
     const [units, setUnitsState] = useState<UnitsPreference>('metric');
 
     useEffect(() => {
-        const loadUnits = async () => {
+        const loadUnits = () => {
             try {
-                const savedUnits = await AsyncStorage.getItem(UNITS_KEY);
+                const savedUnits = Storage.getItem(UNITS_KEY);
                 if (savedUnits === 'metric' || savedUnits === 'imperial') {
                     setUnitsState(savedUnits);
                 }
@@ -31,10 +31,10 @@ export const UnitsProvider = ({ children }: { children: ReactNode }) => {
         loadUnits();
     }, []);
 
-    const setUnits = async (newUnits: UnitsPreference) => {
+    const setUnits = (newUnits: UnitsPreference) => {
         setUnitsState(newUnits);
         try {
-            await AsyncStorage.setItem(UNITS_KEY, newUnits);
+            Storage.setItem(UNITS_KEY, newUnits);
         } catch (error) {
             // Ignore errors
         }
