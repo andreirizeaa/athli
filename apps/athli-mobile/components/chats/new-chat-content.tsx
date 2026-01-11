@@ -9,9 +9,10 @@ import { createNewChat } from '@/services/chats-service';
 
 type NewChatContentProps = {
   onClose: () => void;
+  headerHeight?: number;
 };
 
-export const NewChatContent = ({ onClose }: NewChatContentProps) => {
+export const NewChatContent = ({ onClose, headerHeight = 56 }: NewChatContentProps) => {
   const { t } = useTranslations();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -63,27 +64,25 @@ export const NewChatContent = ({ onClose }: NewChatContentProps) => {
     }
   };
 
+  // Search bar as list header so the whole screen scrolls with proper top padding
+  const ListHeader = (
+    <View style={[styles.searchBarContainer, { paddingTop: headerHeight + 16 }]}>
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder={t('chats.newChat.searchPlaceholder')}
+      />
+    </View>
+  );
+
   return (
     <View style={styles.pageContainer}>
-      {/* Fixed Search Bar */}
-      <View style={styles.searchBarContainer}>
-        <View style={styles.inputGroup}>
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder={t('chats.newChat.searchPlaceholder')}
-          />
-        </View>
-      </View>
-
-      {/* Scrollable Client List */}
-      <View style={styles.listContainer}>
-        <ClientsList
-          clients={filteredClients}
-          isLoading={isLoading}
-          onClientPress={handleClientPress}
-        />
-      </View>
+      <ClientsList
+        clients={filteredClients}
+        isLoading={isLoading}
+        onClientPress={handleClientPress}
+        ListHeaderComponent={ListHeader}
+      />
     </View>
   );
 };
@@ -94,13 +93,6 @@ const styles = StyleSheet.create({
   },
   searchBarContainer: {
     paddingHorizontal: 16,
-    paddingTop: 16,
     paddingBottom: 12,
-  },
-  inputGroup: {
-    width: '100%',
-  },
-  listContainer: {
-    flex: 1,
   },
 });

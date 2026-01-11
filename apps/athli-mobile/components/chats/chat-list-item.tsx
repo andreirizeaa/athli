@@ -1,14 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Archive, Trash2, MailCheck, CheckCircle } from 'lucide-react-native';
+import { Archive, Trash2, MailCheck, CheckCircle, MailOpen } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { Alert } from 'react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { PlatformIcon } from '@/components/platform-icon';
+import { SwipeableRow } from '@/components/swipeable-row';
+import { PressableOpacity } from 'pressto';
 import { getChatMessages, type Chat, type ChatMessage } from '@/services/chats-service';
 
 type ChatListItemProps = {
@@ -19,6 +22,8 @@ type ChatListItemProps = {
   onArchive?: (chatId: string) => void;
   onDelete?: (chatId: string) => void;
   onMarkAsRead?: (chatId: string) => void;
+  onUnarchive?: (chatId: string) => void;
+  onOpen?: (close: () => void) => void;
 };
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -59,11 +64,12 @@ export const ChatListItem = ({
   onArchive,
   onDelete,
   onMarkAsRead,
+  onUnarchive,
+  onOpen,
 }: ChatListItemProps) => {
   const colorScheme = useColorScheme();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const [isPressed, setIsPressed] = useState(false);
   const [lastMessage, setLastMessage] = useState<ChatMessage | null>(null);
 
   useEffect(() => {
@@ -81,24 +87,25 @@ export const ChatListItem = ({
   }, [chat.id]);
 
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress(chat.id);
   };
 
-  const handleLongPress = () => {
-    // Prevent navigation on long press
-    // The Zeego ContextMenuWrapper handles the actual menu
-  };
-
-  const handlePressIn = () => {
-    if (!isEditMode) {
-      setIsPressed(true);
+  const handleDelete = useCallback(() => {
+    if (onDelete) {
+      Alert.alert(
+        t('chats.delete'),
+        t('library.deleteConfirmMessage'),
+        [
+          { text: t('general.cancel'), style: 'cancel' },
+          {
+            text: t('general.delete'),
+            style: 'destructive',
+            onPress: () => onDelete(chat.id)
+          },
+        ]
+      );
     }
-  };
-
-  const handlePressOut = () => {
-    setIsPressed(false);
-  };
+  }, [onDelete, chat.clientName, chat.id, t]);
 
 
   // Use the same color as dividers for checkbox border in light mode
@@ -138,6 +145,20 @@ export const ChatListItem = ({
         },
       ]
       : []),
+    ...(onUnarchive
+      ? [
+        {
+          label: t('chats.archived.unarchive'),
+          icon: {
+            sf: 'archivebox.fill',
+            IconComponent: Archive,
+          },
+          onPress: () => {
+            onUnarchive(chat.id);
+          },
+        },
+      ]
+      : []),
     ...(onDelete
       ? [
         {
@@ -146,6 +167,7 @@ export const ChatListItem = ({
             sf: 'trash',
             IconComponent: Trash2,
           },
+          destructive: true,
           onPress: () => {
             onDelete(chat.id);
           },
@@ -154,129 +176,139 @@ export const ChatListItem = ({
       : []),
   ];
 
-  const content = (
-    <Pressable
-      onPress={handlePress}
-      onLongPress={handleLongPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-    >
-      <View
-        style={[
-          styles.rowWrapper,
-          (isSelected || isPressed) && {
-            backgroundColor: themeColors.surfaceSecondary,
-          },
-        ]}
+  return (
+    <View style={styles.container}>
+      <SwipeableRow
+        onDelete={handleDelete}
+        onOpen={onOpen}
+        deleteConfirmTitle={t('chats.delete')}
+        enabled={!isEditMode && !!onDelete}
       >
-        <View style={styles.content}>
-          {isEditMode && (
-            <View style={styles.checkboxContainer}>
-              <View
-                style={[
-                  styles.checkbox,
-                  {
-                    borderColor: checkboxBorderColor,
-                    backgroundColor: isSelected ? themeColors.primary : 'transparent',
-                  },
-                ]}
-              >
-                {isSelected && (
+        <ContextMenuWrapper options={dropdownOptions}>
+          <PressableOpacity
+            onPress={handlePress}
+            style={[
+              styles.rowWrapper,
+              { backgroundColor: themeColors.pageBackground }
+            ]}
+          >
+            <View
+              style={[
+                styles.chatContent,
+                isSelected && {
+                  backgroundColor: themeColors.surfaceSecondary,
+                },
+              ]}
+            >
+              {isEditMode && (
+                <View style={styles.checkboxContainer}>
                   <View
                     style={[
-                      styles.checkmark,
+                      styles.checkbox,
                       {
-                        borderColor: themeColors.primaryForeground,
+                        borderColor: checkboxBorderColor,
+                        backgroundColor: isSelected ? themeColors.primary : 'transparent',
                       },
+                    ]}
+                  >
+                    {isSelected && (
+                      <View
+                        style={[
+                          styles.checkmark,
+                          {
+                            borderColor: themeColors.primaryForeground,
+                          },
+                        ]}
+                      />
+                    )}
+                  </View>
+                </View>
+              )}
+              <View style={styles.avatarContainer}>
+                {chat.clientAvatar ? (
+                  <Image source={{ uri: chat.clientAvatar }} style={styles.avatar} />
+                ) : (
+                  <View
+                    style={[
+                      styles.avatar,
+                      styles.avatarPlaceholder,
+                      { backgroundColor: themeColors.border },
                     ]}
                   />
                 )}
               </View>
-            </View>
-          )}
-          <View style={styles.avatarContainer}>
-            {chat.clientAvatar ? (
-              <Image source={{ uri: chat.clientAvatar }} style={styles.avatar} />
-            ) : (
-              <View
-                style={[
-                  styles.avatar,
-                  styles.avatarPlaceholder,
-                  { backgroundColor: themeColors.border },
-                ]}
-              />
-            )}
-          </View>
-          <View style={styles.messageContainer}>
-            <View style={styles.messageHeader}>
-              <Text
-                style={[styles.clientName, { color: themeColors.text }]}
-                numberOfLines={1}
-              >
-                {chat.clientName}
-              </Text>
-              <View style={styles.timestampContainer}>
-                <Text
-                  style={[
-                    styles.timestamp,
-                    {
-                      color: chat.unreadCount > 0 ? themeColors.primary : themeColors.mutedText,
-                    },
-                  ]}
-                >
-                  {formatMessageTime(chat.lastMessageTime)}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.messageFooter}>
-              <View style={styles.lastMessageContainer}>
-                {lastMessage?.isSent && (
-                  <View style={styles.readReceiptContainer}>
-                    <PlatformIcon
-                      sf="checkmark.circle"
-                      IconComponent={CheckCircle}
-                      size={iconSizes.extraSmallIcons}
-                      color={
-                        lastMessage.isRead
-                          ? themeColors.primary
-                          : themeColors.mutedText
-                      }
-                    />
-                  </View>
-                )}
-                <Text
-                  style={[
-                    styles.lastMessage,
-                    { color: themeColors.mutedText },
-                  ]}
-                  numberOfLines={2}
-                >
-                  {lastMessage?.text || chat.lastMessage}
-                </Text>
-              </View>
-              <View style={styles.rightColumn}>
-                {chat.unreadCount > 0 && (
-                  <View
-                    style={[
-                      styles.unreadBadge,
-                      { backgroundColor: themeColors.primary },
-                    ]}
+              <View style={styles.messageContainer}>
+                <View style={styles.messageHeader}>
+                  <Text
+                    style={[styles.clientName, { color: themeColors.text }]}
+                    numberOfLines={1}
                   >
+                    {chat.clientName}
+                  </Text>
+                  <View style={styles.timestampContainer}>
                     <Text
                       style={[
-                        styles.unreadCount,
-                        { color: themeColors.primaryForeground },
+                        styles.timestamp,
+                        {
+                          color: chat.unreadCount > 0 ? themeColors.primary : themeColors.mutedText,
+                        },
                       ]}
                     >
-                      {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+                      {formatMessageTime(chat.lastMessageTime)}
                     </Text>
                   </View>
-                )}
+                </View>
+                <View style={styles.messageFooter}>
+                  <View style={styles.lastMessageContainer}>
+                    {lastMessage?.isSent && (
+                      <View style={styles.readReceiptContainer}>
+                        <PlatformIcon
+                          sf="checkmark.circle"
+                          IconComponent={CheckCircle}
+                          size={iconSizes.extraSmallIcons}
+                          color={
+                            lastMessage.isRead
+                              ? themeColors.primary
+                              : themeColors.mutedText
+                          }
+                        />
+                      </View>
+                    )}
+                    <Text
+                      style={[
+                        styles.lastMessage,
+                        { color: themeColors.mutedText },
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {lastMessage?.text || chat.lastMessage}
+                    </Text>
+                  </View>
+                  <View style={styles.rightColumn}>
+                    {chat.unreadCount > 0 && (
+                      <View
+                        style={[
+                          styles.unreadBadge,
+                          { backgroundColor: themeColors.primary },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.unreadCount,
+                            { color: themeColors.primaryForeground },
+                          ]}
+                        >
+                          {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
               </View>
             </View>
-          </View>
-        </View>
-      </View>
+          </PressableOpacity>
+        </ContextMenuWrapper>
+      </SwipeableRow>
       <View
         style={[
           styles.separatorContainer,
@@ -293,26 +325,24 @@ export const ChatListItem = ({
           ]}
         />
       </View>
-    </Pressable>
-  );
-
-  // In edit mode, don't wrap with context menu
-  if (isEditMode || dropdownOptions.length === 0) {
-    return content;
-  }
-
-  return (
-    <ContextMenuWrapper options={dropdownOptions}>
-      {content}
-    </ContextMenuWrapper>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+  },
   rowWrapper: {
     width: '100%',
   },
   content: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  chatContent: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     paddingVertical: 8,

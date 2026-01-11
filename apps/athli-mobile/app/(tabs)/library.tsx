@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { StyleSheet, Text, View, ScrollView, Dimensions, LayoutChangeEvent } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Dimensions, LayoutChangeEvent, Pressable } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
 import * as Haptics from 'expo-haptics';
@@ -38,7 +38,7 @@ type TabComponent = {
 export default function LibraryScreen() {
   const { primaryColor, colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const { setCurrentLibraryTab, searchQuery, setSearchQuery } = useLibraryTab();
+  const { setCurrentLibraryTab, searchQuery, setSearchQuery, closeOpenRow } = useLibraryTab();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const pagerRef = useRef<PagerView>(null);
   const tabBarScrollRef = useRef<ScrollView>(null);
@@ -88,6 +88,7 @@ export default function LibraryScreen() {
   };
 
   const handleTabPress = (index: number) => {
+    closeOpenRow();
     setSelectedIndex(index);
     animateUnderline(index);
     setCurrentLibraryTab(tabs[index]);
@@ -109,6 +110,7 @@ export default function LibraryScreen() {
     const index = event.nativeEvent.position;
     if (index !== selectedIndex) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      closeOpenRow();
       setSelectedIndex(index);
       animateUnderline(index);
       setCurrentLibraryTab(tabs[index]);
@@ -212,18 +214,24 @@ export default function LibraryScreen() {
         >
           {tabComponents.map(({ key, component: Component }) => (
             <View key={key} style={styles.tabContentItem}>
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.tabScrollContent}
+              <Pressable
+                style={{ flex: 1 }}
+                onPress={() => closeOpenRow()}
               >
-                <SearchBar
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholder={t(`library.searchPlaceholders.${key}`)}
-                  style={styles.searchBar}
-                />
-                <Component />
-              </ScrollView>
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.tabScrollContent}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <SearchBar
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder={t(`library.searchPlaceholders.${key}`)}
+                    style={styles.searchBar}
+                  />
+                  <Component />
+                </ScrollView>
+              </Pressable>
             </View>
           ))}
         </PagerView>

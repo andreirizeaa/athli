@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Platform, StyleSheet, Text, View, Alert, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { PressableOpacity } from 'pressto';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check, Image, Video, FileText } from 'lucide-react-native';
@@ -32,9 +32,31 @@ export default function AddFileModal() {
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
 
-    // Form state
-    const [fileName, setFileName] = useState('');
-    const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
+    const params = useLocalSearchParams<{
+        editingId?: string;
+        name?: string;
+        type?: string;
+    }>();
+    const isEditing = !!params.editingId;
+
+    const initialFileType = useMemo(() => {
+        if (!params.type) return undefined;
+        if (params.type === 'image') return 'photo';
+        if (params.type === 'document') return 'pdf';
+        return params.type as 'photo' | 'video' | 'pdf'; // defaulting or casting
+    }, [params.type]);
+
+    const [fileName, setFileName] = useState(params.name || '');
+    const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(() => {
+        if (isEditing && initialFileType) {
+            return {
+                uri: 'existing',
+                type: initialFileType,
+                name: 'Existing File'
+            };
+        }
+        return null;
+    });
     const [isSaving, setIsSaving] = useState(false);
 
     const handleDismissKeyboard = () => {
@@ -49,13 +71,18 @@ export default function AddFileModal() {
         const formValid = trimmedName.length > 0 && selectedFile !== null;
 
         // Check if any field has been modified
-        const changes = trimmedName.length > 0 || selectedFile !== null;
+        let changes = false;
+        if (isEditing) {
+            changes = trimmedName !== (params.name || '').trim();
+        } else {
+            changes = trimmedName.length > 0 || selectedFile !== null;
+        }
 
         return {
             hasChanges: changes,
             canComplete: formValid && !isSaving,
         };
-    }, [fileName, selectedFile, isSaving]);
+    }, [fileName, selectedFile, isSaving, isEditing, params]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -227,7 +254,7 @@ export default function AddFileModal() {
                                 color={themeColors.text}
                             />
                             <Text style={[styles.title, { color: themeColors.text }]}>
-                                {t('files.addFile.title')}
+                                {isEditing ? t('files.addFile.editTitle') : t('files.addFile.title')}
                             </Text>
                             <IconButton
                                 icon={{ sf: 'checkmark', IconComponent: Check }}
@@ -263,7 +290,7 @@ export default function AddFileModal() {
                                 </Text>
                                 <Text style={styles.requiredAsterisk}>*</Text>
                             </View>
-                            <View style={styles.attachmentButtons}>
+                            <View style={[styles.attachmentButtons, isEditing && { opacity: 0.5 }]}>
                                 <PressableOpacity
                                     style={[
                                         styles.attachmentButton,
@@ -272,7 +299,7 @@ export default function AddFileModal() {
                                             { borderColor: themeColors.primary },
                                         ],
                                     ]}
-                                    onPress={handlePhotoPress}
+                                    onPress={isEditing ? undefined : handlePhotoPress}
                                 >
                                     <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
                                         <PlatformIcon
@@ -295,7 +322,7 @@ export default function AddFileModal() {
                                             { borderColor: themeColors.primary },
                                         ],
                                     ]}
-                                    onPress={handleVideoPress}
+                                    onPress={isEditing ? undefined : handleVideoPress}
                                 >
                                     <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
                                         <PlatformIcon
@@ -318,7 +345,7 @@ export default function AddFileModal() {
                                             { borderColor: themeColors.primary },
                                         ],
                                     ]}
-                                    onPress={handleDocumentPress}
+                                    onPress={isEditing ? undefined : handleDocumentPress}
                                 >
                                     <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
                                         <PlatformIcon
@@ -340,15 +367,17 @@ export default function AddFileModal() {
                                     <Text style={[styles.selectedFileLabel, { color: themeColors.mutedText }]} numberOfLines={1}>
                                         {t('files.addFile.selected')}: {selectedFile.name || selectedFile.type}
                                     </Text>
-                                    <PressableOpacity
-                                        style={styles.clearButton}
-                                        onPress={() => setSelectedFile(null)}
-                                        hitSlop={8}
-                                    >
-                                        <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                                            <X {...({ size: 12, color: themeColors.surfaceSecondary, strokeWidth: 3 } as any)} />
-                                        </View>
-                                    </PressableOpacity>
+                                    {!isEditing && (
+                                        <PressableOpacity
+                                            style={styles.clearButton}
+                                            onPress={() => setSelectedFile(null)}
+                                            hitSlop={8}
+                                        >
+                                            <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
+                                                <X {...({ size: 12, color: themeColors.surfaceSecondary, strokeWidth: 3 } as any)} />
+                                            </View>
+                                        </PressableOpacity>
+                                    )}
                                 </View>
                             )}
                         </View>

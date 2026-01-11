@@ -191,6 +191,27 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="library/workout/reorder"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: {
+                backgroundColor: themeColors.pageBackground,
+              },
+            }}
+          />
+          <Stack.Screen
+            name="library/file-preview"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
             name="modals/athli-assistant-help-modal"
             options={{
               presentation: 'modal',
@@ -535,6 +556,18 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="modals/files/add-file-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/shared/client-list-modal"
             options={{
               presentation: 'modal',
               gestureEnabled: false,

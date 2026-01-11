@@ -224,6 +224,7 @@ export type BuilderExercise = {
     supersetGroupId?: string | null;
     equipments?: string[]; // Preserved from library for payload extraction
     bodyParts?: string[];
+    setRestSec?: number; // Rest time between sets in seconds
 };
 
 export type BuilderSection = {
@@ -344,11 +345,12 @@ const mapBuilderSetToPayload = (
     set: BuilderExerciseSet,
     index: number,
     column1Type: string,
-    column2Type: string
+    column2Type: string,
+    exerciseRestSec?: number
 ): SetPayload => ({
     setNumber: set.setNumber ?? (index + 1),
     type: mapSetTypeToPayload(set.type),
-    restSec: parseNumber(set.rest),
+    restSec: parseNumber(set.rest) ?? exerciseRestSec ?? null,
     completed: false,
     skipped: false,
     trackableField1: createTrackableField(column1Type, set.column1 || null),
@@ -455,7 +457,7 @@ const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayload => 
                     tempo: ex.tempo || null,
                     column1Label: ex.column1Type,
                     column2Label: ex.column2Type,
-                    set: mapBuilderSetToPayload(firstSet, 0, ex.column1Type, ex.column2Type),
+                    set: mapBuilderSetToPayload(firstSet, 0, ex.column1Type, ex.column2Type, ex.setRestSec),
                 };
             }),
         }));
@@ -478,7 +480,7 @@ const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayload => 
         exercises: group.map((ex) => ({
             prescribedExerciseId: ex.exerciseId,
             performedExerciseId: null,
-            sets: ex.sets.map((set, idx) => mapBuilderSetToPayload(set, idx, ex.column1Type, ex.column2Type)),
+            sets: ex.sets.map((set, idx) => mapBuilderSetToPayload(set, idx, ex.column1Type, ex.column2Type, ex.setRestSec)),
             alternatives: ex.alternatives.map((alt) => alt.id),
             notes: ex.notes || null,
             supersetId: ex.supersetGroupId || null,
@@ -517,7 +519,7 @@ export const buildWorkoutPayload = (state: BuilderWorkoutState): WorkoutPayload 
                 data: {
                     prescribedExerciseId: ex.exerciseId,
                     performedExerciseId: null,
-                    sets: ex.sets.map((set, idx) => mapBuilderSetToPayload(set, idx, ex.column1Type, ex.column2Type)),
+                    sets: ex.sets.map((set, idx) => mapBuilderSetToPayload(set, idx, ex.column1Type, ex.column2Type, ex.setRestSec)),
                     alternatives: ex.alternatives.map((alt) => alt.id),
                     notes: ex.notes || null,
                     supersetId: ex.supersetGroupId || null,

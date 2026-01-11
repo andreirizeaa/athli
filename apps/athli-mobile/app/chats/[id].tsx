@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Dimensions,
   Keyboard,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from 'react-native';
+import { useKeyboardHandler } from 'react-native-keyboard-controller';
+import { useSharedValue } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -23,9 +25,10 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { type IWaveformRef, PlayerState, FinishMode } from '@/components/audio';
 
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
+import { hexToRgba } from '@/utils/colorUtils';
 import { useTranslations } from '@/contexts/useTranslations';
 import { type DropdownMenuOption } from '@/components/dropdown-menu';
-import { MessageList } from '@/components/message/message-list';
+import { MessageList } from '@/components/message/message-list-flashlist';
 import { MessageReactionsSheet } from '@/components/message/message-reactions-sheet';
 import { ReplyPreviewRow } from '@/components/chats/reply-preview-row';
 import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
@@ -43,7 +46,6 @@ import {
   type Chat,
   type ChatMessage,
 } from '@/services/chats-service';
-import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
 
 const BAR_INTERVAL_MS = 100; // ✅ 10 bars/sec
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -112,6 +114,27 @@ export default function ChatDetailScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
+
+  // Keyboard animation - use onMove for frame-by-frame tracking
+  const keyboardHeight = useSharedValue(0);
+
+  useKeyboardHandler(
+    {
+      onMove: (event) => {
+        'worklet';
+        keyboardHeight.value = event.height;
+      },
+      onEnd: (event) => {
+        'worklet';
+        // Snap to final position to prevent lag at the end
+        keyboardHeight.value = event.height;
+      },
+    },
+    []
+  );
+
+  // Fixed toolbar height - container has static bottom padding for toolbar
+  const toolbarHeight = 60 + insets.bottom;
 
   const [chat, setChat] = useState<Chat | null>(() => {
     if (chatParam) {
@@ -541,10 +564,6 @@ export default function ChatDetailScreen() {
     setShowAttachmentPicker(true);
   };
 
-  const handleCloseAttachmentPicker = () => {
-    setShowAttachmentPicker(false);
-  };
-
   const handleMicrophonePress = async () => {
     setIsMicrophoneMode(true);
 
@@ -649,8 +668,6 @@ export default function ChatDetailScreen() {
         setPreviewPath(null);
         return null;
       }
-
-      return;
     }
 
     // STOPPED -> REDO (restart from fresh)
@@ -813,7 +830,21 @@ export default function ChatDetailScreen() {
     {
       label: t('chats.delete'),
       icon: { sf: 'trash', IconComponent: Trash2 },
-      onPress: handleDeletePress,
+      destructive: true,
+      onPress: () => {
+        Alert.alert(
+          t('chats.delete'),
+          t('library.deleteConfirmMessage'),
+          [
+            { text: t('general.cancel'), style: 'cancel' },
+            {
+              text: t('general.delete'),
+              style: 'destructive',
+              onPress: handleDeletePress
+            },
+          ]
+        );
+      },
     },
   ];
 
@@ -825,10 +856,10 @@ export default function ChatDetailScreen() {
     return <ChatLoadingState message={t('chats.chatNotFound')} />;
   }
 
+
   return (
     <View style={[styles.container, { backgroundColor: 'transparent' }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} translucent backgroundColor="transparent" />
-
       {/* Background image covering entire screen */}
       <Image
         source={isDark ? require('@/assets/chat/bg-dark.png') : require('@/assets/chat/bg-light.png')}
@@ -844,13 +875,14 @@ export default function ChatDetailScreen() {
         dropdownOptions={dropdownOptions}
       />
 
-      {/* ROW 2: SCROLL WINDOW - Content scrolls through header and toolbar */}
+      {/* ROW 2: SCROLL WINDOW - Fills space between header and toolbar */}
       <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <MessageList
           messages={messages}
           backgroundColor="transparent"
           themeColors={themeColors}
           clientName={chat.clientName}
+          keyboardHeight={keyboardHeight}
           onReply={handleMessageReply}
           onEdit={handleMessageEdit}
           onDelete={handleMessageDelete}
@@ -858,12 +890,12 @@ export default function ChatDetailScreen() {
           onDocumentPress={handleDocumentPress}
           onImagePress={handleImagePress}
           onVideoPress={handleVideoPress}
-          headerHeight={insets.top + 60} // Safe area + header content (~60px)
-          toolbarHeight={(isMicrophoneMode ? 108 : 40) + insets.bottom} // Base toolbar height + safe area (toolbar handles reply/attachment height changes internally)
+          headerHeight={insets.top + 60}
+          bottomOffset={toolbarHeight}
         />
       </View>
 
-      {/* ROW 3: TOOLBAR — Absolutely positioned with blur */}
+      {/* ROW 3: TOOLBAR - Absolutely positioned */}
       <ChatToolbar
         chat={chat}
         replyingToMessage={replyingToMessage}
@@ -888,6 +920,8 @@ export default function ChatDetailScreen() {
         onStopToggle={handleStopToggle}
         onSendPress={handleSendPress}
         onCancelReply={handleCancelReply}
+        bottomInset={insets.bottom}
+        keyboardHeight={keyboardHeight}
       />
 
       <MessageReactionsSheet

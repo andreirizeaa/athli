@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Check, Ellipsis, MailCheck, CheckCircle2, Archive, Trash2 } from 'lucide-react-native';
+
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -34,6 +35,14 @@ export default function ChatsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
+  const [openRowCloseFn, setOpenRowCloseFn] = useState<(() => void) | null>(null);
+
+  const registerOpenRow = useCallback((closeFn: () => void) => {
+    if (openRowCloseFn && openRowCloseFn !== closeFn) {
+      openRowCloseFn();
+    }
+    setOpenRowCloseFn(() => closeFn);
+  }, [openRowCloseFn]);
 
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
@@ -43,15 +52,7 @@ export default function ChatsScreen() {
       setIsLoading(true);
       try {
         const fetchedChats = await getChats();
-        // Filter to only show chats that have message mock data
-        const chatsWithMessages = await Promise.all(
-          fetchedChats.map(async (chat) => {
-            const messages = await getChatMessages(chat.id);
-            return messages.length > 0 ? chat : null;
-          }),
-        );
-        const filtered = chatsWithMessages.filter((chat) => chat !== null) as Chat[];
-        setChats(filtered);
+        setChats(fetchedChats);
       } catch (error) {
         console.error('Failed to load chats:', error);
       } finally {
@@ -75,7 +76,7 @@ export default function ChatsScreen() {
       filtered = filtered.filter(
         (chat) =>
           chat.clientName.toLowerCase().includes(query) ||
-          chat.lastMessage.toLowerCase().includes(query),
+          (chat.lastMessage && chat.lastMessage.toLowerCase().includes(query)),
       );
     }
 
@@ -136,6 +137,7 @@ export default function ChatsScreen() {
     setChats(fetchedChats);
   };
 
+
   const handleSelectChatsPress = () => {
     setIsEditMode(true);
   };
@@ -179,6 +181,7 @@ export default function ChatsScreen() {
     const fetchedChats = await getChats();
     setChats(fetchedChats);
   };
+
 
   const dropdownOptions: DropdownMenuOption[] = isEditMode
     ? [
@@ -259,6 +262,7 @@ export default function ChatsScreen() {
           <View style={styles.titleRow}>
             <Text style={[styles.title, { color: themeColors.text }]}>{t('chats.title')}</Text>
             <View style={styles.headerButtonContainer}>
+
               {isEditMode ? (
                 <PressableOpacity
                   style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
@@ -320,6 +324,7 @@ export default function ChatsScreen() {
                 onArchive={handleChatArchive}
                 onDelete={handleChatDelete}
                 onMarkAsRead={handleChatMarkAsRead}
+                onOpen={registerOpenRow}
               />
             ))}
           </View>
@@ -347,13 +352,16 @@ const styles = StyleSheet.create({
   title: {
     ...typography.h1,
     textAlign: 'left',
-    paddingRight: 52, // Space for the button (44px width + 8px margin)
+    paddingRight: 52, // Space for one button (44 + padding)
   },
   headerButtonContainer: {
     position: 'absolute',
     right: 0,
     top: '50%',
     transform: [{ translateY: -22 }],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerButton: {
     alignItems: 'center',
