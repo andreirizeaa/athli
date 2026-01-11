@@ -1,6 +1,5 @@
 export { WorkoutsTab } from './workouts-tab';
 export { SectionsTab } from './sections-tab';
-export { ProgramsTab } from './programs-tab';
 export { ExercisesTab } from './exercises-tab';
 export { CheckInsTab } from './check-ins-tab';
 export { QuestionnairesTab } from './questionnaires-tab';

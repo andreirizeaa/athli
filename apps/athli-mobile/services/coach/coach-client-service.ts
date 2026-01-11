@@ -49,7 +49,7 @@ const calculateAge = (dateOfBirth: string | null): number | null => {
  */
 export const getClients = async (): Promise<Athlete[]> => {
   const response = await apiFetch<{ data: { clients: any[] } }>('/clients');
-  return response.data.clients.map((client) => {
+  const clients = response.data.clients.map((client) => {
     const names = client.full_name?.split(' ') || ['', ''];
     const createdAt = new Date(client.created_at || Date.now());
     const clientForDays = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
@@ -78,6 +78,8 @@ export const getClients = async (): Promise<Athlete[]> => {
       connected: client.status === 'connected' ? true : client.status === 'invited' ? 'invitation-sent' : false,
     };
   });
+  console.log('[coach-client-service] getClients returned:', clients.length, 'clients');
+  return clients;
 };
 
 /**

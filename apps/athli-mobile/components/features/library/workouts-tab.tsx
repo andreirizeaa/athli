@@ -1,21 +1,33 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Dumbbell } from 'lucide-react-native';
 import { PressableOpacity } from 'pressto';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/stores';
+import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@/constants/training';
+import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
-import { useLibraryTab, useLibraryStore } from '@/stores';
+import { useLibraryTab } from '@/stores';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { deleteWorkouts, duplicateWorkout, starWorkouts, archiveWorkouts } from '@/services/coach/coach-workout-service';
+import { getWorkouts, deleteWorkouts, duplicateWorkout, starWorkouts, archiveWorkouts } from '@/services/coach/coach-workout-service';
 import { EmptyState } from '@/components/ui/empty-state';
 
-const noTrainingAvatar = require('@/assets/avatars/no-training-avatar.png');
+// Helper function to get formatted label from value
+const getWorkoutTypeLabel = (value: string | null | undefined): string | null => {
+  if (!value) return null;
+  const type = WORKOUT_TYPES.find(t => t.value === value);
+  return type?.label || null;
+};
+
+const getDifficultyLabel = (value: string | null | undefined): string | null => {
+  if (!value) return null;
+  const difficulty = DIFFICULTY_LEVELS.find(d => d.value === value);
+  return difficulty?.label || null;
+};
 
 export const WorkoutsTab = () => {
   const router = useRouter();
@@ -23,19 +35,49 @@ export const WorkoutsTab = () => {
   const { t } = useTranslations();
   const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
+  const coachProfile = useCoachProfileStore((state) => state.profile);
+  const isAuthenticated = !!coachProfile;
 
-  // Get workouts from Zustand store
-  const getFilteredWorkouts = useLibraryStore((state) => state.getFilteredWorkouts);
-  const filteredWorkouts = useMemo(
-    () => getFilteredWorkouts(searchQuery),
-    [getFilteredWorkouts, searchQuery]
-  );
+  // Fetch workouts directly with TanStack Query
+  const { data: workouts = [], isLoading, isError } = useQuery({
+    queryKey: ['workouts'],
+    queryFn: async () => {
+      console.log('[WorkoutsTab] Fetching workouts...');
+      const data = await getWorkouts();
+      console.log('[WorkoutsTab] Received workouts:', data.length, 'items');
+      return data;
+    },
+    enabled: isAuthenticated,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+  });
+
+  // Filter workouts based on search query
+  const filteredWorkouts = useMemo(() => {
+    if (!searchQuery.trim()) return workouts;
+    const lowerQuery = searchQuery.toLowerCase();
+    return workouts.filter(workout =>
+      workout.name.toLowerCase().includes(lowerQuery) ||
+      workout.type?.toLowerCase().includes(lowerQuery) ||
+      workout.difficulty?.toLowerCase().includes(lowerQuery)
+    );
+  }, [workouts, searchQuery]);
+
+  console.log('[WorkoutsTab] Render:', {
+    isAuthenticated,
+    isLoading,
+    isError,
+    totalWorkouts: workouts.length,
+    filteredWorkouts: filteredWorkouts.length,
+    searchQuery
+  });
 
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteWorkouts(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workouts'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['workouts'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (error: Error) => {
@@ -51,8 +93,8 @@ export const WorkoutsTab = () => {
   // Duplicate mutation
   const duplicateMutation = useMutation({
     mutationFn: (id: string) => duplicateWorkout(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workouts'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['workouts'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (error: Error) => {
@@ -68,8 +110,8 @@ export const WorkoutsTab = () => {
   // Star mutation
   const starMutation = useMutation({
     mutationFn: ({ id, starred }: { id: string; starred: boolean }) => starWorkouts(id, starred),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workouts'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['workouts'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (error: Error) => {
@@ -85,8 +127,8 @@ export const WorkoutsTab = () => {
   // Archive mutation
   const archiveMutation = useMutation({
     mutationFn: ({ id, archived }: { id: string; archived: boolean }) => archiveWorkouts(id, archived),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workouts'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['workouts'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (error: Error) => {
@@ -101,35 +143,25 @@ export const WorkoutsTab = () => {
 
   // Already filtered above
 
-  const handleWorkoutPress = (workoutId: string) => {
+  const handleWorkoutPress = (workout: typeof filteredWorkouts[0]) => {
     closeOpenRow();
     router.push({
       pathname: '/library/workout/[id]',
-      params: { id: workoutId },
+      params: {
+        id: workout.id,
+        name: workout.name,
+        description: workout.description || '',
+        type: workout.type || '',
+        difficulty: workout.difficulty || 'all_levels',
+      },
     });
   };
-
-  const handleDelete = useCallback((id: string) => {
-    Alert.alert(
-      t('general.confirmDelete'),
-      t('general.confirmDeleteMessage'),
-      [
-        { text: t('general.cancel'), style: 'cancel' },
-        {
-          text: t('general.delete'),
-          style: 'destructive',
-          onPress: () => deleteMutation.mutate(id)
-        },
-      ]
-    );
-  }, [deleteMutation, t]);
 
   return (
     <View style={styles.container}>
       {/* Empty State */}
       {filteredWorkouts.length === 0 && (
         <EmptyState
-          image={noTrainingAvatar}
           message={t('library.empty.workouts')}
         />
       )}
@@ -137,15 +169,21 @@ export const WorkoutsTab = () => {
       {/* Workout List */}
       {filteredWorkouts.map((workout, index) => {
         const isLastItem = index === filteredWorkouts.length - 1;
+        const typeLabel = getWorkoutTypeLabel(workout.type);
+        const difficultyLabel = getDifficultyLabel(workout.difficulty);
+        const hasType = !!typeLabel;
+        const hasDifficulty = !!difficultyLabel;
+        const showMetaRow = hasType || hasDifficulty;
+
         return (
           <View key={workout.id}>
             <SwipeableRow
-              onDelete={() => handleDelete(workout.id)}
+              onDelete={() => deleteMutation.mutateAsync(workout.id)}
               onOpen={registerOpenRow}
               deleteConfirmTitle={`${t('general.delete')} ${workout.name}?`}
             >
               <PressableOpacity
-                onPress={() => handleWorkoutPress(workout.id)}
+                onPress={() => handleWorkoutPress(workout)}
                 style={styles.rowWrapper}
               >
                 <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
@@ -165,15 +203,23 @@ export const WorkoutsTab = () => {
                     >
                       {workout.name}
                     </Text>
-                    <View style={styles.metaRow}>
-                      <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                        {workout.type}
-                      </Text>
-                      <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                      <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                        {workout.difficulty}
-                      </Text>
-                    </View>
+                    {showMetaRow && (
+                      <View style={styles.metaRow}>
+                        {hasType && (
+                          <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                            {typeLabel}
+                          </Text>
+                        )}
+                        {hasType && hasDifficulty && (
+                          <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                        )}
+                        {hasDifficulty && (
+                          <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                            {difficultyLabel}
+                          </Text>
+                        )}
+                      </View>
+                    )}
                   </View>
                   <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
                 </View>

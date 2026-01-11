@@ -10,7 +10,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import { typography } from '@/constants/typography';
-import { 
+import {
     HABIT_DURATION_PERIOD_OPTIONS,
     type HabitDurationPeriod,
 } from '@/constants/training';
@@ -19,6 +19,7 @@ import { useTranslations } from '@/stores';
 import { useModalCallbacks, type HabitOptionsData } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
+import { hexToRgba } from '@/utils/colorUtils';
 
 // Helper to create a date from time string "HH:MM"
 const parseTimeString = (timeStr: string): Date => {
@@ -157,7 +158,7 @@ export default function HabitOptionsModal() {
 
             hasLoadedData.current = true;
         }
-        
+
         if (!isFocused) {
             hasLoadedData.current = false;
             initialStateRef.current = null;
@@ -169,12 +170,12 @@ export default function HabitOptionsModal() {
     };
 
     // Duration period options for dropdown
-    const durationPeriodOptions: DropdownMenuOption[] = useMemo(() => 
+    const durationPeriodOptions: DropdownMenuOption[] = useMemo(() =>
         HABIT_DURATION_PERIOD_OPTIONS.map((opt) => ({
             label: t(`library.habitOptions.durationPeriods.${opt.value}`),
             onPress: () => setDurationPeriod(opt.value),
         }))
-    , [t]);
+        , [t]);
 
     // Get display label for selected period
     const getPeriodLabel = (): string => {
@@ -189,7 +190,7 @@ export default function HabitOptionsModal() {
         // Compare against initial state to detect changes
         let changes = false;
         if (initial) {
-            changes = 
+            changes =
                 durationEnabled !== initial.durationEnabled ||
                 durationAmount !== initial.durationAmount ||
                 durationPeriod !== initial.durationPeriod ||
@@ -199,10 +200,10 @@ export default function HabitOptionsModal() {
         } else {
             // No initial state means modal just opened with no saved data
             // Any input counts as a change
-            changes = durationEnabled || 
-                      notificationEnabled ||
-                      durationAmount.trim().length > 0 ||
-                      notificationMessage.trim().length > 0;
+            changes = durationEnabled ||
+                notificationEnabled ||
+                durationAmount.trim().length > 0 ||
+                notificationMessage.trim().length > 0;
         }
 
         // Validation
@@ -301,11 +302,12 @@ export default function HabitOptionsModal() {
                     {/* Fixed Header */}
                     <View style={[styles.fixedHeader, { height: headerHeight }]}>
                         <LinearGradient
-                            colors={
-                                colorScheme === 'dark'
-                                    ? ['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0)']
-                                    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0)']
-                            }
+                            colors={[
+                                hexToRgba(themeColors.background, 1),
+                                hexToRgba(themeColors.background, 0.85),
+                                hexToRgba(themeColors.background, 0.5),
+                                hexToRgba(themeColors.background, 0),
+                            ]}
                             locations={[0, 0.5, 0.8, 1]}
                             style={[styles.headerGradient, { height: gradientHeight }]}
                             pointerEvents="none"

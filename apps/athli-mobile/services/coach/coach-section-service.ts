@@ -199,7 +199,20 @@ export const getSectionById = async (sectionId: string): Promise<any> => {
   const response = await apiFetch<ApiResponse<{ section: any }>>(`/coach/training/sections/${sectionId}`);
 
   if (!response.data) throw new Error('No section returned');
-  return response.data.section;
+
+  const s = response.data.section;
+
+  // Handle both new API format (items at top level) and legacy format (nested in section_data)
+  // If items is present at top level and section_data doesn't have items, use top level
+  const sectionDataItems = s.section_data?.items || s.items || [];
+  const sectionData = {
+    items: sectionDataItems,
+  };
+
+  return {
+    ...s,
+    section_data: sectionData,
+  };
 };
 
 /**

@@ -212,6 +212,36 @@ export type WorkoutPayload = WorkoutData & {
   name: string;
 };
 
+/**
+ * Exercise type for set identification
+ */
+export type ExerciseType = 'weight_reps' | 'reps' | 'distance_duration';
+
+/**
+ * A workout item can be a top-level exercise or a section
+ */
+export type WorkoutItem =
+  | { itemType: 'exercise'; data: RegularExercisePayload }
+  | { itemType: 'section'; data: WorkoutSectionPayload };
+
+/**
+ * Workout program payload for API communication
+ * Uses items array instead of sections for flexible structure
+ */
+export type WorkoutProgramPayload = {
+  id: string | null;
+  name: string;
+  description: string;
+  type: string;
+  difficulty: string;
+  equipment: string[];
+  totalExercises: number;
+  items: WorkoutItem[];
+  pre: WorkoutPre;
+  post: WorkoutPost;
+  completedSummary: WorkoutMeta;
+};
+
 export const DEFAULT_EXECUTION_FIELDS: Pick<WorkoutData, 'pre' | 'post' | 'completedSummary'> = {
   pre: { readiness: null },
   post: {

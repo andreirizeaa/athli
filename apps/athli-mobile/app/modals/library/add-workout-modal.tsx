@@ -31,22 +31,32 @@ export default function AddWorkoutModal() {
 
     const params = useLocalSearchParams<{
         editingId?: string;
+        name?: string;
+        description?: string;
+        type?: string;
+        difficulty?: string;
     }>();
     const isEditing = !!params.editingId;
 
-    // Form state
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
-    const [workoutType, setWorkoutType] = useState<WorkoutType | null>(null);
-    const [difficulty, setDifficulty] = useState<DifficultyLevel | null>(null);
+    // Form state - initialize with params if editing
+    const [name, setName] = useState(params.name || '');
+    const [description, setDescription] = useState(params.description || '');
+    const [workoutType, setWorkoutType] = useState<WorkoutType | null>((params.type as WorkoutType) || null);
+    const [difficulty, setDifficulty] = useState<DifficultyLevel | null>((params.difficulty as DifficultyLevel) || null);
 
     // TanStack Query
     const queryClient = useQueryClient();
 
     const saveMutation = useMutation({
-        mutationFn: isEditing ? editWorkout : createWorkout,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['workouts'] });
+        mutationFn: (workoutData: any) => {
+            if (isEditing && params.editingId) {
+                return editWorkout(params.editingId, workoutData);
+            }
+            return createWorkout(workoutData);
+        },
+        onSuccess: async () => {
+            // Refetch to update the cache and trigger Zustand store update
+            await queryClient.refetchQueries({ queryKey: ['workouts'] });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             handleClose();
         },
@@ -88,17 +98,27 @@ export default function AddWorkoutModal() {
         const formValid = trimmedName.length > 0;
 
         // Check if any field has been modified
-        const changes = trimmedName.length > 0 ||
-            description.trim().length > 0 ||
-            workoutType !== null ||
-            difficulty !== null;
+        let changes = false;
+        if (isEditing) {
+            // When editing, compare against original params values
+            changes = name !== (params.name || '') ||
+                description !== (params.description || '') ||
+                workoutType !== ((params.type as WorkoutType) || null) ||
+                difficulty !== ((params.difficulty as DifficultyLevel) || null);
+        } else {
+            // When creating new, any non-empty field counts as a change
+            changes = trimmedName.length > 0 ||
+                description.trim().length > 0 ||
+                workoutType !== null ||
+                difficulty !== null;
+        }
 
         return {
             isFormValid: formValid,
             hasChanges: changes,
-            canComplete: formValid && !saveMutation.isPending,
+            canComplete: formValid && changes && !saveMutation.isPending,
         };
-    }, [name, description, workoutType, difficulty, saveMutation.isPending]);
+    }, [name, description, workoutType, difficulty, saveMutation.isPending, isEditing, params]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -134,14 +154,10 @@ export default function AddWorkoutModal() {
 
         const workoutData: any = {
             name: name.trim(),
-            description: description.trim(),
-            type: workoutType,
-            difficulty: difficulty,
+            description: description.trim() || undefined,
+            type: workoutType || undefined,
+            difficulty: difficulty || undefined,
         };
-
-        if (isEditing && params.editingId) {
-            workoutData.id = params.editingId;
-        }
 
         saveMutation.mutate(workoutData);
     }, [canComplete, name, description, workoutType, difficulty, isEditing, params.editingId, saveMutation]);

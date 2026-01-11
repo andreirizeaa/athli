@@ -182,6 +182,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           image: "./assets/app-icons/splash-icon-light.png",
           resizeMode: "contain",
           backgroundColor: "#0180F3",
+          imageWidth: 200,
           dark: {
             image: "./assets/app-icons/splash-icon-dark.png",
             backgroundColor: "#0180F3"

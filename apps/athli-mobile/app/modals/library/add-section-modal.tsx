@@ -26,21 +26,30 @@ export default function AddSectionModal() {
 
     const params = useLocalSearchParams<{
         editingId?: string;
+        name?: string;
+        description?: string;
+        sectionType?: string;
     }>();
     const isEditing = !!params.editingId;
 
-    // Form state
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
-    const [sectionType, setSectionType] = useState<SectionType | null>(null);
+    // Form state - initialize with params if editing
+    const [name, setName] = useState(params.name || '');
+    const [description, setDescription] = useState(params.description || '');
+    const [sectionType, setSectionType] = useState<SectionType | null>((params.sectionType as SectionType) || null);
 
     // TanStack Query
     const queryClient = useQueryClient();
 
     const saveMutation = useMutation({
-        mutationFn: isEditing ? updateSection : createSection,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['sections'] });
+        mutationFn: (sectionData: any) => {
+            if (isEditing && params.editingId) {
+                return updateSection(params.editingId, sectionData);
+            }
+            return createSection(sectionData);
+        },
+        onSuccess: async () => {
+            // Refetch to update the cache and trigger Zustand store update
+            await queryClient.refetchQueries({ queryKey: ['sections'] });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             handleClose();
         },
@@ -75,16 +84,25 @@ export default function AddSectionModal() {
         const formValid = trimmedName.length > 0 && sectionType !== null;
 
         // Check if any field has been modified
-        const changes = trimmedName.length > 0 ||
-            description.trim().length > 0 ||
-            sectionType !== null;
+        let changes = false;
+        if (isEditing) {
+            // When editing, compare against original params values
+            changes = name !== (params.name || '') ||
+                description !== (params.description || '') ||
+                sectionType !== ((params.sectionType as SectionType) || null);
+        } else {
+            // When creating new, any non-empty field counts as a change
+            changes = trimmedName.length > 0 ||
+                description.trim().length > 0 ||
+                sectionType !== null;
+        }
 
         return {
             isFormValid: formValid,
             hasChanges: changes,
-            canComplete: formValid && !saveMutation.isPending,
+            canComplete: formValid && changes && !saveMutation.isPending,
         };
-    }, [name, description, sectionType, saveMutation.isPending]);
+    }, [name, description, sectionType, saveMutation.isPending, isEditing, params]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -121,12 +139,8 @@ export default function AddSectionModal() {
         const sectionData: any = {
             name: name.trim(),
             description: description.trim(),
-            type: sectionType,
+            sectionType: sectionType,
         };
-
-        if (isEditing && params.editingId) {
-            sectionData.id = params.editingId;
-        }
 
         saveMutation.mutate(sectionData);
     }, [canComplete, name, description, sectionType, isEditing, params.editingId, saveMutation]);

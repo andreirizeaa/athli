@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { StyleSheet, Text, View, Platform, Keyboard, Alert } from 'react-native';
-import { ChevronLeft, Check, Repeat, Plus, Dumbbell, Layers, Link as LinkIcon } from 'lucide-react-native';
+import { StyleSheet, Text, View, Platform, Keyboard, Alert, ActivityIndicator } from 'react-native';
+import { ChevronLeft, Check, Repeat, Plus, Dumbbell, Layers, Link as LinkIcon, Pencil } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
@@ -32,6 +34,9 @@ import {
     type ExerciseValidationError,
     validateWorkoutItems,
 } from '@/components/features/workout/validation';
+import { createWorkout, editWorkout, getWorkoutById } from '@/services/coach/coach-workout-service';
+import { getExerciseById } from '@/services/coach/coach-exercise-service';
+import { MOCK_EXERCISES } from '@/app/modals/workout/add-exercise-to-builder-modal';
 
 // Mock workout data - this would come from a service in production
 const MOCK_WORKOUTS: Record<string, { id: string; name: string; description: string; type: string; difficulty: string }> = {
@@ -60,38 +65,302 @@ const MOCK_WORKOUTS: Record<string, { id: string; name: string; description: str
 
 export default function WorkoutDetailScreen() {
     const router = useRouter();
-    const { id } = useLocalSearchParams<{ id: string }>();
+    const params = useLocalSearchParams<{
+        id: string;
+        name?: string;
+        description?: string;
+        type?: string;
+        difficulty?: string;
+    }>();
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
 
     const { setExercisesSelectCallback, setSectionSelectCallback, setExerciseSelectCallback, setReorderCallback, setReorderItems } = useModalCallbacks();
+    const queryClient = useQueryClient();
 
-    // Workout state management
-    const [workoutState, setWorkoutState] = useState<BuilderWorkoutState>(createEmptyWorkoutState);
+    // Workout state management - Initialize with params for immediate display
+    const [workoutState, setWorkoutState] = useState<BuilderWorkoutState>(() => {
+        const isNew = params.id === 'new';
+        return {
+            meta: {
+                id: isNew ? null : params.id,
+                name: params.name || '',
+                description: params.description || '',
+                type: params.type || '',
+                difficulty: params.difficulty || 'all_levels',
+            },
+            items: [],
+        };
+    });
     const initialStateRef = useRef<BuilderWorkoutState | null>(null);
     const [isDirty, setIsDirty] = useState(false);
     const [validationErrors, setValidationErrors] = useState<ExerciseValidationError[]>([]);
     const [emptySectionIds, setEmptySectionIds] = useState<string[]>([]);
+    const [isLoadingData, setIsLoadingData] = useState(false);
 
-    // Load workout data
+    // Mutation for creating workout
+    const createMutation = useMutation({
+        mutationFn: createWorkout,
+        onSuccess: async () => {
+            await queryClient.refetchQueries({ queryKey: ['workouts'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            if (router.canGoBack()) {
+                router.back();
+            }
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
+
+    // Mutation for updating workout
+    const editMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string; data: any }) => editWorkout(id, data),
+        onSuccess: async () => {
+            await queryClient.refetchQueries({ queryKey: ['workouts'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            if (router.canGoBack()) {
+                router.back();
+            }
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
+
+    // Load workout data from API when editing
     useEffect(() => {
-        if (id) {
-            const workoutData = MOCK_WORKOUTS[id] || MOCK_WORKOUTS['new'];
-            const newState: BuilderWorkoutState = {
-                meta: {
-                    id: workoutData.id === 'new' ? null : workoutData.id,
-                    name: workoutData.name,
-                    description: workoutData.description,
-                    type: workoutData.type,
-                    difficulty: workoutData.difficulty,
-                },
-                items: [],
-            };
-            setWorkoutState(newState);
-            initialStateRef.current = JSON.parse(JSON.stringify(newState)); // Deep clone
+        const loadWorkoutData = async () => {
+            if (params.id && params.id !== 'new') {
+                setIsLoadingData(true);
+                try {
+                    const workoutData = await getWorkoutById(params.id);
+                    if (workoutData.workout_data && workoutData.workout_data.items) {
+                        // Map set type from API format to builder format
+                        const mapSetType = (type: string): 'R' | 'W' | 'F' | 'D' => {
+                            const typeMap: Record<string, 'R' | 'W' | 'F' | 'D'> = {
+                                'normal': 'R',
+                                'warmUp': 'W',
+                                'failure': 'F',
+                                'dropset': 'D',
+                            };
+                            return typeMap[type] || 'R';
+                        };
+
+                        // Helper to get exercise details from mock data
+                        const getExerciseFromMock = (exerciseId: string) => {
+                            const mockExercise = MOCK_EXERCISES.find(ex => ex.exerciseId === exerciseId);
+                            return {
+                                name: mockExercise?.name || exerciseId || 'Exercise',
+                                imageUrl: mockExercise?.imageUrl || 'https://via.placeholder.com/100',
+                                exerciseType: mockExercise?.exerciseType || 'weight_reps',
+                            };
+                        };
+
+                        // Helper to transform exercise data to builder format
+                        const transformExercise = (data: any): BuilderExercise => {
+                            const exerciseDetails = getExerciseFromMock(data.prescribedExerciseId);
+
+                            return {
+                                id: data.prescribedExerciseId || `exercise-${Date.now()}`,
+                                exerciseId: data.prescribedExerciseId || '',
+                                name: exerciseDetails.name,
+                                imageUrl: exerciseDetails.imageUrl,
+                                exerciseType: exerciseDetails.exerciseType,
+                                sets: (data.sets || []).map((set: any, idx: number) => ({
+                                    id: `set-${idx}`,
+                                    setNumber: set.setNumber || idx + 1,
+                                    column1: set.trackableField1?.prescribed || '',
+                                    column2: set.trackableField2?.prescribed || '',
+                                    type: mapSetType(set.type),
+                                    rest: set.restSec ? set.restSec.toString() : undefined,
+                                })),
+                                column1Type: data.column1Label || 'Reps',
+                                column2Type: data.column2Label || 'kg',
+                                notes: data.notes || '',
+                                alternatives: data.alternatives || [],
+                                tempo: data.tempo || '',
+                                eachSide: data.eachSide || false,
+                                isSupersetNext: data.supersetId ? true : false,
+                            };
+                        };
+
+                        // Transform API payload format to builder format
+                        const transformedItems: BuilderItem[] = workoutData.workout_data.items.map((item: any) => {
+                            if (item.itemType === 'exercise') {
+                                return transformExercise(item.data);
+                            } else if (item.itemType === 'section') {
+                                // Handle section transformation
+                                const data = item.data;
+                                let sectionExercises: BuilderExercise[] = [];
+
+                                // Transform exercises based on section type
+                                if (data.type === 'regular' || data.type === 'auxiliary') {
+                                    // Regular/Auxiliary sections have exercise groups (potentially supersets)
+                                    sectionExercises = (data.exercises || []).flatMap((group: any) =>
+                                        (group.exercises || []).map((ex: any) => transformExercise(ex))
+                                    );
+                                } else if (data.type === 'circuits') {
+                                    // Circuits also have exercise groups
+                                    sectionExercises = (data.exercises || []).flatMap((group: any) =>
+                                        (group.exercises || []).map((ex: any) => transformExercise(ex))
+                                    );
+                                } else if (data.type === 'amrap' || data.type === 'timed') {
+                                    // AMRAP/Timed sections have a flat array of exercises with simpler structure
+                                    sectionExercises = (data.exercises || []).map((ex: any) => ({
+                                        id: ex.prescribedExerciseId || `exercise-${Date.now()}`,
+                                        exerciseId: ex.prescribedExerciseId || '',
+                                        name: '',
+                                        imageUrl: '',
+                                        exerciseType: 'weight_reps',
+                                        sets: [], // AMRAP/Timed don't use traditional sets
+                                        column1Type: ex.trackableField1?.label || 'Reps',
+                                        column2Type: ex.trackableField2?.label || 'kg',
+                                        notes: ex.notes || '',
+                                        alternatives: [],
+                                        tempo: ex.tempo || '',
+                                        eachSide: ex.eachSide || false,
+                                    } as BuilderExercise));
+                                }
+
+                                return {
+                                    id: data.id || `section-${Date.now()}`,
+                                    type: 'section' as const,
+                                    name: data.name || '',
+                                    sectionType: data.type || 'regular',
+                                    duration: data.durationSec ? data.durationSec.toString() : undefined,
+                                    rounds: data.targetRounds ? data.targetRounds.toString() : undefined,
+                                    notes: data.notes || '',
+                                    exercises: sectionExercises,
+                                } as BuilderSection;
+                            }
+                            return null;
+                        }).filter(Boolean) as BuilderItem[];
+
+                        // Update state with the loaded workout schema
+                        setWorkoutState({
+                            meta: {
+                                id: params.id,
+                                name: workoutData.name,
+                                description: workoutData.description || '',
+                                type: workoutData.type || '',
+                                difficulty: workoutData.difficulty || 'all_levels',
+                            },
+                            items: transformedItems,
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to load workout data:', error);
+                    Alert.alert(
+                        t('general.error'),
+                        t('general.errorLoading'),
+                        [{ text: t('general.ok') }]
+                    );
+                } finally {
+                    setIsLoadingData(false);
+                }
+            }
+        };
+
+        loadWorkoutData();
+    }, [params.id, t]);
+
+    // TODO: Fetch exercise details after workout data is loaded
+    // Currently disabled because exercises in the workout data use placeholder IDs
+    // that don't exist in the database yet. Re-enable this once real exercise IDs are used.
+    // useEffect(() => {
+    //     const fetchExerciseDetails = async () => {
+    //         // Collect all unique exercise IDs from the workout
+    //         const exerciseIds = new Set<string>();
+
+    //         workoutState.items.forEach(item => {
+    //             if (isBuilderSection(item)) {
+    //                 // Collect exercise IDs from section
+    //                 item.exercises.forEach(ex => {
+    //                     if (ex.exerciseId && !ex.name) { // Only fetch if we don't have the name yet
+    //                         exerciseIds.add(ex.exerciseId);
+    //                     }
+    //                 });
+    //             } else {
+    //                 // Top-level exercise
+    //                 if (item.exerciseId && !item.name) {
+    //                     exerciseIds.add(item.exerciseId);
+    //                 }
+    //             }
+    //         });
+
+    //         if (exerciseIds.size === 0) return; // No exercises to fetch
+
+    //         // Fetch all exercise details
+    //         try {
+    //             const exerciseDetailsMap = new Map<string, { name: string; imageUrl: string; exerciseType: string }>();
+
+    //             await Promise.all(
+    //                 Array.from(exerciseIds).map(async (id) => {
+    //                     try {
+    //                         const exercise = await getExerciseById(id);
+    //                         exerciseDetailsMap.set(id, {
+    //                             name: exercise.name,
+    //                             imageUrl: '',
+    //                             exerciseType: 'weight_reps',
+    //                         });
+    //                     } catch (error) {
+    //                         console.error(`Failed to fetch exercise ${id}:`, error);
+    //                     }
+    //                 })
+    //             );
+
+    //             // Update workout state with exercise details
+    //             setWorkoutState(prev => ({
+    //                 ...prev,
+    //                 items: prev.items.map(item => {
+    //                     if (isBuilderSection(item)) {
+    //                         return {
+    //                             ...item,
+    //                             exercises: item.exercises.map(ex => {
+    //                                 const details = exerciseDetailsMap.get(ex.exerciseId);
+    //                                 if (details) {
+    //                                     return { ...ex, ...details };
+    //                                 }
+    //                                 return ex;
+    //                             }),
+    //                         };
+    //                     } else {
+    //                         const details = exerciseDetailsMap.get(item.exerciseId);
+    //                         if (details) {
+    //                             return { ...item, ...details };
+    //                         }
+    //                         return item;
+    //                     }
+    //                 }),
+    //             }));
+    //         } catch (error) {
+    //             console.error('Failed to fetch exercise details:', error);
+    //         }
+    //     };
+
+    //     if (workoutState.items.length > 0 && params.id && params.id !== 'new') {
+    //         fetchExerciseDetails();
+    //     }
+    // }, [workoutState.items.length, params.id]);
+
+    // Set initial state ref once data is loaded
+    useEffect(() => {
+        if (!initialStateRef.current && workoutState.items.length > 0) {
+            initialStateRef.current = JSON.parse(JSON.stringify(workoutState)); // Deep clone
         }
-    }, [id]);
+    }, [workoutState]);
 
     // Track dirty state
     useEffect(() => {
@@ -100,6 +369,49 @@ export default function WorkoutDetailScreen() {
             setIsDirty(dirty);
         }
     }, [workoutState]);
+
+    // Sync metadata changes when returning from edit modal
+    useFocusEffect(
+        useCallback(() => {
+            // Only sync if we have an existing workout ID (not a new workout)
+            if (workoutState.meta.id && workoutState.meta.id !== 'new') {
+                // Get the latest workout data from the query cache
+                const cachedWorkouts = queryClient.getQueryData<any[]>(['workouts']);
+                if (cachedWorkouts) {
+                    const updatedWorkout = cachedWorkouts.find(w => w.id === workoutState.meta.id);
+                    if (updatedWorkout) {
+                        // Check if metadata has changed
+                        const metadataChanged =
+                            updatedWorkout.name !== workoutState.meta.name ||
+                            updatedWorkout.description !== workoutState.meta.description ||
+                            updatedWorkout.type !== workoutState.meta.type ||
+                            updatedWorkout.difficulty !== workoutState.meta.difficulty;
+
+                        if (metadataChanged) {
+                            // Update only the metadata, preserve items
+                            setWorkoutState(prev => {
+                                const newState = {
+                                    ...prev,
+                                    meta: {
+                                        ...prev.meta,
+                                        name: updatedWorkout.name,
+                                        description: updatedWorkout.description || '',
+                                        type: updatedWorkout.type || '',
+                                        difficulty: updatedWorkout.difficulty || '',
+                                    }
+                                };
+                                // Also update the initialStateRef so metadata sync doesn't count as a change
+                                if (initialStateRef.current) {
+                                    initialStateRef.current = JSON.parse(JSON.stringify(newState));
+                                }
+                                return newState;
+                            });
+                        }
+                    }
+                }
+            }
+        }, [workoutState.meta.id, queryClient])
+    );
 
     // Handle section select callback
     useEffect(() => {
@@ -148,6 +460,19 @@ export default function WorkoutDetailScreen() {
         }
     }, [isDirty, router, showDiscardAlert]);
 
+    const handleEditMetadata = useCallback(() => {
+        router.push({
+            pathname: '/modals/library/add-workout-modal',
+            params: {
+                editingId: workoutState.meta.id,
+                name: workoutState.meta.name,
+                description: workoutState.meta.description || '',
+                type: workoutState.meta.type || '',
+                difficulty: workoutState.meta.difficulty || '',
+            },
+        });
+    }, [router, workoutState.meta]);
+
     const handleSave = useCallback(() => {
         if (!workoutState.meta.name) {
             Alert.alert(t('library.workout.error'), t('library.workout.nameRequired'));
@@ -171,15 +496,13 @@ export default function WorkoutDetailScreen() {
         const payload = buildWorkoutPayload(workoutState);
         console.log('Saving workout payload:', JSON.stringify(payload, null, 2));
 
-        // TODO: Call API to save workout
-        // For now, update the initial state to mark as saved
-        initialStateRef.current = JSON.parse(JSON.stringify(workoutState));
-        setIsDirty(false);
-
-        if (router.canGoBack()) {
-            router.back();
+        // Call API to save workout
+        if (workoutState.meta.id && workoutState.meta.id !== 'new') {
+            editMutation.mutate({ id: workoutState.meta.id, data: payload });
+        } else {
+            createMutation.mutate(payload);
         }
-    }, [workoutState, router, t]);
+    }, [workoutState, createMutation, editMutation, t]);
 
     const handleReorder = () => {
         // Set up callback to receive reordered items
@@ -536,38 +859,56 @@ export default function WorkoutDetailScreen() {
                 keyboardShouldPersistTaps="handled"
                 bottomOffset={40}
             >
-                {/* Header - Centered title layout that scrolls with content */}
+                {/* Header - Left-aligned title layout that scrolls with content */}
                 <View style={styles.header}>
-                    <IconButton
-                        icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
-                        onPress={handleBackPress}
-                        size="md"
-                        color={themeColors.text}
-                    />
-                    <Text
-                        style={[styles.title, { color: themeColors.text }]}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                    >
-                        {workoutState.meta.name || t('library.workout.newWorkout')}
-                    </Text>
-                    <IconButton
-                        icon={{ sf: 'checkmark', IconComponent: Check }}
-                        onPress={handleSave}
-                        size="md"
-                        variant={canSave ? 'primary' : 'default'}
-                        disabled={!canSave}
-                    />
+                    <View style={styles.headerLeft}>
+                        <IconButton
+                            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+                            onPress={handleBackPress}
+                            size="md"
+                            color={themeColors.text}
+                        />
+                        <Text
+                            style={[styles.title, { color: themeColors.text }]}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                        >
+                            {workoutState.meta.name || t('library.workout.newWorkout')}
+                        </Text>
+                    </View>
+                    <View style={styles.headerRight}>
+                        <IconButton
+                            icon={{ sf: 'pencil', IconComponent: Pencil }}
+                            onPress={handleEditMetadata}
+                            size="md"
+                            color={themeColors.text}
+                        />
+                        <IconButton
+                            icon={{ sf: 'checkmark', IconComponent: Check }}
+                            onPress={handleSave}
+                            size="md"
+                            variant={canSave ? 'primary' : 'default'}
+                            disabled={!canSave}
+                            loading={createMutation.isPending || editMutation.isPending}
+                        />
+                    </View>
                 </View>
 
                 {/* Page Content */}
-                {items.length === 0 && (
+                {isLoadingData ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color={themeColors.primary} />
+                        <Text style={[styles.loadingText, { color: themeColors.mutedText }]}>
+                            {t('library.workout.loading')}
+                        </Text>
+                    </View>
+                ) : items.length === 0 ? (
                     <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
                         {t('library.workout.emptyBuilder')}
                     </Text>
-                )}
+                ) : null}
 
-                {items.map((item, index) => {
+                {!isLoadingData && items.map((item, index) => {
                     const isLast = index === items.length - 1;
 
                     if (isBuilderSection(item)) {
@@ -738,6 +1079,17 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         height: 56,
     },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        gap: 8,
+    },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
     headerActionContainer: {
         width: 36,
         height: 36,
@@ -747,8 +1099,6 @@ const styles = StyleSheet.create({
     title: {
         ...typography.h6,
         flex: 1,
-        textAlign: 'center',
-        marginHorizontal: 8,
     },
     content: {
         paddingHorizontal: 16,
@@ -758,6 +1108,16 @@ const styles = StyleSheet.create({
         ...typography.p2,
         textAlign: 'center',
         marginTop: 32,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 60,
+        gap: 12,
+    },
+    loadingText: {
+        ...typography.p2,
     },
     bottomBarContainer: {
         borderTopWidth: StyleSheet.hairlineWidth,

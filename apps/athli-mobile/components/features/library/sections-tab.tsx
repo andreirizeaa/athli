@@ -3,20 +3,18 @@ import { StyleSheet, Text, View, Alert } from 'react-native';
 import { ChevronRight, Layers } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableOpacity } from 'pressto';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { type SectionType, SECTION_TYPES } from '@/constants/training';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { useLibraryTab, useLibraryStore } from '@/stores';
-import { deleteSections, duplicateSection, starSections, archiveSections } from '@/services/coach/coach-section-service';
+import { useLibraryTab } from '@/stores';
+import { getSections, deleteSections, duplicateSection, starSections, archiveSections } from '@/services/coach/coach-section-service';
 import { EmptyState } from '@/components/ui/empty-state';
-
-const noTrainingAvatar = require('@/assets/avatars/no-training-avatar.png');
 
 export const SectionsTab = () => {
   const { colors: themeColors } = useThemePreference();
@@ -24,19 +22,48 @@ export const SectionsTab = () => {
   const router = useRouter();
   const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
+  const coachProfile = useCoachProfileStore((state) => state.profile);
+  const isAuthenticated = !!coachProfile;
 
-  // Get sections from Zustand store
-  const getFilteredSections = useLibraryStore((state) => state.getFilteredSections);
-  const filteredSections = useMemo(
-    () => getFilteredSections(searchQuery),
-    [getFilteredSections, searchQuery]
-  );
+  // Fetch sections directly with TanStack Query
+  const { data: sections = [], isLoading, isError } = useQuery({
+    queryKey: ['sections'],
+    queryFn: async () => {
+      console.log('[SectionsTab] Fetching sections...');
+      const data = await getSections();
+      console.log('[SectionsTab] Received sections:', data.length, 'items');
+      return data;
+    },
+    enabled: isAuthenticated,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+  });
+
+  // Filter sections based on search query
+  const filteredSections = useMemo(() => {
+    if (!searchQuery.trim()) return sections;
+    const lowerQuery = searchQuery.toLowerCase();
+    return sections.filter(section =>
+      section.program.toLowerCase().includes(lowerQuery) ||
+      section.sectionType?.toLowerCase().includes(lowerQuery)
+    );
+  }, [sections, searchQuery]);
+
+  console.log('[SectionsTab] Render:', {
+    isAuthenticated,
+    isLoading,
+    isError,
+    totalSections: sections.length,
+    filteredSections: filteredSections.length,
+    searchQuery
+  });
 
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteSections(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sections'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['sections'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (error: Error) => {
@@ -52,8 +79,8 @@ export const SectionsTab = () => {
   // Duplicate mutation
   const duplicateMutation = useMutation({
     mutationFn: (id: string) => duplicateSection(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sections'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['sections'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (error: Error) => {
@@ -69,8 +96,8 @@ export const SectionsTab = () => {
   // Star mutation
   const starMutation = useMutation({
     mutationFn: ({ id, starred }: { id: string; starred: boolean }) => starSections(id, starred),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sections'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['sections'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (error: Error) => {
@@ -86,8 +113,8 @@ export const SectionsTab = () => {
   // Archive mutation
   const archiveMutation = useMutation({
     mutationFn: ({ id, archived }: { id: string; archived: boolean }) => archiveSections(id, archived),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sections'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['sections'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onError: (error: Error) => {
@@ -112,26 +139,12 @@ export const SectionsTab = () => {
         duration: '',
         rounds: '',
         notes: section.description || '',
-        editingId: section.id,
+        sectionId: section.id, // Changed from editingId to sectionId for library sections
+        saveToLibrary: 'true', // Flag to indicate this is a library section
         exercises: JSON.stringify([]),
       },
     });
   };
-
-  const handleDelete = useCallback((id: string) => {
-    Alert.alert(
-      t('general.confirmDelete'),
-      t('general.confirmDeleteMessage'),
-      [
-        { text: t('general.cancel'), style: 'cancel' },
-        {
-          text: t('general.delete'),
-          style: 'destructive',
-          onPress: () => deleteMutation.mutate(id)
-        },
-      ]
-    );
-  }, [deleteMutation, t]);
 
   const getSectionTypeLabel = (type: SectionType) => {
     return SECTION_TYPES.find((t) => t.value === type)?.label || type;
@@ -147,7 +160,6 @@ export const SectionsTab = () => {
       {/* Empty State */}
       {filteredSections.length === 0 && (
         <EmptyState
-          image={noTrainingAvatar}
           message={t('library.empty.sections')}
         />
       )}
@@ -158,7 +170,7 @@ export const SectionsTab = () => {
         return (
           <View key={item.id}>
             <SwipeableRow
-              onDelete={() => handleDelete(item.id)}
+              onDelete={() => deleteMutation.mutateAsync(item.id)}
               onOpen={registerOpenRow}
               deleteConfirmTitle={`${t('general.delete')} ${item.program}?`}
             >

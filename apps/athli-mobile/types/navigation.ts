@@ -54,7 +54,6 @@ export type RootStackParamList = {
   'modals/library/add-exercise-modal': undefined;
   'modals/library/add-habit-modal': undefined;
   'modals/library/add-metric-modal': undefined;
-  'modals/library/add-program-modal': undefined;
   'modals/library/add-questionnaire-modal': undefined;
   'modals/library/add-section-modal': undefined;
   'modals/library/add-workout-modal': undefined;

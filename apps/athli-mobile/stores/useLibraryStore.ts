@@ -20,20 +20,6 @@ export interface Workout {
   isFavourite: boolean;
 }
 
-export interface Program {
-  id: string;
-  program: string; // Display name
-  description: string;
-  type: string;
-  difficulty: string;
-  length: string; // Formatted as "X week(s)"
-  totalWorkouts: number;
-  totalExercises: number;
-  equipment: string;
-  created: string; // Formatted date
-  isFavourite: boolean;
-}
-
 interface LibraryStore {
   // State
   checkIns: CheckIn[];
@@ -43,7 +29,6 @@ interface LibraryStore {
   questionnaires: Questionnaire[];
   sections: Section[];
   workouts: Workout[];
-  programs: Program[];
   files: CoachFile[];
 
   // Actions
@@ -54,7 +39,6 @@ interface LibraryStore {
   setQuestionnaires: (questionnaires: Questionnaire[]) => void;
   setSections: (sections: Section[]) => void;
   setWorkouts: (workouts: Workout[]) => void;
-  setPrograms: (programs: Program[]) => void;
   setFiles: (files: CoachFile[]) => void;
 
   // Computed selectors (for filtered/sorted data)
@@ -65,7 +49,6 @@ interface LibraryStore {
   getFilteredQuestionnaires: (searchQuery: string) => Questionnaire[];
   getFilteredSections: (searchQuery: string) => Section[];
   getFilteredWorkouts: (searchQuery: string) => Workout[];
-  getFilteredPrograms: (searchQuery: string) => Program[];
   getFilteredFiles: (searchQuery: string) => CoachFile[];
 }
 
@@ -78,7 +61,6 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
   questionnaires: [],
   sections: [],
   workouts: [],
-  programs: [],
   files: [],
 
   // Actions
@@ -89,7 +71,6 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
   setQuestionnaires: (questionnaires) => set({ questionnaires }),
   setSections: (sections) => set({ sections }),
   setWorkouts: (workouts) => set({ workouts }),
-  setPrograms: (programs) => set({ programs }),
   setFiles: (files) => set({ files }),
 
   // Computed selectors
@@ -140,17 +121,6 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     if (!searchQuery) return workouts;
     const query = searchQuery.toLowerCase();
     return workouts.filter((item) => item.name.toLowerCase().includes(query));
-  },
-
-  getFilteredPrograms: (searchQuery: string) => {
-    const { programs } = get();
-    if (!searchQuery) return programs;
-    const query = searchQuery.toLowerCase();
-    return programs.filter((item) =>
-      item.program.toLowerCase().includes(query) ||
-      item.type.toLowerCase().includes(query) ||
-      item.difficulty.toLowerCase().includes(query)
-    );
   },
 
   getFilteredFiles: (searchQuery: string) => {

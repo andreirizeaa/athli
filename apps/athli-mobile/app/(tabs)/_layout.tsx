@@ -145,7 +145,6 @@ export default function TabLayout() {
     const modalRoutes: Record<LibraryTab, string> = {
       workouts: '/modals/library/add-workout-modal',
       sections: '/modals/library/add-section-modal',
-      programs: '/modals/library/add-program-modal',
       exercises: '/modals/library/add-exercise-modal',
       checkIns: '/modals/library/add-check-in-modal',
       questionnaires: '/modals/library/add-questionnaire-modal',
@@ -332,7 +331,6 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
     const modalRoutes: Record<LibraryTab, string> = {
       workouts: '/modals/library/add-workout-modal',
       sections: '/modals/library/add-section-modal',
-      programs: '/modals/library/add-program-modal',
       exercises: '/modals/library/add-exercise-modal',
       checkIns: '/modals/library/add-check-in-modal',
       questionnaires: '/modals/library/add-questionnaire-modal',

@@ -17,6 +17,29 @@ import { hexToRgba } from '@/utils/colorUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+// Extract video ID from YouTube/Vimeo URLs
+const extractVideoId = (url: string): { id: string; type: 'youtube' | 'vimeo' | null } => {
+    if (!url.trim()) {
+        return { id: '', type: null };
+    }
+
+    // YouTube patterns
+    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const youtubeMatch = url.match(youtubeRegex);
+    if (youtubeMatch) {
+        return { id: youtubeMatch[1], type: 'youtube' };
+    }
+
+    // Vimeo patterns
+    const vimeoRegex = /(?:vimeo\.com\/)(?:.*\/)?(\d+)/;
+    const vimeoMatch = url.match(vimeoRegex);
+    if (vimeoMatch) {
+        return { id: vimeoMatch[1], type: 'vimeo' };
+    }
+
+    return { id: '', type: null };
+};
+
 export default function FilePreviewScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
@@ -32,9 +55,13 @@ export default function FilePreviewScreen() {
 
     const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
 
-    // Video player setup if type is video
-    const player = useVideoPlayer(type === 'video' ? uri : '', (player) => {
-        if (type === 'video') {
+    // Detect if video is YouTube/Vimeo
+    const videoInfo = type === 'video' ? extractVideoId(uri) : { id: '', type: null };
+    const isExternalVideo = videoInfo.id && videoInfo.type;
+
+    // Video player setup if type is video AND it's not YouTube/Vimeo
+    const player = useVideoPlayer(type === 'video' && !isExternalVideo ? uri : '', (player) => {
+        if (type === 'video' && !isExternalVideo) {
             player.loop = true;
             player.play();
         }
@@ -46,10 +73,10 @@ export default function FilePreviewScreen() {
     const [isDocumentLoading, setIsDocumentLoading] = useState(type === 'document');
 
     React.useEffect(() => {
-        if (type === 'video' && status === 'readyToPlay') {
+        if (type === 'video' && !isExternalVideo && status === 'readyToPlay') {
             setIsVideoLoading(false);
         }
-    }, [status, type]);
+    }, [status, type, isExternalVideo]);
 
     const handleClose = () => {
         router.back();
@@ -98,6 +125,66 @@ export default function FilePreviewScreen() {
         }
 
         if (type === 'video') {
+            // Use WebView for YouTube/Vimeo
+            if (isExternalVideo && videoInfo.id && videoInfo.type) {
+                const embedUrl = videoInfo.type === 'youtube'
+                    ? `https://www.youtube.com/embed/${videoInfo.id}?autoplay=0&playsinline=1&rel=0&modestbranding=1`
+                    : `https://player.vimeo.com/video/${videoInfo.id}?autoplay=1`;
+
+                // Create HTML with iframe for better compatibility
+                const htmlContent = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                        <style>
+                            * { margin: 0; padding: 0; }
+                            html, body { height: 100%; overflow: hidden; background: #000; }
+                            iframe {
+                                position: absolute;
+                                top: 0;
+                                left: 0;
+                                width: 100%;
+                                height: 100%;
+                                border: none;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <iframe
+                            src="${embedUrl}"
+                            frameborder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowfullscreen
+                        ></iframe>
+                    </body>
+                    </html>
+                `;
+
+                return (
+                    <View style={styles.videoContainer}>
+                        <WebView
+                            source={{ html: htmlContent }}
+                            style={styles.video}
+                            allowsFullscreenVideo
+                            allowsInlineMediaPlayback
+                            mediaPlaybackRequiresUserAction={false}
+                            javaScriptEnabled
+                            domStorageEnabled
+                            startInLoadingState
+                            onLoadStart={() => setIsVideoLoading(true)}
+                            onLoadEnd={() => setIsVideoLoading(false)}
+                        />
+                        {isVideoLoading && (
+                            <View style={[StyleSheet.absoluteFill, styles.mediaPlaceholder]}>
+                                <ActivityIndicator color={themeColors.text} />
+                            </View>
+                        )}
+                    </View>
+                );
+            }
+
+            // Use VideoView for uploaded videos
             return (
                 <View style={styles.videoContainer}>
                     <VideoView
@@ -107,9 +194,6 @@ export default function FilePreviewScreen() {
                         allowsFullscreen
                         allowsPictureInPicture
                     />
-                    {/* Note: expo-video 1.x doesn't have a direct loading event on VideoView, 
-                        but we can show the spinner for a short duration or use player status if needed. 
-                        Simplified for now. */}
                     {isVideoLoading && (
                         <View style={[StyleSheet.absoluteFill, styles.mediaPlaceholder]}>
                             <ActivityIndicator color={themeColors.text} />
@@ -255,22 +339,19 @@ const styles = StyleSheet.create({
         borderRadius: 24,
     },
     videoContainer: {
-        width: SCREEN_WIDTH * 0.9,
+        width: SCREEN_WIDTH,
         aspectRatio: 16 / 9,
-        borderRadius: 24,
         overflow: 'hidden',
         position: 'relative',
-        backgroundColor: 'rgba(0,0,0,0.02)',
+        backgroundColor: '#000',
     },
     video: {
         width: '100%',
         height: '100%',
-        borderRadius: 24,
     },
     mediaPlaceholder: {
         justifyContent: 'center',
         alignItems: 'center',
-        borderRadius: 24,
     },
     documentContainer: {
         flex: 1,

@@ -161,18 +161,6 @@ export default function ClientTrainingScreen() {
             onPress: () => {
                 router.push('/modals/library/add-workout-modal');
             }
-        },
-        {
-            label: t('clientDetail.actions.assignProgram'),
-            icon: { sf: 'list.bullet.clipboard', IconComponent: ClipboardList },
-            onPress: () => {
-                router.push('/modals/client/assign-program-to-client-modal');
-            }
-        },
-        {
-            label: t('clientDetail.actions.addProgram'),
-            icon: { sf: 'list.bullet.clipboard.fill', IconComponent: ClipboardList },
-            onPress: () => { }
         }
     ], [t, router]);
 

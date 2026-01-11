@@ -99,8 +99,9 @@ export default function AddHabitModal() {
 
     const saveMutation = useMutation({
         mutationFn: isEditing ? editHabit : addHabit,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['habits'] });
+        onSuccess: async () => {
+            // Refetch to update the cache and trigger Zustand store update
+            await queryClient.refetchQueries({ queryKey: ['habits'] });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             handleClose();
         },

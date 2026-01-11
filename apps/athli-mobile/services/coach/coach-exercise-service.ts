@@ -54,10 +54,12 @@ const mapToBackend = (payload: ExercisePayload) => {
  */
 export const getExercises = async (): Promise<Exercise[]> => {
   const response = await apiFetch<ApiResponse<{ exercises: any[] }>>('/coach/training/exercises');
-  return (response.data?.exercises || []).map((e) => ({
+  const exercises = (response.data?.exercises || []).map((e) => ({
     ...e,
     isFavourite: e.is_favourite || false,
   }));
+  console.log('[coach-exercise-service] getExercises returned:', exercises.length, 'exercises');
+  return exercises;
 };
 
 /**

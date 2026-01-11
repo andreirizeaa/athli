@@ -51,11 +51,6 @@ import {
   duplicateWorkout,
 } from '@/services/coach/coach-workout-service';
 import {
-  getPrograms,
-  deletePrograms,
-  duplicateProgram,
-} from '@/services/coach/coach-program-service';
-import {
   getAllFiles,
   deleteFile,
   type CoachFile,
@@ -65,8 +60,9 @@ import {
 /**
  * Hook to fetch and sync all library data
  * Call this ONCE in the root layout
+ * @param isAuthenticated - Whether the user is authenticated
  */
-export function useLibraryData() {
+export function useLibraryData(isAuthenticated: boolean = false) {
   const setCheckIns = useLibraryStore((state) => state.setCheckIns);
   const setExercises = useLibraryStore((state) => state.setExercises);
   const setHabits = useLibraryStore((state) => state.setHabits);
@@ -74,83 +70,122 @@ export function useLibraryData() {
   const setQuestionnaires = useLibraryStore((state) => state.setQuestionnaires);
   const setSections = useLibraryStore((state) => state.setSections);
   const setWorkouts = useLibraryStore((state) => state.setWorkouts);
-  const setPrograms = useLibraryStore((state) => state.setPrograms);
   const setFiles = useLibraryStore((state) => state.setFiles);
 
   // Check-ins
   const checkInsQuery = useQuery({
     queryKey: ['checkIns'],
     queryFn: getCheckIns,
-    staleTime: 5 * 60 * 1000,
+    enabled: isAuthenticated,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+    staleTime: 0, // Always consider data stale to ensure fresh data
   });
 
   // Exercises
   const exercisesQuery = useQuery({
     queryKey: ['exercises'],
     queryFn: getExercises,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // Always consider data stale to ensure fresh data
+    enabled: isAuthenticated,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   // Habits
   const habitsQuery = useQuery({
     queryKey: ['habits'],
     queryFn: getAllHabits,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // Always consider data stale to ensure fresh data
+    enabled: isAuthenticated,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   // Metrics
   const metricsQuery = useQuery({
     queryKey: ['metrics'],
     queryFn: getAllMetrics,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // Always consider data stale to ensure fresh data
+    enabled: isAuthenticated,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   // Questionnaires
   const questionnairesQuery = useQuery({
     queryKey: ['questionnaires'],
     queryFn: getQuestionnaires,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // Always consider data stale to ensure fresh data
+    enabled: isAuthenticated,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   // Sections
   const sectionsQuery = useQuery({
     queryKey: ['sections'],
     queryFn: getSections,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // Always consider data stale to ensure fresh data
+    enabled: isAuthenticated,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   // Workouts
   const workoutsQuery = useQuery({
     queryKey: ['workouts'],
     queryFn: getWorkouts,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Programs
-  const programsQuery = useQuery({
-    queryKey: ['programs'],
-    queryFn: getPrograms,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // Always consider data stale to ensure fresh data
+    enabled: isAuthenticated,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   // Files
   const filesQuery = useQuery({
     queryKey: ['files'],
     queryFn: getAllFiles,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // Always consider data stale to ensure fresh data
+    enabled: isAuthenticated,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   // Sync to Zustand when data changes
   useEffect(() => {
-    if (checkInsQuery.data) setCheckIns(checkInsQuery.data);
-    if (exercisesQuery.data) setExercises(exercisesQuery.data);
-    if (habitsQuery.data) setHabits(habitsQuery.data);
-    if (metricsQuery.data) setMetrics(metricsQuery.data);
-    if (questionnairesQuery.data) setQuestionnaires(questionnairesQuery.data);
-    if (sectionsQuery.data) setSections(sectionsQuery.data);
-    if (workoutsQuery.data) setWorkouts(workoutsQuery.data);
-    if (programsQuery.data) setPrograms(programsQuery.data);
-    if (filesQuery.data) setFiles(filesQuery.data);
+    if (checkInsQuery.data) {
+      console.log('[useLibraryData] Syncing checkIns to store:', checkInsQuery.data.length, 'items');
+      setCheckIns(checkInsQuery.data);
+    }
+    if (exercisesQuery.data) {
+      console.log('[useLibraryData] Syncing exercises to store:', exercisesQuery.data.length, 'items');
+      setExercises(exercisesQuery.data);
+    }
+    if (habitsQuery.data) {
+      console.log('[useLibraryData] Syncing habits to store:', habitsQuery.data.length, 'items');
+      setHabits(habitsQuery.data);
+    }
+    if (metricsQuery.data) {
+      console.log('[useLibraryData] Syncing metrics to store:', metricsQuery.data.length, 'items');
+      setMetrics(metricsQuery.data);
+    }
+    if (questionnairesQuery.data) {
+      console.log('[useLibraryData] Syncing questionnaires to store:', questionnairesQuery.data.length, 'items');
+      setQuestionnaires(questionnairesQuery.data);
+    }
+    if (sectionsQuery.data) {
+      console.log('[useLibraryData] Syncing sections to store:', sectionsQuery.data.length, 'items');
+      setSections(sectionsQuery.data);
+    }
+    if (workoutsQuery.data) {
+      console.log('[useLibraryData] Syncing workouts to store:', workoutsQuery.data.length, 'items');
+      setWorkouts(workoutsQuery.data);
+    }
+    if (filesQuery.data) {
+      console.log('[useLibraryData] Syncing files to store:', filesQuery.data.length, 'items');
+      setFiles(filesQuery.data);
+    }
   }, [
     checkInsQuery.data,
     exercisesQuery.data,
@@ -159,7 +194,6 @@ export function useLibraryData() {
     questionnairesQuery.data,
     sectionsQuery.data,
     workoutsQuery.data,
-    programsQuery.data,
     filesQuery.data,
     setCheckIns,
     setExercises,
@@ -168,7 +202,6 @@ export function useLibraryData() {
     setQuestionnaires,
     setSections,
     setWorkouts,
-    setPrograms,
     setFiles,
   ]);
 
@@ -181,7 +214,6 @@ export function useLibraryData() {
       questionnairesQuery.isLoading ||
       sectionsQuery.isLoading ||
       workoutsQuery.isLoading ||
-      programsQuery.isLoading ||
       filesQuery.isLoading,
     isError:
       checkInsQuery.isError ||
@@ -191,7 +223,6 @@ export function useLibraryData() {
       questionnairesQuery.isError ||
       sectionsQuery.isError ||
       workoutsQuery.isError ||
-      programsQuery.isError ||
       filesQuery.isError,
   };
 }
@@ -310,21 +341,6 @@ export function useLibraryMutations() {
     },
   });
 
-  // Program mutations
-  const deleteProgramMutation = useMutation({
-    mutationFn: (id: string | string[]) => deletePrograms(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['programs'] });
-    },
-  });
-
-  const duplicateProgramMutation = useMutation({
-    mutationFn: (id: string) => duplicateProgram(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['programs'] });
-    },
-  });
-
   // File mutations
   const deleteFileMutation = useMutation({
     mutationFn: (data: DeleteFileData) => deleteFile(data),
@@ -355,9 +371,6 @@ export function useLibraryMutations() {
     // Workouts
     deleteWorkout: deleteWorkoutMutation,
     duplicateWorkout: duplicateWorkoutMutation,
-    // Programs
-    deleteProgram: deleteProgramMutation,
-    duplicateProgram: duplicateProgramMutation,
     // Files
     deleteFile: deleteFileMutation,
   };
