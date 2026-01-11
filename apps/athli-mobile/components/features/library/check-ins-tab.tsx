@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, Alert } from 'react-native';
 import { ChevronRight, Calendar, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableOpacity } from 'pressto';
+import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
@@ -12,13 +13,11 @@ import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { useModalCallbacks } from '@/stores';
+import { useLibraryStore } from '@/stores';
+import { useLibraryMutations } from '@/hooks/use-library-data';
+import { EmptyState } from '@/components/ui/empty-state';
 
-// Mock data
-const MOCK_CHECKINS = [
-  { id: '1', name: 'Weekly Reflection', frequency: 'Weekly', clients: 5 },
-  { id: '2', name: 'Monthly Progress Review', frequency: 'Monthly', clients: 12 },
-  { id: '3', name: 'Post-Workout Feedback', frequency: 'Daily', clients: 45 },
-];
+const noFormsAvatar = require('@/assets/avatars/no-forms-avatar.png');
 
 export const CheckInsTab = () => {
   const { colors: themeColors } = useThemePreference();
@@ -27,15 +26,14 @@ export const CheckInsTab = () => {
   const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
   const { setClientsSelectCallback } = useModalCallbacks();
 
-  const filteredCheckIns = useMemo(() => {
-    if (!searchQuery) return MOCK_CHECKINS;
-    const query = searchQuery.toLowerCase();
-    return MOCK_CHECKINS.filter(
-      (item) => item.name.toLowerCase().includes(query)
-    );
-  }, [searchQuery]);
+  // Get check-ins from Zustand store
+  const getFilteredCheckIns = useLibraryStore((state) => state.getFilteredCheckIns);
+  const filteredCheckIns = useMemo(() => getFilteredCheckIns(searchQuery), [getFilteredCheckIns, searchQuery]);
 
-  const handleCheckInPress = (item: typeof MOCK_CHECKINS[0]) => {
+  // Get mutations
+  const { deleteCheckIn: deleteMutation, duplicateCheckIn: duplicateMutation } = useLibraryMutations();
+
+  const handleCheckInPress = (item: typeof filteredCheckIns[0]) => {
     closeOpenRow();
     router.push({
       pathname: '/modals/library/add-check-in-modal',
@@ -46,9 +44,9 @@ export const CheckInsTab = () => {
     });
   };
 
-  const handleAssign = (item: typeof MOCK_CHECKINS[0]) => {
+  const handleAssign = (item: typeof filteredCheckIns[0]) => {
     setClientsSelectCallback((selectedClients) => {
-      console.log(`Assigned ${item.name} to clients:`, selectedClients.map(c => c.fullName));
+      console.log(`Assigned ${item.name} to clients:`, selectedClients.map(c => c.name));
     });
     router.push({
       pathname: '/modals/shared/client-list-modal',
@@ -59,38 +57,47 @@ export const CheckInsTab = () => {
     });
   };
 
-  const deleteCheckIn = (id: string) => {
-    console.log('Delete check-in:', id);
-    // In a real app, this would dispatch a delete action
-  };
-
-  const handleDelete = useCallback((item: typeof MOCK_CHECKINS[0]) => {
-    Alert.alert(
-      `${t('general.delete')} ${item.name}?`,
-      t('library.deleteConfirmMessage'),
-      [
-        { text: t('general.cancel'), style: 'cancel' },
-        {
-          text: t('general.delete'),
-          style: 'destructive',
-          onPress: () => deleteCheckIn(item.id)
-        },
-      ]
-    );
-  }, [t]);
-
-  if (filteredCheckIns.length === 0) {
-    return (
-      <View style={styles.emptyContainer}>
-        <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
-          {t('library.sections.empty').replace('sections', 'check-ins')}
-        </Text>
-      </View>
-    );
-  }
+  const handleDelete = useCallback(
+    (item: typeof filteredCheckIns[0]) => {
+      Alert.alert(
+        `${t('general.delete')} ${item.name}?`,
+        t('library.deleteConfirmMessage'),
+        [
+          { text: t('general.cancel'), style: 'cancel' },
+          {
+            text: t('general.delete'),
+            style: 'destructive',
+            onPress: () => {
+              deleteMutation.mutate(item.id, {
+                onSuccess: () => {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                },
+                onError: (error: Error) => {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                  Alert.alert(t('general.error'), error.message || t('general.errorDeleting'), [
+                    { text: t('general.ok') },
+                  ]);
+                },
+              });
+            },
+          },
+        ]
+      );
+    },
+    [deleteMutation, t]
+  );
 
   return (
     <View style={styles.container}>
+      {/* Empty State */}
+      {filteredCheckIns.length === 0 && (
+        <EmptyState
+          image={noFormsAvatar}
+          message={t('library.empty.checkIns')}
+        />
+      )}
+
+      {/* Check-in List */}
       {filteredCheckIns.map((item, index) => {
         const isLastItem = index === filteredCheckIns.length - 1;
 
@@ -104,7 +111,7 @@ export const CheckInsTab = () => {
             label: `${t('general.delete')} Check-in`,
             icon: { sf: 'trash', IconComponent: Trash2 },
             destructive: true,
-            onPress: () => deleteCheckIn(item.id),
+            onPress: () => handleDelete(item),
           }
         ];
 
@@ -134,13 +141,21 @@ export const CheckInsTab = () => {
                         {item.name}
                       </Text>
                       <View style={styles.metaRow}>
-                        <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                          {item.frequency}
-                        </Text>
-                        <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                        <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
-                          {item.clients} {item.clients === 1 ? 'client' : 'clients'}
-                        </Text>
+                        {item.schedule_config?.frequency && (
+                          <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                            {item.schedule_config.frequency}
+                          </Text>
+                        )}
+                        {item.questionCount !== undefined && (
+                          <>
+                            {item.schedule_config?.frequency && (
+                              <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                            )}
+                            <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
+                              {item.questionCount} {item.questionCount === 1 ? 'question' : 'questions'}
+                            </Text>
+                          </>
+                        )}
                       </View>
                     </View>
                     <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
@@ -226,5 +241,20 @@ const styles = StyleSheet.create({
   emptyText: {
     ...typography.p2,
     textAlign: 'center',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    ...typography.p2,
+    marginTop: 12,
+  },
+  errorText: {
+    ...typography.p2,
+    textAlign: 'center',
+    paddingHorizontal: 32,
   },
 });

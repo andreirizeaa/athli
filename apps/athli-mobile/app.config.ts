@@ -1,5 +1,5 @@
 import { ConfigContext, ExpoConfig } from "expo/config";
-import { version } from "./package.json";
+import packageJson from "./package.json";
 import * as dotenv from "dotenv";
 import * as path from "path";
 
@@ -22,17 +22,49 @@ const SCHEME = "athlimobile";
 // Get Google URL scheme from environment variables
 const GOOGLE_IOS_URL_SCHEME = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS_SCHEME || "";
 
+// Dynamically configure the app based on the environment.
+function getDynamicAppConfig(environment: string) {
+  if (environment === "production") {
+    return {
+      name: APP_NAME,
+      bundleIdentifier: BUNDLE_IDENTIFIER,
+      packageName: PACKAGE_NAME,
+      icon: ICON,
+      adaptiveIcon: ADAPTIVE_ICON,
+      scheme: SCHEME,
+    };
+  }
+
+  if (environment === "preview") {
+    return {
+      name: `${APP_NAME} Preview`,
+      bundleIdentifier: `${BUNDLE_IDENTIFIER}.preview`,
+      packageName: `${PACKAGE_NAME}.preview`,
+      icon: ICON,
+      adaptiveIcon: ADAPTIVE_ICON,
+      scheme: `${SCHEME}-preview`,
+    };
+  }
+
+  // Development
+  return {
+    name: `${APP_NAME} Dev`,
+    bundleIdentifier: `${BUNDLE_IDENTIFIER}.dev`,
+    packageName: `${PACKAGE_NAME}.dev`,
+    icon: ICON,
+    adaptiveIcon: ADAPTIVE_ICON,
+    scheme: `${SCHEME}-dev`,
+  };
+}
+
 export default ({ config }: ConfigContext): ExpoConfig => {
-  const { name, bundleIdentifier, icon, adaptiveIcon, packageName, scheme } =
-    getDynamicAppConfig(
-      (process.env.APP_ENV as "development" | "preview" | "production") ||
-        "development"
-    );
+  const env = (process.env.APP_ENV as "development" | "preview" | "production") || "development";
+  const { name, bundleIdentifier, icon, adaptiveIcon, packageName, scheme } = getDynamicAppConfig(env);
 
   return {
     ...config,
     name: name,
-    version,
+    version: packageJson.version,
     slug: PROJECT_SLUG,
     platforms: ["ios", "android"],
     orientation: "portrait",
@@ -40,11 +72,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     newArchEnabled: true,
     icon: icon,
     scheme: scheme,
-    splash: {
-      image: "./assets/images/splash-icon.png",
-      resizeMode: "contain",
-      backgroundColor: "#ffffff"
-    },
     ios: {
       supportsTablet: true,
       bundleIdentifier: bundleIdentifier,
@@ -62,12 +89,19 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           }] : [])
         ]
       },
-      usesAppleSignIn: true
+      usesAppleSignIn: true,
+      icon: {
+        light: "./assets/app-icons/ios-light.png",
+        dark: "./assets/app-icons/ios-dark.png",
+        tinted: "./assets/app-icons/ios-tinted.png",
+      }
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: adaptiveIcon,
-        backgroundColor: "#ffffff"
+        foregroundImage: "./assets/app-icons/adaptive-icon.png",
+        monochromeImage: "./assets/app-icons/adaptive-icon.png",
+        backgroundImage: "./assets/app-icons/adaptive-icon.png",
+        backgroundColor: "#0180F3"
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
@@ -102,12 +136,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       "expo-mail-composer",
       "expo-updates",
       "expo-apple-authentication",
-      ...(GOOGLE_IOS_URL_SCHEME ? [[
-        "@react-native-google-signin/google-signin",
-        {
-          iosUrlScheme: GOOGLE_IOS_URL_SCHEME
-        }
-      ]] : []),
+      ...(GOOGLE_IOS_URL_SCHEME ? [
+        [
+          "@react-native-google-signin/google-signin",
+          {
+            iosUrlScheme: GOOGLE_IOS_URL_SCHEME
+          }
+        ] as [string, any]
+      ] : []),
       [
         "expo-build-properties",
         {
@@ -120,11 +156,36 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         }
       ],
       "expo-dynamic-app-icon",
-      "expo-quick-actions",
+      // Temporarily disabled due to ajv dependency conflict
+      // [
+      //   "expo-quick-actions",
+      //   {
+      //     iosActions: [
+      //       {
+      //         id: "deletion_feedback",
+      //         title: "🫨 Deleting Athli?",
+      //         subtitle: "Send us feedback before you delete.",
+      //         icon: "eyes"
+      //       }
+      //     ]
+      //   }
+      // ],
       [
         "expo-audio",
         {
           microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          image: "./assets/app-icons/splash-icon-light.png",
+          resizeMode: "contain",
+          backgroundColor: "#0180F3",
+          dark: {
+            image: "./assets/app-icons/splash-icon-dark.png",
+            backgroundColor: "#0180F3"
+          }
         }
       ]
     ],
@@ -144,45 +205,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       router: {},
       eas: {
         projectId: EAS_PROJECT_ID
-      }
+      },
+      EXPO_PUBLIC_API_ROUTE: process.env.EXPO_PUBLIC_API_ROUTE,
+      EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+      EXPO_PUBLIC_SUPABASE_KEY: process.env.EXPO_PUBLIC_SUPABASE_KEY,
+      EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS,
+      EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID,
     },
     owner: OWNER
   };
 };
 
-// Dynamically configure the app based on the environment.
-export const getDynamicAppConfig = (
-  environment: "development" | "preview" | "production"
-) => {
-  if (environment === "production") {
-    return {
-      name: APP_NAME,
-      bundleIdentifier: BUNDLE_IDENTIFIER,
-      packageName: PACKAGE_NAME,
-      icon: ICON,
-      adaptiveIcon: ADAPTIVE_ICON,
-      scheme: SCHEME,
-    };
-  }
-
-  if (environment === "preview") {
-    return {
-      name: `${APP_NAME} Preview`,
-      bundleIdentifier: `${BUNDLE_IDENTIFIER}.preview`,
-      packageName: `${PACKAGE_NAME}.preview`,
-      icon: ICON,
-      adaptiveIcon: ADAPTIVE_ICON,
-      scheme: `${SCHEME}-preview`,
-    };
-  }
-
-  // Development
-  return {
-    name: `${APP_NAME} Dev`,
-    bundleIdentifier: `${BUNDLE_IDENTIFIER}.dev`,
-    packageName: `${PACKAGE_NAME}.dev`,
-    icon: ICON,
-    adaptiveIcon: ADAPTIVE_ICON,
-    scheme: `${SCHEME}-dev`,
-  };
-};

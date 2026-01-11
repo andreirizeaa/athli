@@ -1,5 +1,7 @@
 import React, { useState, useImperativeHandle, forwardRef, useMemo } from 'react';
-import { StyleSheet, ScrollView } from 'react-native';
+import { StyleSheet, ScrollView, Alert } from 'react-native';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
@@ -14,6 +16,7 @@ type AddClientContentProps = {
 
 export type AddClientContentRef = {
   canComplete: boolean;
+  isLoading: boolean;
   handleComplete: () => Promise<void>;
 };
 
@@ -23,45 +26,63 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
   ({ onClose, onClientAdded, headerHeight = 56 }, ref) => {
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
+    const queryClient = useQueryClient();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [category, setCategory] = useState<ClientCategory>('online');
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Email validation regex
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const isEmailValid = email.trim() !== '' && emailRegex.test(email.trim());
 
-    const canComplete = name.trim() !== '' && isEmailValid;
+    // TanStack Query mutation
+    const addClientMutation = useMutation({
+      mutationFn: addClient,
+      onSuccess: () => {
+        // Invalidate clients query to refetch the list
+        queryClient.invalidateQueries({ queryKey: ['clients'] });
 
-    const handleComplete = async () => {
-      if (!canComplete || isSubmitting) return;
+        // Success haptic feedback
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      setIsSubmitting(true);
-      try {
-        await addClient({
-          firstName: name.trim(),
-          lastName: '',
-          email: email.trim(),
-          type: category,
-        });
+        // Reset form and close modal
         setName('');
         setEmail('');
         setCategory('online');
         onClose();
         onClientAdded?.();
-      } catch (error) {
-        console.error('Failed to add client:', error);
-        // Handle error (show toast, etc.)
-      } finally {
-        setIsSubmitting(false);
-      }
+      },
+      onError: (error: Error) => {
+        // Error haptic feedback
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+
+        // Show error alert
+        Alert.alert(
+          t('general.error'),
+          error.message || t('clients.addClientModal.errorAdding'),
+          [{ text: t('general.ok') }]
+        );
+      },
+    });
+
+    const canComplete = name.trim() !== '' && isEmailValid && !addClientMutation.isPending;
+
+    const handleComplete = async () => {
+      if (!canComplete) return;
+
+      addClientMutation.mutate({
+        firstName: name.trim(),
+        lastName: '',
+        email: email.trim(),
+        coachingType: category,
+      });
     };
 
     useImperativeHandle(ref, () => ({
       canComplete,
+      isLoading: addClientMutation.isPending,
       handleComplete,
-    }), [canComplete, isSubmitting]);
+    }), [canComplete, addClientMutation.isPending]);
 
     const categoryOptions = useMemo(() => [
       { value: 'online' as const, label: t('clients.addClientModal.online') },

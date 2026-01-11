@@ -20,6 +20,8 @@ export {
   type MonthlyOption,
   type ScheduleData,
 } from './useModalCallbacksStore';
+export { useLibraryStore } from './useLibraryStore';
+export { useClientsStore } from './useClientsStore';
 
 // Re-export useColorScheme from useThemeStore
 export { useColorScheme } from './useThemeStore';

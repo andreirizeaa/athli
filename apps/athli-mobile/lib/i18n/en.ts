@@ -122,6 +122,17 @@ export const en = {
     sections: {
       empty: 'No sections found',
     },
+    empty: {
+      workouts: 'No workouts created yet',
+      sections: 'No sections created yet',
+      programs: 'No programs created yet',
+      exercises: 'No exercises created yet',
+      checkIns: 'No check-ins created yet',
+      questionnaires: 'No questionnaires created yet',
+      metrics: 'No metrics created yet',
+      habits: 'No habits created yet',
+      files: 'No files uploaded yet',
+    },
     create: {
       workout: 'Create a workout',
       program: 'Create a program',
@@ -488,6 +499,7 @@ export const en = {
     searchPlaceholder: 'Search clients...',
     years: 'years',
     selectAtLeastOne: 'Please select at least one client',
+    empty: 'No clients yet',
     addClientModal: {
       title: 'Add Client',
       name: 'Name',

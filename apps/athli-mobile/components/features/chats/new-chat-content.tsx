@@ -45,7 +45,7 @@ export const NewChatContent = ({ onClose, headerHeight = 56 }: NewChatContentPro
       (client) =>
         client.firstName.toLowerCase().includes(query) ||
         client.lastName.toLowerCase().includes(query) ||
-        client.fullName.toLowerCase().includes(query)
+        client.name.toLowerCase().includes(query)
     );
   }, [clients, searchQuery]);
 
@@ -54,8 +54,8 @@ export const NewChatContent = ({ onClose, headerHeight = 56 }: NewChatContentPro
       const client = clients.find((c) => c.id === clientId);
       if (client) {
         await createNewChat(clientId, {
-          clientName: client.fullName,
-          clientAvatar: client.avatar,
+          clientName: client.name,
+          clientAvatar: client.avatarUrl,
         });
         onClose();
       }

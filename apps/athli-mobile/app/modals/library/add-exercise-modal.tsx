@@ -1,13 +1,15 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Platform, StyleSheet, Text, View, Keyboard, TouchableWithoutFeedback, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
-import { 
+import {
     EXERCISE_CATEGORY_OPTIONS,
     MUSCLE_GROUP_OPTIONS,
     EQUIPMENT_OPTIONS,
@@ -21,6 +23,7 @@ import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SelectInput } from '@/components/ui/form-inputs';
+import { createExercise, editExercise } from '@/services/coach/coach-exercise-service';
 
 // YouTube/Vimeo URL validation helper
 const isValidVideoUrl = (url: string): boolean => {
@@ -53,6 +56,11 @@ export default function AddExerciseModal() {
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
 
+    const params = useLocalSearchParams<{
+        editingId?: string;
+    }>();
+    const isEditing = !!params.editingId;
+
     // Form state
     const [title, setTitle] = useState('');
     const [category, setCategory] = useState<ExerciseCategory | null>(null);
@@ -61,6 +69,26 @@ export default function AddExerciseModal() {
     const [muscleGroup, setMuscleGroup] = useState<MuscleGroup | null>(null);
     const [equipment, setEquipment] = useState<Equipment | null>(null);
     const [modality, setModality] = useState<Modality | null>(null);
+
+    // TanStack Query
+    const queryClient = useQueryClient();
+
+    const saveMutation = useMutation({
+        mutationFn: isEditing ? editExercise : createExercise,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['exercises'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            handleClose();
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
 
     const handleDismissKeyboard = () => {
         Keyboard.dismiss();
@@ -122,10 +150,10 @@ export default function AddExerciseModal() {
         return {
             isFormValid: formValid,
             hasChanges: changes,
-            canComplete: formValid,
+            canComplete: formValid && !saveMutation.isPending,
             isVideoLinkValid: trimmedVideoLink.length === 0 || isValidVideoUrl(trimmedVideoLink),
         };
-    }, [title, category, videoLink, instructions, muscleGroup, equipment, modality]);
+    }, [title, category, videoLink, instructions, muscleGroup, equipment, modality, saveMutation.isPending]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -159,19 +187,22 @@ export default function AddExerciseModal() {
     const handleSave = useCallback(() => {
         if (!canComplete) return;
 
-        // TODO: Implement save functionality
-        // const exerciseData = {
-        //     title: title.trim(),
-        //     category,
-        //     videoLink: videoLink.trim(),
-        //     instructions: instructions.trim(),
-        //     muscleGroup,
-        //     equipment,
-        //     modality,
-        // };
+        const exerciseData: any = {
+            title: title.trim(),
+            category,
+            videoLink: videoLink.trim(),
+            instructions: instructions.trim(),
+            muscleGroup,
+            equipment,
+            modality,
+        };
 
-        handleClose();
-    }, [canComplete, title, category, videoLink, instructions, muscleGroup, equipment, modality, handleClose]);
+        if (isEditing && params.editingId) {
+            exerciseData.id = params.editingId;
+        }
+
+        saveMutation.mutate(exerciseData);
+    }, [canComplete, title, category, videoLink, instructions, muscleGroup, equipment, modality, isEditing, params.editingId, saveMutation]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -215,6 +246,7 @@ export default function AddExerciseModal() {
                                 size="md"
                                 variant={canComplete ? 'primary' : 'default'}
                                 disabled={!canComplete}
+                                loading={saveMutation.isPending}
                             />
                         </View>
                     </View>

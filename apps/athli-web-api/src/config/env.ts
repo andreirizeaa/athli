@@ -16,7 +16,8 @@ const envSchema = z.object({
   NEXT_PUBLIC_GOOGLE_CLIENT_SECRET: z.string().optional(),
   // Intercom
   NEXT_PUBLIC_INTERCOM_SECRET_KEY: z.string().optional(),
-  // CORS
+  // CORS - comma-separated list of allowed origins
+  // In development, local network IPs are automatically allowed for mobile apps
   CORS_ORIGIN: z.string().default('http://localhost:3001'),
   // Swagger docs protection
   SWAGGER_PASSWORD: z.string().optional(),

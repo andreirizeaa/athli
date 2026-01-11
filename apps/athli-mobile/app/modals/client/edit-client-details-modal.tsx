@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 
 import { useThemePreference, useColorScheme } from '@/stores';
 import { typography } from '@/constants/typography';
@@ -15,15 +17,13 @@ import {
   SelectInput,
   DateOfBirthInput,
   HeightInput,
-  GenderInput,
   CountrySelectorInput,
   PhoneNumberInput,
-  type GenderValue,
   type Country,
   type PhoneNumber,
 } from '@/components/ui/form-inputs';
 import { COUNTRIES } from '@/components/ui/form-inputs/countries-data';
-import { getClients, updateClient, type Client } from '@/services/client-service';
+import { getClients, updateClient, type Client, type UpdateClientData } from '@/services/client-service';
 import { hexToRgba } from '@/utils/colorUtils';
 
 // Helper to find country by name
@@ -60,20 +60,6 @@ const parsePhoneNumber = (phoneString: string): PhoneNumber | null => {
   };
 };
 
-// Helper to convert client gender to form gender value
-const mapClientGenderToFormGender = (gender: Client['gender']): GenderValue => {
-  switch (gender) {
-    case 'male':
-      return 'male';
-    case 'female':
-      return 'female';
-    case 'prefer-not-to-say':
-      return 'prefer-not-to-say';
-    default:
-      return null;
-  }
-};
-
 // Type for tracking original values
 type OriginalValues = {
   name: string;
@@ -81,7 +67,6 @@ type OriginalValues = {
   category: 'online' | 'in-person' | 'hybrid';
   dateOfBirth: Date | null;
   height: string;
-  gender: GenderValue;
   country: Country | null;
   phoneNumber: PhoneNumber | null;
 };
@@ -101,12 +86,38 @@ export default function EditClientDetailsModal() {
   const [category, setCategory] = useState<'online' | 'in-person' | 'hybrid'>('online');
   const [dateOfBirth, setDateOfBirth] = useState<Date | null>(null);
   const [height, setHeight] = useState('');
-  const [gender, setGender] = useState<GenderValue>(null);
   const [country, setCountry] = useState<Country | null>(null);
   const [phoneNumber, setPhoneNumber] = useState<PhoneNumber | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [originalValues, setOriginalValues] = useState<OriginalValues | null>(null);
+  const queryClient = useQueryClient();
+
+  // TanStack Query mutation for updating client
+  const updateMutation = useMutation({
+    mutationFn: (data: { id: string; updates: UpdateClientData }) =>
+      updateClient(data.id, data.updates),
+    onSuccess: () => {
+      // Invalidate clients query to refetch the list
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+
+      // Success haptic feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      // Close modal
+      handleClose();
+    },
+    onError: (error: Error) => {
+      // Error haptic feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+
+      // Show error alert
+      Alert.alert(
+        t('general.error'),
+        error.message || t('clients.editClientModal.errorUpdating'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
 
   const handleDismissKeyboard = () => {
     Keyboard.dismiss();
@@ -135,7 +146,6 @@ export default function EditClientDetailsModal() {
       else if (trimmedEmail !== originalValues.email.trim()) changes = true;
       else if (category !== originalValues.category) changes = true;
       else if (height.trim() !== originalValues.height.trim()) changes = true;
-      else if (gender !== originalValues.gender) changes = true;
       else {
         // Date comparison
         const currentDobTime = dateOfBirth?.getTime() ?? null;
@@ -163,9 +173,9 @@ export default function EditClientDetailsModal() {
     return {
       isFormValid: formValid,
       hasChanges: changes,
-      canComplete: formValid && changes,
+      canComplete: formValid && changes && !updateMutation.isPending,
     };
-  }, [name, email, category, dateOfBirth, height, gender, country, phoneNumber, originalValues]);
+  }, [name, email, category, dateOfBirth, height, country, phoneNumber, originalValues, updateMutation.isPending]);
 
   // Load client data
   useEffect(() => {
@@ -185,11 +195,7 @@ export default function EditClientDetailsModal() {
           const fullName = [foundClient.firstName, foundClient.lastName].filter(Boolean).join(' ');
           setName(fullName || '');
           setEmail(foundClient.email || '');
-          setCategory(foundClient.type || 'online');
-
-          // Set gender
-          const mappedGender = mapClientGenderToFormGender(foundClient.gender);
-          setGender(mappedGender);
+          setCategory(foundClient.coachingType || 'online');
 
           // Set country
           const foundCountry = findCountryByName(foundClient.country);
@@ -199,8 +205,8 @@ export default function EditClientDetailsModal() {
           const parsedPhone = parsePhoneNumber(foundClient.phone);
           setPhoneNumber(parsedPhone);
 
-          // Calculate and set date of birth from age (approximate)
-          if (foundClient.age > 0) {
+          // Calculate and set date of birth from age (approximate) - add null check
+          if (foundClient.age !== null && foundClient.age > 0) {
             const today = new Date();
             const birthYear = today.getFullYear() - foundClient.age;
             const dob = new Date(birthYear, 0, 1); // January 1st of birth year
@@ -208,17 +214,16 @@ export default function EditClientDetailsModal() {
           }
 
           // Store original values for change detection
-          const calculatedDob = foundClient.age > 0
+          const calculatedDob = foundClient.age !== null && foundClient.age > 0
             ? new Date(new Date().getFullYear() - foundClient.age, 0, 1)
             : null;
 
           setOriginalValues({
             name: fullName || '',
             email: foundClient.email || '',
-            category: foundClient.type || 'online',
+            category: foundClient.coachingType || 'online',
             dateOfBirth: calculatedDob,
-            height: '', // Height not stored in client, so original is empty
-            gender: mappedGender,
+            height: foundClient.height || '', // Height can be null
             country: foundCountry,
             phoneNumber: parsedPhone,
           });
@@ -262,24 +267,22 @@ export default function EditClientDetailsModal() {
     }
   }, [canComplete, handleClose, t]);
 
-  const handleSave = async () => {
-    if (!canComplete || isSubmitting || !client) return;
+  const handleSave = () => {
+    if (!canComplete || !client) return;
 
-    setIsSubmitting(true);
-    try {
-      await updateClient(client.id, {
-        firstName: name.trim(),
-        lastName: '',
+    const nameParts = name.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    updateMutation.mutate({
+      id: client.id,
+      updates: {
+        firstName,
+        lastName,
         email: email.trim(),
-        type: category,
-      });
-      handleClose();
-    } catch (error) {
-      console.error('Failed to update client:', error);
-      // Handle error (show toast, etc.)
-    } finally {
-      setIsSubmitting(false);
-    }
+        coachingType: category,
+      },
+    });
   };
 
   const categoryOptions = useMemo(() => [
@@ -370,6 +373,7 @@ export default function EditClientDetailsModal() {
                 size="md"
                 variant={canComplete ? 'primary' : 'default'}
                 disabled={!canComplete}
+                loading={updateMutation.isPending}
               />
             </View>
           </View>
@@ -417,18 +421,6 @@ export default function EditClientDetailsModal() {
               value={height}
               onChangeText={setHeight}
               placeholder={t('clients.editClientModal.heightPlaceholder')}
-            />
-
-            <GenderInput
-              label={t('clients.editClientModal.gender')}
-              value={gender}
-              onChange={setGender}
-              placeholder={t('clients.editClientModal.genderPlaceholder')}
-              options={{
-                male: t('clients.editClientModal.genderMale'),
-                female: t('clients.editClientModal.genderFemale'),
-                preferNotToSay: t('clients.editClientModal.genderPreferNotToSay'),
-              }}
             />
 
             <CountrySelectorInput

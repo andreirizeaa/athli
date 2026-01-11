@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Platform, StyleSheet, Text, View, Keyboard, TouchableWithoutFeedback, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
@@ -18,6 +20,7 @@ import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SelectInput } from '@/components/ui/form-inputs';
 import { hexToRgba } from '@/utils/colorUtils';
+import { createWorkout, editWorkout } from '@/services/coach/coach-workout-service';
 
 export default function AddWorkoutModal() {
     const router = useRouter();
@@ -26,11 +29,36 @@ export default function AddWorkoutModal() {
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
 
+    const params = useLocalSearchParams<{
+        editingId?: string;
+    }>();
+    const isEditing = !!params.editingId;
+
     // Form state
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [workoutType, setWorkoutType] = useState<WorkoutType | null>(null);
     const [difficulty, setDifficulty] = useState<DifficultyLevel | null>(null);
+
+    // TanStack Query
+    const queryClient = useQueryClient();
+
+    const saveMutation = useMutation({
+        mutationFn: isEditing ? editWorkout : createWorkout,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['workouts'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            handleClose();
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
 
     const handleDismissKeyboard = () => {
         Keyboard.dismiss();
@@ -68,9 +96,9 @@ export default function AddWorkoutModal() {
         return {
             isFormValid: formValid,
             hasChanges: changes,
-            canComplete: formValid,
+            canComplete: formValid && !saveMutation.isPending,
         };
-    }, [name, description, workoutType, difficulty]);
+    }, [name, description, workoutType, difficulty, saveMutation.isPending]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -104,16 +132,19 @@ export default function AddWorkoutModal() {
     const handleSave = useCallback(() => {
         if (!canComplete) return;
 
-        // TODO: Implement save functionality
-        // const workoutData = {
-        //     name: name.trim(),
-        //     description: description.trim(),
-        //     type: workoutType,
-        //     difficulty: difficulty,
-        // };
+        const workoutData: any = {
+            name: name.trim(),
+            description: description.trim(),
+            type: workoutType,
+            difficulty: difficulty,
+        };
 
-        handleClose();
-    }, [canComplete, name, description, workoutType, difficulty, handleClose]);
+        if (isEditing && params.editingId) {
+            workoutData.id = params.editingId;
+        }
+
+        saveMutation.mutate(workoutData);
+    }, [canComplete, name, description, workoutType, difficulty, isEditing, params.editingId, saveMutation]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -158,6 +189,7 @@ export default function AddWorkoutModal() {
                                 size="md"
                                 variant={canComplete ? 'primary' : 'default'}
                                 disabled={!canComplete}
+                                loading={saveMutation.isPending}
                             />
                         </View>
                     </View>

@@ -12,6 +12,7 @@ import Animated, {
     Easing,
     runOnJS,
 } from 'react-native-reanimated';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
@@ -26,6 +27,7 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
+import { createMetric, updateMetric } from '@/services/coach/coach-metric-service';
 
 
 type TabKey = 'new' | 'templates';
@@ -58,6 +60,26 @@ export default function AddMetricModal() {
     const [name, setName] = useState(params.name || '');
     const [unit, setUnit] = useState(params.unit || '');
     const [description, setDescription] = useState(params.description || '');
+
+    // TanStack Query
+    const queryClient = useQueryClient();
+
+    const saveMutation = useMutation({
+        mutationFn: isEditing ? updateMetric : createMetric,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['metrics'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            handleClose();
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
 
     // Search state for templates
     const [searchQuery, setSearchQuery] = useState('');
@@ -167,9 +189,9 @@ export default function AddMetricModal() {
 
         return {
             hasChanges: changes,
-            canComplete: formValid,
+            canComplete: formValid && !saveMutation.isPending,
         };
-    }, [name, unit, description, hasLogFrequency, isEditing, params]);
+    }, [name, unit, description, hasLogFrequency, saveMutation.isPending, isEditing, params]);
 
     const animateUnderline = (tabKey: TabKey) => {
         const layout = tabLayoutsRef.current[tabKey];
@@ -280,15 +302,22 @@ export default function AddMetricModal() {
     const handleSave = useCallback(() => {
         if (!canComplete) return;
 
-        // TODO: Implement save functionality
-        // const metricData = {
-        //     name: name.trim(),
-        //     unit: unit.trim(),
-        //     description: description.trim(),
-        // };
+        const metricData: any = {
+            name: name.trim(),
+            unit: unit.trim(),
+            description: description.trim(),
+        };
 
-        handleClose();
-    }, [canComplete, name, unit, description, handleClose]);
+        if (scheduleData) {
+            metricData.schedule = scheduleData;
+        }
+
+        if (isEditing && params.editingId) {
+            metricData.id = params.editingId;
+        }
+
+        saveMutation.mutate(metricData);
+    }, [canComplete, name, unit, description, scheduleData, isEditing, params.editingId, saveMutation]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -331,6 +360,7 @@ export default function AddMetricModal() {
                         size="md"
                         variant={canComplete ? 'primary' : 'default'}
                         disabled={!canComplete}
+                        loading={saveMutation.isPending}
                     />
                 </View>
             </View>

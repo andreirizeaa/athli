@@ -135,8 +135,8 @@ export default function ClientDetailScreen() {
       // If no chat exists, create a new one
       if (!chat) {
         chat = await createNewChat(client.id, {
-          clientName: client.fullName,
-          clientAvatar: client.avatar,
+          clientName: client.name,
+          clientAvatar: client.avatarUrl,
         });
       }
 
@@ -189,7 +189,7 @@ export default function ClientDetailScreen() {
           <View style={styles.avatarContainer}>
             <View
               style={[
-                styles.avatar,
+                styles.avatarCircle,
                 styles.avatarPlaceholder,
                 { width: 42, height: 42, borderRadius: 21 },
               ]}
@@ -225,18 +225,25 @@ export default function ClientDetailScreen() {
           style={{ marginRight: 4 }}
         />
         <View style={styles.avatarContainer}>
-          {client?.avatar ? (
-            <Image source={{ uri: client.avatar }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Text style={{ color: themeColors.mutedText }}>
-                {client?.fullName?.charAt(0)}
-              </Text>
-            </View>
-          )}
+          <View style={styles.avatarCircle}>
+            {client?.avatarUrl ? (
+              <Image
+                source={{ uri: client.avatarUrl }}
+                style={styles.avatarImage}
+                contentFit="cover"
+                contentPosition="center"
+              />
+            ) : (
+              <View style={[styles.avatarImage, styles.avatarPlaceholder]}>
+                <Text style={{ color: themeColors.mutedText }}>
+                  {client?.name?.charAt(0)}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
         <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
-          {client?.fullName || t('clientDetail.loading')}
+          {client?.name || t('clientDetail.loading')}
         </Text>
         <View style={styles.headerActions}>
           <IconButton
@@ -649,11 +656,22 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     marginRight: 12,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  avatar: {
+  avatarCircle: {
     width: 42,
     height: 42,
-    borderRadius: 22,
+    borderRadius: 21,
+    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
+  },
+  avatarImage: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
   },
   avatarPlaceholder: {
     backgroundColor: '#e0e0e0',

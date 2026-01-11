@@ -1,0 +1,71 @@
+import axiosInstance from './axios';
+
+/**
+ * URL and API configuration
+ */
+export const API_URL = axiosInstance.defaults.baseURL;
+
+/**
+ * Common API Response wrapper
+ */
+export interface ApiResponse<T = any> {
+  success: boolean;
+  message: string;
+  data?: T;
+}
+
+/**
+ * Enhanced fetch options for the API client
+ */
+export interface ApiRequestOptions extends RequestInit {
+  authenticated?: boolean;
+  params?: Record<string, any>;
+}
+
+/**
+ * Unified API fetch utility using Axios
+ * - Automatically injects JWT token (via axios interceptor)
+ * - Handles JSON serialization/deserialization
+ * - Provides unified error handling
+ */
+export async function apiFetch<T = any>(
+  endpoint: string,
+  options: ApiRequestOptions = {}
+): Promise<T> {
+  console.log('[apiFetch] Called with:', endpoint, options.method || 'GET');
+
+  const { authenticated = true, params, ...fetchOptions } = options;
+  const body = fetchOptions.body;
+
+  const headers = {
+    ...(fetchOptions.headers as any),
+  };
+
+  // If body is NOT FormData, default Content-Type to application/json
+  if (body && !(body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  try {
+    console.log('[apiFetch] Making axios request...');
+    const response = await axiosInstance.request<T>({
+      url: endpoint,
+      method: fetchOptions.method || 'GET',
+      data: body,
+      params: params,
+      headers: headers,
+    });
+
+    console.log('[apiFetch] Success:', endpoint, response.status);
+    // Axios wraps the response in data, so response.data is the actual payload
+    return response.data;
+  } catch (error: any) {
+    console.error('[apiFetch] Error:', endpoint, error.message);
+    if (error.response && error.response.data) {
+      // If the server returned an error message, throw that
+      const serverError = error.response.data;
+      throw new Error(serverError.message || `API Error: ${error.response.status}`);
+    }
+    throw error;
+  }
+}
