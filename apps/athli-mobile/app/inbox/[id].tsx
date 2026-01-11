@@ -117,8 +117,9 @@ export default function InboxDetailScreen() {
     []
   );
 
-  // Fixed toolbar height - container has static bottom padding for toolbar
-  const toolbarHeight = 60 + insets.bottom;
+  // Dynamic toolbar height - tracks actual height including reply preview and attachment picker
+  const [toolbarHeight, setToolbarHeight] = useState(60 + insets.bottom);
+  const prevToolbarHeightRef = useRef(toolbarHeight);
 
   const [coach, setCoach] = useState<Coach | null>(() => {
     if (coachParam) {
@@ -719,6 +720,10 @@ export default function InboxDetailScreen() {
     );
   };
 
+  const handleToolbarHeightChange = (height: number) => {
+    setToolbarHeight(height);
+  };
+
   if (isLoading) {
     return <ChatLoadingState />;
   }
@@ -788,6 +793,7 @@ export default function InboxDetailScreen() {
         onCancelReply={handleCancelReply}
         bottomInset={insets.bottom}
         keyboardHeight={keyboardHeight}
+        onToolbarHeightChange={handleToolbarHeightChange}
       />
 
       <MessageReactionsSheet
