@@ -6,14 +6,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
 import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';
 import { PressableScale } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useModalCallbacks } from '@/contexts/modal-callbacks';
+import { useModalCallbacks } from '@/stores';
 import { ExerciseBuilderCard } from '@/components/features/workout/exercise-builder-card';
 import { hexToRgba } from '@/utils/colorUtils';
 import { type SectionType, SECTION_TYPES } from '@/constants/training';

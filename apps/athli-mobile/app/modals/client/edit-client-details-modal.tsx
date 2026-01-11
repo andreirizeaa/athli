@@ -6,9 +6,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
+import { useThemePreference, useColorScheme } from '@/stores';
 import { typography } from '@/constants/typography';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import {
   InputBox,

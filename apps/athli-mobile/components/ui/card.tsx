@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 
 export interface CardProps {
   children: React.ReactNode;

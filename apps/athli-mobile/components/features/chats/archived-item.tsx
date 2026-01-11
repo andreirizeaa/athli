@@ -3,8 +3,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Archive } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { PressableOpacity } from 'pressto';
 

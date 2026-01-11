@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColorScheme } from '@/contexts/useColorScheme';
+import { useColorScheme } from '@/stores';
 
 type StatusBarBlurProps = {
   intensity?: number;

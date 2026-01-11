@@ -4,10 +4,10 @@ import { PressableOpacity } from 'pressto';
 import { BlurView } from 'expo-blur';
 import { Camera, Mic, Plus, Send, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { useColorScheme } from '@/contexts/useColorScheme';
+import { useColorScheme } from '@/stores';
 
 import { iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { MessageInputBar } from '@/components/features/message/message-input-bar';

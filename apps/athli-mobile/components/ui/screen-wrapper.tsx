@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { View, ScrollView, StyleSheet, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 
 type ScreenWrapperProps = {

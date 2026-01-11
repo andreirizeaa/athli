@@ -2,8 +2,8 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 
 export const ExercisesTab = () => {
   const { colors: themeColors } = useThemePreference();

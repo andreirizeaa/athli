@@ -8,8 +8,8 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
 import { SECTION_TYPES, type SectionType } from '@/constants/training';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useModalCallbacks } from '@/contexts/modal-callbacks';
+import { useThemePreference } from '@/stores';
+import { useModalCallbacks } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
 import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';

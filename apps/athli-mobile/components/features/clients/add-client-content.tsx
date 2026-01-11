@@ -1,8 +1,8 @@
 import React, { useState, useImperativeHandle, forwardRef, useMemo } from 'react';
 import { StyleSheet, ScrollView } from 'react-native';
 
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { addClient } from '@/services/client-service';
 import { InputBox, ButtonTabGroup } from '@/components/ui/form-inputs';
 

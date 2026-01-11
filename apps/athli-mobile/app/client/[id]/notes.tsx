@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 

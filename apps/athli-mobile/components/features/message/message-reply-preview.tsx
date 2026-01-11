@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { Camera, Video, FileText } from 'lucide-react-native';
-import { useColorScheme } from '@/contexts/useColorScheme';
+import { useColorScheme } from '@/stores';
 import { type ThemeColors } from '@/constants/theme';
 import { type ChatMessage } from '@/services/chats-service';
 import { tintHex, shadeHex, isLightColor } from '@/utils/colorUtils';

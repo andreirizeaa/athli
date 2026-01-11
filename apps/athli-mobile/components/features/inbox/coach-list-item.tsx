@@ -5,8 +5,8 @@ import { Archive, MailCheck } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
-import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useColorScheme, useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { type Coach } from '@/services/inbox-service';
 

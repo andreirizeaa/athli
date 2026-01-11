@@ -5,7 +5,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { PlatformIcon } from './platform-icon';
 import { iconSizes } from '@/constants/typography';
 import { createPresetPalette } from '@/constants/theme';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 
 type IconButtonSize = 'sm' | 'md' | 'lg';
 

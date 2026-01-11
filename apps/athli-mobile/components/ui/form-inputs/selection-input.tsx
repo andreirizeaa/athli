@@ -4,7 +4,7 @@ import { ChevronRight } from 'lucide-react-native';
 import { PressableOpacity } from 'pressto';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 
 type SelectionInputProps = {
     label: string;

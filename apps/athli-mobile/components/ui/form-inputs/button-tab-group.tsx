@@ -9,7 +9,7 @@ import {
 import { PressableOpacity } from 'pressto';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 
 type ButtonTabGroupOption<T extends string> = {
   value: T;

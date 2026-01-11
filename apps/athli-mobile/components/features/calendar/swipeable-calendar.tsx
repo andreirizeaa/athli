@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { typography } from '@/constants/typography';
 import { generateWeeks, getWeekIndexForDate, getWeekMonthYear } from '@/lib/utils/calendar-utils';
 

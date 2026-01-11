@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, Image } from 'react-native';
 import { PressableOpacity } from 'pressto';
-import { useColorScheme } from '@/contexts/useColorScheme';
+import { useColorScheme } from '@/stores';
 import { type ThemeColors } from '@/constants/theme';
 import { type DocumentAttachment } from '@/services/chats-service';
 import { tintHex, shadeHex, isLightColor } from '@/utils/colorUtils';

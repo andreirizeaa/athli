@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { X, Plus, Trash2 } from 'lucide-react-native';
 
 import { iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { AttachmentPreviewToolbar } from '@/components/features/camera/attachment-preview-toolbar';

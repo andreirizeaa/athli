@@ -8,7 +8,7 @@ import { ChevronRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 
 type PlatformIconProps = {
   sf: string;

@@ -7,8 +7,8 @@ import { Check, Ellipsis, MailCheck, CheckCircle2, Archive, Trash2 } from 'lucid
 
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { SearchBar } from '@/components/ui/search-bar';
 import { ChatListItem } from '@/components/features/chats/chat-list-item';
 import { ArchivedItem } from '@/components/features/chats/archived-item';

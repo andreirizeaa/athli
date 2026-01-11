@@ -21,14 +21,14 @@ import { typography } from '@/constants/typography';
 import { type ThemeColors } from '@/constants/theme';
 import { type ChatMessage, reactTo } from '@/services/chats-service';
 import { type DropdownMenuOption, ContextMenuWrapper } from '@/components/ui/dropdown-menu';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { MessageReplyPreview } from '@/components/features/message/message-reply-preview';
 import { MessageDocumentPreview } from '@/components/features/message/message-document-preview';
 import { MessageImagePreview } from '@/components/features/message/message-image-preview';
 import { MessageVideoPreview } from '@/components/features/message/message-video-preview';
 import { MessageAudioPreview } from '@/components/features/message/message-audio-preview';
-import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
+import { useColorScheme, useThemePreference } from '@/stores';
 
 interface MessageListProps {
   messages: ChatMessage[];

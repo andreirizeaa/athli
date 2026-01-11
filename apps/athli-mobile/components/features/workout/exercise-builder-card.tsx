@@ -6,12 +6,12 @@ import { PressableScale } from 'pressto';
 
 import { useRouter } from 'expo-router';
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { InputBox } from '@/components/ui/form-inputs';
-import { useModalCallbacks } from '@/contexts/modal-callbacks';
+import { useModalCallbacks } from '@/stores';
 import { COLUMN_OPTIONS, HEART_RATE_ZONE_OPTIONS, type WorkoutExercise, type ExerciseSet } from './types';
 import { type ExerciseValidationError, hasSetError, hasTempoError } from './validation';
 

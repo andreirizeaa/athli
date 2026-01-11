@@ -5,7 +5,7 @@ import {
   createPresetPalette,
   type ThemeColors,
 } from '@/constants/theme';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 
 type DarkModeContextValue = {
   colors: ThemeColors;

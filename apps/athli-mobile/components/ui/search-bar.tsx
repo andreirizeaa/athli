@@ -4,7 +4,7 @@ import { PressableOpacity } from 'pressto';
 import { Search } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
-import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
+import { useColorScheme, useThemePreference } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 
 type SearchBarProps = {

@@ -13,8 +13,8 @@ import {
     type WorkoutType,
     type DifficultyLevel,
 } from '@/constants/training';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference, useColorScheme } from '@/stores';
+import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SelectInput } from '@/components/ui/form-inputs';
 import { hexToRgba } from '@/utils/colorUtils';

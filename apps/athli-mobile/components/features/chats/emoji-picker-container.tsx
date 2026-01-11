@@ -4,7 +4,7 @@ import { PressableOpacity } from 'pressto';
 import { LinearGradient } from 'expo-linear-gradient';
 import { type EmojiType } from 'rn-emoji-keyboard';
 
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { Plus } from 'lucide-react-native';
 import { type ChatMessage, reactTo } from '@/services/chats-service';

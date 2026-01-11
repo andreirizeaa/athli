@@ -2,10 +2,10 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { X, Camera, Video, FileText } from 'lucide-react-native';
-import { useColorScheme } from '@/contexts/useColorScheme';
+import { useColorScheme } from '@/stores';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { type ChatMessage } from '@/services/chats-service';
