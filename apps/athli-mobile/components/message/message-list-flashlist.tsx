@@ -14,6 +14,7 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { Reply, Copy, Pencil, Trash2, Send, CheckCircle } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import Reanimated, { useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 
 import { typography } from '@/constants/typography';
@@ -341,18 +342,19 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
   onHorizontalDragStart?: () => void;
   onHorizontalDragEnd?: () => void;
 }) {
-  const MAX = 84;
-  const THRESHOLD = 50; // pixels to trigger reply
+  const MAX = 100;
+  const THRESHOLD = 60; // pixels to trigger reply
   const translateX = useRef(new Animated.Value(0)).current;
   const didCancelRef = useRef(false);
   const currentDistanceRef = useRef(0);
   const isDraggingRef = useRef(false);
+  const hapticFiredRef = useRef(false);
 
   const iconOpacity = useMemo(
     () =>
       translateX.interpolate({
-        inputRange: [0, 18, MAX],
-        outputRange: [0, 0.65, 1],
+        inputRange: [0, 15, MAX],
+        outputRange: [0, 0.7, 1],
         extrapolate: 'clamp',
       }),
     [translateX]
@@ -361,8 +363,8 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
   const iconScale = useMemo(
     () =>
       translateX.interpolate({
-        inputRange: [0, MAX],
-        outputRange: [0.9, 1],
+        inputRange: [0, THRESHOLD, MAX],
+        outputRange: [0.8, 1.1, 1.15],
         extrapolate: 'clamp',
       }),
     [translateX]
@@ -374,28 +376,45 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
         onStartShouldSetPanResponder: () => false,
         onMoveShouldSetPanResponder: (_evt, g) => {
           const { dx, dy } = g;
-          if (Math.abs(dx) < 6) return false;
-          if (Math.abs(dx) < Math.abs(dy)) return false; // let vertical scroll win
-          if (dx <= 0) return false; // swipe-right only for now
+          // Require minimum horizontal movement
+          if (Math.abs(dx) < 5) return false;
+          // Must be primarily horizontal - horizontal movement must be at least 2x vertical
+          if (Math.abs(dx) < Math.abs(dy) * 2) return false;
+          // Only trigger on right swipe
+          if (dx <= 0) return false;
           return true;
         },
         onPanResponderGrant: () => {
           translateX.stopAnimation();
           didCancelRef.current = false;
           currentDistanceRef.current = 0;
+          hapticFiredRef.current = false;
           if (!isDraggingRef.current) {
             isDraggingRef.current = true;
             onHorizontalDragStart?.();
           }
         },
+        onShouldBlockNativeResponder: () => true,
         onPanResponderMove: (_evt, g) => {
           if (!didCancelRef.current) {
             onCancelLongPress();
             didCancelRef.current = true;
           }
-          const clamped = Math.min(MAX, Math.max(0, g.dx));
+
+          // Allow swipe based on message alignment
+          const rawDx = g.dx;
+          const clamped = Math.min(MAX, Math.max(0, Math.abs(rawDx)));
+
           currentDistanceRef.current = clamped;
           translateX.setValue(clamped);
+
+          // Haptic feedback when crossing threshold
+          if (clamped >= THRESHOLD && !hapticFiredRef.current) {
+            hapticFiredRef.current = true;
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          } else if (clamped < THRESHOLD && hapticFiredRef.current) {
+            hapticFiredRef.current = false;
+          }
         },
         onPanResponderRelease: () => {
           const distance = currentDistanceRef.current;
@@ -408,12 +427,13 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
           Animated.spring(translateX, {
             toValue: 0,
             useNativeDriver: true,
-            tension: 100,
-            friction: 8,
+            tension: 200,
+            friction: 35,
             velocity: 0,
           }).start();
 
           currentDistanceRef.current = 0;
+          hapticFiredRef.current = false;
           if (isDraggingRef.current) {
             isDraggingRef.current = false;
             onHorizontalDragEnd?.();
@@ -423,17 +443,21 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
           Animated.spring(translateX, {
             toValue: 0,
             useNativeDriver: true,
-            tension: 100,
-            friction: 8,
+            tension: 200,
+            friction: 35,
             velocity: 0,
           }).start();
           currentDistanceRef.current = 0;
+          hapticFiredRef.current = false;
           if (isDraggingRef.current) {
             isDraggingRef.current = false;
             onHorizontalDragEnd?.();
           }
         },
-        onPanResponderTerminationRequest: () => false,
+        onPanResponderTerminationRequest: () => {
+          // Prevent termination if we're actively dragging
+          return !isDraggingRef.current;
+        },
       }),
     [onCancelLongPress, translateX, onReply, message, onHorizontalDragStart, onHorizontalDragEnd]
   );
@@ -456,12 +480,14 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
           },
         ]}
       >
-        <PlatformIcon
-          sf="arrowshape.turn.up.left"
-          IconComponent={Reply}
-          size={18}
-          color={themeColors.mutedText}
-        />
+        <View style={[styles.replyIconContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
+          <PlatformIcon
+            sf="arrowshape.turn.up.left.fill"
+            IconComponent={Reply}
+            size={16}
+            color={themeColors.primary}
+          />
+        </View>
       </Animated.View>
 
       {/* Bubble */}
@@ -618,6 +644,9 @@ export const MessageList = ({
   };
 
   const hideStickySoon = () => {
+    // Don't hide if horizontal drag is active
+    if (isHorizontalDragActive) return;
+
     if (hideStickyTimerRef.current) clearTimeout(hideStickyTimerRef.current);
 
     hideStickyTimerRef.current = setTimeout(() => {
@@ -1140,6 +1169,7 @@ const styles = StyleSheet.create({
   messageText: {
     ...typography.p3,
     fontSize: 16,
+    fontWeight: '400',
     textAlign: 'left',
     includeFontPadding: false, // Android
   },
@@ -1151,7 +1181,7 @@ const styles = StyleSheet.create({
   metaOverlay: {
     position: 'absolute',
     right: 0,
-    bottom: 0,
+    bottom: -4,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
@@ -1258,9 +1288,17 @@ const styles = StyleSheet.create({
   },
   replyUnderlay: {
     position: 'absolute',
-    left: 8,
+    left: 16,
     top: 0,
     bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  replyIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 0,
     justifyContent: 'center',
     alignItems: 'center',
   },
