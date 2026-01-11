@@ -17,9 +17,9 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
 import { defaultMetrics, type DefaultMetric } from '@/constants/metrics';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { useModalCallbacks, type ScheduleData } from '@/contexts/modal-callbacks';
+import { useThemePreference, useColorScheme } from '@/stores';
+import { useTranslations } from '@/stores';
+import { useModalCallbacks, type ScheduleData } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
 import { Card } from '@/components/ui/card';

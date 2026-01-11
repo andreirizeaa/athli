@@ -10,8 +10,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference, useColorScheme } from '@/stores';
+import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { InputBox } from '@/components/ui/form-inputs';

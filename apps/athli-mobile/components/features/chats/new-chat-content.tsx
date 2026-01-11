@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { useTranslations } from '@/contexts/useTranslations';
+import { useTranslations } from '@/stores';
 import { SearchBar } from '@/components/ui/search-bar';
 import { ClientsList } from '@/components/features/clients/clients-list';
 import { getClients, type Client } from '@/services/client-service';

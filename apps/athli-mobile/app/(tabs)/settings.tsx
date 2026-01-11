@@ -21,9 +21,9 @@ import {
 } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useAppView } from '@/contexts/useAppView';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useAppView } from '@/stores';
+import { useTranslations } from '@/stores';
 import { Card } from '@/components/ui/card';
 import { SettingsOption } from '@/components/ui/settings-option';
 import { Separator } from '@/components/ui/separator';

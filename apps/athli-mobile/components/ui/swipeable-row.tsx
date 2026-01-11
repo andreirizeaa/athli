@@ -6,8 +6,8 @@ import { Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 
 type SwipeableRowProps = {
     children: React.ReactNode;

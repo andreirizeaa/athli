@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 
 interface TimeGridProps {
   selectedDate: Date | null;

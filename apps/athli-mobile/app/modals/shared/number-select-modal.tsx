@@ -6,9 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { useModalCallbacks } from '@/contexts/modal-callbacks';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
+import { useModalCallbacks } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';

@@ -24,9 +24,9 @@ import {
 import * as FileSystem from 'expo-file-system/legacy';
 import { type IWaveformRef, PlayerState, FinishMode } from '@/components/features/audio';
 
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
+import { useThemePreference, useColorScheme } from '@/stores';
 import { hexToRgba } from '@/utils/colorUtils';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useTranslations } from '@/stores';
 import { type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { MessageList } from '@/components/features/message/message-list-flashlist';
 import { MessageReactionsSheet } from '@/components/features/message/message-reactions-sheet';

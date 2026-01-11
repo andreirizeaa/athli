@@ -6,13 +6,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference, useColorScheme } from '@/stores';
+import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SelectionInput } from '@/components/ui/form-inputs';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { hexToRgba } from '@/utils/colorUtils';
-import { useModalCallbacks } from '@/contexts/modal-callbacks';
+import { useModalCallbacks } from '@/stores';
 
 export default function EditClientGoalModal() {
     const router = useRouter();

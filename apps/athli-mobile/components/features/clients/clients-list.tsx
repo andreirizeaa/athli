@@ -5,8 +5,8 @@ import { FlashList } from '@shopify/flash-list';
 import { ChevronRight } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 
 import type { Client } from '@/services/client-service';
 

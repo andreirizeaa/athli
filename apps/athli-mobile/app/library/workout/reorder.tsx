@@ -19,11 +19,11 @@ import {
 import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useTranslations } from '@/stores';
 import { hexToRgba } from '@/utils/colorUtils';
-import { useModalCallbacks } from '@/contexts/modal-callbacks';
+import { useModalCallbacks } from '@/stores';
 import {
     type BuilderItem,
     type BuilderSection,

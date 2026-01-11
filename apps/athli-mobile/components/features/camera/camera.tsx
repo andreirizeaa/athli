@@ -11,7 +11,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 
 import { iconSizes, typography } from '@/constants/typography';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
+import { useThemePreference, useColorScheme } from '@/stores';
 import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';

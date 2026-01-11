@@ -15,7 +15,7 @@ import { X, Check } from 'lucide-react-native';
 import { AsYouType } from 'libphonenumber-js';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';

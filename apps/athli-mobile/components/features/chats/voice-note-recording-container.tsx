@@ -7,7 +7,7 @@ import { WaveformPlayer, type IWaveformRef, PlayerState } from '@/components/fea
 
 import { iconSizes } from '@/constants/typography';
 import { PlatformIcon } from '@/components/ui/platform-icon';
-import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
+import { useColorScheme, useThemePreference } from '@/stores';
 import { hexToRgba } from '@/utils/colorUtils';
 
 type VoiceNoteRecordingContainerProps = {

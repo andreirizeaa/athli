@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, Pressable, Platform, Animated } from 'react-nat
 import { PressableOpacity } from 'pressto';
 import { Dumbbell, CalendarX } from 'lucide-react-native';
 
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { typography, iconSizes } from '@/constants/typography';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 

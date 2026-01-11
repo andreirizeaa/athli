@@ -13,7 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { X, ChevronDown, Check } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';

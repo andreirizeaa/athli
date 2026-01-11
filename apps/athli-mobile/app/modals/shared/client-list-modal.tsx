@@ -6,9 +6,9 @@ import { X, UserPlus, Check } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { useModalCallbacks } from '@/contexts/modal-callbacks';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
+import { useModalCallbacks } from '@/stores';
 import { SearchBar } from '@/components/ui/search-bar';
 import { ClientSelectionList } from '@/components/features/clients/client-selection-list';
 import { type Client } from '@/services/client-service';

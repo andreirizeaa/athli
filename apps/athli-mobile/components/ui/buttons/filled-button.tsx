@@ -3,7 +3,7 @@ import { StyleSheet, Text, ViewStyle, TextStyle } from 'react-native';
 import { PressableOpacity } from 'pressto';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 
 type FilledButtonProps = {
   label: string;

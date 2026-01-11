@@ -17,8 +17,8 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
 import { formTemplates, type FormTemplate } from '@/constants/forms';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference, useColorScheme } from '@/stores';
+import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
 import { Separator } from '@/components/ui/separator';

@@ -24,9 +24,9 @@ import { THEMES } from '@/constants/theme';
 import {
   useThemePreference,
   type ColorSchemePreference,
-} from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { useUnits, type UnitsPreference } from '@/contexts/useUnits';
+} from '@/stores';
+import { useTranslations } from '@/stores';
+import { useUnits, type UnitsPreference } from '@/stores';
 
 import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';

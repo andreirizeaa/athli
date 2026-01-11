@@ -13,8 +13,8 @@ import { ChevronLeft, Pencil, MessageCircle, Settings, ChevronRight, Plus, BarCh
 import * as Haptics from 'expo-haptics';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { getClients, type Client } from '@/services/client-service';
 import {
   getChats,

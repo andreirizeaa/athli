@@ -13,8 +13,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { LANGUAGES } from '@/constants/languages';
 import { IconButton } from '@/components/ui/icon-button';
 import { Separator } from '@/components/ui/separator';

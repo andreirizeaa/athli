@@ -23,9 +23,9 @@ import {
     type HabitPeriod,
 } from '@/constants/training';
 import { defaultHabits, type DefaultHabit } from '@/constants/habits';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { useModalCallbacks, type HabitOptionsData } from '@/contexts/modal-callbacks';
+import { useThemePreference, useColorScheme } from '@/stores';
+import { useTranslations } from '@/stores';
+import { useModalCallbacks, type HabitOptionsData } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SelectInput, ButtonTabGroup } from '@/components/ui/form-inputs';
 import { Card } from '@/components/ui/card';

@@ -5,13 +5,13 @@ import { useRouter } from 'expo-router';
 import { PressableOpacity } from 'pressto';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { useLibraryTab } from '@/contexts/useLibraryTab';
+import { useLibraryTab } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
-import { useModalCallbacks } from '@/contexts/modal-callbacks';
+import { useModalCallbacks } from '@/stores';
 
 // Mock data
 const MOCK_CHECKINS = [

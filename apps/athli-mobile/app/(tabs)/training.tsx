@@ -6,9 +6,9 @@ import { Storage } from '@/lib/storage';
 import { ChevronDown } from 'lucide-react-native';
 
 import { typography, iconSizes, headingFontFamily } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { useTrainingOverlay } from '@/contexts/useTrainingOverlay';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
+import { useTrainingOverlay } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableCalendar } from '@/components/features/calendar/swipeable-calendar';
 import { formatDateDDMMYYYY } from '@/lib/utils/date-formatters';

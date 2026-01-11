@@ -8,14 +8,14 @@ import { Image } from 'expo-image';
 import { PressableOpacity, PressableScale } from 'pressto';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { SearchBar } from '@/components/ui/search-bar';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { hexToRgba } from '@/utils/colorUtils';
-import { useModalCallbacks } from '@/contexts/modal-callbacks';
+import { useModalCallbacks } from '@/stores';
 
 // Mock Exercise Data from exercise-search.ts
 export type Exercise = {

@@ -5,9 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
 
-import { useAppView } from '@/contexts/useAppView';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useAppView } from '@/stores';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { typography } from '@/constants/typography';
 import { AddClientContent, type AddClientContentRef } from '@/components/features/clients/add-client-content';
 import { NewChatContent } from '@/components/features/chats/new-chat-content';

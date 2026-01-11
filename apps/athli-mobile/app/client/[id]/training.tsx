@@ -6,8 +6,8 @@ import { Storage } from '@/lib/storage';
 import { ChevronDown, ChevronLeft, Plus, Dumbbell, ClipboardList } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableCalendar } from '@/components/features/calendar/swipeable-calendar';

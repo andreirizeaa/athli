@@ -6,8 +6,8 @@ import * as Haptics from 'expo-haptics';
 import { Alert } from 'react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useColorScheme, useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';

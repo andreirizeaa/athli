@@ -5,7 +5,7 @@ import { ChevronLeft, Ellipsis, User } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
+import { useThemePreference, useColorScheme } from '@/stores';
 import { hexToRgba } from '@/utils/colorUtils';
 import { IconButton } from '@/components/ui/icon-button';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';

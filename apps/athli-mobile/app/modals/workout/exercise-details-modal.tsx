@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
 
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 import { typography } from '@/constants/typography';
 import { IconButton } from '@/components/ui/icon-button';
 import { hexToRgba } from '@/utils/colorUtils';

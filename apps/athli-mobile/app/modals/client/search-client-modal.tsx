@@ -5,9 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { useModalCallbacks } from '@/contexts/modal-callbacks';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
+import { useModalCallbacks } from '@/stores';
 import { SearchBar } from '@/components/ui/search-bar';
 import { ClientsList } from '@/components/features/clients/clients-list';
 import { getClients, type Client } from '@/services/client-service';

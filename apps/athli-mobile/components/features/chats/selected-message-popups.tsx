@@ -15,7 +15,7 @@ import { MessageDocumentPreview } from '@/components/features/message/message-do
 import { MessageImagePreview } from '@/components/features/message/message-image-preview';
 import { MessageVideoPreview } from '@/components/features/message/message-video-preview';
 import { MessageAudioPreview } from '@/components/features/message/message-audio-preview';
-import { useColorScheme } from '@/contexts/useColorScheme';
+import { useColorScheme } from '@/stores';
 
 interface SelectedMessagePopupsProps {
   visible: boolean;

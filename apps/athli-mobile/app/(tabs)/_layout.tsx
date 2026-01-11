@@ -12,11 +12,11 @@ import * as Haptics from 'expo-haptics';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import type { ComponentType } from 'react';
 
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
-import { useAppView } from '@/contexts/useAppView';
-import { useTranslations } from '@/contexts/useTranslations';
-import { useTrainingOverlay } from '@/contexts/useTrainingOverlay';
-import { useLibraryTab, type LibraryTab } from '@/contexts/useLibraryTab';
+import { useThemePreference, useColorScheme } from '@/stores';
+import { useAppView } from '@/stores';
+import { useTranslations } from '@/stores';
+import { useTrainingOverlay } from '@/stores';
+import { useLibraryTab, type LibraryTab } from '@/stores';
 import { iconSizes } from '@/constants/typography';
 import {
   ChartNoAxesColumn,

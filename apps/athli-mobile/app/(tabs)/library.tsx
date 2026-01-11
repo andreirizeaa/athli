@@ -11,8 +11,8 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import {
   WorkoutsTab,
@@ -25,7 +25,7 @@ import {
   HabitsTab,
   FilesTab,
 } from '@/components/features/library';
-import { useLibraryTab, type LibraryTab } from '@/contexts/useLibraryTab';
+import { useLibraryTab, type LibraryTab } from '@/stores';
 import { SearchBar } from '@/components/ui/search-bar';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;

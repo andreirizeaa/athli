@@ -5,8 +5,8 @@ import { Ellipsis } from 'lucide-react-native';
 import { Image as ExpoImage } from 'expo-image';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { FilledButton } from '@/components/ui/buttons/filled-button';
 

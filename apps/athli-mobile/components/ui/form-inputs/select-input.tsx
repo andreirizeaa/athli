@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ChevronDown } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/stores';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 
 type SelectOption<T extends string> = {

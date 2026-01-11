@@ -10,17 +10,11 @@ import 'react-native-reanimated';
 import { PressablesConfig } from 'pressto';
 import * as Haptics from 'expo-haptics';
 
-import {
-  ThemePreferenceProvider,
-  useColorScheme,
-  useThemePreference,
-} from '@/contexts/useColorScheme';
-import { AppViewProvider } from '@/contexts/useAppView';
-import { TranslationProvider } from '@/contexts/useTranslations';
-import { ModalCallbacksProvider } from '@/contexts/modal-callbacks';
-import { TrainingOverlayProvider } from '@/contexts/useTrainingOverlay';
-import { LibraryTabProvider } from '@/contexts/useLibraryTab';
-import { UnitsProvider } from '@/contexts/useUnits';
+import { useColorScheme, useThemePreference } from '@/stores';
+import { useThemeStore } from '@/stores/useThemeStore';
+import { useTranslationsStore } from '@/stores/useTranslationsStore';
+import { useUnitsStore } from '@/stores/useUnitsStore';
+import { useColorScheme as useNativeColorScheme } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -71,21 +65,7 @@ export default function RootLayout() {
           }}
         >
           <KeyboardProvider>
-            <ThemePreferenceProvider>
-              <TranslationProvider>
-                <UnitsProvider>
-                  <AppViewProvider>
-                    <ModalCallbacksProvider>
-                      <TrainingOverlayProvider>
-                        <LibraryTabProvider>
-                          <RootLayoutNav />
-                        </LibraryTabProvider>
-                      </TrainingOverlayProvider>
-                    </ModalCallbacksProvider>
-                  </AppViewProvider>
-                </UnitsProvider>
-              </TranslationProvider>
-            </ThemePreferenceProvider>
+            <RootLayoutNav />
           </KeyboardProvider>
         </PressablesConfig>
       </SafeAreaProvider>
@@ -97,6 +77,19 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { primaryColor, colors: themeColors } = useThemePreference();
   const segments = useSegments();
+  const systemScheme = useNativeColorScheme() ?? 'light';
+
+  // Initialize stores on mount
+  useEffect(() => {
+    useThemeStore.getState().initialize();
+    useTranslationsStore.getState().initialize();
+    useUnitsStore.getState().initialize();
+  }, []);
+
+  // Listen to system color scheme changes
+  useEffect(() => {
+    useThemeStore.getState().updateColorsFromSystemScheme(systemScheme);
+  }, [systemScheme]);
 
   // Hide status bar only for camera and preview screens (not message-image-preview since it's from a message)
   const shouldHideStatusBar = useMemo(() => {

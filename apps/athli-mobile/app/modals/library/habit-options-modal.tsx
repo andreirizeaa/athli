@@ -14,9 +14,9 @@ import {
     HABIT_DURATION_PERIOD_OPTIONS,
     type HabitDurationPeriod,
 } from '@/constants/training';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { useModalCallbacks, type HabitOptionsData } from '@/contexts/modal-callbacks';
+import { useThemePreference, useColorScheme } from '@/stores';
+import { useTranslations } from '@/stores';
+import { useModalCallbacks, type HabitOptionsData } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 
