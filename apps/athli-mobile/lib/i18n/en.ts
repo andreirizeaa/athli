@@ -437,6 +437,8 @@ export const en = {
       addExercisesHint: 'Add exercises to this section',
       error: 'Error',
       nameRequired: 'Please enter a section name',
+      durationRequired: 'Please enter a valid duration for AMRAP sections',
+      roundsRequired: 'Please enter a valid number of rounds',
     },
   },
   inbox: {

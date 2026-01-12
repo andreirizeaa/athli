@@ -6,6 +6,8 @@ export type Section = {
   program: string; // Display name (mapped from 'name')
   description: string;
   sectionType: string;
+  duration?: number;
+  rounds?: number;
   totalExercises: number;
   created: string;
   isFavourite: boolean;
@@ -22,6 +24,8 @@ export const getSections = async (): Promise<Section[]> => {
     program: s.name,
     description: s.description || '',
     sectionType: s.section_type || '',
+    duration: s.duration,
+    rounds: s.rounds,
     totalExercises: s.number_of_exercises || 0,
     created: s.created_at ? new Date(s.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : '',
     isFavourite: s.is_favourite || false,
@@ -81,7 +85,7 @@ export const deleteSections = async (sectionIds: string | string[]): Promise<voi
 /**
  * Create a new section
  */
-export const createSection = async (sectionData: WorkoutProgramPayload & { sectionType: string }): Promise<Section> => {
+export const createSection = async (sectionData: WorkoutProgramPayload & { sectionType: string; duration?: number; rounds?: number }): Promise<Section> => {
   // Calculate total exercises from items
   const totalExercises = (sectionData.items || []).reduce((total, item) => {
     if (item.itemType === 'exercise') {
@@ -107,15 +111,27 @@ export const createSection = async (sectionData: WorkoutProgramPayload & { secti
     items: sectionData.items,
   };
 
+  const payload: any = {
+    name: sectionData.name,
+    description: sectionData.description,
+    section_type: sectionData.sectionType,
+    section_data: cleanSectionData,
+    total_exercises: totalExercises,
+  };
+
+  // Add duration for AMRAP sections
+  if (sectionData.duration !== undefined) {
+    payload.duration = sectionData.duration;
+  }
+
+  // Add rounds for timed/circuits sections
+  if (sectionData.rounds !== undefined) {
+    payload.rounds = sectionData.rounds;
+  }
+
   const response = await apiFetch<ApiResponse<{ section: any }>>('/coach/training/sections', {
     method: 'POST',
-    body: JSON.stringify({
-      name: sectionData.name,
-      description: sectionData.description,
-      section_type: sectionData.sectionType,
-      section_data: cleanSectionData,
-      total_exercises: totalExercises,
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.data) throw new Error('No section returned');
@@ -136,7 +152,7 @@ export const createSection = async (sectionData: WorkoutProgramPayload & { secti
  */
 export const updateSection = async (
   sectionId: string,
-  sectionData: Partial<WorkoutProgramPayload & { sectionType: string }>
+  sectionData: Partial<WorkoutProgramPayload & { sectionType: string; duration?: number; rounds?: number }>
 ): Promise<Section> => {
   // Calculate total exercises if items provided
   const totalExercises = sectionData.items
@@ -170,6 +186,9 @@ export const updateSection = async (
     id: sectionId,
     ...(sectionData.name && { name: sectionData.name }),
     ...(sectionData.description !== undefined && { description: sectionData.description }),
+    ...(sectionData.sectionType && { section_type: sectionData.sectionType }),
+    ...(sectionData.duration !== undefined && { duration: sectionData.duration }),
+    ...(sectionData.rounds !== undefined && { rounds: sectionData.rounds }),
     ...(cleanSectionData && { section_data: cleanSectionData }),
     ...(totalExercises !== undefined && { total_exercises: totalExercises }),
   };

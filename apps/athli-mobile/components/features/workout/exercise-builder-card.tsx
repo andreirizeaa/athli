@@ -244,8 +244,8 @@ export const ExerciseBuilderCard = ({
             }
         ];
 
-        // 5s increments up to 5min (300s)
-        for (let s = 5; s <= 300; s += 5) {
+        // 5s increments up to 10min (600s)
+        for (let s = 5; s <= 600; s += 5) {
             const m = Math.floor(s / 60);
             const sec = s % 60;
             let label = '';

@@ -28,6 +28,7 @@ import {
 } from '@/components/features/workout/workout-schema';
 import {
     type ExerciseValidationError,
+    type ValidationResult,
     validateExercises,
 } from '@/components/features/workout/validation';
 import { createSection, updateSection, getSectionById } from '@/services/coach/coach-section-service';
@@ -100,6 +101,7 @@ export default function SectionBuilderScreen() {
     const initialStateRef = useRef<SectionBuilderState | null>(null);
     const [isDirty, setIsDirty] = useState(false);
     const [validationErrors, setValidationErrors] = useState<ExerciseValidationError[]>([]);
+    const [metadataErrors, setMetadataErrors] = useState({ durationError: false, roundsError: false });
     const [isLoadingData, setIsLoadingData] = useState(false);
 
     // Load section data from API when editing
@@ -118,8 +120,8 @@ export default function SectionBuilderScreen() {
                         const loadedState = {
                             name: sectionData.name,
                             sectionType: sectionData.section_type as SectionType,
-                            duration: '', // API might not store these
-                            rounds: '',
+                            duration: sectionData.duration ? String(sectionData.duration) : '',
+                            rounds: sectionData.rounds ? String(sectionData.rounds) : '',
                             notes: sectionData.description || '',
                             exercises,
                         };
@@ -155,43 +157,8 @@ export default function SectionBuilderScreen() {
         }
     }, [state]);
 
-    // Sync metadata changes when returning from edit modal
-    useFocusEffect(
-        useCallback(() => {
-            // Only sync if this is a library section (has sectionId)
-            if (isLibrarySection && params.sectionId) {
-                // Get the latest section data from the query cache
-                const cachedSections = queryClient.getQueryData<any[]>(['sections']);
-                if (cachedSections) {
-                    const updatedSection = cachedSections.find(s => s.id === params.sectionId);
-                    if (updatedSection) {
-                        // Check if metadata has changed
-                        const metadataChanged =
-                            updatedSection.program !== state.name ||
-                            updatedSection.description !== state.notes ||
-                            updatedSection.sectionType !== state.sectionType;
-
-                        if (metadataChanged) {
-                            // Update only the metadata, preserve exercises
-                            setState(prev => {
-                                const newState = {
-                                    ...prev,
-                                    name: updatedSection.program,
-                                    notes: updatedSection.description || '',
-                                    sectionType: updatedSection.sectionType,
-                                };
-                                // Also update the initialStateRef so metadata sync doesn't count as a change
-                                if (initialStateRef.current) {
-                                    initialStateRef.current = JSON.parse(JSON.stringify(newState));
-                                }
-                                return newState;
-                            });
-                        }
-                    }
-                }
-            }
-        }, [isLibrarySection, params.sectionId, queryClient, state.name, state.notes, state.sectionType])
-    );
+    // Don't sync metadata from cache - user edits directly in section-builder
+    // The useFocusEffect was causing inputs to revert to cached values
 
     // Mutations for library sections (API saves)
     const createSectionMutation = useMutation({
@@ -258,22 +225,64 @@ export default function SectionBuilderScreen() {
             return;
         }
 
-        // Validate exercises if there are any
-        if (state.exercises.length > 0) {
-            const validation = validateExercises(state.exercises);
-            if (!validation.isValid) {
-                setValidationErrors(validation.errors);
-                Alert.alert(t('library.section.error'), validation.errorMessage || t('library.workout.validationError'));
-                return;
+        // Validate section-type specific fields
+        let sectionMetadataError = { durationError: false, roundsError: false };
+        let hasMetadataError = false;
+
+        if (state.sectionType === 'amrap') {
+            const duration = parseInt(state.duration);
+            if (!state.duration.trim() || isNaN(duration) || duration <= 0) {
+                sectionMetadataError.durationError = true;
+                hasMetadataError = true;
             }
+        }
+
+        if (state.sectionType === 'timed' || state.sectionType === 'circuits') {
+            const rounds = parseInt(state.rounds);
+            if (!state.rounds.trim() || isNaN(rounds) || rounds <= 0) {
+                sectionMetadataError.roundsError = true;
+                hasMetadataError = true;
+            }
+        }
+
+        // Validate exercises if there are any
+        let exerciseValidation: ValidationResult = { isValid: true, errors: [], emptySectionIds: [], errorMessage: null };
+        if (state.exercises.length > 0) {
+            exerciseValidation = validateExercises(state.exercises);
+        }
+
+        // If there are any errors, show the combined error message
+        if (hasMetadataError || !exerciseValidation.isValid) {
+            // Build combined error message
+            let errorMessage = 'Please fix the following issues:\n\n';
+
+            if (sectionMetadataError.durationError) {
+                errorMessage += '• Duration is required for AMRAP sections\n';
+            }
+            if (sectionMetadataError.roundsError) {
+                errorMessage += '• Rounds are required for this section type\n';
+            }
+
+            // Add exercise validation errors to the message
+            if (!exerciseValidation.isValid && exerciseValidation.errorMessage) {
+                const exerciseErrors = exerciseValidation.errorMessage
+                    .replace('Please fix the following issues:\n\n', '');
+                errorMessage += exerciseErrors;
+            }
+
+            setValidationErrors(exerciseValidation.errors);
+            setMetadataErrors(sectionMetadataError);
+            Alert.alert(t('library.section.error'), errorMessage);
+            return;
         }
 
         // Clear any previous errors
         setValidationErrors([]);
+        setMetadataErrors({ durationError: false, roundsError: false });
 
         if (isLibrarySection) {
             // Save to API as a library section
-            const sectionPayload = {
+            const sectionPayload: any = {
                 name: state.name,
                 description: state.notes,
                 sectionType: state.sectionType,
@@ -282,6 +291,16 @@ export default function SectionBuilderScreen() {
                     data: exercise,
                 })),
             };
+
+            // Add duration for AMRAP sections
+            if (state.sectionType === 'amrap' && state.duration) {
+                sectionPayload.duration = parseInt(state.duration);
+            }
+
+            // Add rounds for timed/circuits sections
+            if ((state.sectionType === 'timed' || state.sectionType === 'circuits') && state.rounds) {
+                sectionPayload.rounds = parseInt(state.rounds);
+            }
 
             console.log('Saving section payload:', JSON.stringify(sectionPayload, null, 2));
 
@@ -542,9 +561,19 @@ export default function SectionBuilderScreen() {
                         {state.sectionType === 'amrap' && (
                             <>
                                 <View style={[styles.configDivider, { backgroundColor: themeColors.border }]} />
-                                <View style={styles.fieldRow}>
+                                <View style={[
+                                    styles.fieldRow,
+                                    metadataErrors.durationError && {
+                                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                        borderWidth: 1,
+                                        borderColor: '#EF4444',
+                                        borderRadius: 8,
+                                        marginHorizontal: 8,
+                                        paddingHorizontal: 8,
+                                    }
+                                ]}>
                                     <View style={styles.labelContainer}>
-                                        <Text style={[styles.fieldLabel, { color: themeColors.mutedText }]}>{t('library.section.duration')}</Text>
+                                        <Text style={[styles.fieldLabel, { color: metadataErrors.durationError ? '#EF4444' : themeColors.mutedText }]}>{t('library.section.duration')}</Text>
                                         <Text style={styles.requiredAsterisk}>*</Text>
                                     </View>
                                     <View style={[styles.dropdownValueRow, { flex: 1, justifyContent: 'flex-end' }]}>
@@ -554,7 +583,7 @@ export default function SectionBuilderScreen() {
                                             placeholder="0"
                                             placeholderTextColor={themeColors.mutedText}
                                             keyboardType="number-pad"
-                                            style={[styles.dropdownValue, { color: themeColors.text, textAlign: 'right', minWidth: 120, height: '100%' }]}
+                                            style={[styles.dropdownValue, { color: metadataErrors.durationError ? '#EF4444' : themeColors.text, textAlign: 'right', minWidth: 120, height: '100%' }]}
                                         />
                                         <Text style={[styles.dropdownValue, { color: themeColors.mutedText }]}>m</Text>
                                     </View>
@@ -565,9 +594,19 @@ export default function SectionBuilderScreen() {
                         {state.sectionType === 'timed' && (
                             <>
                                 <View style={[styles.configDivider, { backgroundColor: themeColors.border }]} />
-                                <View style={styles.fieldRow}>
+                                <View style={[
+                                    styles.fieldRow,
+                                    metadataErrors.roundsError && {
+                                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                        borderWidth: 1,
+                                        borderColor: '#EF4444',
+                                        borderRadius: 8,
+                                        marginHorizontal: 8,
+                                        paddingHorizontal: 8,
+                                    }
+                                ]}>
                                     <View style={styles.labelContainer}>
-                                        <Text style={[styles.fieldLabel, { color: themeColors.mutedText }]}>{t('library.section.rounds')}</Text>
+                                        <Text style={[styles.fieldLabel, { color: metadataErrors.roundsError ? '#EF4444' : themeColors.mutedText }]}>{t('library.section.rounds')}</Text>
                                         <Text style={styles.requiredAsterisk}>*</Text>
                                     </View>
                                     <View style={[styles.dropdownValueRow, { flex: 1, justifyContent: 'flex-end' }]}>
@@ -577,7 +616,7 @@ export default function SectionBuilderScreen() {
                                             placeholder="0"
                                             placeholderTextColor={themeColors.mutedText}
                                             keyboardType="number-pad"
-                                            style={[styles.dropdownValue, { color: themeColors.text, textAlign: 'right', minWidth: 120, height: '100%' }]}
+                                            style={[styles.dropdownValue, { color: metadataErrors.roundsError ? '#EF4444' : themeColors.text, textAlign: 'right', minWidth: 120, height: '100%' }]}
                                         />
                                     </View>
                                 </View>
@@ -587,9 +626,19 @@ export default function SectionBuilderScreen() {
                         {state.sectionType === 'circuits' && (
                             <>
                                 <View style={[styles.configDivider, { backgroundColor: themeColors.border }]} />
-                                <View style={styles.fieldRow}>
+                                <View style={[
+                                    styles.fieldRow,
+                                    metadataErrors.roundsError && {
+                                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                        borderWidth: 1,
+                                        borderColor: '#EF4444',
+                                        borderRadius: 8,
+                                        marginHorizontal: 8,
+                                        paddingHorizontal: 8,
+                                    }
+                                ]}>
                                     <View style={styles.labelContainer}>
-                                        <Text style={[styles.fieldLabel, { color: themeColors.mutedText }]}>{t('library.section.rounds')}</Text>
+                                        <Text style={[styles.fieldLabel, { color: metadataErrors.roundsError ? '#EF4444' : themeColors.mutedText }]}>{t('library.section.rounds')}</Text>
                                         <Text style={styles.requiredAsterisk}>*</Text>
                                     </View>
                                     <View style={[styles.dropdownValueRow, { flex: 1, justifyContent: 'flex-end' }]}>
@@ -599,7 +648,7 @@ export default function SectionBuilderScreen() {
                                             placeholder="0"
                                             placeholderTextColor={themeColors.mutedText}
                                             keyboardType="number-pad"
-                                            style={[styles.dropdownValue, { color: themeColors.text, textAlign: 'right', minWidth: 120, height: '100%' }]}
+                                            style={[styles.dropdownValue, { color: metadataErrors.roundsError ? '#EF4444' : themeColors.text, textAlign: 'right', minWidth: 120, height: '100%' }]}
                                         />
                                     </View>
                                 </View>
@@ -660,6 +709,7 @@ export default function SectionBuilderScreen() {
                                     eachSide: ex.eachSide,
                                     isSupersetNext: ex.isSupersetNext,
                                     notes: ex.notes,
+                                    setRestSec: ex.setRestSec,
                                 }}
                                 onUpdateExercise={(updates) => handleUpdateExercise(index, updates as Partial<BuilderExercise>)}
                                 onDelete={() => handleDeleteExercise(index)}

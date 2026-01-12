@@ -186,8 +186,7 @@ export default function AddCheckInModal() {
         let changes = false;
         if (isEditing) {
             changes = name !== (params.name || '') ||
-                description !== (params.description || '') ||
-                hasSchedule;
+                description !== (params.description || '');
         } else {
             changes = trimmedName.length > 0 ||
                 description.trim().length > 0 ||
@@ -196,7 +195,7 @@ export default function AddCheckInModal() {
 
         return {
             hasChanges: changes,
-            canComplete: formValid && !saveMutation.isPending,
+            canComplete: formValid && changes && !saveMutation.isPending,
         };
     }, [name, description, hasSchedule, saveMutation.isPending, isEditing, params]);
 

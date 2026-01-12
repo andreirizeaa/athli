@@ -104,6 +104,7 @@ export const MetricsTab = () => {
         name: item.name,
         unit: item.unit,
         description: item.description,
+        schedule_config: item.schedule_config ? JSON.stringify(item.schedule_config) : undefined,
       },
     });
   };

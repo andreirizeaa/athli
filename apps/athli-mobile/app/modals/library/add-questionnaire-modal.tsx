@@ -136,7 +136,7 @@ export default function AddQuestionnaireModal() {
 
         return {
             hasChanges: changes,
-            canComplete: formValid && !saveMutation.isPending,
+            canComplete: formValid && changes && !saveMutation.isPending,
         };
     }, [name, description, saveMutation.isPending, isEditing, params]);
 

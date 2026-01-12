@@ -163,7 +163,7 @@ export default function AddFileModal() {
 
         return {
             hasChanges: changes,
-            canComplete: formValid && !uploadMutation.isPending && !updateMutation.isPending,
+            canComplete: formValid && changes && !uploadMutation.isPending && !updateMutation.isPending,
         };
     }, [fileName, selectedFile, uploadMutation.isPending, updateMutation.isPending, isEditing, params]);
 

@@ -10,10 +10,16 @@ export type ExerciseValidationError = {
     tempoError: boolean;
 };
 
+export type SectionMetadataError = {
+    durationError: boolean;
+    roundsError: boolean;
+};
+
 export type ValidationResult = {
     isValid: boolean;
     errors: ExerciseValidationError[];
     emptySectionIds: string[];
+    sectionMetadataError?: SectionMetadataError;
     errorMessage: string | null;
 };
 

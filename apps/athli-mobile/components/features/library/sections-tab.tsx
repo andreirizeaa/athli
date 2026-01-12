@@ -151,8 +151,14 @@ export const SectionsTab = () => {
   };
 
   const getSectionTypeInfo = (section: typeof filteredSections[0]) => {
-    // API doesn't return duration/rounds info in list view
-    return '';
+    // Return duration for AMRAP or rounds for timed/circuits
+    if (section.sectionType === 'amrap' && section.duration) {
+      return `${section.duration}m`;
+    }
+    if ((section.sectionType === 'timed' || section.sectionType === 'circuits') && section.rounds) {
+      return `${section.rounds} ${section.rounds === 1 ? 'round' : 'rounds'}`;
+    }
+    return null;
   };
 
   return (
@@ -167,6 +173,7 @@ export const SectionsTab = () => {
       {/* Section List */}
       {filteredSections.map((item, index) => {
         const isLastItem = index === filteredSections.length - 1;
+        const typeInfo = getSectionTypeInfo(item);
         return (
           <View key={item.id}>
             <SwipeableRow
@@ -195,6 +202,14 @@ export const SectionsTab = () => {
                       <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
                         {getSectionTypeLabel(item.sectionType as SectionType)}
                       </Text>
+                      {typeInfo && (
+                        <>
+                          <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                          <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                            {typeInfo}
+                          </Text>
+                        </>
+                      )}
                       <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
                       <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
                         {item.totalExercises === 0

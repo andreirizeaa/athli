@@ -177,7 +177,7 @@ function RootLayoutNav() {
             name="welcome"
             options={{
               headerShown: false,
-              animation: 'fade',
+              animation: 'none',
             }}
           />
           <Stack.Screen
