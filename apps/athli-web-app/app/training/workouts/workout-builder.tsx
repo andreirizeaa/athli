@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/general/utils';
-import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants/training';
+import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@athli/shared-types';
 import { searchExercises, type Exercise } from '@/api/exercise/exercise-search';
 import { generateWorkoutFromPrompt, type GeneratedWorkout } from '@/api/exercise/generate-exercise';
 import { toast } from 'sonner';

@@ -13,7 +13,7 @@ import { typography } from '@/constants/typography';
 import {
     HABIT_DURATION_PERIOD_OPTIONS,
     type HabitDurationPeriod,
-} from '@/constants/training';
+} from '@athli/shared-types';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useModalCallbacks, type HabitOptionsData } from '@/stores';

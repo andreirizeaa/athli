@@ -15,7 +15,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
 import { EmptyState } from '@/components/ui/empty-state';
-import { EXERCISE_CATEGORY_OPTIONS, EQUIPMENT_OPTIONS } from '@/constants/training';
+import { EXERCISE_CATEGORY_OPTIONS, EQUIPMENT_OPTIONS } from '@athli/shared-types';
 
 export const ExercisesTab = () => {
   const router = useRouter();

@@ -9,7 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
-import { SECTION_TYPES, type SectionType } from '@/constants/training';
+import { SECTION_TYPES, type SectionType } from '@athli/shared-types';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';

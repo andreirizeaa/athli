@@ -16,7 +16,7 @@ import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dro
 import { useModalCallbacks } from '@/stores';
 import { getAllHabits, deleteHabit, duplicateHabit } from '@/services/coach/coach-habit-service';
 import { EmptyState } from '@/components/ui/empty-state';
-import { HABIT_UNIT_OPTIONS, HABIT_PERIOD_OPTIONS } from '@/constants/training';
+import { HABIT_UNIT_OPTIONS, HABIT_PERIOD_OPTIONS } from '@athli/shared-types';
 
 export const HabitsTab = () => {
   const { colors: themeColors } = useThemePreference();

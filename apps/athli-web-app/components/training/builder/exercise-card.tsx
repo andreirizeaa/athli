@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { OPTIONAL_COLUMN_OPTIONS, HEART_RATE_ZONE_OPTIONS, COLUMN_OPTIONS } from '@/lib/constants/training';
+import { OPTIONAL_COLUMN_OPTIONS, HEART_RATE_ZONE_OPTIONS, COLUMN_OPTIONS } from '@athli/shared-types';
 import {
   Select,
   SelectContent,

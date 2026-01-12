@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/general/utils';
 import { Check, Loader2, Trash2 } from 'lucide-react';
 
-import { DIFFICULTY_LEVELS, PROGRAM_TYPES } from '@/lib/constants/training';
+import { DIFFICULTY_LEVELS, PROGRAM_TYPES } from '@athli/shared-types';
 
 
 

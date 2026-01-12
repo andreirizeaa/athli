@@ -9,7 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { typography } from '@/constants/typography';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
-import { type SectionType, SECTION_TYPES } from '@/constants/training';
+import { type SectionType, SECTION_TYPES } from '@athli/shared-types';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';

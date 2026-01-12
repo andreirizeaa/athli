@@ -3,7 +3,7 @@
  * This ensures workouts created on mobile can be opened on web and vice versa
  */
 
-import { SectionType } from '@/constants/training';
+import { SectionType } from '@athli/shared-types';
 
 // ============================================================================
 // Core Types (Re-export from shared package)

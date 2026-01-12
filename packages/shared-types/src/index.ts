@@ -20,3 +20,6 @@ export * from './payload-builder';
 
 // Payload conversion (API → builder)
 export * from './payload-converter';
+
+// Training constants (centralized)
+export * from './training-constants';

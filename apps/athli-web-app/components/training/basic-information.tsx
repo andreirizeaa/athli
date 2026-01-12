@@ -13,7 +13,7 @@ import {
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { cn } from '@/lib/general/utils';
 
-import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants/training';
+import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@athli/shared-types';
 
 type BasicInformationProps = {
   workoutName: string;

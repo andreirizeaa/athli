@@ -14,7 +14,7 @@ import {
     DIFFICULTY_LEVELS,
     type WorkoutType,
     type DifficultyLevel,
-} from '@/constants/training';
+} from '@athli/shared-types';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
