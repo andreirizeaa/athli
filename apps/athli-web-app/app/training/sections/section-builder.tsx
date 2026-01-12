@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { isEqual } from 'lodash';
+import { isEqual, cloneDeep } from 'lodash';
 import {
   Dialog,
   DialogContent,
@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/general/utils';
-import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants/training';
+import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@athli/shared-types';
 import { searchExercises, type Exercise } from '@/api/exercise/exercise-search';
 import { generateWorkoutFromPrompt, type GeneratedWorkout } from '@/api/exercise/generate-exercise';
 import { toast } from 'sonner';
@@ -280,9 +280,9 @@ export const SectionBuilder = ({
         setWorkoutSchema(initialSchema);
       }
 
-      // Capture initial state
+      // Capture initial state (deep clone to prevent reference issues)
       initialState.current = {
-        schema: initialSchema,
+        schema: cloneDeep(initialSchema),
         name: meta?.name || '',
         type: meta?.type || '',
         difficulty: meta?.difficulty || 'all_levels',
@@ -310,9 +310,9 @@ export const SectionBuilder = ({
       setWorkoutSchema(converted);
       hasInitializedWithDataRef.current = true;
 
-      // Update initial state for dirty tracking
+      // Update initial state for dirty tracking (deep clone to prevent reference issues)
       initialState.current = {
-        schema: converted,
+        schema: cloneDeep(converted),
         name: meta?.name || '',
         type: meta?.type || '',
         difficulty: meta?.difficulty || 'all_levels',
@@ -875,9 +875,9 @@ Focus on proper form and progressive overload.`;
           await result;
           setIsSaving(false);
           setIsDirty(false);
-          // Update initial state to match the saved state
+          // Update initial state to match the saved state (deep clone to prevent reference issues)
           initialState.current = {
-            schema: workoutSchema,
+            schema: cloneDeep(workoutSchema),
             name: workoutTitle,
             type: workoutType,
             difficulty: difficulty,
@@ -889,7 +889,7 @@ Focus on proper form and progressive overload.`;
           setIsSaving(false);
           setIsDirty(false);
           initialState.current = {
-            schema: workoutSchema,
+            schema: cloneDeep(workoutSchema),
             name: workoutTitle,
             type: workoutType,
             difficulty: difficulty,
@@ -1484,14 +1484,14 @@ Focus on proper form and progressive overload.`;
                 {(section.type === 'amrap' || section.type === 'timed' || section.type === 'circuits') && (
                   <div className="relative flex items-center">
                     <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">
-                      {section.type === 'amrap' ? 'Time (s)' : 'Rounds'}
+                      {section.type === 'amrap' ? 'Time (m)' : 'Rounds'}
                     </span>
                     <Input
                       type="text"
                       inputMode="numeric"
                       value={
                         section.type === 'amrap'
-                          ? section.roundDurationSec?.toString() || ''
+                          ? section.roundDurationSec ? Math.round(section.roundDurationSec / 60).toString() : ''
                           : section.targetRounds?.toString() || ''
                       }
                       onChange={(e) => {
@@ -1509,7 +1509,7 @@ Focus on proper form and progressive overload.`;
                                   ...item,
                                   section: {
                                     ...item.section,
-                                    roundDurationSec: value ? parseInt(value, 10) : undefined,
+                                    roundDurationSec: value ? parseInt(value, 10) * 60 : undefined, // Convert minutes to seconds
                                   },
                                 };
                               }

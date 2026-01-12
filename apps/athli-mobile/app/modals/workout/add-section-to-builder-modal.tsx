@@ -1,10 +1,10 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { Platform, StyleSheet, Text, View, LayoutChangeEvent, TextInput, ScrollView } from 'react-native';
+import { Platform, StyleSheet, Text, View, LayoutChangeEvent, TextInput, ScrollView, ActivityIndicator } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check, ChevronRight, ChevronDown } from 'lucide-react-native';
+import { X, Check, ChevronRight, ChevronDown, Layers } from 'lucide-react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -13,10 +13,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { useQuery } from '@tanstack/react-query';
 
 import { typography } from '@/constants/typography';
-import { SECTION_TYPES, type SectionType } from '@/constants/training';
-import { useThemePreference } from '@/stores';
+import { SECTION_TYPES, type SectionType } from '@athli/shared-types';
+import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useModalCallbacks } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
@@ -25,11 +26,12 @@ import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { EmptyState } from '@/components/ui/empty-state';
 import { hexToRgba } from '@/utils/colorUtils';
 import { type BuilderSection } from '@/components/features/workout/workout-schema';
-
-// Saved sections would come from a service in production
-const SAVED_SECTIONS: { id: string; name: string; sectionType: SectionType; exerciseCount: number; duration?: string; rounds?: string }[] = [];
+import { getSections, getSectionById } from '@/services/coach/coach-section-service';
+import { MOCK_EXERCISES } from '@/app/modals/workout/add-exercise-to-builder-modal';
 
 type TabKey = 'saved' | 'new';
 
@@ -39,11 +41,14 @@ export default function AddSectionToBuilderModal() {
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
     const { triggerSectionSelect } = useModalCallbacks();
+    const coachProfile = useCoachProfileStore((state) => state.profile);
+    const isAuthenticated = !!coachProfile;
 
     const [selectedTab, setSelectedTab] = useState<TabKey>('saved');
     const underlinePosition = useSharedValue(0);
     const underlineWidth = useSharedValue(0);
     const tabLayoutsRef = useRef<{ [key: string]: { x: number; width: number } }>({});
+    const [isLoadingSection, setIsLoadingSection] = useState(false);
 
     // Form state for New tab
     const [sectionName, setSectionName] = useState('');
@@ -55,6 +60,15 @@ export default function AddSectionToBuilderModal() {
     // Search state for Saved tab
     const [searchQuery, setSearchQuery] = useState('');
 
+    // Fetch sections from API
+    const { data: sections = [], isLoading } = useQuery({
+        queryKey: ['sections'],
+        queryFn: getSections,
+        enabled: isAuthenticated,
+        staleTime: 0,
+        refetchOnMount: 'always',
+    });
+
     // Tabs - Saved first, New second
     const tabs: { key: TabKey; label: string }[] = [
         { key: 'saved', label: t('library.addSection.tabs.saved') },
@@ -64,22 +78,38 @@ export default function AddSectionToBuilderModal() {
     // Filter saved sections based on search query
     const filteredSections = useMemo(() => {
         if (!searchQuery.trim()) {
-            return SAVED_SECTIONS;
+            return sections;
         }
         const query = searchQuery.toLowerCase().trim();
-        return SAVED_SECTIONS.filter(
+        return sections.filter(
             (section) =>
-                section.name.toLowerCase().includes(query) ||
+                section.program.toLowerCase().includes(query) ||
                 section.sectionType.toLowerCase().includes(query)
         );
-    }, [searchQuery]);
+    }, [sections, searchQuery]);
 
     const UNDERLINE_EXTRA_WIDTH = 8;
 
     // Form validation for New tab
     const canComplete = useMemo(() => {
-        return sectionName.trim().length > 0;
-    }, [sectionName]);
+        const trimmedName = sectionName.trim();
+
+        // Name is mandatory
+        let formValid = trimmedName.length > 0;
+
+        // Additional validation for section-specific fields
+        if (sectionType === 'amrap') {
+            const durationNum = parseInt(duration);
+            formValid = formValid && duration.trim().length > 0 && !isNaN(durationNum) && durationNum > 0;
+        }
+
+        if (sectionType === 'timed' || sectionType === 'circuits') {
+            const roundsNum = parseInt(rounds);
+            formValid = formValid && rounds.trim().length > 0 && !isNaN(roundsNum) && roundsNum > 0;
+        }
+
+        return formValid;
+    }, [sectionName, sectionType, duration, rounds]);
 
     const animateUnderline = (tabKey: TabKey) => {
         const layout = tabLayoutsRef.current[tabKey];
@@ -130,20 +160,225 @@ export default function AddSectionToBuilderModal() {
     };
 
     // Handle selecting a saved section
-    const handleSelectSavedSection = useCallback((savedSection: typeof SAVED_SECTIONS[0]) => {
-        // Create a copy of the saved section with a new ID
-        const section: BuilderSection = {
-            id: `section-${Date.now()}`,
-            type: 'section',
-            name: savedSection.name,
-            sectionType: savedSection.sectionType,
-            duration: savedSection.sectionType === 'amrap' ? savedSection.duration : undefined,
-            rounds: savedSection.sectionType === 'timed' || savedSection.sectionType === 'circuits' ? savedSection.rounds : undefined,
-            exercises: [], // Exercises would be loaded from the saved section
-        };
+    const handleSelectSavedSection = useCallback(async (savedSection: typeof sections[0]) => {
+        setIsLoadingSection(true);
+        try {
+            // Fetch the full section data with exercises
+            const sectionData = await getSectionById(savedSection.id);
 
-        triggerSectionSelect(section);
-        router.dismiss();
+            // Extract section from the response
+            const sectionItems = sectionData.section_data?.items || [];
+            const sectionItem = sectionItems.find((item: any) => item.itemType === 'section');
+
+            if (!sectionItem) {
+                console.error('No section data found');
+                setIsLoadingSection(false);
+                return;
+            }
+
+            const data = sectionItem.data;
+            const sectionType = data.type as SectionType;
+
+            // Helper to get exercise details from MOCK_EXERCISES
+            const getExerciseDetails = (exerciseId: string) => {
+                const exercise = MOCK_EXERCISES.find(ex => ex.exerciseId === exerciseId);
+                return exercise || {
+                    name: 'Unknown Exercise',
+                    imageUrl: '',
+                    exerciseType: 'weight_reps',
+                };
+            };
+
+            const normalizeHeartRateZone = (value: string, columnType: string) => {
+                if (columnType === 'Heart Rate Zone' && value) {
+                    return value.replace('Zone ', '');
+                }
+                return value;
+            };
+
+            const mapSetType = (type: string): 'R' | 'W' | 'F' | 'D' => {
+                switch (type) {
+                    case 'warmUp': return 'W';
+                    case 'failure': return 'F';
+                    case 'dropset': return 'D';
+                    default: return 'R';
+                }
+            };
+
+            // Transform exercises based on section type
+            let exercises: any[] = [];
+
+            if (sectionType === 'amrap' || sectionType === 'timed') {
+                // AMRAP/Timed: flat array of exercises
+                exercises = (data.exercises || []).map((ex: any, idx: number) => {
+                    const exerciseDetails = getExerciseDetails(ex.prescribedExerciseId);
+                    const transformedAlternatives = (ex.alternatives || []).map((altId: string) => {
+                        const altExercise = getExerciseDetails(altId);
+                        return {
+                            id: altId,
+                            exerciseId: altId,
+                            name: altExercise.name,
+                            imageUrl: altExercise.imageUrl,
+                            exerciseType: altExercise.exerciseType,
+                        };
+                    });
+
+                    const column1Type = ex.column1Label || 'Reps';
+                    const column2Type = ex.column2Label || 'kg';
+
+                    const singleSet = {
+                        id: 'set-1',
+                        setNumber: 1,
+                        column1: normalizeHeartRateZone(ex.trackableField1?.prescribed || '', column1Type),
+                        column2: normalizeHeartRateZone(ex.trackableField2?.prescribed || '', column2Type),
+                        type: 'R' as const,
+                        rest: ex.restSec ? ex.restSec.toString() : undefined,
+                    };
+
+                    return {
+                        id: `${ex.prescribedExerciseId}-${Date.now()}-${idx}`,
+                        exerciseId: ex.prescribedExerciseId || '',
+                        name: exerciseDetails.name,
+                        imageUrl: exerciseDetails.imageUrl,
+                        exerciseType: ex.exerciseType || exerciseDetails.exerciseType,
+                        sets: [singleSet],
+                        column1Type,
+                        column2Type,
+                        notes: ex.notes || '',
+                        alternatives: transformedAlternatives,
+                        tempo: ex.tempo || '',
+                        eachSide: ex.eachSide || false,
+                        isSupersetNext: ex.supersetId ? true : false,
+                        supersetGroupId: ex.supersetId || null,
+                        setRestSec: ex.restSec || undefined,
+                    };
+                });
+            } else if (sectionType === 'circuits') {
+                // Circuits: exercise groups with single set
+                let exerciseIndex = 0;
+                exercises = (data.exercises || []).flatMap((group: any) =>
+                    (group.exercises || []).map((ex: any) => {
+                        const exerciseDetails = getExerciseDetails(ex.prescribedExerciseId);
+                        const transformedAlternatives = (ex.alternatives || []).map((altId: string) => {
+                            const altExercise = getExerciseDetails(altId);
+                            return {
+                                id: altId,
+                                exerciseId: altId,
+                                name: altExercise.name,
+                                imageUrl: altExercise.imageUrl,
+                                exerciseType: altExercise.exerciseType,
+                            };
+                        });
+
+                        const column1Type = ex.column1Label || 'Reps';
+                        const column2Type = ex.column2Label || 'kg';
+                        const set = ex.set || { setNumber: 1, type: 'normal', trackableField1: {}, trackableField2: {} };
+
+                        const exercise = {
+                            id: `${ex.prescribedExerciseId}-${Date.now()}-${exerciseIndex}`,
+                            exerciseId: ex.prescribedExerciseId || '',
+                            name: exerciseDetails.name,
+                            imageUrl: exerciseDetails.imageUrl,
+                            exerciseType: exerciseDetails.exerciseType,
+                            sets: [{
+                                id: 'set-1',
+                                setNumber: set.setNumber || 1,
+                                column1: normalizeHeartRateZone(set.trackableField1?.prescribed || '', column1Type),
+                                column2: normalizeHeartRateZone(set.trackableField2?.prescribed || '', column2Type),
+                                type: mapSetType(set.type),
+                                rest: set.restSec ? set.restSec.toString() : undefined,
+                            }],
+                            column1Type,
+                            column2Type,
+                            notes: ex.notes || '',
+                            alternatives: transformedAlternatives,
+                            tempo: ex.tempo || '',
+                            eachSide: ex.eachSide || false,
+                            isSupersetNext: ex.supersetId ? true : false,
+                            supersetGroupId: ex.supersetId || null,
+                            setRestSec: set.restSec || undefined,
+                        };
+                        exerciseIndex++;
+                        return exercise;
+                    })
+                );
+            } else {
+                // Regular/Auxiliary: exercise groups with sets arrays
+                let exerciseIndex = 0;
+                exercises = (data.exercises || []).flatMap((group: any) =>
+                    (group.exercises || []).map((ex: any) => {
+                        const exerciseDetails = getExerciseDetails(ex.prescribedExerciseId);
+                        const transformedAlternatives = (ex.alternatives || []).map((altId: string) => {
+                            const altExercise = getExerciseDetails(altId);
+                            return {
+                                id: altId,
+                                exerciseId: altId,
+                                name: altExercise.name,
+                                imageUrl: altExercise.imageUrl,
+                                exerciseType: altExercise.exerciseType,
+                            };
+                        });
+
+                        const column1Type = ex.column1Label || 'Reps';
+                        const column2Type = ex.column2Label || 'kg';
+                        const firstSetRestSec = ex.sets?.[0]?.restSec;
+
+                        const exercise = {
+                            id: `${ex.prescribedExerciseId}-${Date.now()}-${exerciseIndex}`,
+                            exerciseId: ex.prescribedExerciseId || '',
+                            name: exerciseDetails.name,
+                            imageUrl: exerciseDetails.imageUrl,
+                            exerciseType: exerciseDetails.exerciseType,
+                            sets: (ex.sets || []).map((set: any, idx: number) => ({
+                                id: `set-${idx}`,
+                                setNumber: set.setNumber || idx + 1,
+                                column1: normalizeHeartRateZone(set.trackableField1?.prescribed || '', column1Type),
+                                column2: normalizeHeartRateZone(set.trackableField2?.prescribed || '', column2Type),
+                                type: mapSetType(set.type),
+                                rest: set.restSec ? set.restSec.toString() : undefined,
+                            })),
+                            column1Type,
+                            column2Type,
+                            notes: ex.notes || '',
+                            alternatives: transformedAlternatives,
+                            tempo: ex.tempo || '',
+                            eachSide: ex.eachSide || false,
+                            isSupersetNext: ex.supersetId ? true : false,
+                            supersetGroupId: ex.supersetId || null,
+                            setRestSec: firstSetRestSec || undefined,
+                        };
+                        exerciseIndex++;
+                        return exercise;
+                    })
+                );
+            }
+
+            // Fix isSupersetNext based on adjacent exercises' supersetGroupId
+            const fixedExercises = exercises.map((ex, idx) => {
+                const nextEx = idx < exercises.length - 1 ? exercises[idx + 1] : null;
+                const isSupersetNext = nextEx && ex.supersetGroupId && ex.supersetGroupId === nextEx.supersetGroupId;
+                return { ...ex, isSupersetNext: isSupersetNext || false };
+            });
+
+            // Create the builder section with transformed exercises
+            const section: BuilderSection = {
+                id: `section-${Date.now()}`,
+                type: 'section',
+                name: data.name,
+                sectionType: sectionType,
+                duration: sectionType === 'amrap' && data.durationSec ? String(Math.round(data.durationSec / 60)) : undefined,
+                rounds: (sectionType === 'timed' || sectionType === 'circuits') && data.targetRounds ? String(data.targetRounds) : undefined,
+                notes: data.notes || undefined,
+                exercises: fixedExercises,
+            };
+
+            triggerSectionSelect(section);
+            router.dismiss();
+        } catch (error) {
+            console.error('Error loading section:', error);
+        } finally {
+            setIsLoadingSection(false);
+        }
     }, [triggerSectionSelect, router]);
 
     // Handle creating a new section
@@ -175,21 +410,18 @@ export default function AddSectionToBuilderModal() {
         }))
         , []);
 
-    const getSectionTypeLabel = () => {
-        const found = SECTION_TYPES.find(t => t.value === sectionType);
-        return found?.label || sectionType;
+    const getSectionTypeLabel = (type: SectionType) => {
+        return SECTION_TYPES.find((t) => t.value === type)?.label || type;
     };
 
-    const getSectionDetails = (section: typeof SAVED_SECTIONS[0]) => {
-        const type = SECTION_TYPES.find(t => t.value === section.sectionType)?.label || section.sectionType;
-        let details = type;
+    const getSectionTypeInfo = (section: typeof sections[0]) => {
         if (section.sectionType === 'amrap' && section.duration) {
-            details += ` • ${section.duration}m`;
-        } else if ((section.sectionType === 'timed' || section.sectionType === 'circuits') && section.rounds) {
-            details += ` • ${section.rounds} rounds`;
+            return `${Math.round(section.duration / 60)}m`;
         }
-        details += ` • ${section.exerciseCount} exercises`;
-        return details;
+        if ((section.sectionType === 'timed' || section.sectionType === 'circuits') && section.rounds) {
+            return `${section.rounds} ${section.rounds === 1 ? 'round' : 'rounds'}`;
+        }
+        return null;
     };
 
     return (
@@ -296,42 +528,93 @@ export default function AddSectionToBuilderModal() {
                 {selectedTab === 'saved' ? (
                     <>
                         {/* Search Bar */}
-                        <SearchBar
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                            placeholder={t('library.addSection.searchPlaceholder')}
-                        />
+                        <View style={styles.searchBarContainer}>
+                            <SearchBar
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                                placeholder={t('library.searchPlaceholders.sections')}
+                            />
+                        </View>
 
-                        {/* Saved Sections List */}
-                        {filteredSections.length === 0 ? (
-                            <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
-                                {t('library.addSection.noSectionsFound')}
-                            </Text>
+                        {/* Loading State */}
+                        {isLoading ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="large" color={primaryColor} />
+                            </View>
+                        ) : isLoadingSection ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="large" color={primaryColor} />
+                                <Text style={[styles.loadingText, { color: themeColors.mutedText }]}>
+                                    {t('library.section.loadingSection')}
+                                </Text>
+                            </View>
+                        ) : filteredSections.length === 0 ? (
+                            <EmptyState message={t('library.empty.sections')} />
                         ) : (
-                            <Card style={{ backgroundColor: themeColors.surfaceSecondary }}>
-                                {filteredSections.map((section, index) => (
-                                    <React.Fragment key={section.id}>
-                                        {index > 0 && <Separator />}
-                                        <PressableOpacity
-                                            style={styles.sectionRow}
-                                            onPress={() => handleSelectSavedSection(section)}
-                                        >
-                                            <View style={styles.sectionInfo}>
-                                                <Text style={[styles.sectionName, { color: themeColors.text }]}>
-                                                    {section.name}
-                                                </Text>
-                                                <Text
-                                                    style={[styles.sectionDetails, { color: themeColors.mutedText }]}
-                                                    numberOfLines={1}
-                                                >
-                                                    {getSectionDetails(section)}
-                                                </Text>
-                                            </View>
-                                            <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-                                        </PressableOpacity>
-                                    </React.Fragment>
-                                ))}
-                            </Card>
+                            <>
+                                {filteredSections.map((item, index) => {
+                                    const isLastItem = index === filteredSections.length - 1;
+                                    const typeInfo = getSectionTypeInfo(item);
+                                    return (
+                                        <View key={item.id}>
+                                            <PressableOpacity
+                                                style={styles.rowWrapper}
+                                                onPress={() => handleSelectSavedSection(item)}
+                                            >
+                                                <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
+                                                    <View style={styles.iconContainer}>
+                                                        <PlatformIcon
+                                                            sf="square.stack.3d.up.fill"
+                                                            IconComponent={Layers}
+                                                            size={24}
+                                                            color={themeColors.text}
+                                                        />
+                                                    </View>
+                                                    <View style={styles.textContent}>
+                                                        <Text style={[styles.sectionName, { color: themeColors.text }]} numberOfLines={1}>
+                                                            {item.program}
+                                                        </Text>
+                                                        <View style={styles.sectionMeta}>
+                                                            <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                                                                {getSectionTypeLabel(item.sectionType as SectionType)}
+                                                            </Text>
+                                                            {typeInfo && (
+                                                                <>
+                                                                    <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                                                                    <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                                                                        {typeInfo}
+                                                                    </Text>
+                                                                </>
+                                                            )}
+                                                            <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                                                            <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                                                                {item.totalExercises === 0
+                                                                    ? 'Empty'
+                                                                    : `${item.totalExercises} ${item.totalExercises === 1 ? t('library.exercise') : t('library.exercises')}`
+                                                                }
+                                                            </Text>
+                                                        </View>
+                                                    </View>
+                                                    <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                                                </View>
+                                            </PressableOpacity>
+
+                                            {!isLastItem && (
+                                                <View style={styles.separatorContainer}>
+                                                    <View
+                                                        style={[
+                                                            styles.separator,
+                                                            { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+                                                        ]}
+                                                    />
+                                                </View>
+                                            )}
+
+                                            {isLastItem && <View style={{ height: 24 }} />}
+                                        </View>
+                                    );
+                                })}
+                            </>
                         )}
                     </>
                 ) : (
@@ -359,7 +642,7 @@ export default function AddSectionToBuilderModal() {
                                     </View>
                                     <View style={styles.dropdownValueRow}>
                                         <Text style={[styles.dropdownValue, { color: themeColors.text }]}>
-                                            {getSectionTypeLabel()}
+                                            {getSectionTypeLabel(sectionType)}
                                         </Text>
                                         <ChevronDown {...({ size: 14, color: themeColors.mutedText } as any)} />
                                     </View>
@@ -491,29 +774,60 @@ const styles = StyleSheet.create({
         height: 3,
         borderRadius: 1.5,
     },
-    emptyText: {
-        ...typography.p2,
-        textAlign: 'center',
-        marginTop: 24,
+    searchBarContainer: {
+        paddingBottom: 8,
     },
-    sectionRow: {
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 48,
+        gap: 16,
+    },
+    loadingText: {
+        ...typography.p2,
+    },
+    rowWrapper: {
+        overflow: 'hidden',
+    },
+    rowContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
         paddingVertical: 12,
-        paddingHorizontal: 16,
+        gap: 12,
     },
-    sectionInfo: {
+    iconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    textContent: {
         flex: 1,
-        marginRight: 12,
+        gap: 4,
     },
     sectionName: {
         ...typography.p1,
-        fontWeight: '500',
+        fontWeight: '600',
     },
-    sectionDetails: {
+    sectionMeta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        flexWrap: 'wrap',
+    },
+    metaText: {
         ...typography.p3,
-        marginTop: 2,
+    },
+    metaDot: {
+        ...typography.p3,
+    },
+    separatorContainer: {
+        paddingLeft: 52,
+    },
+    separator: {
+        height: 1,
     },
     formContent: {
         gap: 16,

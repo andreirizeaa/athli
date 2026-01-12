@@ -76,7 +76,7 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
     };
 
     // Helper to map column label to SetData field name (matches exercise-card logic)
-    const getFieldNameForLabel = (columnLabel: string): 'reps' | 'weight' | 'distance' | 'duration' | null => {
+    const getFieldNameForLabel = (columnLabel: string): 'reps' | 'weight' | 'distance' | 'duration' | 'optional' | null => {
         if (!columnLabel) return null;
         const label = columnLabel.toLowerCase();
         if (label === 'reps' || label === 'rep') return 'reps';
@@ -84,8 +84,8 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
         if (label === 'km' || label === 'm' || label === 'yards' || label === 'miles' || label === 'feet') return 'distance';
         if (label === 'minutes' || label === 'seconds') return 'duration';
         if (label === 'none') return null;
-        // Default: treat unknown labels as custom, store in reps/weight based on position
-        return null;
+        // For optional columns (Heart Rate Zone, Tempo, RIR, RPE, etc.)
+        return 'optional';
     };
 
     // Helper to convert a set payload to SetData, handling both legacy and new trackable field formats
@@ -97,6 +97,7 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
         let weight = '';
         let distance = '';
         let duration = '';
+        let optionalValue = '';
 
         // Get raw values from trackable fields
         const column1Value = set.trackableField1?.prescribed?.toString() || '';
@@ -112,6 +113,7 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
             else if (field1 === 'weight') weight = column1Value;
             else if (field1 === 'distance') distance = column1Value;
             else if (field1 === 'duration') duration = column1Value;
+            else if (field1 === 'optional') optionalValue = column1Value;
             else {
                 // Unknown label - default to reps for column 1
                 reps = column1Value;
@@ -123,6 +125,7 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
             else if (field2 === 'weight') weight = column2Value;
             else if (field2 === 'distance') distance = column2Value;
             else if (field2 === 'duration') duration = column2Value;
+            else if (field2 === 'optional') optionalValue = column2Value;
             else {
                 // Unknown label - default to weight for column 2
                 weight = column2Value;
@@ -213,7 +216,7 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
             leftWeight,
             rightWeight,
             optional: {
-                prescribed: set.optional?.prescribed || '',
+                prescribed: optionalValue || set.optional?.prescribed || '',
                 completed: set.optional?.completed || ''
             },
         };
@@ -255,8 +258,8 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
 
                 const exercise: ExerciseWithSuperset = {
                     ...exerciseDetails,
-                    instanceId: `${cleanedId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-                    supersetGroupId: exerciseGroup.isSuperset ? `superset_${Date.now()}_${Math.random().toString(36).slice(2, 8)}` : null,
+                    instanceId: (exercisePayload as any).id || `${cleanedId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                    supersetGroupId: (exercisePayload as any).supersetId || null,
                     sets,
                     notes: exercisePayload.notes || '',
                     eachSide: !!exercisePayload.eachSide,
@@ -264,7 +267,6 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                     alternatives: ((exercisePayload as any).alternatives || []).filter((a: any) => a != null),
                     column1Label: column1Label || undefined,
                     column2Label: column2Label || undefined,
-                    optionalColumnType: (exercisePayload as any).optionalColumnType || 'Optional',
                 };
 
                 items.push({
@@ -294,8 +296,6 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
             if ((sectionPayload.type === 'regular' || sectionPayload.type === 'auxiliary') && sectionPayload.exercises) {
                 console.log('[PAYLOAD CONVERTER] Converting regular/auxiliary section with', sectionPayload.exercises.length, 'exercise groups');
                 sectionPayload.exercises.forEach((group) => {
-                    const supersetGroupId = group.isSuperset ? `superset_${sectionPayload.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}` : null;
-
                     group.exercises.forEach((exercisePayload) => {
                         // Find exercise details from the exercise database, or use fallback
                         const cleanedId = cleanExerciseId(exercisePayload);
@@ -320,8 +320,8 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
 
                         const convertedExercise = {
                             ...exerciseDetails,
-                            instanceId: `${cleanedId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-                            supersetGroupId,
+                            instanceId: (exercisePayload as any).id || `${cleanedId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                            supersetGroupId: (exercisePayload as any).supersetId || null,
                             sets,
                             notes: exercisePayload.notes || '',
                             eachSide: !!exercisePayload.eachSide,
@@ -329,7 +329,6 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                             alternatives,
                             column1Label: column1Label || undefined,
                             column2Label: column2Label || undefined,
-                            optionalColumnType: (exercisePayload as any).optionalColumnType || 'Optional',
                         };
                         section.exercises!.push(convertedExercise);
                         console.log('[PAYLOAD CONVERTER] Added exercise to section, total exercises:', section.exercises!.length);
@@ -338,8 +337,6 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                 console.log('[PAYLOAD CONVERTER] Finished converting section, final exercise count:', section.exercises!.length);
             } else if (sectionPayload.type === 'circuits' && sectionPayload.exercises) {
                 sectionPayload.exercises.forEach((group) => {
-                    const supersetGroupId = group.isSuperset ? `superset_${sectionPayload.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}` : null;
-
                     group.exercises.forEach((exercisePayload) => {
                         // Find exercise details from the exercise database, or use fallback
                         const cleanedId = cleanExerciseId(exercisePayload);
@@ -359,8 +356,8 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
 
                         section.exercises!.push({
                             ...exerciseDetails,
-                            instanceId: `${cleanedId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-                            supersetGroupId,
+                            instanceId: (exercisePayload as any).id || `${cleanedId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                            supersetGroupId: (exercisePayload as any).supersetId || null,
                             sets,
                             notes: exercisePayload.notes || '',
                             eachSide: !!exercisePayload.eachSide,
@@ -368,29 +365,58 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                             alternatives: ((exercisePayload as any).alternatives || []).filter((a: any) => a != null),
                             column1Label: column1Label || undefined,
                             column2Label: column2Label || undefined,
-                            optionalColumnType: (exercisePayload as any).optionalColumnType || 'Optional',
                         });
                     });
                 });
             } else if ((sectionPayload.type === 'amrap' || sectionPayload.type === 'timed') && sectionPayload.exercises) {
-                // For AMRAP and Timed sections, exercises don't have sets in the builder
+                // For AMRAP and Timed sections, exercises have a single set with the trackable field values
                 sectionPayload.exercises.forEach((exercisePayload) => {
                     // Find exercise details from the exercise database, or use fallback
                     const cleanedId = cleanExerciseId(exercisePayload);
                     const exerciseDetails = searchExercises('').find((e) => e.exerciseId === cleanedId)
                         || createFallbackExercise(cleanedId, (exercisePayload as any).exerciseType);
 
+                    // Extract column labels
+                    const column1Label = (exercisePayload as any).column1Label || 'Reps';
+                    const column2Label = (exercisePayload as any).column2Label || 'kg';
+
+                    // Extract trackable field values
+                    const trackableField1 = (exercisePayload as any).trackableField1;
+                    const trackableField2 = (exercisePayload as any).trackableField2;
+
+                    // Map trackable fields to set data based on column labels
+                    const fieldName1 = getFieldNameForLabel(column1Label);
+                    const fieldName2 = getFieldNameForLabel(column2Label);
+                    const value1 = trackableField1?.prescribed?.toString() || '';
+                    const value2 = trackableField2?.prescribed?.toString() || '';
+
+                    // Create a single set with the trackable field values
+                    const singleSet: SetData = {
+                        setNumber: 1,
+                        type: 'normal',
+                        reps: fieldName1 === 'reps' ? value1 : (fieldName2 === 'reps' ? value2 : ''),
+                        weight: fieldName1 === 'weight' ? value1 : (fieldName2 === 'weight' ? value2 : ''),
+                        distance: fieldName1 === 'distance' ? value1 : (fieldName2 === 'distance' ? value2 : ''),
+                        duration: fieldName1 === 'duration' ? value1 : (fieldName2 === 'duration' ? value2 : ''),
+                        rest: (exercisePayload as any).restSec?.toString() || '90',
+                        other: '',
+                        optional: {
+                            prescribed: fieldName1 === 'optional' ? value1 : (fieldName2 === 'optional' ? value2 : ''),
+                            completed: '',
+                        },
+                    };
+
                     section.exercises!.push({
                         ...exerciseDetails,
                         instanceId: `${cleanedId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-                        supersetGroupId: null,
-                        sets: [],
+                        supersetGroupId: (exercisePayload as any).supersetId || null,
+                        sets: [singleSet],
                         notes: exercisePayload.notes || '',
                         eachSide: !!exercisePayload.eachSide,
                         tempo: (exercisePayload as any).tempo || undefined,
                         alternatives: ((exercisePayload as any).alternatives || []).filter((a: any) => a != null),
-                        column1Label: (exercisePayload as any).column1Label || undefined,
-                        column2Label: (exercisePayload as any).column2Label || undefined,
+                        column1Label,
+                        column2Label,
                     });
                 });
             }

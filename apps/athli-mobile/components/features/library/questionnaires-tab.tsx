@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { PressableOpacity } from 'pressto';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
+import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
@@ -13,7 +14,6 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
-import { useModalCallbacks } from '@/stores';
 import { getQuestionnaires, deleteQuestionnaire, duplicateQuestionnaire } from '@/services/coach/coach-questionnaire-service';
 import { EmptyState } from '@/components/ui/empty-state';
 
@@ -21,8 +21,8 @@ export const QuestionnairesTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const router = useRouter();
-  const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
-  const { setClientsSelectCallback } = useModalCallbacks();
+  const { searchQuery, registerOpenRow, closeOpenRow, openRowCloseFn } = useLibraryTab();
+  const isRowOpen = openRowCloseFn !== null;
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
@@ -96,6 +96,12 @@ export const QuestionnairesTab = () => {
   });
 
   const handleQuestionnairePress = (item: typeof filteredQuestionnaires[0]) => {
+    // If a row is open, just close it and prevent navigation
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
     closeOpenRow();
     router.push({
       pathname: '/modals/library/add-questionnaire-modal',
@@ -108,100 +114,110 @@ export const QuestionnairesTab = () => {
   };
 
   const handleAssign = (item: typeof filteredQuestionnaires[0]) => {
-    setClientsSelectCallback((selectedClients) => {
-      console.log(`Assigned ${item.name} to clients:`, selectedClients.map(c => c.name));
-    });
-    router.push({
-      pathname: '/modals/shared/client-list-modal',
-      params: {
-        title: t('general.assign'),
-        buttonText: t('general.assign'),
-      }
-    });
+    // If a row is open, just close it and prevent navigation
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
+    router.push(`/modals/shared/assign-to-clients-modal?type=questionnaire&itemIds=${item.id}`);
   };
 
+  // Prefetch clients when long press happens to make modal open instantly
+  const handleLongPress = useCallback(() => {
+    queryClient.prefetchQuery({
+      queryKey: ['clients'],
+      queryFn: async () => {
+        const { getClients } = await import('@/services/coach/coach-client-service');
+        return getClients();
+      },
+    });
+  }, [queryClient]);
+
+  const renderItem = useCallback(({ item, index }: { item: typeof filteredQuestionnaires[0]; index: number }) => {
+    const isLastItem = index === filteredQuestionnaires.length - 1;
+
+    const dropdownOptions: DropdownMenuOption[] = [
+      {
+        label: t('general.assign'),
+        icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
+        onPress: () => handleAssign(item),
+      },
+      {
+        label: `${t('general.delete')} Questionnaire`,
+        icon: { sf: 'trash', IconComponent: Trash2 },
+        destructive: true,
+        onPress: () => deleteMutation.mutateAsync(item.id),
+      }
+    ];
+
+    return (
+      <View>
+        <SwipeableRow
+          onDelete={() => deleteMutation.mutateAsync(item.id)}
+          onOpen={registerOpenRow}
+          deleteConfirmTitle={`${t('general.delete')} ${item.name}?`}
+        >
+          <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
+            <PressableOpacity
+              style={styles.rowWrapper}
+              onPress={() => handleQuestionnairePress(item)}
+            >
+              <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
+                <View style={styles.iconContainer}>
+                  <PlatformIcon
+                    sf="list.bullet.rectangle.portrait.fill"
+                    IconComponent={ClipboardList}
+                    size={24}
+                    color={themeColors.text}
+                  />
+                </View>
+                <View style={styles.textContent}>
+                  <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <View style={styles.metaRow}>
+                    {item.questionCount !== undefined && (
+                      <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
+                        {item.questionCount} {item.questionCount === 1 ? 'question' : 'questions'}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+              </View>
+            </PressableOpacity>
+          </ContextMenuWrapper>
+        </SwipeableRow>
+
+        {!isLastItem && (
+          <View style={styles.separatorContainer}>
+            <View
+              style={[
+                styles.separator,
+                { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+              ]}
+            />
+          </View>
+        )}
+
+        {isLastItem && <View style={{ height: 24 }} />}
+      </View>
+    );
+  }, [filteredQuestionnaires.length, themeColors, t, deleteMutation, registerOpenRow, handleQuestionnairePress, handleAssign]);
+
   return (
-    <View style={styles.container}>
-      {/* Empty State */}
-      {filteredQuestionnaires.length === 0 && (
+    <FlashList
+      data={filteredQuestionnaires}
+      renderItem={renderItem}
+      keyExtractor={(item) => item.id}
+      ListEmptyComponent={
         <EmptyState
           message={t('library.empty.questionnaires')}
         />
-      )}
-
-      {/* Questionnaire List */}
-      {filteredQuestionnaires.map((item, index) => {
-        const isLastItem = index === filteredQuestionnaires.length - 1;
-
-        const dropdownOptions: DropdownMenuOption[] = [
-          {
-            label: t('general.assign'),
-            icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
-            onPress: () => handleAssign(item),
-          },
-          {
-            label: `${t('general.delete')} Questionnaire`,
-            icon: { sf: 'trash', IconComponent: Trash2 },
-            destructive: true,
-            onPress: () => deleteMutation.mutateAsync(item.id),
-          }
-        ];
-
-        return (
-          <View key={item.id}>
-            <SwipeableRow
-              onDelete={() => deleteMutation.mutateAsync(item.id)}
-              onOpen={registerOpenRow}
-              deleteConfirmTitle={`${t('general.delete')} ${item.name}?`}
-            >
-              <ContextMenuWrapper options={dropdownOptions}>
-                <PressableOpacity
-                  style={styles.rowWrapper}
-                  onPress={() => handleQuestionnairePress(item)}
-                >
-                  <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
-                    <View style={styles.iconContainer}>
-                      <PlatformIcon
-                        sf="list.bullet.rectangle.portrait.fill"
-                        IconComponent={ClipboardList}
-                        size={24}
-                        color={themeColors.text}
-                      />
-                    </View>
-                    <View style={styles.textContent}>
-                      <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
-                        {item.name}
-                      </Text>
-                      <View style={styles.metaRow}>
-                        {item.questionCount !== undefined && (
-                          <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
-                            {item.questionCount} {item.questionCount === 1 ? 'question' : 'questions'}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                    <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-                  </View>
-                </PressableOpacity>
-              </ContextMenuWrapper>
-            </SwipeableRow>
-
-            {!isLastItem && (
-              <View style={styles.separatorContainer}>
-                <View
-                  style={[
-                    styles.separator,
-                    { backgroundColor: themeColors.mutedText, opacity: 0.2 },
-                  ]}
-                />
-              </View>
-            )}
-
-            {isLastItem && <View style={{ height: 24 }} />}
-          </View>
-        );
-      })}
-    </View>
+      }
+      contentContainerStyle={styles.container}
+    />
   );
 };
 
@@ -215,13 +231,13 @@ const styles = StyleSheet.create({
   rowContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: 16,
   },
   iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 58,
+    height: 58,
+    borderRadius: 8,
     backgroundColor: 'rgba(128, 128, 128, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -248,7 +264,7 @@ const styles = StyleSheet.create({
     ...typography.p3,
   },
   separatorContainer: {
-    paddingLeft: 72,
+    paddingLeft: 86,
     paddingRight: 16,
   },
   separator: {

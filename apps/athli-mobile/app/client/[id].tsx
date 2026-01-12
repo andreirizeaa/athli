@@ -15,19 +15,30 @@ import * as Haptics from 'expo-haptics';
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
-import { getClients, type Client } from '@/services/client-service';
 import {
   getChats,
   createNewChat,
   getChatMessages,
 } from '@/services/chats-service';
-import { ListRowItem } from '@/components/ui/list-row-item';
+import { SettingsOption } from '@/components/ui/settings-option';
 import { Separator } from '@/components/ui/separator';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { Card } from '@/components/ui/card';
 import { PressableOpacity } from 'pressto';
+
+// Mock client data
+const MOCK_CLIENT = {
+  id: '1',
+  name: 'Sarah Johnson',
+  firstName: 'Sarah',
+  lastName: 'Johnson',
+  avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face',
+  email: 'sarah.johnson@email.com',
+  age: 28,
+  coachingType: 'hybrid' as const,
+};
 
 const MOCK_BIO = "Experienced marathon runner currently focused on improving 5k speed. Looking to balance high-intensity training with better recovery and nutritional consistency.";
 
@@ -48,8 +59,10 @@ export default function ClientDetailScreen() {
   const { colors: themeColors, primaryColor } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
-  const [client, setClient] = useState<Client | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+
+  // Use mock client data directly
+  const client = MOCK_CLIENT;
+  const isLoading = false;
 
   /* Tabs State */
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -58,24 +71,6 @@ export default function ClientDetailScreen() {
   const underlineWidth = useSharedValue(0);
 
   const iconColor = themeColors.text;
-
-  useEffect(() => {
-    const loadClient = async () => {
-      try {
-        const clients = await getClients();
-        const foundClient = clients.find((c) => c.id === id);
-        setClient(foundClient || null);
-      } catch (error) {
-        console.error('Failed to load client:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (id) {
-      loadClient();
-    }
-  }, [id]);
 
   const handleBackPress = () => {
     router.back();
@@ -463,166 +458,160 @@ export default function ClientDetailScreen() {
             </View>
           ) : (
             <View style={styles.optionsContainer}>
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="sparkles"
-                    IconComponent={Sparkles}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.assistant')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/assistant`)}
-              />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="note.text"
-                    IconComponent={Notebook}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.notes')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/notes`)}
-              />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="figure.run"
-                    IconComponent={Dumbbell}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.training')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/training`)}
-              />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="chart.bar"
-                    IconComponent={BarChart3}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.metrics')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/metrics`)}
-              />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="repeat"
-                    IconComponent={Repeat}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.habits')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/habits`)}
-              />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="photo"
-                    IconComponent={ImageIcon}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.photos')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/photos`)}
-              />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="doc"
-                    IconComponent={File}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.files')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/files`)}
-              />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="checkmark.circle"
-                    IconComponent={ClipboardCheck}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.checkIns')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/check-ins`)}
-              />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="questionmark.circle"
-                    IconComponent={HelpCircle}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.questionnaires')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/questionaires`)}
-              />
-              <Separator style={styles.separator} />
-              <ListRowItem
-                style={styles.optionRow}
-                icon={
-                  <PlatformIcon
-                    sf="gear"
-                    IconComponent={Settings}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title={t('clientDetail.sections.settings')}
-                showChevron
-                chevronSize={12}
-                onPress={() => router.push(`/client/${id}/settings`)}
-              />
-              <Separator style={styles.separator} />
+              {/* Coaching Card */}
+              <Card style={{ marginTop: 2 }}>
+                <SettingsOption
+                  icon={
+                    <PlatformIcon
+                      sf="sparkles"
+                      IconComponent={Sparkles}
+                      size={iconSizes.tabBarIcons}
+                      color={iconColor}
+                    />
+                  }
+                  title={t('clientDetail.sections.assistant')}
+                  showChevron
+                  onPress={() => router.push(`/client/${id}/assistant`)}
+                />
+                <Separator />
+                <SettingsOption
+                  icon={
+                    <PlatformIcon
+                      sf="note.text"
+                      IconComponent={Notebook}
+                      size={iconSizes.tabBarIcons}
+                      color={iconColor}
+                    />
+                  }
+                  title={t('clientDetail.sections.notes')}
+                  showChevron
+                  onPress={() => router.push(`/client/${id}/notes`)}
+                />
+                <Separator />
+                <SettingsOption
+                  icon={
+                    <PlatformIcon
+                      sf="figure.run"
+                      IconComponent={Dumbbell}
+                      size={iconSizes.tabBarIcons}
+                      color={iconColor}
+                    />
+                  }
+                  title={t('clientDetail.sections.training')}
+                  showChevron
+                  onPress={() => router.push(`/client/${id}/training`)}
+                />
+              </Card>
+
+              {/* Data Card */}
+              <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('clientDetail.sections.data')}</Text>
+              <Card>
+                <SettingsOption
+                  icon={
+                    <PlatformIcon
+                      sf="chart.bar"
+                      IconComponent={BarChart3}
+                      size={iconSizes.tabBarIcons}
+                      color={iconColor}
+                    />
+                  }
+                  title={t('clientDetail.sections.metrics')}
+                  showChevron
+                  onPress={() => router.push(`/client/${id}/metrics`)}
+                />
+                <Separator />
+                <SettingsOption
+                  icon={
+                    <PlatformIcon
+                      sf="repeat"
+                      IconComponent={Repeat}
+                      size={iconSizes.tabBarIcons}
+                      color={iconColor}
+                    />
+                  }
+                  title={t('clientDetail.sections.habits')}
+                  showChevron
+                  onPress={() => router.push(`/client/${id}/habits`)}
+                />
+                <Separator />
+                <SettingsOption
+                  icon={
+                    <PlatformIcon
+                      sf="photo"
+                      IconComponent={ImageIcon}
+                      size={iconSizes.tabBarIcons}
+                      color={iconColor}
+                    />
+                  }
+                  title={t('clientDetail.sections.photos')}
+                  showChevron
+                  onPress={() => router.push(`/client/${id}/photos`)}
+                />
+                <Separator />
+                <SettingsOption
+                  icon={
+                    <PlatformIcon
+                      sf="doc"
+                      IconComponent={File}
+                      size={iconSizes.tabBarIcons}
+                      color={iconColor}
+                    />
+                  }
+                  title={t('clientDetail.sections.files')}
+                  showChevron
+                  onPress={() => router.push(`/client/${id}/files`)}
+                />
+              </Card>
+
+              {/* Forms Card */}
+              <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('clientDetail.sections.forms')}</Text>
+              <Card>
+                <SettingsOption
+                  icon={
+                    <PlatformIcon
+                      sf="checkmark.circle"
+                      IconComponent={ClipboardCheck}
+                      size={iconSizes.tabBarIcons}
+                      color={iconColor}
+                    />
+                  }
+                  title={t('clientDetail.sections.checkIns')}
+                  showChevron
+                  onPress={() => router.push(`/client/${id}/check-ins`)}
+                />
+                <Separator />
+                <SettingsOption
+                  icon={
+                    <PlatformIcon
+                      sf="questionmark.circle"
+                      IconComponent={HelpCircle}
+                      size={iconSizes.tabBarIcons}
+                      color={iconColor}
+                    />
+                  }
+                  title={t('clientDetail.sections.questionnaires')}
+                  showChevron
+                  onPress={() => router.push(`/client/${id}/questionaires`)}
+                />
+              </Card>
+
+              {/* Settings Card */}
+              <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('clientDetail.sections.settingsTitle')}</Text>
+              <Card>
+                <SettingsOption
+                  icon={
+                    <PlatformIcon
+                      sf="gear"
+                      IconComponent={Settings}
+                      size={iconSizes.tabBarIcons}
+                      color={iconColor}
+                    />
+                  }
+                  title={t('clientDetail.sections.settings')}
+                  showChevron
+                  onPress={() => router.push(`/client/${id}/settings`)}
+                />
+              </Card>
             </View>
           )}
         </View>
@@ -784,11 +773,16 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   optionsContainer: {
+    padding: 16,
+    paddingTop: 12,
     paddingBottom: 20,
+    gap: 0,
   },
-  optionRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  sectionTitle: {
+    ...typography.p1,
+    textAlign: 'left',
+    marginBottom: 12,
+    marginTop: 8,
   },
   separator: {
     marginVertical: 0,

@@ -22,7 +22,7 @@ export default function ClientHabitsScreen() {
     };
 
     const handleAssignHabit = () => {
-        router.push('/modals/client/assign-habit-to-client-modal');
+        router.push('/modals/shared/assign-to-clients-modal?type=habit');
     };
 
     const handleAddHabit = () => {

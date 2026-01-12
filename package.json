@@ -21,11 +21,13 @@
     "ios": "cd apps/mobile && expo run:ios"
   },
   "dependencies": {
+    "@react-navigation/drawer": "^7.7.11",
     "expo-image": "~3.0.11",
     "libphonenumber-js": "^1.12.33",
     "next": "16.0.7",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-native-drawer-layout": "^4.2.1",
     "rn-emoji-keyboard": "^1.7.0"
   },
   "devDependencies": {

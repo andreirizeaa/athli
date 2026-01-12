@@ -206,16 +206,6 @@ export default function PreferencesScreen() {
       </View>
 
       <View style={[styles.content, { backgroundColor: themeColors.pageBackground }]}>
-        {/* Account Section */}
-        <Card style={{ paddingVertical: 12, marginBottom: 16 }}>
-          <SettingsOption
-            icon={<PlatformIcon sf="rectangle.portrait.and.arrow.right" IconComponent={LogOut} size={iconSize} color={iconColor} />}
-            title={t('auth.logout')}
-            showChevron={false}
-            onPress={handleLogout}
-          />
-        </Card>
-
         {/* Theme, Color Palette, Language, Units */}
         <Card style={{ paddingVertical: 12 }}>
           {/* Theme row with dropdown */}

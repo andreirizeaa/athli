@@ -4,6 +4,7 @@ import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Check, Ellipsis, MailCheck, CheckCircle2, Archive, Trash2 } from 'lucide-react-native';
+import { FlashList } from '@shopify/flash-list';
 
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -37,12 +38,20 @@ export default function ChatsScreen() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
   const [openRowCloseFn, setOpenRowCloseFn] = useState<(() => void) | null>(null);
+  const isRowOpen = openRowCloseFn !== null;
 
   const registerOpenRow = useCallback((closeFn: () => void) => {
     if (openRowCloseFn && openRowCloseFn !== closeFn) {
       openRowCloseFn();
     }
     setOpenRowCloseFn(() => closeFn);
+  }, [openRowCloseFn]);
+
+  const closeOpenRow = useCallback(() => {
+    if (openRowCloseFn) {
+      openRowCloseFn();
+      setOpenRowCloseFn(null);
+    }
   }, [openRowCloseFn]);
 
   const mutedSurfaceColor = themeColors.surfaceSecondary;
@@ -88,6 +97,12 @@ export default function ChatsScreen() {
   }, [chats, searchQuery]);
 
   const handleArchivedPress = async () => {
+    // If a row is open, just close it and prevent navigation/action
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
     // Pre-fetch archived chats to prevent empty flash on navigation
     const archivedChats = await getArchivedChats();
     router.push({
@@ -100,6 +115,12 @@ export default function ChatsScreen() {
   };
 
   const handleChatPress = async (chatId: string) => {
+    // If a row is open, just close it and prevent navigation/action
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
     if (isEditMode) {
       const newSelected = new Set(selectedChatIds);
       if (newSelected.has(chatId)) {
@@ -228,6 +249,36 @@ export default function ChatsScreen() {
 
     ];
 
+  const renderChatItem = useCallback(({ item }: { item: Chat }) => (
+    <ChatListItem
+      chat={item}
+      onPress={handleChatPress}
+      isEditMode={isEditMode}
+      isSelected={selectedChatIds.has(item.id)}
+      onArchive={handleChatArchive}
+      onDelete={handleChatDelete}
+      onMarkAsRead={handleChatMarkAsRead}
+      onOpen={registerOpenRow}
+    />
+  ), [isEditMode, selectedChatIds, handleChatPress, handleChatArchive, handleChatDelete, handleChatMarkAsRead, registerOpenRow]);
+
+  const renderListHeader = useCallback(() => {
+    if (!searchQuery.trim()) {
+      return <ArchivedItem onPress={handleArchivedPress} />;
+    }
+    return null;
+  }, [searchQuery, handleArchivedPress, isRowOpen, closeOpenRow]);
+
+  const renderEmptyComponent = useCallback(() => (
+    <View style={styles.emptyContainer}>
+      <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
+        {searchQuery.trim()
+          ? t('chats.empty.noChatsFound')
+          : t('chats.empty.noChatsYet')}
+      </Text>
+    </View>
+  ), [searchQuery, themeColors.mutedText, t]);
+
   return (
     <ScreenWrapper
       contentContainerStyle={styles.scrollViewContent}
@@ -299,7 +350,13 @@ export default function ChatsScreen() {
           </View>
           <SearchBar
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={(text) => {
+              if (isRowOpen) {
+                closeOpenRow();
+                return;
+              }
+              setSearchQuery(text);
+            }}
             placeholder={t('chats.searchPlaceholder')}
           />
         </View>
@@ -307,32 +364,16 @@ export default function ChatsScreen() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={themeColors.primary} />
           </View>
-        ) : filteredChats.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
-              {searchQuery.trim()
-                ? t('chats.empty.noChatsFound')
-                : t('chats.empty.noChatsYet')}
-            </Text>
-          </View>
         ) : (
           <View style={styles.chatListContainer}>
-            {!searchQuery.trim() && (
-              <ArchivedItem onPress={handleArchivedPress} />
-            )}
-            {filteredChats.map((chat) => (
-              <ChatListItem
-                key={chat.id}
-                chat={chat}
-                onPress={handleChatPress}
-                isEditMode={isEditMode}
-                isSelected={selectedChatIds.has(chat.id)}
-                onArchive={handleChatArchive}
-                onDelete={handleChatDelete}
-                onMarkAsRead={handleChatMarkAsRead}
-                onOpen={registerOpenRow}
-              />
-            ))}
+            <FlashList
+              data={filteredChats}
+              renderItem={renderChatItem}
+              keyExtractor={(item) => item.id}
+              ListHeaderComponent={renderListHeader}
+              ListEmptyComponent={renderEmptyComponent}
+              scrollEnabled={!isRowOpen}
+            />
           </View>
         )}
       </View>
