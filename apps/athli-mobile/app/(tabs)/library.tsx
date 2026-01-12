@@ -219,6 +219,7 @@ export default function LibraryScreen() {
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={styles.tabScrollContent}
                   keyboardShouldPersistTaps="handled"
+                  bounces={false}
                 >
                   <SearchBar
                     value={searchQuery}
