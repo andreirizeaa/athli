@@ -20,7 +20,7 @@ import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SelectInput } from '@/components/ui/form-inputs';
 import { hexToRgba } from '@/utils/colorUtils';
-import { createWorkout, editWorkout } from '@/services/coach/coach-workout-service';
+import { createWorkout, updateWorkoutDetails } from '@/services/coach/coach-workout-service';
 
 export default function AddWorkoutModal() {
     const router = useRouter();
@@ -50,7 +50,13 @@ export default function AddWorkoutModal() {
     const saveMutation = useMutation({
         mutationFn: (workoutData: any) => {
             if (isEditing && params.editingId) {
-                return editWorkout(params.editingId, workoutData);
+                // Only update metadata, preserve workout_data (exercise payloads)
+                return updateWorkoutDetails(params.editingId, {
+                    name: workoutData.name,
+                    description: workoutData.description || '',
+                    type: workoutData.type || '',
+                    difficulty: workoutData.difficulty || '',
+                });
             }
             return createWorkout(workoutData);
         },

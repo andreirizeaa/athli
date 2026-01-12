@@ -192,7 +192,7 @@ export default function AddHabitModal() {
 
         return {
             hasChanges: changes,
-            canComplete: formValid && !saveMutation.isPending,
+            canComplete: formValid && changes && !saveMutation.isPending,
         };
     }, [name, description, amount, unit, period, habitOptionsData, saveMutation.isPending, isEditing, params]);
 

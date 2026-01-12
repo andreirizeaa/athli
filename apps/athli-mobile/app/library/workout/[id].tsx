@@ -986,6 +986,7 @@ export default function WorkoutDetailScreen() {
                                     eachSide: ex.eachSide,
                                     isSupersetNext: ex.isSupersetNext,
                                     notes: ex.notes,
+                                    setRestSec: ex.setRestSec,
                                 }}
                                 onUpdateExercise={(updates) => handleUpdateExercise(index, updates as Partial<BuilderExercise>)}
                                 onDelete={() => handleDeleteItem(index)}

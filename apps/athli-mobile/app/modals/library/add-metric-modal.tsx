@@ -45,6 +45,7 @@ export default function AddMetricModal() {
         name?: string;
         unit?: string;
         description?: string;
+        schedule_config?: string; // JSON stringified schedule
     }>();
     const isEditing = !!params.editingId;
 
@@ -56,16 +57,44 @@ export default function AddMetricModal() {
     // Tab order for swipe navigation
     const tabOrder: TabKey[] = ['templates', 'new'];
 
+    // Store original schedule for change detection
+    const originalScheduleRef = useRef<ScheduleData | null>(null);
+
     // Form state
     const [name, setName] = useState(params.name || '');
     const [unit, setUnit] = useState(params.unit || '');
     const [description, setDescription] = useState(params.description || '');
 
+    // Initialize schedule data when editing
+    useEffect(() => {
+        if (isEditing && params.schedule_config) {
+            try {
+                const parsedSchedule = JSON.parse(params.schedule_config);
+                originalScheduleRef.current = parsedSchedule;
+                setScheduleData(parsedSchedule);
+            } catch (e) {
+                console.error('Failed to parse schedule_config:', e);
+                originalScheduleRef.current = null;
+            }
+        } else {
+            originalScheduleRef.current = null;
+            // Clear schedule data when opening for new metric
+            if (!isEditing) {
+                setScheduleData(null);
+            }
+        }
+    }, [isEditing, params.schedule_config, setScheduleData]);
+
     // TanStack Query
     const queryClient = useQueryClient();
 
     const saveMutation = useMutation({
-        mutationFn: isEditing ? updateMetric : createMetric,
+        mutationFn: async (data: any) => {
+            if (isEditing && params.editingId) {
+                return updateMetric(params.editingId, data);
+            }
+            return createMetric(data);
+        },
         onSuccess: async () => {
             // Refetch to update the cache and trigger Zustand store update
             await queryClient.refetchQueries({ queryKey: ['metrics'] });
@@ -174,13 +203,16 @@ export default function AddMetricModal() {
         // Only name is required, log frequency is optional
         const formValid = trimmedName.length > 0;
 
+        // Check if schedule has changed
+        const scheduleChanged = JSON.stringify(scheduleData) !== JSON.stringify(originalScheduleRef.current);
+
         // Check if any field has been modified
         let changes = false;
         if (isEditing) {
             changes = name !== (params.name || '') ||
                 unit !== (params.unit || '') ||
                 description !== (params.description || '') ||
-                hasLogFrequency;
+                scheduleChanged;
         } else {
             changes = trimmedName.length > 0 ||
                 unit.trim().length > 0 ||
@@ -190,9 +222,9 @@ export default function AddMetricModal() {
 
         return {
             hasChanges: changes,
-            canComplete: formValid && !saveMutation.isPending,
+            canComplete: formValid && changes && !saveMutation.isPending,
         };
-    }, [name, unit, description, hasLogFrequency, saveMutation.isPending, isEditing, params]);
+    }, [name, unit, description, scheduleData, hasLogFrequency, saveMutation.isPending, isEditing, params]);
 
     const animateUnderline = (tabKey: TabKey) => {
         const layout = tabLayoutsRef.current[tabKey];
@@ -310,15 +342,11 @@ export default function AddMetricModal() {
         };
 
         if (scheduleData) {
-            metricData.schedule = scheduleData;
-        }
-
-        if (isEditing && params.editingId) {
-            metricData.id = params.editingId;
+            metricData.schedule_config = scheduleData;
         }
 
         saveMutation.mutate(metricData);
-    }, [canComplete, name, unit, description, scheduleData, isEditing, params.editingId, saveMutation]);
+    }, [canComplete, name, unit, description, scheduleData, saveMutation]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
