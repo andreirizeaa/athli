@@ -1,34 +1,28 @@
-import React, { useRef, useState } from 'react';
-import { StyleSheet, TextInput, View, Text } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View, Text, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, X, Mic, Send, HelpCircle } from 'lucide-react-native';
-import { PressableOpacity } from 'pressto';
+import { ChevronLeft, HelpCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { KeyboardComposer, KeyboardAwareWrapper } from '@launchhq/react-native-keyboard-composer';
 
-import { typography, iconSizes } from '@/constants/typography';
+import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { PlatformIcon } from '@/components/ui/platform-icon';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
-import { MessageInputBar } from '@/components/features/message/message-input-bar';
-import { AttachmentPickerRow } from '@/components/features/chats/attachment-picker-row';
 
 export default function ClientAssistantScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams<{ id: string }>();
-    const { colors: themeColors, primaryColor } = useThemePreference();
+    const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
 
-    const [searchQuery, setSearchQuery] = useState('');
-    const [showAttachmentPicker, setShowAttachmentPicker] = useState(false);
-    const inputRef = useRef<TextInput>(null);
+    const [composerHeight, setComposerHeight] = useState(48);
+    const [messages, setMessages] = useState<Array<{ id: string; text: string; role: 'user' | 'assistant' }>>([]);
+    const [isStreaming, setIsStreaming] = useState(false);
 
     const iconColor = themeColors.text;
-    const headerBackgroundColor = themeColors.headerBackground;
-    const hasText = searchQuery.trim().length > 0;
 
     const handleBackPress = () => {
         router.back();
@@ -38,13 +32,31 @@ export default function ClientAssistantScreen() {
         router.push('/modals/athli-assistant-help-modal');
     };
 
-    const handlePlusPress = () => {
-        if (showAttachmentPicker) {
-            setShowAttachmentPicker(false);
-        } else {
-            inputRef.current?.focus();
-            setShowAttachmentPicker(true);
-        }
+    const handleSend = async (text: string) => {
+        if (!text.trim()) return;
+
+        // Add user message
+        const userMessage = { id: Date.now().toString(), text, role: 'user' as const };
+        setMessages((prev) => [...prev, userMessage]);
+
+        // TODO: Implement AI streaming response
+        setIsStreaming(true);
+
+        // Placeholder for AI response
+        setTimeout(() => {
+            const assistantMessage = {
+                id: (Date.now() + 1).toString(),
+                text: 'This is a placeholder response. AI integration coming soon.',
+                role: 'assistant' as const,
+            };
+            setMessages((prev) => [...prev, assistantMessage]);
+            setIsStreaming(false);
+        }, 1000);
+    };
+
+    const handleStop = () => {
+        setIsStreaming(false);
+        // TODO: Implement stream cancellation
     };
 
     return (
@@ -57,7 +69,9 @@ export default function ClientAssistantScreen() {
                     size="md"
                     color={iconColor}
                 />
-                <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('clientDetail.assistant.title')}</Text>
+                <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+                    {t('clientDetail.assistant.title')}
+                </Text>
                 <IconButton
                     icon={{ sf: 'questionmark.circle', IconComponent: HelpCircle }}
                     onPress={handleHelpPress}
@@ -65,66 +79,74 @@ export default function ClientAssistantScreen() {
                     color={iconColor}
                 />
             </View>
+            {/* Thin divider */}
+            <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
 
-            <KeyboardAvoidingView
-                style={{ flex: 1, backgroundColor: themeColors.pageBackground }}
-                behavior="padding"
-                keyboardVerticalOffset={0}
-            >
-                {/* Placeholder for Assistant Content/Messages */}
-                <View style={styles.contentContainer}>
-                    {/* Content would go here */}
-                </View>
-
-                {/* Bottom Toolbar */}
-                <View style={[styles.toolbar, { backgroundColor: headerBackgroundColor, paddingBottom: insets.bottom }]}>
-                    <View style={styles.toolbarContent}>
-                        <PressableOpacity
-                            style={styles.iconButton}
-                            onPress={handlePlusPress}
-                        >
-                            <PlatformIcon
-                                sf={showAttachmentPicker ? "xmark.circle" : "plus"}
-                                IconComponent={showAttachmentPicker ? X : Plus}
-                                size={iconSizes.tabBarIcons - 2}
-                                color={iconColor}
-                            />
-                        </PressableOpacity>
-                        <View style={styles.searchBarContainer}>
-                            <MessageInputBar
-                                ref={inputRef}
-                                value={searchQuery}
-                                onChangeText={setSearchQuery}
-                                placeholder="Ask Assistant..."
-                            />
+            <KeyboardAwareWrapper style={{ flex: 1 }} extraBottomInset={0}>
+                <ScrollView
+                    style={[styles.scrollView, { backgroundColor: themeColors.pageBackground }]}
+                    contentContainerStyle={styles.scrollContent}
+                >
+                    {messages.length === 0 ? (
+                        <View style={styles.emptyState}>
+                            <Text style={[styles.emptyStateText]}>
+                                {t('clientDetail.assistant.emptyState')}
+                            </Text>
                         </View>
-                        {hasText ? (
-                            <PressableOpacity
-                                style={styles.sendButton}
+                    ) : (
+                        messages.map((message) => (
+                            <View
+                                key={message.id}
+                                style={[
+                                    styles.messageBubble,
+                                    message.role === 'user' ? styles.userMessage : styles.assistantMessage,
+                                    {
+                                        backgroundColor:
+                                            message.role === 'user'
+                                                ? themeColors.primary
+                                                : themeColors.headerBackground,
+                                    },
+                                ]}
                             >
-                                <PlatformIcon
-                                    sf="paperplane.circle.fill"
-                                    IconComponent={Send}
-                                    size={iconSizes.tabBarIconsIOS + 2}
-                                    color={themeColors.primary}
-                                />
-                            </PressableOpacity>
-                        ) : (
-                            <PressableOpacity style={styles.iconButton}>
-                                <PlatformIcon
-                                    sf="mic"
-                                    IconComponent={Mic}
-                                    size={iconSizes.tabBarIcons - 2}
-                                    color={iconColor}
-                                />
-                            </PressableOpacity>
-                        )}
-                    </View>
-                    {showAttachmentPicker && (
-                        <AttachmentPickerRow backgroundColor={headerBackgroundColor} hideVideos hideCamera />
+                                <Text
+                                    style={[
+                                        styles.messageText,
+                                        {
+                                            color:
+                                                message.role === 'user' ? '#FFFFFF' : themeColors.text,
+                                        },
+                                    ]}
+                                >
+                                    {message.text}
+                                </Text>
+                            </View>
+                        ))
                     )}
+                </ScrollView>
+
+                {/* Composer - positioned absolutely */}
+                <View style={[styles.composerContainer]}>
+                    <View
+                        style={[
+                            styles.composerWrapper,
+                            {
+                                height: composerHeight,
+                                backgroundColor: themeColors.headerBackground,
+                            },
+                        ]}
+                    >
+                        <KeyboardComposer
+                            placeholder={t('clientDetail.assistant.placeholder')}
+                            onSend={handleSend}
+                            onStop={handleStop}
+                            onHeightChange={setComposerHeight}
+                            isStreaming={isStreaming}
+                            minHeight={48}
+                            maxHeight={120}
+                        />
+                    </View>
                 </View>
-            </KeyboardAvoidingView>
+            </KeyboardAwareWrapper>
         </ScreenWrapper>
     );
 }
@@ -137,36 +159,58 @@ const styles = StyleSheet.create({
         paddingTop: 4,
         paddingBottom: 8,
     },
-    contentContainer: {
-        flex: 1,
-    },
-    toolbar: {
-        width: '100%',
-    },
-    toolbarContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-    },
-    iconButton: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 30,
-        height: 44,
-        borderRadius: 22,
-    },
-    sendButton: {
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    searchBarContainer: {
-        flex: 1,
-    },
     headerTitle: {
         ...typography.h5,
         flex: 1,
         textAlign: 'center',
+    },
+    divider: {
+        height: 0.5,
+        width: '100%',
+    },
+    scrollView: {
+        flex: 1,
+    },
+    scrollContent: {
+        padding: 16,
+        paddingBottom: 24,
+    },
+    emptyState: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 60,
+    },
+    emptyStateText: {
+        ...typography.p2,
+        textAlign: 'center',
+    },
+    messageBubble: {
+        maxWidth: '80%',
+        padding: 12,
+        borderRadius: 16,
+        marginBottom: 12,
+    },
+    userMessage: {
+        alignSelf: 'flex-end',
+        borderBottomRightRadius: 4,
+    },
+    assistantMessage: {
+        alignSelf: 'flex-start',
+        borderBottomLeftRadius: 4,
+    },
+    messageText: {
+        ...typography.p2,
+    },
+    composerContainer: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        paddingHorizontal: 16,
+    },
+    composerWrapper: {
+        borderRadius: 24,
+        overflow: 'hidden',
     },
 });

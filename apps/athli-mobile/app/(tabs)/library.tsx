@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, Dimensions, LayoutChangeEvent, Pressable } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
@@ -9,6 +9,8 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
+import { useFocusEffect } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
@@ -44,9 +46,28 @@ export default function LibraryScreen() {
   const underlinePosition = useSharedValue(0);
   const underlineWidth = useSharedValue(0);
   const tabLayoutsRef = useRef<{ [key: number]: { x: number; width: number } }>({});
+  const queryClient = useQueryClient();
 
   // Track if a row is currently open
   const isRowOpen = openRowCloseFn !== null;
+
+  // Prefetch clients data when screen comes into focus
+  // This ensures the "Assign to Clients" modal opens instantly
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('[LibraryScreen] 🚀 Prefetching clients on focus...');
+      queryClient.prefetchQuery({
+        queryKey: ['clients'],
+        queryFn: async () => {
+          console.log('[LibraryScreen] 📡 Executing prefetch queryFn...');
+          const { getClients } = await import('@/services/coach/coach-client-service');
+          const data = await getClients();
+          console.log('[LibraryScreen] ✅ Prefetch complete:', data.length, 'clients cached');
+          return data;
+        },
+      });
+    }, [queryClient])
+  );
 
   const tabs: LibraryTab[] = [
     'workouts',

@@ -22,7 +22,7 @@ export default function ClientCheckInsScreen() {
     };
 
     const handleAssignCheckIn = () => {
-        router.push('/modals/client/assign-check-in-to-client-modal');
+        router.push('/modals/shared/assign-to-clients-modal?type=checkIn');
     };
 
     const handleAddCheckIn = () => {

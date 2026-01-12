@@ -758,6 +758,9 @@ export const en = {
       checkIns: 'Check-ins',
       questionnaires: 'Questionnaires',
       settings: 'Settings',
+      data: 'Data',
+      forms: 'Forms',
+      settingsTitle: 'Settings',
     },
     notFound: 'Client Not Found',
     loading: 'Loading...',
@@ -802,6 +805,8 @@ export const en = {
     assistant: {
       title: 'Assistant',
       helpTitle: 'Athli Assistant',
+      placeholder: 'Ask Assistant...',
+      emptyState: 'Start a conversation with your AI assistant',
     },
     assignModals: {
       assignCheckIn: 'Assign Check-in',

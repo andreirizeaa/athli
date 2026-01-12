@@ -14,7 +14,6 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
-import { useModalCallbacks } from '@/stores';
 import { getCheckIns, deleteCheckIn, duplicateCheckIn } from '@/services/coach/coach-check-in-service';
 import { EmptyState } from '@/components/ui/empty-state';
 
@@ -23,7 +22,6 @@ export const CheckInsTab = () => {
   const { t } = useTranslations();
   const router = useRouter();
   const { searchQuery, registerOpenRow, closeOpenRow, openRowCloseFn } = useLibraryTab();
-  const { setClientsSelectCallback } = useModalCallbacks();
   const isRowOpen = openRowCloseFn !== null;
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
@@ -123,17 +121,19 @@ export const CheckInsTab = () => {
       return;
     }
 
-    setClientsSelectCallback((selectedClients) => {
-      console.log(`Assigned ${item.name} to clients:`, selectedClients.map(c => c.name));
-    });
-    router.push({
-      pathname: '/modals/shared/client-list-modal',
-      params: {
-        title: t('general.assign'),
-        buttonText: t('general.assign'),
-      }
-    });
+    router.push(`/modals/shared/assign-to-clients-modal?type=checkIn&itemIds=${item.id}`);
   };
+
+  // Prefetch clients when long press happens to make modal open instantly
+  const handleLongPress = useCallback(() => {
+    queryClient.prefetchQuery({
+      queryKey: ['clients'],
+      queryFn: async () => {
+        const { getClients } = await import('@/services/coach/coach-client-service');
+        return getClients();
+      },
+    });
+  }, [queryClient]);
 
   const renderItem = useCallback(({ item, index }: { item: typeof filteredCheckIns[0]; index: number }) => {
     const isLastItem = index === filteredCheckIns.length - 1;
@@ -159,7 +159,7 @@ export const CheckInsTab = () => {
           onOpen={registerOpenRow}
           deleteConfirmTitle={`${t('general.delete')} ${item.name}?`}
         >
-          <ContextMenuWrapper options={dropdownOptions}>
+          <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
             <PressableOpacity
               style={styles.rowWrapper}
               onPress={() => handleCheckInPress(item)}
