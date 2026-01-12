@@ -56,6 +56,15 @@ export default function ClientAssistantScreen() {
         };
     });
 
+    // Animated style for the list - slides left as panel expands
+    const listSlideStyle = useAnimatedStyle(() => {
+        const delta = panelWidth.value - LIST_WIDTH; // how much wider panel is vs list
+        const tx = -Math.max(0, delta);              // move left as panel expands
+        return {
+            transform: [{ translateX: tx }],
+        };
+    });
+
     // Mock sessions data
     const [sessions, setSessions] = useState<ChatSession[]>([
         {
@@ -286,7 +295,7 @@ export default function ClientAssistantScreen() {
 
                 {/* Sessions list (fixed-width so it doesn't re-layout every frame) */}
                 <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                    <View style={{ width: LIST_WIDTH, flex: 1 }}>
+                    <Animated.View style={[{ width: LIST_WIDTH, flex: 1 }, listSlideStyle]}>
                         <FlashList
                             data={filteredSessions}
                             renderItem={({ item }) => <SessionListItem session={item} />}
@@ -296,7 +305,7 @@ export default function ClientAssistantScreen() {
                             keyboardShouldPersistTaps="handled"
                             style={{ flex: 1 }}
                         />
-                    </View>
+                    </Animated.View>
                 </View>
             </Animated.View>
         </View>
