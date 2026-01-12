@@ -5,9 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
+import { IconButton } from '@/components/ui/icon-button';
 
 export default function AthliAssistantHelpModal() {
     const router = useRouter();

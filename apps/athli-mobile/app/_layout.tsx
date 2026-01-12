@@ -10,20 +10,17 @@ import 'react-native-reanimated';
 import { PressablesConfig } from 'pressto';
 import * as Haptics from 'expo-haptics';
 
-import {
-  ThemePreferenceProvider,
-  useColorScheme,
-  useThemePreference,
-} from '@/contexts/useColorScheme';
-import { AppViewProvider } from '@/contexts/useAppView';
-import { TranslationProvider } from '@/contexts/useTranslations';
-import { ModalCallbacksProvider } from '@/contexts/modal-callbacks';
-import { TrainingOverlayProvider } from '@/contexts/useTrainingOverlay';
-import { LibraryTabProvider } from '@/contexts/useLibraryTab';
-import { UnitsProvider } from '@/contexts/useUnits';
+import { useColorScheme, useThemePreference, useCoachProfileStore, useClientProfileStore } from '@/stores';
+import { useThemeStore } from '@/stores/useThemeStore';
+import { useTranslationsStore } from '@/stores/useTranslationsStore';
+import { useUnitsStore } from '@/stores/useUnitsStore';
+import { useColorScheme as useNativeColorScheme } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { restoreSession } from '@/services/auth/supabase-auth';
+import type { CoachProfile, ClientProfile } from '@/types/profile';
+import QueryProvider from '@/providers/query-provider';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -32,11 +29,17 @@ export {
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  initialRouteName: 'index',
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+// Configure splash screen to fade out
+SplashScreen.setOptions({
+  duration: 500,
+  fade: true,
+});
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -49,12 +52,7 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
+  // Don't render anything until fonts are loaded
   if (!loaded) {
     return null;
   }
@@ -62,32 +60,20 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <PressablesConfig
-          animationType="spring"
-          animationConfig={{ damping: 30, stiffness: 200 }}
-          config={{ minScale: 0.96, activeOpacity: 0.7 }}
-          globalHandlers={{
-            onPress: () => Haptics.selectionAsync(),
-          }}
-        >
-          <KeyboardProvider>
-            <ThemePreferenceProvider>
-              <TranslationProvider>
-                <UnitsProvider>
-                  <AppViewProvider>
-                    <ModalCallbacksProvider>
-                      <TrainingOverlayProvider>
-                        <LibraryTabProvider>
-                          <RootLayoutNav />
-                        </LibraryTabProvider>
-                      </TrainingOverlayProvider>
-                    </ModalCallbacksProvider>
-                  </AppViewProvider>
-                </UnitsProvider>
-              </TranslationProvider>
-            </ThemePreferenceProvider>
-          </KeyboardProvider>
-        </PressablesConfig>
+        <QueryProvider>
+          <PressablesConfig
+            animationType="timing"
+            animationConfig={{ duration: 150 }}
+            config={{ minScale: 0.96, activeOpacity: 0.7 }}
+            globalHandlers={{
+              onPress: () => Haptics.selectionAsync(),
+            }}
+          >
+            <KeyboardProvider>
+              <RootLayoutNav />
+            </KeyboardProvider>
+          </PressablesConfig>
+        </QueryProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
@@ -97,6 +83,47 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { primaryColor, colors: themeColors } = useThemePreference();
   const segments = useSegments();
+  const systemScheme = useNativeColorScheme() ?? 'light';
+  const setCoachProfile = useCoachProfileStore((state) => state.setProfile);
+  const setClientProfile = useClientProfileStore((state) => state.setProfile);
+
+  // Initialize data fetching (runs once after auth is restored)
+  // This must be rendered as a component, not called as a function
+
+  // Initialize stores on mount and hide splash screen
+  useEffect(() => {
+    useThemeStore.getState().initialize();
+    useTranslationsStore.getState().initialize();
+    useUnitsStore.getState().initialize();
+
+    // Hide splash screen after stores are initialized and route is determined
+    SplashScreen.hideAsync();
+  }, []);
+
+  // Restore auth session on mount
+  useEffect(() => {
+    const restoreAuthSession = async () => {
+      try {
+        const authResult = await restoreSession();
+        if (authResult && authResult.profile) {
+          if (authResult.profileType === 'coach') {
+            setCoachProfile(authResult.profile as CoachProfile);
+          } else if (authResult.profileType === 'client') {
+            setClientProfile(authResult.profile as ClientProfile);
+          }
+        }
+      } catch (error) {
+        console.error('Error restoring session:', error);
+      }
+    };
+
+    restoreAuthSession();
+  }, [setCoachProfile, setClientProfile]);
+
+  // Listen to system color scheme changes
+  useEffect(() => {
+    useThemeStore.getState().updateColorsFromSystemScheme(systemScheme);
+  }, [systemScheme]);
 
   // Hide status bar only for camera and preview screens (not message-image-preview since it's from a message)
   const shouldHideStatusBar = useMemo(() => {
@@ -145,7 +172,29 @@ function RootLayoutNav() {
             },
           }}
         >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="welcome"
+            options={{
+              headerShown: false,
+              animation: 'none',
+            }}
+          />
+          <Stack.Screen
+            name="auth/email-sign-in"
+            options={{
+              headerShown: false,
+              presentation: 'card',
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="(tabs)"
+            options={{
+              headerShown: false,
+              animation: 'none',
+            }}
+          />
           <Stack.Screen name="settings/preferences" options={{ headerShown: false }} />
           <Stack.Screen
             name="client/[id]"
@@ -355,6 +404,36 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="modals/auth/sign-in-modal"
+            options={{
+              presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'ios' && {
+                sheetAllowedDetents: [0.50],
+                sheetGrabberVisible: true,
+              }),
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/auth/logout-confirmation-modal"
+            options={{
+              presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'ios' && {
+                sheetAllowedDetents: [0.35],
+                sheetGrabberVisible: true,
+              }),
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
             name="modals/client/search-client-modal"
             options={{
               presentation: 'modal',
@@ -451,18 +530,6 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="modals/client/habits-modal"
-            options={{
-              presentation: 'modal',
-              gestureEnabled: false,
-              headerShown: false,
-              ...(Platform.OS === 'android' && {
-                animation: 'slide_from_bottom',
-                gestureDirection: 'vertical',
-              }),
-            }}
-          />
-          <Stack.Screen
-            name="modals/client/assign-program-to-client-modal"
             options={{
               presentation: 'modal',
               gestureEnabled: false,
@@ -592,18 +659,6 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="modals/library/add-section-modal"
-            options={{
-              presentation: 'modal',
-              gestureEnabled: false,
-              headerShown: false,
-              ...(Platform.OS === 'android' && {
-                animation: 'slide_from_bottom',
-                gestureDirection: 'vertical',
-              }),
-            }}
-          />
-          <Stack.Screen
-            name="modals/library/add-program-modal"
             options={{
               presentation: 'modal',
               gestureEnabled: false,

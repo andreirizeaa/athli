@@ -13,6 +13,7 @@ import Animated, {
     runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
@@ -23,15 +24,16 @@ import {
     type HabitPeriod,
 } from '@/constants/training';
 import { defaultHabits, type DefaultHabit } from '@/constants/habits';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { useModalCallbacks, type HabitOptionsData } from '@/contexts/modal-callbacks';
-import { IconButton } from '@/components/icon-button';
-import { InputBox, TextAreaInput, SelectInput, ButtonTabGroup } from '@/components/form-inputs';
-import { Card } from '@/components/card';
-import { Separator } from '@/components/separator';
-import { SearchBar } from '@/components/search-bar';
+import { useThemePreference, useColorScheme } from '@/stores';
+import { useTranslations } from '@/stores';
+import { useModalCallbacks, type HabitOptionsData } from '@/stores';
+import { IconButton } from '@/components/ui/icon-button';
+import { InputBox, TextAreaInput, SelectInput, ButtonTabGroup } from '@/components/ui/form-inputs';
+import { Card } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
+import { addHabit, editHabit } from '@/services/coach/coach-habit-service';
 
 
 // Helper to format time string "HH:MM" for display (12-hour format)
@@ -91,7 +93,27 @@ export default function AddHabitModal() {
     const [amount, setAmount] = useState(params.amount || '');
     const [unit, setUnit] = useState<HabitUnit | null>((params.unit as HabitUnit) || null);
     const [period, setPeriod] = useState<HabitPeriod>((params.period as HabitPeriod) || 'daily');
-    const [isSaving, setIsSaving] = useState(false);
+
+    // TanStack Query
+    const queryClient = useQueryClient();
+
+    const saveMutation = useMutation({
+        mutationFn: isEditing ? editHabit : addHabit,
+        onSuccess: async () => {
+            // Refetch to update the cache and trigger Zustand store update
+            await queryClient.refetchQueries({ queryKey: ['habits'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            handleClose();
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
 
     // Search state for templates
     const [searchQuery, setSearchQuery] = useState('');
@@ -170,9 +192,9 @@ export default function AddHabitModal() {
 
         return {
             hasChanges: changes,
-            canComplete: formValid && !isSaving,
+            canComplete: formValid && changes && !saveMutation.isPending,
         };
-    }, [name, description, amount, unit, period, habitOptionsData, isSaving, isEditing, params]);
+    }, [name, description, amount, unit, period, habitOptionsData, saveMutation.isPending, isEditing, params]);
 
     const animateUnderline = (tabKey: TabKey) => {
         const layout = tabLayoutsRef.current[tabKey];
@@ -279,17 +301,28 @@ export default function AddHabitModal() {
     const handleSave = useCallback(() => {
         if (!canComplete) return;
 
-        // TODO: Implement save functionality
-        // const habitData = {
-        //     name: name.trim(),
-        //     description: description.trim(),
-        //     amount: parseInt(amount, 10) || 0,
-        //     unit,
-        //     period,
-        // };
+        const habitData: any = {
+            name: name.trim(),
+            description: description.trim(),
+            amount: parseInt(amount, 10) || 0,
+            unit: unit || '',
+            period,
+        };
 
-        handleClose();
-    }, [canComplete, name, description, amount, unit, period, handleClose]);
+        if (habitOptionsData?.duration !== undefined) {
+            habitData.duration = habitOptionsData.duration;
+        }
+        if (habitOptionsData?.reminderTime) {
+            habitData.reminderTime = habitOptionsData.reminderTime;
+            habitData.reminderMessage = habitOptionsData.reminderMessage || '';
+        }
+
+        if (isEditing && params.editingId) {
+            habitData.id = params.editingId;
+        }
+
+        saveMutation.mutate(habitData);
+    }, [canComplete, name, description, amount, unit, period, habitOptionsData, isEditing, params.editingId, saveMutation]);
 
     const handleAmountChange = (text: string) => {
         // Only allow numbers
@@ -342,6 +375,7 @@ export default function AddHabitModal() {
                         size="md"
                         variant={canComplete ? 'primary' : 'default'}
                         disabled={!canComplete}
+                        loading={saveMutation.isPending}
                     />
                 </View>
             </View>

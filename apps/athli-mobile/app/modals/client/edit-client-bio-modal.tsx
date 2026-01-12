@@ -6,10 +6,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { TextAreaInput } from '@/components/form-inputs';
+import { useThemePreference, useColorScheme } from '@/stores';
+import { useTranslations } from '@/stores';
+import { IconButton } from '@/components/ui/icon-button';
+import { TextAreaInput } from '@/components/ui/form-inputs';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { hexToRgba } from '@/utils/colorUtils';
 

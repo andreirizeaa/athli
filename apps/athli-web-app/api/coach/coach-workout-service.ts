@@ -213,6 +213,22 @@ export const getWorkoutById = async (workoutId: string): Promise<Workout & { wor
 
   const w = response.data.workout;
 
+  // Handle both new API format (items at top level) and legacy format (nested in workout_data)
+  // If items is present at top level and workout_data doesn't have items, use top level
+  const workoutDataItems = w.workout_data?.items || w.items || [];
+  const workoutData = {
+    items: workoutDataItems,
+    pre: w.workout_data?.pre || w.pre || { readiness: null },
+    post: w.workout_data?.post || w.post || { rating: null, intensity: null, sessionComments: null },
+    completedSummary: w.workout_data?.completedSummary || w.completedSummary || {
+      status: 'not_started',
+      startedAt: null,
+      completedAt: null,
+      totalDurationMin: null,
+      totalWeightLifted: null,
+    },
+  };
+
   // Map API response fields to Workout type
   return {
     id: w.id,
@@ -225,7 +241,7 @@ export const getWorkoutById = async (workoutId: string): Promise<Workout & { wor
     equipment: Array.isArray(w.equipment) ? w.equipment.join(', ') : w.equipment || '',
     created: w.created_at ? new Date(w.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : '',
     isFavourite: w.is_favourite || false,
-    workout_data: w.workout_data,
+    workout_data: workoutData as WorkoutProgramPayload,
   };
 };
 

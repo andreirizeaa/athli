@@ -1,13 +1,15 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Platform, StyleSheet, Text, View, Keyboard, TouchableWithoutFeedback, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
-import { 
+import {
     EXERCISE_CATEGORY_OPTIONS,
     MUSCLE_GROUP_OPTIONS,
     EQUIPMENT_OPTIONS,
@@ -17,10 +19,12 @@ import {
     type Equipment,
     type Modality,
 } from '@/constants/training';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { InputBox, TextAreaInput, SelectInput } from '@/components/form-inputs';
+import { useThemePreference, useColorScheme } from '@/stores';
+import { useTranslations } from '@/stores';
+import { IconButton } from '@/components/ui/icon-button';
+import { InputBox, TextAreaInput, SelectInput } from '@/components/ui/form-inputs';
+import { hexToRgba } from '@/utils/colorUtils';
+import { createExercise, editExercise, getExerciseById } from '@/services/coach/coach-exercise-service';
 
 // YouTube/Vimeo URL validation helper
 const isValidVideoUrl = (url: string): boolean => {
@@ -28,18 +32,18 @@ const isValidVideoUrl = (url: string): boolean => {
     try {
         const urlObj = new URL(url.trim());
         const hostname = urlObj.hostname.toLowerCase();
-        
+
         // Check for YouTube domains
-        const isYouTube = hostname === 'youtube.com' || 
-                         hostname === 'www.youtube.com' || 
-                         hostname === 'youtu.be' ||
-                         hostname === 'm.youtube.com';
-        
+        const isYouTube = hostname === 'youtube.com' ||
+            hostname === 'www.youtube.com' ||
+            hostname === 'youtu.be' ||
+            hostname === 'm.youtube.com';
+
         // Check for Vimeo domains
-        const isVimeo = hostname === 'vimeo.com' || 
-                       hostname === 'www.vimeo.com' ||
-                       hostname === 'player.vimeo.com';
-        
+        const isVimeo = hostname === 'vimeo.com' ||
+            hostname === 'www.vimeo.com' ||
+            hostname === 'player.vimeo.com';
+
         return isYouTube || isVimeo;
     } catch {
         return false;
@@ -53,79 +57,172 @@ export default function AddExerciseModal() {
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
 
-    // Form state
-    const [title, setTitle] = useState('');
-    const [category, setCategory] = useState<ExerciseCategory | null>(null);
-    const [videoLink, setVideoLink] = useState('');
-    const [instructions, setInstructions] = useState('');
-    const [muscleGroup, setMuscleGroup] = useState<MuscleGroup | null>(null);
-    const [equipment, setEquipment] = useState<Equipment | null>(null);
-    const [modality, setModality] = useState<Modality | null>(null);
+    const params = useLocalSearchParams<{
+        editingId?: string;
+        name?: string;
+        category?: string;
+        videoLink?: string;
+        instructions?: string;
+        muscleGroup?: string;
+        equipment?: string;
+        modality?: string;
+    }>();
+    const isEditing = !!params.editingId;
+
+    // Form state - Initialize with params for immediate display
+    const [title, setTitle] = useState(params.name || '');
+    const [category, setCategory] = useState<ExerciseCategory | null>(
+        (params.category && params.category !== '' ? params.category as ExerciseCategory : null)
+    );
+    const [videoLink, setVideoLink] = useState(params.videoLink || '');
+    const [instructions, setInstructions] = useState(params.instructions || '');
+    const [muscleGroup, setMuscleGroup] = useState<MuscleGroup | null>(
+        (params.muscleGroup && params.muscleGroup !== '' ? params.muscleGroup as MuscleGroup : null)
+    );
+    const [equipment, setEquipment] = useState<Equipment | null>(
+        (params.equipment && params.equipment !== '' ? params.equipment as Equipment : null)
+    );
+    const [modality, setModality] = useState<Modality | null>(
+        (params.modality && params.modality !== '' ? params.modality as Modality : null)
+    );
+
+    // TanStack Query
+    const queryClient = useQueryClient();
+
+    // Fetch exercise data when editing
+    const { data: existingExercise } = useQuery({
+        queryKey: ['exercise', params.editingId],
+        queryFn: () => getExerciseById(params.editingId!),
+        enabled: isEditing && !!params.editingId,
+    });
+
+    // Populate form when exercise data is loaded
+    useEffect(() => {
+        if (existingExercise) {
+            setTitle(existingExercise.name || '');
+            setCategory((existingExercise.category as ExerciseCategory) || null);
+            setVideoLink(existingExercise.video_link || '');
+            setInstructions(existingExercise.description || '');
+            setMuscleGroup((existingExercise.muscle_group?.[0] as MuscleGroup) || null);
+            setEquipment((existingExercise.equipment as Equipment) || null);
+            setModality((existingExercise.modality as Modality) || null);
+        }
+    }, [existingExercise]);
+
+    const createMutation = useMutation({
+        mutationFn: createExercise,
+        onSuccess: async () => {
+            await queryClient.refetchQueries({ queryKey: ['exercises'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            handleClose();
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
+
+    const editMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string; data: any }) => editExercise(id, data),
+        onSuccess: async () => {
+            await queryClient.refetchQueries({ queryKey: ['exercises'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            handleClose();
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
 
     const handleDismissKeyboard = () => {
         Keyboard.dismiss();
     };
 
     // Category options from constants
-    const categoryOptions = useMemo(() => 
+    const categoryOptions = useMemo(() =>
         EXERCISE_CATEGORY_OPTIONS.map((opt) => ({
             value: opt.value,
             label: opt.label,
         }))
-    , []);
+        , []);
 
     // Muscle group options from constants
-    const muscleGroupOptions = useMemo(() => 
+    const muscleGroupOptions = useMemo(() =>
         MUSCLE_GROUP_OPTIONS.map((opt) => ({
             value: opt.value,
             label: opt.label,
         }))
-    , []);
+        , []);
 
     // Equipment options from constants
-    const equipmentOptions = useMemo(() => 
+    const equipmentOptions = useMemo(() =>
         EQUIPMENT_OPTIONS.map((opt) => ({
             value: opt.value,
             label: opt.label,
         }))
-    , []);
+        , []);
 
     // Modality options from constants
-    const modalityOptions = useMemo(() => 
+    const modalityOptions = useMemo(() =>
         MODALITY_OPTIONS.map((opt) => ({
             value: opt.value,
             label: opt.label,
         }))
-    , []);
+        , []);
 
     // Form validation and change detection
     const { isFormValid, hasChanges, canComplete, isVideoLinkValid } = useMemo(() => {
         const trimmedTitle = title.trim();
         const trimmedVideoLink = videoLink.trim();
-        
+
         // Title, category, and valid video link are mandatory
         const titleValid = trimmedTitle.length > 0;
         const categoryValid = category !== null;
         const videoValid = isValidVideoUrl(trimmedVideoLink);
-        
+
         const formValid = titleValid && categoryValid && videoValid;
 
-        // Check if any field has been modified
-        const changes = trimmedTitle.length > 0 || 
-                       category !== null ||
-                       trimmedVideoLink.length > 0 ||
-                       instructions.trim().length > 0 || 
-                       muscleGroup !== null ||
-                       equipment !== null ||
-                       modality !== null;
+        // Check if any field has been modified from original values
+        let changes = false;
+        if (isEditing) {
+            const originalCategory = params.category && params.category !== '' ? params.category : null;
+            const originalMuscleGroup = params.muscleGroup && params.muscleGroup !== '' ? params.muscleGroup : null;
+            const originalEquipment = params.equipment && params.equipment !== '' ? params.equipment : null;
+            const originalModality = params.modality && params.modality !== '' ? params.modality : null;
+
+            changes = title !== (params.name || '') ||
+                category !== originalCategory ||
+                videoLink !== (params.videoLink || '') ||
+                instructions !== (params.instructions || '') ||
+                muscleGroup !== originalMuscleGroup ||
+                equipment !== originalEquipment ||
+                modality !== originalModality;
+        } else {
+            changes = trimmedTitle.length > 0 ||
+                category !== null ||
+                trimmedVideoLink.length > 0 ||
+                instructions.trim().length > 0 ||
+                muscleGroup !== null ||
+                equipment !== null ||
+                modality !== null;
+        }
 
         return {
             isFormValid: formValid,
             hasChanges: changes,
-            canComplete: formValid,
+            canComplete: formValid && !createMutation.isPending && !editMutation.isPending,
             isVideoLinkValid: trimmedVideoLink.length === 0 || isValidVideoUrl(trimmedVideoLink),
         };
-    }, [title, category, videoLink, instructions, muscleGroup, equipment, modality]);
+    }, [title, category, videoLink, instructions, muscleGroup, equipment, modality, createMutation.isPending, editMutation.isPending, isEditing, params]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -159,19 +256,22 @@ export default function AddExerciseModal() {
     const handleSave = useCallback(() => {
         if (!canComplete) return;
 
-        // TODO: Implement save functionality
-        // const exerciseData = {
-        //     title: title.trim(),
-        //     category,
-        //     videoLink: videoLink.trim(),
-        //     instructions: instructions.trim(),
-        //     muscleGroup,
-        //     equipment,
-        //     modality,
-        // };
+        const exerciseData: any = {
+            name: title.trim(),
+            category,
+            videoLink: videoLink.trim(),
+            instructions: instructions.trim(),
+            muscleGroups: muscleGroup ? [muscleGroup] : [],
+            equipment,
+            modality,
+        };
 
-        handleClose();
-    }, [canComplete, title, category, videoLink, instructions, muscleGroup, equipment, modality, handleClose]);
+        if (isEditing && params.editingId) {
+            editMutation.mutate({ id: params.editingId, data: exerciseData });
+        } else {
+            createMutation.mutate(exerciseData);
+        }
+    }, [canComplete, title, category, videoLink, instructions, muscleGroup, equipment, modality, isEditing, params.editingId, createMutation, editMutation]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -183,11 +283,12 @@ export default function AddExerciseModal() {
                     {/* Header with gradient */}
                     <View style={[styles.fixedHeader, { height: headerHeight }]}>
                         <LinearGradient
-                            colors={
-                                colorScheme === 'dark'
-                                    ? ['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0)']
-                                    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0)']
-                            }
+                            colors={[
+                                hexToRgba(themeColors.background, 1),
+                                hexToRgba(themeColors.background, 0.85),
+                                hexToRgba(themeColors.background, 0.5),
+                                hexToRgba(themeColors.background, 0),
+                            ]}
                             locations={[0, 0.5, 0.8, 1]}
                             style={[styles.headerGradient, { height: gradientHeight }]}
                             pointerEvents="none"
@@ -215,6 +316,7 @@ export default function AddExerciseModal() {
                                 size="md"
                                 variant={canComplete ? 'primary' : 'default'}
                                 disabled={!canComplete}
+                                loading={createMutation.isPending || editMutation.isPending}
                             />
                         </View>
                     </View>

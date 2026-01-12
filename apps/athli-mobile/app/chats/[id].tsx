@@ -22,21 +22,21 @@ import {
   setAudioModeAsync,
 } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
-import { type IWaveformRef, PlayerState, FinishMode } from '@/components/audio';
+import { type IWaveformRef, PlayerState, FinishMode } from '@/components/features/audio';
 
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
+import { useThemePreference, useColorScheme } from '@/stores';
 import { hexToRgba } from '@/utils/colorUtils';
-import { useTranslations } from '@/contexts/useTranslations';
-import { type DropdownMenuOption } from '@/components/dropdown-menu';
-import { MessageList } from '@/components/message/message-list-flashlist';
-import { MessageReactionsSheet } from '@/components/message/message-reactions-sheet';
-import { ReplyPreviewRow } from '@/components/chats/reply-preview-row';
-import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
-import { VoiceNoteRecordingContainer } from '@/components/chats/voice-note-recording-container';
-import { ChatHeader } from '@/components/chats/chat-header';
-import { ChatToolbar } from '@/components/chats/chat-toolbar';
-import { ChatLoadingState } from '@/components/chats/chat-loading-state';
-import { stopAllWaveformPlayers } from '@/components/message/message-audio-preview';
+import { useTranslations } from '@/stores';
+import { type DropdownMenuOption } from '@/components/ui/dropdown-menu';
+import { MessageList } from '@/components/features/message/message-list-flashlist';
+import { MessageReactionsSheet } from '@/components/features/message/message-reactions-sheet';
+import { ReplyPreviewRow } from '@/components/features/chats/reply-preview-row';
+import { AttachmentPickerRow } from '@/components/features/chats/attachment-picker-row';
+import { VoiceNoteRecordingContainer } from '@/components/features/chats/voice-note-recording-container';
+import { ChatHeader } from '@/components/features/chats/chat-header';
+import { ChatToolbar } from '@/components/features/chats/chat-toolbar';
+import { ChatLoadingState } from '@/components/features/chats/chat-loading-state';
+import { stopAllWaveformPlayers } from '@/components/features/message/message-audio-preview';
 import {
   getChats,
   getArchivedChats,

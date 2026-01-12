@@ -594,6 +594,8 @@ export const esMessages = {
     equipment: 'Equipamiento',
     created: 'Creado',
     continue: 'Continuar',
+    deleteSection: 'Eliminar Sección',
+    deleteSectionDescription: '¿Estás seguro de que deseas eliminar esta sección? Esta acción no se puede deshacer.',
   },
   messages: {
     title: 'Inbox',

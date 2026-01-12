@@ -6,15 +6,15 @@ import { X, UserPlus, Check } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { useModalCallbacks } from '@/contexts/modal-callbacks';
-import { SearchBar } from '@/components/search-bar';
-import { ClientSelectionList } from '@/components/clients/client-selection-list';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
+import { useModalCallbacks } from '@/stores';
+import { SearchBar } from '@/components/ui/search-bar';
+import { ClientSelectionList } from '@/components/features/clients/client-selection-list';
 import { type Client } from '@/services/client-service';
-import { IconButton } from '@/components/icon-button';
+import { IconButton } from '@/components/ui/icon-button';
 import { hexToRgba } from '@/utils/colorUtils';
-import { FilledButton } from '@/components/buttons';
+import { FilledButton } from '@/components/ui/buttons';
 
 // TODO: Replace with actual TanStack Query hook: const { data: clients, isLoading } = useClients()
 // Mock data to mimic TanStack Query behavior
@@ -52,7 +52,7 @@ export default function ClientListModal() {
             (client: Client) =>
                 client.firstName.toLowerCase().includes(query) ||
                 client.lastName.toLowerCase().includes(query) ||
-                client.fullName.toLowerCase().includes(query)
+                client.name.toLowerCase().includes(query)
         );
     }, [clients, searchQuery]);
 

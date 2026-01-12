@@ -10,14 +10,45 @@ import type {
 } from '@/components/training/shared/types/workout-builder.types';
 
 /**
+ * Maps a column label to the actual field name where data is stored
+ * This must match the logic in exercise-card.tsx getFieldName
+ */
+const getFieldNameFromLabel = (columnLabel: string | undefined): 'reps' | 'weight' | 'distance' | 'duration' | 'optional' | null => {
+  if (!columnLabel || columnLabel === 'None') return null;
+  if (columnLabel === 'Reps') return 'reps';
+  if (columnLabel === 'kg' || columnLabel === 'lbs') return 'weight';
+  if (columnLabel === 'km' || columnLabel === 'm' || columnLabel === 'yards' || columnLabel === 'miles' || columnLabel === 'feet') return 'distance';
+  if (columnLabel === 'minutes' || columnLabel === 'seconds') return 'duration';
+  // For optional columns (Tempo, RIR, RPE, etc.)
+  return 'optional';
+};
+
+/**
+ * Gets the value from a set based on the field name
+ */
+const getFieldValue = (set: SetData, fieldName: 'reps' | 'weight' | 'distance' | 'duration' | 'optional' | null): string => {
+  if (!fieldName) return '';
+  if (fieldName === 'reps') return set.reps || '';
+  if (fieldName === 'weight') return set.weight || '';
+  if (fieldName === 'distance') return set.distance || '';
+  if (fieldName === 'duration') return set.duration || '';
+  if (fieldName === 'optional') return set.optional?.prescribed || '';
+  return '';
+};
+
+/**
+ * Validates tempo format - must be empty or complete X-X-X-X format (4 digits)
+ */
+const isTempoValid = (tempo?: string): boolean => {
+  if (!tempo || tempo.trim() === '') return true;
+  // Must match exactly X-X-X-X where X is a digit
+  const tempoPattern = /^\d-\d-\d-\d$/;
+  return tempoPattern.test(tempo);
+};
+
+/**
  * Recomputes validation errors for a single exercise based on its sets
- *
- * @param exerciseInstanceId - The instance ID of the exercise
- * @param exerciseType - The type of exercise (weight_reps, reps, or distance_duration)
- * @param sets - The sets data for the exercise
- * @param hasAttemptedSave - Whether the user has attempted to save (controls when validation is shown)
- * @param currentErrors - The current validation errors state
- * @returns Updated validation errors
+ * Simple validation: value required in each cell unless column is set to "None"
  */
 export const recomputeExerciseValidation = (
   exerciseInstanceId: string,
@@ -25,7 +56,10 @@ export const recomputeExerciseValidation = (
   sets: SetData[] | undefined,
   hasAttemptedSave: boolean,
   currentErrors: ValidationErrors,
-  eachSide?: boolean
+  eachSide?: boolean,
+  column1Label?: string,
+  column2Label?: string,
+  tempo?: string
 ): ValidationErrors => {
   // Do not show validation until the user has attempted to save at least once
   if (!hasAttemptedSave) {
@@ -35,104 +69,40 @@ export const recomputeExerciseValidation = (
   const next: ValidationErrors = { ...currentErrors };
   const exerciseErrors: ExerciseValidationError = {};
 
+  // Map column labels to field names
+  const column1Field = getFieldNameFromLabel(column1Label);
+  const column2Field = getFieldNameFromLabel(column2Label);
 
+  // Column 1 is required if not "None" or optional type
+  const column1Required = column1Field !== null && column1Field !== 'optional';
+  // Column 2 is required if not "None" or optional type
+  const column2Required = column2Field !== null && column2Field !== 'optional';
 
   if (sets && sets.length > 0) {
     sets.forEach((set, index) => {
       const setErrors: SetFieldValidation = {};
 
-      const hasRest = !!set.rest && set.rest.trim() !== '';
-      if (!hasRest) {
-        setErrors.rest = true;
+      // Validate column 1 (if required)
+      if (column1Required) {
+        const value = getFieldValue(set, column1Field);
+        if (!value || value.trim() === '') {
+          // Mark the appropriate field as having an error
+          if (column1Field === 'reps') setErrors.reps = true;
+          else if (column1Field === 'weight') setErrors.weight = true;
+          else if (column1Field === 'distance') setErrors.distance = true;
+          else if (column1Field === 'duration') setErrors.duration = true;
+        }
       }
 
-      if (exerciseType === 'distance_duration') {
-        const hasDistance = !!set.distance && set.distance.trim() !== '';
-        const hasDuration = !!set.duration && set.duration.trim() !== '';
-
-        if (!hasDistance && !hasDuration) {
-          setErrors.distance = true;
-          setErrors.duration = true;
-        }
-      } else {
-        if (set.type === 'dropset') {
-          // For dropsets, check that all drop stages have values
-          // Dropset values are stored as hyphen-separated strings like "10-8-6"
-
-          if (eachSide) {
-            // Each-side dropsets use leftReps and rightReps
-            const leftRepsStages = (set.leftReps || '').split('-');
-            const rightRepsStages = (set.rightReps || '').split('-');
-            const allLeftRepsValid = leftRepsStages.length > 0 && leftRepsStages.every(stage => stage.trim() !== '') && !(leftRepsStages.length === 1 && leftRepsStages[0] === '');
-            const allRightRepsValid = rightRepsStages.length > 0 && rightRepsStages.every(stage => stage.trim() !== '') && !(rightRepsStages.length === 1 && rightRepsStages[0] === '');
-
-            if (!allLeftRepsValid || !allRightRepsValid) {
-              setErrors.reps = true;
-            }
-
-            if (exerciseType === 'weight_reps') {
-              // For each-side weight_reps dropsets, also validate left/right weight stages
-              const leftWeightStages = (set.leftWeight || '').split('-');
-              const rightWeightStages = (set.rightWeight || '').split('-');
-              const allLeftWeightValid = leftWeightStages.length > 0 && leftWeightStages.every(stage => stage.trim() !== '') && !(leftWeightStages.length === 1 && leftWeightStages[0] === '');
-              const allRightWeightValid = rightWeightStages.length > 0 && rightWeightStages.every(stage => stage.trim() !== '') && !(rightWeightStages.length === 1 && rightWeightStages[0] === '');
-
-              if (!allLeftWeightValid || !allRightWeightValid) {
-                setErrors.weight = true;
-              }
-            }
-          } else {
-            // Standard dropset (not each-side)
-            const repsStages = (set.reps || '').split('-');
-            const allRepsValid = repsStages.length > 0 && repsStages.every(stage => stage.trim() !== '');
-
-            if (exerciseType === 'weight_reps') {
-              const weightStages = (set.weight || '').split('-');
-              const allWeightValid = weightStages.length > 0 && weightStages.every(stage => stage.trim() !== '');
-
-              // Both reps and weight must have all stages filled
-              if (!allRepsValid || repsStages.length === 0 || (repsStages.length === 1 && repsStages[0] === '')) {
-                setErrors.reps = true;
-              }
-              if (!allWeightValid || weightStages.length === 0 || (weightStages.length === 1 && weightStages[0] === '')) {
-                setErrors.weight = true;
-              }
-            } else {
-              // For reps-only exercises, just validate reps
-              if (!allRepsValid || repsStages.length === 0 || (repsStages.length === 1 && repsStages[0] === '')) {
-                setErrors.reps = true;
-              }
-            }
-          }
-        } else {
-          // Reps required only for non-dropset, non-failure sets
-          if (set.type !== 'failure') {
-            if (eachSide) {
-              const leftRepsStr = set.leftReps?.toString() || '';
-              const rightRepsStr = set.rightReps?.toString() || '';
-              const hasLeftReps = leftRepsStr.trim() !== '';
-              const hasRightReps = rightRepsStr.trim() !== '';
-
-              if (!hasLeftReps || !hasRightReps) {
-                setErrors.reps = true; // Use 'reps' key for the error signal
-              }
-            } else {
-              const repsStr = set.reps?.toString() || '';
-              const hasReps = repsStr.trim() !== '';
-              if (!hasReps) {
-                setErrors.reps = true;
-              }
-            }
-          }
-
-          // Weight required for all weight_reps sets except dropsets
-          if (exerciseType === 'weight_reps') {
-            const weightStr = set.weight?.toString() || '';
-            const hasWeight = weightStr.trim() !== '';
-            if (!hasWeight) {
-              setErrors.weight = true;
-            }
-          }
+      // Validate column 2 (if required)
+      if (column2Required) {
+        const value = getFieldValue(set, column2Field);
+        if (!value || value.trim() === '') {
+          // Mark the appropriate field as having an error
+          if (column2Field === 'reps') setErrors.reps = true;
+          else if (column2Field === 'weight') setErrors.weight = true;
+          else if (column2Field === 'distance') setErrors.distance = true;
+          else if (column2Field === 'duration') setErrors.duration = true;
         }
       }
 
@@ -140,6 +110,12 @@ export const recomputeExerciseValidation = (
         exerciseErrors[index] = setErrors;
       }
     });
+  }
+
+  // Check tempo format (at exercise level, not per-set)
+  if (!isTempoValid(tempo)) {
+    // Add a special marker for tempo error (use set index -1 or a special key)
+    exerciseErrors[-1] = { tempo: true } as unknown as SetFieldValidation;
   }
 
   if (Object.keys(exerciseErrors).length === 0) {
@@ -153,12 +129,6 @@ export const recomputeExerciseValidation = (
 
 /**
  * Clears a specific validation error field for a set
- *
- * @param exerciseInstanceId - The instance ID of the exercise
- * @param setIndex - The index of the set
- * @param field - The field to clear the error for
- * @param currentErrors - The current validation errors state
- * @returns Updated validation errors
  */
 export const clearSetValidationField = (
   exerciseInstanceId: string,
@@ -194,110 +164,51 @@ export const clearSetValidationField = (
 
 /**
  * Validates a single exercise and adds any errors to the nextErrors object
+ * Simple validation: value required in each cell unless column is set to "None"
  */
 const validateExercise = (
   exercise: ExerciseWithSuperset,
   nextErrors: ValidationErrors
 ): void => {
-
-
   const sets = exercise.sets || [];
+
+  // Get column labels
+  const column1Label = exercise.column1Label;
+  const column2Label = exercise.column2Label;
+
+  // Map column labels to field names
+  const column1Field = getFieldNameFromLabel(column1Label);
+  const column2Field = getFieldNameFromLabel(column2Label);
+
+  // Column 1 is required if not "None" or optional type
+  const column1Required = column1Field !== null && column1Field !== 'optional';
+  // Column 2 is required if not "None" or optional type
+  const column2Required = column2Field !== null && column2Field !== 'optional';
 
   sets.forEach((set, index) => {
     const setErrors: SetFieldValidation = {};
 
-    const hasRest = !!set.rest && set.rest.trim() !== '';
-    if (!hasRest) {
-      setErrors.rest = true;
+    // Validate column 1 (if required)
+    if (column1Required) {
+      const value = getFieldValue(set, column1Field);
+      if (!value || value.trim() === '') {
+        // Mark the appropriate field as having an error
+        if (column1Field === 'reps') setErrors.reps = true;
+        else if (column1Field === 'weight') setErrors.weight = true;
+        else if (column1Field === 'distance') setErrors.distance = true;
+        else if (column1Field === 'duration') setErrors.duration = true;
+      }
     }
 
-    if (exercise.exerciseType === 'distance_duration') {
-      const hasDistance = !!set.distance && set.distance.trim() !== '';
-      const hasDuration = !!set.duration && set.duration.trim() !== '';
-
-      if (!hasDistance && !hasDuration) {
-        setErrors.distance = true;
-        setErrors.duration = true;
-      }
-    } else {
-      if (set.type === 'dropset') {
-        // For dropsets, check that all drop stages have values
-        // Dropset values are stored as hyphen-separated strings like "10-8-6"
-
-        if (exercise.eachSide) {
-          // Each-side dropsets use leftReps and rightReps
-          const leftRepsStages = (set.leftReps || '').split('-');
-          const rightRepsStages = (set.rightReps || '').split('-');
-          const allLeftRepsValid = leftRepsStages.length > 0 && leftRepsStages.every(stage => stage.trim() !== '') && !(leftRepsStages.length === 1 && leftRepsStages[0] === '');
-          const allRightRepsValid = rightRepsStages.length > 0 && rightRepsStages.every(stage => stage.trim() !== '') && !(rightRepsStages.length === 1 && rightRepsStages[0] === '');
-
-          if (!allLeftRepsValid || !allRightRepsValid) {
-            setErrors.reps = true;
-          }
-
-          if (exercise.exerciseType === 'weight_reps') {
-            // For each-side weight_reps dropsets, also validate left/right weight stages
-            const leftWeightStages = (set.leftWeight || '').split('-');
-            const rightWeightStages = (set.rightWeight || '').split('-');
-            const allLeftWeightValid = leftWeightStages.length > 0 && leftWeightStages.every(stage => stage.trim() !== '') && !(leftWeightStages.length === 1 && leftWeightStages[0] === '');
-            const allRightWeightValid = rightWeightStages.length > 0 && rightWeightStages.every(stage => stage.trim() !== '') && !(rightWeightStages.length === 1 && rightWeightStages[0] === '');
-
-            if (!allLeftWeightValid || !allRightWeightValid) {
-              setErrors.weight = true;
-            }
-          }
-        } else {
-          // Standard dropset (not each-side)
-          const repsStages = (set.reps || '').split('-');
-          const allRepsValid = repsStages.length > 0 && repsStages.every(stage => stage.trim() !== '');
-
-          if (exercise.exerciseType === 'weight_reps') {
-            const weightStages = (set.weight || '').split('-');
-            const allWeightValid = weightStages.length > 0 && weightStages.every(stage => stage.trim() !== '');
-
-            // Both reps and weight must have all stages filled
-            if (!allRepsValid || repsStages.length === 0 || (repsStages.length === 1 && repsStages[0] === '')) {
-              setErrors.reps = true;
-            }
-            if (!allWeightValid || weightStages.length === 0 || (weightStages.length === 1 && weightStages[0] === '')) {
-              setErrors.weight = true;
-            }
-          } else {
-            // For reps-only exercises, just validate reps
-            if (!allRepsValid || repsStages.length === 0 || (repsStages.length === 1 && repsStages[0] === '')) {
-              setErrors.reps = true;
-            }
-          }
-        }
-      } else {
-        // Reps required only for non-dropset, non-failure sets
-        if (set.type !== 'failure') {
-          if (exercise.eachSide) {
-            const leftRepsStr = set.leftReps?.toString() || '';
-            const rightRepsStr = set.rightReps?.toString() || '';
-            const hasLeftReps = leftRepsStr.trim() !== '';
-            const hasRightReps = rightRepsStr.trim() !== '';
-
-            if (!hasLeftReps || !hasRightReps) {
-              setErrors.reps = true;
-            }
-          } else {
-            const repsStr = set.reps?.toString() || '';
-            const hasReps = repsStr.trim() !== '';
-            if (!hasReps) {
-              setErrors.reps = true;
-            }
-          }
-        }
-
-        // Weight required for all weight_reps sets except dropsets
-        if (exercise.exerciseType === 'weight_reps') {
-          const weightStr = set.weight?.toString() || '';
-          const hasWeight = weightStr.trim() !== '';
-          if (!hasWeight) {
-            setErrors.weight = true;
-          }
-        }
+    // Validate column 2 (if required)
+    if (column2Required) {
+      const value = getFieldValue(set, column2Field);
+      if (!value || value.trim() === '') {
+        // Mark the appropriate field as having an error
+        if (column2Field === 'reps') setErrors.reps = true;
+        else if (column2Field === 'weight') setErrors.weight = true;
+        else if (column2Field === 'distance') setErrors.distance = true;
+        else if (column2Field === 'duration') setErrors.duration = true;
       }
     }
 
@@ -308,13 +219,18 @@ const validateExercise = (
       nextErrors[exercise.instanceId][index] = setErrors;
     }
   });
+
+  // Check tempo format (at exercise level)
+  if (!isTempoValid(exercise.tempo)) {
+    if (!nextErrors[exercise.instanceId]) {
+      nextErrors[exercise.instanceId] = {};
+    }
+    nextErrors[exercise.instanceId][-1] = { tempo: true } as unknown as SetFieldValidation;
+  }
 };
 
 /**
  * Validates the entire workout schema and returns all validation errors
- *
- * @param workoutSchema - The workout schema to validate
- * @returns An object containing exercise validation errors and section validation errors
  */
 export const validateWorkoutSchema = (
   workoutSchema: WorkoutSchema
@@ -368,22 +284,14 @@ export const validateWorkoutSchema = (
       section.exercises?.forEach((exercise) => {
         validateExercise(exercise, nextErrors);
       });
-
-
     }
   });
-
-
 
   return { exerciseErrors: nextErrors, sectionErrors: nextSectionErrors };
 };
 
 /**
  * Clears the empty exercises validation error when an exercise is added to a section
- *
- * @param sectionId - The ID of the section
- * @param currentErrors - The current section validation errors
- * @returns Updated section validation errors
  */
 export const clearEmptyExercisesError = (
   sectionId: string,
@@ -407,10 +315,6 @@ export const clearEmptyExercisesError = (
 
 /**
  * Clears the missing config validation error when configuration is added to a section
- *
- * @param sectionId - The ID of the section
- * @param currentErrors - The current section validation errors
- * @returns Updated section validation errors
  */
 export const clearMissingConfigError = (
   sectionId: string,

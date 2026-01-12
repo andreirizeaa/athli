@@ -7,13 +7,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { PlatformIcon } from '@/components/platform-icon';
-import { ScreenWrapper } from '@/components/screen-wrapper';
-import { MessageInputBar } from '@/components/message/message-input-bar';
-import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
+import { IconButton } from '@/components/ui/icon-button';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { MessageInputBar } from '@/components/features/message/message-input-bar';
+import { AttachmentPickerRow } from '@/components/features/chats/attachment-picker-row';
 
 export default function ClientAssistantScreen() {
     const router = useRouter();

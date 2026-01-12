@@ -11,6 +11,9 @@ export type ExerciseWithSuperset = Exercise & {
   alternatives?: string[]; // Array of exercise IDs for alternative exercises
   notes?: string;
   eachSide?: boolean;       // Exercise-level each side toggle
+  tempo?: string;           // Exercise-level tempo (x-x-x-x format)
+  column1Label?: string;    // Column 1 label (Reps, seconds, km, etc.)
+  column2Label?: string;    // Column 2 label (kg, lbs, feet, etc.)
   optionalColumnType?: 'Optional' | 'Tempo' | 'RIR' | 'RPE' | 'Heart Rate Zone' | 'Calories' | 'Watts' | 'Pace' | 'Speed' | 'Incline' | 'Height' | 'RPM';
 };
 
@@ -64,6 +67,7 @@ export type SetFieldValidation = {
   distance?: boolean;
   duration?: boolean;
   rest?: boolean;
+  tempo?: boolean;
 };
 
 /**

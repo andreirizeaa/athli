@@ -5,13 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
 
-import { useAppView } from '@/contexts/useAppView';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
+import { useAppView } from '@/stores';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { typography } from '@/constants/typography';
-import { AddClientContent, type AddClientContentRef } from '@/components/clients/add-client-content';
-import { NewChatContent } from '@/components/chats/new-chat-content';
-import { IconButton } from '@/components/icon-button';
+import { AddClientContent, type AddClientContentRef } from '@/components/features/clients/add-client-content';
+import { NewChatContent } from '@/components/features/chats/new-chat-content';
+import { IconButton } from '@/components/ui/icon-button';
 import { hexToRgba } from '@/utils/colorUtils';
 
 export default function AddModalContent() {
@@ -24,6 +24,7 @@ export default function AddModalContent() {
   const insets = useSafeAreaInsets();
   const clientContentRef = useRef<AddClientContentRef>(null);
   const [canCompleteClient, setCanCompleteClient] = useState(false);
+  const [isLoadingClient, setIsLoadingClient] = useState(false);
 
   // Determine which content to show based on route param or pathname
   const getCurrentRoute = (): 'clients' | 'chats' => {
@@ -67,20 +68,22 @@ export default function AddModalContent() {
     }
   };
 
-  // Check canComplete for clients route
+  // Check canComplete and loading state for clients route
   useEffect(() => {
     if (currentRoute === 'clients') {
-      const checkCanComplete = () => {
+      const checkState = () => {
         if (clientContentRef.current) {
           setCanCompleteClient(clientContentRef.current.canComplete);
+          setIsLoadingClient(clientContentRef.current.isLoading);
         }
       };
       // Check immediately and then periodically
-      checkCanComplete();
-      const interval = setInterval(checkCanComplete, 200);
+      checkState();
+      const interval = setInterval(checkState, 200);
       return () => clearInterval(interval);
     } else {
       setCanCompleteClient(false);
+      setIsLoadingClient(false);
     }
   }, [currentRoute]);
 
@@ -122,9 +125,9 @@ export default function AddModalContent() {
               icon={{ sf: 'checkmark', IconComponent: Check }}
               onPress={handleCompleteClient}
               size="md"
-              color={canCompleteClient ? themeColors.primary : themeColors.mutedText}
+              variant={canCompleteClient ? 'primary' : 'default'}
               disabled={!canCompleteClient}
-              style={!canCompleteClient ? { opacity: 0.5 } : undefined}
+              loading={isLoadingClient}
             />
           ) : (
             <View style={styles.placeholder} />

@@ -7,16 +7,17 @@ import { Check, Ellipsis, MailCheck, CheckCircle2, Archive, Trash2 } from 'lucid
 
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { SearchBar } from '@/components/search-bar';
-import { ChatListItem } from '@/components/chats/chat-list-item';
-import { ArchivedItem } from '@/components/chats/archived-item';
-import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
-import { PlatformIcon } from '@/components/platform-icon';
-import { ScreenWrapper } from '@/components/screen-wrapper';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
+import { SearchBar } from '@/components/ui/search-bar';
+import { ChatListItem } from '@/components/features/chats/chat-list-item';
+import { ArchivedItem } from '@/components/features/chats/archived-item';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import {
   getChats,
+  getArchivedChats,
   readAllChats,
   archiveChat,
   deleteChat,
@@ -86,10 +87,15 @@ export default function ChatsScreen() {
     );
   }, [chats, searchQuery]);
 
-  const handleArchivedPress = () => {
+  const handleArchivedPress = async () => {
+    // Pre-fetch archived chats to prevent empty flash on navigation
+    const archivedChats = await getArchivedChats();
     router.push({
       pathname: '/chats/archived',
-      params: { unreadCount: totalUnreadCount.toString() },
+      params: {
+        unreadCount: totalUnreadCount.toString(),
+        archivedChats: JSON.stringify(archivedChats),
+      },
     });
   };
 
@@ -336,7 +342,7 @@ export default function ChatsScreen() {
 
 const styles = StyleSheet.create({
   scrollViewContent: {
-    paddingBottom: 40,
+    paddingBottom: 120,
     paddingTop: 16,
   },
   container: {

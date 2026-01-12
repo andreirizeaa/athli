@@ -4,18 +4,21 @@ import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check, Image, Video, FileText } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import { X, Check, Image as ImageIcon, Video, FileText, Play } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { PlatformIcon } from '@/components/platform-icon';
-import { InputBox } from '@/components/form-inputs';
-import { addFile, type AddFileData } from '@/services/file-service';
+import { useThemePreference, useColorScheme } from '@/stores';
+import { useTranslations } from '@/stores';
+import { IconButton } from '@/components/ui/icon-button';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { InputBox } from '@/components/ui/form-inputs';
+import { uploadFile, updateFile } from '@/services/coach/coach-file-service';
 import { hexToRgba } from '@/utils/colorUtils';
 
 type SelectedFile = {
@@ -23,6 +26,47 @@ type SelectedFile = {
     type: 'photo' | 'video' | 'pdf';
     name?: string;
     size?: number;
+    mimeType?: string;
+};
+
+// Helper functions
+const getMimeTypeFromFileType = (type: 'photo' | 'video' | 'pdf'): string => {
+    switch (type) {
+        case 'photo':
+            return 'image/jpeg';
+        case 'video':
+            return 'video/mp4';
+        case 'pdf':
+            return 'application/pdf';
+        default:
+            return 'application/octet-stream';
+    }
+};
+
+const getExtensionFromType = (type: 'photo' | 'video' | 'pdf'): string => {
+    switch (type) {
+        case 'photo':
+            return 'jpg';
+        case 'video':
+            return 'mp4';
+        case 'pdf':
+            return 'pdf';
+        default:
+            return 'bin';
+    }
+};
+
+const getFormattedFileTypeLabel = (type: 'photo' | 'video' | 'pdf'): string => {
+    switch (type) {
+        case 'photo':
+            return 'Image';
+        case 'video':
+            return 'Video';
+        case 'pdf':
+            return 'PDF';
+        default:
+            return 'File';
+    }
 };
 
 export default function AddFileModal() {
@@ -31,6 +75,7 @@ export default function AddFileModal() {
     const colorScheme = useColorScheme();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
+    const queryClient = useQueryClient();
 
     const params = useLocalSearchParams<{
         editingId?: string;
@@ -57,7 +102,42 @@ export default function AddFileModal() {
         }
         return null;
     });
-    const [isSaving, setIsSaving] = useState(false);
+
+    // Upload mutation
+    const uploadMutation = useMutation({
+        mutationFn: uploadFile,
+        onSuccess: async () => {
+            await queryClient.refetchQueries({ queryKey: ['files'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            handleClose();
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
+
+    // Update mutation
+    const updateMutation = useMutation({
+        mutationFn: updateFile,
+        onSuccess: async () => {
+            await queryClient.refetchQueries({ queryKey: ['files'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            handleClose();
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
 
     const handleDismissKeyboard = () => {
         Keyboard.dismiss();
@@ -67,8 +147,11 @@ export default function AddFileModal() {
     const { hasChanges, canComplete } = useMemo(() => {
         const trimmedName = fileName.trim();
 
-        // Name and file are required
-        const formValid = trimmedName.length > 0 && selectedFile !== null;
+        // For editing, only name is required
+        // For creating, both name and file are required
+        const formValid = isEditing
+            ? trimmedName.length > 0
+            : trimmedName.length > 0 && selectedFile !== null;
 
         // Check if any field has been modified
         let changes = false;
@@ -80,9 +163,9 @@ export default function AddFileModal() {
 
         return {
             hasChanges: changes,
-            canComplete: formValid && !isSaving,
+            canComplete: formValid && changes && !uploadMutation.isPending && !updateMutation.isPending,
         };
-    }, [fileName, selectedFile, isSaving, isEditing, params]);
+    }, [fileName, selectedFile, uploadMutation.isPending, updateMutation.isPending, isEditing, params]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -112,27 +195,30 @@ export default function AddFileModal() {
         }
     }, [hasChanges, handleClose, t]);
 
-    const handleSave = async () => {
-        if (!canComplete || !selectedFile) return;
+    const handleSave = useCallback(() => {
+        if (!canComplete) return;
 
-        setIsSaving(true);
-        try {
-            const fileData: AddFileData = {
-                name: fileName.trim(),
+        if (isEditing && params.editingId) {
+            // Update file metadata only
+            updateMutation.mutate({
+                fileId: params.editingId,
+                fileName: fileName.trim(),
+            });
+        } else if (selectedFile) {
+            // Upload new file
+            // Create File object compatible with FormData
+            const file = {
                 uri: selectedFile.uri,
-                type: selectedFile.type,
-                size: selectedFile.size,
-            };
+                type: selectedFile.mimeType || getMimeTypeFromFileType(selectedFile.type),
+                name: selectedFile.name || `${fileName.trim()}.${getExtensionFromType(selectedFile.type)}`,
+            } as any;
 
-            await addFile(fileData);
-            handleClose();
-        } catch (error) {
-            Alert.alert(t('files.addFile.errors.saveFailed'));
-            console.error('Error saving file:', error);
-        } finally {
-            setIsSaving(false);
+            uploadMutation.mutate({
+                fileName: fileName.trim(),
+                file,
+            });
         }
-    };
+    }, [canComplete, isEditing, params.editingId, fileName, selectedFile, uploadMutation, updateMutation]);
 
     const handlePhotoPress = async () => {
         try {
@@ -156,6 +242,7 @@ export default function AddFileModal() {
                         type: 'photo',
                         name: asset.fileName || undefined,
                         size: asset.fileSize,
+                        mimeType: asset.mimeType || 'image/jpeg',
                     });
                 }
             }
@@ -187,6 +274,7 @@ export default function AddFileModal() {
                         type: 'video',
                         name: asset.fileName || undefined,
                         size: asset.fileSize,
+                        mimeType: asset.mimeType || 'video/mp4',
                     });
                 }
             }
@@ -211,6 +299,7 @@ export default function AddFileModal() {
                     type: 'pdf',
                     name: asset.name || undefined,
                     size: asset.size,
+                    mimeType: asset.mimeType || 'application/pdf',
                 });
             }
         } catch (error) {
@@ -262,6 +351,7 @@ export default function AddFileModal() {
                                 size="md"
                                 variant={canComplete ? 'primary' : 'default'}
                                 disabled={!canComplete}
+                                loading={uploadMutation.isPending || updateMutation.isPending}
                             />
                         </View>
                     </View>
@@ -304,7 +394,7 @@ export default function AddFileModal() {
                                     <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
                                         <PlatformIcon
                                             sf="photo.on.rectangle"
-                                            IconComponent={Image}
+                                            IconComponent={ImageIcon}
                                             size={iconSizes.tabBarIcons}
                                             color={themeColors.primary}
                                         />
@@ -361,23 +451,49 @@ export default function AddFileModal() {
                                 </PressableOpacity>
                             </View>
 
-                            {/* Selected file display */}
+                            {/* Selected file display with preview */}
                             {selectedFile && (
-                                <View style={styles.selectedFileRow}>
-                                    <Text style={[styles.selectedFileLabel, { color: themeColors.mutedText }]} numberOfLines={1}>
-                                        {t('files.addFile.selected')}: {selectedFile.name || selectedFile.type}
-                                    </Text>
-                                    {!isEditing && (
-                                        <PressableOpacity
-                                            style={styles.clearButton}
-                                            onPress={() => setSelectedFile(null)}
-                                            hitSlop={8}
-                                        >
-                                            <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                                                <X {...({ size: 12, color: themeColors.surfaceSecondary, strokeWidth: 3 } as any)} />
-                                            </View>
-                                        </PressableOpacity>
+                                <View style={styles.selectedFileSection}>
+                                    {/* Preview Thumbnail for images and videos */}
+                                    {(selectedFile.type === 'photo' || selectedFile.type === 'video') && selectedFile.uri !== 'existing' && (
+                                        <View style={styles.previewContainer}>
+                                            <Image
+                                                source={{ uri: selectedFile.uri }}
+                                                style={styles.previewImage}
+                                                contentFit="cover"
+                                                transition={200}
+                                            />
+                                            {selectedFile.type === 'video' && (
+                                                <View style={styles.videoPlayOverlay}>
+                                                    <Play {...({ color: "#FFFFFF", size: 24 } as any)} />
+                                                </View>
+                                            )}
+                                        </View>
                                     )}
+
+                                    {/* File info row */}
+                                    <View style={styles.selectedFileRow}>
+                                        <View style={styles.selectedFileInfo}>
+                                            <Text style={[styles.selectedFileLabel, { color: themeColors.text }]} numberOfLines={1}>
+                                                {selectedFile.name || `${fileName.trim() || 'Untitled'}.${getExtensionFromType(selectedFile.type)}`}
+                                            </Text>
+                                            <Text style={[styles.selectedFileType, { color: themeColors.mutedText }]}>
+                                                {getFormattedFileTypeLabel(selectedFile.type)}
+                                                {selectedFile.size && ` • ${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`}
+                                            </Text>
+                                        </View>
+                                        {!isEditing && (
+                                            <PressableOpacity
+                                                style={styles.clearButton}
+                                                onPress={() => setSelectedFile(null)}
+                                                hitSlop={8}
+                                            >
+                                                <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
+                                                    <X {...({ size: 12, color: themeColors.surfaceSecondary, strokeWidth: 3 } as any)} />
+                                                </View>
+                                            </PressableOpacity>
+                                        )}
+                                    </View>
                                 </View>
                             )}
                         </View>
@@ -469,19 +585,51 @@ const styles = StyleSheet.create({
         ...typography.p3,
         fontSize: 12,
     },
-    selectedFileRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+    selectedFileSection: {
         marginTop: 12,
         paddingTop: 12,
         borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: 'rgba(128, 128, 128, 0.3)',
     },
-    selectedFileLabel: {
-        ...typography.p4,
+    previewContainer: {
+        width: '100%',
+        height: 200,
+        borderRadius: 12,
+        overflow: 'hidden',
+        backgroundColor: '#E0E0E0',
+        marginBottom: 12,
+        position: 'relative',
+    },
+    previewImage: {
+        width: '100%',
+        height: '100%',
+    },
+    videoPlayOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    selectedFileRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    selectedFileInfo: {
         flex: 1,
         marginRight: 12,
+    },
+    selectedFileLabel: {
+        ...typography.p2,
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    selectedFileType: {
+        ...typography.p4,
     },
     clearButton: {
         padding: 4,

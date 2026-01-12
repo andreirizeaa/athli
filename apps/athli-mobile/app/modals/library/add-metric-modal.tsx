@@ -12,20 +12,22 @@ import Animated, {
     Easing,
     runOnJS,
 } from 'react-native-reanimated';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
 import { defaultMetrics, type DefaultMetric } from '@/constants/metrics';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { useModalCallbacks, type ScheduleData } from '@/contexts/modal-callbacks';
-import { IconButton } from '@/components/icon-button';
-import { InputBox, TextAreaInput } from '@/components/form-inputs';
-import { Card } from '@/components/card';
-import { Separator } from '@/components/separator';
-import { SearchBar } from '@/components/search-bar';
+import { useThemePreference, useColorScheme } from '@/stores';
+import { useTranslations } from '@/stores';
+import { useModalCallbacks, type ScheduleData } from '@/stores';
+import { IconButton } from '@/components/ui/icon-button';
+import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
+import { Card } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
+import { createMetric, updateMetric } from '@/services/coach/coach-metric-service';
 
 
 type TabKey = 'new' | 'templates';
@@ -43,6 +45,7 @@ export default function AddMetricModal() {
         name?: string;
         unit?: string;
         description?: string;
+        schedule_config?: string; // JSON stringified schedule
     }>();
     const isEditing = !!params.editingId;
 
@@ -54,10 +57,59 @@ export default function AddMetricModal() {
     // Tab order for swipe navigation
     const tabOrder: TabKey[] = ['templates', 'new'];
 
+    // Store original schedule for change detection
+    const originalScheduleRef = useRef<ScheduleData | null>(null);
+
     // Form state
     const [name, setName] = useState(params.name || '');
     const [unit, setUnit] = useState(params.unit || '');
     const [description, setDescription] = useState(params.description || '');
+
+    // Initialize schedule data when editing
+    useEffect(() => {
+        if (isEditing && params.schedule_config) {
+            try {
+                const parsedSchedule = JSON.parse(params.schedule_config);
+                originalScheduleRef.current = parsedSchedule;
+                setScheduleData(parsedSchedule);
+            } catch (e) {
+                console.error('Failed to parse schedule_config:', e);
+                originalScheduleRef.current = null;
+            }
+        } else {
+            originalScheduleRef.current = null;
+            // Clear schedule data when opening for new metric
+            if (!isEditing) {
+                setScheduleData(null);
+            }
+        }
+    }, [isEditing, params.schedule_config, setScheduleData]);
+
+    // TanStack Query
+    const queryClient = useQueryClient();
+
+    const saveMutation = useMutation({
+        mutationFn: async (data: any) => {
+            if (isEditing && params.editingId) {
+                return updateMetric(params.editingId, data);
+            }
+            return createMetric(data);
+        },
+        onSuccess: async () => {
+            // Refetch to update the cache and trigger Zustand store update
+            await queryClient.refetchQueries({ queryKey: ['metrics'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            handleClose();
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
 
     // Search state for templates
     const [searchQuery, setSearchQuery] = useState('');
@@ -151,13 +203,16 @@ export default function AddMetricModal() {
         // Only name is required, log frequency is optional
         const formValid = trimmedName.length > 0;
 
+        // Check if schedule has changed
+        const scheduleChanged = JSON.stringify(scheduleData) !== JSON.stringify(originalScheduleRef.current);
+
         // Check if any field has been modified
         let changes = false;
         if (isEditing) {
             changes = name !== (params.name || '') ||
                 unit !== (params.unit || '') ||
                 description !== (params.description || '') ||
-                hasLogFrequency;
+                scheduleChanged;
         } else {
             changes = trimmedName.length > 0 ||
                 unit.trim().length > 0 ||
@@ -167,9 +222,9 @@ export default function AddMetricModal() {
 
         return {
             hasChanges: changes,
-            canComplete: formValid,
+            canComplete: formValid && changes && !saveMutation.isPending,
         };
-    }, [name, unit, description, hasLogFrequency, isEditing, params]);
+    }, [name, unit, description, scheduleData, hasLogFrequency, saveMutation.isPending, isEditing, params]);
 
     const animateUnderline = (tabKey: TabKey) => {
         const layout = tabLayoutsRef.current[tabKey];
@@ -280,15 +335,18 @@ export default function AddMetricModal() {
     const handleSave = useCallback(() => {
         if (!canComplete) return;
 
-        // TODO: Implement save functionality
-        // const metricData = {
-        //     name: name.trim(),
-        //     unit: unit.trim(),
-        //     description: description.trim(),
-        // };
+        const metricData: any = {
+            name: name.trim(),
+            unit: unit.trim(),
+            description: description.trim(),
+        };
 
-        handleClose();
-    }, [canComplete, name, unit, description, handleClose]);
+        if (scheduleData) {
+            metricData.schedule_config = scheduleData;
+        }
+
+        saveMutation.mutate(metricData);
+    }, [canComplete, name, unit, description, scheduleData, saveMutation]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -331,6 +389,7 @@ export default function AddMetricModal() {
                         size="md"
                         variant={canComplete ? 'primary' : 'default'}
                         disabled={!canComplete}
+                        loading={saveMutation.isPending}
                     />
                 </View>
             </View>

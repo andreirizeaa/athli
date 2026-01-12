@@ -11,22 +11,21 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { ScreenWrapper } from '@/components/screen-wrapper';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import {
   WorkoutsTab,
   SectionsTab,
-  ProgramsTab,
   ExercisesTab,
   CheckInsTab,
   QuestionnairesTab,
   MetricsTab,
   HabitsTab,
   FilesTab,
-} from '@/components/library';
-import { useLibraryTab, type LibraryTab } from '@/contexts/useLibraryTab';
-import { SearchBar } from '@/components/search-bar';
+} from '@/components/features/library';
+import { useLibraryTab, type LibraryTab } from '@/stores';
+import { SearchBar } from '@/components/ui/search-bar';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -49,7 +48,6 @@ export default function LibraryScreen() {
   const tabs: LibraryTab[] = [
     'workouts',
     'sections',
-    'programs',
     'exercises',
     'checkIns',
     'questionnaires',
@@ -61,7 +59,6 @@ export default function LibraryScreen() {
   const tabComponents = useMemo(() => [
     { key: 'workouts', component: WorkoutsTab },
     { key: 'sections', component: SectionsTab },
-    { key: 'programs', component: ProgramsTab },
     { key: 'exercises', component: ExercisesTab },
     { key: 'checkIns', component: CheckInsTab },
     { key: 'questionnaires', component: QuestionnairesTab },
@@ -222,6 +219,7 @@ export default function LibraryScreen() {
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={styles.tabScrollContent}
                   keyboardShouldPersistTaps="handled"
+                  bounces={false}
                 >
                   <SearchBar
                     value={searchQuery}

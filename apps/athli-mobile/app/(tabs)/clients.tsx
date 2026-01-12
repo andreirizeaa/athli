@@ -2,18 +2,20 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, View, Share } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { Image } from 'expo-image';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { ChevronRight, Send } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { useQuery } from '@tanstack/react-query';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { getClients, type Client } from '@/services/client-service';
-import { PlatformIcon } from '@/components/platform-icon';
-import { IconButton } from '@/components/icon-button';
-import { SearchBar } from '@/components/search-bar';
-import { ScreenWrapper } from '@/components/screen-wrapper';
+import { useThemePreference, useCoachProfileStore } from '@/stores';
+import { useTranslations } from '@/stores';
+import { getClients, type Athlete } from '@/services/coach/coach-client-service';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { IconButton } from '@/components/ui/icon-button';
+import { SearchBar } from '@/components/ui/search-bar';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { EmptyState } from '@/components/ui/empty-state';
 
 // Fuzzy search function - checks if query matches name (allowing for character skipping)
 const fuzzyMatch = (text: string, query: string): boolean => {
@@ -42,23 +44,24 @@ export default function ClientsScreen() {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const [clients, setClients] = useState<Client[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const coachProfile = useCoachProfileStore((state) => state.profile);
+  const isAuthenticated = !!coachProfile;
 
-  const loadClients = useCallback(async () => {
-    try {
+  // Fetch clients directly with TanStack Query
+  const { data: clients = [], isLoading, isError } = useQuery({
+    queryKey: ['clients'],
+    queryFn: async () => {
+      console.log('[ClientsScreen] Fetching clients...');
       const data = await getClients();
-      setClients(data);
-    } catch (error) {
-      console.error('Failed to load clients:', error);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadClients();
-    }, [loadClients])
-  );
+      console.log('[ClientsScreen] Received clients:', data.length, 'items');
+      return data;
+    },
+    enabled: isAuthenticated,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+  });
 
   // Filter clients based on search query
   const filteredClients = useMemo(() => {
@@ -67,7 +70,7 @@ export default function ClientsScreen() {
     }
 
     return clients.filter((client) => {
-      const fullName = client.fullName.toLowerCase();
+      const fullName = client.name.toLowerCase(); // API returns 'name' not 'fullName'
       const firstName = client.firstName.toLowerCase();
       const lastName = client.lastName.toLowerCase();
       const query = searchQuery.toLowerCase();
@@ -80,27 +83,33 @@ export default function ClientsScreen() {
     });
   }, [clients, searchQuery]);
 
+  console.log('[ClientsScreen] Render:', {
+    isAuthenticated,
+    isLoading,
+    isError,
+    totalClients: clients.length,
+    filteredClients: filteredClients.length,
+    searchQuery
+  });
+
   const handleClientPress = (clientId: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(`/client/${clientId}`);
   };
 
-  const formatSubtitle = (client: Client): string => {
+  const formatSubtitle = (client: Athlete): string => {
     const parts: string[] = [];
 
     if (client.age) {
       parts.push(`${client.age} ${t('clients.years')}`);
     }
 
-    if (client.gender && client.gender !== 'prefer-not-to-say') {
-      parts.push(client.gender);
-    }
-
-    if (client.type) {
+    // Note: Client type comes as coachingType from API
+    if (client.coachingType) {
       const typeLabel =
-        client.type === 'in-person'
+        client.coachingType === 'in-person'
           ? t('clients.addClientModal.inPerson')
-          : client.type === 'online'
+          : client.coachingType === 'online'
             ? t('clients.addClientModal.online')
             : t('clients.addClientModal.hybrid');
       parts.push(typeLabel);
@@ -140,6 +149,15 @@ export default function ClientsScreen() {
           placeholder={t('clients.searchPlaceholder')}
         />
       </View>
+
+      {/* Empty State */}
+      {filteredClients.length === 0 && (
+        <EmptyState
+          message={t('clients.empty')}
+        />
+      )}
+
+      {/* Client List */}
       <View style={styles.listContainer}>
         {filteredClients.map((client, index) => {
           const isLastItem = index === filteredClients.length - 1;
@@ -151,24 +169,32 @@ export default function ClientsScreen() {
               >
                 <View style={styles.rowContent}>
                   <View style={styles.avatarContainer}>
-                    {client.avatar ? (
-                      <Image source={{ uri: client.avatar }} style={styles.avatar} />
-                    ) : (
-                      <View
-                        style={[
-                          styles.avatar,
-                          styles.avatarPlaceholder,
-                          { backgroundColor: themeColors.border },
-                        ]}
-                      />
-                    )}
+                    <View style={styles.avatarCircle}>
+                      {client.avatarUrl ? (
+                        <Image
+                          source={{ uri: client.avatarUrl }}
+                          style={styles.avatarImage}
+                          contentFit="cover"
+                          contentPosition="center"
+                          cachePolicy="memory-disk"
+                        />
+                      ) : (
+                        <View
+                          style={[
+                            styles.avatarImage,
+                            styles.avatarPlaceholder,
+                            { backgroundColor: themeColors.border },
+                          ]}
+                        />
+                      )}
+                    </View>
                   </View>
                   <View style={styles.clientInfo}>
                     <Text
                       style={[styles.clientName, { color: themeColors.text }]}
                       numberOfLines={1}
                     >
-                      {client.fullName}
+                      {client.name}
                     </Text>
                     <Text
                       style={[styles.clientSubtitle, { color: themeColors.mutedText }]}
@@ -199,7 +225,7 @@ export default function ClientsScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingBottom: 16,
+    paddingBottom: 60,
     paddingTop: 16,
   },
   headerSection: {
@@ -220,8 +246,19 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     marginRight: 12,
+    width: 56,
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  avatar: {
+  avatarCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
+  },
+  avatarImage: {
     width: 54,
     height: 54,
     borderRadius: 27,
@@ -262,6 +299,21 @@ const styles = StyleSheet.create({
     right: 0,
     top: '50%',
     transform: [{ translateY: -22 }],
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    ...typography.p2,
+    marginTop: 12,
+  },
+  errorText: {
+    ...typography.p2,
+    textAlign: 'center',
+    paddingHorizontal: 32,
   },
 });
 

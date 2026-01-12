@@ -240,6 +240,8 @@ export const SectionBuilder = ({
 
   // Track previous open state to detect dialog transitions
   const prevOpenRef = useRef(open);
+  // Track whether we've initialized with actual data (not empty/null)
+  const hasInitializedWithDataRef = useRef(false);
 
   // Reset save loading status and reset schema when dialog opens
   useEffect(() => {
@@ -248,6 +250,7 @@ export const SectionBuilder = ({
     // Only initialize when the dialog first opens, not on every re-render while open
     if (justOpened) {
       setIsSaving(false);
+      hasInitializedWithDataRef.current = false; // Reset the flag when dialog opens
 
       let initialSchema: WorkoutSchema;
 
@@ -257,6 +260,7 @@ export const SectionBuilder = ({
         const converted = convertPayloadToBuilderFormat(initialData);
         initialSchema = converted;
         setWorkoutSchema(converted);
+        hasInitializedWithDataRef.current = true;
       } else {
         // Section mode: start with one section
         initialSchema = {
@@ -295,6 +299,33 @@ export const SectionBuilder = ({
     prevOpenRef.current = open;
   }, [open, initialData, sectionType, meta, onDirtyChange]);
 
+  // Handle async data arrival: when initialData arrives after dialog is already open
+  useEffect(() => {
+    // Only run if:
+    // 1. Dialog is open
+    // 2. We haven't initialized with data yet
+    // 3. initialData is now available with items
+    if (open && !hasInitializedWithDataRef.current && initialData && initialData.items?.length > 0) {
+      const converted = convertPayloadToBuilderFormat(initialData);
+      setWorkoutSchema(converted);
+      hasInitializedWithDataRef.current = true;
+
+      // Update initial state for dirty tracking
+      initialState.current = {
+        schema: converted,
+        name: meta?.name || '',
+        type: meta?.type || '',
+        difficulty: meta?.difficulty || 'all_levels',
+        description: meta?.description || '',
+      };
+
+      setIsDirty(false);
+      setHasAttemptedSave(false);
+      setValidationErrors({});
+      setSectionValidationErrors({});
+    }
+  }, [open, initialData, meta]);
+
   // Deep compare current state with initial state to determine isDirty
   useEffect(() => {
     if (!open || !initialState.current) return;
@@ -307,17 +338,44 @@ export const SectionBuilder = ({
       description: description,
     };
 
-    // Helper to clean schema for comparison (ignore volatile IDs if necessary, or assume stable structure)
-    // Actually, lodash isEqual handles deep comparison well.
-    // However, we need to be careful about order and generated IDs if they change on re-render (they shouldn't)
+    // Check if current state differs from initial state
+    let isNowDirty = !isEqual(initialState.current, currentState);
 
-    // Note: If IDs are generated randomly on "new section", the comparison will fail correctly (it IS a change).
-    // If we delete a new section and go back to empty, it should match initial empty state.
+    // Additional check: If the section has exercises added, it's dirty
+    // This handles cases where the isEqual comparison might fail due to dynamically generated IDs
+    const hasExercises = workoutSchema.items.some(item =>
+      item.itemType === 'section' && item.section.exercises && item.section.exercises.length > 0
+    );
+    const initialHadExercises = initialState.current.schema.items.some(item =>
+      item.itemType === 'section' && item.section.exercises && item.section.exercises.length > 0
+    );
 
-    const isNowDirty = !isEqual(initialState.current, currentState);
+    // If exercises were added/removed, mark as dirty
+    if (hasExercises !== initialHadExercises) {
+      isNowDirty = true;
+    }
 
-    // Additional check: valid form state?
-    // User might want "save" enabled only if valid? No, dirty is distinct from valid.
+    // Also mark dirty if exercises count changed
+    const getExerciseCount = (schema: WorkoutSchema) => {
+      return schema.items.reduce((count, item) => {
+        if (item.itemType === 'section') {
+          return count + (item.section.exercises?.length || 0);
+        }
+        if (item.itemType === 'exercise') {
+          return count + 1;
+        }
+        return count;
+      }, 0);
+    };
+
+    if (getExerciseCount(workoutSchema) !== getExerciseCount(initialState.current.schema)) {
+      isNowDirty = true;
+    }
+
+    // Also check if title or description changed
+    if (workoutTitle !== initialState.current.name || description !== initialState.current.description) {
+      isNowDirty = true;
+    }
 
     if (isDirty !== isNowDirty) {
       setIsDirty(isNowDirty);

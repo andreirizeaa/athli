@@ -36,9 +36,11 @@ const cleanExerciseId = (payload: any): string => {
  * Used when loading a workout from the backend
  */
 export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): WorkoutSchema => {
+    console.log('[PAYLOAD CONVERTER] Input payload:', JSON.stringify(payload, null, 2));
     const items: WorkoutSchemaItem[] = [];
 
     if (!payload || !payload.items) {
+        console.log('[PAYLOAD CONVERTER] No payload or items, returning empty');
         return { items: [] };
     }
 
@@ -60,6 +62,161 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                 return getMetricValue(val);
             })
             .join('-');
+    };
+
+    // Helper to extract value from trackable fields based on label (for new API format)
+    const getTrackableFieldValue = (set: any, labels: string[]): string => {
+        if (set.trackableField1 && labels.some(l => set.trackableField1.label?.toLowerCase().includes(l.toLowerCase()))) {
+            return set.trackableField1.prescribed?.toString() || '';
+        }
+        if (set.trackableField2 && labels.some(l => set.trackableField2.label?.toLowerCase().includes(l.toLowerCase()))) {
+            return set.trackableField2.prescribed?.toString() || '';
+        }
+        return '';
+    };
+
+    // Helper to map column label to SetData field name (matches exercise-card logic)
+    const getFieldNameForLabel = (columnLabel: string): 'reps' | 'weight' | 'distance' | 'duration' | null => {
+        if (!columnLabel) return null;
+        const label = columnLabel.toLowerCase();
+        if (label === 'reps' || label === 'rep') return 'reps';
+        if (label === 'kg' || label === 'lbs' || label === 'lb') return 'weight';
+        if (label === 'km' || label === 'm' || label === 'yards' || label === 'miles' || label === 'feet') return 'distance';
+        if (label === 'minutes' || label === 'seconds') return 'duration';
+        if (label === 'none') return null;
+        // Default: treat unknown labels as custom, store in reps/weight based on position
+        return null;
+    };
+
+    // Helper to convert a set payload to SetData, handling both legacy and new trackable field formats
+    const convertSetToSetData = (set: any, exerciseType: string, column1Label?: string, column2Label?: string): SetData => {
+        const isDropset = ('dropset' in set && set.dropset) || ('type' in set && set.type === 'dropset');
+
+        // Initialize all values
+        let reps = '';
+        let weight = '';
+        let distance = '';
+        let duration = '';
+
+        // Get raw values from trackable fields
+        const column1Value = set.trackableField1?.prescribed?.toString() || '';
+        const column2Value = set.trackableField2?.prescribed?.toString() || '';
+
+        // Determine field mapping based on column labels
+        const field1 = column1Label ? getFieldNameForLabel(column1Label) : null;
+        const field2 = column2Label ? getFieldNameForLabel(column2Label) : null;
+
+        // If we have column labels, use them to map values to the correct fields
+        if (column1Label && column1Value) {
+            if (field1 === 'reps') reps = column1Value;
+            else if (field1 === 'weight') weight = column1Value;
+            else if (field1 === 'distance') distance = column1Value;
+            else if (field1 === 'duration') duration = column1Value;
+            else {
+                // Unknown label - default to reps for column 1
+                reps = column1Value;
+            }
+        }
+
+        if (column2Label && column2Value) {
+            if (field2 === 'reps') reps = column2Value;
+            else if (field2 === 'weight') weight = column2Value;
+            else if (field2 === 'distance') distance = column2Value;
+            else if (field2 === 'duration') duration = column2Value;
+            else {
+                // Unknown label - default to weight for column 2
+                weight = column2Value;
+            }
+        }
+
+        // Fallback to legacy/exercise type-based logic if no column labels provided
+        if (!column1Label && !column2Label) {
+            // Reconstruct reps string (handle dropsets and new trackable field format)
+            if (exerciseType !== 'distance_duration') {
+                if ('reps' in set && set.reps !== undefined) {
+                    reps = getMetricValue(set.reps);
+                } else if (set.trackableField1?.prescribed !== undefined) {
+                    reps = set.trackableField1.prescribed?.toString() || '';
+                } else {
+                    reps = getTrackableFieldValue(set, ['rep', 'reps']);
+                }
+            }
+
+            // Reconstruct weight string (handle dropsets and new trackable field format)
+            if (exerciseType === 'weight_reps') {
+                if ('weight' in set && set.weight !== undefined) {
+                    weight = getMetricValue(set.weight);
+                } else if (set.trackableField2?.prescribed !== undefined) {
+                    weight = set.trackableField2.prescribed?.toString() || '';
+                } else {
+                    weight = getTrackableFieldValue(set, ['weight', 'kg', 'lbs', 'lb']);
+                }
+            }
+
+            // Handle distance/duration from trackable fields
+            if (exerciseType === 'distance_duration') {
+                if ('distance' in set) {
+                    distance = getMetricValue(set.distance);
+                } else {
+                    distance = getTrackableFieldValue(set, ['distance', 'km', 'mi', 'meter', 'm']);
+                }
+                if ('durationSec' in set) {
+                    duration = getMetricValue(set.durationSec);
+                } else {
+                    duration = getTrackableFieldValue(set, ['duration', 'time', 'sec', 'min']);
+                }
+            }
+        }
+
+        // Handle dropset overrides
+        if (isDropset && 'dropset' in set && set.dropset?.stages) {
+            reps = getDropsetString(set.dropset.stages, 'reps');
+            if (exerciseType === 'weight_reps') {
+                const weightStr = getDropsetString(set.dropset.stages, 'weight');
+                if (weightStr.includes('-')) weight = weightStr;
+            }
+        }
+
+        // Reconstruct Left/Right Reps
+        let leftReps = 'leftReps' in set ? getMetricValue(set.leftReps) : '';
+        if (isDropset && 'leftDropset' in set && set.leftDropset?.stages) {
+            leftReps = getDropsetString(set.leftDropset.stages, 'reps');
+        }
+
+        let rightReps = 'rightReps' in set ? getMetricValue(set.rightReps) : '';
+        if (isDropset && 'rightDropset' in set && set.rightDropset?.stages) {
+            rightReps = getDropsetString(set.rightDropset.stages, 'reps');
+        }
+
+        let leftWeight = '';
+        if (isDropset && 'leftDropset' in set && set.leftDropset?.stages) {
+            const w = getDropsetString(set.leftDropset.stages, 'weight');
+            if (w.includes('-')) leftWeight = w;
+        }
+
+        let rightWeight = '';
+        if (isDropset && 'rightDropset' in set && set.rightDropset?.stages) {
+            const w = getDropsetString(set.rightDropset.stages, 'weight');
+            if (w.includes('-')) rightWeight = w;
+        }
+
+        return {
+            setNumber: set.setNumber,
+            type: isDropset ? 'dropset' : (set.type || 'normal'),
+            reps,
+            weight,
+            rest: set.restSec?.toString() || '',
+            distance,
+            duration,
+            leftReps,
+            rightReps,
+            leftWeight,
+            rightWeight,
+            optional: {
+                prescribed: set.optional?.prescribed || '',
+                completed: set.optional?.completed || ''
+            },
+        };
     };
 
     payload.items.forEach((item: WorkoutItem) => {
@@ -84,68 +241,17 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                 // Find exercise details from the exercise database, or use fallback
                 const cleanedId = cleanExerciseId(exercisePayload);
                 const exerciseDetails = searchExercises('').find((e) => e.exerciseId === cleanedId)
-                    || createFallbackExercise(cleanedId, exercisePayload.exerciseType);
+                    || createFallbackExercise(cleanedId, (exercisePayload as any).exerciseType);
 
-                // Convert sets from payload format to builder format (uses getMetricValue for MetricNumber pattern)
-                const sets: SetData[] = exercisePayload.sets.map((set) => {
-                    const isDropset = ('dropset' in set && set.dropset) || ('type' in set && set.type === 'dropset');
+                // Get exercise type for set conversion
+                const exerciseType = (exercisePayload as any).exerciseType || exerciseDetails.exerciseType || 'weight_reps';
 
-                    // Reconstruct reps string (handle dropsets)
-                    let reps = set.exerciseType === 'distance_duration' ? '' : getMetricValue(set.reps);
-                    if (isDropset && 'dropset' in set && set.dropset?.stages) {
-                        reps = getDropsetString(set.dropset.stages, 'reps');
-                    }
+                // Get column labels for proper trackable field mapping
+                const column1Label = (exercisePayload as any).column1Label;
+                const column2Label = (exercisePayload as any).column2Label;
 
-                    // Reconstruct weight string (handle dropsets)
-                    let weight = set.exerciseType === 'weight_reps' ? getMetricValue(set.weight) : '';
-                    if (isDropset && 'dropset' in set && set.dropset?.stages && set.exerciseType === 'weight_reps') {
-                        // Check if weight varies across stages
-                        const weightStr = getDropsetString(set.dropset.stages, 'weight');
-                        // Use dropset string if it looks like there are multiple stages, otherwise fallback to main weight
-                        if (weightStr.includes('-')) weight = weightStr;
-                    }
-
-                    // Reconstruct Left/Right Reps
-                    let leftReps = 'leftReps' in set ? getMetricValue((set as any).leftReps) : '';
-                    if (isDropset && 'leftDropset' in set && (set as any).leftDropset?.stages) {
-                        leftReps = getDropsetString((set as any).leftDropset.stages, 'reps');
-                    }
-
-                    let rightReps = 'rightReps' in set ? getMetricValue((set as any).rightReps) : '';
-                    if (isDropset && 'rightDropset' in set && (set as any).rightDropset?.stages) {
-                        rightReps = getDropsetString((set as any).rightDropset.stages, 'reps');
-                    }
-
-                    let leftWeight = '';
-                    if (isDropset && 'leftDropset' in set && (set as any).leftDropset?.stages) {
-                        const w = getDropsetString((set as any).leftDropset.stages, 'weight');
-                        if (w.includes('-')) leftWeight = w;
-                    }
-
-                    let rightWeight = '';
-                    if (isDropset && 'rightDropset' in set && (set as any).rightDropset?.stages) {
-                        const w = getDropsetString((set as any).rightDropset.stages, 'weight');
-                        if (w.includes('-')) rightWeight = w;
-                    }
-
-                    return {
-                        setNumber: set.setNumber,
-                        type: isDropset ? 'dropset' : (set.type || 'normal'),
-                        reps,
-                        weight,
-                        rest: set.restSec?.toString() || '',
-                        distance: set.exerciseType === 'distance_duration' && 'distance' in set ? getMetricValue((set as any).distance) : '',
-                        duration: set.exerciseType === 'distance_duration' && 'durationSec' in set ? getMetricValue((set as any).durationSec) : '',
-                        leftReps,
-                        rightReps,
-                        leftWeight,
-                        rightWeight,
-                        optional: {
-                            prescribed: (set as any).optional?.prescribed || '',
-                            completed: (set as any).optional?.completed || ''
-                        },
-                    };
-                });
+                // Convert sets from payload format to builder format using the helper function
+                const sets: SetData[] = exercisePayload.sets.map((set) => convertSetToSetData(set, exerciseType, column1Label, column2Label));
 
                 const exercise: ExerciseWithSuperset = {
                     ...exerciseDetails,
@@ -154,6 +260,10 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                     sets,
                     notes: exercisePayload.notes || '',
                     eachSide: !!exercisePayload.eachSide,
+                    tempo: (exercisePayload as any).tempo || undefined,
+                    alternatives: ((exercisePayload as any).alternatives || []).filter((a: any) => a != null),
+                    column1Label: column1Label || undefined,
+                    column2Label: column2Label || undefined,
                     optionalColumnType: (exercisePayload as any).optionalColumnType || 'Optional',
                 };
 
@@ -165,6 +275,8 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
         } else if (item.itemType === 'section') {
             // Convert section to builder format
             const sectionPayload = item.data;
+            console.log('[PAYLOAD CONVERTER] Processing section:', sectionPayload.name, 'Type:', sectionPayload.type);
+            console.log('[PAYLOAD CONVERTER] Section exercises:', sectionPayload.exercises);
 
             const section: WorkoutSection = {
                 id: sectionPayload.id,
@@ -180,70 +292,50 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
 
             // Convert exercises within the section
             if ((sectionPayload.type === 'regular' || sectionPayload.type === 'auxiliary') && sectionPayload.exercises) {
+                console.log('[PAYLOAD CONVERTER] Converting regular/auxiliary section with', sectionPayload.exercises.length, 'exercise groups');
                 sectionPayload.exercises.forEach((group) => {
                     const supersetGroupId = group.isSuperset ? `superset_${sectionPayload.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}` : null;
 
                     group.exercises.forEach((exercisePayload) => {
                         // Find exercise details from the exercise database, or use fallback
                         const cleanedId = cleanExerciseId(exercisePayload);
+                        console.log('[PAYLOAD CONVERTER] Processing exercise with ID:', cleanedId);
                         const exerciseDetails = searchExercises('').find((e) => e.exerciseId === cleanedId)
-                            || createFallbackExercise(cleanedId, exercisePayload.exerciseType);
+                            || createFallbackExercise(cleanedId, (exercisePayload as any).exerciseType);
 
-                        const sets: SetData[] = exercisePayload.sets.map((set) => {
-                            const isDropset = ('dropset' in set && set.dropset) || ('type' in set && set.type === 'dropset');
+                        // Get exercise type for set conversion
+                        const exerciseType = (exercisePayload as any).exerciseType || exerciseDetails.exerciseType || 'weight_reps';
 
-                            // Reconstruct reps string (handle dropsets)
-                            let reps = set.exerciseType === 'distance_duration' ? '' : getMetricValue(set.reps);
-                            if (isDropset && 'dropset' in set && set.dropset?.stages) {
-                                reps = getDropsetString(set.dropset.stages, 'reps');
-                            }
+                        // Get column labels for proper trackable field mapping
+                        const column1Label = (exercisePayload as any).column1Label;
+                        const column2Label = (exercisePayload as any).column2Label;
 
-                            // Reconstruct weight string (handle dropsets)
-                            let weight = set.exerciseType === 'weight_reps' ? getMetricValue(set.weight) : '';
-                            if (isDropset && 'dropset' in set && set.dropset?.stages && set.exerciseType === 'weight_reps') {
-                                const weightStr = getDropsetString(set.dropset.stages, 'weight');
-                                if (weightStr.includes('-')) weight = weightStr;
-                            }
+                        // Convert sets using the helper function
+                        const sets: SetData[] = exercisePayload.sets.map((set) => convertSetToSetData(set, exerciseType, column1Label, column2Label));
+                        console.log('[PAYLOAD CONVERTER] Converted', sets.length, 'sets for exercise');
 
-                            // Reconstruct Left/Right Reps
-                            let leftReps = 'leftReps' in set ? getMetricValue((set as any).leftReps) : '';
-                            if (isDropset && 'leftDropset' in set && (set as any).leftDropset?.stages) {
-                                leftReps = getDropsetString((set as any).leftDropset.stages, 'reps');
-                            }
+                        // Extract alternatives from payload (filter out null values)
+                        const alternatives = ((exercisePayload as any).alternatives || []).filter((a: any) => a != null);
+                        console.log('[PAYLOAD CONVERTER] Alternatives for exercise:', cleanedId, alternatives);
 
-                            let rightReps = 'rightReps' in set ? getMetricValue((set as any).rightReps) : '';
-                            if (isDropset && 'rightDropset' in set && (set as any).rightDropset?.stages) {
-                                rightReps = getDropsetString((set as any).rightDropset.stages, 'reps');
-                            }
-
-                            return {
-                                setNumber: set.setNumber,
-                                type: isDropset ? 'dropset' : (set.type || 'normal'),
-                                reps,
-                                weight,
-                                rest: set.restSec?.toString() || '',
-                                distance: set.exerciseType === 'distance_duration' && 'distance' in set ? getMetricValue((set as any).distance) : '',
-                                duration: set.exerciseType === 'distance_duration' && 'durationSec' in set ? getMetricValue((set as any).durationSec) : '',
-                                leftReps,
-                                rightReps,
-                                optional: {
-                                    prescribed: (set as any).optional?.prescribed || '',
-                                    completed: (set as any).optional?.completed || ''
-                                },
-                            };
-                        });
-
-                        section.exercises!.push({
+                        const convertedExercise = {
                             ...exerciseDetails,
                             instanceId: `${cleanedId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
                             supersetGroupId,
                             sets,
                             notes: exercisePayload.notes || '',
                             eachSide: !!exercisePayload.eachSide,
+                            tempo: (exercisePayload as any).tempo || undefined,
+                            alternatives,
+                            column1Label: column1Label || undefined,
+                            column2Label: column2Label || undefined,
                             optionalColumnType: (exercisePayload as any).optionalColumnType || 'Optional',
-                        });
+                        };
+                        section.exercises!.push(convertedExercise);
+                        console.log('[PAYLOAD CONVERTER] Added exercise to section, total exercises:', section.exercises!.length);
                     });
                 });
+                console.log('[PAYLOAD CONVERTER] Finished converting section, final exercise count:', section.exercises!.length);
             } else if (sectionPayload.type === 'circuits' && sectionPayload.exercises) {
                 sectionPayload.exercises.forEach((group) => {
                     const supersetGroupId = group.isSuperset ? `superset_${sectionPayload.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}` : null;
@@ -252,63 +344,18 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                         // Find exercise details from the exercise database, or use fallback
                         const cleanedId = cleanExerciseId(exercisePayload);
                         const exerciseDetails = searchExercises('').find((e) => e.exerciseId === cleanedId)
-                            || createFallbackExercise(cleanedId, exercisePayload.exerciseType);
+                            || createFallbackExercise(cleanedId, (exercisePayload as any).exerciseType);
 
-                        // For circuits, convert the single set to an array
-                        // For circuits, convert the single set to an array
+                        // Get exercise type for set conversion
+                        const exerciseType = (exercisePayload as any).exerciseType || exerciseDetails.exerciseType || 'weight_reps';
+
+                        // Get column labels for proper trackable field mapping
+                        const column1Label = (exercisePayload as any).column1Label;
+                        const column2Label = (exercisePayload as any).column2Label;
+
+                        // For circuits, convert the single set to an array using the helper function
                         const setPayload = exercisePayload.set;
-                        const isDropset = ('dropset' in setPayload && setPayload.dropset) || ('type' in setPayload && setPayload.type === 'dropset');
-
-                        let reps = setPayload.exerciseType === 'distance_duration' ? '' : getMetricValue(setPayload.reps);
-                        if (isDropset && 'dropset' in setPayload && setPayload.dropset?.stages) {
-                            reps = getDropsetString(setPayload.dropset.stages, 'reps');
-                        }
-
-                        let weight = setPayload.exerciseType === 'weight_reps' ? getMetricValue(setPayload.weight) : '';
-                        if (isDropset && 'dropset' in setPayload && setPayload.dropset?.stages && setPayload.exerciseType === 'weight_reps') {
-                            const weightStr = getDropsetString(setPayload.dropset.stages, 'weight');
-                            if (weightStr.includes('-')) weight = weightStr;
-                        }
-
-                        let leftReps = 'leftReps' in setPayload ? getMetricValue((setPayload as any).leftReps) : '';
-                        if (isDropset && 'leftDropset' in setPayload && (setPayload as any).leftDropset?.stages) {
-                            leftReps = getDropsetString((setPayload as any).leftDropset.stages, 'reps');
-                        }
-
-                        let rightReps = 'rightReps' in setPayload ? getMetricValue((setPayload as any).rightReps) : '';
-                        if (isDropset && 'rightDropset' in setPayload && (setPayload as any).rightDropset?.stages) {
-                            rightReps = getDropsetString((setPayload as any).rightDropset.stages, 'reps');
-                        }
-
-                        let leftWeight = '';
-                        if (isDropset && 'leftDropset' in setPayload && (setPayload as any).leftDropset?.stages) {
-                            const w = getDropsetString((setPayload as any).leftDropset.stages, 'weight');
-                            if (w.includes('-')) leftWeight = w;
-                        }
-
-                        let rightWeight = '';
-                        if (isDropset && 'rightDropset' in setPayload && (setPayload as any).rightDropset?.stages) {
-                            const w = getDropsetString((setPayload as any).rightDropset.stages, 'weight');
-                            if (w.includes('-')) rightWeight = w;
-                        }
-
-                        const sets: SetData[] = [{
-                            setNumber: setPayload.setNumber,
-                            type: isDropset ? 'dropset' : (setPayload.type || 'normal'),
-                            reps,
-                            weight,
-                            rest: setPayload.restSec?.toString() || '',
-                            distance: setPayload.exerciseType === 'distance_duration' && 'distance' in setPayload ? getMetricValue((setPayload as any).distance) : '',
-                            duration: setPayload.exerciseType === 'distance_duration' && 'durationSec' in setPayload ? getMetricValue((setPayload as any).durationSec) : '',
-                            leftReps,
-                            rightReps,
-                            leftWeight,
-                            rightWeight,
-                            optional: {
-                                prescribed: (setPayload as any).optional?.prescribed || '',
-                                completed: (setPayload as any).optional?.completed || ''
-                            },
-                        }];
+                        const sets: SetData[] = [convertSetToSetData(setPayload, exerciseType, column1Label, column2Label)];
 
                         section.exercises!.push({
                             ...exerciseDetails,
@@ -317,6 +364,10 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                             sets,
                             notes: exercisePayload.notes || '',
                             eachSide: !!exercisePayload.eachSide,
+                            tempo: (exercisePayload as any).tempo || undefined,
+                            alternatives: ((exercisePayload as any).alternatives || []).filter((a: any) => a != null),
+                            column1Label: column1Label || undefined,
+                            column2Label: column2Label || undefined,
                             optionalColumnType: (exercisePayload as any).optionalColumnType || 'Optional',
                         });
                     });
@@ -327,7 +378,7 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                     // Find exercise details from the exercise database, or use fallback
                     const cleanedId = cleanExerciseId(exercisePayload);
                     const exerciseDetails = searchExercises('').find((e) => e.exerciseId === cleanedId)
-                        || createFallbackExercise(cleanedId, exercisePayload.exerciseType);
+                        || createFallbackExercise(cleanedId, (exercisePayload as any).exerciseType);
 
                     section.exercises!.push({
                         ...exerciseDetails,
@@ -336,6 +387,10 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                         sets: [],
                         notes: exercisePayload.notes || '',
                         eachSide: !!exercisePayload.eachSide,
+                        tempo: (exercisePayload as any).tempo || undefined,
+                        alternatives: ((exercisePayload as any).alternatives || []).filter((a: any) => a != null),
+                        column1Label: (exercisePayload as any).column1Label || undefined,
+                        column2Label: (exercisePayload as any).column2Label || undefined,
                     });
                 });
             }
@@ -344,8 +399,10 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                 itemType: 'section',
                 section,
             });
+            console.log('[PAYLOAD CONVERTER] Added section to items');
         }
     });
 
+    console.log('[PAYLOAD CONVERTER] Final converted schema:', JSON.stringify({ items }, null, 2));
     return { items };
 };

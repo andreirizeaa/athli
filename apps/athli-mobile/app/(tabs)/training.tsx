@@ -2,19 +2,19 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useRouter, useFocusEffect } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Storage } from '@/lib/storage';
 import { ChevronDown } from 'lucide-react-native';
 
 import { typography, iconSizes, headingFontFamily } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { useTrainingOverlay } from '@/contexts/useTrainingOverlay';
-import { PlatformIcon } from '@/components/platform-icon';
-import { SwipeableCalendar } from '@/components/calendar/swipeable-calendar';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
+import { useTrainingOverlay } from '@/stores';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { SwipeableCalendar } from '@/components/features/calendar/swipeable-calendar';
 import { formatDateDDMMYYYY } from '@/lib/utils/date-formatters';
-import { TrainingAddOptions } from '@/components/training/training-add-options';
-import { TrainingContent } from '@/components/training/training-content';
-import { ScreenWrapper } from '@/components/screen-wrapper';
+import { TrainingAddOptions } from '@/components/features/training/training-add-options';
+import { TrainingContent } from '@/components/features/training/training-content';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 
 const SELECTED_DATE_KEY = '@select_date_modal_selected_date';
 
@@ -81,9 +81,9 @@ export default function TrainingScreen() {
   // Listen for when we return from the modal and check if date was updated
   useFocusEffect(
     useCallback(() => {
-      const checkSelectedDate = async () => {
+      const checkSelectedDate = () => {
         try {
-          const storedDate = await AsyncStorage.getItem(SELECTED_DATE_KEY);
+          const storedDate = Storage.getItem(SELECTED_DATE_KEY);
           if (storedDate) {
             const date = new Date(storedDate);
             if (!isNaN(date.getTime())) {
@@ -94,7 +94,7 @@ export default function TrainingScreen() {
               setCurrentMonth(date.getMonth());
               setCurrentYear(date.getFullYear());
               // Clear the stored date after reading it
-              await AsyncStorage.removeItem(SELECTED_DATE_KEY);
+              Storage.removeItem(SELECTED_DATE_KEY);
             }
           }
         } catch (error) {
