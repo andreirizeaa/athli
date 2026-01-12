@@ -6,7 +6,9 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./workout-schema": "./src/workout-schema.ts"
+    "./workout-schema": "./src/workout-schema.ts",
+    "./payload-builder": "./src/payload-builder.ts",
+    "./payload-converter": "./src/payload-converter.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit"

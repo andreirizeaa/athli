@@ -10,6 +10,23 @@ import type {
 } from '@/components/training/shared/types/workout-builder.types';
 
 /**
+ * Gets default column labels based on exercise type
+ * This must match the logic in exercise-card.tsx getDefaultColumnLabels
+ */
+const getDefaultColumnLabels = (exerciseType?: string): { column1: string; column2: string } => {
+  if (exerciseType === 'weight_reps') {
+    return { column1: 'Reps', column2: 'kg' };
+  }
+  if (exerciseType === 'reps') {
+    return { column1: 'Reps', column2: 'None' };
+  }
+  if (exerciseType === 'distance_duration') {
+    return { column1: 'km', column2: 'minutes' };
+  }
+  return { column1: 'Reps', column2: 'None' };
+};
+
+/**
  * Maps a column label to the actual field name where data is stored
  * This must match the logic in exercise-card.tsx getFieldName
  */
@@ -69,9 +86,14 @@ export const recomputeExerciseValidation = (
   const next: ValidationErrors = { ...currentErrors };
   const exerciseErrors: ExerciseValidationError = {};
 
+  // Get default column labels if not provided
+  const defaults = getDefaultColumnLabels(exerciseType);
+  const effectiveColumn1Label = column1Label || defaults.column1;
+  const effectiveColumn2Label = column2Label || defaults.column2;
+
   // Map column labels to field names
-  const column1Field = getFieldNameFromLabel(column1Label);
-  const column2Field = getFieldNameFromLabel(column2Label);
+  const column1Field = getFieldNameFromLabel(effectiveColumn1Label);
+  const column2Field = getFieldNameFromLabel(effectiveColumn2Label);
 
   // Column 1 is required if not "None" or optional type
   const column1Required = column1Field !== null && column1Field !== 'optional';
@@ -172,9 +194,10 @@ const validateExercise = (
 ): void => {
   const sets = exercise.sets || [];
 
-  // Get column labels
-  const column1Label = exercise.column1Label;
-  const column2Label = exercise.column2Label;
+  // Get column labels (use defaults if not explicitly set)
+  const defaults = getDefaultColumnLabels(exercise.exerciseType);
+  const column1Label = exercise.column1Label || defaults.column1;
+  const column2Label = exercise.column2Label || defaults.column2;
 
   // Map column labels to field names
   const column1Field = getFieldNameFromLabel(column1Label);

@@ -66,6 +66,7 @@ export type SetPayload = {
  * Round exercise payload (for AMRAP / Timed sections)
  */
 export type RoundExercisePayload = ExerciseIdPair & {
+  id: string; // Instance ID - unique for this specific exercise instance in the workout/section
   notes: string | null;
   completed: boolean;
   eachSide: boolean;
@@ -73,23 +74,27 @@ export type RoundExercisePayload = ExerciseIdPair & {
   trackableField1: TrackableField;
   trackableField2: TrackableField;
   restSec: number | null;
-  exerciseType?: string; // Optional for backward compatibility
+  exerciseType: string;
+  alternatives: string[];
+  supersetId: string | null; // References the instance ID (id field) of another exercise in the superset
+  column1Label: string;
+  column2Label: string;
 };
 
 /**
  * Regular section exercise (with sets)
  */
 export type RegularExercisePayload = ExerciseIdPair & {
+  id: string; // Instance ID - unique for this specific exercise instance in the workout/section
   sets: SetPayload[];
   alternatives: string[];
   notes: string | null;
-  supersetId: string | null;
+  supersetId: string | null; // References the instance ID (id field) of another exercise in the superset
   eachSide: boolean;
   tempo: string | null;
   column1Label: string;
   column2Label: string;
   exerciseType?: string; // Optional for backward compatibility
-  optionalColumnType?: string | null; // Optional column type
 };
 
 // ============================================================================

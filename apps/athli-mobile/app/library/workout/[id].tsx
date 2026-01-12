@@ -29,6 +29,7 @@ import {
     getDefaultColumns,
     isBuilderSection,
     buildWorkoutPayload,
+    buildSectionPayload,
     type WorkoutItem,
     type WorkoutProgramPayload,
 } from '@/components/features/workout/workout-schema';
@@ -203,6 +204,22 @@ export default function WorkoutDetailScreen() {
                             };
                         };
 
+                        // Helper to normalize Heart Rate Zone values from web format to mobile format
+                        // Web: "Z1: 50-60% of max HR" -> Mobile: "Zone 1"
+                        const normalizeHeartRateZone = (value: string, columnType: string): string => {
+                            if (columnType !== 'Heart Rate Zone' || !value) return value;
+
+                            // Check if it's web format (e.g., "Z1: 50-60% of max HR")
+                            const webFormatMatch = value.match(/^Z(\d):/);
+                            if (webFormatMatch) {
+                                const zoneNumber = webFormatMatch[1];
+                                return `Zone ${zoneNumber}`;
+                            }
+
+                            // Already in mobile format or unrecognized - return as is
+                            return value;
+                        };
+
                         // Helper to transform exercise data to builder format
                         const transformExercise = (data: any): BuilderExercise => {
                             const exerciseDetails = getExerciseFromMock(data.prescribedExerciseId);
@@ -224,8 +241,15 @@ export default function WorkoutDetailScreen() {
                                 transformedAlternatives,
                             });
 
+                            // Get column types
+                            const column1Type = data.column1Label || 'Reps';
+                            const column2Type = data.column2Label || 'kg';
+
+                            // Get rest time from first set for exercise-level rest display
+                            const firstSetRestSec = data.sets?.[0]?.restSec;
+
                             return {
-                                id: data.prescribedExerciseId || `exercise-${Date.now()}`,
+                                id: data.id || `exercise-${Date.now()}`, // Use instance ID from payload
                                 exerciseId: data.prescribedExerciseId || '',
                                 name: exerciseDetails.name,
                                 imageUrl: exerciseDetails.imageUrl,
@@ -233,18 +257,20 @@ export default function WorkoutDetailScreen() {
                                 sets: (data.sets || []).map((set: any, idx: number) => ({
                                     id: `set-${idx}`,
                                     setNumber: set.setNumber || idx + 1,
-                                    column1: set.trackableField1?.prescribed || '',
-                                    column2: set.trackableField2?.prescribed || '',
+                                    column1: normalizeHeartRateZone(set.trackableField1?.prescribed || '', column1Type),
+                                    column2: normalizeHeartRateZone(set.trackableField2?.prescribed || '', column2Type),
                                     type: mapSetType(set.type),
                                     rest: set.restSec ? set.restSec.toString() : undefined,
                                 })),
-                                column1Type: data.column1Label || 'Reps',
-                                column2Type: data.column2Label || 'kg',
+                                column1Type,
+                                column2Type,
                                 notes: data.notes || '',
                                 alternatives: transformedAlternatives,
                                 tempo: data.tempo || '',
                                 eachSide: data.eachSide || false,
-                                isSupersetNext: data.supersetId ? true : false,
+                                isSupersetNext: false, // Will be fixed after all items are transformed
+                                supersetGroupId: data.supersetId || null, // Add superset group ID
+                                setRestSec: firstSetRestSec || undefined,
                             };
                         };
 
@@ -260,30 +286,88 @@ export default function WorkoutDetailScreen() {
                                 // Transform exercises based on section type
                                 if (data.type === 'regular' || data.type === 'auxiliary') {
                                     // Regular/Auxiliary sections have exercise groups (potentially supersets)
-                                    sectionExercises = (data.exercises || []).flatMap((group: any) =>
+                                    const allExercises = (data.exercises || []).flatMap((group: any) =>
                                         (group.exercises || []).map((ex: any) => transformExercise(ex))
                                     );
+                                    // Fix isSupersetNext based on adjacent exercises
+                                    sectionExercises = allExercises.map((ex, idx) => {
+                                        const nextEx = idx < allExercises.length - 1 ? allExercises[idx + 1] : null;
+                                        const isSupersetNext = nextEx && ex.supersetGroupId && ex.supersetGroupId === nextEx.supersetGroupId;
+                                        return { ...ex, isSupersetNext: isSupersetNext || false };
+                                    });
                                 } else if (data.type === 'circuits') {
-                                    // Circuits also have exercise groups
-                                    sectionExercises = (data.exercises || []).flatMap((group: any) =>
-                                        (group.exercises || []).map((ex: any) => transformExercise(ex))
+                                    // Circuits have exercise groups, each exercise has a single 'set' field
+                                    const allExercises = (data.exercises || []).flatMap((group: any) =>
+                                        (group.exercises || []).map((ex: any) => {
+                                            // Convert single 'set' to 'sets' array for transformExercise
+                                            const exerciseWithSets = {
+                                                ...ex,
+                                                sets: ex.set ? [ex.set] : [],
+                                            };
+                                            return transformExercise(exerciseWithSets);
+                                        })
                                     );
+                                    // Fix isSupersetNext based on adjacent exercises
+                                    sectionExercises = allExercises.map((ex, idx) => {
+                                        const nextEx = idx < allExercises.length - 1 ? allExercises[idx + 1] : null;
+                                        const isSupersetNext = nextEx && ex.supersetGroupId && ex.supersetGroupId === nextEx.supersetGroupId;
+                                        return { ...ex, isSupersetNext: isSupersetNext || false };
+                                    });
                                 } else if (data.type === 'amrap' || data.type === 'timed') {
-                                    // AMRAP/Timed sections have a flat array of exercises with simpler structure
-                                    sectionExercises = (data.exercises || []).map((ex: any) => ({
-                                        id: ex.prescribedExerciseId || `exercise-${Date.now()}`,
-                                        exerciseId: ex.prescribedExerciseId || '',
-                                        name: '',
-                                        imageUrl: '',
-                                        exerciseType: 'weight_reps',
-                                        sets: [], // AMRAP/Timed don't use traditional sets
-                                        column1Type: ex.trackableField1?.label || 'Reps',
-                                        column2Type: ex.trackableField2?.label || 'kg',
-                                        notes: ex.notes || '',
-                                        alternatives: [],
-                                        tempo: ex.tempo || '',
-                                        eachSide: ex.eachSide || false,
-                                    } as BuilderExercise));
+                                    // AMRAP/Timed sections have a flat array of exercises
+                                    const allExercises = (data.exercises || []).map((ex: any) => {
+                                        const exerciseDetails = getExerciseFromMock(ex.prescribedExerciseId);
+
+                                        // Transform alternatives from IDs to exercise objects
+                                        const transformedAlternatives = (ex.alternatives || []).map((altId: string) => {
+                                            const altExercise = getExerciseFromMock(altId);
+                                            return {
+                                                id: altId,
+                                                exerciseId: altId,
+                                                name: altExercise.name,
+                                                imageUrl: altExercise.imageUrl,
+                                                exerciseType: altExercise.exerciseType,
+                                            };
+                                        });
+
+                                        // Get column types
+                                        const column1Type = ex.column1Label || 'Reps';
+                                        const column2Type = ex.column2Label || 'kg';
+
+                                        // Create a single set for AMRAP/Timed exercises with the trackable field values
+                                        const singleSet = {
+                                            id: 'set-1',
+                                            setNumber: 1,
+                                            column1: normalizeHeartRateZone(ex.trackableField1?.prescribed || '', column1Type),
+                                            column2: normalizeHeartRateZone(ex.trackableField2?.prescribed || '', column2Type),
+                                            type: 'R' as const,
+                                            rest: ex.restSec ? ex.restSec.toString() : undefined,
+                                        };
+
+                                        return {
+                                            id: ex.id || `exercise-${Date.now()}`, // Use instance ID from payload
+                                            exerciseId: ex.prescribedExerciseId || '',
+                                            name: exerciseDetails.name,
+                                            imageUrl: exerciseDetails.imageUrl,
+                                            exerciseType: ex.exerciseType || exerciseDetails.exerciseType,
+                                            sets: [singleSet],
+                                            column1Type,
+                                            column2Type,
+                                            notes: ex.notes || '',
+                                            alternatives: transformedAlternatives,
+                                            tempo: ex.tempo || '',
+                                            eachSide: ex.eachSide || false,
+                                            isSupersetNext: false, // Will be fixed below
+                                            supersetGroupId: ex.supersetId || null, // Add superset group ID
+                                            setRestSec: ex.restSec || undefined,
+                                        } as BuilderExercise;
+                                    });
+                                    // Fix isSupersetNext based on adjacent exercises
+                                    sectionExercises = allExercises.map((ex, idx) => {
+                                        const nextEx = idx < allExercises.length - 1 ? allExercises[idx + 1] : null;
+                                        const isSupersetNext = nextEx && ex.supersetGroupId && ex.supersetGroupId === nextEx.supersetGroupId;
+                                        return { ...ex, isSupersetNext: isSupersetNext || false };
+                                    });
                                 }
 
                                 return {
@@ -300,6 +384,21 @@ export default function WorkoutDetailScreen() {
                             return null;
                         }).filter(Boolean) as BuilderItem[];
 
+                        // Fix isSupersetNext for top-level exercises (not in sections)
+                        const fixedItems = transformedItems.map((item, idx) => {
+                            if (!isBuilderSection(item)) {
+                                const ex = item as BuilderExercise;
+                                const nextItem = idx < transformedItems.length - 1 ? transformedItems[idx + 1] : null;
+                                if (nextItem && !isBuilderSection(nextItem)) {
+                                    const nextEx = nextItem as BuilderExercise;
+                                    const isSupersetNext = ex.supersetGroupId && ex.supersetGroupId === nextEx.supersetGroupId;
+                                    return { ...ex, isSupersetNext: isSupersetNext || false };
+                                }
+                                return { ...ex, isSupersetNext: false };
+                            }
+                            return item;
+                        });
+
                         // Update state with the loaded workout schema
                         setWorkoutState({
                             meta: {
@@ -309,7 +408,7 @@ export default function WorkoutDetailScreen() {
                                 type: workoutData.type || '',
                                 difficulty: workoutData.difficulty || 'all_levels',
                             },
-                            items: transformedItems,
+                            items: fixedItems,
                         });
                     }
                 } catch (error) {
@@ -833,49 +932,22 @@ export default function WorkoutDetailScreen() {
     const handleSaveSection = (index: number) => {
         const section = workoutState.items[index] as BuilderSection;
 
-        // Convert section exercises to workout exercise items
-        const exerciseItems: WorkoutItem[] = section.exercises.map(ex => ({
-            itemType: 'exercise' as const,
-            data: {
-                prescribedExerciseId: ex.exerciseId,
-                performedExerciseId: null,
-                sets: ex.sets.map((set, idx) => ({
-                    setNumber: set.setNumber ?? (idx + 1),
-                    type: set.type === 'W' ? 'warmUp' : set.type === 'F' ? 'failure' : set.type === 'D' ? 'dropset' : 'normal',
-                    restSec: set.rest ? parseInt(set.rest) : ex.setRestSec || null,
-                    completed: false,
-                    skipped: false,
-                    trackableField1: {
-                        label: ex.column1Type,
-                        prescribed: set.column1 || null,
-                        completed: null,
-                    },
-                    trackableField2: {
-                        label: ex.column2Type,
-                        prescribed: set.column2 || null,
-                        completed: null,
-                    },
-                    dropset: null,
-                })),
-                alternatives: ex.alternatives.map(alt => alt.id),
-                notes: ex.notes || null,
-                supersetId: ex.supersetGroupId || null,
-                eachSide: ex.eachSide || false,
-                tempo: ex.tempo || null,
-                column1Label: ex.column1Type,
-                column2Label: ex.column2Type,
-            },
-        }));
+        // Use buildSectionPayload to ensure correct format for all section types
+        const sectionData = buildSectionPayload(section);
 
-        // Create the section payload matching the createSection service format
-        // The section_data.items should contain exercises directly, not wrapped in a section
-        const sectionPayload: WorkoutProgramPayload & { sectionType: string; duration?: number; rounds?: number } = {
+        // Create the payload matching the createSection service format
+        const sectionPayload: any = {
             name: section.name,
             description: section.notes || '',
             sectionType: section.sectionType,
-            items: exerciseItems,
-            ...(section.duration && { duration: parseFloat(section.duration) || undefined }),
-            ...(section.rounds && { rounds: parseFloat(section.rounds) || undefined }),
+            section_data: {
+                items: [
+                    {
+                        itemType: 'section' as const,
+                        data: sectionData,
+                    }
+                ],
+            },
         };
 
         console.log('[handleSaveSection] Saving section with payload:', JSON.stringify(sectionPayload, null, 2));

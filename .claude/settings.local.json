@@ -29,7 +29,8 @@
       "Bash(PORT=3002 npm run dev:*)",
       "Bash(awk:*)",
       "Bash(curl:*)",
-      "Bash(npx expo prebuild:*)"
+      "Bash(npx expo prebuild:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

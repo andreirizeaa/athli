@@ -540,7 +540,10 @@ export const ExerciseBuilderCard = ({
                 {(() => {
                     const validAlternatives = exercise.alternatives.filter(alt => alt !== null);
                     return validAlternatives.length > 0 && (
-                        <View style={styles.alternativesSection}>
+                        <View style={[
+                            styles.alternativesSection,
+                            isLinkedToNext && { paddingBottom: 16 }
+                        ]}>
                             <Text style={[styles.alternativesLabel, { color: themeColors.mutedText }]}>
                                 Alternative Exercises
                             </Text>
@@ -573,6 +576,8 @@ export const ExerciseBuilderCard = ({
                     );
                 })()}
             </View>
+            {/* Add padding at bottom when linked to next exercise to prevent clipping */}
+            {isLinkedToNext && <View style={{ height: 16 }} />}
         </Card>
     );
 };
