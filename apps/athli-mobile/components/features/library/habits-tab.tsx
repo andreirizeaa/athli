@@ -14,7 +14,6 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
-import { useModalCallbacks } from '@/stores';
 import { getAllHabits, deleteHabit, duplicateHabit } from '@/services/coach/coach-habit-service';
 import { EmptyState } from '@/components/ui/empty-state';
 import { HABIT_UNIT_OPTIONS, HABIT_PERIOD_OPTIONS } from '@athli/shared-types';
@@ -118,8 +117,6 @@ export const HabitsTab = () => {
     });
   };
 
-  const { setClientsSelectCallback } = useModalCallbacks();
-
   const handleAssign = (item: typeof filteredHabits[0]) => {
     // If a row is open, just close it and prevent navigation
     if (isRowOpen) {
@@ -127,18 +124,23 @@ export const HabitsTab = () => {
       return;
     }
 
-    setClientsSelectCallback((selectedClients) => {
-      console.log(`Assigned ${item.name} to clients:`, selectedClients.map(c => c.name));
-      // Here you would normally call a service to assign the habit
-    });
-    router.push({
-      pathname: '/modals/shared/client-list-modal',
-      params: {
-        title: t('general.assign'),
-        buttonText: t('general.assign'),
-      }
-    });
+    router.push(`/modals/shared/assign-to-clients-modal?type=habit&itemIds=${item.id}`);
   };
+
+  // Prefetch clients when long press happens to make modal open instantly
+  const handleLongPress = useCallback(() => {
+    console.log('[HabitsTab] 🎯 Long press detected, prefetching clients...');
+    queryClient.prefetchQuery({
+      queryKey: ['clients'],
+      queryFn: async () => {
+        console.log('[HabitsTab] 📡 Executing prefetch queryFn...');
+        const { getClients } = await import('@/services/coach/coach-client-service');
+        const data = await getClients();
+        console.log('[HabitsTab] ✅ Prefetch complete:', data.length, 'clients');
+        return data;
+      },
+    });
+  }, [queryClient]);
 
   // Helper to get formatted label for unit
   const getUnitLabel = (value: string | null | undefined): string => {
@@ -182,7 +184,7 @@ export const HabitsTab = () => {
           onOpen={registerOpenRow}
           deleteConfirmTitle={`${t('general.delete')} ${item.name}?`}
         >
-          <ContextMenuWrapper options={dropdownOptions}>
+          <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
             <PressableOpacity
               style={styles.rowWrapper}
               onPress={() => handleHabitPress(item)}

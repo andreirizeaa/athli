@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
-import { Search } from 'lucide-react-native';
+import { Search, X } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/stores';
@@ -25,6 +25,10 @@ export const SearchBar = ({
   style,
 }: SearchBarProps) => {
   const { colors: themeColors } = useThemePreference();
+
+  const handleClear = () => {
+    onChangeText('');
+  };
 
   return (
     <View
@@ -54,6 +58,16 @@ export const SearchBar = ({
         multiline={false}
         numberOfLines={1}
       />
+      {value.length > 0 && (
+        <PressableOpacity style={styles.clearIcon} onPress={handleClear}>
+          <PlatformIcon
+            sf="xmark.circle.fill"
+            IconComponent={X}
+            size={22}
+            color={themeColors.mutedText}
+          />
+        </PressableOpacity>
+      )}
       {rightIcon && (
         <PressableOpacity
           style={styles.rightIcon}
@@ -82,6 +96,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     ...typography.p2,
+    fontWeight: '500',
     padding: 0,
     height: 24,
     maxHeight: 24,
@@ -89,5 +104,9 @@ const styles = StyleSheet.create({
   rightIcon: {
     marginLeft: 8,
     padding: 4,
+  },
+  clearIcon: {
+    marginLeft: 8,
+    padding: 2,
   },
 });

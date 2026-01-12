@@ -148,6 +148,7 @@ export const DropdownMenu = ({
 type ContextMenuWrapperProps = {
   options: DropdownMenuOption[];
   children: React.ReactNode;
+  onLongPress?: () => void;
 };
 
 /**
@@ -157,6 +158,7 @@ type ContextMenuWrapperProps = {
 export const ContextMenuWrapper = ({
   options,
   children,
+  onLongPress,
 }: ContextMenuWrapperProps) => {
   const { colors: themeColors } = useThemePreference();
 
@@ -175,8 +177,12 @@ export const ContextMenuWrapper = ({
   };
 
   return (
-    <ContextMenu.Root>
-      <ContextMenu.Trigger>
+    <ContextMenu.Root onOpenChange={(open) => {
+      if (open && onLongPress) {
+        onLongPress();
+      }
+    }}>
+      <ContextMenu.Trigger action="longPress">
         <View>
           {children}
         </View>

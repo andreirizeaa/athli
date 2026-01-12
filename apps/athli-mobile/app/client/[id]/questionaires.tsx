@@ -22,7 +22,7 @@ export default function ClientQuestionairesScreen() {
     };
 
     const handleAssignQuestionnaire = () => {
-        router.push('/modals/client/assign-questionnaire-to-client-modal');
+        router.push('/modals/shared/assign-to-clients-modal?type=questionnaire');
     };
 
     const handleAddQuestionnaire = () => {

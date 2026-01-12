@@ -15,7 +15,6 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
-import { useModalCallbacks } from '@/stores';
 import { getAllFiles, getFileTypeFromMime, deleteFile } from '@/services/coach/coach-file-service';
 import { EmptyState } from '@/components/ui/empty-state';
 
@@ -135,8 +134,6 @@ export const FilesTab = () => {
     });
   };
 
-  const { setClientsSelectCallback } = useModalCallbacks();
-
   const handleAssign = (item: typeof filteredFiles[0]) => {
     // If a row is open, just close it and prevent navigation
     if (isRowOpen) {
@@ -144,17 +141,19 @@ export const FilesTab = () => {
       return;
     }
 
-    setClientsSelectCallback((selectedClients) => {
-      console.log(`Assigned ${item.filename} to clients:`, selectedClients.map(c => c.name));
-    });
-    router.push({
-      pathname: '/modals/shared/client-list-modal',
-      params: {
-        title: t('general.assign'),
-        buttonText: t('general.assign'),
-      }
-    });
+    router.push(`/modals/shared/assign-to-clients-modal?type=file&itemIds=${item.id}`);
   };
+
+  // Prefetch clients when long press happens to make modal open instantly
+  const handleLongPress = useCallback(() => {
+    queryClient.prefetchQuery({
+      queryKey: ['clients'],
+      queryFn: async () => {
+        const { getClients } = await import('@/services/coach/coach-client-service');
+        return getClients();
+      },
+    });
+  }, [queryClient]);
 
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -272,7 +271,7 @@ export const FilesTab = () => {
           onOpen={registerOpenRow}
           deleteConfirmTitle={`${t('general.delete')} ${item.filename}?`}
         >
-          <ContextMenuWrapper options={dropdownOptions}>
+          <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
             <View style={styles.rowWrapper}>
               <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
 
