@@ -266,6 +266,8 @@ export const WorkoutBuilder = ({
   // Reset save loading status and reset schema when dialog opens
   const prevOpenRef = useRef(open);
   const prevIsLoadingRef = useRef(isLoadingInitialData);
+  // Track whether we've initialized with actual data (not empty/null)
+  const hasInitializedWithDataRef = useRef(false);
 
   // Reset save loading status and reset schema when dialog opens
   // ONLY run this when the dialog transitions from closed to open, OR if we strictly need to re-initialize (e.g. data loaded)
@@ -280,6 +282,9 @@ export const WorkoutBuilder = ({
 
     if (justOpened || dataLoaded) {
       setIsSaving(false);
+      if (justOpened) {
+        hasInitializedWithDataRef.current = false; // Reset the flag when dialog opens
+      }
 
       let initialSchema: WorkoutSchema;
 
@@ -319,6 +324,7 @@ export const WorkoutBuilder = ({
         const converted = convertPayloadToBuilderFormat(payloadToConvert);
         initialSchema = converted;
         setWorkoutSchema(converted);
+        hasInitializedWithDataRef.current = true;
       } else {
         // New workout: start with empty items
         initialSchema = { items: [] };
@@ -345,6 +351,63 @@ export const WorkoutBuilder = ({
     prevIsLoadingRef.current = isLoadingInitialData;
   }, [open, isLoadingInitialData, initialData, meta, onDirtyChange]);
 
+  // Handle async data arrival: when initialData arrives after dialog is already open
+  // This handles the case where the parent doesn't use isLoadingInitialData
+  useEffect(() => {
+    // Only run if:
+    // 1. Dialog is open
+    // 2. We haven't initialized with data yet
+    // 3. initialData is now available with items
+    const data = initialData as any;
+    const initialItems = data?.items?.length > 0
+      ? data.items
+      : data?.workout_data?.items;
+
+    if (open && !hasInitializedWithDataRef.current && initialItems?.length > 0) {
+      const payloadToConvert = {
+        items: initialItems,
+        name: '',
+        description: '',
+        type: '',
+        difficulty: '',
+        equipment: [],
+        totalExercises: 0,
+        id: null,
+        pre: { readiness: null },
+        post: {
+          rating: null,
+          intensity: null,
+          sessionComments: null
+        },
+        completedSummary: {
+          status: 'not_started',
+          startedAt: null,
+          completedAt: null,
+          totalDurationMin: null,
+          totalWeightLifted: null
+        }
+      } as WorkoutProgramPayload;
+
+      const converted = convertPayloadToBuilderFormat(payloadToConvert);
+      setWorkoutSchema(converted);
+      hasInitializedWithDataRef.current = true;
+
+      // Update initial state for dirty tracking
+      initialState.current = {
+        schema: converted,
+        name: meta?.name || '',
+        type: meta?.type || '',
+        difficulty: meta?.difficulty || 'all_levels',
+        description: meta?.description || '',
+      };
+
+      setIsDirty(false);
+      setHasAttemptedSave(false);
+      setValidationErrors({});
+      setSectionValidationErrors({});
+    }
+  }, [open, initialData, meta]);
+
   // Deep compare current state with initial state to determine isDirty
   useEffect(() => {
     if (!open || !initialState.current) return;
@@ -357,17 +420,62 @@ export const WorkoutBuilder = ({
       description: description,
     };
 
-    // Helper to clean schema for comparison (ignore volatile IDs if necessary, or assume stable structure)
-    // Actually, lodash isEqual handles deep comparison well.
-    // However, we need to be careful about order and generated IDs if they change on re-render (they shouldn't)
+    // Check if current state differs from initial state
+    let isNowDirty = !isEqual(initialState.current, currentState);
 
-    // Note: If IDs are generated randomly on "new section", the comparison will fail correctly (it IS a change).
-    // If we delete a new section and go back to empty, it should match initial empty state.
+    // Special case for CREATE mode: If we don't have initial data (creating new workout),
+    // consider the form dirty if:
+    // 1. There's a title entered, OR
+    // 2. There are exercises/sections added, OR
+    // 3. There's a description
+    const isCreateMode = !hasInitializedWithDataRef.current;
+    if (isCreateMode) {
+      const hasContent =
+        workoutTitle.trim() !== '' ||
+        workoutSchema.items.length > 0 ||
+        description.trim() !== '';
 
-    const isNowDirty = !isEqual(initialState.current, currentState);
+      if (hasContent) {
+        isNowDirty = true;
+      }
+    }
 
-    // Additional check: valid form state?
-    // User might want "save" enabled only if valid? No, dirty is distinct from valid.
+    // Additional check: If the workout has exercises/sections added, it's dirty
+    // This handles cases where the isEqual comparison might fail due to dynamically generated IDs
+    const hasContentInItems = workoutSchema.items.length > 0;
+    const initialHadContent = initialState.current.schema.items.length > 0;
+
+    // If content was added/removed, mark as dirty
+    if (hasContentInItems !== initialHadContent) {
+      isNowDirty = true;
+    }
+
+    // Also mark dirty if items count changed
+    if (workoutSchema.items.length !== initialState.current.schema.items.length) {
+      isNowDirty = true;
+    }
+
+    // Also mark dirty if exercises count changed
+    const getExerciseCount = (schema: WorkoutSchema) => {
+      return schema.items.reduce((count, item) => {
+        if (item.itemType === 'section') {
+          return count + (item.section.exercises?.length || 0);
+        }
+        if (item.itemType === 'exercise') {
+          return count + 1;
+        }
+        return count;
+      }, 0);
+    };
+
+    if (getExerciseCount(workoutSchema) !== getExerciseCount(initialState.current.schema)) {
+      isNowDirty = true;
+    }
+
+    // Also check if title or description changed
+    if (workoutTitle !== initialState.current.name || description !== initialState.current.description) {
+      isNowDirty = true;
+    }
 
     if (isDirty !== isNowDirty) {
       setIsDirty(isNowDirty);

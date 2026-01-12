@@ -110,7 +110,7 @@ export const createSection = async (sectionData: WorkoutProgramPayload & { secti
   const response = await apiFetch<ApiResponse<{ section: any }>>('/coach/training/sections', {
     method: 'POST',
     body: JSON.stringify({
-      name: sectionData.name,
+      title: sectionData.name,
       description: sectionData.description,
       section_type: sectionData.sectionType,
       section_data: cleanSectionData,
@@ -168,7 +168,7 @@ export const updateSection = async (
 
   const updatePayload: any = {
     id: sectionId,
-    ...(sectionData.name && { name: sectionData.name }),
+    ...(sectionData.name && { title: sectionData.name }),
     ...(sectionData.description !== undefined && { description: sectionData.description }),
     ...(cleanSectionData && { section_data: cleanSectionData }),
     ...(totalExercises !== undefined && { total_exercises: totalExercises }),
@@ -199,7 +199,20 @@ export const getSectionById = async (sectionId: string): Promise<any> => {
   const response = await apiFetch<ApiResponse<{ section: any }>>(`/coach/training/sections/${sectionId}`);
 
   if (!response.data) throw new Error('No section returned');
-  return response.data.section;
+
+  const s = response.data.section;
+
+  // Handle both new API format (items at top level) and legacy format (nested in section_data)
+  // If items is present at top level and section_data doesn't have items, use top level
+  const sectionDataItems = s.section_data?.items || s.items || [];
+  const sectionData = {
+    items: sectionDataItems,
+  };
+
+  return {
+    ...s,
+    section_data: sectionData,
+  };
 };
 
 /**

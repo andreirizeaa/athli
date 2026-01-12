@@ -84,159 +84,90 @@ const parseStages = (value?: string): number[] => {
 };
 
 /**
- * Maps set data from the builder UI format to the payload format
+ * Maps set data from the builder UI format to the payload format using TrackableField pattern
  *
  * @param exerciseType - The type of exercise
  * @param set - The set data from the builder
+ * @param column1Label - Label for trackableField1 (e.g., 'Reps', 'km')
+ * @param column2Label - Label for trackableField2 (e.g., 'kg', 'lbs')
  * @param parserType - Whether to use 'null' or 'undefined' for empty values (standard uses null, AI uses both)
  * @returns The set payload
  */
 export const mapSetDataToPayload = (
   exerciseType: ExerciseType,
   set: SetData,
+  column1Label: string = 'Reps',
+  column2Label: string = 'kg',
   parserType: ParserType = 'null'
 ): SetPayload => {
-  // Parse values once for reuse in prescribed/completed pairs
-  const weightValue = parseNumber(set.weight, 'null') ?? 0;
-  const repsValue = parseNumber(set.reps, 'null') ?? 0;
-  const distanceValue = parseNumber(set.distance, 'null');
-  const durationValue = parseNumber(set.duration, 'null');
+  // Helper to create a TrackableField
+  const createField = (label: string, value: string | undefined): { label: string; prescribed: string | null; completed: string | null } => ({
+    label,
+    prescribed: value || null,
+    completed: value || null,  // Pre-filled with prescribed
+  });
 
-  const base = {
+  // Determine which UI field maps to which trackable field based on exercise type
+  let field1Value: string | undefined;
+  let field2Value: string | undefined;
+
+  if (exerciseType === 'distance_duration') {
+    field1Value = set.distance;
+    field2Value = set.duration;
+  } else if (exerciseType === 'weight_reps') {
+    field1Value = set.reps;
+    field2Value = set.weight;
+  } else {
+    // reps-only
+    field1Value = set.reps;
+    field2Value = undefined;
+  }
+
+  const base: SetPayload = {
     setNumber: set.setNumber,
     type: set.type || 'normal',
     restSec: set.rest ? (parseNumber(set.rest, 'null') ?? null) : null,
     completed: false,
     skipped: false,
-    optional: {
-      prescribed: set.optional?.prescribed || null,
-      completed: set.optional?.completed || null
-    },
+    trackableField1: createField(column1Label, field1Value),
+    trackableField2: createField(column2Label, field2Value),
+    dropset: null,
   };
 
-  // distance_duration is always non-dropset, with either distance or durationSec
-  if (exerciseType === 'distance_duration') {
-    return {
-      ...base,
-      exerciseType: 'distance_duration',
-      distance: {
-        prescribed: distanceValue,
-        completed: distanceValue,  // Pre-filled with prescribed
-      },
-      durationSec: {
-        prescribed: durationValue,
-        completed: durationValue,  // Pre-filled with prescribed
-      },
-      dropset: null,  // Always present, null for non-dropset
-    } as SetPayload;
-  }
-
-  // Dropset handling – presence of dropset implies dropset semantics
+  // Handle dropsets
   if (set.type === 'dropset') {
-    const repStages = parseStages(set.reps);
-    const weightStages = exerciseType === 'weight_reps' ? parseStages(set.weight) : [];
+    const field1Stages = parseStages(field1Value);
+    const field2Stages = exerciseType === 'weight_reps' ? parseStages(field2Value) : [];
 
     const stages = Array.from(
-      { length: Math.max(repStages.length, weightStages.length) },
+      { length: Math.max(field1Stages.length, field2Stages.length) },
       (_v, index) => {
-        const repPrescribed = repStages[index] ?? null;
-        const weightPrescribed = weightStages[index] ?? null;
+        const field1Prescribed = field1Stages[index]?.toString() ?? null;
+        const field2Prescribed = field2Stages[index]?.toString() ?? null;
         return {
-          weight: { prescribed: weightPrescribed, completed: weightPrescribed },
-          reps: { prescribed: repPrescribed, completed: repPrescribed },
+          trackableField1: {
+            label: column1Label,
+            prescribed: field1Prescribed,
+            completed: field1Prescribed,
+          },
+          trackableField2: {
+            label: column2Label,
+            prescribed: field2Prescribed,
+            completed: field2Prescribed,
+          },
           completed: false,
         };
       }
-    ).filter((s) => s.reps.prescribed != null || s.weight.prescribed != null);
+    ).filter((s) => s.trackableField1.prescribed != null || s.trackableField2.prescribed != null);
 
-    // Left/Right Dropset handling
-    let leftDropsetStages: any[] | undefined;
-    let rightDropsetStages: any[] | undefined;
-
-    if (set.leftReps || set.rightReps) {
-      const leftRepStages = parseStages(set.leftReps);
-      const rightRepStages = parseStages(set.rightReps);
-
-      const leftWeightStages = parseStages(set.leftWeight);
-      const rightWeightStages = parseStages(set.rightWeight);
-
-      if (leftRepStages.length > 0) {
-        leftDropsetStages = leftRepStages.map((r, idx) => {
-          const w = leftWeightStages[idx] ?? weightValue;
-          return {
-            reps: { prescribed: r, completed: r },
-            weight: { prescribed: w, completed: w },
-            completed: false
-          };
-        });
-      }
-      if (rightRepStages.length > 0) {
-        rightDropsetStages = rightRepStages.map((r, idx) => {
-          const w = rightWeightStages[idx] ?? weightValue;
-          return {
-            reps: { prescribed: r, completed: r },
-            weight: { prescribed: w, completed: w },
-            completed: false
-          };
-        });
-      }
-    }
-
-    if (exerciseType === 'weight_reps') {
-      return {
-        ...base,
-        type: 'dropset' as const,
-        exerciseType: 'weight_reps',
-        weight: { prescribed: weightValue, completed: weightValue },
-        reps: { prescribed: repsValue, completed: repsValue },
-        leftReps: set.leftReps ? { prescribed: parseNumber(set.leftReps, 'null') ?? 0, completed: parseNumber(set.leftReps, 'null') ?? 0 } : undefined,
-        rightReps: set.rightReps ? { prescribed: parseNumber(set.rightReps, 'null') ?? 0, completed: parseNumber(set.rightReps, 'null') ?? 0 } : undefined,
-        dropset: { stages },
-        leftDropset: leftDropsetStages ? { stages: leftDropsetStages } : undefined,
-        rightDropset: rightDropsetStages ? { stages: rightDropsetStages } : undefined,
-      } as SetPayload;
-    }
-
-    // reps-only dropset
     return {
       ...base,
       type: 'dropset' as const,
-      exerciseType: 'reps',
-      reps: { prescribed: repsValue, completed: repsValue },
-      dropset: {
-        stages: stages.map((s) => ({
-          reps: s.reps,
-          weight: s.weight,
-          completed: false,
-        })),
-      },
-      leftDropset: leftDropsetStages ? { stages: leftDropsetStages } : undefined,
-      rightDropset: rightDropsetStages ? { stages: rightDropsetStages } : undefined,
-    } as SetPayload;
+      dropset: { stages },
+    };
   }
 
-  // Non-dropset sets
-  if (exerciseType === 'weight_reps') {
-    return {
-      ...base,
-      exerciseType: 'weight_reps',
-      weight: { prescribed: weightValue, completed: weightValue },
-      reps: { prescribed: repsValue, completed: repsValue },
-      leftReps: set.leftReps ? { prescribed: parseNumber(set.leftReps, 'null') ?? 0, completed: parseNumber(set.leftReps, 'null') ?? 0 } : undefined,
-      rightReps: set.rightReps ? { prescribed: parseNumber(set.rightReps, 'null') ?? 0, completed: parseNumber(set.rightReps, 'null') ?? 0 } : undefined,
-      dropset: null,  // Always present, null for non-dropset
-    } as SetPayload;
-  }
-
-  // reps-only non-dropset
-  return {
-    ...base,
-    exerciseType: 'reps',
-    reps: { prescribed: repsValue, completed: repsValue },
-    leftReps: set.leftReps ? { prescribed: parseNumber(set.leftReps, 'null') ?? 0, completed: parseNumber(set.leftReps, 'null') ?? 0 } : undefined,
-    rightReps: set.rightReps ? { prescribed: parseNumber(set.rightReps, 'null') ?? 0, completed: parseNumber(set.rightReps, 'null') ?? 0 } : undefined,
-    dropset: null,  // Always present, null for non-dropset
-  } as SetPayload;
+  return base;
 };
 
 /**
@@ -261,17 +192,23 @@ const buildSectionPayload = (
           console.warn('Exercise missing exerciseId, using fallback:', prescribedId);
         }
 
+        const col1Label = exercise.column1Label || 'Reps';
+        const col2Label = exercise.column2Label || 'kg';
+
         return {
           prescribedExerciseId: prescribedId,
           performedExerciseId: null,  // null => same as prescribed
           exerciseType: exercise.exerciseType as ExerciseType,
           sets: (exercise.sets || []).map((set) =>
-            mapSetDataToPayload(exercise.exerciseType as ExerciseType, set, parserType)
+            mapSetDataToPayload(exercise.exerciseType as ExerciseType, set, col1Label, col2Label, parserType)
           ),
           alternatives: exercise.alternatives || [],
           supersetId: exercise.supersetGroupId || null,  // Use null, not undefined
           notes: exercise.notes || null,  // Use null, not empty string
           eachSide: exercise.eachSide || false,
+          tempo: exercise.tempo || null,
+          column1Label: col1Label,
+          column2Label: col2Label,
           optionalColumnType: exercise.optionalColumnType || null,
         };
       });
@@ -302,25 +239,33 @@ const buildSectionPayload = (
         ? exercise.exerciseId
         : (exercise.instanceId || exercise.id || `unknown_${Date.now()}`);
 
-      // Parse values for MetricNumber pattern with pre-fill
-      const weightValue = parseNumber(firstSet?.weight, 'null') ?? exercise.weight ?? null;
-      const repsValue = parseNumber(firstSet?.reps, 'null') ?? exercise.reps ?? null;
-      const distanceValue = parseNumber(firstSet?.distance, 'null') ?? exercise.distance ?? null;
-      const durationValue = parseNumber(firstSet?.duration, 'null') ?? exercise.durationSec ?? null;
+      // Get column labels (for trackable fields)
+      const column1Label = exercise.column1Label || 'Reps';
+      const column2Label = exercise.column2Label || 'kg';
+
+      // Get prescribed values from first set
+      const field1Value = firstSet?.reps || firstSet?.duration || firstSet?.distance || null;
+      const field2Value = firstSet?.weight || null;
 
       return {
         prescribedExerciseId: prescribedId,
         performedExerciseId: null,  // null => same as prescribed
         exerciseType: exercise.exerciseType,
-        type: firstSet?.type || null,
-        weight: { prescribed: weightValue ?? 0, completed: weightValue ?? 0 },
-        reps: { prescribed: repsValue ?? 0, completed: repsValue ?? 0 },
-        distance: { prescribed: distanceValue, completed: distanceValue },
-        durationSec: { prescribed: durationValue, completed: durationValue },
+        trackableField1: {
+          label: column1Label,
+          prescribed: field1Value,
+          completed: null,
+        },
+        trackableField2: {
+          label: column2Label,
+          prescribed: field2Value,
+          completed: null,
+        },
         restSec: parseNumber(firstSet?.rest, 'null') ?? exercise.restSec ?? null,
         completed: false,
         notes: exercise.notes || null,
         eachSide: exercise.eachSide || false,
+        tempo: exercise.tempo || null,
       } as RoundExercisePayload;
     });
 
@@ -355,15 +300,21 @@ const buildSectionPayload = (
           ? exercise.exerciseId
           : (exercise as any).instanceId || `unknown_${Date.now()}`;
 
+        const col1Label = exercise.column1Label || 'Reps';
+        const col2Label = exercise.column2Label || 'kg';
+
         return {
           prescribedExerciseId: prescribedId,
           performedExerciseId: null,  // null => same as prescribed
           exerciseType: exercise.exerciseType as ExerciseType,
-          set: mapSetDataToPayload(exercise.exerciseType as ExerciseType, firstSet, parserType),
+          set: mapSetDataToPayload(exercise.exerciseType as ExerciseType, firstSet, col1Label, col2Label, parserType),
           alternatives: exercise.alternatives || [],
           supersetId: exercise.supersetGroupId || null,  // Use null, not undefined
           notes: exercise.notes || null,
           eachSide: exercise.eachSide || false,
+          tempo: exercise.tempo || null,
+          column1Label: col1Label,
+          column2Label: col2Label,
           optionalColumnType: exercise.optionalColumnType || null,
         };
       });
@@ -398,17 +349,23 @@ const buildSectionPayload = (
           ? exercise.exerciseId
           : (exercise as any).instanceId || `unknown_${Date.now()}`;
 
+        const col1Label = exercise.column1Label || 'Reps';
+        const col2Label = exercise.column2Label || 'kg';
+
         return {
           prescribedExerciseId: prescribedId,
           performedExerciseId: null,  // null => same as prescribed
           exerciseType: exercise.exerciseType as ExerciseType,
           sets: (exercise.sets || []).map((set) =>
-            mapSetDataToPayload(exercise.exerciseType as ExerciseType, set, parserType)
+            mapSetDataToPayload(exercise.exerciseType as ExerciseType, set, col1Label, col2Label, parserType)
           ),
           alternatives: exercise.alternatives || [],
           supersetId: exercise.supersetGroupId || null,  // Use null, not undefined
           notes: exercise.notes || null,
           eachSide: exercise.eachSide || false,
+          tempo: exercise.tempo || null,
+          column1Label: col1Label,
+          column2Label: col2Label,
           optionalColumnType: exercise.optionalColumnType || null,
         };
       });
@@ -440,25 +397,33 @@ const buildSectionPayload = (
       ? exercise.exerciseId
       : (exercise.instanceId || exercise.id || `unknown_${Date.now()}`);
 
-    // Parse values for MetricNumber pattern with pre-fill
-    const weightValue = parseNumber(firstSet?.weight, 'null') ?? exercise.weight ?? null;
-    const repsValue = parseNumber(firstSet?.reps, 'null') ?? exercise.reps ?? null;
-    const distanceValue = parseNumber(firstSet?.distance, 'null') ?? exercise.distance ?? null;
-    const durationValue = parseNumber(firstSet?.duration, 'null') ?? exercise.durationSec ?? null;
+    // Get column labels (for trackable fields)
+    const column1Label = exercise.column1Label || 'Reps';
+    const column2Label = exercise.column2Label || 'kg';
+
+    // Get prescribed values from first set
+    const field1Value = firstSet?.reps || firstSet?.duration || firstSet?.distance || null;
+    const field2Value = firstSet?.weight || null;
 
     return {
       prescribedExerciseId: prescribedId,
       performedExerciseId: null,  // null => same as prescribed
       exerciseType: exercise.exerciseType,
-      type: firstSet?.type || null,
-      weight: { prescribed: weightValue ?? 0, completed: weightValue ?? 0 },
-      reps: { prescribed: repsValue ?? 0, completed: repsValue ?? 0 },
-      distance: { prescribed: distanceValue, completed: distanceValue },
-      durationSec: { prescribed: durationValue, completed: durationValue },
+      trackableField1: {
+        label: column1Label,
+        prescribed: field1Value,
+        completed: null,
+      },
+      trackableField2: {
+        label: column2Label,
+        prescribed: field2Value,
+        completed: null,
+      },
       restSec: parseNumber(firstSet?.rest, 'null') ?? exercise.restSec ?? null,
       completed: false,
       notes: exercise.notes || null,
       eachSide: exercise.eachSide || false,
+      tempo: exercise.tempo || null,
     } as RoundExercisePayload;
   });
 
@@ -511,6 +476,9 @@ export const buildWorkoutPayload = (
         ? item.exercise.exerciseId
         : item.exercise.instanceId || `unknown_${Date.now()}`;
 
+      const col1Label = item.exercise.column1Label || 'Reps';
+      const col2Label = item.exercise.column2Label || 'kg';
+
       return {
         itemType: 'exercise' as const,
         data: {
@@ -518,12 +486,15 @@ export const buildWorkoutPayload = (
           performedExerciseId: null,  // null => same as prescribed
           exerciseType: item.exercise.exerciseType as ExerciseType,
           sets: (item.exercise.sets || []).map((set) =>
-            mapSetDataToPayload(item.exercise.exerciseType as ExerciseType, set, parserType)
+            mapSetDataToPayload(item.exercise.exerciseType as ExerciseType, set, col1Label, col2Label, parserType)
           ),
           alternatives: item.exercise.alternatives || [],
           supersetId: item.exercise.supersetGroupId || null,  // Use null, not undefined
           notes: item.exercise.notes || null,
           eachSide: item.exercise.eachSide || false,
+          tempo: item.exercise.tempo || null,
+          column1Label: col1Label,
+          column2Label: col2Label,
           optionalColumnType: item.exercise.optionalColumnType || null,
         } as RegularExercisePayload,
       };

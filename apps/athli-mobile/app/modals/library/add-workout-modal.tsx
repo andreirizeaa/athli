@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Platform, StyleSheet, Text, View, Keyboard, TouchableWithoutFeedback, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
@@ -13,11 +15,12 @@ import {
     type WorkoutType,
     type DifficultyLevel,
 } from '@/constants/training';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { InputBox, TextAreaInput, SelectInput } from '@/components/form-inputs';
+import { useThemePreference, useColorScheme } from '@/stores';
+import { useTranslations } from '@/stores';
+import { IconButton } from '@/components/ui/icon-button';
+import { InputBox, TextAreaInput, SelectInput } from '@/components/ui/form-inputs';
 import { hexToRgba } from '@/utils/colorUtils';
+import { createWorkout, updateWorkoutDetails } from '@/services/coach/coach-workout-service';
 
 export default function AddWorkoutModal() {
     const router = useRouter();
@@ -26,11 +29,52 @@ export default function AddWorkoutModal() {
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
 
-    // Form state
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
-    const [workoutType, setWorkoutType] = useState<WorkoutType | null>(null);
-    const [difficulty, setDifficulty] = useState<DifficultyLevel | null>(null);
+    const params = useLocalSearchParams<{
+        editingId?: string;
+        name?: string;
+        description?: string;
+        type?: string;
+        difficulty?: string;
+    }>();
+    const isEditing = !!params.editingId;
+
+    // Form state - initialize with params if editing
+    const [name, setName] = useState(params.name || '');
+    const [description, setDescription] = useState(params.description || '');
+    const [workoutType, setWorkoutType] = useState<WorkoutType | null>((params.type as WorkoutType) || null);
+    const [difficulty, setDifficulty] = useState<DifficultyLevel | null>((params.difficulty as DifficultyLevel) || null);
+
+    // TanStack Query
+    const queryClient = useQueryClient();
+
+    const saveMutation = useMutation({
+        mutationFn: (workoutData: any) => {
+            if (isEditing && params.editingId) {
+                // Only update metadata, preserve workout_data (exercise payloads)
+                return updateWorkoutDetails(params.editingId, {
+                    name: workoutData.name,
+                    description: workoutData.description || '',
+                    type: workoutData.type || '',
+                    difficulty: workoutData.difficulty || '',
+                });
+            }
+            return createWorkout(workoutData);
+        },
+        onSuccess: async () => {
+            // Refetch to update the cache and trigger Zustand store update
+            await queryClient.refetchQueries({ queryKey: ['workouts'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            handleClose();
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
 
     const handleDismissKeyboard = () => {
         Keyboard.dismiss();
@@ -60,17 +104,27 @@ export default function AddWorkoutModal() {
         const formValid = trimmedName.length > 0;
 
         // Check if any field has been modified
-        const changes = trimmedName.length > 0 ||
-            description.trim().length > 0 ||
-            workoutType !== null ||
-            difficulty !== null;
+        let changes = false;
+        if (isEditing) {
+            // When editing, compare against original params values
+            changes = name !== (params.name || '') ||
+                description !== (params.description || '') ||
+                workoutType !== ((params.type as WorkoutType) || null) ||
+                difficulty !== ((params.difficulty as DifficultyLevel) || null);
+        } else {
+            // When creating new, any non-empty field counts as a change
+            changes = trimmedName.length > 0 ||
+                description.trim().length > 0 ||
+                workoutType !== null ||
+                difficulty !== null;
+        }
 
         return {
             isFormValid: formValid,
             hasChanges: changes,
-            canComplete: formValid,
+            canComplete: formValid && changes && !saveMutation.isPending,
         };
-    }, [name, description, workoutType, difficulty]);
+    }, [name, description, workoutType, difficulty, saveMutation.isPending, isEditing, params]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -104,16 +158,15 @@ export default function AddWorkoutModal() {
     const handleSave = useCallback(() => {
         if (!canComplete) return;
 
-        // TODO: Implement save functionality
-        // const workoutData = {
-        //     name: name.trim(),
-        //     description: description.trim(),
-        //     type: workoutType,
-        //     difficulty: difficulty,
-        // };
+        const workoutData: any = {
+            name: name.trim(),
+            description: description.trim() || undefined,
+            type: workoutType || undefined,
+            difficulty: difficulty || undefined,
+        };
 
-        handleClose();
-    }, [canComplete, name, description, workoutType, difficulty, handleClose]);
+        saveMutation.mutate(workoutData);
+    }, [canComplete, name, description, workoutType, difficulty, isEditing, params.editingId, saveMutation]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -158,6 +211,7 @@ export default function AddWorkoutModal() {
                                 size="md"
                                 variant={canComplete ? 'primary' : 'default'}
                                 disabled={!canComplete}
+                                loading={saveMutation.isPending}
                             />
                         </View>
                     </View>

@@ -178,6 +178,176 @@ class UserService {
   }
 
   /**
+   * Ensure coach profile exists for a user
+   * Creates a coach profile if it doesn't exist, otherwise returns existing profile
+   * Used for Google OAuth signups where the trigger doesn't create a profile
+   */
+  async ensureCoachProfile(userId: string): Promise<UserProfile> {
+    const supabase = getSupabaseClient();
+
+    // Get user from auth
+    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
+
+    if (authError || !authUser.user) {
+      throw new Error('User not found');
+    }
+
+    // Check if coach profile already exists in user_profiles
+    const { data: existingProfile, error: fetchError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .eq('user_type', 'coach')
+      .maybeSingle();
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      throw new Error(`Failed to check profile: ${fetchError.message}`);
+    }
+
+    // If profile exists, return it
+    if (existingProfile) {
+      return {
+        id: authUser.user.id,
+        email: existingProfile.email,
+        name: existingProfile.name,
+        userType: existingProfile.user_type,
+        profilePictureUrl: existingProfile.profile_picture_url,
+        signinMethod: existingProfile.signin_method,
+        isActive: existingProfile.is_active,
+        createdAt: authUser.user.created_at,
+        updatedAt: existingProfile.updated_at,
+      };
+    }
+
+    // Create coach profile
+    const userEmail = authUser.user.email || '';
+    const userName = authUser.user.user_metadata?.name ||
+      authUser.user.user_metadata?.full_name ||
+      userEmail.split('@')[0];
+    const signinMethod = authUser.user.app_metadata?.provider === 'google' ? 'google' : 'email';
+    const profilePictureUrl = authUser.user.user_metadata?.avatar_url ||
+      authUser.user.user_metadata?.picture || null;
+
+    // Generate default avatar if not present and using email
+    let finalProfilePictureUrl = profilePictureUrl;
+    if (!finalProfilePictureUrl && signinMethod === 'email') {
+      try {
+        finalProfilePictureUrl = await avatarService.generateDefaultAvatar(userId, userName);
+      } catch (avatarErr) {
+        console.error('Failed to generate default avatar during profile creation:', avatarErr);
+      }
+    }
+
+    // Generate unique code for coach
+    const uniqueCode = await this.generateUniqueCode();
+
+    // Insert into user_profiles
+    const { data: newUserProfile, error: userProfileInsertError } = await supabase
+      .from('user_profiles')
+      .insert({
+        id: userId,
+        user_type: 'coach',
+        email: userEmail,
+        name: userName,
+        profile_picture_url: finalProfilePictureUrl,
+        signin_method: signinMethod,
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (userProfileInsertError) {
+      // If profile already exists (race condition), fetch it
+      if (userProfileInsertError.code === '23505') {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', userId)
+          .eq('user_type', 'coach')
+          .single();
+
+        if (profile) {
+          return {
+            id: authUser.user.id,
+            email: profile.email,
+            name: profile.name,
+            userType: profile.user_type,
+            profilePictureUrl: profile.profile_picture_url,
+            signinMethod: profile.signin_method,
+            isActive: profile.is_active,
+            createdAt: authUser.user.created_at,
+            updatedAt: profile.updated_at,
+          };
+        }
+      }
+      throw new Error(`Failed to create user profile: ${userProfileInsertError.message}`);
+    }
+
+    // Also insert into coach_profiles for complete data
+    const { error: coachProfileInsertError } = await supabase
+      .from('coach_profiles')
+      .insert({
+        id: userId,
+        email: userEmail,
+        name: userName,
+        profile_picture_url: finalProfilePictureUrl,
+        signin_method: signinMethod,
+        is_active: true,
+        unique_code: uniqueCode,
+      });
+
+    if (coachProfileInsertError && coachProfileInsertError.code !== '23505') {
+      console.error('Failed to create coach_profiles entry:', coachProfileInsertError);
+      // Don't fail - user_profiles is the primary table
+    }
+
+    // Update user metadata to ensure user_type is set
+    await supabase.auth.admin.updateUserById(userId, {
+      user_metadata: {
+        ...authUser.user.user_metadata,
+        user_type: 'coach',
+      },
+    });
+
+    return {
+      id: authUser.user.id,
+      email: newUserProfile.email,
+      name: newUserProfile.name,
+      userType: newUserProfile.user_type,
+      profilePictureUrl: newUserProfile.profile_picture_url,
+      signinMethod: newUserProfile.signin_method,
+      isActive: newUserProfile.is_active,
+      createdAt: authUser.user.created_at,
+      updatedAt: newUserProfile.updated_at,
+    };
+  }
+
+  /**
+   * Generate a unique code for coaches
+   */
+  private async generateUniqueCode(): Promise<string> {
+    const supabase = getSupabaseClient();
+    let uniqueCode: string;
+    let isUnique = false;
+
+    do {
+      // Generate a 14-character alphanumeric code
+      uniqueCode = Math.random().toString(36).substring(2, 16).toUpperCase();
+
+      // Check if it already exists
+      const { data } = await supabase
+        .from('coach_profiles')
+        .select('unique_code')
+        .eq('unique_code', uniqueCode)
+        .maybeSingle();
+
+      isUnique = !data;
+    } while (!isUnique);
+
+    return uniqueCode;
+  }
+
+  /**
    * Ensure client profile exists for a user
    * Creates a client profile if it doesn't exist, otherwise returns existing profile
    */

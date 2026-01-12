@@ -1,10 +1,10 @@
 // Service for editing personal details
 // In the future, this will make actual API calls
 
-type FieldType = 'name' | 'age' | 'gender' | 'height' | 'weight';
+import type { PersonalDetailsFieldType } from '@/types';
 
 export const editPersonalDetails = async (
-  field: FieldType,
+  field: PersonalDetailsFieldType,
   value: string | number
 ): Promise<void> => {
   // Simulate API call

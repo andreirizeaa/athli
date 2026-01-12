@@ -6,13 +6,13 @@ import { useRouter } from 'expo-router';
 import { Check, Ellipsis, MailCheck, CheckCircle2, Archive } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { SearchBar } from '@/components/search-bar';
-import { CoachListItem } from '@/components/inbox/coach-list-item';
-import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
-import { PlatformIcon } from '@/components/platform-icon';
-import { ScreenWrapper } from '@/components/screen-wrapper';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
+import { SearchBar } from '@/components/ui/search-bar';
+import { CoachListItem } from '@/components/features/inbox/coach-list-item';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import {
   getCoaches,
   getInboxMessages,
@@ -313,7 +313,7 @@ export default function InboxScreen() {
 
 const styles = StyleSheet.create({
   scrollViewContent: {
-    paddingBottom: 40,
+    paddingBottom: 120,
     paddingTop: 16,
   },
   container: {

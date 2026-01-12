@@ -1,6 +1,6 @@
 import { View, StyleSheet } from 'react-native';
-import Camera from '@/components/camera/camera';
-import { DarkModeWrapper, useDarkModeTheme } from '@/components/dark-mode-wrapper';
+import Camera from '@/components/features/camera/camera';
+import { DarkModeWrapper, useDarkModeTheme } from '@/components/ui/dark-mode-wrapper';
 
 function CameraPageContent() {
   const { colors: themeColors } = useDarkModeTheme();

@@ -81,6 +81,20 @@ userRouter.post('/ensure-client-profile', supabaseAuthenticate, validate(ensureC
 
 /**
  * @swagger
+ * /api/v1/user/ensure-coach-profile:
+ *   post:
+ *     summary: Ensure coach profile exists for current user
+ *     tags: [User]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Coach profile ready
+ */
+userRouter.post('/ensure-coach-profile', supabaseAuthenticate, userController.ensureCoachProfile);
+
+/**
+ * @swagger
  * /api/v1/user/fetch/{id}:
  *   get:
  *     summary: Get user by ID (public endpoint)

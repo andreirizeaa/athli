@@ -1,0 +1,321 @@
+import React, { useCallback, useMemo } from 'react';
+import { StyleSheet, Text, View, Alert } from 'react-native';
+import { ChevronRight, Layers } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { PressableOpacity } from 'pressto';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
+
+import { typography } from '@/constants/typography';
+import { useThemePreference, useCoachProfileStore } from '@/stores';
+import { useTranslations } from '@/stores';
+import { type SectionType, SECTION_TYPES } from '@/constants/training';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { SwipeableRow } from '@/components/ui/swipeable-row';
+import { useLibraryTab } from '@/stores';
+import { getSections, deleteSections, duplicateSection, starSections, archiveSections } from '@/services/coach/coach-section-service';
+import { EmptyState } from '@/components/ui/empty-state';
+
+export const SectionsTab = () => {
+  const { colors: themeColors } = useThemePreference();
+  const { t } = useTranslations();
+  const router = useRouter();
+  const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
+  const queryClient = useQueryClient();
+  const coachProfile = useCoachProfileStore((state) => state.profile);
+  const isAuthenticated = !!coachProfile;
+
+  // Fetch sections directly with TanStack Query
+  const { data: sections = [], isLoading, isError } = useQuery({
+    queryKey: ['sections'],
+    queryFn: async () => {
+      console.log('[SectionsTab] Fetching sections...');
+      const data = await getSections();
+      console.log('[SectionsTab] Received sections:', data.length, 'items');
+      return data;
+    },
+    enabled: isAuthenticated,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+  });
+
+  // Filter sections based on search query
+  const filteredSections = useMemo(() => {
+    if (!searchQuery.trim()) return sections;
+    const lowerQuery = searchQuery.toLowerCase();
+    return sections.filter(section =>
+      section.program.toLowerCase().includes(lowerQuery) ||
+      section.sectionType?.toLowerCase().includes(lowerQuery)
+    );
+  }, [sections, searchQuery]);
+
+  console.log('[SectionsTab] Render:', {
+    isAuthenticated,
+    isLoading,
+    isError,
+    totalSections: sections.length,
+    filteredSections: filteredSections.length,
+    searchQuery
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteSections(id),
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['sections'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorDeleting'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  // Duplicate mutation
+  const duplicateMutation = useMutation({
+    mutationFn: (id: string) => duplicateSection(id),
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['sections'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorDuplicating'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  // Star mutation
+  const starMutation = useMutation({
+    mutationFn: ({ id, starred }: { id: string; starred: boolean }) => starSections(id, starred),
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['sections'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorUpdating'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  // Archive mutation
+  const archiveMutation = useMutation({
+    mutationFn: ({ id, archived }: { id: string; archived: boolean }) => archiveSections(id, archived),
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['sections'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorUpdating'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  // Already filtered above
+
+  const handleSectionPress = (section: typeof filteredSections[0]) => {
+    closeOpenRow();
+    router.push({
+      pathname: '/library/workout/section-builder',
+      params: {
+        name: section.program,
+        sectionType: section.sectionType,
+        duration: '',
+        rounds: '',
+        notes: section.description || '',
+        sectionId: section.id, // Changed from editingId to sectionId for library sections
+        saveToLibrary: 'true', // Flag to indicate this is a library section
+        exercises: JSON.stringify([]),
+      },
+    });
+  };
+
+  const getSectionTypeLabel = (type: SectionType) => {
+    return SECTION_TYPES.find((t) => t.value === type)?.label || type;
+  };
+
+  const getSectionTypeInfo = (section: typeof filteredSections[0]) => {
+    // Return duration for AMRAP or rounds for timed/circuits
+    if (section.sectionType === 'amrap' && section.duration) {
+      return `${section.duration}m`;
+    }
+    if ((section.sectionType === 'timed' || section.sectionType === 'circuits') && section.rounds) {
+      return `${section.rounds} ${section.rounds === 1 ? 'round' : 'rounds'}`;
+    }
+    return null;
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Empty State */}
+      {filteredSections.length === 0 && (
+        <EmptyState
+          message={t('library.empty.sections')}
+        />
+      )}
+
+      {/* Section List */}
+      {filteredSections.map((item, index) => {
+        const isLastItem = index === filteredSections.length - 1;
+        const typeInfo = getSectionTypeInfo(item);
+        return (
+          <View key={item.id}>
+            <SwipeableRow
+              onDelete={() => deleteMutation.mutateAsync(item.id)}
+              onOpen={registerOpenRow}
+              deleteConfirmTitle={`${t('general.delete')} ${item.program}?`}
+            >
+              <PressableOpacity
+                style={styles.rowWrapper}
+                onPress={() => handleSectionPress(item)}
+              >
+                <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
+                  <View style={styles.iconContainer}>
+                    <PlatformIcon
+                      sf="square.stack.3d.up.fill"
+                      IconComponent={Layers}
+                      size={24}
+                      color={themeColors.text}
+                    />
+                  </View>
+                  <View style={styles.textContent}>
+                    <Text style={[styles.sectionName, { color: themeColors.text }]} numberOfLines={1}>
+                      {item.program}
+                    </Text>
+                    <View style={styles.sectionMeta}>
+                      <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                        {getSectionTypeLabel(item.sectionType as SectionType)}
+                      </Text>
+                      {typeInfo && (
+                        <>
+                          <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                          <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                            {typeInfo}
+                          </Text>
+                        </>
+                      )}
+                      <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                      <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                        {item.totalExercises === 0
+                          ? 'Empty'
+                          : `${item.totalExercises} ${item.totalExercises === 1 ? t('library.exercise') : t('library.exercises')}`
+                        }
+                      </Text>
+                    </View>
+                  </View>
+                  <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                </View>
+              </PressableOpacity>
+            </SwipeableRow>
+
+            {!isLastItem && (
+              <View style={styles.separatorContainer}>
+                <View
+                  style={[
+                    styles.separator,
+                    { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+                  ]}
+                />
+              </View>
+            )}
+
+            {isLastItem && <View style={{ height: 24 }} />}
+          </View>
+        );
+      })}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  rowWrapper: {
+    width: '100%',
+  },
+  rowContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  iconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  textContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  sectionName: {
+    ...typography.p1,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  sectionMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  metaText: {
+    ...typography.p3,
+  },
+  metaDot: {
+    marginHorizontal: 6,
+    ...typography.p3,
+  },
+  separatorContainer: {
+    paddingLeft: 72,
+    paddingRight: 16,
+  },
+  separator: {
+    height: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 48,
+  },
+  emptyText: {
+    ...typography.p2,
+    textAlign: 'center',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    ...typography.p2,
+    marginTop: 12,
+  },
+  errorText: {
+    ...typography.p2,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
+});

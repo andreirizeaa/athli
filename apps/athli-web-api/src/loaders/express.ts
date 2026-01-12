@@ -26,8 +26,37 @@ export function createExpressApp() {
   app.use(helmet());
 
   // CORS configuration - must specify origin when using credentials
+  // Allow web app (localhost:3001) and mobile app (local network IPs) in development
+  const allowedOrigins = env.CORS_ORIGIN
+    ? env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+    : ['http://localhost:3001'];
+
   const corsOptions = {
-    origin: env.CORS_ORIGIN || 'http://localhost:3001',
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Allow requests with no origin (like mobile apps, Postman, curl)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // Check if origin is in allowed list
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // In development, allow local network IPs for Expo mobile app
+      if (env.NODE_ENV === 'development') {
+        const localNetworkPattern = /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.0\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$/;
+        const expoPattern = /^exp:\/\//;
+
+        if (localNetworkPattern.test(origin) || expoPattern.test(origin)) {
+          return callback(null, true);
+        }
+      }
+
+      // Origin not allowed
+      logger.warn({ origin }, 'CORS: Origin not allowed');
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id', 'x-coach-id'],

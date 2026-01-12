@@ -4,11 +4,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus, ClipboardCheck } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { IconButton } from '@/components/icon-button';
-import { ScreenWrapper } from '@/components/screen-wrapper';
-import { DropdownMenuWrapper } from '@/components/dropdown-menu';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
+import { IconButton } from '@/components/ui/icon-button';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';
 
 export default function ClientCheckInsScreen() {
     const router = useRouter();

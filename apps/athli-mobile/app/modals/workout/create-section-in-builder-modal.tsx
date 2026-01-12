@@ -8,13 +8,13 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
 import { SECTION_TYPES, type SectionType } from '@/constants/training';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useModalCallbacks } from '@/contexts/modal-callbacks';
-import { IconButton } from '@/components/icon-button';
-import { InputBox, TextAreaInput } from '@/components/form-inputs';
-import { DropdownMenuWrapper } from '@/components/dropdown-menu';
+import { useThemePreference } from '@/stores';
+import { useModalCallbacks } from '@/stores';
+import { IconButton } from '@/components/ui/icon-button';
+import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
+import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';
 import { hexToRgba } from '@/utils/colorUtils';
-import { type BuilderSection } from '@/components/workout/workout-schema';
+import { type BuilderSection } from '@/components/features/workout/workout-schema';
 
 export default function CreateSectionInBuilderModal() {
     const router = useRouter();

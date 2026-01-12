@@ -12,11 +12,11 @@ import * as Haptics from 'expo-haptics';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import type { ComponentType } from 'react';
 
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
-import { useAppView } from '@/contexts/useAppView';
-import { useTranslations } from '@/contexts/useTranslations';
-import { useTrainingOverlay } from '@/contexts/useTrainingOverlay';
-import { useLibraryTab, type LibraryTab } from '@/contexts/useLibraryTab';
+import { useThemePreference, useColorScheme } from '@/stores';
+import { useAppView } from '@/stores';
+import { useTranslations } from '@/stores';
+import { useTrainingOverlay } from '@/stores';
+import { useLibraryTab, type LibraryTab } from '@/stores';
 import { iconSizes } from '@/constants/typography';
 import {
   ChartNoAxesColumn,
@@ -145,7 +145,6 @@ export default function TabLayout() {
     const modalRoutes: Record<LibraryTab, string> = {
       workouts: '/modals/library/add-workout-modal',
       sections: '/modals/library/add-section-modal',
-      programs: '/modals/library/add-program-modal',
       exercises: '/modals/library/add-exercise-modal',
       checkIns: '/modals/library/add-check-in-modal',
       questionnaires: '/modals/library/add-questionnaire-modal',
@@ -332,7 +331,6 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
     const modalRoutes: Record<LibraryTab, string> = {
       workouts: '/modals/library/add-workout-modal',
       sections: '/modals/library/add-section-modal',
-      programs: '/modals/library/add-program-modal',
       exercises: '/modals/library/add-exercise-modal',
       checkIns: '/modals/library/add-check-in-modal',
       questionnaires: '/modals/library/add-questionnaire-modal',

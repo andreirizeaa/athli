@@ -1,13 +1,20 @@
-# Ignore native directories in mobile app
-apps/athli-mobile/ios
-apps/athli-mobile/android
+# CRITICAL: Exclude all other apps in monorepo - only athli-mobile should be uploaded
+apps/athli-web-app
+apps/athli-web-api
+apps/athli-landing-page
+
+# Exclude root-level node_modules (monorepo dependencies)
+/node_modules
+
+# Ignore native directories in mobile app - these are rebuilt by EAS prebuild
+apps/athli-mobile/ios/
+apps/athli-mobile/android/
+apps/athli-mobile/ios/**
+apps/athli-mobile/android/**
 
 # Ignore expo cache
 apps/athli-mobile/.expo
 **/.expo
-
-# Ignore node_modules (EAS handles this)
-**/node_modules
 
 # Ignore build artifacts
 *.jks

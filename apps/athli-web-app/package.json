@@ -19,6 +19,7 @@
     "check:no-write": "biome check ."
   },
   "dependencies": {
+    "@athli/shared-types": "*",
     "@dicebear/collection": "^9.2.4",
     "@dicebear/core": "^9.2.4",
     "@dnd-kit/core": "^6.3.1",

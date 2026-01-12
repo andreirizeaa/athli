@@ -233,13 +233,7 @@ const SectionsPage = () => {
       toast.success(t('library.sections.toast.savedSuccessfully', {
         name: data.title,
         type: formatSectionType(data.sectionType)
-      }), {
-        style: {
-          background: 'rgb(220 252 231)',
-          color: 'rgb(20 83 45)',
-          border: '1px solid rgb(187 247 208)',
-        },
-      });
+      }));
     } catch (error) {
       console.error('Failed to create section:', error);
       toast.error(t('general.error'));

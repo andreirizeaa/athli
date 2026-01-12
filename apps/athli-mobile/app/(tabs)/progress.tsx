@@ -2,9 +2,9 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { ScreenWrapper } from '@/components/screen-wrapper';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 
 export default function ProgressScreen() {
   const { colors: themeColors } = useThemePreference();

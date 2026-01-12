@@ -4,8 +4,13 @@
   "private": true,
   "packageManager": "npm@10.2.4",
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
+  "overrides": {
+    "ajv": "^8.17.1",
+    "ajv-keywords": "^5.1.0"
+  },
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",

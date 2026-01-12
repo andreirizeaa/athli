@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Platform, StyleSheet, Text, View, LayoutChangeEvent, Alert } from 'react-native';
 import { PressableOpacity } from 'pressto';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check, ChevronRight } from 'lucide-react-native';
@@ -12,19 +12,21 @@ import Animated, {
     Easing,
     runOnJS,
 } from 'react-native-reanimated';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
 import { formTemplates, type FormTemplate } from '@/constants/forms';
-import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
-import { useTranslations } from '@/contexts/useTranslations';
-import { useModalCallbacks, type ScheduleData } from '@/contexts/modal-callbacks';
-import { IconButton } from '@/components/icon-button';
-import { InputBox, TextAreaInput } from '@/components/form-inputs';
-import { Separator } from '@/components/separator';
-import { SearchBar } from '@/components/search-bar';
+import { useThemePreference, useColorScheme } from '@/stores';
+import { useTranslations } from '@/stores';
+import { useModalCallbacks, type ScheduleData } from '@/stores';
+import { IconButton } from '@/components/ui/icon-button';
+import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
+import { Separator } from '@/components/ui/separator';
+import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
+import { addCheckIn, editCheckInDetails } from '@/services/coach/coach-check-in-service';
 
 type TabKey = 'new' | 'templates';
 
@@ -36,7 +38,14 @@ export default function AddCheckInModal() {
     const insets = useSafeAreaInsets();
     const { scheduleData, setScheduleData, setScheduleCallback } = useModalCallbacks();
 
-    const [selectedTab, setSelectedTab] = useState<TabKey>('templates');
+    const params = useLocalSearchParams<{
+        editingId?: string;
+        name?: string;
+        description?: string;
+    }>();
+    const isEditing = !!params.editingId;
+
+    const [selectedTab, setSelectedTab] = useState<TabKey>(isEditing ? 'new' : 'templates');
     const underlinePosition = useSharedValue(0);
     const underlineWidth = useSharedValue(0);
     const tabLayoutsRef = useRef<{ [key: string]: { x: number; width: number } }>({});
@@ -44,9 +53,30 @@ export default function AddCheckInModal() {
     // Tab order for swipe navigation
     const tabOrder: TabKey[] = ['templates', 'new'];
 
-    // Form state
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
+    // Form state - Initialize with params for immediate display
+    const [name, setName] = useState(params.name || '');
+    const [description, setDescription] = useState(params.description || '');
+
+    // TanStack Query
+    const queryClient = useQueryClient();
+
+    const saveMutation = useMutation({
+        mutationFn: isEditing ? editCheckInDetails : addCheckIn,
+        onSuccess: async () => {
+            // Refetch to update the cache and trigger Zustand store update
+            await queryClient.refetchQueries({ queryKey: ['checkIns'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            handleClose();
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
 
     // Search state for templates
     const [searchQuery, setSearchQuery] = useState('');
@@ -152,16 +182,22 @@ export default function AddCheckInModal() {
         // Only name is required, schedule is optional
         const formValid = trimmedName.length > 0;
 
-        // Check if any field has been modified
-        const changes = trimmedName.length > 0 ||
-            description.trim().length > 0 ||
-            hasSchedule;
+        // Check if any field has been modified from original values
+        let changes = false;
+        if (isEditing) {
+            changes = name !== (params.name || '') ||
+                description !== (params.description || '');
+        } else {
+            changes = trimmedName.length > 0 ||
+                description.trim().length > 0 ||
+                hasSchedule;
+        }
 
         return {
             hasChanges: changes,
-            canComplete: formValid,
+            canComplete: formValid && changes && !saveMutation.isPending,
         };
-    }, [name, description, hasSchedule]);
+    }, [name, description, hasSchedule, saveMutation.isPending, isEditing, params]);
 
     const animateUnderline = (tabKey: TabKey) => {
         const layout = tabLayoutsRef.current[tabKey];
@@ -284,15 +320,21 @@ export default function AddCheckInModal() {
     const handleSave = useCallback(() => {
         if (!canComplete) return;
 
-        // TODO: Implement save functionality
-        // const checkInData = {
-        //     name: name.trim(),
-        //     description: description.trim(),
-        //     schedule: scheduleData,
-        // };
+        const checkInData: any = {
+            name: name.trim(),
+            description: description.trim(),
+        };
 
-        handleClose();
-    }, [canComplete, name, description, scheduleData, handleClose]);
+        if (scheduleData) {
+            checkInData.schedule = scheduleData;
+        }
+
+        if (isEditing && params.editingId) {
+            checkInData.id = params.editingId;
+        }
+
+        saveMutation.mutate(checkInData);
+    }, [canComplete, name, description, scheduleData, isEditing, params.editingId, saveMutation]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -335,6 +377,7 @@ export default function AddCheckInModal() {
                         size="md"
                         variant={canComplete ? 'primary' : 'default'}
                         disabled={!canComplete}
+                        loading={saveMutation.isPending}
                     />
                 </View>
             </View>
