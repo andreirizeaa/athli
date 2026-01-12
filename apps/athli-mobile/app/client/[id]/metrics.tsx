@@ -22,7 +22,7 @@ export default function MetricsScreen() {
   };
 
   const handleAssignMetric = () => {
-    router.push('/modals/client/assign-metric-to-client-modal');
+    router.push('/modals/shared/assign-to-clients-modal?type=metric');
   };
 
   const handleAddMetric = () => {

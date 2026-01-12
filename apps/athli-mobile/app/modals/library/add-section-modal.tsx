@@ -9,7 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
-import { SECTION_TYPES, type SectionType } from '@/constants/training';
+import { SECTION_TYPES, type SectionType } from '@athli/shared-types';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
@@ -190,22 +190,45 @@ export default function AddSectionModal() {
 
         setMetadataErrors({ durationError: false, roundsError: false });
 
+        // Create an empty section data structure based on type
+        const emptySectionData: any = {
+            id: `section-${Date.now()}`,
+            name: name.trim(),
+            type: sectionType,
+            notes: description.trim() || null,
+            exercises: [], // Empty exercises array - will be added in section-builder
+        };
+
+        // Add type-specific fields
+        if (sectionType === 'amrap') {
+            emptySectionData.durationSec = duration ? parseInt(duration) * 60 : null; // Convert minutes to seconds
+            emptySectionData.actualDurationSec = null;
+            emptySectionData.roundsCompleted = null;
+        } else if (sectionType === 'timed') {
+            emptySectionData.targetRounds = rounds ? parseInt(rounds) : null;
+            emptySectionData.actualRounds = null;
+            emptySectionData.totalDurationSec = null;
+        } else if (sectionType === 'circuits') {
+            emptySectionData.targetRounds = rounds ? parseInt(rounds) : null;
+            emptySectionData.actualRounds = null;
+            emptySectionData.totalDurationSec = null;
+        } else {
+            // Regular/Auxiliary sections don't need additional fields
+        }
+
         const sectionData: any = {
             name: name.trim(),
             description: description.trim(),
             sectionType: sectionType,
-            items: [], // Empty items array - exercises will be added in section-builder
+            section_data: {
+                items: [
+                    {
+                        itemType: 'section',
+                        data: emptySectionData,
+                    }
+                ],
+            },
         };
-
-        // Add duration for AMRAP sections (in minutes)
-        if (sectionType === 'amrap' && duration) {
-            sectionData.duration = parseInt(duration);
-        }
-
-        // Add rounds for timed/circuits sections
-        if ((sectionType === 'timed' || sectionType === 'circuits') && rounds) {
-            sectionData.rounds = parseInt(rounds);
-        }
 
         console.log('[ADD SECTION MODAL] Saving section:', JSON.stringify(sectionData, null, 2));
 

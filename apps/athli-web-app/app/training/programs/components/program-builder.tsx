@@ -57,7 +57,7 @@ import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { createProgram, editProgram, deletePrograms, updateProgramDetails, type ProgramData } from '@/api/coach/coach-program-service';
 import { toast } from 'sonner';
 import { EditProgramDetailsSidePanel } from './edit-program-details-side-panel';
-import { PROGRAM_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants/training';
+import { PROGRAM_TYPES, DIFFICULTY_LEVELS } from '@athli/shared-types';
 import { useTrainingData } from '../../training-data-context';
 import { WorkoutBuilder } from '@/app/training/workouts/workout-builder';
 import type { WorkoutPayload, WorkoutSectionPayload, WorkoutProgramPayload } from '@/components/training/workout-schema';

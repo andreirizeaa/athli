@@ -3,7 +3,7 @@
  * This ensures workouts created on mobile can be opened on web and vice versa
  */
 
-import { SectionType } from '@/constants/training';
+import { SectionType } from '@athli/shared-types';
 
 // ============================================================================
 // Core Types (Re-export from shared package)
@@ -25,7 +25,7 @@ export type BuilderExerciseSet = {
 };
 
 export type BuilderExercise = {
-    id: string; // Instance ID for this card in the builder
+    id: string; // Instance ID for this card in the builder - unique per workout/section instance
     exerciseId: string; // ID of the exercise from the library
     name: string;
     imageUrl: string;
@@ -37,8 +37,8 @@ export type BuilderExercise = {
     alternatives: { id: string; name: string; imageUrl: string }[];
     tempo?: string;
     eachSide?: boolean;
-    isSupersetNext?: boolean;
-    supersetGroupId?: string | null;
+    isSupersetNext?: boolean; // UI helper - indicates if this exercise is supersetted with the next one
+    supersetGroupId?: string | null; // References the instance ID of the first exercise in the superset group
     equipments?: string[]; // Preserved from library for payload extraction
     bodyParts?: string[];
     setRestSec?: number; // Rest time between sets in seconds
@@ -79,11 +79,11 @@ export const getDefaultColumns = (exerciseType: string) => {
         case 'weight_reps':
             return { column1Type: 'Reps', column2Type: 'kg' };
         case 'reps':
-            return { column1Type: 'Reps', column2Type: 'None' };
+            return { column1Type: 'Reps', column2Type: 'kg' };
         case 'distance_duration':
             return { column1Type: 'km', column2Type: 'minutes' };
         default:
-            return { column1Type: 'Reps', column2Type: 'None' };
+            return { column1Type: 'Reps', column2Type: 'kg' };
     }
 };
 
@@ -201,8 +201,10 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
         const exercises: RoundExercisePayload[] = section.exercises.map((ex) => {
             const firstSet = ex.sets[0];
             return {
+                id: ex.id, // Instance ID
                 prescribedExerciseId: ex.exerciseId,
                 performedExerciseId: null,
+                exerciseType: ex.exerciseType || 'weight_reps',
                 notes: ex.notes || null,
                 completed: false,
                 eachSide: ex.eachSide || false,
@@ -210,6 +212,10 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
                 trackableField1: createTrackableField(ex.column1Type, firstSet?.column1 || null),
                 trackableField2: createTrackableField(ex.column2Type, firstSet?.column2 || null),
                 restSec: parseNumber(firstSet?.rest),
+                alternatives: ex.alternatives.map((alt) => alt.id),
+                supersetId: ex.supersetGroupId || null,
+                column1Label: ex.column1Type,
+                column2Label: ex.column2Type,
             };
         });
 
@@ -229,8 +235,10 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
         const exercises: RoundExercisePayload[] = section.exercises.map((ex) => {
             const firstSet = ex.sets[0];
             return {
+                id: ex.id, // Instance ID
                 prescribedExerciseId: ex.exerciseId,
                 performedExerciseId: null,
+                exerciseType: ex.exerciseType || 'weight_reps',
                 notes: ex.notes || null,
                 completed: false,
                 eachSide: ex.eachSide || false,
@@ -238,6 +246,10 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
                 trackableField1: createTrackableField(ex.column1Type, firstSet?.column1 || null),
                 trackableField2: createTrackableField(ex.column2Type, firstSet?.column2 || null),
                 restSec: parseNumber(firstSet?.rest),
+                alternatives: ex.alternatives.map((alt) => alt.id),
+                supersetId: ex.supersetGroupId || null,
+                column1Label: ex.column1Type,
+                column2Label: ex.column2Type,
             };
         });
 
@@ -259,6 +271,7 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
             exercises: group.map((ex) => {
                 const firstSet = ex.sets[0] || { id: '1', setNumber: 1, column1: '', column2: '', type: 'R' as const };
                 return {
+                    id: ex.id, // Instance ID
                     prescribedExerciseId: ex.exerciseId,
                     performedExerciseId: null,
                     alternatives: ex.alternatives.map((alt) => alt.id),
@@ -289,6 +302,7 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
     const exerciseGroups: ExerciseGroupPayload[] = groups.map((group) => ({
         isSuperset: group.length > 1,
         exercises: group.map((ex) => ({
+            id: ex.id, // Instance ID
             prescribedExerciseId: ex.exerciseId,
             performedExerciseId: null,
             sets: ex.sets.map((set, idx) => mapBuilderSetToPayload(set, idx, ex.column1Type, ex.column2Type, ex.setRestSec)),
@@ -328,6 +342,7 @@ export const buildWorkoutPayload = (state: BuilderWorkoutState): WorkoutPayload 
             return {
                 itemType: 'exercise' as const,
                 data: {
+                    id: ex.id, // Instance ID
                     prescribedExerciseId: ex.exerciseId,
                     performedExerciseId: null,
                     sets: ex.sets.map((set, idx) => mapBuilderSetToPayload(set, idx, ex.column1Type, ex.column2Type, ex.setRestSec)),

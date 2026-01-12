@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { OPTIONAL_COLUMN_OPTIONS, HEART_RATE_ZONE_OPTIONS, COLUMN_OPTIONS } from '@/lib/constants/training';
+import { OPTIONAL_COLUMN_OPTIONS, HEART_RATE_ZONE_OPTIONS, COLUMN_OPTIONS } from '@athli/shared-types';
 import {
   Select,
   SelectContent,
@@ -505,6 +505,7 @@ export type SetFieldValidation = {
   distance?: boolean;
   duration?: boolean;
   rest?: boolean;
+  tempo?: boolean;
 };
 
 type ExerciseWithSets = Exercise & {
@@ -513,7 +514,6 @@ type ExerciseWithSets = Exercise & {
   notes?: string; // Exercise-specific notes
   eachSide?: boolean;       // Exercise-level each side toggle
   tempo?: string;           // Exercise-level tempo (x-x-x-x format)
-  optionalColumnType?: 'Optional' | 'Tempo' | 'RIR' | 'RPE' | 'Heart Rate Zone' | 'Calories' | 'Watts' | 'Pace' | 'Speed' | 'Incline' | 'Height' | 'RPM';
   column1Label?: string;    // Column 1 label (Reps, Weight, Distance, etc.)
   column2Label?: string;    // Column 2 label (Reps, Weight, Duration, etc.)
 };
@@ -533,11 +533,6 @@ type ExerciseCardProps = {
   validationErrors?: Record<number, SetFieldValidation>;
   onClearValidationField?: (setIndex: number, field: keyof SetFieldValidation) => void;
   hasSupersetError?: boolean;
-};
-
-type DropsetData = {
-  dropNumber: number;
-  value: string;
 };
 
 export const ExerciseCard = ({
@@ -607,7 +602,6 @@ export const ExerciseCard = ({
       { setNumber: 3, type: 'normal', reps: '12', weight: '', rest: '90' },
     ];
   });
-  const [dropsetPopoverOpen, setDropsetPopoverOpen] = useState<string | null>(null);
   const [alternativeSearchResults, setAlternativeSearchResults] = useState<Exercise[]>([]);
 
   const handleAlternativesSearch = (query: string = '') => {
@@ -625,23 +619,17 @@ export const ExerciseCard = ({
       handleAlternativesSearch('');
     }
   }, [isAlternativesVisible, exercise.exerciseId, exercise.alternatives]);
-  const [dropsetData, setDropsetData] = useState<{
-    setIndex: number;
-    field: 'reps' | 'leftReps' | 'rightReps';
-    repsDrops: DropsetData[];
-    weightDrops: DropsetData[];
-  } | null>(null);
 
   // Initialize column labels based on exercise type (with default units)
   const getDefaultColumnLabels = (exerciseType: string) => {
     if (exerciseType === 'weight_reps') {
       return { column1: 'Reps', column2: 'kg' };
     } else if (exerciseType === 'reps') {
-      return { column1: 'Reps', column2: 'None' };
+      return { column1: 'Reps', column2: 'kg' };
     } else if (exerciseType === 'distance_duration') {
       return { column1: 'km', column2: 'minutes' };
     }
-    return { column1: 'Reps', column2: 'None' };
+    return { column1: 'Reps', column2: 'kg' };
   };
 
   const [column1Label, setColumn1Label] = useState<string>(() => {
@@ -678,35 +666,6 @@ export const ExerciseCard = ({
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [isSearchOpen]);
-
-  useEffect(() => {
-    if (dropsetPopoverOpen) {
-      const handleClickOutsideDropset = (event: MouseEvent) => {
-        // Check if click is outside the popover
-        const target = event.target as Node;
-        const popoverElement = document.querySelector('[data-slot="popover-content"]');
-        if (
-          popoverElement &&
-          !popoverElement.contains(target) &&
-          containerRef.current &&
-          !containerRef.current.contains(target)
-        ) {
-          setDropsetPopoverOpen(null);
-          setDropsetData(null);
-        }
-      };
-
-      // Small delay to avoid immediate closure
-      const timeout = setTimeout(() => {
-        document.addEventListener('mousedown', handleClickOutsideDropset);
-      }, 100);
-
-      return () => {
-        clearTimeout(timeout);
-        document.removeEventListener('mousedown', handleClickOutsideDropset);
-      };
-    }
-  }, [dropsetPopoverOpen]);
 
   const handleExerciseSelect = (selectedExercise: Exercise) => {
     // When a new exercise is selected, reset the local sets and notify parent
@@ -1096,190 +1055,6 @@ export const ExerciseCard = ({
     }
   };
 
-  const handleDropsetInputClick = (
-    setIndex: number,
-    field: 'reps' | 'leftReps' | 'rightReps',
-    triggerId: string
-  ) => {
-    const set = sets[setIndex];
-    if (set.type === 'dropset') {
-      // Initialize dropset data for both reps and weight
-      const parseDrops = (value: string): DropsetData[] => {
-        if (value && value.includes('-')) {
-          const values = value.split('-');
-          return values.map((val, idx) => ({
-            dropNumber: idx + 1,
-            value: val.trim(),
-          }));
-        }
-        return [
-          { dropNumber: 1, value: '' },
-          { dropNumber: 2, value: '' },
-        ];
-      };
-
-      const repsValue = set[field] || '';
-      // Determine which weight field to use based on the reps field
-      let weightValue = '';
-      if (field === 'leftReps') {
-        weightValue = set.leftWeight || '';
-      } else if (field === 'rightReps') {
-        weightValue = set.rightWeight || '';
-      } else {
-        weightValue = set.weight;
-      }
-
-      const repsDrops = parseDrops(repsValue);
-      const weightDrops = parseDrops(weightValue);
-
-      // Ensure both have the same number of drops (use the max)
-      const maxDrops = Math.max(repsDrops.length, weightDrops.length, 2);
-      const normalizedRepsDrops = Array.from(
-        { length: maxDrops },
-        (_, idx) => repsDrops[idx] || { dropNumber: idx + 1, value: '' }
-      );
-      const normalizedWeightDrops = Array.from(
-        { length: maxDrops },
-        (_, idx) => weightDrops[idx] || { dropNumber: idx + 1, value: '' }
-      );
-
-      setDropsetData({
-        setIndex,
-        field,
-        repsDrops: normalizedRepsDrops,
-        weightDrops: normalizedWeightDrops,
-      });
-      setDropsetPopoverOpen(triggerId);
-    }
-  };
-
-  const handleDropsetValueChange = (dropIndex: number, type: 'reps' | 'weight', value: string) => {
-    if (!dropsetData) return;
-
-    const nextDropsetData = {
-      ...dropsetData,
-      repsDrops:
-        type === 'reps'
-          ? dropsetData.repsDrops.map((drop, idx) =>
-            idx === dropIndex ? { ...drop, value } : drop
-          )
-          : dropsetData.repsDrops,
-      weightDrops:
-        type === 'weight'
-          ? dropsetData.weightDrops.map((drop, idx) =>
-            idx === dropIndex ? { ...drop, value } : drop
-          )
-          : dropsetData.weightDrops,
-    };
-
-    setDropsetData(nextDropsetData);
-
-    // Live-update the parent set's reps/weight from dropset data
-    const formattedReps = nextDropsetData.repsDrops
-      .map((drop) => drop.value.trim())
-      .filter((val) => val !== '')
-      .join('-');
-
-    const formattedWeight = nextDropsetData.weightDrops
-      .map((drop) => drop.value.trim())
-      .filter((val) => val !== '')
-      .join('-');
-
-    const updated = [...sets];
-
-    // Determine target weight field
-    let weightField = 'weight';
-    if (dropsetData.field === 'leftReps') weightField = 'leftWeight';
-    else if (dropsetData.field === 'rightReps') weightField = 'rightWeight';
-
-    updated[nextDropsetData.setIndex] = {
-      ...updated[nextDropsetData.setIndex],
-      [dropsetData.field]: formattedReps, // Update specific field (reps, leftReps, or rightReps)
-      [weightField]: formattedWeight,
-    };
-
-    setSets(updated);
-
-    onExerciseChange({
-      ...exercise,
-      sets: updated,
-      alternatives: exercise.alternatives || [],
-    });
-
-    if (formattedReps) {
-      onClearValidationField?.(nextDropsetData.setIndex, 'reps');
-    }
-    if (formattedWeight) {
-      onClearValidationField?.(nextDropsetData.setIndex, 'weight');
-    }
-  };
-
-  const handleAddDrop = () => {
-    if (dropsetData) {
-      const newDropNumber = dropsetData.repsDrops.length + 1;
-      setDropsetData({
-        ...dropsetData,
-        repsDrops: [...dropsetData.repsDrops, { dropNumber: newDropNumber, value: '' }],
-        weightDrops: [...dropsetData.weightDrops, { dropNumber: newDropNumber, value: '' }],
-      });
-    }
-  };
-
-  const handleRemoveDrop = (dropIndex: number) => {
-    if (dropsetData) {
-      const updatedRepsDrops = dropsetData.repsDrops.filter((_, idx) => idx !== dropIndex);
-      const updatedWeightDrops = dropsetData.weightDrops.filter((_, idx) => idx !== dropIndex);
-      // Renumber drops
-      const renumberedRepsDrops = updatedRepsDrops.map((drop, idx) => ({
-        ...drop,
-        dropNumber: idx + 1,
-      }));
-      const renumberedWeightDrops = updatedWeightDrops.map((drop, idx) => ({
-        ...drop,
-        dropNumber: idx + 1,
-      }));
-      setDropsetData({
-        ...dropsetData,
-        repsDrops: renumberedRepsDrops,
-        weightDrops: renumberedWeightDrops,
-      });
-
-      // Recalculate and update parent set
-      const formattedReps = renumberedRepsDrops
-        .map((drop) => drop.value.trim())
-        .filter((val) => val !== '')
-        .join('-');
-
-      const formattedWeight = renumberedWeightDrops
-        .map((drop) => drop.value.trim())
-        .filter((val) => val !== '')
-        .join('-');
-
-      const updated = [...sets];
-
-      // Determine target weight field
-      let weightField = 'weight';
-      if (dropsetData.field === 'leftReps') weightField = 'leftWeight';
-      else if (dropsetData.field === 'rightReps') weightField = 'rightWeight';
-
-      updated[dropsetData.setIndex] = {
-        ...updated[dropsetData.setIndex],
-        [dropsetData.field]: formattedReps,
-        [weightField]: formattedWeight,
-      };
-
-      setSets(updated);
-
-      onExerciseChange({
-        ...exercise,
-        sets: updated,
-        alternatives: exercise.alternatives || [],
-      });
-    }
-  };
-
-  // Dropsets are now saved live as the user types; no explicit Save button needed
-
   const handleNumericInput = (
     e: React.ChangeEvent<HTMLInputElement>,
     handler: (value: string) => void
@@ -1303,106 +1078,21 @@ export const ExerciseCard = ({
       );
     }
 
-    // Handle dropset for Reps or Weight (kg/lbs) column in weight_reps exercises
-    // Both columns open the same popover (which shows both reps and weight)
-    const isWeightColumn = columnLabel === 'kg' || columnLabel === 'lbs';
-    if (
-      (columnLabel === 'Reps' || isWeightColumn) &&
-      set.type === 'dropset' &&
-      exercise.exerciseType === 'weight_reps'
-    ) {
-      const triggerId = `${setIndex}-reps`;
-      const displayValue = columnLabel === 'Reps' ? (set.reps || '-') : (set.weight || '-');
-      const hasError = columnLabel === 'Reps'
-        ? validationErrors?.[setIndex]?.reps
-        : validationErrors?.[setIndex]?.weight;
+    // Handle dropset - just show a simple input for the hyphenated format (e.g., "12-10-8")
+    if (set.type === 'dropset' && exercise.exerciseType === 'weight_reps') {
+      const value = getFieldValue(set, columnLabel);
+      const fieldName = getFieldName(columnLabel);
+      const hasError =
+        (fieldName === 'reps' && validationErrors?.[setIndex]?.reps) ||
+        (fieldName === 'weight' && validationErrors?.[setIndex]?.weight);
+
       return (
-        <TableCell className="py-1 px-2" key={`${setIndex}-${columnLabel}-dropset`}>
-          <div className="flex justify-center">
-            <Popover
-              open={dropsetPopoverOpen === triggerId}
-              onOpenChange={(open) => {
-                if (open) {
-                  handleDropsetInputClick(setIndex, 'reps', triggerId);
-                } else {
-                  setDropsetPopoverOpen(null);
-                  setDropsetData(null);
-                }
-              }}
-            >
-              <PopoverTrigger asChild>
-                <div
-                  onClick={() => handleDropsetInputClick(setIndex, 'reps', triggerId)}
-                  className={cn(
-                    'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
-                    'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
-                    dropsetPopoverOpen === triggerId && 'ring-2 ring-inset ring-primary',
-                    hasError && 'text-destructive ring-2 ring-inset ring-destructive',
-                    !displayValue || displayValue === '-' ? 'text-muted-foreground' : ''
-                  )}
-                >
-                  {displayValue}
-                </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-1" align="start">
-                {dropsetData && dropsetData.setIndex === setIndex && dropsetData.field === 'reps' && (
-                  <div className="flex flex-col gap-3 p-1">
-                    <div className="rounded-md overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-muted/50 h-8 hover:bg-muted/50 border-none">
-                            <TableHead className="h-8 py-1 px-2 w-[40px] text-center font-medium border-0">Drop</TableHead>
-                            <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Reps</TableHead>
-                            <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Weight</TableHead>
-                            <TableHead className="h-8 py-1 px-2 w-[30px] border-0"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {dropsetData.repsDrops.map((drop, dropIdx) => (
-                            <TableRow key={dropIdx} className="h-9 border-none">
-                              <TableCell className="py-0 px-0 h-9 text-center text-muted-foreground font-medium w-[40px] border-0">
-                                {drop.dropNumber}
-                              </TableCell>
-                              <TableCell className="py-0 px-0 h-9 w-[70px]">
-                                <Input
-                                  value={drop.value}
-                                  onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'reps', val))}
-                                  className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
-                                  placeholder="-"
-                                />
-                              </TableCell>
-                              <TableCell className="py-0 px-0 h-9 w-[70px]">
-                                <Input
-                                  value={dropsetData.weightDrops[dropIdx]?.value || ''}
-                                  onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'weight', val))}
-                                  className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
-                                  placeholder="-"
-                                />
-                              </TableCell>
-                              <TableCell className="py-0 px-0 h-9 w-[30px]">
-                                <div className="flex items-center justify-center h-full">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveDrop(dropIdx)}
-                                    className="text-muted-foreground hover:text-destructive flex items-center justify-center h-6 w-6 rounded-md hover:bg-muted/50"
-                                  >
-                                    <X className="size-3" />
-                                  </button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={handleAddDrop} className="w-full h-7 text-xs">
-                      Add drop
-                    </Button>
-                  </div>
-                )}
-              </PopoverContent>
-            </Popover>
-          </div>
+        <TableCell className="py-0 px-0 text-center" key={`${setIndex}-${columnLabel}-dropset`}>
+          <EditableCell
+            value={value}
+            onChange={(newValue) => updateFieldValue(setIndex, columnLabel, newValue)}
+            hasError={hasError}
+          />
         </TableCell>
       );
     }
@@ -1713,6 +1403,7 @@ export const ExerciseCard = ({
                   tempo: value,
                 });
               }}
+              hasError={validationErrors?.[-1]?.tempo}
             />
           </div>
         </div>

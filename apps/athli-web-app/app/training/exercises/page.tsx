@@ -60,7 +60,7 @@ import {
   MUSCLE_GROUP_OPTIONS,
   EXERCISE_EQUIPMENT_OPTIONS,
   MODALITY_OPTIONS,
-} from '@/lib/constants/training';
+} from '@athli/shared-types';
 
 type ColumnId = 'category' | 'muscleGroup' | 'modality' | 'equipment' | 'actions';
 

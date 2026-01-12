@@ -114,7 +114,7 @@ export function createPresetPalette(
   if (preset === 'underground') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#0a0a0a',
+        pageBackground: '#000000',
         background: '#121212',
         surface: '#1E1E1E',
         surfaceSecondary: '#2A2A2A',
@@ -156,7 +156,7 @@ export function createPresetPalette(
   if (preset === 'rose-garden') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#0a0a0a',
+        pageBackground: '#000000',
         background: '#121212',
         surface: '#1E1E1E',
         surfaceSecondary: '#2A2A2A',
@@ -198,7 +198,7 @@ export function createPresetPalette(
   if (preset === 'lake-view') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#0a0a0a',
+        pageBackground: '#000000',
         background: '#121212',
         surface: '#1E1E1E',
         surfaceSecondary: '#2A2A2A',
@@ -240,7 +240,7 @@ export function createPresetPalette(
   if (preset === 'sunset-glow') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#0a0a0a',
+        pageBackground: '#000000',
         background: '#121212',
         surface: '#1E1E1E',
         surfaceSecondary: '#2A2A2A',
@@ -282,7 +282,7 @@ export function createPresetPalette(
   if (preset === 'forest-whisper') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#0a0a0a',
+        pageBackground: '#000000',
         background: '#121212',
         surface: '#1E1E1E',
         surfaceSecondary: '#2A2A2A',
@@ -324,7 +324,7 @@ export function createPresetPalette(
   if (preset === 'ocean-breeze') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#0a0a0a',
+        pageBackground: '#000000',
         background: '#121212',
         surface: '#1E1E1E',
         surfaceSecondary: '#2A2A2A',
@@ -366,7 +366,7 @@ export function createPresetPalette(
   if (preset === 'lavender-dream') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#0a0a0a',
+        pageBackground: '#000000',
         background: '#121212',
         surface: '#1E1E1E',
         surfaceSecondary: '#2A2A2A',
@@ -407,7 +407,7 @@ export function createPresetPalette(
 
   if (scheme === 'dark') {
     return {
-      pageBackground: '#0a0a0a',
+      pageBackground: '#000000',
       background: '#121212',
       surface: '#1E1E1E',
       surfaceSecondary: '#2A2A2A',

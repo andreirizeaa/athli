@@ -4,30 +4,24 @@ import { PressableOpacity } from 'pressto';
 import { Search, X } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
-import { useColorScheme, useThemePreference } from '@/stores';
+import { useThemePreference } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 
-type SearchBarProps = {
+type AnimatedSearchBarProps = {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
-  rightIcon?: React.ReactNode;
-  onRightIconPress?: () => void;
   onFocus?: () => void;
   onBlur?: () => void;
-  style?: object;
 };
 
-export const SearchBar = ({
+export const AnimatedSearchBar = ({
   value,
   onChangeText,
   placeholder,
-  rightIcon,
-  onRightIconPress,
   onFocus,
   onBlur,
-  style,
-}: SearchBarProps) => {
+}: AnimatedSearchBarProps) => {
   const { colors: themeColors } = useThemePreference();
 
   const handleClear = () => {
@@ -40,8 +34,9 @@ export const SearchBar = ({
         styles.searchContainer,
         {
           backgroundColor: themeColors.iconButton,
+          flex: 1,
+          minWidth: 0,
         },
-        style,
       ]}
     >
       <View style={styles.searchIcon}>
@@ -74,14 +69,6 @@ export const SearchBar = ({
           />
         </PressableOpacity>
       )}
-      {rightIcon && (
-        <PressableOpacity
-          style={styles.rightIcon}
-          onPress={onRightIconPress}
-        >
-          {rightIcon}
-        </PressableOpacity>
-      )}
     </View>
   );
 };
@@ -106,10 +93,6 @@ const styles = StyleSheet.create({
     padding: 0,
     height: 24,
     maxHeight: 24,
-  },
-  rightIcon: {
-    marginLeft: 8,
-    padding: 4,
   },
   clearIcon: {
     marginLeft: 8,

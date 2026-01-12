@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { type WorkoutSection } from './types';
-import { SECTION_TYPES } from '@/constants/training';
+import { SECTION_TYPES } from '@athli/shared-types';
 import { PressableScale } from 'pressto';
 
 const RED_ERROR = '#EF4444';

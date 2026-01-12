@@ -18,7 +18,7 @@ import {
     type MuscleGroup,
     type Equipment,
     type Modality,
-} from '@/constants/training';
+} from '@athli/shared-types';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
@@ -194,18 +194,24 @@ export default function AddExerciseModal() {
         // Check if any field has been modified from original values
         let changes = false;
         if (isEditing) {
-            const originalCategory = params.category && params.category !== '' ? params.category : null;
-            const originalMuscleGroup = params.muscleGroup && params.muscleGroup !== '' ? params.muscleGroup : null;
-            const originalEquipment = params.equipment && params.equipment !== '' ? params.equipment : null;
-            const originalModality = params.modality && params.modality !== '' ? params.modality : null;
+            // If we're editing and haven't loaded the data yet, no changes
+            if (!existingExercise) {
+                changes = false;
+            } else {
+                // Compare against the actual fetched exercise data
+                const originalCategory = existingExercise.category || null;
+                const originalMuscleGroup = existingExercise.muscle_group?.[0] || null;
+                const originalEquipment = existingExercise.equipment || null;
+                const originalModality = existingExercise.modality || null;
 
-            changes = title !== (params.name || '') ||
-                category !== originalCategory ||
-                videoLink !== (params.videoLink || '') ||
-                instructions !== (params.instructions || '') ||
-                muscleGroup !== originalMuscleGroup ||
-                equipment !== originalEquipment ||
-                modality !== originalModality;
+                changes = title !== (existingExercise.name || '') ||
+                    category !== originalCategory ||
+                    videoLink !== (existingExercise.video_link || '') ||
+                    instructions !== (existingExercise.description || '') ||
+                    muscleGroup !== originalMuscleGroup ||
+                    equipment !== originalEquipment ||
+                    modality !== originalModality;
+            }
         } else {
             changes = trimmedTitle.length > 0 ||
                 category !== null ||
@@ -219,10 +225,10 @@ export default function AddExerciseModal() {
         return {
             isFormValid: formValid,
             hasChanges: changes,
-            canComplete: formValid && !createMutation.isPending && !editMutation.isPending,
+            canComplete: formValid && changes && !createMutation.isPending && !editMutation.isPending,
             isVideoLinkValid: trimmedVideoLink.length === 0 || isValidVideoUrl(trimmedVideoLink),
         };
-    }, [title, category, videoLink, instructions, muscleGroup, equipment, modality, createMutation.isPending, editMutation.isPending, isEditing, params]);
+    }, [title, category, videoLink, instructions, muscleGroup, equipment, modality, createMutation.isPending, editMutation.isPending, isEditing, existingExercise]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {

@@ -1,4 +1,4 @@
-import { SECTION_TYPES } from '@/lib/constants/training';
+import { SECTION_TYPES } from '@athli/shared-types';
 
 export type SectionType = 'regular' | 'amrap' | 'timed' | 'circuits';
 

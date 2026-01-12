@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
-import { SECTION_TYPES, type SectionType } from '@/constants/training';
+import { SECTION_TYPES, type SectionType } from '@athli/shared-types';
 import { useThemePreference } from '@/stores';
 import { useModalCallbacks } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';

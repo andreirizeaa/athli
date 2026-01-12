@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useModalCallbacks } from '@/stores';
 import { ExerciseBuilderCard } from '@/components/features/workout/exercise-builder-card';
 import { hexToRgba } from '@/utils/colorUtils';
-import { type SectionType, SECTION_TYPES } from '@/constants/training';
+import { type SectionType, SECTION_TYPES } from '@athli/shared-types';
 import { Exercise } from '@/app/modals/workout/add-exercise-to-builder-modal';
 import {
     type BuilderExercise,
@@ -118,23 +118,63 @@ export default function SectionBuilderScreen() {
                     const sectionItems = sectionData.section_data?.items || [];
                     const sectionItem = sectionItems.find((item: any) => item.itemType === 'section');
 
-                    // Exercises are nested inside section.data.exercises as exercise groups
-                    const exerciseGroups = sectionItem?.data?.exercises || [];
+                    const sectionType = sectionItem?.data?.type || 'regular';
+                    const exerciseData = sectionItem?.data?.exercises || [];
 
-                    // Flatten exercise groups into individual exercises
+                    // Flatten exercises based on section type
                     const apiExercises: any[] = [];
-                    exerciseGroups.forEach((group: any) => {
-                        if (group.exercises && Array.isArray(group.exercises)) {
-                            group.exercises.forEach((ex: any) => {
+                    const exerciseGroups: any[] = [];
+
+                    if (sectionType === 'amrap' || sectionType === 'timed') {
+                        // AMRAP/Timed: exercises is a flat array of RoundExercisePayload
+                        // Each exercise has trackableField1/trackableField2, not sets array
+                        exerciseData.forEach((ex: any) => {
+                            apiExercises.push({
+                                ...ex,
+                                isSuperset: false,
+                                // Create a single set from trackable fields for builder compatibility
+                                sets: [{
+                                    setNumber: 1,
+                                    type: 'normal',
+                                    trackableField1: ex.trackableField1,
+                                    trackableField2: ex.trackableField2,
+                                    restSec: ex.restSec,
+                                }],
+                            });
+                        });
+                        // No exercise groups for AMRAP/Timed
+                        exerciseGroups.push(...exerciseData.map((ex: any) => ({ exercises: [ex], isSuperset: false })));
+                    } else if (sectionType === 'circuits') {
+                        // Circuits: exercises is array of CircuitExerciseGroupPayload
+                        // Each group.exercises has a single 'set' field
+                        exerciseData.forEach((group: any) => {
+                            exerciseGroups.push(group);
+                            (group.exercises || []).forEach((ex: any) => {
                                 apiExercises.push({
                                     ...ex,
                                     isSuperset: group.isSuperset || false,
+                                    // Convert single 'set' to 'sets' array for builder compatibility
+                                    sets: ex.set ? [ex.set] : [],
                                 });
                             });
-                        }
-                    });
+                        });
+                    } else {
+                        // Regular/Auxiliary: exercises is array of ExerciseGroupPayload
+                        // Each group.exercises has 'sets' array
+                        exerciseData.forEach((group: any) => {
+                            exerciseGroups.push(group);
+                            if (group.exercises && Array.isArray(group.exercises)) {
+                                group.exercises.forEach((ex: any) => {
+                                    apiExercises.push({
+                                        ...ex,
+                                        isSuperset: group.isSuperset || false,
+                                    });
+                                });
+                            }
+                        });
+                    }
 
-                    console.log('Found exercises in section:', apiExercises.length);
+                    console.log('Found exercises in section:', apiExercises.length, 'section type:', sectionType);
 
                     // Collect all unique exercise IDs
                     const exerciseIds = new Set<string>();
@@ -183,7 +223,7 @@ export default function SectionBuilderScreen() {
                         }).filter(Boolean); // Remove null entries
 
                         // Extract setRestSec from the first set (applies to all sets)
-                        const setRestSec = ex.sets.length > 0 && ex.sets[0].restSec !== undefined
+                        const setRestSec = ex.sets && ex.sets.length > 0 && ex.sets[0].restSec !== undefined
                             ? ex.sets[0].restSec
                             : undefined;
 
@@ -195,7 +235,7 @@ export default function SectionBuilderScreen() {
                             exerciseType: details.exerciseType,
                             column1Type: ex.column1Label || 'Reps',
                             column2Type: ex.column2Label || 'kg',
-                            sets: ex.sets.map((set: any, setIdx: number) => ({
+                            sets: (ex.sets || []).map((set: any, setIdx: number) => ({
                                 id: 'set-' + Date.now() + '-' + idx + '-' + setIdx,
                                 setNumber: set.setNumber,
                                 column1: set.trackableField1?.prescribed || '',
@@ -214,24 +254,11 @@ export default function SectionBuilderScreen() {
                         };
                     });
 
-                    // Set isSupersetNext based on exercise groups
-                    let currentGroupIdx = 0;
-                    let exerciseInGroupIdx = 0;
+                    // Fix isSupersetNext based on adjacent exercises' supersetGroupId
                     exercises.forEach((ex, idx) => {
-                        const currentGroup = exerciseGroups[currentGroupIdx];
-                        if (currentGroup && currentGroup.exercises) {
-                            // Check if this is not the last exercise in the group
-                            if (exerciseInGroupIdx < currentGroup.exercises.length - 1 && currentGroup.isSuperset) {
-                                ex.isSupersetNext = true;
-                            }
-
-                            exerciseInGroupIdx++;
-                            // Move to next group if we've processed all exercises in current group
-                            if (exerciseInGroupIdx >= currentGroup.exercises.length) {
-                                currentGroupIdx++;
-                                exerciseInGroupIdx = 0;
-                            }
-                        }
+                        const nextEx = idx < exercises.length - 1 ? exercises[idx + 1] : null;
+                        const isSupersetNext = nextEx && ex.supersetGroupId && ex.supersetGroupId === nextEx.supersetGroupId;
+                        ex.isSupersetNext = isSupersetNext || false;
                     });
 
                     // Extract duration/rounds from nested section data (reuse sectionItem from above)
@@ -430,6 +457,9 @@ export default function SectionBuilderScreen() {
 
         if (isLibrarySection) {
             // Save to API as a library section
+            console.log('[SECTION BUILDER] State exercises before building payload:', state.exercises.length, 'exercises');
+            console.log('[SECTION BUILDER] State exercises detail:', JSON.stringify(state.exercises, null, 2));
+
             // Build a BuilderSection from state
             const builderSection: BuilderSection = {
                 id: params.sectionId || `section-${Date.now()}`,
@@ -442,30 +472,26 @@ export default function SectionBuilderScreen() {
                 exercises: state.exercises,
             };
 
+            console.log('[SECTION BUILDER] BuilderSection exercises:', builderSection.exercises.length);
+
             // Use the buildSectionPayload function to convert to proper API format
             const sectionData = buildSectionPayload(builderSection);
+
+            console.log('[SECTION BUILDER] Section data after buildSectionPayload:', JSON.stringify(sectionData, null, 2));
 
             const sectionPayload: any = {
                 name: state.name,
                 description: state.notes,
                 sectionType: state.sectionType,
-                items: [{
-                    itemType: 'section' as const,
-                    data: sectionData,
-                }],
+                section_data: {
+                    items: [{
+                        itemType: 'section' as const,
+                        data: sectionData,
+                    }],
+                },
             };
 
-            // Add duration for AMRAP sections (in minutes for the section metadata)
-            if (state.sectionType === 'amrap' && state.duration) {
-                sectionPayload.duration = parseInt(state.duration);
-            }
-
-            // Add rounds for timed/circuits sections
-            if ((state.sectionType === 'timed' || state.sectionType === 'circuits') && state.rounds) {
-                sectionPayload.rounds = parseInt(state.rounds);
-            }
-
-            console.log('Saving section payload:', JSON.stringify(sectionPayload, null, 2));
+            console.log('[SECTION BUILDER] Saving section payload:', JSON.stringify(sectionPayload, null, 2));
 
             if (params.sectionId) {
                 // Update existing section
@@ -573,10 +599,54 @@ export default function SectionBuilderScreen() {
     const toggleSuperset = (index: number) => {
         setState(prev => {
             const newExercises = [...prev.exercises];
-            newExercises[index] = {
-                ...newExercises[index],
-                isSupersetNext: !newExercises[index].isSupersetNext
-            };
+            const ex = newExercises[index];
+            const isLinking = !ex.isSupersetNext;
+
+            if (isLinking) {
+                // Linking: assign supersetGroupId to both current and next exercise
+                const nextIndex = index + 1;
+                if (nextIndex < newExercises.length) {
+                    const nextEx = newExercises[nextIndex];
+
+                    // Generate a shared superset group ID or use existing one
+                    const supersetGroupId = ex.supersetGroupId || `superset-section-${Date.now()}`;
+
+                    // Update current exercise
+                    newExercises[index] = {
+                        ...ex,
+                        isSupersetNext: true,
+                        supersetGroupId,
+                    };
+
+                    // Update next exercise with the same supersetGroupId
+                    newExercises[nextIndex] = {
+                        ...nextEx,
+                        supersetGroupId,
+                    };
+                }
+            } else {
+                // Unlinking: remove supersetGroupId from both current and next
+                const nextIndex = index + 1;
+
+                // Update current exercise
+                newExercises[index] = {
+                    ...ex,
+                    isSupersetNext: false,
+                    supersetGroupId: null,
+                };
+
+                // Update next exercise to remove supersetGroupId (if it matches)
+                if (nextIndex < newExercises.length) {
+                    const nextEx = newExercises[nextIndex];
+                    if (nextEx.supersetGroupId === ex.supersetGroupId) {
+                        newExercises[nextIndex] = {
+                            ...nextEx,
+                            supersetGroupId: null,
+                        };
+                    }
+                }
+            }
+
             return { ...prev, exercises: newExercises };
         });
     };

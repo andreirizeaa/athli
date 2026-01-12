@@ -6,6 +6,7 @@ import { ChevronRight, Dumbbell, Play } from 'lucide-react-native';
 import { PressableOpacity } from 'pressto';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
+import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
@@ -15,14 +16,15 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
 import { EmptyState } from '@/components/ui/empty-state';
-import { EXERCISE_CATEGORY_OPTIONS, EQUIPMENT_OPTIONS } from '@/constants/training';
+import { EXERCISE_CATEGORY_OPTIONS, EQUIPMENT_OPTIONS } from '@athli/shared-types';
 
 export const ExercisesTab = () => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
+  const { searchQuery, registerOpenRow, closeOpenRow, openRowCloseFn } = useLibraryTab();
   const queryClient = useQueryClient();
+  const isRowOpen = openRowCloseFn !== null;
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
 
@@ -130,6 +132,12 @@ export const ExercisesTab = () => {
   });
 
   const handleExercisePress = useCallback((exercise: typeof filteredExercises[0]) => {
+    // If a row is open, just close it and prevent navigation
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
     closeOpenRow();
     router.push({
       pathname: '/modals/library/add-exercise-modal',
@@ -144,9 +152,15 @@ export const ExercisesTab = () => {
         modality: exercise.modality || '',
       },
     });
-  }, [closeOpenRow, router]);
+  }, [isRowOpen, closeOpenRow, router]);
 
   const handleThumbnailPress = useCallback((exercise: typeof filteredExercises[0]) => {
+    // If a row is open, just close it and prevent navigation
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
     closeOpenRow();
     if (exercise.video_link) {
       router.push({
@@ -159,7 +173,7 @@ export const ExercisesTab = () => {
         },
       });
     }
-  }, [closeOpenRow, router]);
+  }, [isRowOpen, closeOpenRow, router]);
 
   // Helper to get formatted label for category
   const getCategoryLabel = (value: string | null | undefined): string => {
@@ -203,115 +217,117 @@ export const ExercisesTab = () => {
     return null;
   };
 
+  const renderItem = useCallback(({ item: exercise, index }: { item: typeof filteredExercises[0]; index: number }) => {
+    const isLastItem = index === filteredExercises.length - 1;
+    const thumbnailUrl = getVideoThumbnail(exercise.video_link);
+    const categoryLabel = getCategoryLabel(exercise.category);
+    const equipmentLabel = getEquipmentLabel(exercise.equipment);
+    const hasCategory = Boolean(categoryLabel);
+    const hasEquipment = Boolean(equipmentLabel);
+
+    return (
+      <View>
+        <SwipeableRow
+          onDelete={() => deleteMutation.mutateAsync(exercise.id)}
+          onOpen={registerOpenRow}
+          deleteConfirmTitle={`${t('general.delete')} ${exercise.name}?`}
+        >
+          <View style={styles.rowWrapper}>
+            <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
+              {/* Thumbnail - Separate Pressable */}
+              <PressableOpacity
+                onPress={() => handleThumbnailPress(exercise)}
+                style={styles.thumbnailWrapper}
+              >
+                {thumbnailUrl ? (
+                  <View style={styles.videoThumbnailContainer}>
+                    <Image
+                      source={{ uri: thumbnailUrl }}
+                      style={styles.thumbnailImage}
+                      contentFit="cover"
+                      transition={200}
+                    />
+                    <View style={styles.playOverlay}>
+                      <Play {...({ color: "#FFFFFF", size: 16 } as any)} />
+                    </View>
+                  </View>
+                ) : (
+                  <View style={[styles.iconContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
+                    <PlatformIcon
+                      sf="figure.strengthtraining.traditional"
+                      IconComponent={Dumbbell}
+                      size={24}
+                      color={themeColors.text}
+                    />
+                  </View>
+                )}
+              </PressableOpacity>
+
+              {/* Rest of row - Pressable for Edit */}
+              <PressableOpacity
+                onPress={() => handleExercisePress(exercise)}
+                style={styles.mainContentPressable}
+              >
+                <View style={styles.textContent}>
+                  <Text
+                    style={[styles.exerciseName, { color: themeColors.text }]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {exercise.name}
+                  </Text>
+                  {(hasCategory || hasEquipment) && (
+                    <View style={styles.metaRow}>
+                      {hasCategory && (
+                        <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                          {categoryLabel}
+                        </Text>
+                      )}
+                      {hasCategory && hasEquipment && (
+                        <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                      )}
+                      {hasEquipment && (
+                        <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                          {equipmentLabel}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                </View>
+                <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+              </PressableOpacity>
+            </View>
+          </View>
+        </SwipeableRow>
+
+        {!isLastItem && (
+          <View style={styles.separatorContainer}>
+            <View
+              style={[
+                styles.separator,
+                { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+              ]}
+            />
+          </View>
+        )}
+
+        {isLastItem && <View style={{ height: 24 }} />}
+      </View>
+    );
+  }, [filteredExercises.length, themeColors, t, deleteMutation, registerOpenRow, handleThumbnailPress, handleExercisePress]);
+
   return (
-    <View style={styles.container}>
-      {/* Empty State */}
-      {filteredExercises.length === 0 && (
+    <FlashList
+      data={filteredExercises}
+      renderItem={renderItem}
+      keyExtractor={(item) => item.id}
+      ListEmptyComponent={
         <EmptyState
           message={t('library.empty.exercises')}
         />
-      )}
-
-      {/* Exercise List */}
-      {filteredExercises.map((exercise, index) => {
-        const isLastItem = index === filteredExercises.length - 1;
-        const thumbnailUrl = getVideoThumbnail(exercise.video_link);
-        const categoryLabel = getCategoryLabel(exercise.category);
-        const equipmentLabel = getEquipmentLabel(exercise.equipment);
-        const hasCategory = Boolean(categoryLabel);
-        const hasEquipment = Boolean(equipmentLabel);
-
-        return (
-          <View key={exercise.id}>
-            <SwipeableRow
-              onDelete={() => deleteMutation.mutateAsync(exercise.id)}
-              onOpen={registerOpenRow}
-              deleteConfirmTitle={`${t('general.delete')} ${exercise.name}?`}
-            >
-              <View style={styles.rowWrapper}>
-                <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
-                  {/* Thumbnail - Separate Pressable */}
-                  <PressableOpacity
-                    onPress={() => handleThumbnailPress(exercise)}
-                    style={styles.thumbnailWrapper}
-                  >
-                    {thumbnailUrl ? (
-                      <View style={styles.videoThumbnailContainer}>
-                        <Image
-                          source={{ uri: thumbnailUrl }}
-                          style={styles.thumbnailImage}
-                          contentFit="cover"
-                          transition={200}
-                        />
-                        <View style={styles.playOverlay}>
-                          <Play {...({ color: "#FFFFFF", size: 16 } as any)} />
-                        </View>
-                      </View>
-                    ) : (
-                      <View style={[styles.iconContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
-                        <PlatformIcon
-                          sf="figure.strengthtraining.traditional"
-                          IconComponent={Dumbbell}
-                          size={24}
-                          color={themeColors.text}
-                        />
-                      </View>
-                    )}
-                  </PressableOpacity>
-
-                  {/* Rest of row - Pressable for Edit */}
-                  <PressableOpacity
-                    onPress={() => handleExercisePress(exercise)}
-                    style={styles.mainContentPressable}
-                  >
-                    <View style={styles.textContent}>
-                      <Text
-                        style={[styles.exerciseName, { color: themeColors.text }]}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {exercise.name}
-                      </Text>
-                      {(hasCategory || hasEquipment) && (
-                        <View style={styles.metaRow}>
-                          {hasCategory && (
-                            <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                              {categoryLabel}
-                            </Text>
-                          )}
-                          {hasCategory && hasEquipment && (
-                            <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                          )}
-                          {hasEquipment && (
-                            <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                              {equipmentLabel}
-                            </Text>
-                          )}
-                        </View>
-                      )}
-                    </View>
-                    <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-                  </PressableOpacity>
-                </View>
-              </View>
-            </SwipeableRow>
-
-            {!isLastItem && (
-              <View style={styles.separatorContainer}>
-                <View
-                  style={[
-                    styles.separator,
-                    { backgroundColor: themeColors.mutedText, opacity: 0.2 },
-                  ]}
-                />
-              </View>
-            )}
-
-            {isLastItem && <View style={{ height: 24 }} />}
-          </View>
-        );
-      })}
-    </View>
+      }
+      contentContainerStyle={styles.container}
+    />
   );
 };
 
@@ -325,15 +341,15 @@ const styles = StyleSheet.create({
   rowContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: 16,
   },
   thumbnailWrapper: {
     marginRight: 12,
   },
   videoThumbnailContainer: {
-    width: 44,
-    height: 44,
+    width: 58,
+    height: 58,
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#E0E0E0',
@@ -354,8 +370,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconContainer: {
-    width: 44,
-    height: 44,
+    width: 58,
+    height: 58,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -386,7 +402,7 @@ const styles = StyleSheet.create({
     ...typography.p3,
   },
   separatorContainer: {
-    paddingLeft: 72,
+    paddingLeft: 86,
     paddingRight: 16,
   },
   separator: {

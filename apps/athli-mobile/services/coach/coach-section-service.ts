@@ -86,8 +86,11 @@ export const deleteSections = async (sectionIds: string | string[]): Promise<voi
  * Create a new section
  */
 export const createSection = async (sectionData: WorkoutProgramPayload & { sectionType: string; duration?: number; rounds?: number }): Promise<Section> => {
+  // Get items from section_data
+  const items = (sectionData as any).section_data?.items || [];
+
   // Calculate total exercises from items
-  const totalExercises = (sectionData.items || []).reduce((total, item) => {
+  const totalExercises = items.reduce((total: number, item: any) => {
     if (item.itemType === 'exercise') {
       // Top-level exercises count as 1
       return total + 1;
@@ -95,10 +98,10 @@ export const createSection = async (sectionData: WorkoutProgramPayload & { secti
       const section = item.data;
       if (section.type === 'regular' || section.type === 'auxiliary') {
         const exercises = section.exercises || [];
-        return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
+        return total + exercises.reduce((sum: number, group: any) => sum + (group.exercises?.length || 0), 0);
       } else if (section.type === 'circuits') {
         const exercises = section.exercises || [];
-        return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
+        return total + exercises.reduce((sum: number, group: any) => sum + (group.exercises?.length || 0), 0);
       } else if (section.type === 'amrap' || section.type === 'timed') {
         return total + (section.exercises?.length || 0);
       }
@@ -106,44 +109,13 @@ export const createSection = async (sectionData: WorkoutProgramPayload & { secti
     return total;
   }, 0);
 
-  // Build section data with type-specific fields
-  const sectionDataPayload: any = {
-    id: `section-${Date.now()}`,
-    name: sectionData.name,
-    type: sectionData.sectionType,
-    exercises: [],
-    notes: sectionData.description || null,
-  };
-
-  // Add type-specific fields to the section data
-  if (sectionData.sectionType === 'amrap' && sectionData.duration !== undefined) {
-    sectionDataPayload.durationSec = sectionData.duration * 60; // Convert minutes to seconds
-    sectionDataPayload.actualDurationSec = null;
-    sectionDataPayload.roundsCompleted = null;
-  } else if (sectionData.sectionType === 'timed' && sectionData.rounds !== undefined) {
-    sectionDataPayload.targetRounds = sectionData.rounds;
-    sectionDataPayload.actualRounds = null;
-    sectionDataPayload.totalDurationSec = null;
-  } else if (sectionData.sectionType === 'circuits' && sectionData.rounds !== undefined) {
-    sectionDataPayload.targetRounds = sectionData.rounds;
-    sectionDataPayload.actualRounds = null;
-    sectionDataPayload.totalDurationSec = null;
-  } else if (sectionData.sectionType === 'auxiliary') {
-    sectionDataPayload.category = 'warmup'; // Default category
-  }
-
-  const cleanSectionData = {
-    items: [{
-      itemType: 'section',
-      data: sectionDataPayload,
-    }],
-  };
+  console.log('[CREATE SECTION SERVICE] Total exercises calculated:', totalExercises);
 
   const payload: any = {
     title: sectionData.name,
     description: sectionData.description,
     section_type: sectionData.sectionType,
-    section_data: cleanSectionData,
+    section_data: (sectionData as any).section_data,
     total_exercises: totalExercises,
   };
 
@@ -176,9 +148,10 @@ export const updateSection = async (
   sectionId: string,
   sectionData: Partial<WorkoutProgramPayload & { sectionType: string; duration?: number; rounds?: number }>
 ): Promise<Section> => {
-  // Calculate total exercises if items provided
-  const totalExercises = sectionData.items
-    ? sectionData.items.reduce((total, item) => {
+  // Calculate total exercises if section_data provided
+  const items = (sectionData as any).section_data?.items || [];
+  const totalExercises = items.length > 0
+    ? items.reduce((total: number, item: any) => {
       if (item.itemType === 'exercise') {
         // Top-level exercises count as 1
         return total + 1;
@@ -186,10 +159,10 @@ export const updateSection = async (
         const section = item.data;
         if (section.type === 'regular' || section.type === 'auxiliary') {
           const exercises = section.exercises || [];
-          return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
+          return total + exercises.reduce((sum: number, group: any) => sum + (group.exercises?.length || 0), 0);
         } else if (section.type === 'circuits') {
           const exercises = section.exercises || [];
-          return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
+          return total + exercises.reduce((sum: number, group: any) => sum + (group.exercises?.length || 0), 0);
         } else if (section.type === 'amrap' || section.type === 'timed') {
           return total + (section.exercises?.length || 0);
         }
@@ -198,20 +171,12 @@ export const updateSection = async (
     }, 0)
     : undefined;
 
-  const cleanSectionData = sectionData.items
-    ? {
-      items: sectionData.items,
-    }
-    : undefined;
-
   const updatePayload: any = {
     id: sectionId,
     ...(sectionData.name && { title: sectionData.name }),
     ...(sectionData.description !== undefined && { description: sectionData.description }),
     ...(sectionData.sectionType && { section_type: sectionData.sectionType }),
-    ...(sectionData.duration !== undefined && { duration: sectionData.duration }),
-    ...(sectionData.rounds !== undefined && { rounds: sectionData.rounds }),
-    ...(cleanSectionData && { section_data: cleanSectionData }),
+    ...((sectionData as any).section_data && { section_data: (sectionData as any).section_data }),
     ...(totalExercises !== undefined && { total_exercises: totalExercises }),
   };
 

@@ -132,14 +132,14 @@ const styles = StyleSheet.create({
     avatarCircle: {
         width: 44,
         height: 44,
-        borderRadius: 22,
+        borderRadius: 6,
         overflow: 'hidden',
         backgroundColor: '#f0f0f0',
     },
     avatarImage: {
         width: 44,
         height: 44,
-        borderRadius: 22,
+        borderRadius: 6,
     },
     avatarPlaceholder: {
         backgroundColor: '#e0e0e0',

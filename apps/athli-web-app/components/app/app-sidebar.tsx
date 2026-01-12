@@ -4,6 +4,7 @@ import React from 'react';
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   // CalendarDays,
   Dumbbell,
@@ -24,7 +25,6 @@ import {
   WandSparkles,
   Headset,
 } from 'lucide-react';
-import { LogoIcon } from '@/components/logo';
 import {
   Sidebar,
   SidebarContent,
@@ -118,11 +118,17 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader>
         {isCollapsed ? (
-          <div className="flex items-center justify-center px-2 py-1 h-10">
-            <LogoIcon className="h-5 w-auto" />
+          <div className="flex items-center justify-center h-14">
+            <Image
+              src="/icons/athli.png"
+              alt="Athli"
+              width={48}
+              height={48}
+              className="object-contain"
+            />
           </div>
         ) : (
-          <div className="flex items-center px-2 py-1 h-10">
+          <div className="flex items-center px-2 h-14">
             <span className="text-base font-semibold">Athli</span>
           </div>
         )}

@@ -69,7 +69,7 @@ import { toast } from 'sonner';
 import { useTrainingData } from '../training-data-context';
 import { CreateProgramSidePanel } from './components/create-program-side-panel';
 import { ProgramNameCell } from './components/program-name-cell';
-import { DIFFICULTY_LEVELS } from '@/lib/constants/training';
+import { DIFFICULTY_LEVELS } from '@athli/shared-types';
 
 type ColumnId = 'description' | 'type' | 'difficulty' | 'length' | 'totalWorkouts' | 'actions';
 

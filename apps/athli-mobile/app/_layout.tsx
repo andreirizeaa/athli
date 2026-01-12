@@ -4,8 +4,9 @@ import { useFonts } from 'expo-font';
 import { Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo } from 'react';
-import { Platform, View as RNView } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Platform, View as RNView, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import 'react-native-reanimated';
 import { PressablesConfig } from 'pressto';
 import * as Haptics from 'expo-haptics';
@@ -52,6 +53,13 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
+  // Hide the native splash screen immediately since we're using our own overlay
+  useEffect(() => {
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
+
   // Don't render anything until fonts are loaded
   if (!loaded) {
     return null;
@@ -80,30 +88,28 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
+  const [isAppReady, setIsAppReady] = useState(false);
+  const setCoachProfile = useCoachProfileStore((state) => state.setProfile);
+  const setClientProfile = useClientProfileStore((state) => state.setProfile);
+
+  // Initialize stores synchronously before first render
+  useMemo(() => {
+    useThemeStore.getState().initialize();
+    useTranslationsStore.getState().initialize();
+    useUnitsStore.getState().initialize();
+  }, []);
+
+  // Now we can safely use theme hooks after initialization
   const colorScheme = useColorScheme();
   const { primaryColor, colors: themeColors } = useThemePreference();
   const segments = useSegments();
   const systemScheme = useNativeColorScheme() ?? 'light';
-  const setCoachProfile = useCoachProfileStore((state) => state.setProfile);
-  const setClientProfile = useClientProfileStore((state) => state.setProfile);
-
-  // Initialize data fetching (runs once after auth is restored)
-  // This must be rendered as a component, not called as a function
-
-  // Initialize stores on mount and hide splash screen
-  useEffect(() => {
-    useThemeStore.getState().initialize();
-    useTranslationsStore.getState().initialize();
-    useUnitsStore.getState().initialize();
-
-    // Hide splash screen after stores are initialized and route is determined
-    SplashScreen.hideAsync();
-  }, []);
 
   // Restore auth session on mount
   useEffect(() => {
-    const restoreAuthSession = async () => {
+    const initializeApp = async () => {
       try {
+        // Restore auth session
         const authResult = await restoreSession();
         if (authResult && authResult.profile) {
           if (authResult.profileType === 'coach') {
@@ -112,12 +118,20 @@ function RootLayoutNav() {
             setClientProfile(authResult.profile as ClientProfile);
           }
         }
+
+        // Small delay to ensure first frame is rendered
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Mark app as ready
+        setIsAppReady(true);
       } catch (error) {
-        console.error('Error restoring session:', error);
+        console.error('Error initializing app:', error);
+        // Still mark as ready even on error to prevent infinite splash screen
+        setIsAppReady(true);
       }
     };
 
-    restoreAuthSession();
+    initializeApp();
   }, [setCoachProfile, setClientProfile]);
 
   // Listen to system color scheme changes
@@ -201,9 +215,6 @@ function RootLayoutNav() {
             options={{
               headerShown: false,
               animation: 'slide_from_right',
-              contentStyle: {
-                backgroundColor: themeColors.pageBackground,
-              },
             }}
           />
           <Stack.Screen name="client/[id]/activity" options={{ headerShown: false }} />
@@ -445,54 +456,6 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
-            name="modals/client/assign-check-in-to-client-modal"
-            options={{
-              presentation: 'modal',
-              gestureEnabled: false,
-              headerShown: false,
-              ...(Platform.OS === 'android' && {
-                animation: 'slide_from_bottom',
-                gestureDirection: 'vertical',
-              }),
-            }}
-          />
-          <Stack.Screen
-            name="modals/client/assign-questionnaire-to-client-modal"
-            options={{
-              presentation: 'modal',
-              gestureEnabled: false,
-              headerShown: false,
-              ...(Platform.OS === 'android' && {
-                animation: 'slide_from_bottom',
-                gestureDirection: 'vertical',
-              }),
-            }}
-          />
-          <Stack.Screen
-            name="modals/client/assign-file-to-client-modal"
-            options={{
-              presentation: 'modal',
-              gestureEnabled: false,
-              headerShown: false,
-              ...(Platform.OS === 'android' && {
-                animation: 'slide_from_bottom',
-                gestureDirection: 'vertical',
-              }),
-            }}
-          />
-          <Stack.Screen
-            name="modals/client/assign-metric-to-client-modal"
-            options={{
-              presentation: 'modal',
-              gestureEnabled: false,
-              headerShown: false,
-              ...(Platform.OS === 'android' && {
-                animation: 'slide_from_bottom',
-                gestureDirection: 'vertical',
-              }),
-            }}
-          />
-          <Stack.Screen
             name="modals/client/log-metric-for-client-modal"
             options={{
               presentation: 'modal',
@@ -530,30 +493,6 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="modals/client/habits-modal"
-            options={{
-              presentation: 'modal',
-              gestureEnabled: false,
-              headerShown: false,
-              ...(Platform.OS === 'android' && {
-                animation: 'slide_from_bottom',
-                gestureDirection: 'vertical',
-              }),
-            }}
-          />
-          <Stack.Screen
-            name="modals/client/assign-workout-to-client-modal"
-            options={{
-              presentation: 'modal',
-              gestureEnabled: false,
-              headerShown: false,
-              ...(Platform.OS === 'android' && {
-                animation: 'slide_from_bottom',
-                gestureDirection: 'vertical',
-              }),
-            }}
-          />
-          <Stack.Screen
-            name="modals/client/assign-habit-to-client-modal"
             options={{
               presentation: 'modal',
               gestureEnabled: false,
@@ -635,6 +574,18 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="modals/shared/client-list-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/shared/assign-to-clients-modal"
             options={{
               presentation: 'modal',
               gestureEnabled: false,
@@ -856,6 +807,39 @@ function RootLayoutNav() {
           <Stack.Screen name="inbox/[id]" options={{ headerShown: false }} />
         </Stack>
       </ThemeProvider>
+
+      {/* Manual Splash Screen Overlay */}
+      {!isAppReady && (
+        <RNView style={splashStyles.container}>
+          <Image
+            source={
+              colorScheme === 'dark'
+                ? require('../assets/app-icons/splash-icon-dark.png')
+                : require('../assets/app-icons/splash-icon-light.png')
+            }
+            style={splashStyles.image}
+            contentFit="contain"
+          />
+        </RNView>
+      )}
     </RNView>
   );
 }
+
+const splashStyles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999,
+  },
+  image: {
+    width: 130,
+    height: 200,
+  },
+});

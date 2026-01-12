@@ -6,6 +6,7 @@ import { PressableOpacity } from 'pressto';
 import { Image } from 'expo-image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
+import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
@@ -14,7 +15,6 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
-import { useModalCallbacks } from '@/stores';
 import { getAllFiles, getFileTypeFromMime, deleteFile } from '@/services/coach/coach-file-service';
 import { EmptyState } from '@/components/ui/empty-state';
 
@@ -22,8 +22,9 @@ export const FilesTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const router = useRouter();
-  const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
+  const { searchQuery, registerOpenRow, closeOpenRow, openRowCloseFn } = useLibraryTab();
   const queryClient = useQueryClient();
+  const isRowOpen = openRowCloseFn !== null;
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
 
@@ -82,6 +83,12 @@ export const FilesTab = () => {
   // Already filtered above
 
   const handleFilePress = (item: typeof filteredFiles[0]) => {
+    // If a row is open, just close it and prevent navigation
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
     closeOpenRow();
     router.push({
       pathname: '/modals/files/add-file-modal',
@@ -94,6 +101,12 @@ export const FilesTab = () => {
   };
 
   const handleThumbnailPress = async (item: typeof filteredFiles[0]) => {
+    // If a row is open, just close it and prevent navigation
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
     closeOpenRow();
 
     // Get signed URL for preview
@@ -121,20 +134,26 @@ export const FilesTab = () => {
     });
   };
 
-  const { setClientsSelectCallback } = useModalCallbacks();
-
   const handleAssign = (item: typeof filteredFiles[0]) => {
-    setClientsSelectCallback((selectedClients) => {
-      console.log(`Assigned ${item.filename} to clients:`, selectedClients.map(c => c.name));
-    });
-    router.push({
-      pathname: '/modals/shared/client-list-modal',
-      params: {
-        title: t('general.assign'),
-        buttonText: t('general.assign'),
-      }
-    });
+    // If a row is open, just close it and prevent navigation
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
+    router.push(`/modals/shared/assign-to-clients-modal?type=file&itemIds=${item.id}`);
   };
+
+  // Prefetch clients when long press happens to make modal open instantly
+  const handleLongPress = useCallback(() => {
+    queryClient.prefetchQuery({
+      queryKey: ['clients'],
+      queryFn: async () => {
+        const { getClients } = await import('@/services/coach/coach-client-service');
+        return getClients();
+      },
+    });
+  }, [queryClient]);
 
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -229,97 +248,99 @@ export const FilesTab = () => {
     );
   };
 
+  const renderItem = useCallback(({ item, index }: { item: typeof filteredFiles[0]; index: number }) => {
+    const isLastItem = index === filteredFiles.length - 1;
+    const dropdownOptions: DropdownMenuOption[] = [
+      {
+        label: t('general.assign'),
+        icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
+        onPress: () => handleAssign(item),
+      },
+      {
+        label: `${t('general.delete')} File`,
+        icon: { sf: 'trash', IconComponent: Trash2 },
+        destructive: true,
+        onPress: () => deleteMutation.mutateAsync(item.id),
+      }
+    ];
+
+    return (
+      <View>
+        <SwipeableRow
+          onDelete={() => deleteMutation.mutateAsync(item.id)}
+          onOpen={registerOpenRow}
+          deleteConfirmTitle={`${t('general.delete')} ${item.filename}?`}
+        >
+          <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
+            <View style={styles.rowWrapper}>
+              <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
+
+                {/* Thumbnail - Pressable separately */}
+                <PressableOpacity
+                  onPress={() => handleThumbnailPress(item)}
+                  style={styles.thumbnailWrapper}
+                >
+                  {renderThumbnail(item)}
+                </PressableOpacity>
+
+                {/* REST of row - Pressable for Edit */}
+                <PressableOpacity
+                  style={styles.mainContentPressable}
+                  onPress={() => handleFilePress(item)}
+                >
+                  <View style={styles.textContent}>
+                    <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
+                      {item.filename}
+                    </Text>
+                    <View style={styles.metaRow}>
+                      <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                        {getFormattedFileTypeLabel(item.mime_type)}
+                      </Text>
+                      {item.size && (
+                        <>
+                          <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                          <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                            {formatSize(item.size)}
+                          </Text>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                  <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                </PressableOpacity>
+              </View>
+            </View>
+          </ContextMenuWrapper>
+        </SwipeableRow>
+
+        {!isLastItem && (
+          <View style={styles.separatorContainer}>
+            <View
+              style={[
+                styles.separator,
+                { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+              ]}
+            />
+          </View>
+        )}
+
+        {isLastItem && <View style={{ height: 24 }} />}
+      </View>
+    );
+  }, [filteredFiles.length, themeColors, t, deleteMutation, registerOpenRow, handleThumbnailPress, handleFilePress, handleAssign, renderThumbnail, formatSize, getFormattedFileTypeLabel]);
+
   return (
-    <View style={styles.container}>
-      {/* Empty State */}
-      {filteredFiles.length === 0 && (
+    <FlashList
+      data={filteredFiles}
+      renderItem={renderItem}
+      keyExtractor={(item) => item.id}
+      ListEmptyComponent={
         <EmptyState
           message={t('library.empty.files')}
         />
-      )}
-
-      {/* Files List */}
-      {filteredFiles.map((item, index) => {
-        const isLastItem = index === filteredFiles.length - 1;
-        const dropdownOptions: DropdownMenuOption[] = [
-          {
-            label: t('general.assign'),
-            icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
-            onPress: () => handleAssign(item),
-          },
-          {
-            label: `${t('general.delete')} File`,
-            icon: { sf: 'trash', IconComponent: Trash2 },
-            destructive: true,
-            onPress: () => deleteMutation.mutateAsync(item.id),
-          }
-        ];
-
-        return (
-          <View key={item.id}>
-            <SwipeableRow
-              onDelete={() => deleteMutation.mutateAsync(item.id)}
-              onOpen={registerOpenRow}
-              deleteConfirmTitle={`${t('general.delete')} ${item.filename}?`}
-            >
-              <ContextMenuWrapper options={dropdownOptions}>
-                <View style={styles.rowWrapper}>
-                  <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
-
-                    {/* Thumbnail - Pressable separately */}
-                    <PressableOpacity
-                      onPress={() => handleThumbnailPress(item)}
-                      style={styles.thumbnailWrapper}
-                    >
-                      {renderThumbnail(item)}
-                    </PressableOpacity>
-
-                    {/* REST of row - Pressable for Edit */}
-                    <PressableOpacity
-                      style={styles.mainContentPressable}
-                      onPress={() => handleFilePress(item)}
-                    >
-                      <View style={styles.textContent}>
-                        <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
-                          {item.filename}
-                        </Text>
-                        <View style={styles.metaRow}>
-                          <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                            {getFormattedFileTypeLabel(item.mime_type)}
-                          </Text>
-                          {item.size && (
-                            <>
-                              <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                              <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                                {formatSize(item.size)}
-                              </Text>
-                            </>
-                          )}
-                        </View>
-                      </View>
-                      <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-                    </PressableOpacity>
-                  </View>
-                </View>
-              </ContextMenuWrapper>
-            </SwipeableRow>
-
-            {!isLastItem && (
-              <View style={styles.separatorContainer}>
-                <View
-                  style={[
-                    styles.separator,
-                    { backgroundColor: themeColors.mutedText, opacity: 0.2 },
-                  ]}
-                />
-              </View>
-            )}
-
-            {isLastItem && <View style={{ height: 24 }} />}
-          </View>
-        );
-      })}
-    </View>
+      }
+      contentContainerStyle={styles.container}
+    />
   );
 };
 
@@ -333,15 +354,15 @@ const styles = StyleSheet.create({
   rowContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: 16,
   },
   thumbnailWrapper: {
     marginRight: 12,
   },
   imageThumbnailContainer: {
-    width: 44,
-    height: 44,
+    width: 58,
+    height: 58,
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#E0E0E0',
@@ -362,8 +383,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconThumbnailContainer: {
-    width: 44,
-    height: 44,
+    width: 58,
+    height: 58,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -394,7 +415,7 @@ const styles = StyleSheet.create({
     ...typography.p3,
   },
   separatorContainer: {
-    paddingLeft: 72,
+    paddingLeft: 86,
     paddingRight: 16,
   },
   separator: {

@@ -8,10 +8,13 @@ export {
     type BuilderExerciseSet as ExerciseSet,
     type BuilderExercise as WorkoutExercise,
     type BuilderSection as WorkoutSection,
-    type BuilderItem as WorkoutItem,
+    type BuilderItem,  // Don't alias to WorkoutItem to avoid conflict with shared package
     getDefaultColumns,
 } from '@/components/features/workout/workout-schema';
 
-export { COLUMN_OPTIONS, HEART_RATE_ZONE_OPTIONS } from '@/constants/training';
-export type { ColumnValue, HeartRateZone } from '@/constants/training';
+// Note: WorkoutItem from shared package refers to the API payload item type
+// Use BuilderItem for builder UI state
+
+export { COLUMN_OPTIONS, HEART_RATE_ZONE_OPTIONS } from '@athli/shared-types';
+export type { ColumnValue, HeartRateZone } from '@athli/shared-types';
 

@@ -14,7 +14,6 @@ export type ExerciseWithSuperset = Exercise & {
   tempo?: string;           // Exercise-level tempo (x-x-x-x format)
   column1Label?: string;    // Column 1 label (Reps, seconds, km, etc.)
   column2Label?: string;    // Column 2 label (kg, lbs, feet, etc.)
-  optionalColumnType?: 'Optional' | 'Tempo' | 'RIR' | 'RPE' | 'Heart Rate Zone' | 'Calories' | 'Watts' | 'Pace' | 'Speed' | 'Incline' | 'Height' | 'RPM';
 };
 
 /**

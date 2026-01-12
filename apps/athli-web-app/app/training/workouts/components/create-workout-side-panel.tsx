@@ -9,7 +9,7 @@ import { createWorkout } from '@/api/coach/coach-workout-service';
 import { toast } from 'sonner';
 import { useTrainingData } from '../../training-data-context';
 import { BasicInformation } from '@/components/training/basic-information';
-import { DIFFICULTY_LEVELS } from '@/lib/constants/training';
+import { DIFFICULTY_LEVELS } from '@athli/shared-types';
 import { Check } from 'lucide-react';
 import { type WorkoutPayload, DEFAULT_EXECUTION_FIELDS } from '@/components/training/workout-schema';
 

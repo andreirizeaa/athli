@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, Dimensions, LayoutChangeEvent, Pressable } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
@@ -9,6 +9,8 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
+import { useFocusEffect } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
@@ -37,13 +39,35 @@ type TabComponent = {
 export default function LibraryScreen() {
   const { primaryColor, colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const { setCurrentLibraryTab, searchQuery, setSearchQuery, closeOpenRow } = useLibraryTab();
+  const { setCurrentLibraryTab, searchQuery, setSearchQuery, closeOpenRow, openRowCloseFn } = useLibraryTab();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const pagerRef = useRef<PagerView>(null);
   const tabBarScrollRef = useRef<ScrollView>(null);
   const underlinePosition = useSharedValue(0);
   const underlineWidth = useSharedValue(0);
   const tabLayoutsRef = useRef<{ [key: number]: { x: number; width: number } }>({});
+  const queryClient = useQueryClient();
+
+  // Track if a row is currently open
+  const isRowOpen = openRowCloseFn !== null;
+
+  // Prefetch clients data when screen comes into focus
+  // This ensures the "Assign to Clients" modal opens instantly
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('[LibraryScreen] 🚀 Prefetching clients on focus...');
+      queryClient.prefetchQuery({
+        queryKey: ['clients'],
+        queryFn: async () => {
+          console.log('[LibraryScreen] 📡 Executing prefetch queryFn...');
+          const { getClients } = await import('@/services/coach/coach-client-service');
+          const data = await getClients();
+          console.log('[LibraryScreen] ✅ Prefetch complete:', data.length, 'clients cached');
+          return data;
+        },
+      });
+    }, [queryClient])
+  );
 
   const tabs: LibraryTab[] = [
     'workouts',
@@ -85,6 +109,12 @@ export default function LibraryScreen() {
   };
 
   const handleTabPress = (index: number) => {
+    // If a row is open, just close it and prevent tab change
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
     closeOpenRow();
     setSelectedIndex(index);
     animateUnderline(index);
@@ -106,6 +136,12 @@ export default function LibraryScreen() {
   const handlePageSelected = (event: PagerViewOnPageSelectedEvent) => {
     const index = event.nativeEvent.position;
     if (index !== selectedIndex) {
+      // If a row is open, just close it and prevent page change
+      if (isRowOpen) {
+        closeOpenRow();
+        return;
+      }
+
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       closeOpenRow();
       setSelectedIndex(index);
@@ -121,6 +157,13 @@ export default function LibraryScreen() {
           animated: true,
         });
       }
+    }
+  };
+
+  const handleSearchBarPress = () => {
+    // If a row is open, close it and prevent search bar interaction
+    if (isRowOpen) {
+      closeOpenRow();
     }
   };
 
@@ -208,25 +251,45 @@ export default function LibraryScreen() {
           style={styles.contentWrapper}
           initialPage={0}
           onPageSelected={handlePageSelected}
+          scrollEnabled={!isRowOpen}
         >
           {tabComponents.map(({ key, component: Component }) => (
             <View key={key} style={styles.tabContentItem}>
               <Pressable
                 style={{ flex: 1 }}
-                onPress={() => closeOpenRow()}
+                onPress={() => {
+                  if (isRowOpen) {
+                    closeOpenRow();
+                  }
+                }}
               >
                 <ScrollView
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={styles.tabScrollContent}
                   keyboardShouldPersistTaps="handled"
                   bounces={false}
+                  scrollEnabled={!isRowOpen}
                 >
-                  <SearchBar
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    placeholder={t(`library.searchPlaceholders.${key}`)}
-                    style={styles.searchBar}
-                  />
+                  <View onStartShouldSetResponder={() => isRowOpen}>
+                    <Pressable
+                      onPress={handleSearchBarPress}
+                      style={{ pointerEvents: isRowOpen ? 'auto' : 'box-none' }}
+                    >
+                      <SearchBar
+                        value={searchQuery}
+                        onChangeText={(text) => {
+                          // If a row is open, close it and prevent search input
+                          if (isRowOpen) {
+                            closeOpenRow();
+                            return;
+                          }
+                          setSearchQuery(text);
+                        }}
+                        placeholder={t(`library.searchPlaceholders.${key}`)}
+                        style={styles.searchBar}
+                      />
+                    </Pressable>
+                  </View>
                   <Component />
                 </ScrollView>
               </Pressable>

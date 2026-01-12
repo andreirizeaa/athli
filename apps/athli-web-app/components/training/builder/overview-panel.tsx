@@ -159,19 +159,24 @@ const OverviewSectionCard = ({
               ({section.exercises ? section.exercises.length : 0})
             </span>
           </div>
-          {/* Hide delete and drag buttons when hideDragAndDelete is true */}
+          {/* Hide buttons when hideDragAndDelete is true */}
           {!hideDragAndDelete && (
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(section.id);
-                }}
-                className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-              >
-                <Trash2 className="size-3" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(section.id);
+                    }}
+                    className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-muted transition-colors"
+                  >
+                    <Trash2 className="size-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Delete section</TooltipContent>
+              </Tooltip>
               <button
                 type="button"
                 {...attributes}

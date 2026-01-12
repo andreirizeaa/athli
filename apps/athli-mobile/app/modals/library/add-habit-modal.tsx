@@ -22,7 +22,7 @@ import {
     HABIT_UNIT_OPTIONS,
     type HabitUnit,
     type HabitPeriod,
-} from '@/constants/training';
+} from '@athli/shared-types';
 import { defaultHabits, type DefaultHabit } from '@/constants/habits';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';

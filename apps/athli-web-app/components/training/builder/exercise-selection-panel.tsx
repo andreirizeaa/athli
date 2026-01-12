@@ -20,7 +20,7 @@ import {
   CATEGORY_OPTIONS,
   DIFFICULTY_LEVELS,
   EQUIPMENT_OPTIONS
-} from '@/lib/constants/training';
+} from '@athli/shared-types';
 
 type ExerciseSelectionPanelProps = {
   onExerciseClick?: (exercise: Exercise) => void;

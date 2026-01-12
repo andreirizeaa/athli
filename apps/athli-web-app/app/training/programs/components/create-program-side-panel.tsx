@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 import { useTrainingData } from '../../training-data-context';
 import { Check } from 'lucide-react';
 
-import { PROGRAM_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants/training';
+import { PROGRAM_TYPES, DIFFICULTY_LEVELS } from '@athli/shared-types';
 
 interface CreateProgramSidePanelProps {
     open: boolean;

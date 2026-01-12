@@ -152,7 +152,7 @@ export default function ClientTrainingScreen() {
             label: t('clientDetail.actions.assignWorkout'),
             icon: { sf: 'figure.run', IconComponent: Dumbbell },
             onPress: () => {
-                router.push('/modals/client/assign-workout-to-client-modal');
+                router.push('/modals/shared/assign-to-clients-modal?type=workout');
             }
         },
         {

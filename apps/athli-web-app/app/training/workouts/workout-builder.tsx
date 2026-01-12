@@ -3,8 +3,9 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
-import { ArrowDown, ArrowUp, BrainCog, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Dumbbell, Ellipsis, FileText, Info, Link2, Link2Off, Loader2, NotebookPen, Plus, Repeat, Sparkles, Timer, Trash2, X, Check } from 'lucide-react';
+import { ArrowDown, ArrowUp, BrainCog, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Dumbbell, Ellipsis, FileText, Info, Link2, Link2Off, Loader2, NotebookPen, Plus, Repeat, Save, Sparkles, Timer, Trash2, X, Check } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { isEqual } from 'lodash';
+import { isEqual, cloneDeep } from 'lodash';
 import {
   Dialog,
   DialogContent,
@@ -30,7 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/general/utils';
-import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants/training';
+import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@athli/shared-types';
 import { searchExercises, type Exercise } from '@/api/exercise/exercise-search';
 import { generateWorkoutFromPrompt, type GeneratedWorkout } from '@/api/exercise/generate-exercise';
 import { toast } from 'sonner';
@@ -43,7 +44,7 @@ import { ExerciseCard } from '@/components/training/builder/exercise-card';
 import { ExerciseSelectionPanel } from '@/components/training/builder/exercise-selection-panel';
 import { CoachSectionsSidebar } from '@/components/training/builder/coach-sections-sidebar';
 import { InlineSectionCreator } from '@/components/training/builder/inline-section-creator';
-import { getSectionById, type Section } from '@/api/coach/coach-section-service';
+import { getSectionById, createSection, type Section } from '@/api/coach/coach-section-service';
 import { SectionType } from '@/app/training/sections/section-type-utils';
 
 import { OverviewPanel } from '@/components/training/builder/overview-panel';
@@ -76,7 +77,9 @@ import {
 } from '@/components/training/shared/utils/validation';
 import {
   buildWorkoutPayload,
+  adaptSection,
 } from '@/components/training/shared/utils/payload-builder';
+import { buildSectionPayload } from '@athli/shared-types';
 import {
   convertPayloadToBuilderFormat,
 } from '@/components/training/shared/utils/payload-converter';
@@ -139,6 +142,7 @@ export const WorkoutBuilder = ({
   const t = useTranslations();
   const isSectionMode = false;
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -218,6 +222,7 @@ export const WorkoutBuilder = ({
   const [builderMode, setBuilderMode] = useState<'exercise' | 'section'>('exercise');
   const [selectedEquipmentGroups, setSelectedEquipmentGroups] = useState<string[]>([]);
   const [sectionToDelete, setSectionToDelete] = useState<WorkoutSection | null>(null);
+  const [savingSectionId, setSavingSectionId] = useState<string | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
@@ -331,9 +336,9 @@ export const WorkoutBuilder = ({
         setWorkoutSchema({ items: [] });
       }
 
-      // Capture initial state
+      // Capture initial state (deep clone to prevent reference issues)
       initialState.current = {
-        schema: initialSchema,
+        schema: cloneDeep(initialSchema),
         name: meta?.name || '',
         type: meta?.type || '',
         difficulty: meta?.difficulty || 'all_levels',
@@ -392,9 +397,9 @@ export const WorkoutBuilder = ({
       setWorkoutSchema(converted);
       hasInitializedWithDataRef.current = true;
 
-      // Update initial state for dirty tracking
+      // Update initial state for dirty tracking (deep clone to prevent reference issues)
       initialState.current = {
-        schema: converted,
+        schema: cloneDeep(converted),
         name: meta?.name || '',
         type: meta?.type || '',
         difficulty: meta?.difficulty || 'all_levels',
@@ -951,9 +956,9 @@ Focus on proper form and progressive overload.`;
           await result;
           setIsSaving(false);
           setIsDirty(false);
-          // Update initial state to match the saved state
+          // Update initial state to match the saved state (deep clone to prevent reference issues)
           initialState.current = {
-            schema: workoutSchema,
+            schema: cloneDeep(workoutSchema),
             name: workoutTitle,
             type: workoutType,
             difficulty: difficulty,
@@ -965,7 +970,7 @@ Focus on proper form and progressive overload.`;
           setIsSaving(false);
           setIsDirty(false);
           initialState.current = {
-            schema: workoutSchema,
+            schema: cloneDeep(workoutSchema),
             name: workoutTitle,
             type: workoutType,
             difficulty: difficulty,
@@ -1033,6 +1038,44 @@ Focus on proper form and progressive overload.`;
     markDirty();
   };
 
+  const handleSaveSectionToLibrary = async (section: WorkoutSection) => {
+    setSavingSectionId(section.id);
+
+    try {
+      // Convert section to generic format using adapter
+      const adaptedSection = adaptSection(section);
+
+      // Use shared package's buildSectionPayload to convert to proper API format
+      const sectionPayload = buildSectionPayload(adaptedSection);
+
+      // Build section data with properly formatted exercises
+      const sectionData = {
+        name: section.name || section.type,
+        description: section.notes || '',
+        items: [
+          {
+            itemType: 'section' as const,
+            data: sectionPayload,
+          },
+        ],
+        sectionType: section.type,
+        duration: section.durationSec ? Math.round(section.durationSec / 60) : undefined,
+        rounds: section.targetRounds,
+      };
+
+      await createSection(sectionData);
+
+      // Invalidate sections query to refresh the library
+      await queryClient.invalidateQueries({ queryKey: ['coach-sections'] });
+
+      toast.success('Section saved to library');
+    } catch (error) {
+      console.error('Error saving section to library:', error);
+      toast.error('Failed to save section to library');
+    } finally {
+      setSavingSectionId(null);
+    }
+  };
 
   const handleDeleteExerciseFromOverview = (sectionId: string, exerciseId: string) => {
     setWorkoutSchema((prev) =>
@@ -1617,15 +1660,20 @@ Focus on proper form and progressive overload.`;
                 )}
                 {/* Hide actions in section mode */}
                 {!isSectionMode && (
-                  <DropdownMenu>
+                  <DropdownMenu open={savingSectionId === section.id ? false : undefined}>
                     <DropdownMenuTrigger asChild>
                       <Button
                         type="button"
                         variant="outline"
                         size="icon"
                         className="h-7 w-7 text-foreground bg-background border-input shadow-none shrink-0"
+                        disabled={savingSectionId === section.id}
                       >
-                        <Ellipsis className="size-3" />
+                        {savingSectionId === section.id ? (
+                          <Loader2 className="size-3 animate-spin" />
+                        ) : (
+                          <Ellipsis className="size-3" />
+                        )}
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -1641,6 +1689,12 @@ Focus on proper form and progressive overload.`;
                           Move down
                         </DropdownMenuItem>
                       )}
+                      <DropdownMenuItem
+                        onClick={() => handleSaveSectionToLibrary(section)}
+                      >
+                        <Save className="size-4 mr-2" />
+                        Save to library
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => setSectionToDelete(section)}
                       >

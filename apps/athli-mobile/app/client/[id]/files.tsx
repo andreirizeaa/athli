@@ -22,7 +22,7 @@ export default function ClientFilesScreen() {
     };
 
     const handleAssignFile = () => {
-        router.push('/modals/client/assign-file-to-client-modal');
+        router.push('/modals/shared/assign-to-clients-modal?type=file');
     };
 
     const handleAddFile = () => {
