@@ -20,7 +20,7 @@ export default function Page() {
           <Image
             width={300}
             height={200}
-            src={`/403.svg`}
+            src={`/errors/403.svg`}
             className="w-full"
             alt="403 Error"
             unoptimized
