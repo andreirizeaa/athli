@@ -264,14 +264,15 @@ export default function ClientAssistantScreen() {
 
     // Drawer content
     const renderDrawerContent = () => (
-        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+        <View style={{ flex: 1, backgroundColor: 'transparent' }} pointerEvents="box-none">
             {/* Right-anchored panel that expands LEFT by increasing width */}
             <Animated.View
                 style={[
                     styles.panel,
-                    { backgroundColor: themeColors.pageBackground, paddingTop: insets.top + 12 },
+                    { backgroundColor: themeColors.pageBackground, paddingTop: insets.top + 4 },
                     panelAnimStyle,
                 ]}
+                pointerEvents="auto"
             >
                 {/* Search bar and icon (new session or close) */}
                 <View style={styles.drawerHeader}>
@@ -284,13 +285,22 @@ export default function ClientAssistantScreen() {
                             placeholder="Search"
                         />
                     </View>
-                    <PressableOpacity onPress={isSearchFocused ? handleCloseSearch : handleCreateNewSession}>
-                        {isSearchFocused ? (
-                            <X size={22} color={themeColors.text} strokeWidth={2} />
-                        ) : (
-                            <SquarePen size={22} color={themeColors.text} strokeWidth={2} />
-                        )}
-                    </PressableOpacity>
+                    {isSearchFocused ? (
+                        <IconButton
+                            icon={{ sf: 'xmark', IconComponent: X }}
+                            onPress={handleCloseSearch}
+                            size="md"
+                            color={iconColor}
+                        />
+                    ) : (
+                        <IconButton
+                            icon={{ sf: 'square.and.pencil', IconComponent: SquarePen }}
+                            onPress={handleCreateNewSession}
+                            size="md"
+                            color={iconColor}
+                            style={{ backgroundColor: 'transparent' }}
+                        />
+                    )}
                 </View>
 
                 {/* Sessions list (fixed-width so it doesn't re-layout every frame) */}
@@ -302,7 +312,6 @@ export default function ClientAssistantScreen() {
                             keyExtractor={(item) => item.id}
                             estimatedItemSize={70}
                             contentContainerStyle={styles.sessionsList}
-                            keyboardShouldPersistTaps="handled"
                             style={{ flex: 1 }}
                         />
                     </Animated.View>
@@ -319,9 +328,9 @@ export default function ClientAssistantScreen() {
                 onClose={handleDrawerClose}
                 renderDrawerContent={renderDrawerContent}
                 drawerPosition="right"
-                drawerType="front"
+                drawerType="slide"
                 drawerStyle={{
-                    width: SCREEN_WIDTH,
+                    width: PANEL_COLLAPSED,
                     backgroundColor: 'transparent',
                 }}
                 overlayStyle={{
@@ -494,7 +503,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
-        paddingBottom: 16,
+        paddingBottom: 24,
         gap: 8,
     },
     sessionsList: {
@@ -503,8 +512,8 @@ const styles = StyleSheet.create({
     },
     sessionItem: {
         paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 8,
+        paddingHorizontal: 14,
+        borderRadius: 14,
         marginBottom: 4,
     },
     sessionSummary: {
