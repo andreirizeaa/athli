@@ -570,6 +570,10 @@ export const ExerciseCard = ({
     }
     return [];
   });
+  // Track if we've synced parent alternatives to local state
+  const hasSyncedParentAlternativesRef = useRef(
+    exercise.alternatives && exercise.alternatives.length > 0
+  );
   const [isAlternativesVisible, setIsAlternativesVisible] = useState(
     exercise.alternatives && exercise.alternatives.length > 0
   );
@@ -627,7 +631,7 @@ export const ExerciseCard = ({
     repsDrops: DropsetData[];
     weightDrops: DropsetData[];
   } | null>(null);
-  
+
   // Initialize column labels based on exercise type (with default units)
   const getDefaultColumnLabels = (exerciseType: string) => {
     if (exerciseType === 'weight_reps') {
@@ -775,12 +779,12 @@ export const ExerciseCard = ({
     setSets(nextSets);
     // Clear alternatives when main exercise changes
     setAlternatives([]);
-    
+
     // Reset column labels based on new exercise type
     const defaultLabels = getDefaultColumnLabels(selectedExercise.exerciseType);
     setColumn1Label(defaultLabels.column1);
     setColumn2Label(defaultLabels.column2);
-    
+
     onExerciseChange({
       ...exercise,
       ...selectedExercise,
@@ -790,6 +794,11 @@ export const ExerciseCard = ({
       column2Label: defaultLabels.column2,
     });
   };
+
+  // Track if we've synced parent sets to local state
+  const hasSyncedParentSetsRef = useRef(
+    exercise.sets && exercise.sets.length > 0
+  );
 
   // On first mount, if the parent has no sets yet, push our initial defaults up
   useEffect(() => {
@@ -803,6 +812,44 @@ export const ExerciseCard = ({
     // We intentionally run this only once on mount to establish initial sets.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Sync parent sets to local state when parent data arrives after initial mount
+  // This handles the case where the component mounts before async data loads
+  useEffect(() => {
+    // Only sync if:
+    // 1. Parent has sets
+    // 2. We haven't synced parent sets before
+    if (
+      exercise.sets &&
+      exercise.sets.length > 0 &&
+      !hasSyncedParentSetsRef.current
+    ) {
+      setSets(exercise.sets);
+      hasSyncedParentSetsRef.current = true;
+    }
+  }, [exercise.sets]);
+
+  // Sync parent alternatives to local state when parent data arrives after initial mount
+  // This handles the case where alternatives are loaded asynchronously
+  useEffect(() => {
+    // Only sync if:
+    // 1. Parent has alternatives
+    // 2. We haven't synced parent alternatives before
+    if (
+      exercise.alternatives &&
+      exercise.alternatives.length > 0 &&
+      !hasSyncedParentAlternativesRef.current
+    ) {
+      // Load full exercise objects from IDs
+      const loadedAlternatives = exercise.alternatives
+        .map((id) => searchExercises('').find((e) => e.exerciseId === id))
+        .filter((e): e is Exercise => e !== undefined);
+      console.log('[EXERCISE CARD] Syncing alternatives from parent:', exercise.alternatives, 'Loaded:', loadedAlternatives.map(e => ({ id: e.exerciseId, name: e.name })));
+      setAlternatives(loadedAlternatives);
+      setIsAlternativesVisible(true);
+      hasSyncedParentAlternativesRef.current = true;
+    }
+  }, [exercise.alternatives]);
 
   useEffect(() => {
     if (isEmpty) {
@@ -959,6 +1006,8 @@ export const ExerciseCard = ({
       ...exercise,
       sets: updated,
       alternatives: exercise.alternatives || [],
+      column1Label,
+      column2Label,
     });
   };
 
@@ -976,6 +1025,13 @@ export const ExerciseCard = ({
         }
       };
       setSets(updated);
+      onExerciseChange({
+        ...exercise,
+        sets: updated,
+        alternatives: exercise.alternatives || [],
+        column1Label,
+        column2Label,
+      });
       return;
     }
 
@@ -1012,6 +1068,8 @@ export const ExerciseCard = ({
       ...exercise,
       sets: updated,
       alternatives: exercise.alternatives || [],
+      column1Label,
+      column2Label,
     });
 
     // Clear validation for this field when the user enters a value
@@ -1255,8 +1313,8 @@ export const ExerciseCard = ({
     ) {
       const triggerId = `${setIndex}-reps`;
       const displayValue = columnLabel === 'Reps' ? (set.reps || '-') : (set.weight || '-');
-      const hasError = columnLabel === 'Reps' 
-        ? validationErrors?.[setIndex]?.reps 
+      const hasError = columnLabel === 'Reps'
+        ? validationErrors?.[setIndex]?.reps
         : validationErrors?.[setIndex]?.weight;
       return (
         <TableCell className="py-1 px-2" key={`${setIndex}-${columnLabel}-dropset`}>
@@ -1363,7 +1421,7 @@ export const ExerciseCard = ({
     // Get the value for this column
     const value = getFieldValue(set, columnLabel);
     const fieldName = getFieldName(columnLabel);
-    const hasError = 
+    const hasError =
       (fieldName === 'reps' && validationErrors?.[setIndex]?.reps) ||
       (fieldName === 'weight' && validationErrors?.[setIndex]?.weight) ||
       (fieldName === 'distance' && validationErrors?.[setIndex]?.distance) ||
@@ -1671,11 +1729,11 @@ export const ExerciseCard = ({
                   <TableRow className="h-8">
                     <TableHead className="text-center h-8 py-1 px-2 w-[70px] text-xs font-medium pl-1">Type</TableHead>
                     {/* Column 1 with dropdown */}
-                        <TableHead className="text-center h-8 py-1 px-2 w-[120px]">
-                          <div className="flex items-center justify-center gap-0.5">
-                            <Select
+                    <TableHead className="text-center h-8 py-1 px-2 w-[120px]">
+                      <div className="flex items-center justify-center gap-0.5">
+                        <Select
                           value={column1Label}
-                              onValueChange={(value) => {
+                          onValueChange={(value) => {
                             clearColumnValues(column1Label);
                             setColumn1Label(value);
                             onExerciseChange({
@@ -1688,128 +1746,128 @@ export const ExerciseCard = ({
                           {column1Label === 'Heart Rate Zone' ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                              <SelectTrigger
-                                className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                                style={{ minHeight: '24px', height: '24px' }}
-                              >
-                                <SelectValue />
-                              </SelectTrigger>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <div className="flex flex-col gap-1 text-xs">
-                                  <p>Z1 - Recovery</p>
-                                  <p>Z2 - Endurance</p>
-                                  <p>Z3 - Tempo</p>
-                                  <p>Z4 - Threshold</p>
-                                  <p>Z5 - Max</p>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                          ) : (
-                              <SelectTrigger
-                                className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                                style={{ minHeight: '24px', height: '24px' }}
-                              >
-                                <SelectValue />
-                              </SelectTrigger>
-                          )}
-                              <SelectContent className="max-h-[200px] overflow-y-auto">
-                            {COLUMN_OPTIONS.map(opt => (
-                                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                        {column1Label !== 'None' && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                              clearColumnValues(column1Label);
-                              const defaultLabels = getDefaultColumnLabels(exercise.exerciseType);
-                              setColumn1Label(defaultLabels.column1);
-                                  onExerciseChange({
-                                    ...exercise,
-                                column1Label: defaultLabels.column1,
-                                    alternatives: exercise.alternatives || [],
-                                  });
-                                }}
-                                className="p-0.5 hover:bg-muted rounded"
-                            aria-label="Reset column"
-                              >
-                                <X className="size-3 text-muted-foreground hover:text-foreground" />
-                              </button>
-                            )}
-                          </div>
-                        </TableHead>
-                    {/* Column 2 with dropdown */}
-                        <TableHead className="text-center h-8 py-1 px-2 w-[120px]">
-                          <div className="flex items-center justify-center gap-0.5">
-                            <Select
-                          value={column2Label}
-                              onValueChange={(value) => {
-                            clearColumnValues(column2Label);
-                            setColumn2Label(value);
-                                onExerciseChange({
-                                  ...exercise,
-                              column2Label: value,
-                                  alternatives: exercise.alternatives || [],
-                                });
-                              }}
-                            >
-                          {column2Label === 'Heart Rate Zone' ? (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <SelectTrigger
-                                      className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                                      style={{ minHeight: '24px', height: '24px' }}
-                                    >
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <div className="flex flex-col gap-1 text-xs">
-                                      <p>Z1 - Recovery</p>
-                                      <p>Z2 - Endurance</p>
-                                      <p>Z3 - Tempo</p>
-                                      <p>Z4 - Threshold</p>
-                                      <p>Z5 - Max</p>
-                                    </div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              ) : (
                                 <SelectTrigger
                                   className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
                                   style={{ minHeight: '24px', height: '24px' }}
                                 >
                                   <SelectValue />
                                 </SelectTrigger>
-                              )}
-                              <SelectContent className="max-h-[200px] overflow-y-auto">
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <div className="flex flex-col gap-1 text-xs">
+                                  <p>Z1 - Recovery</p>
+                                  <p>Z2 - Endurance</p>
+                                  <p>Z3 - Tempo</p>
+                                  <p>Z4 - Threshold</p>
+                                  <p>Z5 - Max</p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <SelectTrigger
+                              className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
+                              style={{ minHeight: '24px', height: '24px' }}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                          )}
+                          <SelectContent className="max-h-[200px] overflow-y-auto">
                             {COLUMN_OPTIONS.map(opt => (
-                                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {column1Label !== 'None' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              clearColumnValues(column1Label);
+                              const defaultLabels = getDefaultColumnLabels(exercise.exerciseType);
+                              setColumn1Label(defaultLabels.column1);
+                              onExerciseChange({
+                                ...exercise,
+                                column1Label: defaultLabels.column1,
+                                alternatives: exercise.alternatives || [],
+                              });
+                            }}
+                            className="p-0.5 hover:bg-muted rounded"
+                            aria-label="Reset column"
+                          >
+                            <X className="size-3 text-muted-foreground hover:text-foreground" />
+                          </button>
+                        )}
+                      </div>
+                    </TableHead>
+                    {/* Column 2 with dropdown */}
+                    <TableHead className="text-center h-8 py-1 px-2 w-[120px]">
+                      <div className="flex items-center justify-center gap-0.5">
+                        <Select
+                          value={column2Label}
+                          onValueChange={(value) => {
+                            clearColumnValues(column2Label);
+                            setColumn2Label(value);
+                            onExerciseChange({
+                              ...exercise,
+                              column2Label: value,
+                              alternatives: exercise.alternatives || [],
+                            });
+                          }}
+                        >
+                          {column2Label === 'Heart Rate Zone' ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <SelectTrigger
+                                  className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
+                                  style={{ minHeight: '24px', height: '24px' }}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <div className="flex flex-col gap-1 text-xs">
+                                  <p>Z1 - Recovery</p>
+                                  <p>Z2 - Endurance</p>
+                                  <p>Z3 - Tempo</p>
+                                  <p>Z4 - Threshold</p>
+                                  <p>Z5 - Max</p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <SelectTrigger
+                              className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
+                              style={{ minHeight: '24px', height: '24px' }}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                          )}
+                          <SelectContent className="max-h-[200px] overflow-y-auto">
+                            {COLUMN_OPTIONS.map(opt => (
+                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         {column2Label !== 'None' && (
-                              <button
-                                type="button"
-                                onClick={() => {
+                          <button
+                            type="button"
+                            onClick={() => {
                               clearColumnValues(column2Label);
                               const defaultLabels = getDefaultColumnLabels(exercise.exerciseType);
                               setColumn2Label(defaultLabels.column2);
-                                  onExerciseChange({
-                                    ...exercise,
+                              onExerciseChange({
+                                ...exercise,
                                 column2Label: defaultLabels.column2,
-                                    alternatives: exercise.alternatives || [],
-                                  });
-                                }}
-                                className="p-0.5 hover:bg-muted rounded"
+                                alternatives: exercise.alternatives || [],
+                              });
+                            }}
+                            className="p-0.5 hover:bg-muted rounded"
                             aria-label="Reset column"
-                              >
-                                <X className="size-3 text-muted-foreground hover:text-foreground" />
-                              </button>
-                            )}
-                          </div>
-                        </TableHead>
+                          >
+                            <X className="size-3 text-muted-foreground hover:text-foreground" />
+                          </button>
+                        )}
+                      </div>
+                    </TableHead>
                     <TableHead className="text-center h-8 py-1 px-2 w-[70px] text-xs font-medium">Rest</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1827,13 +1885,13 @@ export const ExerciseCard = ({
                           onChange={(value) => handleSetChange(index, 'type', value as SetData['type'])}
                           options={[
                             { value: 'warmUp', label: 'Warm up' },
-                            { value: 'normal', label: 'Normal' },
+                            { value: 'normal', label: 'Regular' },
                             { value: 'failure', label: 'Failure' },
                             ...(exercise.exerciseType === 'weight_reps' ? [{ value: 'dropset', label: 'Dropset' }] : []),
                           ]}
                           displayValue={
                             `${index + 1}${set.type === 'warmUp' ? 'W' :
-                              set.type === 'normal' ? 'N' :
+                              set.type === 'normal' ? 'R' :
                                 set.type === 'failure' ? 'F' :
                                   set.type === 'dropset' ? 'D' : ''
                             }`
@@ -1849,7 +1907,7 @@ export const ExerciseCard = ({
                         <EditableCell
                           value={set.rest}
                           onChange={(value) => handleSetChange(index, 'rest', value)}
-                          placeholder="90"
+                          placeholder="-"
                           hasError={validationErrors?.[index]?.rest}
                         />
                       </TableCell>
@@ -1932,11 +1990,22 @@ export const ExerciseCard = ({
             <MultiAsyncSelect
               async
               placeholder="Search for alternative exercises..."
-              options={alternativeSearchResults.map((e) => ({
-                label: e.name,
-                value: e.exerciseId,
-                imageUrl: e.imageUrl,
-              }))}
+              options={[
+                // Include pre-loaded alternatives first so they show in the pills
+                ...alternatives.map((e) => ({
+                  label: e.name,
+                  value: e.exerciseId,
+                  imageUrl: e.imageUrl,
+                })),
+                // Then include search results, filtering out duplicates
+                ...alternativeSearchResults
+                  .filter((e) => !alternatives.some(a => a.exerciseId === e.exerciseId))
+                  .map((e) => ({
+                    label: e.name,
+                    value: e.exerciseId,
+                    imageUrl: e.imageUrl,
+                  })),
+              ]}
               value={exercise.alternatives || []}
               onValueChange={handleAlternativesChange}
               onSearch={handleAlternativesSearch}
@@ -1954,7 +2023,7 @@ export const ExerciseCard = ({
                   <span>{option.label}</span>
                 </div>
               )}
-              className="w-full bg-transparent border-input h-9 shadow-none"
+              className="w-full bg-transparent border-input min-h-9 h-auto shadow-none"
               maxCount={10}
             />
           </div>

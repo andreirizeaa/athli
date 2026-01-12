@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, Platform, Keyboard, Alert, ActivityIndicator } 
 import { ChevronLeft, Check, Repeat, Plus, Dumbbell, Layers, Link as LinkIcon, Pencil } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
@@ -29,6 +29,8 @@ import {
     getDefaultColumns,
     isBuilderSection,
     buildWorkoutPayload,
+    type WorkoutItem,
+    type WorkoutProgramPayload,
 } from '@/components/features/workout/workout-schema';
 import {
     type ExerciseValidationError,
@@ -36,6 +38,7 @@ import {
 } from '@/components/features/workout/validation';
 import { createWorkout, editWorkout, getWorkoutById } from '@/services/coach/coach-workout-service';
 import { getExerciseById } from '@/services/coach/coach-exercise-service';
+import { createSection } from '@/services/coach/coach-section-service';
 import { MOCK_EXERCISES } from '@/app/modals/workout/add-exercise-to-builder-modal';
 
 // Mock workout data - this would come from a service in production
@@ -139,6 +142,28 @@ export default function WorkoutDetailScreen() {
         },
     });
 
+    // Mutation for creating section from workout builder
+    const saveSectionMutation = useMutation({
+        mutationFn: createSection,
+        onSuccess: async () => {
+            await queryClient.refetchQueries({ queryKey: ['sections'] });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert(
+                t('general.success'),
+                t('library.section.savedSuccessfully'),
+                [{ text: t('general.ok') }]
+            );
+        },
+        onError: (error: Error) => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
+
     // Load workout data from API when editing
     useEffect(() => {
         const loadWorkoutData = async () => {
@@ -146,6 +171,16 @@ export default function WorkoutDetailScreen() {
                 setIsLoadingData(true);
                 try {
                     const workoutData = await getWorkoutById(params.id);
+                    console.log('[WorkoutDetailScreen] Loaded workout data:', {
+                        id: params.id,
+                        name: workoutData.name,
+                        type: workoutData.type,
+                        difficulty: workoutData.difficulty,
+                        hasWorkoutData: !!workoutData.workout_data,
+                        itemsCount: workoutData.workout_data?.items?.length || 0,
+                        fullData: workoutData,
+                    });
+                    console.log('[WorkoutDetailScreen] Workout items:', JSON.stringify(workoutData.workout_data?.items, null, 2));
                     if (workoutData.workout_data && workoutData.workout_data.items) {
                         // Map set type from API format to builder format
                         const mapSetType = (type: string): 'R' | 'W' | 'F' | 'D' => {
@@ -172,6 +207,23 @@ export default function WorkoutDetailScreen() {
                         const transformExercise = (data: any): BuilderExercise => {
                             const exerciseDetails = getExerciseFromMock(data.prescribedExerciseId);
 
+                            // Transform alternatives from IDs to exercise objects
+                            const transformedAlternatives = (data.alternatives || []).map((altId: string) => {
+                                const altExercise = getExerciseFromMock(altId);
+                                return {
+                                    id: altId,
+                                    exerciseId: altId,
+                                    name: altExercise.name,
+                                    imageUrl: altExercise.imageUrl,
+                                    exerciseType: altExercise.exerciseType,
+                                };
+                            });
+
+                            console.log('[WorkoutDetailScreen] Transform alternatives:', {
+                                originalAlternatives: data.alternatives,
+                                transformedAlternatives,
+                            });
+
                             return {
                                 id: data.prescribedExerciseId || `exercise-${Date.now()}`,
                                 exerciseId: data.prescribedExerciseId || '',
@@ -189,7 +241,7 @@ export default function WorkoutDetailScreen() {
                                 column1Type: data.column1Label || 'Reps',
                                 column2Type: data.column2Label || 'kg',
                                 notes: data.notes || '',
-                                alternatives: data.alternatives || [],
+                                alternatives: transformedAlternatives,
                                 tempo: data.tempo || '',
                                 eachSide: data.eachSide || false,
                                 isSupersetNext: data.supersetId ? true : false,
@@ -449,6 +501,14 @@ export default function WorkoutDetailScreen() {
             ]
         );
     }, [router, t]);
+
+    // Disable swipe-to-go-back gesture when there are unsaved changes
+    const navigation = useNavigation();
+    useEffect(() => {
+        navigation.setOptions({
+            gestureEnabled: !isDirty,
+        });
+    }, [navigation, isDirty]);
 
     const handleBackPress = useCallback(() => {
         if (isDirty) {
@@ -770,6 +830,58 @@ export default function WorkoutDetailScreen() {
         });
     };
 
+    const handleSaveSection = (index: number) => {
+        const section = workoutState.items[index] as BuilderSection;
+
+        // Convert section exercises to workout exercise items
+        const exerciseItems: WorkoutItem[] = section.exercises.map(ex => ({
+            itemType: 'exercise' as const,
+            data: {
+                prescribedExerciseId: ex.exerciseId,
+                performedExerciseId: null,
+                sets: ex.sets.map((set, idx) => ({
+                    setNumber: set.setNumber ?? (idx + 1),
+                    type: set.type === 'W' ? 'warmUp' : set.type === 'F' ? 'failure' : set.type === 'D' ? 'dropset' : 'normal',
+                    restSec: set.rest ? parseInt(set.rest) : ex.setRestSec || null,
+                    completed: false,
+                    skipped: false,
+                    trackableField1: {
+                        label: ex.column1Type,
+                        prescribed: set.column1 || null,
+                        completed: null,
+                    },
+                    trackableField2: {
+                        label: ex.column2Type,
+                        prescribed: set.column2 || null,
+                        completed: null,
+                    },
+                    dropset: null,
+                })),
+                alternatives: ex.alternatives.map(alt => alt.id),
+                notes: ex.notes || null,
+                supersetId: ex.supersetGroupId || null,
+                eachSide: ex.eachSide || false,
+                tempo: ex.tempo || null,
+                column1Label: ex.column1Type,
+                column2Label: ex.column2Type,
+            },
+        }));
+
+        // Create the section payload matching the createSection service format
+        // The section_data.items should contain exercises directly, not wrapped in a section
+        const sectionPayload: WorkoutProgramPayload & { sectionType: string; duration?: number; rounds?: number } = {
+            name: section.name,
+            description: section.notes || '',
+            sectionType: section.sectionType,
+            items: exerciseItems,
+            ...(section.duration && { duration: parseFloat(section.duration) || undefined }),
+            ...(section.rounds && { rounds: parseFloat(section.rounds) || undefined }),
+        };
+
+        console.log('[handleSaveSection] Saving section with payload:', JSON.stringify(sectionPayload, null, 2));
+        saveSectionMutation.mutate(sectionPayload);
+    };
+
     const addOptions: DropdownMenuOption[] = [
         {
             label: t('library.workout.addSection'),
@@ -945,6 +1057,7 @@ export default function WorkoutDetailScreen() {
                                     }}
                                     onDelete={() => handleDeleteItem(index)}
                                     onEdit={() => handleEditSection(index)}
+                                    onSaveSection={() => handleSaveSection(index)}
                                     canMoveUp={index > 0}
                                     canMoveDown={index < items.length - 1}
                                     onMoveUp={() => handleMoveUp(index)}

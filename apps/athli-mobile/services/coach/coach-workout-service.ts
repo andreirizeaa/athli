@@ -1,5 +1,5 @@
 import { apiFetch, type ApiResponse } from '@/lib/api-client';
-import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
+import type { WorkoutProgramPayload } from '@/components/features/workout/workout-schema';
 import type { Workout } from '@/components/app/app-shell';
 
 /**

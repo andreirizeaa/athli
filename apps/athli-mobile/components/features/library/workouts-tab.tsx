@@ -144,6 +144,15 @@ export const WorkoutsTab = () => {
   // Already filtered above
 
   const handleWorkoutPress = (workout: typeof filteredWorkouts[0]) => {
+    console.log('[WorkoutsTab] Opening workout:', {
+      id: workout.id,
+      name: workout.name,
+      description: workout.description,
+      type: workout.type,
+      difficulty: workout.difficulty,
+      totalExercises: workout.totalExercises,
+      fullWorkoutData: workout,
+    });
     closeOpenRow();
     router.push({
       pathname: '/library/workout/[id]',

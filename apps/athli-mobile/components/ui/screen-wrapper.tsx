@@ -12,6 +12,7 @@ type ScreenWrapperProps = {
   blurIntensity?: number;
   blurHeight?: number;
   overlay?: ReactNode;
+  hideStatusBarBlur?: boolean;
 };
 
 export const ScreenWrapper = ({
@@ -22,6 +23,7 @@ export const ScreenWrapper = ({
   blurIntensity = 5,
   blurHeight = 0,
   overlay,
+  hideStatusBarBlur = false,
 }: ScreenWrapperProps) => {
   const insets = useSafeAreaInsets();
   const { colors: themeColors } = useThemePreference();
@@ -50,7 +52,7 @@ export const ScreenWrapper = ({
             {children}
           </ScrollView>
           {overlay}
-          <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} />
+          {!hideStatusBarBlur && <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} />}
         </View>
       </View>
     );
@@ -72,7 +74,7 @@ export const ScreenWrapper = ({
         {children}
       </View>
       {overlay}
-      <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} />
+      {!hideStatusBarBlur && <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} />}
     </View>
   );
 };
