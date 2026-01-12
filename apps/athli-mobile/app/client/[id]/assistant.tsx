@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, Dimensions, Pressable } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { StyleSheet, View, Text, ScrollView, useWindowDimensions, Keyboard } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, SlidersHorizontal, SquarePen } from 'lucide-react-native';
+import { ChevronLeft, SlidersHorizontal, SquarePen, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardComposer, KeyboardAwareWrapper } from '@launchhq/react-native-keyboard-composer';
 import { Drawer } from 'react-native-drawer-layout';
 import { FlashList } from '@shopify/flash-list';
+import { PressableOpacity } from 'pressto';
+import * as Haptics from 'expo-haptics';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { SearchBar } from '@/components/ui/search-bar';
+import { AnimatedSearchBar } from '@/components/ui/animated-search-bar';
 
 // Session type
 type ChatSession = {
@@ -21,9 +24,6 @@ type ChatSession = {
     timestamp: Date;
 };
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const PANEL_WIDTH = SCREEN_WIDTH * 0.8;
-
 export default function ClientAssistantScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -31,6 +31,10 @@ export default function ClientAssistantScreen() {
     const colorScheme = useColorScheme();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
+
+    const { width: SCREEN_WIDTH } = useWindowDimensions();
+    const PANEL_COLLAPSED = useMemo(() => SCREEN_WIDTH * 0.8, [SCREEN_WIDTH]);
+    const LIST_WIDTH = PANEL_COLLAPSED; // keep list constant to avoid jank
 
     const [composerHeight, setComposerHeight] = useState(48);
     const [messages, setMessages] = useState<Array<{ id: string; text: string; role: 'user' | 'assistant' }>>([]);
@@ -40,6 +44,17 @@ export default function ClientAssistantScreen() {
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [activeSessionId, setActiveSessionId] = useState('session-1');
     const [searchQuery, setSearchQuery] = useState('');
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+    // Animated panel width
+    const panelWidth = useSharedValue(PANEL_COLLAPSED);
+
+    // Animated style for the inner panel
+    const panelAnimStyle = useAnimatedStyle(() => {
+        return {
+            width: panelWidth.value,
+        };
+    });
 
     // Mock sessions data
     const [sessions, setSessions] = useState<ChatSession[]>([
@@ -74,11 +89,35 @@ export default function ClientAssistantScreen() {
         setIsPanelOpen(!isPanelOpen);
     };
 
-    // TODO: Implement add new session
-    const handleAddSession = () => {
-        // Create a new chat session and switch to it
-        // Clear messages and set a new active session ID
-        console.log('Add new session clicked');
+    // Handle drawer close - reset width and search state
+    const handleDrawerClose = () => {
+        setIsPanelOpen(false);
+        setIsSearchFocused(false);
+        setSearchQuery('');
+        panelWidth.value = PANEL_COLLAPSED;
+    };
+
+    // Create new chat session
+    const handleCreateNewSession = () => {
+        // Haptic feedback
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+        // Close the drawer
+        setIsPanelOpen(false);
+
+        // TODO: Implement new session creation
+        // 1. Generate new session ID (e.g., UUID)
+        // 2. Create new session object with default data
+        // 3. Add to sessions list
+        // 4. Set as active session
+        // 5. Clear current messages array
+        // 6. Reset any session-specific state
+        // 7. Optionally: Show toast/feedback to user
+
+        console.log('Creating new chat session...');
+
+        // Mock implementation - clear messages for now
+        setMessages([]);
     };
 
     // TODO: Implement session selection
@@ -88,6 +127,38 @@ export default function ClientAssistantScreen() {
         setActiveSessionId(sessionId);
         setIsPanelOpen(false);
         console.log('Selected session:', sessionId);
+    };
+
+    // Handle search focus
+    const handleSearchFocus = () => {
+        setIsSearchFocused(true);
+        setActiveSessionId(''); // Unhighlight active session
+
+        // Animate panel to full screen with smooth easing
+        panelWidth.value = withTiming(SCREEN_WIDTH, {
+            duration: 320,
+            easing: Easing.out(Easing.cubic),
+        });
+    };
+
+    // Handle search blur
+    const handleSearchBlur = () => {
+        setIsSearchFocused(false);
+        setActiveSessionId('session-1'); // Restore active session
+
+        // Animate back to collapsed size with smooth easing
+        panelWidth.value = withTiming(PANEL_COLLAPSED, {
+            duration: 320,
+            easing: Easing.out(Easing.cubic),
+        });
+    };
+
+    // Close search and unfocus
+    const handleCloseSearch = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        Keyboard.dismiss();
+        setSearchQuery('');
+        handleSearchBlur();
     };
 
     // TODO: Implement session search
@@ -157,15 +228,14 @@ export default function ClientAssistantScreen() {
         const isActive = session.id === activeSessionId;
 
         return (
-            <Pressable
+            <PressableOpacity
                 onPress={() => handleSelectSession(session.id)}
                 style={[
                     styles.sessionItem,
                     {
                         backgroundColor: isActive
                             ? themeColors.surfaceSecondary
-                            : themeColors.surface,
-                        borderColor: themeColors.border,
+                            : 'transparent',
                     },
                 ]}
             >
@@ -179,22 +249,57 @@ export default function ClientAssistantScreen() {
                 >
                     {session.summary}
                 </Text>
-                <Text
-                    style={[
-                        styles.sessionTimestamp,
-                        { color: themeColors.mutedText },
-                    ]}
-                    numberOfLines={1}
-                >
-                    {formatTimestamp(session.timestamp)}
-                </Text>
-            </Pressable>
+            </PressableOpacity>
         );
     };
 
-    // Drawer content - Empty for now
+    // Drawer content
     const renderDrawerContent = () => (
-        <View style={[styles.drawerContent, { backgroundColor: themeColors.pageBackground }]} />
+        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+            {/* Right-anchored panel that expands LEFT by increasing width */}
+            <Animated.View
+                style={[
+                    styles.panel,
+                    { backgroundColor: themeColors.pageBackground, paddingTop: insets.top + 12 },
+                    panelAnimStyle,
+                ]}
+            >
+                {/* Search bar and icon (new session or close) */}
+                <View style={styles.drawerHeader}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                        <AnimatedSearchBar
+                            value={searchQuery}
+                            onChangeText={handleSearchSessions}
+                            onFocus={handleSearchFocus}
+                            onBlur={handleSearchBlur}
+                            placeholder="Search"
+                        />
+                    </View>
+                    <PressableOpacity onPress={isSearchFocused ? handleCloseSearch : handleCreateNewSession}>
+                        {isSearchFocused ? (
+                            <X size={22} color={themeColors.text} strokeWidth={2} />
+                        ) : (
+                            <SquarePen size={22} color={themeColors.text} strokeWidth={2} />
+                        )}
+                    </PressableOpacity>
+                </View>
+
+                {/* Sessions list (fixed-width so it doesn't re-layout every frame) */}
+                <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                    <View style={{ width: LIST_WIDTH, flex: 1 }}>
+                        <FlashList
+                            data={filteredSessions}
+                            renderItem={({ item }) => <SessionListItem session={item} />}
+                            keyExtractor={(item) => item.id}
+                            estimatedItemSize={70}
+                            contentContainerStyle={styles.sessionsList}
+                            keyboardShouldPersistTaps="handled"
+                            style={{ flex: 1 }}
+                        />
+                    </View>
+                </View>
+            </Animated.View>
+        </View>
     );
 
     return (
@@ -202,13 +307,13 @@ export default function ClientAssistantScreen() {
             <Drawer
                 open={isPanelOpen}
                 onOpen={() => setIsPanelOpen(true)}
-                onClose={() => setIsPanelOpen(false)}
+                onClose={handleDrawerClose}
                 renderDrawerContent={renderDrawerContent}
                 drawerPosition="right"
-                drawerType="slide"
+                drawerType="front"
                 drawerStyle={{
-                    width: PANEL_WIDTH,
-                    backgroundColor: themeColors.pageBackground,
+                    width: SCREEN_WIDTH,
+                    backgroundColor: 'transparent',
                 }}
                 overlayStyle={{
                     backgroundColor: colorScheme === 'dark'
@@ -370,22 +475,18 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         overflow: 'hidden',
     },
-    drawerContent: {
-        flex: 1,
+    panel: {
+        position: 'absolute',
+        right: 0,
+        top: 0,
+        bottom: 0,
     },
-    panelHeader: {
+    drawerHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
-        paddingTop: 12,
-        paddingBottom: 12,
+        paddingBottom: 16,
         gap: 8,
-    },
-    searchContainer: {
-        flex: 1,
-    },
-    searchBar: {
-        flex: 1,
     },
     sessionsList: {
         paddingHorizontal: 16,
@@ -394,17 +495,11 @@ const styles = StyleSheet.create({
     sessionItem: {
         paddingVertical: 12,
         paddingHorizontal: 16,
-        borderRadius: 12,
-        marginBottom: 8,
-        borderWidth: 1,
-    },
-    sessionSummary: {
-        ...typography.p1,
-        fontWeight: '600',
+        borderRadius: 8,
         marginBottom: 4,
     },
-    sessionTimestamp: {
+    sessionSummary: {
         ...typography.p2,
-        fontSize: 13,
+        fontWeight: '500',
     },
 });
