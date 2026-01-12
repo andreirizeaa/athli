@@ -13,6 +13,7 @@ type ScreenWrapperProps = {
   blurHeight?: number;
   overlay?: ReactNode;
   hideStatusBarBlur?: boolean;
+  scrollEnabled?: boolean;
 };
 
 export const ScreenWrapper = ({
@@ -24,6 +25,7 @@ export const ScreenWrapper = ({
   blurHeight = 0,
   overlay,
   hideStatusBarBlur = false,
+  scrollEnabled = true,
 }: ScreenWrapperProps) => {
   const insets = useSafeAreaInsets();
   const { colors: themeColors } = useThemePreference();
@@ -47,6 +49,7 @@ export const ScreenWrapper = ({
               contentContainerStyle,
             ]}
             showsVerticalScrollIndicator={showsVerticalScrollIndicator}
+            scrollEnabled={scrollEnabled}
           >
             <View style={{ height: insets.top }} />
             {children}

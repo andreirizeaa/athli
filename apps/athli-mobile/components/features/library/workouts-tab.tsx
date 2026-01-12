@@ -5,36 +5,24 @@ import { ChevronRight, Dumbbell } from 'lucide-react-native';
 import { PressableOpacity } from 'pressto';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
+import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
-import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@athli/shared-types';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { useLibraryTab } from '@/stores';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { getWorkouts, deleteWorkouts, duplicateWorkout, starWorkouts, archiveWorkouts } from '@/services/coach/coach-workout-service';
+import { getWorkouts, deleteWorkouts } from '@/services/coach/coach-workout-service';
 import { EmptyState } from '@/components/ui/empty-state';
-
-// Helper function to get formatted label from value
-const getWorkoutTypeLabel = (value: string | null | undefined): string | null => {
-  if (!value) return null;
-  const type = WORKOUT_TYPES.find(t => t.value === value);
-  return type?.label || null;
-};
-
-const getDifficultyLabel = (value: string | null | undefined): string | null => {
-  if (!value) return null;
-  const difficulty = DIFFICULTY_LEVELS.find(d => d.value === value);
-  return difficulty?.label || null;
-};
 
 export const WorkoutsTab = () => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
+  const { searchQuery, registerOpenRow, closeOpenRow, openRowCloseFn } = useLibraryTab();
   const queryClient = useQueryClient();
+  const isRowOpen = openRowCloseFn !== null;
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
 
@@ -90,60 +78,16 @@ export const WorkoutsTab = () => {
     },
   });
 
-  // Duplicate mutation
-  const duplicateMutation = useMutation({
-    mutationFn: (id: string) => duplicateWorkout(id),
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ['workouts'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    },
-    onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorDuplicating'),
-        [{ text: t('general.ok') }]
-      );
-    },
-  });
-
-  // Star mutation
-  const starMutation = useMutation({
-    mutationFn: ({ id, starred }: { id: string; starred: boolean }) => starWorkouts(id, starred),
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ['workouts'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    },
-    onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorUpdating'),
-        [{ text: t('general.ok') }]
-      );
-    },
-  });
-
-  // Archive mutation
-  const archiveMutation = useMutation({
-    mutationFn: ({ id, archived }: { id: string; archived: boolean }) => archiveWorkouts(id, archived),
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ['workouts'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    },
-    onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorUpdating'),
-        [{ text: t('general.ok') }]
-      );
-    },
-  });
 
   // Already filtered above
 
   const handleWorkoutPress = (workout: typeof filteredWorkouts[0]) => {
+    // If a row is open, just close it and prevent navigation
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
     console.log('[WorkoutsTab] Opening workout:', {
       id: workout.id,
       name: workout.name,
@@ -167,25 +111,13 @@ export const WorkoutsTab = () => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Empty State */}
-      {filteredWorkouts.length === 0 && (
-        <EmptyState
-          message={t('library.empty.workouts')}
-        />
-      )}
-
-      {/* Workout List */}
-      {filteredWorkouts.map((workout, index) => {
+    <FlashList
+      data={filteredWorkouts}
+      renderItem={({ item: workout, index }) => {
         const isLastItem = index === filteredWorkouts.length - 1;
-        const typeLabel = getWorkoutTypeLabel(workout.type);
-        const difficultyLabel = getDifficultyLabel(workout.difficulty);
-        const hasType = !!typeLabel;
-        const hasDifficulty = !!difficultyLabel;
-        const showMetaRow = hasType || hasDifficulty;
 
         return (
-          <View key={workout.id}>
+          <View>
             <SwipeableRow
               onDelete={() => deleteMutation.mutateAsync(workout.id)}
               onOpen={registerOpenRow}
@@ -238,8 +170,14 @@ export const WorkoutsTab = () => {
             {isLastItem && <View style={{ height: 24 }} />}
           </View>
         );
-      })}
-    </View>
+      }}
+      keyExtractor={(item) => item.id}
+      ListEmptyComponent={
+        <EmptyState
+          message={t('library.empty.workouts')}
+        />
+      }
+    />
   );
 };
 
@@ -253,13 +191,13 @@ const styles = StyleSheet.create({
   rowContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: 16,
   },
   iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 58,
+    height: 58,
+    borderRadius: 8,
     backgroundColor: 'rgba(128, 128, 128, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -290,7 +228,7 @@ const styles = StyleSheet.create({
     ...typography.p3,
   },
   separatorContainer: {
-    paddingLeft: 72,
+    paddingLeft: 86,
     paddingRight: 16,
   },
   separator: {

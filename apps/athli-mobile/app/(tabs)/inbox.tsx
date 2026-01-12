@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Check, Ellipsis, MailCheck, CheckCircle2, Archive } from 'lucide-react-native';
+import { FlashList } from '@shopify/flash-list';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
@@ -32,6 +33,22 @@ export default function InboxScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedCoachIds, setSelectedCoachIds] = useState<Set<string>>(new Set());
+  const [openRowCloseFn, setOpenRowCloseFn] = useState<(() => void) | null>(null);
+  const isRowOpen = openRowCloseFn !== null;
+
+  const registerOpenRow = useCallback((closeFn: () => void) => {
+    if (openRowCloseFn && openRowCloseFn !== closeFn) {
+      openRowCloseFn();
+    }
+    setOpenRowCloseFn(() => closeFn);
+  }, [openRowCloseFn]);
+
+  const closeOpenRow = useCallback(() => {
+    if (openRowCloseFn) {
+      openRowCloseFn();
+      setOpenRowCloseFn(null);
+    }
+  }, [openRowCloseFn]);
 
   useEffect(() => {
     const loadCoaches = async () => {
@@ -83,6 +100,12 @@ export default function InboxScreen() {
   }, [coaches]);
 
   const handleCoachPress = async (coachId: string) => {
+    // If a row is open, just close it and prevent navigation/action
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
     if (isEditMode) {
       const newSelected = new Set(selectedCoachIds);
       if (newSelected.has(coachId)) {
@@ -211,6 +234,28 @@ export default function InboxScreen() {
       },
     ];
 
+  const renderCoachItem = useCallback(({ item }: { item: Coach }) => (
+    <CoachListItem
+      coach={item}
+      onPress={handleCoachPress}
+      isEditMode={isEditMode}
+      isSelected={selectedCoachIds.has(item.id)}
+      onArchive={handleCoachArchive}
+      onMarkAsRead={handleCoachMarkAsRead}
+      onOpen={registerOpenRow}
+    />
+  ), [isEditMode, selectedCoachIds, handleCoachPress, handleCoachArchive, handleCoachMarkAsRead, registerOpenRow]);
+
+  const renderEmptyComponent = useCallback(() => (
+    <View style={styles.emptyContainer}>
+      <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
+        {searchQuery.trim()
+          ? t('inbox.empty.noCoachesFound')
+          : t('inbox.empty.noCoachesYet')}
+      </Text>
+    </View>
+  ), [searchQuery, themeColors.mutedText, t]);
+
   return (
     <ScreenWrapper
       contentContainerStyle={styles.scrollViewContent}
@@ -275,7 +320,13 @@ export default function InboxScreen() {
           </View>
           <SearchBar
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={(text) => {
+              if (isRowOpen) {
+                closeOpenRow();
+                return;
+              }
+              setSearchQuery(text);
+            }}
             placeholder={t('inbox.searchPlaceholder')}
           />
         </View>
@@ -283,27 +334,15 @@ export default function InboxScreen() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={themeColors.primary} />
           </View>
-        ) : filteredCoaches.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
-              {searchQuery.trim()
-                ? t('inbox.empty.noCoachesFound')
-                : t('inbox.empty.noCoachesYet')}
-            </Text>
-          </View>
         ) : (
           <View style={styles.coachListContainer}>
-            {filteredCoaches.map((coach) => (
-              <CoachListItem
-                key={coach.id}
-                coach={coach}
-                onPress={handleCoachPress}
-                isEditMode={isEditMode}
-                isSelected={selectedCoachIds.has(coach.id)}
-                onArchive={handleCoachArchive}
-                onMarkAsRead={handleCoachMarkAsRead}
-              />
-            ))}
+            <FlashList
+              data={filteredCoaches}
+              renderItem={renderCoachItem}
+              keyExtractor={(item) => item.id}
+              ListEmptyComponent={renderEmptyComponent}
+              scrollEnabled={!isRowOpen}
+            />
           </View>
         )}
       </View>

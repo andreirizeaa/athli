@@ -52,12 +52,20 @@ export default function ArchivedChatsScreen() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
   const [openRowCloseFn, setOpenRowCloseFn] = useState<(() => void) | null>(null);
+  const isRowOpen = openRowCloseFn !== null;
 
   const registerOpenRow = useCallback((closeFn: () => void) => {
     if (openRowCloseFn && openRowCloseFn !== closeFn) {
       openRowCloseFn();
     }
     setOpenRowCloseFn(() => closeFn);
+  }, [openRowCloseFn]);
+
+  const closeOpenRow = useCallback(() => {
+    if (openRowCloseFn) {
+      openRowCloseFn();
+      setOpenRowCloseFn(null);
+    }
   }, [openRowCloseFn]);
 
   const unreadCountNum = unreadCount ? parseInt(unreadCount, 10) : 0;
@@ -84,6 +92,12 @@ export default function ArchivedChatsScreen() {
   }, [archivedChatsParam]);
 
   const handleBackPress = () => {
+    // If a row is open, just close it and prevent navigation/action
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
     router.back();
   };
 
@@ -97,6 +111,12 @@ export default function ArchivedChatsScreen() {
   };
 
   const handleChatPress = async (chatId: string) => {
+    // If a row is open, just close it and prevent navigation/action
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
     if (isEditMode) {
       const newSelected = new Set(selectedChatIds);
       if (newSelected.has(chatId)) {
@@ -165,6 +185,7 @@ export default function ArchivedChatsScreen() {
   return (
     <ScreenWrapper
       contentContainerStyle={isEditMode ? styles.scrollViewContentEdit : styles.scrollViewContent}
+      scrollEnabled={!isRowOpen}
       overlay={
         isEditMode ? (
           <View

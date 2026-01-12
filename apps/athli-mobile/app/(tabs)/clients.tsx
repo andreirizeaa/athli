@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View, Share } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { Image } from 'expo-image';
@@ -6,12 +6,12 @@ import { useRouter } from 'expo-router';
 import { ChevronRight, Send } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useQuery } from '@tanstack/react-query';
+import { FlashList } from '@shopify/flash-list';
 
-import { typography, iconSizes } from '@/constants/typography';
+import { typography } from '@/constants/typography';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { getClients, type Athlete } from '@/services/coach/coach-client-service';
-import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { SearchBar } from '@/components/ui/search-bar';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
@@ -150,19 +150,13 @@ export default function ClientsScreen() {
         />
       </View>
 
-      {/* Empty State */}
-      {filteredClients.length === 0 && (
-        <EmptyState
-          message={t('clients.empty')}
-        />
-      )}
-
       {/* Client List */}
-      <View style={styles.listContainer}>
-        {filteredClients.map((client, index) => {
+      <FlashList
+        data={filteredClients}
+        renderItem={({ item: client, index }) => {
           const isLastItem = index === filteredClients.length - 1;
           return (
-            <View key={client.id}>
+            <View>
               <PressableOpacity
                 onPress={() => handleClientPress(client.id)}
                 style={styles.rowWrapper}
@@ -217,8 +211,15 @@ export default function ClientsScreen() {
               {isLastItem && <View style={{ height: 60 }} />}
             </View>
           );
-        })}
-      </View>
+        }}
+        keyExtractor={(item) => item.id}
+        ListEmptyComponent={
+          <EmptyState
+            message={t('clients.empty')}
+          />
+        }
+        contentContainerStyle={styles.listContainer}
+      />
     </ScreenWrapper>
   );
 }
@@ -254,14 +255,14 @@ const styles = StyleSheet.create({
   avatarCircle: {
     width: 54,
     height: 54,
-    borderRadius: 27,
+    borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#f0f0f0',
   },
   avatarImage: {
     width: 54,
     height: 54,
-    borderRadius: 27,
+    borderRadius: 8,
   },
   avatarPlaceholder: {
     backgroundColor: '#e0e0e0',

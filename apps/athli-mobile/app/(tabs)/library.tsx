@@ -37,13 +37,16 @@ type TabComponent = {
 export default function LibraryScreen() {
   const { primaryColor, colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const { setCurrentLibraryTab, searchQuery, setSearchQuery, closeOpenRow } = useLibraryTab();
+  const { setCurrentLibraryTab, searchQuery, setSearchQuery, closeOpenRow, openRowCloseFn } = useLibraryTab();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const pagerRef = useRef<PagerView>(null);
   const tabBarScrollRef = useRef<ScrollView>(null);
   const underlinePosition = useSharedValue(0);
   const underlineWidth = useSharedValue(0);
   const tabLayoutsRef = useRef<{ [key: number]: { x: number; width: number } }>({});
+
+  // Track if a row is currently open
+  const isRowOpen = openRowCloseFn !== null;
 
   const tabs: LibraryTab[] = [
     'workouts',
@@ -85,6 +88,12 @@ export default function LibraryScreen() {
   };
 
   const handleTabPress = (index: number) => {
+    // If a row is open, just close it and prevent tab change
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
     closeOpenRow();
     setSelectedIndex(index);
     animateUnderline(index);
@@ -106,6 +115,12 @@ export default function LibraryScreen() {
   const handlePageSelected = (event: PagerViewOnPageSelectedEvent) => {
     const index = event.nativeEvent.position;
     if (index !== selectedIndex) {
+      // If a row is open, just close it and prevent page change
+      if (isRowOpen) {
+        closeOpenRow();
+        return;
+      }
+
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       closeOpenRow();
       setSelectedIndex(index);
@@ -121,6 +136,13 @@ export default function LibraryScreen() {
           animated: true,
         });
       }
+    }
+  };
+
+  const handleSearchBarPress = () => {
+    // If a row is open, close it and prevent search bar interaction
+    if (isRowOpen) {
+      closeOpenRow();
     }
   };
 
@@ -208,25 +230,45 @@ export default function LibraryScreen() {
           style={styles.contentWrapper}
           initialPage={0}
           onPageSelected={handlePageSelected}
+          scrollEnabled={!isRowOpen}
         >
           {tabComponents.map(({ key, component: Component }) => (
             <View key={key} style={styles.tabContentItem}>
               <Pressable
                 style={{ flex: 1 }}
-                onPress={() => closeOpenRow()}
+                onPress={() => {
+                  if (isRowOpen) {
+                    closeOpenRow();
+                  }
+                }}
               >
                 <ScrollView
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={styles.tabScrollContent}
                   keyboardShouldPersistTaps="handled"
                   bounces={false}
+                  scrollEnabled={!isRowOpen}
                 >
-                  <SearchBar
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    placeholder={t(`library.searchPlaceholders.${key}`)}
-                    style={styles.searchBar}
-                  />
+                  <View onStartShouldSetResponder={() => isRowOpen}>
+                    <Pressable
+                      onPress={handleSearchBarPress}
+                      style={{ pointerEvents: isRowOpen ? 'auto' : 'box-none' }}
+                    >
+                      <SearchBar
+                        value={searchQuery}
+                        onChangeText={(text) => {
+                          // If a row is open, close it and prevent search input
+                          if (isRowOpen) {
+                            closeOpenRow();
+                            return;
+                          }
+                          setSearchQuery(text);
+                        }}
+                        placeholder={t(`library.searchPlaceholders.${key}`)}
+                        style={styles.searchBar}
+                      />
+                    </Pressable>
+                  </View>
                   <Component />
                 </ScrollView>
               </Pressable>
