@@ -16,6 +16,7 @@ type SectionBuilderCardProps = {
     section: WorkoutSection;
     onDelete: () => void;
     onEdit: () => void;
+    onSaveSection?: () => void;
     canMoveUp?: boolean;
     canMoveDown?: boolean;
     onMoveUp?: () => void;
@@ -27,6 +28,7 @@ export const SectionBuilderCard = ({
     section,
     onDelete,
     onEdit,
+    onSaveSection,
     canMoveUp,
     canMoveDown,
     onMoveUp,
@@ -44,6 +46,8 @@ export const SectionBuilderCard = ({
         details += ` • ${section.rounds} Rounds`;
     }
 
+    const hasExercises = (section.exercises?.length ?? 0) > 0;
+
     const actionOptions: DropdownMenuOption[] = [
         ...(canMoveUp ? [{
             label: 'Move Up',
@@ -55,12 +59,15 @@ export const SectionBuilderCard = ({
             icon: { sf: 'arrow.down', IconComponent: ArrowDown },
             onPress: onMoveDown!,
         }] : []),
+        ...(hasExercises && onSaveSection ? [
+            { separator: true },
+            {
+                label: 'Save Section',
+                icon: { sf: 'square.and.arrow.down', IconComponent: Save },
+                onPress: onSaveSection,
+            }
+        ] : []),
         { separator: true },
-        {
-            label: 'Save Section',
-            icon: { sf: 'square.and.arrow.down', IconComponent: Save },
-            onPress: () => console.log('Save section'),
-        },
         {
             label: 'Delete Section',
             icon: { sf: 'trash', IconComponent: Trash2 },

@@ -537,38 +537,41 @@ export const ExerciseBuilderCard = ({
                 </View>
 
                 {/* Alternatives Section */}
-                {exercise.alternatives.length > 0 && (
-                    <View style={styles.alternativesSection}>
-                        <Text style={[styles.alternativesLabel, { color: themeColors.mutedText }]}>
-                            Alternative Exercises
-                        </Text>
-                        {exercise.alternatives.map((alt, index) => (
-                            <React.Fragment key={alt.id}>
-                                <View style={styles.alternativeItem}>
-                                    <PressableScale onPress={() => handleThumbnailPress(alt.name)}>
-                                        <Image
-                                            source={{ uri: alt.imageUrl }}
-                                            style={styles.smallThumbnail}
-                                            contentFit="cover"
-                                        />
-                                    </PressableScale>
-                                    <Text style={[styles.alternativeName, { color: themeColors.text }]} numberOfLines={1}>
-                                        {alt.name}
-                                    </Text>
-                                    <PressableScale
-                                        onPress={() => handleDeleteAlternative(alt.id)}
-                                        style={styles.smallTrashCircle}
-                                    >
-                                        <Trash2 {...({ size: 12, color: RED_ERROR } as any)} />
-                                    </PressableScale>
+                {(() => {
+                    const validAlternatives = exercise.alternatives.filter(alt => alt !== null);
+                    return validAlternatives.length > 0 && (
+                        <View style={styles.alternativesSection}>
+                            <Text style={[styles.alternativesLabel, { color: themeColors.mutedText }]}>
+                                Alternative Exercises
+                            </Text>
+                            {validAlternatives.map((alt, index) => (
+                                <View key={alt.id || alt.exerciseId || `alt-${index}`}>
+                                    <View style={styles.alternativeItem}>
+                                        <PressableScale onPress={() => handleThumbnailPress(alt.name)}>
+                                            <Image
+                                                source={{ uri: alt.imageUrl }}
+                                                style={styles.smallThumbnail}
+                                                contentFit="cover"
+                                            />
+                                        </PressableScale>
+                                        <Text style={[styles.alternativeName, { color: themeColors.text }]} numberOfLines={1}>
+                                            {alt.name}
+                                        </Text>
+                                        <PressableScale
+                                            onPress={() => handleDeleteAlternative(alt.id)}
+                                            style={styles.smallTrashCircle}
+                                        >
+                                            <Trash2 {...({ size: 12, color: RED_ERROR } as any)} />
+                                        </PressableScale>
+                                    </View>
+                                    {index < validAlternatives.length - 1 && (
+                                        <View style={[styles.itemDivider, { backgroundColor: themeColors.border }]} />
+                                    )}
                                 </View>
-                                {index < exercise.alternatives.length - 1 && (
-                                    <View style={[styles.itemDivider, { backgroundColor: themeColors.border }]} />
-                                )}
-                            </React.Fragment>
-                        ))}
-                    </View>
-                )}
+                            ))}
+                        </View>
+                    );
+                })()}
             </View>
         </Card>
     );
@@ -719,10 +722,10 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     restTimerContainer: {
-        width: 140, // Increased width for the longer text
         alignItems: 'flex-end',
         marginRight: 4,
         marginLeft: 8,
+        flexShrink: 1,
     },
     restTimerButton: {
         flexDirection: 'row',
@@ -735,6 +738,7 @@ const styles = StyleSheet.create({
     restTimerText: {
         ...typography.p3,
         fontWeight: '600',
+        flexShrink: 0,
     },
     secondaryControls: {
         flexDirection: 'row',

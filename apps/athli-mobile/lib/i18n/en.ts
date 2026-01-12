@@ -439,6 +439,7 @@ export const en = {
       nameRequired: 'Please enter a section name',
       durationRequired: 'Please enter a valid duration for AMRAP sections',
       roundsRequired: 'Please enter a valid number of rounds',
+      savedSuccessfully: 'Section saved to library',
     },
   },
   inbox: {

@@ -6,196 +6,13 @@
 import { SectionType } from '@/constants/training';
 
 // ============================================================================
-// Core Types (matching web app's workout-schema.ts)
+// Core Types (Re-export from shared package)
 // ============================================================================
 
-export type WorkoutStatus = 'not_started' | 'in_progress' | 'completed';
-
-export type TrackableField = {
-    label: string;
-    prescribed: string | null;
-    completed: string | null;
-};
-
-export type ExerciseIdPair = {
-    prescribedExerciseId: string;
-    performedExerciseId: string | null;
-};
-
-export type DropsetStage = {
-    trackableField1: TrackableField;
-    trackableField2: TrackableField;
-    completed: boolean;
-};
-
-export type DropsetPayload = {
-    stages: DropsetStage[];
-};
-
-export type SetPayload = {
-    setNumber: number;
-    type: 'warmUp' | 'normal' | 'failure' | 'dropset';
-    restSec: number | null;
-    completed: boolean;
-    skipped: boolean;
-    trackableField1: TrackableField;
-    trackableField2: TrackableField;
-    dropset: DropsetPayload | null;
-};
-
-export type RoundExercisePayload = ExerciseIdPair & {
-    notes: string | null;
-    completed: boolean;
-    eachSide: boolean;
-    tempo: string | null;
-    trackableField1: TrackableField;
-    trackableField2: TrackableField;
-    restSec: number | null;
-};
-
-export type RegularExercisePayload = ExerciseIdPair & {
-    sets: SetPayload[];
-    alternatives: string[];
-    notes: string | null;
-    supersetId: string | null;
-    eachSide: boolean;
-    tempo: string | null;
-    column1Label: string;
-    column2Label: string;
-};
-
-
-
-export type ExerciseGroupPayload = {
-    isSuperset: boolean;
-    exercises: RegularExercisePayload[];
-};
-
-export type RegularSectionPayload = {
-    id: string;
-    name: string;
-    type: 'regular';
-    exercises: ExerciseGroupPayload[];
-    notes: string | null;
-};
-
-export type AmrapSectionPayload = {
-    id: string;
-    name: string;
-    type: 'amrap';
-    durationSec: number;
-    actualDurationSec: number | null;
-    roundsCompleted: number | null;
-    exercises: RoundExercisePayload[];
-    notes: string | null;
-};
-
-export type TimedSectionPayload = {
-    id: string;
-    name: string;
-    type: 'timed';
-    targetRounds: number;
-    actualRounds: number | null;
-    totalDurationSec: number | null;
-    exercises: RoundExercisePayload[];
-    notes: string | null;
-};
-
-export type CircuitExercisePayload = Omit<RegularExercisePayload, 'sets'> & {
-    set: SetPayload;
-};
-
-export type CircuitExerciseGroupPayload = {
-    isSuperset: boolean;
-    exercises: CircuitExercisePayload[];
-};
-
-export type CircuitsSectionPayload = {
-    id: string;
-    name: string;
-    type: 'circuits';
-    targetRounds: number;
-    actualRounds: number | null;
-    totalDurationSec: number | null;
-    exercises: CircuitExerciseGroupPayload[];
-    notes: string | null;
-};
-
-
-
-export type WorkoutSectionPayload =
-    | RegularSectionPayload
-    | AmrapSectionPayload
-    | TimedSectionPayload
-    | CircuitsSectionPayload;
-
-export type WorkoutPre = {
-    readiness: number | null;
-};
-
-export type WorkoutPost = {
-    rating: number | null;
-    intensity: number | null;
-    sessionComments: string | null;
-};
-
-export type WorkoutMeta = {
-    status: WorkoutStatus;
-    startedAt: string | null;
-    completedAt: string | null;
-    totalDurationMin: number | null;
-    totalWeightLifted: number | null;
-};
-
-export type WorkoutDetails = {
-    description: string;
-    type: string;
-    difficulty: string;
-    equipment: string[];
-    totalExercises: number;
-};
-
-// The payload format items (section or top-level exercise)
-export type WorkoutItem = {
-    itemType: 'section' | 'exercise';
-    data: WorkoutSectionPayload | RegularExercisePayload;
-};
-
-export type WorkoutData = {
-    description: string;
-    type: string;
-    difficulty: string;
-    equipment: string[];
-    totalExercises: number;
-    items: WorkoutItem[];
-    pre: WorkoutPre;
-    post: WorkoutPost;
-    completedSummary: WorkoutMeta;
-};
-
-export type WorkoutPayload = WorkoutData & {
-    id: string | null;
-    name: string;
-};
-
-export const DEFAULT_EXECUTION_FIELDS: Pick<WorkoutData, 'pre' | 'post' | 'completedSummary'> = {
-    pre: { readiness: null },
-    post: {
-        rating: null,
-        intensity: null,
-        sessionComments: null,
-    },
-    completedSummary: {
-        status: 'not_started' as const,
-        startedAt: null,
-        completedAt: null,
-        totalDurationMin: null,
-        totalWeightLifted: null,
-    },
-};
+export * from '@athli/shared-types';
 
 // ============================================================================
-// Builder Types (for mobile builder UI state)
+// Builder Types (Mobile-specific for builder UI state)
 // ============================================================================
 
 export type BuilderExerciseSet = {
@@ -254,29 +71,8 @@ export type BuilderWorkoutState = {
 };
 
 // ============================================================================
-// Helper Functions
+// Helper Functions (Mobile-specific)
 // ============================================================================
-
-export const createTrackableField = (label: string, prescribed: string | null = null): TrackableField => ({
-    label,
-    prescribed,
-    completed: null,
-});
-
-export const createDefaultSet = (
-    setNumber: number,
-    column1Label: string,
-    column2Label: string
-): SetPayload => ({
-    setNumber,
-    type: 'normal',
-    restSec: null,
-    completed: false,
-    skipped: false,
-    trackableField1: createTrackableField(column1Label),
-    trackableField2: createTrackableField(column2Label),
-    dropset: null,
-});
 
 export const getDefaultColumns = (exerciseType: string) => {
     switch (exerciseType) {
@@ -324,7 +120,22 @@ export const areWorkoutStatesEqual = (
 
 // ============================================================================
 // Payload Builder Functions (convert builder state to API payload format)
+// Re-import from shared types for consistency
 // ============================================================================
+
+import {
+    createTrackableField,
+    type SetPayload,
+    type RoundExercisePayload,
+    type RegularExercisePayload,
+    type CircuitExercisePayload,
+    type ExerciseGroupPayload,
+    type CircuitExerciseGroupPayload,
+    type WorkoutSectionPayload,
+    type WorkoutItem,
+    type WorkoutPayload,
+    DEFAULT_EXECUTION_FIELDS,
+} from '@athli/shared-types';
 
 const parseNumber = (value?: string): number | null => {
     if (!value) return null;
@@ -382,7 +193,7 @@ const groupExercisesBySuperset = (
     return groups;
 };
 
-const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayload => {
+export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayload => {
     const groups = groupExercisesBySuperset(section.exercises);
     const sectionType = section.sectionType;
 

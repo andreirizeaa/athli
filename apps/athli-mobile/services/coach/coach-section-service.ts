@@ -1,5 +1,5 @@
 import { apiFetch, type ApiResponse } from '@/lib/api-client';
-import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
+import type { WorkoutProgramPayload } from '@/components/features/workout/workout-schema';
 
 export type Section = {
   id: string;
@@ -106,33 +106,55 @@ export const createSection = async (sectionData: WorkoutProgramPayload & { secti
     return total;
   }, 0);
 
-  // Separate metadata from section data
+  // Build section data with type-specific fields
+  const sectionDataPayload: any = {
+    id: `section-${Date.now()}`,
+    name: sectionData.name,
+    type: sectionData.sectionType,
+    exercises: [],
+    notes: sectionData.description || null,
+  };
+
+  // Add type-specific fields to the section data
+  if (sectionData.sectionType === 'amrap' && sectionData.duration !== undefined) {
+    sectionDataPayload.durationSec = sectionData.duration * 60; // Convert minutes to seconds
+    sectionDataPayload.actualDurationSec = null;
+    sectionDataPayload.roundsCompleted = null;
+  } else if (sectionData.sectionType === 'timed' && sectionData.rounds !== undefined) {
+    sectionDataPayload.targetRounds = sectionData.rounds;
+    sectionDataPayload.actualRounds = null;
+    sectionDataPayload.totalDurationSec = null;
+  } else if (sectionData.sectionType === 'circuits' && sectionData.rounds !== undefined) {
+    sectionDataPayload.targetRounds = sectionData.rounds;
+    sectionDataPayload.actualRounds = null;
+    sectionDataPayload.totalDurationSec = null;
+  } else if (sectionData.sectionType === 'auxiliary') {
+    sectionDataPayload.category = 'warmup'; // Default category
+  }
+
   const cleanSectionData = {
-    items: sectionData.items,
+    items: [{
+      itemType: 'section',
+      data: sectionDataPayload,
+    }],
   };
 
   const payload: any = {
-    name: sectionData.name,
+    title: sectionData.name,
     description: sectionData.description,
     section_type: sectionData.sectionType,
     section_data: cleanSectionData,
     total_exercises: totalExercises,
   };
 
-  // Add duration for AMRAP sections
-  if (sectionData.duration !== undefined) {
-    payload.duration = sectionData.duration;
-  }
-
-  // Add rounds for timed/circuits sections
-  if (sectionData.rounds !== undefined) {
-    payload.rounds = sectionData.rounds;
-  }
+  console.log('[CREATE SECTION SERVICE] Payload being sent to API:', JSON.stringify(payload, null, 2));
 
   const response = await apiFetch<ApiResponse<{ section: any }>>('/coach/training/sections', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+
+  console.log('[CREATE SECTION SERVICE] API Response:', JSON.stringify(response.data?.section, null, 2));
 
   if (!response.data) throw new Error('No section returned');
   const s = response.data.section;
@@ -184,7 +206,7 @@ export const updateSection = async (
 
   const updatePayload: any = {
     id: sectionId,
-    ...(sectionData.name && { name: sectionData.name }),
+    ...(sectionData.name && { title: sectionData.name }),
     ...(sectionData.description !== undefined && { description: sectionData.description }),
     ...(sectionData.sectionType && { section_type: sectionData.sectionType }),
     ...(sectionData.duration !== undefined && { duration: sectionData.duration }),

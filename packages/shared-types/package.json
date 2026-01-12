@@ -1,0 +1,27 @@
+{
+  "name": "@athli/shared-types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types for Athli workout schema - ensures web and mobile apps stay in sync",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./workout-schema": "./src/workout-schema.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "athli",
+    "shared",
+    "types",
+    "workout",
+    "schema"
+  ],
+  "author": "Athli",
+  "license": "UNLICENSED",
+  "private": true,
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
