@@ -106,6 +106,7 @@ export const useLibraryTab = () => {
   const setSearchQuery = useLibraryTabStore((state) => state.setSearchQuery);
   const registerOpenRow = useLibraryTabStore((state) => state.registerOpenRow);
   const closeOpenRow = useLibraryTabStore((state) => state.closeOpenRow);
+  const openRowCloseFn = useLibraryTabStore((state) => state.openRowCloseFn);
 
   return {
     currentLibraryTab,
@@ -114,6 +115,7 @@ export const useLibraryTab = () => {
     setSearchQuery,
     registerOpenRow,
     closeOpenRow,
+    openRowCloseFn,
   };
 };
 

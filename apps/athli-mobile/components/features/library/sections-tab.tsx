@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { PressableOpacity } from 'pressto';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
+import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
@@ -20,8 +21,9 @@ export const SectionsTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const router = useRouter();
-  const { searchQuery, registerOpenRow, closeOpenRow } = useLibraryTab();
+  const { searchQuery, registerOpenRow, closeOpenRow, openRowCloseFn } = useLibraryTab();
   const queryClient = useQueryClient();
+  const isRowOpen = openRowCloseFn !== null;
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
 
@@ -130,6 +132,12 @@ export const SectionsTab = () => {
   // Already filtered above
 
   const handleSectionPress = (section: typeof filteredSections[0]) => {
+    // If a row is open, just close it and prevent navigation
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
     closeOpenRow();
     router.push({
       pathname: '/library/workout/section-builder',
@@ -161,85 +169,87 @@ export const SectionsTab = () => {
     return null;
   };
 
+  const renderItem = useCallback(({ item, index }: { item: typeof filteredSections[0]; index: number }) => {
+    const isLastItem = index === filteredSections.length - 1;
+    const typeInfo = getSectionTypeInfo(item);
+    return (
+      <View>
+        <SwipeableRow
+          onDelete={() => deleteMutation.mutateAsync(item.id)}
+          onOpen={registerOpenRow}
+          deleteConfirmTitle={`${t('general.delete')} ${item.program}?`}
+        >
+          <PressableOpacity
+            style={styles.rowWrapper}
+            onPress={() => handleSectionPress(item)}
+          >
+            <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
+              <View style={styles.iconContainer}>
+                <PlatformIcon
+                  sf="square.stack.3d.up.fill"
+                  IconComponent={Layers}
+                  size={24}
+                  color={themeColors.text}
+                />
+              </View>
+              <View style={styles.textContent}>
+                <Text style={[styles.sectionName, { color: themeColors.text }]} numberOfLines={1}>
+                  {item.program}
+                </Text>
+                <View style={styles.sectionMeta}>
+                  <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                    {getSectionTypeLabel(item.sectionType as SectionType)}
+                  </Text>
+                  {typeInfo && (
+                    <>
+                      <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                      <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                        {typeInfo}
+                      </Text>
+                    </>
+                  )}
+                  <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                  <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                    {item.totalExercises === 0
+                      ? 'Empty'
+                      : `${item.totalExercises} ${item.totalExercises === 1 ? t('library.exercise') : t('library.exercises')}`
+                    }
+                  </Text>
+                </View>
+              </View>
+              <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+            </View>
+          </PressableOpacity>
+        </SwipeableRow>
+
+        {!isLastItem && (
+          <View style={styles.separatorContainer}>
+            <View
+              style={[
+                styles.separator,
+                { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+              ]}
+            />
+          </View>
+        )}
+
+        {isLastItem && <View style={{ height: 24 }} />}
+      </View>
+    );
+  }, [filteredSections.length, themeColors, t, deleteMutation, registerOpenRow, handleSectionPress]);
+
   return (
-    <View style={styles.container}>
-      {/* Empty State */}
-      {filteredSections.length === 0 && (
+    <FlashList
+      data={filteredSections}
+      renderItem={renderItem}
+      keyExtractor={(item) => item.id}
+      ListEmptyComponent={
         <EmptyState
           message={t('library.empty.sections')}
         />
-      )}
-
-      {/* Section List */}
-      {filteredSections.map((item, index) => {
-        const isLastItem = index === filteredSections.length - 1;
-        const typeInfo = getSectionTypeInfo(item);
-        return (
-          <View key={item.id}>
-            <SwipeableRow
-              onDelete={() => deleteMutation.mutateAsync(item.id)}
-              onOpen={registerOpenRow}
-              deleteConfirmTitle={`${t('general.delete')} ${item.program}?`}
-            >
-              <PressableOpacity
-                style={styles.rowWrapper}
-                onPress={() => handleSectionPress(item)}
-              >
-                <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
-                  <View style={styles.iconContainer}>
-                    <PlatformIcon
-                      sf="square.stack.3d.up.fill"
-                      IconComponent={Layers}
-                      size={24}
-                      color={themeColors.text}
-                    />
-                  </View>
-                  <View style={styles.textContent}>
-                    <Text style={[styles.sectionName, { color: themeColors.text }]} numberOfLines={1}>
-                      {item.program}
-                    </Text>
-                    <View style={styles.sectionMeta}>
-                      <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                        {getSectionTypeLabel(item.sectionType as SectionType)}
-                      </Text>
-                      {typeInfo && (
-                        <>
-                          <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                          <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                            {typeInfo}
-                          </Text>
-                        </>
-                      )}
-                      <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                      <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                        {item.totalExercises === 0
-                          ? 'Empty'
-                          : `${item.totalExercises} ${item.totalExercises === 1 ? t('library.exercise') : t('library.exercises')}`
-                        }
-                      </Text>
-                    </View>
-                  </View>
-                  <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-                </View>
-              </PressableOpacity>
-            </SwipeableRow>
-
-            {!isLastItem && (
-              <View style={styles.separatorContainer}>
-                <View
-                  style={[
-                    styles.separator,
-                    { backgroundColor: themeColors.mutedText, opacity: 0.2 },
-                  ]}
-                />
-              </View>
-            )}
-
-            {isLastItem && <View style={{ height: 24 }} />}
-          </View>
-        );
-      })}
-    </View>
+      }
+      contentContainerStyle={styles.container}
+    />
   );
 };
 
@@ -253,13 +263,13 @@ const styles = StyleSheet.create({
   rowContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: 16,
   },
   iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 58,
+    height: 58,
+    borderRadius: 8,
     backgroundColor: 'rgba(128, 128, 128, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -287,7 +297,7 @@ const styles = StyleSheet.create({
     ...typography.p3,
   },
   separatorContainer: {
-    paddingLeft: 72,
+    paddingLeft: 86,
     paddingRight: 16,
   },
   separator: {
