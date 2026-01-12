@@ -16,7 +16,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useQuery } from '@tanstack/react-query';
 
 import { typography } from '@/constants/typography';
-import { SECTION_TYPES, type SectionType } from '@/constants/training';
+import { SECTION_TYPES, type SectionType } from '@athli/shared-types';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useModalCallbacks } from '@/stores';

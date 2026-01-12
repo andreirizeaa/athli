@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useModalCallbacks } from '@/stores';
 import { ExerciseBuilderCard } from '@/components/features/workout/exercise-builder-card';
 import { hexToRgba } from '@/utils/colorUtils';
-import { type SectionType, SECTION_TYPES } from '@/constants/training';
+import { type SectionType, SECTION_TYPES } from '@athli/shared-types';
 import { Exercise } from '@/app/modals/workout/add-exercise-to-builder-modal';
 import {
     type BuilderExercise,

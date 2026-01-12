@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
-import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@/constants/training';
+import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@athli/shared-types';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
