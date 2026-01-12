@@ -807,6 +807,7 @@ export const en = {
       helpTitle: 'Athli Assistant',
       placeholder: 'Ask Assistant...',
       emptyState: 'Start a conversation with your AI assistant',
+      searchSessions: 'Search',
     },
     assignModals: {
       assignCheckIn: 'Assign Check-in',

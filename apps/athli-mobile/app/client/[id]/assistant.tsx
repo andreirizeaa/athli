@@ -1,20 +1,34 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Dimensions, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, HelpCircle } from 'lucide-react-native';
+import { ChevronLeft, SlidersHorizontal, SquarePen } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardComposer, KeyboardAwareWrapper } from '@launchhq/react-native-keyboard-composer';
+import { Drawer } from 'react-native-drawer-layout';
+import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { SearchBar } from '@/components/ui/search-bar';
+
+// Session type
+type ChatSession = {
+    id: string;
+    summary: string;
+    lastMessagePreview: string;
+    timestamp: Date;
+};
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const PANEL_WIDTH = SCREEN_WIDTH * 0.8;
 
 export default function ClientAssistantScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams<{ id: string }>();
     const { colors: themeColors } = useThemePreference();
+    const colorScheme = useColorScheme();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
 
@@ -22,14 +36,72 @@ export default function ClientAssistantScreen() {
     const [messages, setMessages] = useState<Array<{ id: string; text: string; role: 'user' | 'assistant' }>>([]);
     const [isStreaming, setIsStreaming] = useState(false);
 
+    // Side panel state
+    const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const [activeSessionId, setActiveSessionId] = useState('session-1');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Mock sessions data
+    const [sessions, setSessions] = useState<ChatSession[]>([
+        {
+            id: 'session-1',
+            summary: 'Client nutrition advice',
+            lastMessagePreview: 'What should I eat before training?',
+            timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 mins ago
+        },
+        {
+            id: 'session-2',
+            summary: 'Training program discussion',
+            lastMessagePreview: 'Help me design a strength program',
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+        },
+        {
+            id: 'session-3',
+            summary: 'Recovery and rest days',
+            lastMessagePreview: 'How many rest days per week?',
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+        },
+    ]);
+
     const iconColor = themeColors.text;
 
     const handleBackPress = () => {
         router.back();
     };
 
-    const handleHelpPress = () => {
-        router.push('/modals/athli-assistant-help-modal');
+    // Toggle side panel
+    const handleSessionsPress = () => {
+        setIsPanelOpen(!isPanelOpen);
+    };
+
+    // TODO: Implement add new session
+    const handleAddSession = () => {
+        // Create a new chat session and switch to it
+        // Clear messages and set a new active session ID
+        console.log('Add new session clicked');
+    };
+
+    // TODO: Implement session selection
+    const handleSelectSession = (sessionId: string) => {
+        // Load messages for the selected session
+        // Update activeSessionId
+        setActiveSessionId(sessionId);
+        setIsPanelOpen(false);
+        console.log('Selected session:', sessionId);
+    };
+
+    // TODO: Implement session search
+    const handleSearchSessions = (query: string) => {
+        // Filter sessions based on summary or last message preview
+        setSearchQuery(query);
+        console.log('Searching sessions:', query);
+    };
+
+    // TODO: Implement session deletion
+    const handleDeleteSession = (sessionId: string) => {
+        // Delete session from list
+        // If active session is deleted, switch to another one
+        console.log('Delete session:', sessionId);
     };
 
     const handleSend = async (text: string) => {
@@ -59,114 +131,199 @@ export default function ClientAssistantScreen() {
         // TODO: Implement stream cancellation
     };
 
-    return (
-        <ScreenWrapper scrollable={false}>
-            {/* Header */}
-            <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
-                <IconButton
-                    icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
-                    onPress={handleBackPress}
-                    size="md"
-                    color={iconColor}
-                />
-                <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-                    {t('clientDetail.assistant.title')}
-                </Text>
-                <IconButton
-                    icon={{ sf: 'questionmark.circle', IconComponent: HelpCircle }}
-                    onPress={handleHelpPress}
-                    size="md"
-                    color={iconColor}
-                />
-            </View>
-            {/* Thin divider */}
-            <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
+    // Filter sessions based on search
+    const filteredSessions = sessions.filter((session) =>
+        searchQuery.trim() === '' ||
+        session.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        session.lastMessagePreview.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
-            <KeyboardAwareWrapper style={{ flex: 1 }} extraBottomInset={0}>
-                <ScrollView
-                    style={[styles.scrollView, { backgroundColor: themeColors.pageBackground }]}
-                    contentContainerStyle={styles.scrollContent}
+    // Format timestamp
+    const formatTimestamp = (date: Date): string => {
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / (1000 * 60));
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays === 1) return 'Yesterday';
+        return `${diffDays}d ago`;
+    };
+
+    // Session List Item Component
+    const SessionListItem = ({ session }: { session: ChatSession }) => {
+        const isActive = session.id === activeSessionId;
+
+        return (
+            <Pressable
+                onPress={() => handleSelectSession(session.id)}
+                style={[
+                    styles.sessionItem,
+                    {
+                        backgroundColor: isActive
+                            ? themeColors.surfaceSecondary
+                            : themeColors.surface,
+                        borderColor: themeColors.border,
+                    },
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.sessionSummary,
+                        { color: themeColors.text },
+                    ]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
                 >
-                    {messages.length === 0 ? (
-                        <View style={styles.emptyState}>
-                            <Text style={[styles.emptyStateText]}>
-                                {t('clientDetail.assistant.emptyState')}
-                            </Text>
-                        </View>
-                    ) : (
-                        messages.map((message) => (
+                    {session.summary}
+                </Text>
+                <Text
+                    style={[
+                        styles.sessionTimestamp,
+                        { color: themeColors.mutedText },
+                    ]}
+                    numberOfLines={1}
+                >
+                    {formatTimestamp(session.timestamp)}
+                </Text>
+            </Pressable>
+        );
+    };
+
+    // Drawer content - Empty for now
+    const renderDrawerContent = () => (
+        <View style={[styles.drawerContent, { backgroundColor: themeColors.pageBackground }]} />
+    );
+
+    return (
+        <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
+            <Drawer
+                open={isPanelOpen}
+                onOpen={() => setIsPanelOpen(true)}
+                onClose={() => setIsPanelOpen(false)}
+                renderDrawerContent={renderDrawerContent}
+                drawerPosition="right"
+                drawerType="slide"
+                drawerStyle={{
+                    width: PANEL_WIDTH,
+                    backgroundColor: themeColors.pageBackground,
+                }}
+                overlayStyle={{
+                    backgroundColor: colorScheme === 'dark'
+                        ? 'rgba(255, 255, 255, 0.1)'
+                        : 'rgba(0, 0, 0, 0.3)',
+                }}
+            >
+                <View style={styles.mainContent}>
+                    {/* Header with safe area top padding */}
+                    <View style={[styles.header, { backgroundColor: themeColors.pageBackground, paddingTop: insets.top + 4 }]}>
+                        <IconButton
+                            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+                            onPress={handleBackPress}
+                            size="md"
+                            color={iconColor}
+                        />
+                        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+                            {t('clientDetail.assistant.title')}
+                        </Text>
+                        <IconButton
+                            icon={{ sf: 'line.3.horizontal.decrease', IconComponent: SlidersHorizontal }}
+                            onPress={handleSessionsPress}
+                            size="md"
+                            color={iconColor}
+                        />
+                    </View>
+
+                    <KeyboardAwareWrapper style={{ flex: 1 }} extraBottomInset={0}>
+                        <ScrollView
+                            style={[styles.scrollView, { backgroundColor: themeColors.pageBackground }]}
+                            contentContainerStyle={styles.scrollContent}
+                        >
+                            {messages.length === 0 ? (
+                                <View style={styles.emptyState}>
+                                    <Text style={[styles.emptyStateText, { color: themeColors.mutedText }]}>
+                                        {t('clientDetail.assistant.emptyState')}
+                                    </Text>
+                                </View>
+                            ) : (
+                                messages.map((message) => (
+                                    <View
+                                        key={message.id}
+                                        style={[
+                                            styles.messageBubble,
+                                            message.role === 'user' ? styles.userMessage : styles.assistantMessage,
+                                            {
+                                                backgroundColor:
+                                                    message.role === 'user'
+                                                        ? themeColors.primary
+                                                        : themeColors.headerBackground,
+                                            },
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.messageText,
+                                                {
+                                                    color:
+                                                        message.role === 'user' ? '#FFFFFF' : themeColors.text,
+                                                },
+                                            ]}
+                                        >
+                                            {message.text}
+                                        </Text>
+                                    </View>
+                                ))
+                            )}
+                        </ScrollView>
+
+                        {/* Composer - positioned absolutely */}
+                        <View style={[styles.composerContainer]}>
                             <View
-                                key={message.id}
                                 style={[
-                                    styles.messageBubble,
-                                    message.role === 'user' ? styles.userMessage : styles.assistantMessage,
+                                    styles.composerWrapper,
                                     {
-                                        backgroundColor:
-                                            message.role === 'user'
-                                                ? themeColors.primary
-                                                : themeColors.headerBackground,
+                                        height: composerHeight,
+                                        backgroundColor: themeColors.headerBackground,
                                     },
                                 ]}
                             >
-                                <Text
-                                    style={[
-                                        styles.messageText,
-                                        {
-                                            color:
-                                                message.role === 'user' ? '#FFFFFF' : themeColors.text,
-                                        },
-                                    ]}
-                                >
-                                    {message.text}
-                                </Text>
+                                <KeyboardComposer
+                                    placeholder={t('clientDetail.assistant.placeholder')}
+                                    onSend={handleSend}
+                                    onStop={handleStop}
+                                    onHeightChange={setComposerHeight}
+                                    isStreaming={isStreaming}
+                                    minHeight={48}
+                                    maxHeight={120}
+                                />
                             </View>
-                        ))
-                    )}
-                </ScrollView>
-
-                {/* Composer - positioned absolutely */}
-                <View style={[styles.composerContainer]}>
-                    <View
-                        style={[
-                            styles.composerWrapper,
-                            {
-                                height: composerHeight,
-                                backgroundColor: themeColors.headerBackground,
-                            },
-                        ]}
-                    >
-                        <KeyboardComposer
-                            placeholder={t('clientDetail.assistant.placeholder')}
-                            onSend={handleSend}
-                            onStop={handleStop}
-                            onHeightChange={setComposerHeight}
-                            isStreaming={isStreaming}
-                            minHeight={48}
-                            maxHeight={120}
-                        />
-                    </View>
+                        </View>
+                    </KeyboardAwareWrapper>
                 </View>
-            </KeyboardAwareWrapper>
-        </ScreenWrapper>
+            </Drawer>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
+    screen: {
+        flex: 1,
+    },
+    mainContent: {
+        flex: 1,
+    },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
-        paddingTop: 4,
         paddingBottom: 8,
     },
     headerTitle: {
         ...typography.h5,
         flex: 1,
         textAlign: 'center',
-    },
-    divider: {
-        height: 0.5,
-        width: '100%',
     },
     scrollView: {
         flex: 1,
@@ -212,5 +369,42 @@ const styles = StyleSheet.create({
     composerWrapper: {
         borderRadius: 24,
         overflow: 'hidden',
+    },
+    drawerContent: {
+        flex: 1,
+    },
+    panelHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 12,
+        gap: 8,
+    },
+    searchContainer: {
+        flex: 1,
+    },
+    searchBar: {
+        flex: 1,
+    },
+    sessionsList: {
+        paddingHorizontal: 16,
+        paddingBottom: 20,
+    },
+    sessionItem: {
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        marginBottom: 8,
+        borderWidth: 1,
+    },
+    sessionSummary: {
+        ...typography.p1,
+        fontWeight: '600',
+        marginBottom: 4,
+    },
+    sessionTimestamp: {
+        ...typography.p2,
+        fontSize: 13,
     },
 });

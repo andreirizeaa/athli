@@ -215,9 +215,6 @@ function RootLayoutNav() {
             options={{
               headerShown: false,
               animation: 'slide_from_right',
-              contentStyle: {
-                backgroundColor: themeColors.pageBackground,
-              },
             }}
           />
           <Stack.Screen name="client/[id]/activity" options={{ headerShown: false }} />
