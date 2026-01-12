@@ -32,7 +32,10 @@
       "Bash(npx expo prebuild:*)",
       "Bash(npm run:*)",
       "Bash(for file in apps/athli-mobile/components/features/library/check-ins-tab.tsx apps/athli-mobile/components/features/library/files-tab.tsx apps/athli-mobile/components/features/library/habits-tab.tsx apps/athli-mobile/components/features/library/metrics-tab.tsx apps/athli-mobile/components/features/library/questionnaires-tab.tsx)",
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:reactnavigation.org)",
+      "WebFetch(domain:docs.swmansion.com)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }
