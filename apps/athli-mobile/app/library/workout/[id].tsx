@@ -291,7 +291,7 @@ export default function WorkoutDetailScreen() {
                                         (group.exercises || []).map((ex: any) => transformExercise(ex))
                                     );
                                     // Fix isSupersetNext based on adjacent exercises
-                                    sectionExercises = allExercises.map((ex, idx) => {
+                                    sectionExercises = allExercises.map((ex: any, idx: number) => {
                                         const nextEx = idx < allExercises.length - 1 ? allExercises[idx + 1] : null;
                                         const isSupersetNext = nextEx && ex.supersetGroupId && ex.supersetGroupId === nextEx.supersetGroupId;
                                         return { ...ex, isSupersetNext: isSupersetNext || false };
@@ -309,7 +309,7 @@ export default function WorkoutDetailScreen() {
                                         })
                                     );
                                     // Fix isSupersetNext based on adjacent exercises
-                                    sectionExercises = allExercises.map((ex, idx) => {
+                                    sectionExercises = allExercises.map((ex: any, idx: number) => {
                                         const nextEx = idx < allExercises.length - 1 ? allExercises[idx + 1] : null;
                                         const isSupersetNext = nextEx && ex.supersetGroupId && ex.supersetGroupId === nextEx.supersetGroupId;
                                         return { ...ex, isSupersetNext: isSupersetNext || false };
@@ -364,7 +364,7 @@ export default function WorkoutDetailScreen() {
                                         } as BuilderExercise;
                                     });
                                     // Fix isSupersetNext based on adjacent exercises
-                                    sectionExercises = allExercises.map((ex, idx) => {
+                                    sectionExercises = allExercises.map((ex: any, idx: number) => {
                                         const nextEx = idx < allExercises.length - 1 ? allExercises[idx + 1] : null;
                                         const isSupersetNext = nextEx && ex.supersetGroupId && ex.supersetGroupId === nextEx.supersetGroupId;
                                         return { ...ex, isSupersetNext: isSupersetNext || false };

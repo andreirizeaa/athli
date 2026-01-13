@@ -310,7 +310,6 @@ export default function ClientAssistantScreen() {
                             data={filteredSessions}
                             renderItem={({ item }) => <SessionListItem session={item} />}
                             keyExtractor={(item) => item.id}
-                            estimatedItemSize={70}
                             contentContainerStyle={styles.sessionsList}
                             style={{ flex: 1 }}
                         />

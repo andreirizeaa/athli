@@ -114,7 +114,6 @@ export default function ClientGoalsScreen() {
           data={MOCK_GOALS}
           renderItem={renderGoal}
           keyExtractor={(item) => item.id}
-          estimatedItemSize={70}
           ListEmptyComponent={
             <EmptyState message={t('clientDetail.overview.noGoals')} />
           }

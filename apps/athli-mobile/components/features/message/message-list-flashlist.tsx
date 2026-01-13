@@ -1084,7 +1084,6 @@ export const MessageList = ({
           data={data}
           keyExtractor={(m) => m.id}
           renderItem={renderItem}
-          estimatedItemSize={80}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           scrollEnabled={!isHorizontalDragActive}
