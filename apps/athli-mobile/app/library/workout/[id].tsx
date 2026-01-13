@@ -1047,7 +1047,7 @@ export default function WorkoutDetailScreen() {
                 <View style={styles.header}>
                     <View style={styles.headerLeft}>
                         <IconButton
-                            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+                            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                             onPress={handleBackPress}
                             size="md"
                             color={themeColors.text}

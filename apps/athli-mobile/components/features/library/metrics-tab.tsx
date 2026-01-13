@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, Text, View, Alert } from 'react-native';
 import { ChevronRight, Activity, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { PressableOpacity } from 'pressto';
+import { PressableScale } from 'pressto';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { FlashList } from '@shopify/flash-list';
@@ -162,7 +162,7 @@ export const MetricsTab = () => {
           deleteConfirmTitle={`${t('general.delete')} ${item.name}?`}
         >
           <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
-            <PressableOpacity
+            <PressableScale
               style={styles.rowWrapper}
               onPress={() => handleMetricPress(item)}
             >
@@ -195,7 +195,7 @@ export const MetricsTab = () => {
                 </View>
                 <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
               </View>
-            </PressableOpacity>
+            </PressableScale>
           </ContextMenuWrapper>
         </SwipeableRow>
 

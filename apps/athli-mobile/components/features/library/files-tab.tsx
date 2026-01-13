@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { StyleSheet, Text, View, Alert } from 'react-native';
 import { ChevronRight, FileText, Image as ImageIcon, Video as VideoIcon, Play, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { PressableOpacity } from 'pressto';
+import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -165,7 +165,7 @@ export const FilesTab = () => {
 
   // Helper to get formatted file type label
   const getFormattedFileTypeLabel = (mimeType: string | null | undefined): string => {
-    const fileType = getFileTypeFromMime(mimeType);
+    const fileType = getFileTypeFromMime(mimeType ?? null);
     const labels: Record<string, string> = {
       'image': 'Image',
       'video': 'Video',
@@ -276,15 +276,15 @@ export const FilesTab = () => {
               <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
 
                 {/* Thumbnail - Pressable separately */}
-                <PressableOpacity
+                <PressableScale
                   onPress={() => handleThumbnailPress(item)}
                   style={styles.thumbnailWrapper}
                 >
                   {renderThumbnail(item)}
-                </PressableOpacity>
+                </PressableScale>
 
                 {/* REST of row - Pressable for Edit */}
-                <PressableOpacity
+                <PressableScale
                   style={styles.mainContentPressable}
                   onPress={() => handleFilePress(item)}
                 >
@@ -307,7 +307,7 @@ export const FilesTab = () => {
                     </View>
                   </View>
                   <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-                </PressableOpacity>
+                </PressableScale>
               </View>
             </View>
           </ContextMenuWrapper>

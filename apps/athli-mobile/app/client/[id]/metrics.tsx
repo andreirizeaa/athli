@@ -37,7 +37,7 @@ export default function MetricsScreen() {
     <ScreenWrapper>
       <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
         <IconButton
-          icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}
           size="md"
           color={iconColor}

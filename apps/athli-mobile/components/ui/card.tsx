@@ -15,7 +15,7 @@ export function Card({ children, style }: CardProps) {
       style={[
         styles.card,
         {
-          backgroundColor: themeColors.surface,
+          backgroundColor: themeColors.iconButton,
           borderColor: themeColors.border,
           shadowColor: themeColors.shadowColor,
         },

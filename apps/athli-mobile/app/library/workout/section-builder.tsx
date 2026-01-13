@@ -722,7 +722,7 @@ export default function SectionBuilderScreen() {
                 <View style={styles.header}>
                     <View style={styles.headerLeft}>
                         <IconButton
-                            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+                            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                             onPress={handleBack}
                             size="md"
                             color={themeColors.text}

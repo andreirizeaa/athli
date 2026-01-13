@@ -168,7 +168,7 @@ export default function EmailSignInScreen() {
 
             <View style={styles.header}>
                 <IconButton
-                    icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+                    icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                     onPress={handleBackPress}
                     size="md"
                     color={themeColors.text}

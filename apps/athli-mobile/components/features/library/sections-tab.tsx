@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, Text, View, Alert } from 'react-native';
 import { ChevronRight, Layers } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { PressableOpacity } from 'pressto';
+import { PressableScale } from 'pressto';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { FlashList } from '@shopify/flash-list';
@@ -179,7 +179,7 @@ export const SectionsTab = () => {
           onOpen={registerOpenRow}
           deleteConfirmTitle={`${t('general.delete')} ${item.program}?`}
         >
-          <PressableOpacity
+          <PressableScale
             style={styles.rowWrapper}
             onPress={() => handleSectionPress(item)}
           >
@@ -219,7 +219,7 @@ export const SectionsTab = () => {
               </View>
               <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
             </View>
-          </PressableOpacity>
+          </PressableScale>
         </SwipeableRow>
 
         {!isLastItem && (
