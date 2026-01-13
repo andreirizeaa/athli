@@ -23,6 +23,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { restoreSession } from '@/services/auth/supabase-auth';
 import type { CoachProfile, ClientProfile } from '@/types/profile';
 import QueryProvider from '@/providers/query-provider';
+import { ErrorBoundary as CustomErrorBoundary } from '@/components/ui/error-boundary';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -78,9 +79,11 @@ export default function RootLayout() {
               onPress: () => haptics.medium(),
             }}
           >
-            <KeyboardProvider>
-              <RootLayoutNav />
-            </KeyboardProvider>
+            <CustomErrorBoundary>
+              <KeyboardProvider>
+                <RootLayoutNav />
+              </KeyboardProvider>
+            </CustomErrorBoundary>
           </PressablesConfig>
         </QueryProvider>
       </SafeAreaProvider>
