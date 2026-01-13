@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { StyleSheet, View, Text, useWindowDimensions, TextInput, InteractionManager } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { StyleSheet, View, Text, ScrollView, useWindowDimensions, Keyboard } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, SlidersHorizontal, SquarePen, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,10 +7,10 @@ import { KeyboardComposer, KeyboardAwareWrapper } from '@launchhq/react-native-k
 import { Drawer } from 'react-native-drawer-layout';
 import { FlashList } from '@shopify/flash-list';
 import { PressableOpacity } from 'pressto';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 
 import { typography } from '@/constants/typography';
-import { haptics } from '@/utils/haptics';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
@@ -35,13 +35,6 @@ export default function ClientAssistantScreen() {
     const { width: SCREEN_WIDTH } = useWindowDimensions();
     const PANEL_COLLAPSED = useMemo(() => SCREEN_WIDTH * 0.8, [SCREEN_WIDTH]);
     const LIST_WIDTH = PANEL_COLLAPSED; // keep list constant to avoid jank
-
-    // Animation constants
-    const ANIM = { duration: 320, easing: Easing.out(Easing.cubic) };
-
-    // Refs
-    const closeFromXRef = useRef(false);
-    const searchInputRef = useRef<TextInput>(null);
 
     const [composerHeight, setComposerHeight] = useState(48);
     const [messages, setMessages] = useState<Array<{ id: string; text: string; role: 'user' | 'assistant' }>>([]);
@@ -105,22 +98,18 @@ export default function ClientAssistantScreen() {
         setIsPanelOpen(!isPanelOpen);
     };
 
-    // Cleanup after drawer closes
-    useEffect(() => {
-        if (!isPanelOpen) {
-            InteractionManager.runAfterInteractions(() => {
-                setSearchQuery('');
-                setIsSearchFocused(false);
-                setActiveSessionId('session-1');
-                panelWidth.value = PANEL_COLLAPSED;
-            });
-        }
-    }, [isPanelOpen]);
+    // Handle drawer close - reset width and search state
+    const handleDrawerClose = () => {
+        setIsPanelOpen(false);
+        setIsSearchFocused(false);
+        setSearchQuery('');
+        panelWidth.value = PANEL_COLLAPSED;
+    };
 
     // Create new chat session
     const handleCreateNewSession = () => {
         // Haptic feedback
-        haptics.medium();
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
         // Close the drawer
         setIsPanelOpen(false);
@@ -149,49 +138,40 @@ export default function ClientAssistantScreen() {
         console.log('Selected session:', sessionId);
     };
 
-    // Finish search collapse (called after animation completes)
-    const finishSearchCollapse = () => {
-        setIsSearchFocused(false);
-        setActiveSessionId('session-1');
-    };
-
-    // Collapse search with animation
-    const collapseSearch = () => {
-        panelWidth.value = withTiming(PANEL_COLLAPSED, ANIM, (finished) => {
-            'worklet';
-            if (finished) {
-                runOnJS(finishSearchCollapse)();
-            }
-        });
-    };
-
     // Handle search focus
     const handleSearchFocus = () => {
         setIsSearchFocused(true);
-        setActiveSessionId('');
-        panelWidth.value = withTiming(SCREEN_WIDTH, ANIM);
+        setActiveSessionId(''); // Unhighlight active session
+
+        // Animate panel to full screen with smooth easing
+        panelWidth.value = withTiming(SCREEN_WIDTH, {
+            duration: 320,
+            easing: Easing.out(Easing.cubic),
+        });
     };
 
     // Handle search blur
     const handleSearchBlur = () => {
-        // If X initiated, ignore blur (blur happens before onPress sometimes)
-        if (closeFromXRef.current) {
-            closeFromXRef.current = false;
-            return;
-        }
-        collapseSearch();
+        setIsSearchFocused(false);
+        setActiveSessionId('session-1'); // Restore active session
+
+        // Animate back to collapsed size with smooth easing
+        panelWidth.value = withTiming(PANEL_COLLAPSED, {
+            duration: 320,
+            easing: Easing.out(Easing.cubic),
+        });
     };
 
     // Close search and unfocus
     const handleCloseSearch = () => {
-        haptics.medium();
-
-        // Mark BEFORE blur happens
-        closeFromXRef.current = true;
-
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        Keyboard.dismiss();
         setSearchQuery('');
-        searchInputRef.current?.blur(); // triggers onBlur, but will be ignored
-        collapseSearch();
+        setIsSearchFocused(false);
+        setActiveSessionId('session-1'); // Restore active session
+
+        // Snap back immediately without animation
+        panelWidth.value = PANEL_COLLAPSED;
     };
 
     // TODO: Implement session search
@@ -256,41 +236,6 @@ export default function ClientAssistantScreen() {
         return `${diffDays}d ago`;
     };
 
-    // Message Bubble Component
-    const renderMessageBubble = ({ item }: { item: { id: string; text: string; role: 'user' | 'assistant' } }) => (
-        <View
-            style={[
-                styles.messageBubble,
-                item.role === 'user' ? styles.userMessage : styles.assistantMessage,
-                {
-                    backgroundColor:
-                        item.role === 'user'
-                            ? themeColors.primary
-                            : themeColors.translucentBackground,
-                },
-            ]}
-        >
-            <Text
-                style={[
-                    styles.messageText,
-                    {
-                        color: item.role === 'user' ? '#FFFFFF' : themeColors.text,
-                    },
-                ]}
-            >
-                {item.text}
-            </Text>
-        </View>
-    );
-
-    // Empty state component
-    const renderEmptyState = () => (
-        <View style={styles.emptyState}>
-            <Text style={[styles.emptyStateText, { color: themeColors.mutedText }]}>
-                {t('clientDetail.assistant.emptyState')}
-            </Text>
-        </View>
-    );
 
     // Session List Item Component
     const SessionListItem = ({ session }: { session: ChatSession }) => {
@@ -343,7 +288,6 @@ export default function ClientAssistantScreen() {
                             onFocus={handleSearchFocus}
                             onBlur={handleSearchBlur}
                             placeholder="Search"
-                            inputRef={searchInputRef}
                         />
                     </View>
                     {isSearchFocused ? (
@@ -385,12 +329,12 @@ export default function ClientAssistantScreen() {
             <Drawer
                 open={isPanelOpen}
                 onOpen={() => setIsPanelOpen(true)}
-                onClose={() => setIsPanelOpen(false)}
+                onClose={handleDrawerClose}
                 renderDrawerContent={renderDrawerContent}
                 drawerPosition="right"
-                drawerType="front"
+                drawerType="slide"
                 drawerStyle={{
-                    width: SCREEN_WIDTH,
+                    width: PANEL_COLLAPSED,
                     backgroundColor: 'transparent',
                 }}
                 overlayStyle={{
@@ -403,7 +347,7 @@ export default function ClientAssistantScreen() {
                     {/* Header with safe area top padding */}
                     <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top + 4 }]}>
                         <IconButton
-                            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+                            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
                             onPress={handleBackPress}
                             size="md"
                             color={iconColor}
@@ -420,14 +364,46 @@ export default function ClientAssistantScreen() {
                     </View>
 
                     <KeyboardAwareWrapper style={{ flex: 1 }} extraBottomInset={0}>
-                        <FlashList
-                            data={messages}
-                            renderItem={renderMessageBubble}
-                            keyExtractor={(item) => item.id}
-                            estimatedItemSize={80}
-                            ListEmptyComponent={renderEmptyState}
-                            contentContainerStyle={styles.messagesContent}
-                        />
+                        <ScrollView
+                            style={[styles.scrollView, { backgroundColor: themeColors.backgroundPrimary }]}
+                            contentContainerStyle={styles.scrollContent}
+                        >
+                            {messages.length === 0 ? (
+                                <View style={styles.emptyState}>
+                                    <Text style={[styles.emptyStateText, { color: themeColors.mutedText }]}>
+                                        {t('clientDetail.assistant.emptyState')}
+                                    </Text>
+                                </View>
+                            ) : (
+                                messages.map((message) => (
+                                    <View
+                                        key={message.id}
+                                        style={[
+                                            styles.messageBubble,
+                                            message.role === 'user' ? styles.userMessage : styles.assistantMessage,
+                                            {
+                                                backgroundColor:
+                                                    message.role === 'user'
+                                                        ? themeColors.primary
+                                                        : themeColors.translucentBackground,
+                                            },
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.messageText,
+                                                {
+                                                    color:
+                                                        message.role === 'user' ? '#FFFFFF' : themeColors.text,
+                                                },
+                                            ]}
+                                        >
+                                            {message.text}
+                                        </Text>
+                                    </View>
+                                ))
+                            )}
+                        </ScrollView>
 
                         {/* Composer - positioned absolutely */}
                         <View style={[styles.composerContainer]}>
@@ -436,7 +412,7 @@ export default function ClientAssistantScreen() {
                                     styles.composerWrapper,
                                     {
                                         height: composerHeight,
-                                        backgroundColor: themeColors.surfacePrimary,
+                                        backgroundColor: themeColors.translucentBackground,
                                     },
                                 ]}
                             >
@@ -480,10 +456,6 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        padding: 16,
-        paddingBottom: 24,
-    },
-    messagesContent: {
         padding: 16,
         paddingBottom: 24,
     },
