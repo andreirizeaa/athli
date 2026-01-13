@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { StyleSheet, View, Text, ScrollView, Keyboard, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, SlidersHorizontal, SquarePen, X } from 'lucide-react-native';
@@ -26,6 +26,58 @@ type ChatSession = {
 
 const COLLAPSED_WIDTH_RATIO = 0.8;
 
+// Session list item - extracted and memoized for performance
+type SessionListItemProps = {
+    session: ChatSession;
+    activeSessionId: string;
+    themeColors: any;
+    onSelectSession: (id: string) => void;
+};
+
+const SessionListItem = React.memo(({ session, activeSessionId, themeColors, onSelectSession }: SessionListItemProps) => {
+    const isActive = session.id === activeSessionId;
+
+    return (
+        <PressableOpacity
+            onPress={() => onSelectSession(session.id)}
+            style={styles.sessionItem}
+        >
+            {({ progress }) => (
+                <>
+                    {/* Base background for active state */}
+                    {isActive && (
+                        <View
+                            style={[
+                                StyleSheet.absoluteFill,
+                                { backgroundColor: themeColors.surfacePrimary, borderRadius: 14 },
+                            ]}
+                        />
+                    )}
+                    {/* Press overlay */}
+                    <Animated.View
+                        style={[
+                            StyleSheet.absoluteFill,
+                            {
+                                backgroundColor: themeColors.surfacePrimary,
+                                opacity: progress,
+                                borderRadius: 14,
+                            },
+                        ]}
+                    />
+                    {/* Content */}
+                    <Text
+                        style={[styles.sessionSummary, { color: themeColors.text }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                    >
+                        {session.summary}
+                    </Text>
+                </>
+            )}
+        </PressableOpacity>
+    );
+});
+
 // Panel content as a separate component to properly use hooks
 type PanelContentProps = {
     expansion: SharedValue<number>;
@@ -46,7 +98,7 @@ type PanelContentProps = {
     onSelectSession: (id: string) => void;
 };
 
-const PanelContent = ({
+const PanelContent = React.memo(({
     expansion,
     collapsedOffset,
     visibleWidth,
@@ -66,7 +118,7 @@ const PanelContent = ({
 }: PanelContentProps) => {
     const { colors: themeColors } = useThemePreference();
     const insets = useSafeAreaInsets();
-    const iconColor = themeColors.text;
+    const iconColor = useMemo(() => themeColors.text, [themeColors.text]);
 
     // Trigger list width animation when fully expanded state changes
     useEffect(() => {
@@ -106,57 +158,16 @@ const PanelContent = ({
     });
 
     // Filter sessions
-    const filteredSessions = sessions.filter(
-        (session) =>
-            searchQuery.trim() === '' ||
-            session.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            session.lastMessagePreview.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredSessions = useMemo(
+        () =>
+            sessions.filter(
+                (session) =>
+                    searchQuery.trim() === '' ||
+                    session.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    session.lastMessagePreview.toLowerCase().includes(searchQuery.toLowerCase())
+            ),
+        [sessions, searchQuery]
     );
-
-    // Simple session list item
-    const SessionListItem = ({ session }: { session: ChatSession }) => {
-        const isActive = session.id === activeSessionId;
-
-        return (
-            <PressableOpacity
-                onPress={() => onSelectSession(session.id)}
-                style={styles.sessionItem}
-            >
-                {({ progress }) => (
-                    <>
-                        {/* Base background for active state */}
-                        {isActive && (
-                            <View
-                                style={[
-                                    StyleSheet.absoluteFill,
-                                    { backgroundColor: themeColors.surfacePrimary, borderRadius: 14 },
-                                ]}
-                            />
-                        )}
-                        {/* Press overlay */}
-                        <Animated.View
-                            style={[
-                                StyleSheet.absoluteFill,
-                                {
-                                    backgroundColor: themeColors.surfacePrimary,
-                                    opacity: progress,
-                                    borderRadius: 14,
-                                },
-                            ]}
-                        />
-                        {/* Content */}
-                        <Text
-                            style={[styles.sessionSummary, { color: themeColors.text }]}
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                        >
-                            {session.summary}
-                        </Text>
-                    </>
-                )}
-            </PressableOpacity>
-        );
-    };
 
     return (
         <View
@@ -200,7 +211,14 @@ const PanelContent = ({
                 <Animated.View style={[{ flex: 1 }, listWidthStyle]}>
                     <FlashList
                         data={filteredSessions}
-                        renderItem={({ item }) => <SessionListItem session={item} />}
+                        renderItem={({ item }) => (
+                            <SessionListItem
+                                session={item}
+                                activeSessionId={activeSessionId}
+                                themeColors={themeColors}
+                                onSelectSession={onSelectSession}
+                            />
+                        )}
                         keyExtractor={(item) => item.id}
                         estimatedItemSize={48}
                         contentContainerStyle={styles.sessionsList}
@@ -209,7 +227,7 @@ const PanelContent = ({
             </View>
         </View>
     );
-};
+});
 
 export default function ClientAssistantScreen() {
     const router = useRouter();
