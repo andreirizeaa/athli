@@ -33,6 +33,7 @@ type PanelContentProps = {
     visibleWidth: number; // Width of panel when collapsed (80% of screen)
     screenWidth: number;
     isFullyExpanded: boolean;
+    listWidthProgress: SharedValue<number>;
     sessions: ChatSession[];
     activeSessionId: string;
     searchQuery: string;
@@ -51,6 +52,7 @@ const PanelContent = ({
     visibleWidth,
     screenWidth,
     isFullyExpanded,
+    listWidthProgress,
     sessions,
     activeSessionId,
     searchQuery,
@@ -66,9 +68,6 @@ const PanelContent = ({
     const insets = useSafeAreaInsets();
     const iconColor = themeColors.text;
 
-    // Separate shared value for list width animation
-    const listWidthProgress = useSharedValue(0);
-
     // Trigger list width animation when fully expanded state changes
     useEffect(() => {
         if (isFullyExpanded) {
@@ -77,12 +76,10 @@ const PanelContent = ({
                 easing: Easing.out(Easing.cubic),
             });
         } else {
-            listWidthProgress.value = withTiming(0, {
-                duration: 200,
-                easing: Easing.out(Easing.cubic),
-            });
+            // Snap instantly to collapsed width (no animation)
+            listWidthProgress.value = 0;
         }
-    }, [isFullyExpanded]);
+    }, [isFullyExpanded, listWidthProgress]);
 
     // Animated style for header padding - search bar expands
     const headerPaddingStyle = useAnimatedStyle(() => {
@@ -232,6 +229,9 @@ export default function ClientAssistantScreen() {
     // Refs
     const panelRef = useRef<SlidingPanelRef>(null);
 
+    // Shared values for animations
+    const listWidthProgress = useSharedValue(0);
+
     // Chat state
     const [composerHeight, setComposerHeight] = useState(48);
     const [messages, setMessages] = useState<Array<{ id: string; text: string; role: 'user' | 'assistant' }>>([]);
@@ -313,15 +313,17 @@ export default function ClientAssistantScreen() {
         // Wait for explicit close action
     }, []);
 
-    // Close search (collapse but stay open)
+    // Close search (snap to collapsed state instantly)
     const handleCloseSearch = useCallback(() => {
         haptics.light();
         Keyboard.dismiss();
         setSearchQuery('');
         setIsSearchFocused(false);
         setActiveSessionId('session-1');
-        panelRef.current?.collapse();
-    }, []);
+        // Snap list width instantly before collapsing panel
+        listWidthProgress.value = 0;
+        panelRef.current?.snapToCollapsed();
+    }, [listWidthProgress]);
 
     // Search handler
     const handleSearchSessions = useCallback((query: string) => {
@@ -366,6 +368,7 @@ export default function ClientAssistantScreen() {
                 visibleWidth={VISIBLE_WIDTH}
                 screenWidth={SCREEN_WIDTH}
                 isFullyExpanded={isFullyExpanded}
+                listWidthProgress={listWidthProgress}
                 sessions={sessions}
                 activeSessionId={activeSessionId}
                 searchQuery={searchQuery}
@@ -383,6 +386,7 @@ export default function ClientAssistantScreen() {
             VISIBLE_WIDTH,
             SCREEN_WIDTH,
             isFullyExpanded,
+            listWidthProgress,
             sessions,
             activeSessionId,
             searchQuery,
