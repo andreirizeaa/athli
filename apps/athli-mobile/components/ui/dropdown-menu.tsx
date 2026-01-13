@@ -2,7 +2,6 @@ import React from 'react';
 import { Dimensions, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as ContextMenu from 'zeego/context-menu';
 import * as DropdownMenuZeego from 'zeego/dropdown-menu';
-import * as Haptics from 'expo-haptics';
 import type { LucideIcon } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';

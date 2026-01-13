@@ -5,9 +5,10 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
+
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
@@ -108,13 +109,13 @@ export default function WorkoutDetailScreen() {
         mutationFn: createWorkout,
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['workouts'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             if (router.canGoBack()) {
                 router.back();
             }
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),
@@ -128,13 +129,13 @@ export default function WorkoutDetailScreen() {
         mutationFn: ({ id, data }: { id: string; data: any }) => editWorkout(id, data),
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['workouts'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             if (router.canGoBack()) {
                 router.back();
             }
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),
@@ -148,7 +149,7 @@ export default function WorkoutDetailScreen() {
         mutationFn: createSection,
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['sections'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             Alert.alert(
                 t('general.success'),
                 t('library.section.savedSuccessfully'),
@@ -156,7 +157,7 @@ export default function WorkoutDetailScreen() {
             );
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),

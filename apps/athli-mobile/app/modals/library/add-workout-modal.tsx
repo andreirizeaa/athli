@@ -5,10 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
+
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import {
     WORKOUT_TYPES,
     DIFFICULTY_LEVELS,
@@ -63,11 +64,11 @@ export default function AddWorkoutModal() {
         onSuccess: async () => {
             // Refetch to update the cache and trigger Zustand store update
             await queryClient.refetchQueries({ queryKey: ['workouts'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             handleClose();
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),

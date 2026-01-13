@@ -6,10 +6,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
+
 
 import { useThemePreference, useColorScheme } from '@/stores';
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import {
@@ -101,14 +102,14 @@ export default function EditClientDetailsModal() {
       await queryClient.refetchQueries({ queryKey: ['clients'] });
 
       // Success haptic feedback
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
 
       // Close modal
       handleClose();
     },
     onError: (error: Error) => {
       // Error haptic feedback
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
 
       // Show error alert
       Alert.alert(

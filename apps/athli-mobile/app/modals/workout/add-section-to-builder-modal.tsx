@@ -11,11 +11,12 @@ import Animated, {
     withTiming,
     Easing,
 } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
+
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useQuery } from '@tanstack/react-query';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { SECTION_TYPES, type SectionType } from '@athli/shared-types';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
@@ -127,7 +128,7 @@ export default function AddSectionToBuilderModal() {
 
     const handleTabPress = (tabKey: TabKey) => {
         if (selectedTab !== tabKey) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            haptics.medium();
             setSelectedTab(tabKey);
         }
     };

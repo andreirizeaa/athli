@@ -13,10 +13,10 @@ import Animated, {
     runOnJS,
 } from 'react-native-reanimated';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { defaultMetrics, type DefaultMetric } from '@/constants/metrics';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
@@ -98,11 +98,11 @@ export default function AddMetricModal() {
         onSuccess: async () => {
             // Refetch to update the cache and trigger Zustand store update
             await queryClient.refetchQueries({ queryKey: ['metrics'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             handleClose();
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),
@@ -242,7 +242,7 @@ export default function AddMetricModal() {
 
     const handleTabPress = (tabKey: TabKey) => {
         if (selectedTab !== tabKey) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            haptics.medium();
             setSelectedTab(tabKey);
         }
     };

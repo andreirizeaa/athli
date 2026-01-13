@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Archive, MailCheck } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/stores';

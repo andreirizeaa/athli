@@ -16,9 +16,10 @@ import {
     GestureDetector,
     GestureHandlerRootView,
 } from 'react-native-gesture-handler';
-import * as Haptics from 'expo-haptics';
+
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { useTranslations } from '@/stores';
@@ -183,7 +184,7 @@ const DraggableRow: React.FC<DraggableRowProps> = ({
             hoverIndex.value = index;
             const sectionId = isSection ? item.id : undefined;
             runOnJS(onDragStart)(sectionId);
-            runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+            runOnJS(haptics.medium)();
         })
         .onUpdate((event) => {
             'worklet';
@@ -205,7 +206,7 @@ const DraggableRow: React.FC<DraggableRowProps> = ({
 
             if (hoverIndex.value !== newHoverIndex) {
                 hoverIndex.value = newHoverIndex;
-                runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+                runOnJS(haptics.medium)();
             }
         })
         .onEnd(() => {
@@ -228,7 +229,7 @@ const DraggableRow: React.FC<DraggableRowProps> = ({
             }
 
             runOnJS(onDragEnd)(sectionId);
-            runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+            runOnJS(haptics.medium)();
         });
 
     // Style for the dragged item
@@ -393,7 +394,7 @@ export default function ReorderScreen() {
     }, [collapsedSections]);
 
     const handleToggleSection = useCallback((sectionId: string) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.medium();
         setCollapsedSections(prev => {
             const next = new Set(prev);
             if (next.has(sectionId)) {

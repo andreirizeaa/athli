@@ -1,9 +1,9 @@
 import React, { useState, useImperativeHandle, forwardRef, useMemo } from 'react';
 import { StyleSheet, ScrollView, Alert } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
 
 import { useThemePreference } from '@/stores';
+import { haptics } from '@/utils/haptics';
 import { useTranslations } from '@/stores';
 import { addClient } from '@/services/client-service';
 import { InputBox, SelectInput } from '@/components/ui/form-inputs';
@@ -43,7 +43,7 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
         await queryClient.refetchQueries({ queryKey: ['clients'] });
 
         // Success haptic feedback
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        haptics.success();
 
         // Reset form and close modal
         setName('');
@@ -54,7 +54,7 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
       },
       onError: (error: Error) => {
         // Error haptic feedback
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        haptics.error();
 
         // Show error alert
         Alert.alert(

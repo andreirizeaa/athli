@@ -5,10 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
+
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import {
     EXERCISE_CATEGORY_OPTIONS,
     MUSCLE_GROUP_OPTIONS,
@@ -113,11 +114,11 @@ export default function AddExerciseModal() {
         mutationFn: createExercise,
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['exercises'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             handleClose();
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),
@@ -130,11 +131,11 @@ export default function AddExerciseModal() {
         mutationFn: ({ id, data }: { id: string; data: any }) => editExercise(id, data),
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['exercises'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             handleClose();
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),

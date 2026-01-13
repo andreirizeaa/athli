@@ -14,10 +14,11 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { Reply, Copy, Pencil, Trash2, Send, CheckCircle } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
+
 import Reanimated, { useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { type ThemeColors } from '@/constants/theme';
 import { type ChatMessage, reactTo } from '@/services/chats-service';
 import { type DropdownMenuOption, ContextMenuWrapper } from '@/components/ui/dropdown-menu';
@@ -411,7 +412,7 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
           // Haptic feedback when crossing threshold
           if (clamped >= THRESHOLD && !hapticFiredRef.current) {
             hapticFiredRef.current = true;
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            haptics.medium();
           } else if (clamped < THRESHOLD && hapticFiredRef.current) {
             hapticFiredRef.current = false;
           }

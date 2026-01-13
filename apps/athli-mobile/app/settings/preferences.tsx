@@ -6,6 +6,7 @@ import {
   Text,
   View,
   Alert,
+  Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -20,6 +21,7 @@ import {
   Palette,
   Ruler,
   Sun,
+  Vibrate,
 } from 'lucide-react-native';
 import { typography, iconSizes } from '@/constants/typography';
 import { THEMES } from '@/constants/theme';
@@ -31,6 +33,7 @@ import {
 } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useUnits, type UnitsPreference } from '@/stores';
+import { useHaptics } from '@/stores';
 
 import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
@@ -63,6 +66,7 @@ export default function PreferencesScreen() {
   } = useThemePreference();
   const { t, locale } = useTranslations();
   const { units, setUnits } = useUnits();
+  const { hapticsEnabled, setHapticsEnabled } = useHaptics();
   const insets = useSafeAreaInsets();
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
@@ -91,6 +95,10 @@ export default function PreferencesScreen() {
 
   const handleUnitsChange = (newUnits: UnitsPreference) => {
     setUnits(newUnits);
+  };
+
+  const handleHapticsToggle = (value: boolean) => {
+    setHapticsEnabled(value);
   };
 
   const handleLogout = () => {
@@ -273,6 +281,24 @@ export default function PreferencesScreen() {
               onPress={() => {}}
             />
           </DropdownMenuWrapper>
+          <Separator />
+          {/* Haptics toggle row */}
+          <View style={styles.switchRow}>
+            <View style={styles.switchRowLeft}>
+              <PlatformIcon sf="waveform" IconComponent={Vibrate} size={iconSize} color={iconColor} />
+              <Text style={[styles.switchRowTitle, { color: themeColors.text }]}>
+                {t('preferences.haptics')}
+              </Text>
+            </View>
+            <Switch
+              value={hapticsEnabled}
+              onValueChange={handleHapticsToggle}
+              trackColor={{ false: themeColors.border, true: themeColors.primary }}
+              thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
+              ios_backgroundColor={themeColors.border}
+              style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+            />
+          </View>
         </Card>
       </View>
     </View>
@@ -309,6 +335,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 32,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  switchRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  switchRowTitle: {
+    ...typography.p1,
+    lineHeight: 22,
   },
 });
 
