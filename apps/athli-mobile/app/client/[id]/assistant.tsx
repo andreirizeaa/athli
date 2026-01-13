@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { StyleSheet, View, Text, useWindowDimensions, Keyboard } from 'react-native';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { StyleSheet, View, Text, useWindowDimensions, TextInput, InteractionManager } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, SlidersHorizontal, SquarePen, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +7,7 @@ import { KeyboardComposer, KeyboardAwareWrapper } from '@launchhq/react-native-k
 import { Drawer } from 'react-native-drawer-layout';
 import { FlashList } from '@shopify/flash-list';
 import { PressableOpacity } from 'pressto';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
@@ -35,6 +35,13 @@ export default function ClientAssistantScreen() {
     const { width: SCREEN_WIDTH } = useWindowDimensions();
     const PANEL_COLLAPSED = useMemo(() => SCREEN_WIDTH * 0.8, [SCREEN_WIDTH]);
     const LIST_WIDTH = PANEL_COLLAPSED; // keep list constant to avoid jank
+
+    // Animation constants
+    const ANIM = { duration: 320, easing: Easing.out(Easing.cubic) };
+
+    // Refs
+    const closeFromXRef = useRef(false);
+    const searchInputRef = useRef<TextInput>(null);
 
     const [composerHeight, setComposerHeight] = useState(48);
     const [messages, setMessages] = useState<Array<{ id: string; text: string; role: 'user' | 'assistant' }>>([]);
@@ -98,22 +105,17 @@ export default function ClientAssistantScreen() {
         setIsPanelOpen(!isPanelOpen);
     };
 
-    // Cleanup state after drawer animation completes
-    const cleanupAfterClose = () => {
-        setIsSearchFocused(false);
-        setSearchQuery('');
-        panelWidth.value = PANEL_COLLAPSED;
-    };
-
-    // Handle drawer close
-    const handleDrawerClose = () => {
-        // Update state for gesture/overlay closes (no-op if already false)
-        setIsPanelOpen(false);
-        // Defer cleanup until drawer animation completes (300ms native animation + buffer)
-        setTimeout(() => {
-            cleanupAfterClose();
-        }, 350);
-    };
+    // Cleanup after drawer closes
+    useEffect(() => {
+        if (!isPanelOpen) {
+            InteractionManager.runAfterInteractions(() => {
+                setSearchQuery('');
+                setIsSearchFocused(false);
+                setActiveSessionId('session-1');
+                panelWidth.value = PANEL_COLLAPSED;
+            });
+        }
+    }, [isPanelOpen]);
 
     // Create new chat session
     const handleCreateNewSession = () => {
@@ -147,36 +149,49 @@ export default function ClientAssistantScreen() {
         console.log('Selected session:', sessionId);
     };
 
+    // Finish search collapse (called after animation completes)
+    const finishSearchCollapse = () => {
+        setIsSearchFocused(false);
+        setActiveSessionId('session-1');
+    };
+
+    // Collapse search with animation
+    const collapseSearch = () => {
+        panelWidth.value = withTiming(PANEL_COLLAPSED, ANIM, (finished) => {
+            'worklet';
+            if (finished) {
+                runOnJS(finishSearchCollapse)();
+            }
+        });
+    };
+
     // Handle search focus
     const handleSearchFocus = () => {
         setIsSearchFocused(true);
-        setActiveSessionId(''); // Unhighlight active session
-
-        // Animate panel to full screen with smooth easing
-        panelWidth.value = withTiming(SCREEN_WIDTH, {
-            duration: 320,
-            easing: Easing.out(Easing.cubic),
-        });
+        setActiveSessionId('');
+        panelWidth.value = withTiming(SCREEN_WIDTH, ANIM);
     };
 
     // Handle search blur
     const handleSearchBlur = () => {
-        setIsSearchFocused(false);
-        setActiveSessionId('session-1'); // Restore active session
-
-        // Animate back to collapsed size with smooth easing
-        panelWidth.value = withTiming(PANEL_COLLAPSED, {
-            duration: 320,
-            easing: Easing.out(Easing.cubic),
-        });
+        // If X initiated, ignore blur (blur happens before onPress sometimes)
+        if (closeFromXRef.current) {
+            closeFromXRef.current = false;
+            return;
+        }
+        collapseSearch();
     };
 
     // Close search and unfocus
     const handleCloseSearch = () => {
         haptics.medium();
-        Keyboard.dismiss();
+
+        // Mark BEFORE blur happens
+        closeFromXRef.current = true;
+
         setSearchQuery('');
-        handleSearchBlur();
+        searchInputRef.current?.blur(); // triggers onBlur, but will be ignored
+        collapseSearch();
     };
 
     // TODO: Implement session search
@@ -328,6 +343,7 @@ export default function ClientAssistantScreen() {
                             onFocus={handleSearchFocus}
                             onBlur={handleSearchBlur}
                             placeholder="Search"
+                            inputRef={searchInputRef}
                         />
                     </View>
                     {isSearchFocused ? (
@@ -369,12 +385,12 @@ export default function ClientAssistantScreen() {
             <Drawer
                 open={isPanelOpen}
                 onOpen={() => setIsPanelOpen(true)}
-                onClose={handleDrawerClose}
+                onClose={() => setIsPanelOpen(false)}
                 renderDrawerContent={renderDrawerContent}
                 drawerPosition="right"
-                drawerType="slide"
+                drawerType="front"
                 drawerStyle={{
-                    width: PANEL_COLLAPSED,
+                    width: SCREEN_WIDTH,
                     backgroundColor: 'transparent',
                 }}
                 overlayStyle={{

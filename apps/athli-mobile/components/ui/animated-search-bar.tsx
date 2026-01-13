@@ -13,6 +13,7 @@ type AnimatedSearchBarProps = {
   placeholder?: string;
   onFocus?: () => void;
   onBlur?: () => void;
+  inputRef?: React.RefObject<TextInput | null>;
 };
 
 export const AnimatedSearchBar = ({
@@ -21,6 +22,7 @@ export const AnimatedSearchBar = ({
   placeholder,
   onFocus,
   onBlur,
+  inputRef,
 }: AnimatedSearchBarProps) => {
   const { colors: themeColors } = useThemePreference();
 
@@ -48,6 +50,7 @@ export const AnimatedSearchBar = ({
         />
       </View>
       <TextInput
+        ref={inputRef}
         style={[styles.searchInput, { color: themeColors.text }]}
         placeholder={placeholder}
         placeholderTextColor={themeColors.mutedText}
