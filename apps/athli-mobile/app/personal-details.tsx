@@ -90,7 +90,7 @@ export default function PersonalDetailsScreen() {
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
+    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
       <View
         style={[
           styles.safeArea,
@@ -109,7 +109,7 @@ export default function PersonalDetailsScreen() {
           contentInsetAdjustmentBehavior="never"
         >
           <View style={styles.content}>
-            <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+            <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
               <IconButton
                 icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                 onPress={handleBackPress}

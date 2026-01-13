@@ -39,7 +39,7 @@ export const SearchBar = ({
       style={[
         styles.searchContainer,
         {
-          backgroundColor: themeColors.iconButton,
+          backgroundColor: themeColors.surfacePrimary,
         },
         style,
       ]}

@@ -34,7 +34,7 @@ export default function LogoutConfirmationModal() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background, paddingBottom: 200 }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary, paddingBottom: 200 }]}>
       <View style={styles.content}>
         <Text style={[styles.title, { color: themeColors.text }]}>
           {t('profile.logoutConfirmTitle')}

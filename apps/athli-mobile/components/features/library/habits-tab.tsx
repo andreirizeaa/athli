@@ -189,7 +189,7 @@ export const HabitsTab = () => {
               style={styles.rowWrapper}
               onPress={() => handleHabitPress(item)}
             >
-              <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
+              <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
                 <View style={styles.iconContainer}>
                   <PlatformIcon
                     sf="checkmark.circle.fill"

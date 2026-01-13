@@ -42,7 +42,7 @@ export default function ClientActivityScreen() {
   return (
     <ScreenWrapper scrollable={true}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton
           icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}

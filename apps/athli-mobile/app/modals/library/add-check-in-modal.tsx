@@ -340,15 +340,15 @@ export default function AddCheckInModal() {
     const gradientHeight = headerHeight + 12;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             {/* Fixed Header with gradient */}
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
                     colors={[
-                        hexToRgba(themeColors.background, 1),
-                        hexToRgba(themeColors.background, 0.85),
-                        hexToRgba(themeColors.background, 0.5),
-                        hexToRgba(themeColors.background, 0),
+                        hexToRgba(themeColors.backgroundSecondary, 1),
+                        hexToRgba(themeColors.backgroundSecondary, 0.85),
+                        hexToRgba(themeColors.backgroundSecondary, 0.5),
+                        hexToRgba(themeColors.backgroundSecondary, 0),
                     ]}
                     locations={[0, 0.5, 0.8, 1]}
                     style={[styles.headerGradient, { height: gradientHeight }]}
@@ -460,7 +460,7 @@ export default function AddCheckInModal() {
                                                 {group.label}
                                             </Text>
                                         )}
-                                        <View style={[styles.card, { backgroundColor: themeColors.surfaceSecondary }]}>
+                                        <View style={[styles.card, { backgroundColor: themeColors.backgroundTertiary }]}>
                                             {group.templates.map((template, index) => (
                                                 <React.Fragment key={template.name}>
                                                     {index > 0 && <Separator />}
@@ -502,7 +502,7 @@ export default function AddCheckInModal() {
 
                             {/* Schedule - Optional */}
                             <PressableOpacity
-                                style={[styles.scheduleContainer, { backgroundColor: themeColors.surfaceSecondary }]}
+                                style={[styles.scheduleContainer, { backgroundColor: themeColors.backgroundTertiary }]}
                                 onPress={handleOpenScheduleModal}
                             >
                                 <View style={styles.scheduleContent}>
@@ -532,7 +532,7 @@ export default function AddCheckInModal() {
                                                     hitSlop={8}
                                                 >
                                                     <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                                                        <X {...({ size: 12, color: themeColors.surfaceSecondary, strokeWidth: 3 } as any)} />
+                                                        <X {...({ size: 12, color: themeColors.backgroundTertiary, strokeWidth: 3 } as any)} />
                                                     </View>
                                                 </PressableOpacity>
                                             </View>

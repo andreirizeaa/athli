@@ -191,7 +191,7 @@ export const PhoneNumberInput = ({
       <View style={styles.container}>
         {/* Left Box: Country Code Dropdown */}
         <PressableOpacity
-          style={[styles.codeBox, { backgroundColor: themeColors.iconButton }]}
+          style={[styles.codeBox, { backgroundColor: themeColors.surfacePrimary }]}
           onPress={handleOpenCountryPicker}
         >
           <Text style={[styles.boxLabel, { color: themeColors.mutedText }]}>
@@ -206,7 +206,7 @@ export const PhoneNumberInput = ({
         </PressableOpacity>
 
         {/* Right Box: Phone Number Input */}
-        <View style={[styles.numberBox, { backgroundColor: themeColors.iconButton }]}>
+        <View style={[styles.numberBox, { backgroundColor: themeColors.surfacePrimary }]}>
           <Text style={[styles.boxLabel, { color: themeColors.mutedText }]}>
             {numberLabel}
           </Text>
@@ -242,7 +242,7 @@ export const PhoneNumberInput = ({
         presentationStyle="pageSheet"
         onRequestClose={handleCloseCountryPicker}
       >
-        <View style={[styles.modalContainer, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.modalContainer, { backgroundColor: themeColors.surfacePrimary }]}>
           {/* Country List */}
           <View style={styles.listContainer}>
             <FlashList
@@ -271,10 +271,10 @@ export const PhoneNumberInput = ({
           <View style={[styles.fixedHeader, { height: headerHeight }]}>
             <LinearGradient
               colors={[
-                hexToRgba(themeColors.background, 1),
-                hexToRgba(themeColors.background, 0.85),
-                hexToRgba(themeColors.background, 0.5),
-                hexToRgba(themeColors.background, 0),
+                hexToRgba(themeColors.surfacePrimary, 1),
+                hexToRgba(themeColors.surfacePrimary, 0.85),
+                hexToRgba(themeColors.surfacePrimary, 0.5),
+                hexToRgba(themeColors.surfacePrimary, 0),
               ]}
               locations={[0, 0.5, 0.8, 1]}
               style={[styles.headerGradient, { height: gradientHeight }]}

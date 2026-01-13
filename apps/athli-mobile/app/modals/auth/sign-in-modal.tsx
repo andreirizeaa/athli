@@ -138,10 +138,10 @@ export default function SignInModal() {
                     >
                         <Image
                             source={require('@/assets/icons/apple.png')}
-                            style={[styles.icon, { tintColor: themeColors.pageBackground }]}
+                            style={[styles.icon, { tintColor: themeColors.backgroundPrimary }]}
                             resizeMode="contain"
                         />
-                        <Text style={[styles.buttonText, { color: themeColors.pageBackground }]}>
+                        <Text style={[styles.buttonText, { color: themeColors.backgroundPrimary }]}>
                             {t('auth.signInWithApple')}
                         </Text>
                     </PressableScale>

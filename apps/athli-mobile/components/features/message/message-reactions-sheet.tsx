@@ -133,7 +133,7 @@ export const MessageReactionsSheet = ({
             styles.sheetContainer,
             {
               height: modalHeight,
-              backgroundColor: themeColors.background,
+              backgroundColor: themeColors.backgroundSecondary,
               transform: [{ translateY: sheetTranslateY }],
             },
           ]}
@@ -144,7 +144,7 @@ export const MessageReactionsSheet = ({
               styles.header,
               {
                 paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20,
-                backgroundColor: themeColors.background,
+                backgroundColor: themeColors.backgroundSecondary,
               },
             ]}
           >
@@ -170,7 +170,7 @@ export const MessageReactionsSheet = ({
                   <View
                     style={[
                       styles.avatar,
-                      { backgroundColor: themeColors.surfaceSecondary },
+                      { backgroundColor: themeColors.backgroundTertiary },
                     ]}
                   >
                     <Text style={[styles.avatarText, { color: themeColors.text }]}>

@@ -52,7 +52,7 @@ export function ListRowItem({ icon, title, subtitle, subtitleRight, onPress, sho
             style={({ pressed }) => [
                 styles.row,
                 {
-                    backgroundColor: pressed ? themeColors.surfaceSecondary : 'transparent',
+                    backgroundColor: pressed ? themeColors.backgroundTertiary : 'transparent',
                     opacity: 1 // Reset opacity since we're using background color
                 },
                 style,

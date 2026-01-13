@@ -6,7 +6,7 @@ function CameraPageContent() {
   const { colors: themeColors } = useDarkModeTheme();
   
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
       <Camera />
     </View>
   );

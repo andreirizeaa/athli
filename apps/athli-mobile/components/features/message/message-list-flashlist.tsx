@@ -156,7 +156,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
   const baseTextColor = item.isSent ? themeColors.primaryForeground : themeColors.text;
 
   // Use a subtle flash color based on existing palette (no extra ThemeColors field)
-  const flashTextColor = item.isSent ? themeColors.surface : themeColors.primary;
+  const flashTextColor = item.isSent ? themeColors.backgroundSecondary: themeColors.primary;
 
   const animatedTextColor =
     flashOpacity &&
@@ -480,7 +480,7 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
           },
         ]}
       >
-        <View style={[styles.replyIconContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
+        <View style={[styles.replyIconContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
           <PlatformIcon
             sf="arrowshape.turn.up.left.fill"
             IconComponent={Reply}
@@ -531,7 +531,7 @@ export const MessageList = ({
   const [isHorizontalDragActive, setIsHorizontalDragActive] = useState(false);
   const colorScheme = useColorScheme();
   const isLightMode = colorScheme === 'light';
-  const recipientBackgroundColor = isLightMode ? '#FFFFFF' : themeColors.surfaceSecondary;
+  const recipientBackgroundColor = isLightMode ? '#FFFFFF' : themeColors.backgroundTertiary;
   const messageRefs = useRef<Record<string, View>>({});
   const containerRef = useRef<View>(null);
   const flashAnimations = useRef<Record<string, Animated.Value>>({});
@@ -952,7 +952,7 @@ export const MessageList = ({
             <View
               style={[
                 styles.datePill,
-                { backgroundColor: themeColors.surfaceSecondary },
+                { backgroundColor: themeColors.backgroundTertiary },
                 hideInlinePill && styles.datePillHidden,
               ]}
             >
@@ -1018,7 +1018,7 @@ export const MessageList = ({
                 style={[
                   styles.reactionsInner,
                   {
-                    backgroundColor: themeColors.surface,
+                    backgroundColor: themeColors.backgroundSecondary,
                     shadowColor: themeColors.shadowColor,
                     ...(item.isSent ? { marginRight: 6 } : { marginLeft: 6 }),
                   },
@@ -1121,7 +1121,7 @@ export const MessageList = ({
             ]}
             pointerEvents="none"
           >
-            <View style={[styles.datePill, { backgroundColor: themeColors.surfaceSecondary }]}>
+            <View style={[styles.datePill, { backgroundColor: themeColors.backgroundTertiary }]}>
               <Text style={[styles.datePillText, { color: themeColors.text }]}>
                 {getDatePillLabel(stickyDateForLabel)}
               </Text>

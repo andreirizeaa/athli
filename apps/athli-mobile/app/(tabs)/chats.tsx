@@ -54,7 +54,7 @@ export default function ChatsScreen() {
     }
   }, [openRowCloseFn]);
 
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
+  const mutedSurfaceColor = themeColors.backgroundTertiary;
   const iconColor = themeColors.text;
 
   useEffect(() => {
@@ -294,7 +294,7 @@ export default function ChatsScreen() {
               ]}
             >
               <PressableOpacity
-                style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+                style={[styles.actionButton, { backgroundColor: themeColors.backgroundSecondary }]}
                 onPress={handleArchivePress}
               >
                 <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
@@ -302,7 +302,7 @@ export default function ChatsScreen() {
                 </Text>
               </PressableOpacity>
               <PressableOpacity
-                style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+                style={[styles.actionButton, { backgroundColor: themeColors.backgroundSecondary }]}
                 onPress={handleDeletePress}
               >
                 <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
@@ -322,7 +322,7 @@ export default function ChatsScreen() {
 
               {isEditMode ? (
                 <PressableOpacity
-                  style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
+                  style={[styles.headerButton, { backgroundColor: themeColors.backgroundSecondary }]}
                   onPress={handleEllipsisPress}
                 >
                   <PlatformIcon
@@ -335,7 +335,7 @@ export default function ChatsScreen() {
               ) : (
                 <DropdownMenuWrapper options={dropdownOptions}>
                   <PressableOpacity
-                    style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
+                    style={[styles.headerButton, { backgroundColor: themeColors.backgroundSecondary }]}
                   >
                     <PlatformIcon
                       sf="ellipsis"

@@ -16,7 +16,7 @@ export default function GoalsInjuriesScreen() {
   const insets = useSafeAreaInsets();
 
   const iconColor = themeColors.text;
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
+  const mutedSurfaceColor = themeColors.backgroundTertiary;
 
   const handleBackPress = () => {
     router.back();
@@ -27,7 +27,7 @@ export default function GoalsInjuriesScreen() {
       style={[
         styles.safeArea,
         {
-          backgroundColor: themeColors.pageBackground,
+          backgroundColor: themeColors.backgroundPrimary,
           paddingTop: insets.top,
           paddingBottom: 0,
           paddingLeft: insets.left,
@@ -35,7 +35,7 @@ export default function GoalsInjuriesScreen() {
         },
       ]}
     >
-      <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton
           icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}

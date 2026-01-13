@@ -51,7 +51,7 @@ export function TrainingAddOptions({
         <View style={styles.cardsContainer} pointerEvents="box-none">
           {/* Create a session Card */}
           <PressableOpacity
-            style={[styles.card, { backgroundColor: themeColors.surface }]}
+            style={[styles.card, { backgroundColor: themeColors.backgroundSecondary}]}
             onPress={() => {
               onCreateSessionPress();
             }}
@@ -71,7 +71,7 @@ export function TrainingAddOptions({
 
           {/* One-off session Card */}
           <PressableOpacity
-            style={[styles.card, { backgroundColor: themeColors.surface }]}
+            style={[styles.card, { backgroundColor: themeColors.backgroundSecondary}]}
             onPress={() => {
               onOneOffSessionPress();
             }}

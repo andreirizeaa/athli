@@ -101,7 +101,7 @@ export const SectionBuilderCard = ({
                         <View style={styles.exerciseList}>
                             {section.exercises.map((ex, idx) => (
                                 <View key={ex.id} style={styles.exerciseRow}>
-                                    <View style={[styles.numberCircle, { backgroundColor: themeColors.surfaceSecondary }]}>
+                                    <View style={[styles.numberCircle, { backgroundColor: themeColors.backgroundTertiary }]}>
                                         <Text style={[styles.numberText, { color: themeColors.mutedText }]}>{idx + 1}</Text>
                                     </View>
                                     <Text style={[styles.exerciseName, { color: themeColors.text }]} numberOfLines={1}>

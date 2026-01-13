@@ -296,17 +296,17 @@ export default function HabitOptionsModal() {
     const iosPickerThemeVariant = colorScheme === 'dark' ? 'dark' : 'light';
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             <TouchableWithoutFeedback onPress={handleDismissKeyboard} accessible={false}>
                 <View style={styles.container}>
                     {/* Fixed Header */}
                     <View style={[styles.fixedHeader, { height: headerHeight }]}>
                         <LinearGradient
                             colors={[
-                                hexToRgba(themeColors.background, 1),
-                                hexToRgba(themeColors.background, 0.85),
-                                hexToRgba(themeColors.background, 0.5),
-                                hexToRgba(themeColors.background, 0),
+                                hexToRgba(themeColors.backgroundSecondary, 1),
+                                hexToRgba(themeColors.backgroundSecondary, 0.85),
+                                hexToRgba(themeColors.backgroundSecondary, 0.5),
+                                hexToRgba(themeColors.backgroundSecondary, 0),
                             ]}
                             locations={[0, 0.5, 0.8, 1]}
                             style={[styles.headerGradient, { height: gradientHeight }]}
@@ -342,7 +342,7 @@ export default function HabitOptionsModal() {
                     >
                         <View style={styles.content}>
                             {/* Duration Card */}
-                            <View style={[styles.card, { backgroundColor: themeColors.surfaceSecondary }]}>
+                            <View style={[styles.card, { backgroundColor: themeColors.backgroundTertiary }]}>
                                 {/* Switch Row */}
                                 <View style={styles.switchRow}>
                                     <Text style={[styles.cardTitle, { color: themeColors.text }]}>
@@ -400,7 +400,7 @@ export default function HabitOptionsModal() {
                             </View>
 
                             {/* Notification Card */}
-                            <View style={[styles.card, { backgroundColor: themeColors.surfaceSecondary }]}>
+                            <View style={[styles.card, { backgroundColor: themeColors.backgroundTertiary }]}>
                                 {/* Switch Row */}
                                 <View style={styles.switchRow}>
                                     <Text style={[styles.cardTitle, { color: themeColors.text }]}>

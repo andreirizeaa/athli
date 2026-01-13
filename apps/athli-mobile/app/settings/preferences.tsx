@@ -186,7 +186,7 @@ export default function PreferencesScreen() {
       style={[
         styles.safeArea,
         {
-          backgroundColor: themeColors.pageBackground,
+          backgroundColor: themeColors.backgroundPrimary,
           paddingTop: insets.top,
           paddingBottom: 0,
           paddingLeft: insets.left,
@@ -194,7 +194,7 @@ export default function PreferencesScreen() {
         },
       ]}
     >
-      <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton
           icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}
@@ -205,7 +205,7 @@ export default function PreferencesScreen() {
         <View style={styles.headerRightPlaceholder} />
       </View>
 
-      <View style={[styles.content, { backgroundColor: themeColors.pageBackground }]}>
+      <View style={[styles.content, { backgroundColor: themeColors.backgroundPrimary }]}>
         {/* Theme, Color Palette, Language, Units */}
         <Card style={{ paddingVertical: 12 }}>
           {/* Theme row with dropdown */}

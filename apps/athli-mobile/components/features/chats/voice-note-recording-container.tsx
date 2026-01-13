@@ -89,7 +89,7 @@ export const VoiceNoteRecordingContainer = ({
       <View style={styles.topRow}>
         {isStopped ? (
           // ✅ STOPPED PREVIEW TOP ROW
-          <View style={[styles.previewPill, { backgroundColor: themeColors.surface, borderColor: themeColors.border || 'rgba(0, 0, 0, 0.1)' }]}>
+          <View style={[styles.previewPill, { backgroundColor: themeColors.backgroundSecondary, borderColor: themeColors.border || 'rgba(0, 0, 0, 0.1)' }]}>
             <PressableOpacity
               style={styles.playButton}
               onPress={onTogglePreviewPlay}
@@ -135,7 +135,7 @@ export const VoiceNoteRecordingContainer = ({
               style={[
                 styles.timerPill,
                 {
-                  backgroundColor: hexToRgba(themeColors.headerBackground, 0.35),
+                  backgroundColor: hexToRgba(themeColors.translucentBackground, 0.35),
                   left: timerPillLeft,
                   opacity: isPositioned || pillWidth > 0 ? 1 : 0,
                 },

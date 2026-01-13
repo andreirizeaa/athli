@@ -271,7 +271,7 @@ export default function InboxScreen() {
               ]}
             >
               <PressableOpacity
-                style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+                style={[styles.actionButton, { backgroundColor: themeColors.backgroundSecondary }]}
                 onPress={handleArchivePress}
               >
                 <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
@@ -292,7 +292,7 @@ export default function InboxScreen() {
             <View style={styles.headerButtonContainer}>
               {isEditMode ? (
                 <PressableOpacity
-                  style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
+                  style={[styles.headerButton, { backgroundColor: themeColors.backgroundSecondary }]}
                   onPress={handleEllipsisPress}
                 >
                   <PlatformIcon
@@ -305,7 +305,7 @@ export default function InboxScreen() {
               ) : (
                 <DropdownMenuWrapper options={dropdownOptions}>
                   <PressableOpacity
-                    style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
+                    style={[styles.headerButton, { backgroundColor: themeColors.backgroundSecondary }]}
                   >
                     <PlatformIcon
                       sf="ellipsis"

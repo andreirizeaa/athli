@@ -21,7 +21,7 @@ export const FilledButton = ({ label, onPress, disabled = false, style, textStyl
       style={[
         styles.button,
         {
-          backgroundColor: disabled ? themeColors.surfaceSecondary : themeColors.primary,
+          backgroundColor: disabled ? themeColors.backgroundTertiary : themeColors.primary,
           opacity: disabled ? 0.5 : 1,
         },
         style,

@@ -243,7 +243,7 @@ export default function ClientAssistantScreen() {
                     styles.sessionItem,
                     {
                         backgroundColor: isActive
-                            ? themeColors.surfaceSecondary
+                            ? themeColors.backgroundTertiary
                             : 'transparent',
                     },
                 ]}
@@ -269,7 +269,7 @@ export default function ClientAssistantScreen() {
             <Animated.View
                 style={[
                     styles.panel,
-                    { backgroundColor: themeColors.pageBackground, paddingTop: insets.top + 4 },
+                    { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top + 4 },
                     panelAnimStyle,
                 ]}
                 pointerEvents="auto"
@@ -321,7 +321,7 @@ export default function ClientAssistantScreen() {
     );
 
     return (
-        <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
+        <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
             <Drawer
                 open={isPanelOpen}
                 onOpen={() => setIsPanelOpen(true)}
@@ -341,7 +341,7 @@ export default function ClientAssistantScreen() {
             >
                 <View style={styles.mainContent}>
                     {/* Header with safe area top padding */}
-                    <View style={[styles.header, { backgroundColor: themeColors.pageBackground, paddingTop: insets.top + 4 }]}>
+                    <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top + 4 }]}>
                         <IconButton
                             icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                             onPress={handleBackPress}
@@ -361,7 +361,7 @@ export default function ClientAssistantScreen() {
 
                     <KeyboardAwareWrapper style={{ flex: 1 }} extraBottomInset={0}>
                         <ScrollView
-                            style={[styles.scrollView, { backgroundColor: themeColors.pageBackground }]}
+                            style={[styles.scrollView, { backgroundColor: themeColors.backgroundPrimary }]}
                             contentContainerStyle={styles.scrollContent}
                         >
                             {messages.length === 0 ? (
@@ -381,7 +381,7 @@ export default function ClientAssistantScreen() {
                                                 backgroundColor:
                                                     message.role === 'user'
                                                         ? themeColors.primary
-                                                        : themeColors.headerBackground,
+                                                        : themeColors.translucentBackground,
                                             },
                                         ]}
                                     >
@@ -408,7 +408,7 @@ export default function ClientAssistantScreen() {
                                     styles.composerWrapper,
                                     {
                                         height: composerHeight,
-                                        backgroundColor: themeColors.headerBackground,
+                                        backgroundColor: themeColors.surfacePrimary,
                                     },
                                 ]}
                             >

@@ -20,7 +20,7 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.pageBackground }} edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.backgroundPrimary }} edges={['top', 'bottom']}>
       <View style={styles.container}>
         <View style={styles.titleContainer}>
           <Text style={[styles.title, { color: themeColors.text }]}>{t('welcome.title')}</Text>
@@ -31,7 +31,7 @@ export default function WelcomeScreen() {
             style={[styles.filledButton, { backgroundColor: themeColors.text }]}
             onPress={handleGetStartedPress}
           >
-            <Text style={[styles.filledButtonText, { color: themeColors.pageBackground }]}>{t('welcome.getStarted')}</Text>
+            <Text style={[styles.filledButtonText, { color: themeColors.backgroundPrimary }]}>{t('welcome.getStarted')}</Text>
           </PressableScale>
 
           <PressableScale

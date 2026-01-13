@@ -35,7 +35,7 @@ const ImagePreviewScreen = () => {
 
   const { colors: themeColors } = useDarkModeTheme();
   const insets = useSafeAreaInsets();
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
+  const mutedSurfaceColor = themeColors.backgroundTertiary;
   const iconColor = themeColors.text;
   const showToolbar = fromPicker;
 
@@ -377,7 +377,7 @@ const ImagePreviewScreen = () => {
   // Viewing mode (not from picker) - show scrollable list
   if (!fromPicker) {
     return (
-      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
         <View
           style={[
             styles.safeArea,
@@ -434,7 +434,7 @@ const ImagePreviewScreen = () => {
                   {/* Download button - only show when there's a single image */}
                   {images.length === 1 && (
                     <PressableOpacity
-                      style={[styles.downloadButton, { backgroundColor: themeColors.iconButton }]}
+                      style={[styles.downloadButton, { backgroundColor: themeColors.backgroundSecondary }]}
                       onPress={handleDownload}
                     >
                       <PlatformIcon
@@ -449,7 +449,7 @@ const ImagePreviewScreen = () => {
                   {images.length > 1 && (
                     <DropdownMenuWrapper options={dropdownOptions}>
                       <PressableOpacity
-                        style={[styles.downloadButton, { backgroundColor: themeColors.iconButton }]}
+                        style={[styles.downloadButton, { backgroundColor: themeColors.backgroundSecondary }]}
                         onPress={() => { }}
                       >
                         <PlatformIcon
@@ -544,7 +544,7 @@ const ImagePreviewScreen = () => {
             />
 
             {/* Selected count (centered, not clickable) */}
-            <View style={[styles.selectedCountButton, { backgroundColor: themeColors.iconButton }]}>
+            <View style={[styles.selectedCountButton, { backgroundColor: themeColors.backgroundSecondary }]}>
               <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
                 {selectedImageIds.size} item{selectedImageIds.size !== 1 ? 's' : ''} selected
               </Text>
@@ -553,7 +553,7 @@ const ImagePreviewScreen = () => {
             {/* Trash button (only for sent messages within 1 hour) */}
             {canShowDelete && (
               <PressableOpacity
-                style={[styles.closeButton, { backgroundColor: themeColors.iconButton }]}
+                style={[styles.closeButton, { backgroundColor: themeColors.backgroundSecondary }]}
                 onPress={handleDeleteSelected}
               >
                 <PlatformIcon

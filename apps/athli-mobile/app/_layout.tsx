@@ -157,7 +157,7 @@ function RootLayoutNav() {
         colors: {
           ...DarkTheme.colors,
           primary: primaryColor,
-          background: themeColors.pageBackground,
+          background: themeColors.backgroundPrimary,
         },
       }
       : {
@@ -165,12 +165,12 @@ function RootLayoutNav() {
         colors: {
           ...DefaultTheme.colors,
           primary: primaryColor,
-          background: themeColors.pageBackground,
+          background: themeColors.backgroundPrimary,
         },
       };
 
   return (
-    <RNView style={{ flex: 1, backgroundColor: themeColors.pageBackground }}>
+    <RNView style={{ flex: 1, backgroundColor: themeColors.backgroundPrimary }}>
       <ThemeProvider value={navigationTheme}>
         <StatusBar
           style={colorScheme === 'dark' ? 'light' : 'dark'}
@@ -182,7 +182,7 @@ function RootLayoutNav() {
           screenOptions={{
             headerTransparent: true,
             contentStyle: {
-              backgroundColor: themeColors.pageBackground,
+              backgroundColor: themeColors.backgroundPrimary,
             },
           }}
         >
@@ -247,7 +247,7 @@ function RootLayoutNav() {
               headerShown: false,
               animation: 'slide_from_right',
               contentStyle: {
-                backgroundColor: themeColors.pageBackground,
+                backgroundColor: themeColors.backgroundPrimary,
               },
             }}
           />
@@ -257,7 +257,7 @@ function RootLayoutNav() {
               headerShown: false,
               animation: 'slide_from_right',
               contentStyle: {
-                backgroundColor: themeColors.pageBackground,
+                backgroundColor: themeColors.backgroundPrimary,
               },
             }}
           />
@@ -267,7 +267,7 @@ function RootLayoutNav() {
               headerShown: false,
               animation: 'slide_from_right',
               contentStyle: {
-                backgroundColor: themeColors.pageBackground,
+                backgroundColor: themeColors.backgroundPrimary,
               },
             }}
           />

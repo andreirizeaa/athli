@@ -45,7 +45,7 @@ export const AttachmentPreviewScreen = ({
 }: AttachmentPreviewScreenProps) => {
   const { colors: themeColors } = useDarkModeTheme();
   const insets = useSafeAreaInsets();
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
+  const mutedSurfaceColor = themeColors.backgroundTertiary;
   const iconColor = themeColors.text;
   const scrollViewRef = useRef<ScrollView>(null);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -85,7 +85,7 @@ export const AttachmentPreviewScreen = ({
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
         <StatusBar hidden />
         <RNImage source={{ uri: selectedImage.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
 

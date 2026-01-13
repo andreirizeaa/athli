@@ -163,10 +163,10 @@ export default function Camera() {
   }, [device]);
 
   const iconColor = themeColors.text;
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
+  const mutedSurfaceColor = themeColors.backgroundTertiary;
 
   // Create translucent background color for frosted glass effect (60% opacity)
-  const headerBackgroundColor = themeColors.headerBackground;
+  const headerBackgroundColor = themeColors.translucentBackground;
   const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.6);
 
   useEffect(() => {
@@ -747,7 +747,7 @@ export default function Camera() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
       <StatusBar hidden />
       <VisionCamera
         ref={cameraRef}

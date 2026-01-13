@@ -37,7 +37,7 @@ export const ChatHeader = ({
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
 
-  const headerBackgroundColor = themeColors.headerBackground;
+  const headerBackgroundColor = themeColors.translucentBackground;
   const iconColor = themeColors.text;
   const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.95);
 

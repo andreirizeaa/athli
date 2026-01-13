@@ -233,7 +233,7 @@ export const ExercisesTab = () => {
           deleteConfirmTitle={`${t('general.delete')} ${exercise.name}?`}
         >
           <View style={styles.rowWrapper}>
-            <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
+            <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
               {/* Thumbnail - Separate Pressable */}
               <PressableScale
                 onPress={() => handleThumbnailPress(exercise)}
@@ -252,7 +252,7 @@ export const ExercisesTab = () => {
                     </View>
                   </View>
                 ) : (
-                  <View style={[styles.iconContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
+                  <View style={[styles.iconContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
                     <PlatformIcon
                       sf="figure.strengthtraining.traditional"
                       IconComponent={Dumbbell}

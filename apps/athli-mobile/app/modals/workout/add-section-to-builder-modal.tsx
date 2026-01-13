@@ -425,15 +425,15 @@ export default function AddSectionToBuilderModal() {
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             {/* Header */}
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
                     colors={[
-                        hexToRgba(themeColors.background, 1),
-                        hexToRgba(themeColors.background, 0.85),
-                        hexToRgba(themeColors.background, 0.5),
-                        hexToRgba(themeColors.background, 0),
+                        hexToRgba(themeColors.backgroundSecondary, 1),
+                        hexToRgba(themeColors.backgroundSecondary, 0.85),
+                        hexToRgba(themeColors.backgroundSecondary, 0.5),
+                        hexToRgba(themeColors.backgroundSecondary, 0),
                     ]}
                     locations={[0, 0.5, 0.8, 1]}
                     style={[styles.headerGradient, { height: headerHeight + 12 }]}
@@ -561,7 +561,7 @@ export default function AddSectionToBuilderModal() {
                                                 style={styles.rowWrapper}
                                                 onPress={() => handleSelectSavedSection(item)}
                                             >
-                                                <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
+                                                <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
                                                     <View style={styles.iconContainer}>
                                                         <PlatformIcon
                                                             sf="square.stack.3d.up.fill"
@@ -629,7 +629,7 @@ export default function AddSectionToBuilderModal() {
                             autoFocus
                         />
 
-                        <View style={[styles.card, { backgroundColor: themeColors.surfaceSecondary }]}>
+                        <View style={[styles.card, { backgroundColor: themeColors.backgroundTertiary }]}>
                             <DropdownMenuWrapper options={sectionTypeOptions.map(opt => ({
                                 label: opt.label,
                                 subtitle: opt.subtitle,

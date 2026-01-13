@@ -39,7 +39,7 @@ export const TextAreaInput = forwardRef<TextAreaInputRef, TextAreaInputProps>(
     }));
 
     return (
-      <View style={[styles.inputBox, { backgroundColor: themeColors.iconButton }]}>
+      <View style={[styles.inputBox, { backgroundColor: themeColors.surfacePrimary }]}>
         <View style={styles.labelRow}>
           <View style={styles.labelLeft}>
             <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
@@ -54,7 +54,7 @@ export const TextAreaInput = forwardRef<TextAreaInputRef, TextAreaInputProps>(
               hitSlop={8}
             >
               <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                <X {...({ size: 10, color: themeColors.iconButton, strokeWidth: 3 } as any)} />
+                <X {...({ size: 10, color: themeColors.surfacePrimary, strokeWidth: 3 } as any)} />
               </View>
             </PressableOpacity>
           )}

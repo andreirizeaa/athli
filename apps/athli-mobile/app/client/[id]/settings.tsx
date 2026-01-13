@@ -67,7 +67,7 @@ export default function ClientSettingsScreen() {
 
     return (
         <ScreenWrapper contentContainerStyle={styles.scrollContent}>
-            <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+            <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
                 <IconButton
                     icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                     onPress={handleBackPress}

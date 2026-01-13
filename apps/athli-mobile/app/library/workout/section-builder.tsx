@@ -694,14 +694,14 @@ export default function SectionBuilderScreen() {
     const totalExercises = state.exercises.length;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
                     colors={[
-                        hexToRgba(themeColors.background, 1),
-                        hexToRgba(themeColors.background, 0.85),
-                        hexToRgba(themeColors.background, 0.5),
-                        hexToRgba(themeColors.background, 0),
+                        hexToRgba(themeColors.backgroundSecondary, 1),
+                        hexToRgba(themeColors.backgroundSecondary, 0.85),
+                        hexToRgba(themeColors.backgroundSecondary, 0.5),
+                        hexToRgba(themeColors.backgroundSecondary, 0),
                     ]}
                     locations={[0, 0.5, 0.8, 1]}
                     style={[styles.headerGradient, { height: gradientHeight }]}
@@ -753,7 +753,7 @@ export default function SectionBuilderScreen() {
                         required
                     />
 
-                    <View style={[styles.configCard, { backgroundColor: themeColors.surfaceSecondary }]}>
+                    <View style={[styles.configCard, { backgroundColor: themeColors.backgroundTertiary }]}>
                         <DropdownMenuWrapper options={SECTION_TYPES.map((type) => ({
                             label: type.label,
                             subtitle: type.description,
@@ -973,7 +973,7 @@ export default function SectionBuilderScreen() {
                                             style={[
                                                 styles.supersetButton,
                                                 {
-                                                    backgroundColor: isLinkedToNext ? themeColors.background : themeColors.surfaceSecondary,
+                                                    backgroundColor: isLinkedToNext ? themeColors.backgroundSecondary : themeColors.backgroundTertiary,
                                                     borderColor: themeColors.border,
                                                     paddingVertical: 4,
                                                     marginHorizontal: !isLinkedToNext ? 12 : 0,
@@ -1006,19 +1006,19 @@ export default function SectionBuilderScreen() {
             <View style={[
                 styles.bottomBarContainer,
                 {
-                    backgroundColor: themeColors.pageBackground,
+                    backgroundColor: themeColors.backgroundPrimary,
                     paddingBottom: insets.bottom + 12,
                     borderTopColor: themeColors.border,
                 }
             ]}>
                 <View style={styles.bottomBarContent}>
-                    <View style={[styles.countCircle, { backgroundColor: themeColors.iconButton }]}>
+                    <View style={[styles.countCircle, { backgroundColor: themeColors.backgroundSecondary }]}>
                         <Text style={[styles.countText, { color: themeColors.text }]}>{totalExercises}</Text>
                     </View>
 
                     <View style={styles.buttonWrapper}>
                         <PressableScale
-                            style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+                            style={[styles.actionButton, { backgroundColor: themeColors.backgroundSecondary }]}
                             onPress={handleReorder}
                         >
                             <Repeat {...({ size: 18, color: themeColors.text, style: styles.buttonIcon } as any)} />
@@ -1028,7 +1028,7 @@ export default function SectionBuilderScreen() {
 
                     <View style={styles.buttonWrapper}>
                         <PressableScale
-                            style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+                            style={[styles.actionButton, { backgroundColor: themeColors.backgroundSecondary }]}
                             onPress={handleAddExercise}
                         >
                             <Plus {...({ size: 18, color: themeColors.text, style: styles.buttonIcon } as any)} />

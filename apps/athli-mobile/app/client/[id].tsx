@@ -187,7 +187,7 @@ export default function ClientProfileScreen() {
   return (
     <ScreenWrapper scrollable={true}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton
           icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}
@@ -206,7 +206,7 @@ export default function ClientProfileScreen() {
       </View>
 
       {/* Profile Card */}
-      <View style={[styles.profileCard, { backgroundColor: themeColors.iconButton }]}>
+      <View style={[styles.profileCard, { backgroundColor: themeColors.backgroundSecondary }]}>
         <View style={styles.avatarLarge}>
           {client?.avatarUrl ? (
             <Image
@@ -231,7 +231,7 @@ export default function ClientProfileScreen() {
           style={[
             styles.editButton,
             {
-              backgroundColor: `${themeColors.surfaceSecondary}`,
+              backgroundColor: `${themeColors.backgroundTertiary}`,
             },
           ]}
           onPress={handleEditProfilePress}

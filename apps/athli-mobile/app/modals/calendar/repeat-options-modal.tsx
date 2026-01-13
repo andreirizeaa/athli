@@ -156,9 +156,9 @@ export default function RepeatOptionsModal() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20, backgroundColor: themeColors.background }]}>
+      <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20, backgroundColor: themeColors.backgroundSecondary }]}>
         <IconButton
           icon={{ sf: 'xmark', IconComponent: X }}
           onPress={handleClose}
@@ -179,13 +179,13 @@ export default function RepeatOptionsModal() {
       {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Button Group */}
-        <View style={[styles.buttonGroup, { backgroundColor: themeColors.surfaceSecondary }]}>
+        <View style={[styles.buttonGroup, { backgroundColor: themeColors.backgroundTertiary }]}>
           <PressableOpacity
             style={[
               styles.buttonGroupButton,
               selectedOption === 'weekly' && [
                 styles.buttonGroupButtonActive,
-                { backgroundColor: themeColors.background },
+                { backgroundColor: themeColors.backgroundSecondary },
               ],
             ]}
             onPress={() => setSelectedOption('weekly')}
@@ -205,7 +205,7 @@ export default function RepeatOptionsModal() {
               styles.buttonGroupButton,
               selectedOption === 'monthly' && [
                 styles.buttonGroupButtonActive,
-                { backgroundColor: themeColors.background },
+                { backgroundColor: themeColors.backgroundSecondary },
               ],
             ]}
             onPress={() => setSelectedOption('monthly')}

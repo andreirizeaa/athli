@@ -352,15 +352,15 @@ export default function AddMetricModal() {
     const gradientHeight = headerHeight + 12;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             {/* Fixed Header with gradient */}
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
                     colors={[
-                        hexToRgba(themeColors.background, 1),
-                        hexToRgba(themeColors.background, 0.85),
-                        hexToRgba(themeColors.background, 0.5),
-                        hexToRgba(themeColors.background, 0),
+                        hexToRgba(themeColors.backgroundSecondary, 1),
+                        hexToRgba(themeColors.backgroundSecondary, 0.85),
+                        hexToRgba(themeColors.backgroundSecondary, 0.5),
+                        hexToRgba(themeColors.backgroundSecondary, 0),
                     ]}
                     locations={[0, 0.5, 0.8, 1]}
                     style={[styles.headerGradient, { height: gradientHeight }]}
@@ -470,7 +470,7 @@ export default function AddMetricModal() {
                                         <Text style={[styles.categoryLabel, { color: themeColors.mutedText }]}>
                                             {section.label}
                                         </Text>
-                                        <Card style={{ backgroundColor: themeColors.surfaceSecondary }}>
+                                        <Card style={{ backgroundColor: themeColors.backgroundTertiary }}>
                                             {section.metrics.map((metric, index) => (
                                                 <React.Fragment key={metric.name}>
                                                     {index > 0 && <Separator />}
@@ -509,7 +509,7 @@ export default function AddMetricModal() {
 
                             {/* Log Frequency - Optional */}
                             <PressableOpacity
-                                style={[styles.scheduleContainer, { backgroundColor: themeColors.surfaceSecondary }]}
+                                style={[styles.scheduleContainer, { backgroundColor: themeColors.backgroundTertiary }]}
                                 onPress={handleOpenScheduleModal}
                             >
                                 <View style={styles.scheduleContent}>
@@ -539,7 +539,7 @@ export default function AddMetricModal() {
                                                     hitSlop={8}
                                                 >
                                                     <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                                                        <X {...({ size: 12, color: themeColors.surfaceSecondary, strokeWidth: 3 } as any)} />
+                                                        <X {...({ size: 12, color: themeColors.backgroundTertiary, strokeWidth: 3 } as any)} />
                                                     </View>
                                                 </PressableOpacity>
                                             </View>

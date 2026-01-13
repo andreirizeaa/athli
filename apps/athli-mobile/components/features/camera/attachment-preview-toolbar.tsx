@@ -28,10 +28,10 @@ export const AttachmentPreviewToolbar = ({
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = true; // Always dark mode
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
+  const mutedSurfaceColor = themeColors.backgroundTertiary;
 
   // Create translucent background color for frosted glass effect (60% opacity)
-  const translucentHeaderBg = hexToRgba(themeColors.headerBackground, 0.6);
+  const translucentHeaderBg = hexToRgba(themeColors.translucentBackground, 0.6);
 
   return (
     <>
@@ -63,7 +63,7 @@ export const AttachmentPreviewToolbar = ({
         >
           <View style={styles.content}>
             {clientName && (
-              <View style={[styles.clientNameContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
+              <View style={[styles.clientNameContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
                 <Text style={[styles.clientNameText, { color: themeColors.text }]} numberOfLines={1}>
                   {clientName}
                 </Text>
