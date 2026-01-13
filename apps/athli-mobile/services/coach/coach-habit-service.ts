@@ -117,12 +117,13 @@ export const addHabit = async (data: AddHabitData): Promise<Habit> => {
  * Service method to edit a habit in coach's library
  * This will be connected to the backend in the future
  */
-export const editHabit = async (data: EditHabitData): Promise<void> => {
+export const editHabit = async (data: EditHabitData): Promise<Habit> => {
   const { id, ...rest } = data;
-  await apiFetch(`/coach/habits/${id}`, {
+  const response = await apiFetch<{ data: { habit: DBHabit } }>(`/coach/habits/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(mapHabitDataToDB(rest)) as any,
   });
+  return mapDBHabitToHabit(response.data.habit);
 };
 
 /**

@@ -113,7 +113,6 @@ export default function ClientInjuriesScreen() {
           data={MOCK_INJURIES}
           renderItem={renderInjury}
           keyExtractor={(item) => item.id}
-          estimatedItemSize={70}
           ListEmptyComponent={
             <EmptyState message={t('clientDetail.overview.noInjuries')} />
           }
