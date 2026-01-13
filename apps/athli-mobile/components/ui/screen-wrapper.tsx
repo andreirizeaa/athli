@@ -32,7 +32,7 @@ export const ScreenWrapper = ({
 
   if (scrollable) {
     return (
-      <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
+      <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
         <View
           style={[
             styles.safeArea,
@@ -63,7 +63,7 @@ export const ScreenWrapper = ({
 
   // Static layout (no ScrollView)
   return (
-    <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
+    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
       <View
         style={[
           styles.container,

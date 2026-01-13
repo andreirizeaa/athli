@@ -288,7 +288,7 @@ export default function EditClientDetailsScreen() {
   if (isLoading) {
     return (
       <ScreenWrapper scrollable={false}>
-        <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+        <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
           <IconButton
             icon={{ sf: 'xmark', IconComponent: X }}
             onPress={handleClose}
@@ -307,7 +307,7 @@ export default function EditClientDetailsScreen() {
   return (
     <ScreenWrapper scrollable={true}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton
           icon={{ sf: 'xmark', IconComponent: X }}
           onPress={handleCloseWithConfirmation}

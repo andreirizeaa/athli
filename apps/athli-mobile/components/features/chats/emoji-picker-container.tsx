@@ -129,7 +129,7 @@ export const EmojiPickerContainer = ({
           top: emojiPickerTop,
           width: emojiPickerWidth,
           height: emojiPickerHeight,
-          backgroundColor: fullThemeColors.surface,
+          backgroundColor: fullThemeColors.backgroundSecondary,
           borderColor: fullThemeColors.border,
           shadowColor: fullThemeColors.shadowColor,
         },
@@ -151,7 +151,7 @@ export const EmojiPickerContainer = ({
               style={[
                 styles.emojiShortcut,
                 isCurrentReaction && {
-                  backgroundColor: fullThemeColors.surfaceSecondary,
+                  backgroundColor: fullThemeColors.backgroundTertiary,
                   borderRadius: 18,
                 },
               ]}
@@ -171,14 +171,14 @@ export const EmojiPickerContainer = ({
           {
             width: plusButtonSize,
             height: plusButtonSize,
-            backgroundColor: fullThemeColors.surface,
+            backgroundColor: fullThemeColors.backgroundSecondary,
           },
         ]}
         onPress={handlePlusPress}
       >
         {/* Blur/fade effect on the left edge of plus button */}
         <LinearGradient
-          colors={[fullThemeColors.surface, 'transparent']}
+          colors={[fullThemeColors.backgroundSecondary, 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 0.3, y: 0 }}
           style={styles.plusButtonFade}

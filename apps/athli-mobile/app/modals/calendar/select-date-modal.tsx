@@ -336,7 +336,7 @@ export default function SelectDateModal() {
   }, [currentPageIndex, monthsData, handleDateSelect]);
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background, paddingBottom: 200 }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary, paddingBottom: 200 }]}>
       <View style={styles.header}>
         <View style={styles.headerSideLeft} />
         <Text style={[styles.title, { color: themeColors.text }]} pointerEvents="none">
@@ -344,7 +344,7 @@ export default function SelectDateModal() {
         </Text>
         <View style={styles.headerSideRight}>
           <PressableOpacity
-            style={[styles.todayButton, { backgroundColor: themeColors.iconButton }]}
+            style={[styles.todayButton, { backgroundColor: themeColors.backgroundSecondary }]}
             onPress={handleSelectToday}
           >
             <Text style={[styles.todayButtonText, { color: themeColors.text }]}>{t('calendar.today')}</Text>

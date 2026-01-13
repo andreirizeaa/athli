@@ -312,17 +312,17 @@ export default function AddFileModal() {
     const gradientHeight = headerHeight + 12;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             <TouchableWithoutFeedback onPress={handleDismissKeyboard} accessible={false}>
                 <View style={styles.container}>
                     {/* Header with gradient */}
                     <View style={[styles.fixedHeader, { height: headerHeight }]}>
                         <LinearGradient
                             colors={[
-                                hexToRgba(themeColors.background, 1),
-                                hexToRgba(themeColors.background, 0.85),
-                                hexToRgba(themeColors.background, 0.5),
-                                hexToRgba(themeColors.background, 0),
+                                hexToRgba(themeColors.backgroundSecondary, 1),
+                                hexToRgba(themeColors.backgroundSecondary, 0.85),
+                                hexToRgba(themeColors.backgroundSecondary, 0.5),
+                                hexToRgba(themeColors.backgroundSecondary, 0),
                             ]}
                             locations={[0, 0.5, 0.8, 1]}
                             style={[styles.headerGradient, { height: gradientHeight }]}
@@ -373,7 +373,7 @@ export default function AddFileModal() {
                         />
 
                         {/* File Type Selection */}
-                        <View style={[styles.attachSection, { backgroundColor: themeColors.surfaceSecondary }]}>
+                        <View style={[styles.attachSection, { backgroundColor: themeColors.backgroundTertiary }]}>
                             <View style={styles.attachLabelRow}>
                                 <Text style={[styles.attachLabel, { color: themeColors.mutedText }]}>
                                     {t('files.addFile.attachFile')}
@@ -489,7 +489,7 @@ export default function AddFileModal() {
                                                 hitSlop={8}
                                             >
                                                 <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                                                    <X {...({ size: 12, color: themeColors.surfaceSecondary, strokeWidth: 3 } as any)} />
+                                                    <X {...({ size: 12, color: themeColors.backgroundTertiary, strokeWidth: 3 } as any)} />
                                                 </View>
                                             </PressableOpacity>
                                         )}

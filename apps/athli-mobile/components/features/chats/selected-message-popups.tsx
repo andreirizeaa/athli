@@ -111,7 +111,7 @@ export const SelectedMessagePopups = ({
   const blurTint = colorScheme === 'dark' ? 'dark' : 'light';
   const colorSchemeHook = useColorScheme();
   const isLightMode = colorSchemeHook === 'light';
-  const effectiveRecipientBackgroundColor = recipientBackgroundColor || (isLightMode ? '#FFFFFF' : themeColors.surfaceSecondary);
+  const effectiveRecipientBackgroundColor = recipientBackgroundColor || (isLightMode ? '#FFFFFF' : themeColors.backgroundTertiary);
 
   // Find the original message if this is a reply
   const originalMessage = useMemo(() => {
@@ -412,14 +412,14 @@ export const SelectedMessagePopups = ({
           enableSearchBar
           theme={{
             backdrop: '#00000055',
-            container: fullThemeColors.surface,
+            container: fullThemeColors.backgroundSecondary,
             header: fullThemeColors.text,
             skinTonesContainer: colorScheme === 'dark' ? '#2a2a2a' : '#e3dbcd',
             category: {
               icon: fullThemeColors.mutedText || fullThemeColors.text,
               iconActive: fullThemeColors.primary,
               container: colorScheme === 'dark' ? '#2a2a2a' : '#e3dbcd',
-              containerActive: fullThemeColors.surface,
+              containerActive: fullThemeColors.backgroundSecondary,
             },
             search: {
               text: fullThemeColors.text,

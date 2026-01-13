@@ -166,7 +166,7 @@ export default function ClientTrainingScreen() {
 
     return (
         <ScreenWrapper>
-            <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+            <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
                 <IconButton
                     icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                     onPress={handleBackPress}

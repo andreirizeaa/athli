@@ -495,12 +495,12 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
       <View style={[styles.separator, { backgroundColor: themeColors.border }]} />
       <View
         style={[
           styles.navigationBar,
-          { paddingBottom: insets.bottom + 8, backgroundColor: themeColors.background },
+          { paddingBottom: insets.bottom + 8, backgroundColor: themeColors.backgroundSecondary },
         ]}
       >
         <View style={styles.tabsContainer}>

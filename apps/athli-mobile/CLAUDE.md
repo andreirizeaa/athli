@@ -127,19 +127,25 @@ const MyComponent = () => {
 ```
 
 ### Available Theme Colors (`ThemeColors`)
-- `pageBackground` - Main page background
-- `background` - Component backgrounds
-- `surface` - Card/elevated surfaces
-- `surfaceSecondary` - Secondary surfaces
+
+**Backgrounds** (for pages, modals, containers):
+- `backgroundPrimary` - Main screen/page background
+- `backgroundSecondary` - Modal backgrounds, card containers
+- `backgroundTertiary` - Alternative background areas
+
+**Surfaces** (for buttons, inputs, interactive elements):
+- `surfacePrimary` - Primary buttons, inputs, clickable surfaces
+- `surfaceSecondary` - Secondary buttons, muted interactive elements
+- `surfaceTertiary` - Tertiary interactive surfaces, disabled states
+
+**Text & Accents**:
 - `text` - Primary text color
 - `mutedText` - Secondary/muted text
 - `primary` - Primary accent color
 - `primaryForeground` - Text on primary backgrounds
 - `primarySoft` - Soft primary accent
 - `border` - Border colors
-- `searchBarBackground` - Search input background
-- `iconButton` - Icon button backgrounds
-- `headerBackground` - Header backgrounds
+- `translucentBackground` - Translucent overlays and headers
 
 ### Typography
 

@@ -57,7 +57,7 @@ export default function MetricsModal() {
     const renderItem = ({ item }: { item: { section: string; metrics: DefaultMetric[] } }) => (
         <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{item.section}</Text>
-            <View style={[styles.listContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
+            <View style={[styles.listContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
                 {item.metrics.map((metric, index) => (
                     <React.Fragment key={metric.name}>
                         {index > 0 && <Separator />}
@@ -78,15 +78,15 @@ export default function MetricsModal() {
     );
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             {/* Header */}
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
                     colors={[
-                        hexToRgba(themeColors.background, 1),
-                        hexToRgba(themeColors.background, 0.85),
-                        hexToRgba(themeColors.background, 0.5),
-                        hexToRgba(themeColors.background, 0),
+                        hexToRgba(themeColors.backgroundSecondary, 1),
+                        hexToRgba(themeColors.backgroundSecondary, 0.85),
+                        hexToRgba(themeColors.backgroundSecondary, 0.5),
+                        hexToRgba(themeColors.backgroundSecondary, 0),
                     ]}
                     locations={[0, 0.5, 0.8, 1]}
                     style={[styles.headerGradient, { height: gradientHeight }]}

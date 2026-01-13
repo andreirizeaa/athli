@@ -69,7 +69,7 @@ export default function ArchivedChatsScreen() {
   }, [openRowCloseFn]);
 
   const unreadCountNum = unreadCount ? parseInt(unreadCount, 10) : 0;
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
+  const mutedSurfaceColor = themeColors.backgroundTertiary;
   const iconColor = themeColors.text;
 
   // Only fetch if no initial data was provided
@@ -197,7 +197,7 @@ export default function ArchivedChatsScreen() {
             ]}
           >
             <PressableOpacity
-              style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+              style={[styles.actionButton, { backgroundColor: themeColors.backgroundSecondary }]}
               onPress={handleUnarchivePress}
             >
               <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
@@ -205,7 +205,7 @@ export default function ArchivedChatsScreen() {
               </Text>
             </PressableOpacity>
             <PressableOpacity
-              style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+              style={[styles.actionButton, { backgroundColor: themeColors.backgroundSecondary }]}
               onPress={handleDeletePress}
             >
               <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
@@ -218,7 +218,7 @@ export default function ArchivedChatsScreen() {
     >
       <View style={styles.header}>
         <PressableOpacity
-          style={[styles.backButton, { backgroundColor: themeColors.iconButton }]}
+          style={[styles.backButton, { backgroundColor: themeColors.backgroundSecondary }]}
           onPress={handleBackPress}
         >
           <PlatformIcon
@@ -242,7 +242,7 @@ export default function ArchivedChatsScreen() {
           {t('chats.archived.title')}
         </Text>
         <PressableOpacity
-          style={[styles.editButton, { backgroundColor: themeColors.iconButton }]}
+          style={[styles.editButton, { backgroundColor: themeColors.backgroundSecondary }]}
           onPress={handleEditPress}
         >
           {isEditMode ? (

@@ -59,7 +59,7 @@ export const GenderInput = ({
 
   return (
     <DropdownMenuWrapper options={menuOptions}>
-      <View style={[styles.inputBox, { backgroundColor: themeColors.iconButton }]}>
+      <View style={[styles.inputBox, { backgroundColor: themeColors.surfacePrimary }]}>
         <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
           {label}
         </Text>

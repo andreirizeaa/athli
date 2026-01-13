@@ -22,11 +22,11 @@ export default function AthliAssistantHelpModal() {
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.pageBackground }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
             {/* Header */}
             <View style={[styles.header, {
                 paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20,
-                backgroundColor: themeColors.pageBackground
+                backgroundColor: themeColors.backgroundPrimary
             }]}>
                 <IconButton
                     icon={{ sf: 'xmark', IconComponent: X }}

@@ -23,7 +23,7 @@ export const AuthLoadingOverlay = ({ visible }: AuthLoadingOverlayProps) => {
         <View
           style={[
             styles.container,
-            { backgroundColor: themeColors.surface },
+            { backgroundColor: themeColors.backgroundSecondary },
           ]}
         >
           <ActivityIndicator size="large" color={themeColors.primary} />

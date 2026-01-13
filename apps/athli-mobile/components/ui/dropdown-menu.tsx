@@ -91,7 +91,7 @@ export const DropdownMenu = ({
         {
           left: leftPosition,
           top: topPosition,
-          backgroundColor: themeColors.surface,
+          backgroundColor: themeColors.backgroundSecondary,
           borderColor: themeColors.border,
           shadowColor: themeColors.shadowColor,
         },
@@ -169,7 +169,7 @@ export const ContextMenuWrapper = ({
       return React.cloneElement(children as React.ReactElement<any>, {
         style: [
           (children as React.ReactElement<any>).props.style,
-          { backgroundColor: themeColors.surface },
+          { backgroundColor: themeColors.backgroundSecondary},
         ],
       });
     }
@@ -189,7 +189,7 @@ export const ContextMenuWrapper = ({
       </ContextMenu.Trigger>
       <ContextMenu.Preview>
         {() => (
-          <View style={{ backgroundColor: themeColors.surface }}>
+          <View style={{ backgroundColor: themeColors.backgroundSecondary}}>
             {getPreviewChildren()}
           </View>
         )}

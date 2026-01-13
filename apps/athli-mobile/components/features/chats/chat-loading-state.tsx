@@ -16,7 +16,7 @@ export const ChatLoadingState = ({ message }: ChatLoadingStateProps) => {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.pageBackground }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
       <View
         style={[
           styles.safeArea,

@@ -125,7 +125,7 @@ export const SwipeableRow = ({
 
                     {/* Loading Overlay on Row */}
                     {isDeleting && (
-                        <View style={[styles.rowLoadingOverlay, { backgroundColor: themeColors.pageBackground }]}>
+                        <View style={[styles.rowLoadingOverlay, { backgroundColor: themeColors.backgroundPrimary }]}>
                             <ActivityIndicator size="small" color={themeColors.primary} />
                             <Text style={[styles.loadingText, { color: themeColors.text }]}>
                                 {t('general.deleting')}

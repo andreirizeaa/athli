@@ -36,7 +36,7 @@ export const AttachmentPickerRow = ({
   const slideAnim = useRef(new Animated.Value(0)).current;
 
   // Create translucent background color - more transparent since parent already has BlurView
-  const translucentBg = backgroundColor ? hexToRgba(backgroundColor, 0.3) : hexToRgba(themeColors.headerBackground, 0.3);
+  const translucentBg = backgroundColor ? hexToRgba(backgroundColor, 0.3) : hexToRgba(themeColors.translucentBackground, 0.3);
 
   // WhatsApp-style colors for each attachment type
   const attachmentColors = {

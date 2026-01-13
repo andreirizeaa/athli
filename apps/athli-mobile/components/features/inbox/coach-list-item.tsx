@@ -131,7 +131,7 @@ export const CoachListItem = ({
         style={[
           styles.rowWrapper,
           (isSelected || isPressed) && {
-            backgroundColor: themeColors.surfaceSecondary,
+            backgroundColor: themeColors.backgroundTertiary,
           },
         ]}
       >

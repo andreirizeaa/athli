@@ -981,19 +981,19 @@ export default function WorkoutDetailScreen() {
         <View style={[
             styles.bottomBarContainer,
             {
-                backgroundColor: themeColors.pageBackground,
+                backgroundColor: themeColors.backgroundPrimary,
                 paddingBottom: insets.bottom + 12,
                 borderTopColor: themeColors.border,
             }
         ]}>
             <View style={styles.bottomBarContent}>
-                <View style={[styles.countCircle, { backgroundColor: themeColors.iconButton }]}>
+                <View style={[styles.countCircle, { backgroundColor: themeColors.backgroundSecondary }]}>
                     <Text style={[styles.countText, { color: themeColors.text }]}>{totalExercises}</Text>
                 </View>
 
                 <View style={styles.buttonWrapper}>
                     <PressableScale
-                        style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+                        style={[styles.actionButton, { backgroundColor: themeColors.backgroundSecondary }]}
                         onPress={handleReorder}
                     >
                         <Repeat {...({ size: 18, color: themeColors.text, style: styles.buttonIcon } as any)} />
@@ -1003,7 +1003,7 @@ export default function WorkoutDetailScreen() {
 
                 <View style={styles.buttonWrapper}>
                     <DropdownMenuWrapper options={addOptions}>
-                        <View style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}>
+                        <View style={[styles.actionButton, { backgroundColor: themeColors.backgroundSecondary }]}>
                             <Plus {...({ size: 18, color: themeColors.text, style: styles.buttonIcon } as any)} />
                             <Text style={[styles.actionButtonText, { color: themeColors.text }]}>{t('library.workout.add')}</Text>
                         </View>
@@ -1017,15 +1017,15 @@ export default function WorkoutDetailScreen() {
     const gradientHeight = headerHeight + 12;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             {/* Fixed Header Gradient */}
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
                     colors={[
-                        hexToRgba(themeColors.background, 1),
-                        hexToRgba(themeColors.background, 0.85),
-                        hexToRgba(themeColors.background, 0.5),
-                        hexToRgba(themeColors.background, 0),
+                        hexToRgba(themeColors.backgroundSecondary, 1),
+                        hexToRgba(themeColors.backgroundSecondary, 0.85),
+                        hexToRgba(themeColors.backgroundSecondary, 0.5),
+                        hexToRgba(themeColors.backgroundSecondary, 0),
                     ]}
                     locations={[0, 0.5, 0.8, 1]}
                     style={[styles.headerGradient, { height: gradientHeight }]}
@@ -1202,7 +1202,7 @@ export default function WorkoutDetailScreen() {
                                                 style={[
                                                     styles.supersetButton,
                                                     {
-                                                        backgroundColor: isLinkedToNext ? themeColors.background : themeColors.surfaceSecondary,
+                                                        backgroundColor: isLinkedToNext ? themeColors.backgroundSecondary : themeColors.backgroundTertiary,
                                                         borderColor: themeColors.border,
                                                         paddingVertical: 4,
                                                         marginHorizontal: !isLinkedToNext ? 12 : 0,

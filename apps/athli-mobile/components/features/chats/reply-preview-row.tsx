@@ -44,7 +44,7 @@ export const ReplyPreviewRow = ({ message, clientName, onClose, backgroundColor 
   const isDark = colorScheme === 'dark';
 
   // Create translucent background color - more transparent since parent already has BlurView
-  const translucentBg = backgroundColor ? hexToRgba(backgroundColor, 0.3) : hexToRgba(themeColors.headerBackground, 0.3);
+  const translucentBg = backgroundColor ? hexToRgba(backgroundColor, 0.3) : hexToRgba(themeColors.translucentBackground, 0.3);
 
   const senderName = message.isSent ? 'You' : clientName;
   // Use primary color for sender, and a distinct purple/violet for recipient

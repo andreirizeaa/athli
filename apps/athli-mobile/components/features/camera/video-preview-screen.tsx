@@ -41,7 +41,7 @@ export const VideoPreviewScreen = () => {
   }>();
 
   const { colors: themeColors } = useDarkModeTheme();
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
+  const mutedSurfaceColor = themeColors.backgroundTertiary;
   const iconColor = themeColors.text;
   const [caption, setCaption] = useState(params.caption || '');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -178,7 +178,7 @@ export const VideoPreviewScreen = () => {
   const videoMarginTop = 0;
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
       {showToolbar && <StatusBar hidden />}
       <VideoView
         player={player}

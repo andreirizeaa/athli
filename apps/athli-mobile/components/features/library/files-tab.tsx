@@ -209,7 +209,7 @@ export const FilesTab = () => {
 
       if (isLoading || !uri) {
         return (
-          <View style={[styles.imageThumbnailContainer, { backgroundColor: themeColors.surfaceSecondary, justifyContent: 'center', alignItems: 'center' }]}>
+          <View style={[styles.imageThumbnailContainer, { backgroundColor: themeColors.backgroundTertiary, justifyContent: 'center', alignItems: 'center' }]}>
             <Text style={{ color: themeColors.mutedText, fontSize: 10 }}>...</Text>
           </View>
         );
@@ -237,7 +237,7 @@ export const FilesTab = () => {
     const sf = fileType === 'pdf' ? 'doc.text' : 'doc.text';
 
     return (
-      <View style={[styles.iconThumbnailContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
+      <View style={[styles.iconThumbnailContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
         <PlatformIcon
           sf={sf}
           IconComponent={IconComponent}
@@ -273,7 +273,7 @@ export const FilesTab = () => {
         >
           <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
             <View style={styles.rowWrapper}>
-              <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
+              <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
 
                 {/* Thumbnail - Pressable separately */}
                 <PressableScale

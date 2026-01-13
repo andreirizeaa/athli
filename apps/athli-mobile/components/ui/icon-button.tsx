@@ -76,7 +76,7 @@ export const IconButton = ({
   const resolvedColors =
     scheme === 'auto' ? themeColors : createPresetPalette(preset, scheme);
 
-  const background = variant === 'primary' ? resolvedColors.primary : resolvedColors.iconButton;
+  const background = variant === 'primary' ? resolvedColors.primary : resolvedColors.surfacePrimary;
   const iconColor =
     color ?? (variant === 'primary' ? resolvedColors.primaryForeground : resolvedColors.text);
 
@@ -128,7 +128,7 @@ export const DoubleIconButton = React.forwardRef<View, DoubleIconButtonProps>(
     const resolvedColors =
       scheme === 'auto' ? themeColors : createPresetPalette(preset, scheme);
 
-    const background = variant === 'primary' ? resolvedColors.primary : resolvedColors.iconButton;
+    const background = variant === 'primary' ? resolvedColors.primary : resolvedColors.surfacePrimary;
     const iconColor =
       color ?? (variant === 'primary' ? resolvedColors.primaryForeground : resolvedColors.text);
 

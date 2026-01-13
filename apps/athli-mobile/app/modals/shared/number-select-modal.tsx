@@ -39,9 +39,9 @@ export default function NumberSelectModal() {
     : Array.from({ length: max }, (_, i) => i + 1);
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20, backgroundColor: themeColors.background }]}>
+      <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20, backgroundColor: themeColors.backgroundSecondary }]}>
         <IconButton
           icon={{ sf: 'xmark', IconComponent: X }}
           onPress={handleClose}

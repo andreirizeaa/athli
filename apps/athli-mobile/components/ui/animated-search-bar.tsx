@@ -33,7 +33,7 @@ export const AnimatedSearchBar = ({
       style={[
         styles.searchContainer,
         {
-          backgroundColor: themeColors.iconButton,
+          backgroundColor: themeColors.surfacePrimary,
           flex: 1,
           minWidth: 0,
         },
