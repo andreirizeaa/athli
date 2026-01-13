@@ -267,16 +267,12 @@ export const DropdownMenuWrapper = ({
   options,
   children,
 }: DropdownMenuWrapperProps) => {
-  const handleTouchStart = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
   return (
     <DropdownMenuZeego.Root>
       <DropdownMenuZeego.Trigger>
-        <Pressable onPressIn={handleTouchStart}>
+        <View style={{ alignSelf: 'stretch' }}>
           {children}
-        </Pressable>
+        </View>
       </DropdownMenuZeego.Trigger>
       <DropdownMenuZeego.Content>
         {options.map((option, index) => {

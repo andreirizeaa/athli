@@ -72,7 +72,7 @@ export const GenderInput = ({
           >
             {getDisplayValue()}
           </Text>
-          <ChevronDown size={20} color={themeColors.mutedText} />
+          <ChevronDown {...({ size: 20, color: themeColors.mutedText } as any)} />
         </View>
       </View>
     </DropdownMenuWrapper>

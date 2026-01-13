@@ -362,7 +362,7 @@ export default function DefineScheduleModal() {
                     >
                         <View style={styles.content}>
                             {/* Frequency Card */}
-                            <View style={[styles.card, { backgroundColor: themeColors.backgroundTertiary }]}>
+                            <View style={[styles.card, { backgroundColor: themeColors.surfacePrimary }]}>
                                 {/* Frequency Row */}
                                 <DropdownMenuWrapper options={frequencyOptions}>
                                     <View style={styles.fieldRow}>
@@ -421,7 +421,7 @@ export default function DefineScheduleModal() {
 
                             {/* Days Selection Card (only for daily/weekly/biweekly) */}
                             {(frequency === 'daily' || frequency === 'weekly' || frequency === 'biweekly') && (
-                                <View style={[styles.card, { backgroundColor: themeColors.backgroundTertiary }]}>
+                                <View style={[styles.card, { backgroundColor: themeColors.surfacePrimary }]}>
                                     {DAYS.map((day, index) => {
                                         const isSelected = selectedDays.has(day);
                                         return (

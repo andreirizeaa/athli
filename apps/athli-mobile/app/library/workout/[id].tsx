@@ -987,13 +987,13 @@ export default function WorkoutDetailScreen() {
             }
         ]}>
             <View style={styles.bottomBarContent}>
-                <View style={[styles.countCircle, { backgroundColor: themeColors.backgroundSecondary }]}>
+                <View style={[styles.countCircle, { backgroundColor: themeColors.surfacePrimary }]}>
                     <Text style={[styles.countText, { color: themeColors.text }]}>{totalExercises}</Text>
                 </View>
 
                 <View style={styles.buttonWrapper}>
                     <PressableScale
-                        style={[styles.actionButton, { backgroundColor: themeColors.backgroundSecondary }]}
+                        style={[styles.actionButton, { backgroundColor: themeColors.surfacePrimary }]}
                         onPress={handleReorder}
                     >
                         <Repeat {...({ size: 18, color: themeColors.text, style: styles.buttonIcon } as any)} />
@@ -1003,7 +1003,7 @@ export default function WorkoutDetailScreen() {
 
                 <View style={styles.buttonWrapper}>
                     <DropdownMenuWrapper options={addOptions}>
-                        <View style={[styles.actionButton, { backgroundColor: themeColors.backgroundSecondary }]}>
+                        <View style={[styles.actionButton, { backgroundColor: themeColors.surfacePrimary }]}>
                             <Plus {...({ size: 18, color: themeColors.text, style: styles.buttonIcon } as any)} />
                             <Text style={[styles.actionButtonText, { color: themeColors.text }]}>{t('library.workout.add')}</Text>
                         </View>

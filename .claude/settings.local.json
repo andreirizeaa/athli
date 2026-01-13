@@ -35,7 +35,13 @@
       "WebSearch",
       "WebFetch(domain:reactnavigation.org)",
       "WebFetch(domain:docs.swmansion.com)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(for file in app/modals/library/add-metric-modal.tsx app/modals/library/add-habit-modal.tsx app/modals/library/add-exercise-modal.tsx app/modals/library/add-workout-modal.tsx app/modals/library/add-questionnaire-modal.tsx app/modals/library/habit-options-modal.tsx)",
+      "Bash(do if head -15 \"$file\")",
+      "Bash(then if ! head -15 \"$file\")",
+      "Bash(then echo \"MISSING X: $file\" fi fi done)",
+      "Bash(while read file)",
+      "Bash(head:*)"
     ]
   }
 }

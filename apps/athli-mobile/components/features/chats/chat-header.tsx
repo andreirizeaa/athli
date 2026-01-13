@@ -57,7 +57,7 @@ export const ChatHeader = ({
         <View style={styles.header}>
           {showBackButton && (
             <IconButton
-              icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+              icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
               onPress={onBackPress}
               size="md"
               color={iconColor}

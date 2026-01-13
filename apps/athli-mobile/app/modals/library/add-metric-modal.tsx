@@ -4,7 +4,7 @@ import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check, ChevronRight } from 'lucide-react-native';
+import { Check, ChevronRight, X } from 'lucide-react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -22,7 +22,7 @@ import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useModalCallbacks, type ScheduleData } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
+import { InputBox, TextAreaInput, DropdownInput } from '@/components/ui/form-inputs';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
@@ -470,7 +470,7 @@ export default function AddMetricModal() {
                                         <Text style={[styles.categoryLabel, { color: themeColors.mutedText }]}>
                                             {section.label}
                                         </Text>
-                                        <Card style={{ backgroundColor: themeColors.backgroundTertiary }}>
+                                        <Card style={{ backgroundColor: themeColors.surfacePrimary }}>
                                             {section.metrics.map((metric, index) => (
                                                 <React.Fragment key={metric.name}>
                                                     {index > 0 && <Separator />}
@@ -508,49 +508,14 @@ export default function AddMetricModal() {
                             />
 
                             {/* Log Frequency - Optional */}
-                            <PressableOpacity
-                                style={[styles.scheduleContainer, { backgroundColor: themeColors.backgroundTertiary }]}
+                            <DropdownInput
+                                label={t('library.addMetric.logFrequency')}
+                                value={formatScheduleText(scheduleData)}
+                                placeholder=""
                                 onPress={handleOpenScheduleModal}
-                            >
-                                <View style={styles.scheduleContent}>
-                                    <View style={styles.scheduleLabelRow}>
-                                        <Text style={[styles.scheduleLabel, { color: themeColors.mutedText }]}>
-                                            {t('library.addMetric.logFrequency')}
-                                        </Text>
-                                        <Text style={[styles.optionalLabel, { color: themeColors.mutedText }]}>
-                                            {t('library.addMetric.optional')}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.scheduleValueRow}>
-                                        <Text
-                                            style={[
-                                                styles.scheduleValue,
-                                                { color: hasLogFrequency ? themeColors.text : themeColors.mutedText },
-                                            ]}
-                                            numberOfLines={0}
-                                        >
-                                            {formatScheduleText(scheduleData)}
-                                        </Text>
-                                        {hasLogFrequency ? (
-                                            <View style={styles.clearButtonContainer}>
-                                                <PressableOpacity
-                                                    style={styles.clearButton}
-                                                    onPress={handleClearSchedule}
-                                                    hitSlop={8}
-                                                >
-                                                    <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                                                        <X {...({ size: 12, color: themeColors.backgroundTertiary, strokeWidth: 3 } as any)} />
-                                                    </View>
-                                                </PressableOpacity>
-                                            </View>
-                                        ) : (
-                                            <View style={styles.chevronContainer}>
-                                                <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
-                                            </View>
-                                        )}
-                                    </View>
-                                </View>
-                            </PressableOpacity>
+                                onClear={hasLogFrequency ? handleClearSchedule : undefined}
+                                optional
+                            />
 
                             <InputBox
                                 label={t('library.addMetric.unit')}
@@ -679,54 +644,5 @@ const styles = StyleSheet.create({
     templateUnit: {
         ...typography.p3,
         marginTop: 2,
-    },
-    scheduleContainer: {
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingTop: 10,
-        paddingBottom: 12,
-    },
-    scheduleContent: {
-        flex: 1,
-    },
-    scheduleLabelRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 2,
-    },
-    scheduleLabel: {
-        ...typography.p4,
-    },
-    optionalLabel: {
-        ...typography.p4,
-    },
-    scheduleValueRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 12,
-    },
-    scheduleValue: {
-        ...typography.p1,
-        flex: 1,
-        flexShrink: 1,
-    },
-    clearButtonContainer: {
-        flexShrink: 0,
-        paddingTop: 2,
-    },
-    chevronContainer: {
-        flexShrink: 0,
-        paddingTop: 2,
-    },
-    clearButton: {
-        // No margin needed, using gap in parent
-    },
-    clearButtonIcon: {
-        width: 22,
-        height: 22,
-        borderRadius: 11,
-        alignItems: 'center',
-        justifyContent: 'center',
     },
 });

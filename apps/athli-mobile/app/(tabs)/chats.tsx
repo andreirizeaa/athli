@@ -11,6 +11,7 @@ import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { SearchBar } from '@/components/ui/search-bar';
+import { IconButton } from '@/components/ui/icon-button';
 import { ChatListItem } from '@/components/features/chats/chat-list-item';
 import { ArchivedItem } from '@/components/features/chats/archived-item';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
@@ -321,29 +322,20 @@ export default function ChatsScreen() {
             <View style={styles.headerButtonContainer}>
 
               {isEditMode ? (
-                <PressableOpacity
-                  style={[styles.headerButton, { backgroundColor: themeColors.backgroundSecondary }]}
+                <IconButton
+                  icon={{ sf: 'checkmark', IconComponent: Check }}
                   onPress={handleEllipsisPress}
-                >
-                  <PlatformIcon
-                    sf="checkmark"
-                    IconComponent={Check}
-                    size={iconSizes.navigationChevrons}
-                    color={themeColors.text}
-                  />
-                </PressableOpacity>
+                  size="md"
+                  color={themeColors.text}
+                />
               ) : (
                 <DropdownMenuWrapper options={dropdownOptions}>
-                  <PressableOpacity
-                    style={[styles.headerButton, { backgroundColor: themeColors.backgroundSecondary }]}
-                  >
-                    <PlatformIcon
-                      sf="ellipsis"
-                      IconComponent={Ellipsis}
-                      size={iconSizes.navigationChevrons}
-                      color={themeColors.text}
-                    />
-                  </PressableOpacity>
+                  <IconButton
+                    icon={{ sf: 'ellipsis', IconComponent: Ellipsis }}
+                    onPress={() => {}}
+                    size="md"
+                    color={themeColors.text}
+                  />
                 </DropdownMenuWrapper>
               )}
             </View>
@@ -409,13 +401,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  headerButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
   },
   chatListContainer: {
   },

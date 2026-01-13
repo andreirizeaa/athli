@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Archive, MailCheck } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -8,6 +8,7 @@ import { typography } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
+import { PressableScale } from 'pressto';
 import { type Coach } from '@/services/inbox-service';
 
 type CoachListItemProps = {
@@ -60,26 +61,9 @@ export const CoachListItem = ({
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const colorScheme = useColorScheme();
-  const [isPressed, setIsPressed] = useState(false);
 
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress(coach.id);
-  };
-
-  const handleLongPress = () => {
-    // Prevent navigation on long press
-    // The Zeego ContextMenuWrapper handles the actual menu
-  };
-
-  const handlePressIn = () => {
-    if (!isEditMode) {
-      setIsPressed(true);
-    }
-  };
-
-  const handlePressOut = () => {
-    setIsPressed(false);
   };
 
   const checkboxBorderColor =
@@ -121,21 +105,18 @@ export const CoachListItem = ({
   ];
 
   const content = (
-    <Pressable
+    <PressableScale
       onPress={handlePress}
-      onLongPress={handleLongPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
+      style={styles.rowWrapper}
     >
       <View
         style={[
-          styles.rowWrapper,
-          (isSelected || isPressed) && {
+          styles.content,
+          isSelected && {
             backgroundColor: themeColors.backgroundTertiary,
           },
         ]}
       >
-        <View style={styles.content}>
           {isEditMode && (
             <View style={styles.checkboxContainer}>
               <View
@@ -232,7 +213,6 @@ export const CoachListItem = ({
             )}
           </View>
         </View>
-      </View>
       <View
         style={[
           styles.separatorContainer,
@@ -249,7 +229,7 @@ export const CoachListItem = ({
           ]}
         />
       </View>
-    </Pressable>
+    </PressableScale>
   );
 
   // In edit mode, don't wrap with context menu

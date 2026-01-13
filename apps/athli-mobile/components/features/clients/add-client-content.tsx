@@ -6,7 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { addClient } from '@/services/client-service';
-import { InputBox, ButtonTabGroup } from '@/components/ui/form-inputs';
+import { InputBox, SelectInput } from '@/components/ui/form-inputs';
 
 type AddClientContentProps = {
   onClose: () => void;
@@ -112,10 +112,12 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
           autoCapitalize="none"
         />
 
-        <ButtonTabGroup
-          options={categoryOptions}
+        <SelectInput
+          label={t('clients.editClientModal.type')}
           value={category}
           onChange={setCategory}
+          options={categoryOptions}
+          placeholder={t('clients.editClientModal.typePlaceholder')}
         />
       </ScrollView>
     );

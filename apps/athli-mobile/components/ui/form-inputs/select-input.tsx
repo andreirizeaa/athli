@@ -54,7 +54,7 @@ export const SelectInput = <T extends string>({
           >
             {displayValue}
           </Text>
-          <ChevronDown size={16} color={themeColors.mutedText} />
+          <ChevronDown {...({ size: 16, color: themeColors.mutedText } as any)} />
         </View>
       </DropdownMenuWrapper>
     );
@@ -80,7 +80,7 @@ export const SelectInput = <T extends string>({
           >
             {displayValue}
           </Text>
-          <ChevronDown size={20} color={themeColors.mutedText} />
+          <ChevronDown {...({ size: 20, color: themeColors.mutedText } as any)} />
         </View>
       </View>
     </DropdownMenuWrapper>
