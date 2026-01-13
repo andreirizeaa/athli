@@ -11,7 +11,7 @@ import { useTranslations } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { PressableOpacity } from 'pressto';
+import { PressableScale } from 'pressto';
 import { getChatMessages, type Chat, type ChatMessage } from '@/services/chats-service';
 
 type ChatListItemProps = {
@@ -185,7 +185,7 @@ export const ChatListItem = ({
         enabled={!isEditMode && !!onDelete}
       >
         <ContextMenuWrapper options={dropdownOptions}>
-          <PressableOpacity
+          <PressableScale
             onPress={handlePress}
             style={[
               styles.rowWrapper,
@@ -306,7 +306,7 @@ export const ChatListItem = ({
                 </View>
               </View>
             </View>
-          </PressableOpacity>
+          </PressableScale>
         </ContextMenuWrapper>
       </SwipeableRow>
       <View

@@ -26,7 +26,7 @@ export const MessageInputBar = forwardRef<TextInput, MessageInputBarProps>(
         style={[
           styles.inputContainer,
           {
-            backgroundColor: themeColors.backgroundSecondary,
+            backgroundColor: themeColors.surfacePrimary,
           },
           style,
         ]}

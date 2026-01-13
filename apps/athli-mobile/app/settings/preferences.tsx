@@ -210,32 +210,23 @@ export default function PreferencesScreen() {
         <Card style={{ paddingVertical: 12 }}>
           {/* Theme row with dropdown */}
           <DropdownMenuWrapper options={themeOptions}>
-            <View style={styles.themeRow}>
-              <View style={styles.themeRowLeft}>
-                <View style={styles.themeIconContainer}>
-                  <PlatformIcon
-                    sf={preference === 'light' ? 'sun.max' : preference === 'dark' ? 'moon' : 'circle.lefthalf.filled'}
-                    IconComponent={preference === 'light' ? Sun : Moon}
-                    size={iconSize}
-                    color={iconColor}
-                  />
-                </View>
-                <Text style={[styles.themeRowTitle, { color: themeColors.text }]}>
-                  {t('preferences.appearance')}
-                </Text>
-              </View>
-              <View style={styles.themeRowRight}>
-                <Text style={[styles.themeValue, { color: themeColors.mutedText }]}>
-                  {getThemeLabel()}
-                </Text>
+            <SettingsOption
+              icon={
                 <PlatformIcon
-                  sf="chevron.down"
-                  IconComponent={ChevronDown}
-                  size={14}
-                  color={themeColors.mutedText}
+                  sf={preference === 'light' ? 'sun.max' : preference === 'dark' ? 'moon' : 'circle.lefthalf.filled'}
+                  IconComponent={preference === 'light' ? Sun : Moon}
+                  size={iconSize}
+                  color={iconColor}
                 />
-              </View>
-            </View>
+              }
+              title={t('preferences.appearance')}
+              subtitle={getThemeLabel()}
+              subtitleRight
+              showChevron
+              chevronSize={14}
+              chevronIcon={{ sf: 'chevron.down', IconComponent: ChevronDown }}
+              onPress={() => {}}
+            />
           </DropdownMenuWrapper>
           <Separator />
           <SettingsOption
@@ -271,27 +262,16 @@ export default function PreferencesScreen() {
               onPress: () => handleUnitsChange('imperial'),
             },
           ]}>
-            <View style={styles.themeRow}>
-              <View style={styles.themeRowLeft}>
-                <View style={styles.themeIconContainer}>
-                  <PlatformIcon sf="ruler" IconComponent={Ruler} size={iconSize} color={iconColor} />
-                </View>
-                <Text style={[styles.themeRowTitle, { color: themeColors.text }]}>
-                  {t('preferences.units')}
-                </Text>
-              </View>
-              <View style={styles.themeRowRight}>
-                <Text style={[styles.themeValue, { color: themeColors.mutedText }]}>
-                  {getUnitsLabel()}
-                </Text>
-                <PlatformIcon
-                  sf="chevron.down"
-                  IconComponent={ChevronDown}
-                  size={14}
-                  color={themeColors.mutedText}
-                />
-              </View>
-            </View>
+            <SettingsOption
+              icon={<PlatformIcon sf="ruler" IconComponent={Ruler} size={iconSize} color={iconColor} />}
+              title={t('preferences.units')}
+              subtitle={getUnitsLabel()}
+              subtitleRight
+              showChevron
+              chevronSize={14}
+              chevronIcon={{ sf: 'chevron.down', IconComponent: ChevronDown }}
+              onPress={() => {}}
+            />
           </DropdownMenuWrapper>
         </Card>
       </View>
@@ -329,35 +309,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 32,
-  },
-  themeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-  },
-  themeRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  themeIconContainer: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 4,
-  },
-  themeRowTitle: {
-    ...typography.p1,
-  },
-  themeRowRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  themeValue: {
-    ...typography.p2,
   },
 });
 

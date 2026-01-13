@@ -373,7 +373,7 @@ export default function AddFileModal() {
                         />
 
                         {/* File Type Selection */}
-                        <View style={[styles.attachSection, { backgroundColor: themeColors.backgroundTertiary }]}>
+                        <View style={[styles.attachSection, { backgroundColor: themeColors.surfacePrimary }]}>
                             <View style={styles.attachLabelRow}>
                                 <Text style={[styles.attachLabel, { color: themeColors.mutedText }]}>
                                     {t('files.addFile.attachFile')}
