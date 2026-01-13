@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, Text, View, Alert } from 'react-native';
-import { ChevronRight, Layers } from 'lucide-react-native';
+import { ChevronRight, Layers, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableScale } from 'pressto';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -14,6 +14,7 @@ import { useTranslations } from '@/stores';
 import { type SectionType, SECTION_TYPES } from '@athli/shared-types';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
+import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { useLibraryTab } from '@/stores';
 import { getSections, deleteSections, duplicateSection, starSections, archiveSections } from '@/services/coach/coach-section-service';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -155,6 +156,27 @@ export const SectionsTab = () => {
     });
   };
 
+  const handleAssign = (section: typeof filteredSections[0]) => {
+    // If a row is open, just close it and prevent navigation
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
+    router.push(`/modals/shared/assign-to-clients-modal?type=section&itemIds=${section.id}`);
+  };
+
+  // Prefetch clients when long press happens to make modal open instantly
+  const handleLongPress = useCallback(() => {
+    queryClient.prefetchQuery({
+      queryKey: ['clients'],
+      queryFn: async () => {
+        const { getClients } = await import('@/services/coach/coach-client-service');
+        return getClients();
+      },
+    });
+  }, [queryClient]);
+
   const getSectionTypeLabel = (type: SectionType) => {
     return SECTION_TYPES.find((t) => t.value === type)?.label || type;
   };
@@ -173,6 +195,21 @@ export const SectionsTab = () => {
   const renderItem = useCallback(({ item, index }: { item: typeof filteredSections[0]; index: number }) => {
     const isLastItem = index === filteredSections.length - 1;
     const typeInfo = getSectionTypeInfo(item);
+
+    const dropdownOptions: DropdownMenuOption[] = [
+      {
+        label: t('general.assign'),
+        icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
+        onPress: () => handleAssign(item),
+      },
+      {
+        label: `${t('general.delete')} Section`,
+        icon: { sf: 'trash', IconComponent: Trash2 },
+        destructive: true,
+        onPress: () => deleteMutation.mutateAsync(item.id),
+      }
+    ];
+
     return (
       <View>
         <SwipeableRow
@@ -180,47 +217,49 @@ export const SectionsTab = () => {
           onOpen={registerOpenRow}
           deleteConfirmTitle={`${t('general.delete')} ${item.program}?`}
         >
-          <PressableScale
-            style={styles.rowWrapper}
-            onPress={() => handleSectionPress(item)}
-          >
-            <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
-              <View style={styles.iconContainer}>
-                <PlatformIcon
-                  sf="square.stack.3d.up.fill"
-                  IconComponent={Layers}
-                  size={24}
-                  color={themeColors.text}
-                />
-              </View>
-              <View style={styles.textContent}>
-                <Text style={[styles.sectionName, { color: themeColors.text }]} numberOfLines={1}>
-                  {item.program}
-                </Text>
-                <View style={styles.sectionMeta}>
-                  <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                    {getSectionTypeLabel(item.sectionType as SectionType)}
-                  </Text>
-                  {typeInfo && (
-                    <>
-                      <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                      <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                        {typeInfo}
-                      </Text>
-                    </>
-                  )}
-                  <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                  <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                    {item.totalExercises === 0
-                      ? 'Empty'
-                      : `${item.totalExercises} ${item.totalExercises === 1 ? t('library.exercise') : t('library.exercises')}`
-                    }
-                  </Text>
+          <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
+            <PressableScale
+              style={styles.rowWrapper}
+              onPress={() => handleSectionPress(item)}
+            >
+              <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
+                <View style={styles.iconContainer}>
+                  <PlatformIcon
+                    sf="square.stack.3d.up.fill"
+                    IconComponent={Layers}
+                    size={24}
+                    color={themeColors.text}
+                  />
                 </View>
+                <View style={styles.textContent}>
+                  <Text style={[styles.sectionName, { color: themeColors.text }]} numberOfLines={1}>
+                    {item.program}
+                  </Text>
+                  <View style={styles.sectionMeta}>
+                    <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                      {getSectionTypeLabel(item.sectionType as SectionType)}
+                    </Text>
+                    {typeInfo && (
+                      <>
+                        <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                        <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                          {typeInfo}
+                        </Text>
+                      </>
+                    )}
+                    <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                    <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                      {item.totalExercises === 0
+                        ? 'Empty'
+                        : `${item.totalExercises} ${item.totalExercises === 1 ? t('library.exercise') : t('library.exercises')}`
+                      }
+                    </Text>
+                  </View>
+                </View>
+                <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
               </View>
-              <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-            </View>
-          </PressableScale>
+            </PressableScale>
+          </ContextMenuWrapper>
         </SwipeableRow>
 
         {!isLastItem && (
@@ -237,7 +276,7 @@ export const SectionsTab = () => {
         {isLastItem && <View style={{ height: 24 }} />}
       </View>
     );
-  }, [filteredSections.length, themeColors, t, deleteMutation, registerOpenRow, handleSectionPress]);
+  }, [filteredSections.length, themeColors, t, deleteMutation, registerOpenRow, handleSectionPress, handleAssign, handleLongPress]);
 
   return (
     <FlashList

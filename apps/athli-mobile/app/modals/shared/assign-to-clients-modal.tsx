@@ -124,10 +124,14 @@ export default function AssignToClientsModal() {
     }, [router]);
 
     const handleSave = useCallback(() => {
+        if (selectedClientIds.size === 0) return;
+
         // TODO: Implement save functionality
         // Will use selectedClientIds and itemIds to assign items to clients
         handleClose();
     }, [handleClose, selectedClientIds, itemIds]);
+
+    const canSave = selectedClientIds.size > 0;
 
     const handleClientToggle = useCallback((clientId: string) => {
         setSelectedClientIds((prev) => {
@@ -180,7 +184,8 @@ export default function AssignToClientsModal() {
                         icon={{ sf: 'checkmark', IconComponent: Check }}
                         onPress={handleSave}
                         size="md"
-                        color={themeColors.text}
+                        variant={canSave ? 'primary' : 'default'}
+                        disabled={!canSave}
                     />
                 </View>
             </View>
