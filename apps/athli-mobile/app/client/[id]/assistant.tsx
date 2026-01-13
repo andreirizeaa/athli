@@ -103,7 +103,12 @@ export default function ClientAssistantScreen() {
         setIsPanelOpen(false);
         setIsSearchFocused(false);
         setSearchQuery('');
-        panelWidth.value = PANEL_COLLAPSED;
+
+        // Animate the panel width to match the drawer's close animation
+        panelWidth.value = withTiming(PANEL_COLLAPSED, {
+            duration: 150,
+            easing: Easing.out(Easing.cubic),
+        });
     };
 
     // Create new chat session
@@ -342,6 +347,7 @@ export default function ClientAssistantScreen() {
                         ? 'rgba(255, 255, 255, 0.1)'
                         : 'rgba(0, 0, 0, 0.3)',
                 }}
+                duration={150}
             >
                 <View style={styles.mainContent}>
                     {/* Header with safe area top padding */}
