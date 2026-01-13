@@ -289,7 +289,10 @@ export default function ClientAssistantScreen() {
     const handleCreateNewSession = useCallback(() => {
         haptics.light();
         closePanel();
-        setMessages([]);
+        // Defer message clear until after close animation completes (320ms)
+        setTimeout(() => {
+            setMessages([]);
+        }, 350); // Slightly longer than ANIMATION_CONFIG duration
         console.log('Creating new chat session...');
     }, [closePanel]);
 
