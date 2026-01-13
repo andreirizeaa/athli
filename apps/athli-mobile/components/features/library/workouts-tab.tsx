@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet, Text, View, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Dumbbell } from 'lucide-react-native';
-import { PressableOpacity } from 'pressto';
+import { PressableScale } from 'pressto';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { FlashList } from '@shopify/flash-list';
@@ -123,7 +123,7 @@ export const WorkoutsTab = () => {
               onOpen={registerOpenRow}
               deleteConfirmTitle={`${t('general.delete')} ${workout.name}?`}
             >
-              <PressableOpacity
+              <PressableScale
                 onPress={() => handleWorkoutPress(workout)}
                 style={styles.rowWrapper}
               >
@@ -153,7 +153,7 @@ export const WorkoutsTab = () => {
                   </View>
                   <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
                 </View>
-              </PressableOpacity>
+              </PressableScale>
             </SwipeableRow>
 
             {!isLastItem && (

@@ -1,17 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, StyleSheet, Text, Platform, Keyboard, TouchableWithoutFeedback, Alert } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, StyleSheet, Text, Alert } from 'react-native';
 import { X, Check } from 'lucide-react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
-import { useThemePreference, useColorScheme } from '@/stores';
+import { useThemePreference } from '@/stores';
 import { typography } from '@/constants/typography';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
+import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import {
   InputBox,
   SelectInput,
@@ -24,7 +22,6 @@ import {
 } from '@/components/ui/form-inputs';
 import { COUNTRIES } from '@/components/ui/form-inputs/countries-data';
 import { getClients, updateClient, type Client, type UpdateClientData } from '@/services/client-service';
-import { hexToRgba } from '@/utils/colorUtils';
 
 // Helper to find country by name
 const findCountryByName = (name: string): Country | null => {
@@ -71,15 +68,13 @@ type OriginalValues = {
   phoneNumber: PhoneNumber | null;
 };
 
-export default function EditClientDetailsModal() {
+export default function EditClientDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   // Handle case where id might be an array (Expo Router quirk)
   const clientId = Array.isArray(params.id) ? params.id[0] : params.id;
   const { colors: themeColors } = useThemePreference();
-  const colorScheme = useColorScheme();
   const { t } = useTranslations();
-  const insets = useSafeAreaInsets();
   const [client, setClient] = useState<Client | null>(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -103,7 +98,7 @@ export default function EditClientDetailsModal() {
       // Success haptic feedback
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Close modal
+      // Close screen
       handleClose();
     },
     onError: (error: Error) => {
@@ -118,10 +113,6 @@ export default function EditClientDetailsModal() {
       );
     },
   });
-
-  const handleDismissKeyboard = () => {
-    Keyboard.dismiss();
-  };
 
   // Combined validation and change detection - all in one useMemo for consistent reactivity
   const { isFormValid, hasChanges, canComplete } = useMemo(() => {
@@ -239,6 +230,7 @@ export default function EditClientDetailsModal() {
   }, [clientId]);
 
   const handleClose = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (router.canGoBack()) {
       router.back();
     }
@@ -291,164 +283,135 @@ export default function EditClientDetailsModal() {
     { value: 'hybrid' as const, label: t('clients.addClientModal.hybrid') },
   ], [t]);
 
-  const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
-  const gradientHeight = headerHeight + 12;
+  const iconColor = themeColors.text;
+
+  if (isLoading) {
+    return (
+      <ScreenWrapper scrollable={false}>
+        <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+          <IconButton
+            icon={{ sf: 'xmark', IconComponent: X }}
+            onPress={handleClose}
+            size="md"
+            color={iconColor}
+          />
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+            {t('clients.editClientModal.title')}
+          </Text>
+          <View style={styles.headerPlaceholder} />
+        </View>
+      </ScreenWrapper>
+    );
+  }
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <TouchableWithoutFeedback onPress={handleDismissKeyboard} accessible={false}>
-        <View style={styles.container}>
-          {/* Header with blur effect */}
-          <View style={[styles.fixedHeader, { height: headerHeight }]}>
-            <LinearGradient
-              colors={[
-                hexToRgba(themeColors.background, 1),
-                hexToRgba(themeColors.background, 0.85),
-                hexToRgba(themeColors.background, 0.5),
-                hexToRgba(themeColors.background, 0),
-              ]}
-              locations={[0, 0.5, 0.8, 1]}
-              style={[styles.headerGradient, { height: gradientHeight }]}
-              pointerEvents="none"
-            />
-            <View
-              style={[
-                styles.header,
-                {
-                  paddingTop: Platform.OS === 'android' ? 12 + insets.top : 12,
-                },
-              ]}
-            >
-              <IconButton
-                icon={{ sf: 'xmark', IconComponent: X }}
-                onPress={handleCloseWithConfirmation}
-                size="md"
-                color={themeColors.text}
-              />
-              <Text style={[styles.title, { color: themeColors.text }]}>
-                {t('clients.editClientModal.title')}
-              </Text>
-              <IconButton
-                icon={{ sf: 'checkmark', IconComponent: Check }}
-                onPress={handleSave}
-                size="md"
-                variant={canComplete ? 'primary' : 'default'}
-                disabled={!canComplete}
-                loading={updateMutation.isPending}
-              />
-            </View>
-          </View>
+    <ScreenWrapper scrollable={true}>
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+        <IconButton
+          icon={{ sf: 'xmark', IconComponent: X }}
+          onPress={handleCloseWithConfirmation}
+          size="md"
+          color={iconColor}
+        />
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+          {t('clients.editClientModal.title')}
+        </Text>
+        {canComplete ? (
+          <IconButton
+            icon={{ sf: 'checkmark', IconComponent: Check }}
+            onPress={handleSave}
+            size="md"
+            variant="primary"
+            disabled={!canComplete}
+            loading={updateMutation.isPending}
+          />
+        ) : (
+          <View style={styles.headerPlaceholder} />
+        )}
+      </View>
 
-          {/* Content */}
-          <KeyboardAwareScrollView
-            style={styles.scrollView}
-            contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            bottomOffset={40}
-          >
-            <InputBox
-              label={t('clients.addClientModal.name')}
-              value={name}
-              onChangeText={setName}
-              placeholder={t('clients.addClientModal.namePlaceholder')}
-            />
+      {/* Form Content */}
+      <View style={styles.formContainer}>
+        <InputBox
+          label={t('clients.addClientModal.name')}
+          value={name}
+          onChangeText={setName}
+          placeholder={t('clients.addClientModal.namePlaceholder')}
+        />
 
-            <InputBox
-              label={t('clients.addClientModal.email')}
-              value={email}
-              onChangeText={setEmail}
-              placeholder={t('clients.addClientModal.emailPlaceholder')}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
+        <InputBox
+          label={t('clients.addClientModal.email')}
+          value={email}
+          onChangeText={setEmail}
+          placeholder={t('clients.addClientModal.emailPlaceholder')}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
 
-            <SelectInput
-              label={t('clients.editClientModal.type')}
-              value={category}
-              onChange={setCategory}
-              options={categoryOptions}
-              placeholder={t('clients.editClientModal.typePlaceholder')}
-            />
+        <SelectInput
+          label={t('clients.editClientModal.type')}
+          value={category}
+          onChange={setCategory}
+          options={categoryOptions}
+          placeholder={t('clients.editClientModal.typePlaceholder')}
+        />
 
-            <DateOfBirthInput
-              label={t('clients.editClientModal.dateOfBirth')}
-              value={dateOfBirth}
-              onChange={setDateOfBirth}
-            />
+        <DateOfBirthInput
+          label={t('clients.editClientModal.dateOfBirth')}
+          value={dateOfBirth}
+          onChange={setDateOfBirth}
+        />
 
-            <HeightInput
-              label={t('clients.editClientModal.height')}
-              value={height}
-              onChangeText={setHeight}
-              placeholder={t('clients.editClientModal.heightPlaceholder')}
-            />
+        <HeightInput
+          label={t('clients.editClientModal.height')}
+          value={height}
+          onChangeText={setHeight}
+          placeholder={t('clients.editClientModal.heightPlaceholder')}
+        />
 
-            <CountrySelectorInput
-              label={t('clients.editClientModal.country')}
-              value={country}
-              onChange={setCountry}
-              placeholder={t('clients.editClientModal.countryPlaceholder')}
-              modalTitle={t('clients.editClientModal.countryModalTitle')}
-            />
+        <CountrySelectorInput
+          label={t('clients.editClientModal.country')}
+          value={country}
+          onChange={setCountry}
+          placeholder={t('clients.editClientModal.countryPlaceholder')}
+          modalTitle={t('clients.editClientModal.countryModalTitle')}
+        />
 
-            <PhoneNumberInput
-              codeLabel={t('clients.editClientModal.code')}
-              numberLabel={t('clients.editClientModal.phoneNumber')}
-              value={phoneNumber}
-              onChange={setPhoneNumber}
-              placeholder={t('clients.editClientModal.phoneNumberPlaceholder')}
-              modalTitle={t('clients.editClientModal.countryModalTitle')}
-            />
-          </KeyboardAwareScrollView>
-        </View>
-      </TouchableWithoutFeedback>
-    </View>
+        <PhoneNumberInput
+          codeLabel={t('clients.editClientModal.code')}
+          numberLabel={t('clients.editClientModal.phoneNumber')}
+          value={phoneNumber}
+          onChange={setPhoneNumber}
+          placeholder={t('clients.editClientModal.phoneNumberPlaceholder')}
+          modalTitle={t('clients.editClientModal.countryModalTitle')}
+        />
+      </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  fixedHeader: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  headerGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
-  title: {
-    ...typography.h6,
+  headerTitle: {
+    ...typography.h5,
     flex: 1,
     textAlign: 'center',
   },
-  closeButton: {
+  headerPlaceholder: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
+  formContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 40,
     gap: 12,
   },
 });

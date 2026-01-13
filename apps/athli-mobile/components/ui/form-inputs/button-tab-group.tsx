@@ -47,14 +47,14 @@ export const ButtonTabGroup = <T extends string>({
   };
 
   return (
-    <View style={[styles.buttonGroup, { backgroundColor: themeColors.surfaceSecondary }]}>
+    <View style={[styles.buttonGroup, { backgroundColor: themeColors.iconButton }]}>
       {/* Animated pill background */}
       {buttonDimensions.width > 0 && (
         <Animated.View
           style={[
             styles.animatedPill,
             {
-              backgroundColor: themeColors.background,
+              backgroundColor: themeColors.pageBackground,
               width: buttonDimensions.width,
               height: buttonDimensions.height,
               transform: [{ translateX: pillPosition }],

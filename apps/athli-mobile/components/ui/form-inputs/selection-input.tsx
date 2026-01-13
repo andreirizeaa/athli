@@ -25,7 +25,7 @@ export const SelectionInput = ({
 
     return (
         <PressableOpacity onPress={onPress}>
-            <View style={[styles.inputBox, { backgroundColor: themeColors.surfaceSecondary }]}>
+            <View style={[styles.inputBox, { backgroundColor: themeColors.iconButton }]}>
                 {label.length > 0 && (
                     <View style={styles.labelRow}>
                         <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>

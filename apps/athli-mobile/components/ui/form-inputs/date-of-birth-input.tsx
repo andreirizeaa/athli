@@ -132,7 +132,7 @@ export const DateOfBirthInput = ({
   };
 
   return (
-    <View style={[styles.inputBox, { backgroundColor: themeColors.surfaceSecondary }]}>
+    <View style={[styles.inputBox, { backgroundColor: themeColors.iconButton }]}>
       <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
         {label}
       </Text>

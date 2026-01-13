@@ -219,7 +219,6 @@ function RootLayoutNav() {
           />
           <Stack.Screen name="client/[id]/activity" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/metrics" options={{ headerShown: false }} />
-          <Stack.Screen name="client/[id]/training-calendar" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/goals-injuries" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/notes" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/training" options={{ headerShown: false }} />
@@ -230,6 +229,18 @@ function RootLayoutNav() {
           <Stack.Screen name="client/[id]/questionaires" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/settings" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/assistant" options={{ headerShown: false }} />
+          <Stack.Screen name="client/[id]/goals" options={{ headerShown: false }} />
+          <Stack.Screen name="client/[id]/injuries" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="client/[id]/edit-details"
+            options={{
+              headerShadowVisible: true,
+              headerShown: false,
+              animation: 'slide_from_bottom',
+              animationDuration: 150,
+              presentation: 'card',
+            }}
+          />
           <Stack.Screen
             name="library/workout/[id]"
             options={{

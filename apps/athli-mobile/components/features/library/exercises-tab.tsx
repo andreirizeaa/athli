@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, Alert } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Dumbbell, Play } from 'lucide-react-native';
-import { PressableOpacity } from 'pressto';
+import { PressableScale } from 'pressto';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { FlashList } from '@shopify/flash-list';
@@ -235,7 +235,7 @@ export const ExercisesTab = () => {
           <View style={styles.rowWrapper}>
             <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
               {/* Thumbnail - Separate Pressable */}
-              <PressableOpacity
+              <PressableScale
                 onPress={() => handleThumbnailPress(exercise)}
                 style={styles.thumbnailWrapper}
               >
@@ -261,10 +261,10 @@ export const ExercisesTab = () => {
                     />
                   </View>
                 )}
-              </PressableOpacity>
+              </PressableScale>
 
               {/* Rest of row - Pressable for Edit */}
-              <PressableOpacity
+              <PressableScale
                 onPress={() => handleExercisePress(exercise)}
                 style={styles.mainContentPressable}
               >
@@ -295,7 +295,7 @@ export const ExercisesTab = () => {
                   )}
                 </View>
                 <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-              </PressableOpacity>
+              </PressableScale>
             </View>
           </View>
         </SwipeableRow>

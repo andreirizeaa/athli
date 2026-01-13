@@ -222,7 +222,7 @@ export default function ArchivedChatsScreen() {
           onPress={handleBackPress}
         >
           <PlatformIcon
-            sf="chevron.left"
+            sf="arrow.left"
             IconComponent={ChevronLeft}
             size={iconSizes.navigationChevrons}
             color={iconColor}

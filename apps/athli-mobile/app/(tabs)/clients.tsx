@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View, Share } from 'react-native';
-import { PressableOpacity } from 'pressto';
+import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Send } from 'lucide-react-native';
@@ -157,7 +157,7 @@ export default function ClientsScreen() {
           const isLastItem = index === filteredClients.length - 1;
           return (
             <View>
-              <PressableOpacity
+              <PressableScale
                 onPress={() => handleClientPress(client.id)}
                 style={styles.rowWrapper}
               >
@@ -199,7 +199,7 @@ export default function ClientsScreen() {
                   </View>
                   <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
                 </View>
-              </PressableOpacity>
+              </PressableScale>
               <View style={styles.separatorContainer}>
                 <View
                   style={[

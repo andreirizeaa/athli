@@ -125,7 +125,7 @@ export const CountrySelectorInput = ({
   return (
     <>
       <PressableOpacity
-        style={[styles.inputBox, { backgroundColor: themeColors.surfaceSecondary }]}
+        style={[styles.inputBox, { backgroundColor: themeColors.iconButton }]}
         onPress={handlePress}
       >
         <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>

@@ -545,7 +545,7 @@ export default function ReorderScreen() {
                     {/* Header */}
                     <View style={styles.header}>
                         <IconButton
-                            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+                            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                             onPress={handleBack}
                             size="md"
                             color={themeColors.text}

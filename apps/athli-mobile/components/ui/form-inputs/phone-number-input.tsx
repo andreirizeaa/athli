@@ -191,7 +191,7 @@ export const PhoneNumberInput = ({
       <View style={styles.container}>
         {/* Left Box: Country Code Dropdown */}
         <PressableOpacity
-          style={[styles.codeBox, { backgroundColor: themeColors.surfaceSecondary }]}
+          style={[styles.codeBox, { backgroundColor: themeColors.iconButton }]}
           onPress={handleOpenCountryPicker}
         >
           <Text style={[styles.boxLabel, { color: themeColors.mutedText }]}>
@@ -206,7 +206,7 @@ export const PhoneNumberInput = ({
         </PressableOpacity>
 
         {/* Right Box: Phone Number Input */}
-        <View style={[styles.numberBox, { backgroundColor: themeColors.surfaceSecondary }]}>
+        <View style={[styles.numberBox, { backgroundColor: themeColors.iconButton }]}>
           <Text style={[styles.boxLabel, { color: themeColors.mutedText }]}>
             {numberLabel}
           </Text>
