@@ -78,6 +78,14 @@ export const SlidingPanel = forwardRef<SlidingPanelRef, SlidingPanelProps>(
             [onExpansionChange]
         );
 
+        const setIsOpen = useCallback((value: boolean) => {
+            isOpenRef.current = value;
+        }, []);
+
+        const setIsExpanded = useCallback((value: boolean) => {
+            isExpandedRef.current = value;
+        }, []);
+
         const open = useCallback(() => {
             isOpenRef.current = true;
             progress.value = withTiming(1, ANIMATION_CONFIG, (finished) => {
@@ -89,8 +97,8 @@ export const SlidingPanel = forwardRef<SlidingPanelRef, SlidingPanelProps>(
 
         const close = useCallback(() => {
             Keyboard.dismiss();
-            isOpenRef.current = false;
-            isExpandedRef.current = false;
+            setIsOpen(false);
+            setIsExpanded(false);
 
             // Don't animate expansion - slide off from current position
             // This ensures smooth close from both 80% and 100%
@@ -101,32 +109,32 @@ export const SlidingPanel = forwardRef<SlidingPanelRef, SlidingPanelProps>(
                     runOnJS(notifyOpenChange)(false);
                 }
             });
-        }, [progress, expansion, notifyOpenChange]);
+        }, [progress, expansion, setIsOpen, setIsExpanded, notifyOpenChange]);
 
         const expand = useCallback(() => {
-            isExpandedRef.current = true;
+            setIsExpanded(true);
             expansion.value = withTiming(1, ANIMATION_CONFIG, (finished) => {
                 if (finished) {
                     runOnJS(notifyExpansionChange)(true);
                 }
             });
-        }, [expansion, notifyExpansionChange]);
+        }, [expansion, setIsExpanded, notifyExpansionChange]);
 
         const collapse = useCallback(() => {
-            isExpandedRef.current = false;
+            setIsExpanded(false);
             expansion.value = withTiming(0, ANIMATION_CONFIG, (finished) => {
                 if (finished) {
                     runOnJS(notifyExpansionChange)(false);
                 }
             });
-        }, [expansion, notifyExpansionChange]);
+        }, [expansion, setIsExpanded, notifyExpansionChange]);
 
         // Snap to collapsed without animation (for instant reset)
         const snapToCollapsed = useCallback(() => {
-            isExpandedRef.current = false;
+            setIsExpanded(false);
             expansion.value = 0;
             notifyExpansionChange(false);
-        }, [expansion, notifyExpansionChange]);
+        }, [expansion, setIsExpanded, notifyExpansionChange]);
 
         // Expose methods via ref
         useImperativeHandle(
@@ -158,12 +166,12 @@ export const SlidingPanel = forwardRef<SlidingPanelRef, SlidingPanelProps>(
                 const shouldClose = event.translationX > effectiveWidth * 0.3 || event.velocityX > 500;
 
                 if (shouldClose) {
-                    isOpenRef.current = false;
-                    isExpandedRef.current = false;
                     // Don't animate expansion - just slide off smoothly
                     progress.value = withTiming(0, FAST_ANIMATION_CONFIG, (finished) => {
                         if (finished) {
                             expansion.value = 0; // Reset after close
+                            runOnJS(setIsOpen)(false);
+                            runOnJS(setIsExpanded)(false);
                             runOnJS(notifyOpenChange)(false);
                         }
                     });
