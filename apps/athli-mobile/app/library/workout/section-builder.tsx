@@ -5,9 +5,9 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
@@ -331,13 +331,13 @@ export default function SectionBuilderScreen() {
         mutationFn: (sectionData: any) => createSection(sectionData),
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['sections'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             if (router.canGoBack()) {
                 router.back();
             }
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),
@@ -350,13 +350,13 @@ export default function SectionBuilderScreen() {
         mutationFn: ({ id, data }: { id: string; data: any }) => updateSection(id, data),
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['sections'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             if (router.canGoBack()) {
                 router.back();
             }
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),

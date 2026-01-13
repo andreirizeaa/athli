@@ -4,10 +4,11 @@ import { ChevronRight, Layers } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableScale } from 'pressto';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
+
 import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { type SectionType, SECTION_TYPES } from '@athli/shared-types';
@@ -66,10 +67,10 @@ export const SectionsTab = () => {
     mutationFn: (id: string) => deleteSections(id),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['sections'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDeleting'),
@@ -83,10 +84,10 @@ export const SectionsTab = () => {
     mutationFn: (id: string) => duplicateSection(id),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['sections'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDuplicating'),
@@ -100,10 +101,10 @@ export const SectionsTab = () => {
     mutationFn: ({ id, starred }: { id: string; starred: boolean }) => starSections(id, starred),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['sections'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorUpdating'),
@@ -117,10 +118,10 @@ export const SectionsTab = () => {
     mutationFn: ({ id, archived }: { id: string; archived: boolean }) => archiveSections(id, archived),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['sections'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorUpdating'),

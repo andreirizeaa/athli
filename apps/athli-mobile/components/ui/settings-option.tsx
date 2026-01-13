@@ -5,10 +5,10 @@ import { Platform, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import type { LucideIcon } from 'lucide-react-native';
 import { ChevronRight } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
+import { haptics } from '@/utils/haptics';
 
 type PlatformIconProps = {
   sf: string;
@@ -47,7 +47,7 @@ export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, 
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.medium();
     onPress(event);
   };
 

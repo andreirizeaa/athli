@@ -4,11 +4,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Dumbbell, Play } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
-import * as Haptics from 'expo-haptics';
+
 import { Image } from 'expo-image';
 import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { getExercises, deleteExercises, duplicateExercises, starExercises, archiveExercises } from '@/services/coach/coach-exercise-service';
@@ -68,10 +69,10 @@ export const ExercisesTab = () => {
     mutationFn: (id: string) => deleteExercises(id),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['exercises'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDeleting'),
@@ -85,10 +86,10 @@ export const ExercisesTab = () => {
     mutationFn: (id: string) => duplicateExercises(id),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['exercises'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDuplicating'),
@@ -102,10 +103,10 @@ export const ExercisesTab = () => {
     mutationFn: ({ id, starred }: { id: string; starred: boolean }) => starExercises(id, starred),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['exercises'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorUpdating'),
@@ -119,10 +120,10 @@ export const ExercisesTab = () => {
     mutationFn: ({ id, archived }: { id: string; archived: boolean }) => archiveExercises(id, archived),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['exercises'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorUpdating'),

@@ -9,12 +9,13 @@ import { Platform, View as RNView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import 'react-native-reanimated';
 import { PressablesConfig } from 'pressto';
-import * as Haptics from 'expo-haptics';
 
 import { useColorScheme, useThemePreference, useCoachProfileStore, useClientProfileStore } from '@/stores';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { useTranslationsStore } from '@/stores/useTranslationsStore';
 import { useUnitsStore } from '@/stores/useUnitsStore';
+import { useHapticsStore } from '@/stores/useHapticsStore';
+import { haptics } from '@/utils/haptics';
 import { useColorScheme as useNativeColorScheme } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -74,7 +75,7 @@ export default function RootLayout() {
             animationConfig={{ duration: 150 }}
             config={{ minScale: 0.96, activeOpacity: 0.7 }}
             globalHandlers={{
-              onPress: () => Haptics.selectionAsync(),
+              onPress: () => haptics.medium(),
             }}
           >
             <KeyboardProvider>
@@ -97,6 +98,7 @@ function RootLayoutNav() {
     useThemeStore.getState().initialize();
     useTranslationsStore.getState().initialize();
     useUnitsStore.getState().initialize();
+    useHapticsStore.getState().initialize();
   }, []);
 
   // Now we can safely use theme hooks after initialization

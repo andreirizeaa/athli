@@ -3,10 +3,11 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { View, StyleSheet, Text, Alert } from 'react-native';
 import { X, Check } from 'lucide-react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
+
 
 import { useThemePreference } from '@/stores';
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
@@ -96,14 +97,14 @@ export default function EditClientDetailsScreen() {
       await queryClient.refetchQueries({ queryKey: ['clients'] });
 
       // Success haptic feedback
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
 
       // Close screen
       handleClose();
     },
     onError: (error: Error) => {
       // Error haptic feedback
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
 
       // Show error alert
       Alert.alert(
@@ -230,7 +231,7 @@ export default function EditClientDetailsScreen() {
   }, [clientId]);
 
   const handleClose = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.medium();
     if (router.canGoBack()) {
       router.back();
     }

@@ -7,10 +7,10 @@ import { KeyboardComposer, KeyboardAwareWrapper } from '@launchhq/react-native-k
 import { Drawer } from 'react-native-drawer-layout';
 import { FlashList } from '@shopify/flash-list';
 import { PressableOpacity } from 'pressto';
-import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
@@ -109,7 +109,7 @@ export default function ClientAssistantScreen() {
     // Create new chat session
     const handleCreateNewSession = () => {
         // Haptic feedback
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.medium();
 
         // Close the drawer
         setIsPanelOpen(false);
@@ -164,7 +164,7 @@ export default function ClientAssistantScreen() {
 
     // Close search and unfocus
     const handleCloseSearch = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.medium();
         Keyboard.dismiss();
         setSearchQuery('');
         handleSearchBlur();

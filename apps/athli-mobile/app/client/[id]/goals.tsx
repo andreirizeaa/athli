@@ -2,11 +2,12 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus, ChevronRight } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+
 import { FlashList } from '@shopify/flash-list';
 import { PressableScale } from 'pressto';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
@@ -36,12 +37,12 @@ export default function ClientGoalsScreen() {
   const iconColor = themeColors.text;
 
   const handleBackPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.medium();
     router.back();
   };
 
   const handleAddGoal = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.medium();
     router.push({
       pathname: '/modals/client/add-client-goal-modal',
       params: { id },
@@ -49,7 +50,7 @@ export default function ClientGoalsScreen() {
   };
 
   const handleGoalPress = (goalId: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.medium();
     router.push({
       pathname: '/modals/client/edit-client-goal-modal',
       params: { id, goalId },

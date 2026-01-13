@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
 import { MaterialIcons } from '@expo/vector-icons';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as Haptics from 'expo-haptics';
+
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import type { ComponentType } from 'react';
 
@@ -18,6 +18,7 @@ import { useTranslations } from '@/stores';
 import { useTrainingOverlay } from '@/stores';
 import { useLibraryTab, type LibraryTab } from '@/stores';
 import { iconSizes } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import {
   ChartNoAxesColumn,
   FileText,
@@ -42,7 +43,7 @@ const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewPr
   const insets = useSafeAreaInsets();
 
   const handleAddPressWithHaptic = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.medium();
     onAddPress();
   };
 
@@ -342,7 +343,7 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   };
 
   const handleTabPress = (name: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.medium();
     if (name === activeRouteName) {
       return;
     }
@@ -351,7 +352,7 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   };
 
   const handleAddPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.medium();
     if (appView === 'coach') {
       // Navigate to appropriate modal based on route
       if (activeRouteName === 'clients') {

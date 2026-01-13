@@ -1,9 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { Archive, Trash2, MailCheck, CheckCircle, MailOpen } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
-import { Alert } from 'react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/stores';

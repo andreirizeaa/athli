@@ -4,11 +4,12 @@ import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Send } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+
 import { useQuery } from '@tanstack/react-query';
 import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { getClients, type Athlete } from '@/services/coach/coach-client-service';
@@ -93,7 +94,7 @@ export default function ClientsScreen() {
   });
 
   const handleClientPress = (clientId: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.medium();
     router.push(`/client/${clientId}`);
   };
 
@@ -119,7 +120,7 @@ export default function ClientsScreen() {
   };
 
   const handleShare = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.medium();
     try {
       await Share.share({
         message: 'YOUR INVITE LINE HERE',

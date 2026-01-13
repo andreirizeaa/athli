@@ -5,10 +5,11 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
+
 import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
@@ -68,10 +69,10 @@ export const FilesTab = () => {
     mutationFn: (id: string) => deleteFile({ fileId: id }),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['files'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDeleting'),

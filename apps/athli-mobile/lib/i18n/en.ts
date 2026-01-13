@@ -741,6 +741,7 @@ export const en = {
     colorPalette: 'Color palette',
     searchPalettes: 'Search',
     searchLanguages: 'Search',
+    haptics: 'Haptic feedback',
   },
   clientDetail: {
     tabs: {

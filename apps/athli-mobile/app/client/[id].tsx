@@ -21,10 +21,11 @@ import {
   Heart,
   Pencil,
 } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+
 import { PressableScale, PressableOpacity } from 'pressto';
 
 import { typography, iconSizes } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
@@ -66,22 +67,22 @@ export default function ClientProfileScreen() {
   const iconColor = themeColors.text;
 
   const handleBackPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.medium();
     router.back();
   };
 
   const handleAssistantPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.medium();
     router.push(`/client/${id}/assistant`);
   };
 
   const handleEditProfilePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.medium();
     router.push(`/modals/client/edit-client-details-modal?id=${id}`);
   };
 
   const handleMenuItemPress = (route: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.medium();
     router.push(route);
   };
 
