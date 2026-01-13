@@ -1,5 +1,6 @@
 import React from 'react';
-import { Dimensions, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import * as ContextMenu from 'zeego/context-menu';
 import * as DropdownMenuZeego from 'zeego/dropdown-menu';
 import type { LucideIcon } from 'lucide-react-native';
@@ -98,10 +99,9 @@ export const DropdownMenu = ({
       onStartShouldSetResponder={() => true}
     >
       {options.map((option, index) => (
-        <TouchableOpacity
+        <PressableOpacity
           key={index}
           style={styles.menuItem}
-          activeOpacity={0.7}
           onPress={() => {
             option.onPress?.();
             onClose();
@@ -121,7 +121,7 @@ export const DropdownMenu = ({
           ]}>
             {option.label}
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
       ))}
     </View>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'expo-router';
-import { View, StyleSheet, Text, Platform, FlatList } from 'react-native';
+import { View, StyleSheet, Text, Platform } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Search, ChevronRight } from 'lucide-react-native';
@@ -69,7 +70,7 @@ export default function MetricsModal() {
                                 <Text style={[styles.metricName, { color: themeColors.text }]}>{metric.name}</Text>
                                 <Text style={[styles.metricUnit, { color: themeColors.mutedText }]}>{metric.unit}</Text>
                             </View>
-                            <ChevronRight {...({ size: 18, color: themeColors.mutedText } as any)} />
+                            <ChevronRight size={18} color={themeColors.mutedText} />
                         </PressableOpacity>
                     </React.Fragment>
                 ))}
@@ -114,9 +115,10 @@ export default function MetricsModal() {
             </View>
 
             <View style={[styles.content]}>
-                <FlatList
+                <FlashList
                     data={filteredMetrics}
                     keyExtractor={(item) => item.section}
+                    estimatedItemSize={120}
                     renderItem={renderItem}
                     contentContainerStyle={[styles.listContent, { paddingTop: headerHeight + 16 }]}
                     ListHeaderComponent={

@@ -77,18 +77,18 @@ export function useLibraryData(isAuthenticated: boolean = false) {
     queryKey: ['checkIns'],
     queryFn: getCheckIns,
     enabled: isAuthenticated,
-    refetchOnMount: 'always',
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
-    staleTime: 0, // Always consider data stale to ensure fresh data
+    staleTime: 5 * 60 * 1000, // 5 minutes - cache data to reduce API calls
   });
 
   // Exercises
   const exercisesQuery = useQuery({
     queryKey: ['exercises'],
     queryFn: getExercises,
-    staleTime: 0, // Always consider data stale to ensure fresh data
+    staleTime: 5 * 60 * 1000, // 5 minutes - cache data to reduce API calls
     enabled: isAuthenticated,
-    refetchOnMount: 'always',
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
   });
 
@@ -96,9 +96,9 @@ export function useLibraryData(isAuthenticated: boolean = false) {
   const habitsQuery = useQuery({
     queryKey: ['habits'],
     queryFn: getAllHabits,
-    staleTime: 0, // Always consider data stale to ensure fresh data
+    staleTime: 5 * 60 * 1000, // 5 minutes - cache data to reduce API calls
     enabled: isAuthenticated,
-    refetchOnMount: 'always',
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
   });
 
@@ -106,9 +106,9 @@ export function useLibraryData(isAuthenticated: boolean = false) {
   const metricsQuery = useQuery({
     queryKey: ['metrics'],
     queryFn: getAllMetrics,
-    staleTime: 0, // Always consider data stale to ensure fresh data
+    staleTime: 5 * 60 * 1000, // 5 minutes - cache data to reduce API calls
     enabled: isAuthenticated,
-    refetchOnMount: 'always',
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
   });
 
@@ -116,9 +116,9 @@ export function useLibraryData(isAuthenticated: boolean = false) {
   const questionnairesQuery = useQuery({
     queryKey: ['questionnaires'],
     queryFn: getQuestionnaires,
-    staleTime: 0, // Always consider data stale to ensure fresh data
+    staleTime: 5 * 60 * 1000, // 5 minutes - cache data to reduce API calls
     enabled: isAuthenticated,
-    refetchOnMount: 'always',
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
   });
 
@@ -126,9 +126,9 @@ export function useLibraryData(isAuthenticated: boolean = false) {
   const sectionsQuery = useQuery({
     queryKey: ['sections'],
     queryFn: getSections,
-    staleTime: 0, // Always consider data stale to ensure fresh data
+    staleTime: 5 * 60 * 1000, // 5 minutes - cache data to reduce API calls
     enabled: isAuthenticated,
-    refetchOnMount: 'always',
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
   });
 
@@ -136,9 +136,9 @@ export function useLibraryData(isAuthenticated: boolean = false) {
   const workoutsQuery = useQuery({
     queryKey: ['workouts'],
     queryFn: getWorkouts,
-    staleTime: 0, // Always consider data stale to ensure fresh data
+    staleTime: 5 * 60 * 1000, // 5 minutes - cache data to reduce API calls
     enabled: isAuthenticated,
-    refetchOnMount: 'always',
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
   });
 
@@ -146,9 +146,9 @@ export function useLibraryData(isAuthenticated: boolean = false) {
   const filesQuery = useQuery({
     queryKey: ['files'],
     queryFn: getAllFiles,
-    staleTime: 0, // Always consider data stale to ensure fresh data
+    staleTime: 5 * 60 * 1000, // 5 minutes - cache data to reduce API calls
     enabled: isAuthenticated,
-    refetchOnMount: 'always',
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
   });
 
@@ -186,6 +186,7 @@ export function useLibraryData(isAuthenticated: boolean = false) {
       console.log('[useLibraryData] Syncing files to store:', filesQuery.data.length, 'items');
       setFiles(filesQuery.data);
     }
+    // Note: Zustand setters are stable and don't need to be in dependencies
   }, [
     checkInsQuery.data,
     exercisesQuery.data,
@@ -195,14 +196,6 @@ export function useLibraryData(isAuthenticated: boolean = false) {
     sectionsQuery.data,
     workoutsQuery.data,
     filesQuery.data,
-    setCheckIns,
-    setExercises,
-    setHabits,
-    setMetrics,
-    setQuestionnaires,
-    setSections,
-    setWorkouts,
-    setFiles,
   ]);
 
   return {

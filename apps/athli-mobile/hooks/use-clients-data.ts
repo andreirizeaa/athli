@@ -30,9 +30,9 @@ export function useClientsData(isAuthenticated: boolean = false) {
   const clientsQuery = useQuery({
     queryKey: ['clients'],
     queryFn: getClients,
-    staleTime: 0, // Always consider data stale to ensure fresh data
+    staleTime: 5 * 60 * 1000, // 5 minutes - cache data to reduce API calls
     enabled: isAuthenticated,
-    refetchOnMount: 'always',
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
   });
 
