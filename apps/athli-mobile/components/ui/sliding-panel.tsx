@@ -90,27 +90,17 @@ export const SlidingPanel = forwardRef<SlidingPanelRef, SlidingPanelProps>(
         const close = useCallback(() => {
             Keyboard.dismiss();
             isOpenRef.current = false;
-            const wasExpanded = isExpandedRef.current;
             isExpandedRef.current = false;
 
-            if (wasExpanded) {
-                // Close from expanded: keep expansion at 1, slide directly from 100% to off-screen
-                progress.value = withTiming(0, ANIMATION_CONFIG, (finished) => {
-                    if (finished) {
-                        runOnJS(notifyOpenChange)(false);
-                        // Reset expansion after notifying (without animation to avoid triggering callbacks)
-                        expansion.value = 0;
-                    }
-                });
-            } else {
-                // Close from collapsed: animate both (current behavior)
-                expansion.value = withTiming(0, ANIMATION_CONFIG);
-                progress.value = withTiming(0, ANIMATION_CONFIG, (finished) => {
-                    if (finished) {
-                        runOnJS(notifyOpenChange)(false);
-                    }
-                });
-            }
+            // Don't animate expansion - slide off from current position
+            // This ensures smooth close from both 80% and 100%
+            progress.value = withTiming(0, ANIMATION_CONFIG, (finished) => {
+                if (finished) {
+                    // Reset expansion after close completes (for next open)
+                    expansion.value = 0;
+                    runOnJS(notifyOpenChange)(false);
+                }
+            });
         }, [progress, expansion, notifyOpenChange]);
 
         const expand = useCallback(() => {
@@ -131,10 +121,11 @@ export const SlidingPanel = forwardRef<SlidingPanelRef, SlidingPanelProps>(
             });
         }, [expansion, notifyExpansionChange]);
 
+        // Snap to collapsed without animation (for instant reset)
         const snapToCollapsed = useCallback(() => {
             isExpandedRef.current = false;
             expansion.value = 0;
-            runOnJS(notifyExpansionChange)(false);
+            notifyExpansionChange(false);
         }, [expansion, notifyExpansionChange]);
 
         // Expose methods via ref
@@ -168,27 +159,14 @@ export const SlidingPanel = forwardRef<SlidingPanelRef, SlidingPanelProps>(
 
                 if (shouldClose) {
                     isOpenRef.current = false;
-                    const wasExpanded = isExpandedRef.current;
                     isExpandedRef.current = false;
-
-                    if (wasExpanded) {
-                        // Close from expanded: keep expansion at 1, slide directly off-screen
-                        progress.value = withTiming(0, FAST_ANIMATION_CONFIG, (finished) => {
-                            if (finished) {
-                                runOnJS(notifyOpenChange)(false);
-                                // Reset expansion after notifying (without animation to avoid triggering callbacks)
-                                expansion.value = 0;
-                            }
-                        });
-                    } else {
-                        // Close from collapsed: animate both
-                        expansion.value = withTiming(0, FAST_ANIMATION_CONFIG);
-                        progress.value = withTiming(0, FAST_ANIMATION_CONFIG, (finished) => {
-                            if (finished) {
-                                runOnJS(notifyOpenChange)(false);
-                            }
-                        });
-                    }
+                    // Don't animate expansion - just slide off smoothly
+                    progress.value = withTiming(0, FAST_ANIMATION_CONFIG, (finished) => {
+                        if (finished) {
+                            expansion.value = 0; // Reset after close
+                            runOnJS(notifyOpenChange)(false);
+                        }
+                    });
                 } else {
                     progress.value = withTiming(1, FAST_ANIMATION_CONFIG);
                 }
