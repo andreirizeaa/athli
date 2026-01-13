@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, View, Text, ScrollView, useWindowDimensions, Keyboard } from 'react-native';
+import { StyleSheet, View, Text, useWindowDimensions, Keyboard } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, SlidersHorizontal, SquarePen, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -98,12 +98,21 @@ export default function ClientAssistantScreen() {
         setIsPanelOpen(!isPanelOpen);
     };
 
-    // Handle drawer close - reset width and search state
-    const handleDrawerClose = () => {
-        setIsPanelOpen(false);
+    // Cleanup state after drawer animation completes
+    const cleanupAfterClose = () => {
         setIsSearchFocused(false);
         setSearchQuery('');
         panelWidth.value = PANEL_COLLAPSED;
+    };
+
+    // Handle drawer close
+    const handleDrawerClose = () => {
+        // Update state for gesture/overlay closes (no-op if already false)
+        setIsPanelOpen(false);
+        // Defer cleanup until drawer animation completes (300ms native animation + buffer)
+        setTimeout(() => {
+            cleanupAfterClose();
+        }, 350);
     };
 
     // Create new chat session
@@ -232,6 +241,42 @@ export default function ClientAssistantScreen() {
         return `${diffDays}d ago`;
     };
 
+    // Message Bubble Component
+    const renderMessageBubble = ({ item }: { item: { id: string; text: string; role: 'user' | 'assistant' } }) => (
+        <View
+            style={[
+                styles.messageBubble,
+                item.role === 'user' ? styles.userMessage : styles.assistantMessage,
+                {
+                    backgroundColor:
+                        item.role === 'user'
+                            ? themeColors.primary
+                            : themeColors.translucentBackground,
+                },
+            ]}
+        >
+            <Text
+                style={[
+                    styles.messageText,
+                    {
+                        color: item.role === 'user' ? '#FFFFFF' : themeColors.text,
+                    },
+                ]}
+            >
+                {item.text}
+            </Text>
+        </View>
+    );
+
+    // Empty state component
+    const renderEmptyState = () => (
+        <View style={styles.emptyState}>
+            <Text style={[styles.emptyStateText, { color: themeColors.mutedText }]}>
+                {t('clientDetail.assistant.emptyState')}
+            </Text>
+        </View>
+    );
+
     // Session List Item Component
     const SessionListItem = ({ session }: { session: ChatSession }) => {
         const isActive = session.id === activeSessionId;
@@ -243,7 +288,7 @@ export default function ClientAssistantScreen() {
                     styles.sessionItem,
                     {
                         backgroundColor: isActive
-                            ? themeColors.backgroundTertiary
+                            ? themeColors.surfacePrimary
                             : 'transparent',
                     },
                 ]}
@@ -359,46 +404,14 @@ export default function ClientAssistantScreen() {
                     </View>
 
                     <KeyboardAwareWrapper style={{ flex: 1 }} extraBottomInset={0}>
-                        <ScrollView
-                            style={[styles.scrollView, { backgroundColor: themeColors.backgroundPrimary }]}
-                            contentContainerStyle={styles.scrollContent}
-                        >
-                            {messages.length === 0 ? (
-                                <View style={styles.emptyState}>
-                                    <Text style={[styles.emptyStateText, { color: themeColors.mutedText }]}>
-                                        {t('clientDetail.assistant.emptyState')}
-                                    </Text>
-                                </View>
-                            ) : (
-                                messages.map((message) => (
-                                    <View
-                                        key={message.id}
-                                        style={[
-                                            styles.messageBubble,
-                                            message.role === 'user' ? styles.userMessage : styles.assistantMessage,
-                                            {
-                                                backgroundColor:
-                                                    message.role === 'user'
-                                                        ? themeColors.primary
-                                                        : themeColors.translucentBackground,
-                                            },
-                                        ]}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.messageText,
-                                                {
-                                                    color:
-                                                        message.role === 'user' ? '#FFFFFF' : themeColors.text,
-                                                },
-                                            ]}
-                                        >
-                                            {message.text}
-                                        </Text>
-                                    </View>
-                                ))
-                            )}
-                        </ScrollView>
+                        <FlashList
+                            data={messages}
+                            renderItem={renderMessageBubble}
+                            keyExtractor={(item) => item.id}
+                            estimatedItemSize={80}
+                            ListEmptyComponent={renderEmptyState}
+                            contentContainerStyle={styles.messagesContent}
+                        />
 
                         {/* Composer - positioned absolutely */}
                         <View style={[styles.composerContainer]}>
@@ -451,6 +464,10 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
+        padding: 16,
+        paddingBottom: 24,
+    },
+    messagesContent: {
         padding: 16,
         paddingBottom: 24,
     },
