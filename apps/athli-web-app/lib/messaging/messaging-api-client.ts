@@ -3,7 +3,7 @@
  * Calls backend API endpoints instead of direct Supabase access
  */
 
-import axios from '@/lib/axios';
+import { apiFetch } from '@/api/api-client';
 import type {
   Conversation,
   Message,
@@ -26,14 +26,18 @@ export const getConversations = async ({
   includeArchived = false,
   limit = 100,
 }: Omit<GetConversationsOptions, 'coachId'>): Promise<Conversation[]> => {
-  const response = await axios.get('/api/v1/coach/messaging/conversations', {
-    params: {
-      includeArchived,
-      limit,
-    },
-  });
+  const response = await apiFetch<{ data: { conversations: Conversation[] } }>(
+    '/coach/messaging/conversations',
+    {
+      method: 'POST',
+      body: {
+        includeArchived,
+        limit,
+      },
+    }
+  );
 
-  return response.data.data.conversations;
+  return response.data.conversations;
 };
 
 // ================================================
@@ -53,19 +57,19 @@ export const getMessages = async ({
   offset = 0,
   beforeTimestamp,
 }: GetMessagesOptions): Promise<Message[]> => {
-  const response = await axios.get(
-    `/api/v1/coach/messaging/conversations/${conversationId}/messages`,
+  const response = await apiFetch<{ data: { messages: any[] } }>(
+    `/coach/messaging/conversations/${conversationId}/messages`,
     {
       params: {
         limit,
         offset,
         beforeTimestamp: beforeTimestamp?.toISOString(),
       },
-    },
+    }
   );
 
   // Convert string dates to Date objects
-  const messages = response.data.data.messages.map((msg: any) => ({
+  const messages = response.data.messages.map((msg: any) => ({
     ...msg,
     sent_at: new Date(msg.sent_at),
     read_at: msg.read_at ? new Date(msg.read_at) : null,
@@ -108,14 +112,20 @@ export const sendMessage = async ({
   messageType = 'text',
   parentMessageId,
 }: SendMessageOptions): Promise<Message> => {
-  const response = await axios.post('/api/v1/coach/messaging/messages', {
-    conversationId,
-    content,
-    messageType,
-    parentMessageId,
-  });
+  const response = await apiFetch<{ data: { message: any } }>(
+    '/coach/messaging/messages',
+    {
+      method: 'POST',
+      body: {
+        conversationId,
+        content,
+        messageType,
+        parentMessageId,
+      },
+    }
+  );
 
-  const msg = response.data.data.message;
+  const msg = response.data.message;
 
   return {
     ...msg,
@@ -136,13 +146,19 @@ export const addReaction = async (
   conversationId: string,
   reaction: ReactionEmoji,
 ): Promise<MessageReaction> => {
-  const response = await axios.post('/api/v1/coach/messaging/reactions', {
-    messageId,
-    conversationId,
-    reaction,
-  });
+  const response = await apiFetch<{ data: { reaction: any } }>(
+    '/coach/messaging/reactions',
+    {
+      method: 'POST',
+      body: {
+        messageId,
+        conversationId,
+        reaction,
+      },
+    }
+  );
 
-  const react = response.data.data.reaction;
+  const react = response.data.reaction;
 
   return {
     ...react,
@@ -151,7 +167,9 @@ export const addReaction = async (
 };
 
 export const removeReaction = async (messageId: string): Promise<void> => {
-  await axios.delete(`/api/v1/coach/messaging/reactions/${messageId}`);
+  await apiFetch(`/coach/messaging/reactions/${messageId}`, {
+    method: 'DELETE',
+  });
 };
 
 // ================================================
@@ -159,7 +177,9 @@ export const removeReaction = async (messageId: string): Promise<void> => {
 // ================================================
 
 export const markConversationAsRead = async (conversationId: string): Promise<void> => {
-  await axios.post(`/api/v1/coach/messaging/conversations/${conversationId}/read`);
+  await apiFetch(`/coach/messaging/conversations/${conversationId}/read`, {
+    method: 'POST',
+  });
 };
 
 // ================================================
@@ -167,27 +187,39 @@ export const markConversationAsRead = async (conversationId: string): Promise<vo
 // ================================================
 
 export const archiveConversation = async (conversationId: string): Promise<void> => {
-  await axios.post(`/api/v1/coach/messaging/conversations/${conversationId}/archive`);
+  await apiFetch(`/coach/messaging/conversations/${conversationId}/archive`, {
+    method: 'POST',
+  });
 };
 
 export const unarchiveConversation = async (conversationId: string): Promise<void> => {
-  await axios.post(`/api/v1/coach/messaging/conversations/${conversationId}/unarchive`);
+  await apiFetch(`/coach/messaging/conversations/${conversationId}/unarchive`, {
+    method: 'POST',
+  });
 };
 
 export const pinConversation = async (conversationId: string): Promise<void> => {
-  await axios.post(`/api/v1/coach/messaging/conversations/${conversationId}/pin`);
+  await apiFetch(`/coach/messaging/conversations/${conversationId}/pin`, {
+    method: 'POST',
+  });
 };
 
 export const unpinConversation = async (conversationId: string): Promise<void> => {
-  await axios.post(`/api/v1/coach/messaging/conversations/${conversationId}/unpin`);
+  await apiFetch(`/coach/messaging/conversations/${conversationId}/unpin`, {
+    method: 'POST',
+  });
 };
 
 export const muteConversation = async (conversationId: string): Promise<void> => {
-  await axios.post(`/api/v1/coach/messaging/conversations/${conversationId}/mute`);
+  await apiFetch(`/coach/messaging/conversations/${conversationId}/mute`, {
+    method: 'POST',
+  });
 };
 
 export const unmuteConversation = async (conversationId: string): Promise<void> => {
-  await axios.post(`/api/v1/coach/messaging/conversations/${conversationId}/unmute`);
+  await apiFetch(`/coach/messaging/conversations/${conversationId}/unmute`, {
+    method: 'POST',
+  });
 };
 
 // ================================================
@@ -195,5 +227,7 @@ export const unmuteConversation = async (conversationId: string): Promise<void> 
 // ================================================
 
 export const deleteMessage = async (messageId: string): Promise<void> => {
-  await axios.delete(`/api/v1/coach/messaging/messages/${messageId}`);
+  await apiFetch(`/coach/messaging/messages/${messageId}`, {
+    method: 'DELETE',
+  });
 };

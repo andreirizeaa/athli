@@ -7,27 +7,28 @@ export const coachMessagingRouter = Router();
 /**
  * @swagger
  * /api/v1/coach/messaging/conversations:
- *   get:
+ *   post:
  *     summary: Get all conversations for a coach
  *     tags: [Coach Messaging]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: includeArchived
- *         schema:
- *           type: boolean
- *         description: Include archived conversations
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: Maximum number of conversations to return
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               includeArchived:
+ *                 type: boolean
+ *                 description: Include archived conversations
+ *               limit:
+ *                 type: integer
+ *                 description: Maximum number of conversations to return
  *     responses:
  *       200:
  *         description: Conversations retrieved successfully
  */
-coachMessagingRouter.get('/conversations', supabaseAuthenticate, coachMessagingController.getConversations);
+coachMessagingRouter.post('/conversations', supabaseAuthenticate, coachMessagingController.getConversations);
 
 /**
  * @swagger
