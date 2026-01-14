@@ -62,7 +62,7 @@ export default function AddSectionToBuilderModal() {
     const [searchQuery, setSearchQuery] = useState('');
 
     // Fetch sections from API
-    const { data: sections = [], isLoading } = useQuery({
+    const { data: sections = [] } = useQuery({
         queryKey: ['sections'],
         queryFn: getSections,
         enabled: isAuthenticated,
@@ -538,11 +538,7 @@ export default function AddSectionToBuilderModal() {
                         </View>
 
                         {/* Loading State */}
-                        {isLoading ? (
-                            <View style={styles.loadingContainer}>
-                                <ActivityIndicator size="large" color={primaryColor} />
-                            </View>
-                        ) : isLoadingSection ? (
+                        {isLoadingSection ? (
                             <View style={styles.loadingContainer}>
                                 <ActivityIndicator size="large" color={primaryColor} />
                                 <Text style={[styles.loadingText, { color: themeColors.mutedText }]}>

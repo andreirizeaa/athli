@@ -37,7 +37,15 @@ import {
   sendInboxMessage,
   type Coach,
   type InboxMessage,
+  type Message,
+  type OptimisticMessage,
 } from '@/services/inbox-service';
+import { createOptimisticMessage } from '@athli/shared-types';
+import {
+  useRealtimeMessages,
+  useMessageMerging,
+} from '@/hooks/use-realtime-messaging';
+import { supabase } from '@/lib/supabase';
 
 const BAR_INTERVAL_MS = 100;
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -138,7 +146,7 @@ export default function InboxDetailScreen() {
         const parsed = JSON.parse(messagesParam) as InboxMessage[];
         return parsed.map((msg) => ({
           ...msg,
-          timestamp: new Date(msg.timestamp),
+          timestamp: new Date(msg.sent_at),
         }));
       } catch {
         return [];
@@ -146,6 +154,8 @@ export default function InboxDetailScreen() {
     }
     return [];
   });
+  const [optimisticMessages, setOptimisticMessages] = useState<OptimisticMessage[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [isLoading, setIsLoading] = useState(!coachParam || !messagesParam);
   const [reactionsSheetVisible, setReactionsSheetVisible] = useState(false);
@@ -192,6 +202,28 @@ export default function InboxDetailScreen() {
   const [durationLabel, setDurationLabel] = useState('0:00');
   const lastVoiceNoteDurationMsRef = useRef(0);
   const recordingStartedAtMsRef = useRef<number | null>(null);
+
+  // Get current user ID
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    };
+    getCurrentUser();
+  }, []);
+
+  // Realtime messages subscription
+  const { realtimeMessages } = useRealtimeMessages({
+    conversationId: id,
+    onMessageReceived: (message) => {
+      console.log('[Inbox Realtime] New message received:', message.id);
+    },
+  });
+
+  // Merge saved, realtime, and optimistic messages
+  const allMessages = useMessageMerging(messages, realtimeMessages, optimisticMessages);
 
   useEffect(() => {
     const handleKeyboardHide = () => {
@@ -443,7 +475,7 @@ export default function InboxDetailScreen() {
         setCoach(foundCoach);
         setMessages(inboxMessages.map((msg) => ({
           ...msg,
-          timestamp: new Date(msg.timestamp),
+          timestamp: new Date(msg.sent_at),
         })));
       } catch (error) {
         console.error('Failed to load inbox:', error);
@@ -620,22 +652,43 @@ export default function InboxDetailScreen() {
 
   const handleSendMessage = async () => {
     const text = searchQuery.trim();
-    if (!text) return;
+    if (!text || !currentUserId) return;
 
-    const originalMessage = replyingToMessage
-      ? findOriginalMessage(replyingToMessage)
-      : null;
+    // Clear input and exit reply mode immediately
+    setSearchQuery('');
+    const parentMessageId = replyingToMessage?.id;
+    setReplyingToMessage(null);
+
+    // Create optimistic message
+    const optimisticMsg = createOptimisticMessage(
+      id, // conversationId
+      currentUserId,
+      text,
+      'text',
+      parentMessageId
+    );
+
+    // Add to optimistic messages for immediate UI update
+    setOptimisticMessages((prev) => [...prev, optimisticMsg]);
 
     try {
-      const newMessage = await sendInboxMessage(text, {
-        ...(originalMessage && { replyTo: originalMessage }),
+      // Send to database
+      await sendInboxMessage(id, text, {
+        messageType: 'text',
+        parentMessageId,
       });
 
-      setMessages((prev) => [...prev, newMessage]);
-      setSearchQuery('');
-      setReplyingToMessage(null);
+      // Remove optimistic message (realtime will add the real one)
+      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('[Inbox] Failed to send message:', error);
+      // Mark as failed
+      setOptimisticMessages((prev) =>
+        prev.map((m) =>
+          m.id === optimisticMsg.id ? { ...m, status: 'failed' as const } : m
+        )
+      );
+      // TODO: Show error toast
     }
   };
 
@@ -749,10 +802,10 @@ export default function InboxDetailScreen() {
 
       <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <MessageList
-          messages={messages}
+          messages={allMessages}
           backgroundColor="transparent"
           themeColors={themeColors}
-          clientName={coach.name}
+          clientName={coach.other_user_name || 'Coach'}
           keyboardHeight={keyboardHeight}
           onReply={handleMessageReply}
           onEdit={handleMessageEdit}
@@ -793,7 +846,6 @@ export default function InboxDetailScreen() {
         onCancelReply={handleCancelReply}
         bottomInset={insets.bottom}
         keyboardHeight={keyboardHeight}
-        onToolbarHeightChange={handleToolbarHeightChange}
       />
 
       <MessageReactionsSheet

@@ -29,7 +29,7 @@ export const MetricsTab = () => {
   const isAuthenticated = !!coachProfile;
 
   // Fetch metrics directly with TanStack Query
-  const { data: metrics = [], isLoading, isError } = useQuery({
+  const { data: metrics = [] } = useQuery({
     queryKey: ['metrics'],
     queryFn: async () => {
       console.log('[MetricsTab] Fetching metrics...');
@@ -56,8 +56,6 @@ export const MetricsTab = () => {
 
   console.log('[MetricsTab] Render:', {
     isAuthenticated,
-    isLoading,
-    isError,
     totalMetrics: metrics.length,
     filteredMetrics: filteredMetrics.length,
     searchQuery

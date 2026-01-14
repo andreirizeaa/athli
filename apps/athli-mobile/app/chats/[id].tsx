@@ -43,9 +43,18 @@ import {
   archiveChat,
   deleteChat,
   getChatMessages,
+  sendMessage,
   type Chat,
   type ChatMessage,
+  type Message,
+  type OptimisticMessage,
 } from '@/services/chats-service';
+import { createOptimisticMessage } from '@athli/shared-types';
+import {
+  useRealtimeMessages,
+  useMessageMerging,
+} from '@/hooks/use-realtime-messaging';
+import { supabase } from '@/lib/supabase';
 
 const BAR_INTERVAL_MS = 100; // ✅ 10 bars/sec
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -153,7 +162,7 @@ export default function ChatDetailScreen() {
         const parsed = JSON.parse(messagesParam) as ChatMessage[];
         return parsed.map((msg) => ({
           ...msg,
-          timestamp: new Date(msg.timestamp),
+          timestamp: new Date(msg.sent_at),
         }));
       } catch {
         return [];
@@ -161,6 +170,8 @@ export default function ChatDetailScreen() {
     }
     return [];
   });
+  const [optimisticMessages, setOptimisticMessages] = useState<OptimisticMessage[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [isLoading, setIsLoading] = useState(!chatParam || !messagesParam);
   const [reactionsSheetVisible, setReactionsSheetVisible] = useState(false);
@@ -211,6 +222,27 @@ export default function ChatDetailScreen() {
   const lastVoiceNoteDurationMsRef = useRef(0);
   const recordingStartedAtMsRef = useRef<number | null>(null);
 
+  // Get current user ID
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    };
+    getCurrentUser();
+  }, []);
+
+  // Realtime messages subscription
+  const { realtimeMessages } = useRealtimeMessages({
+    conversationId: id,
+    onMessageReceived: (message) => {
+      console.log('[Realtime] New message received:', message.id);
+    },
+  });
+
+  // Merge saved, realtime, and optimistic messages
+  const allMessages = useMessageMerging(messages, realtimeMessages, optimisticMessages);
 
   useEffect(() => {
     const handleKeyboardHide = () => {
@@ -520,8 +552,8 @@ export default function ChatDetailScreen() {
   };
 
   const handleUserProfilePress = () => {
-    if (chat?.clientId) {
-      router.push(`/client/${chat.clientId}`);
+    if (chat?.client_id) {
+      router.push(`/client/${chat.client_id}`);
     }
   };
 
@@ -711,31 +743,46 @@ export default function ChatDetailScreen() {
     return findOriginalMessage(message.replyTo);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     const text = searchQuery.trim();
-    if (!text) return;
+    if (!text || !currentUserId) return;
 
-    // If replying, find the original message (not the immediate reply)
-    const originalMessage = replyingToMessage
-      ? findOriginalMessage(replyingToMessage)
-      : null;
-
-    // Create new message
-    const newMessage: ChatMessage = {
-      id: `m-${Date.now()}`,
-      text: text,
-      timestamp: new Date(),
-      isSent: true,
-      isRead: false,
-      ...(originalMessage && { replyTo: originalMessage }),
-    };
-
-    // Add message to the list
-    setMessages((prev) => [...prev, newMessage]);
-
-    // Clear input and exit reply mode
+    // Clear input and exit reply mode immediately
     setSearchQuery('');
+    const parentMessageId = replyingToMessage?.id;
     setReplyingToMessage(null);
+
+    // Create optimistic message
+    const optimisticMsg = createOptimisticMessage(
+      id, // conversationId
+      currentUserId,
+      text,
+      'text',
+      parentMessageId
+    );
+
+    // Add to optimistic messages for immediate UI update
+    setOptimisticMessages((prev) => [...prev, optimisticMsg]);
+
+    try {
+      // Send to database
+      await sendMessage(id, text, {
+        messageType: 'text',
+        parentMessageId,
+      });
+
+      // Remove optimistic message (realtime will add the real one)
+      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+    } catch (error) {
+      console.error('[Chat] Failed to send message:', error);
+      // Mark as failed (keep in optimistic list but update status)
+      setOptimisticMessages((prev) =>
+        prev.map((m) =>
+          m.id === optimisticMsg.id ? { ...m, status: 'failed' as const } : m
+        )
+      );
+      // TODO: Show error toast
+    }
   };
 
   const handleMessageEdit = (message: ChatMessage) => {
@@ -763,8 +810,8 @@ export default function ChatDetailScreen() {
         mimeType: document.mimeType,
         size: document.size?.toString() || '',
         chatId: chat?.id || '',
-        clientId: chat?.clientId || '',
-        clientName: chat?.clientName || '',
+        clientId: chat?.client_id || '',
+        clientName: chat?.other_user_name || '',
         fromMessage: 'true', // Flag to show download icon
       },
     });
@@ -878,10 +925,10 @@ export default function ChatDetailScreen() {
       {/* ROW 2: SCROLL WINDOW - Fills space between header and toolbar */}
       <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <MessageList
-          messages={messages}
+          messages={allMessages}
           backgroundColor="transparent"
           themeColors={themeColors}
-          clientName={chat.clientName}
+          clientName={chat.other_user_name || 'Client'}
           keyboardHeight={keyboardHeight}
           onReply={handleMessageReply}
           onEdit={handleMessageEdit}

@@ -3,14 +3,19 @@
  * Import types from here throughout the app
  */
 
-// Chat types
+// Messaging types (from @athli/shared-types via ./chat)
 export type {
-  Chat,
-  ChatMessage,
-  DocumentAttachment,
-  ImageAttachment,
-  VideoAttachment,
-  AudioAttachment,
+  Message,
+  MessageAttachment,
+  MessageReaction,
+  Conversation,
+  ConversationParticipant,
+  ReadReceipt,
+  OptimisticMessage,
+  MessageStatus,
+  MessageType,
+  ReactionEmoji,
+  UploadStatus,
 } from './chat';
 
 // Client types
@@ -27,9 +32,6 @@ export type {
   GraphEventCreate,
   CalendarProvider,
 } from './calendar';
-
-// Inbox types
-export type { Coach, InboxMessage } from './inbox';
 
 // Library types
 export type {

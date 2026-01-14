@@ -119,7 +119,7 @@ export const ReplyPreviewRow = ({ message, clientName, onClose, backgroundColor 
     if (message.audio) {
       return (
         <Text style={[styles.messagePreview, { color: themeColors.text }]} numberOfLines={1}>
-          {`Audio message • ${formatAudioReplyStamp(message.timestamp)}`}
+          {`Audio message • ${formatAudioReplyStamp(message.sent_at)}`}
         </Text>
       );
     }

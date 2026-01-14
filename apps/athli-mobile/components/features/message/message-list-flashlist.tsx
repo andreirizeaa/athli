@@ -118,7 +118,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
   // Find the original message if this is a reply
   const originalMessage = item.replyTo ? findOriginalMessage(item.replyTo) : null;
 
-  const timeLabel = useMemo(() => formatTime(item.timestamp), [item.timestamp, formatTime]);
+  const timeLabel = useMemo(() => formatTime(item.sent_at), [item.sent_at, formatTime]);
 
   // Measure ONE NBSP using the same typography as the timestamp
   const onMeasureSpace = (e: any) => {
@@ -204,7 +204,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
           isParentSent={item.isSent}
           onPress={() => {
             if (item.images) {
-              onImagePress(item.images, clientName, item.isSent, item.timestamp);
+              onImagePress(item.images, clientName, item.isSent, item.sent_at);
             }
           }}
         />
@@ -221,7 +221,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
           isParentSent={item.isSent}
           onPress={() => {
             if (item.video) {
-              onVideoPress(item.video, clientName, item.isSent, item.timestamp);
+              onVideoPress(item.video, clientName, item.isSent, item.sent_at);
             }
           }}
         />
@@ -664,7 +664,7 @@ export const MessageList = ({
   // Normal list (NOT inverted): chronological order (oldest first)
   // Index 0 (oldest) = TOP, last index (newest) = BOTTOM (above toolbar)
   const data = useMemo(() => {
-    const sorted = [...localMessages].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    const sorted = [...localMessages].sort((a, b) => a.sent_at.getTime() - b.sent_at.getTime());
     return sorted;
   }, [localMessages]);
 
@@ -696,10 +696,10 @@ export const MessageList = ({
       .replace(',', '');
   };
 
-  const [stickyTimestamp, setStickyTimestamp] = useState<Date>(() => data[0]?.timestamp ?? new Date());
+  const [stickyTimestamp, setStickyTimestamp] = useState<Date>(() => data[0]?.sent_at ?? new Date());
   const [stickyDayKey, setStickyDayKey] = useState(() => {
     const first = data[0];
-    return first ? dayKey(first.timestamp) : dayKey(new Date());
+    return first ? dayKey(first.sent_at) : dayKey(new Date());
   });
   const stickyLabelOpacity = useRef(new Animated.Value(1)).current;
 
@@ -712,14 +712,14 @@ export const MessageList = ({
       let topMost = null as { item: ChatMessage; index: number | null } | null;
 
       for (const v of viewableItems) {
-        if (!v?.item?.timestamp) continue;
+        if (!v?.item?.sent_at) continue;
         if (!topMost || (v.index ?? -1) > (topMost.index ?? -1)) {
           topMost = v;
         }
       }
       if (!topMost) return;
 
-      const nextTs = topMost.item.timestamp;
+      const nextTs = topMost.item.sent_at;
       const nextKey = dayKey(nextTs);
 
       setStickyTimestamp((prevTs) => {
@@ -748,7 +748,7 @@ export const MessageList = ({
 
   const isMessageWithinOneHour = (message: ChatMessage): boolean => {
     const now = new Date();
-    const messageTime = message.timestamp;
+    const messageTime = message.sent_at;
     const diffInMs = now.getTime() - messageTime.getTime();
     const diffInHours = diffInMs / (1000 * 60 * 60);
     return diffInHours <= 1;
@@ -864,7 +864,7 @@ export const MessageList = ({
 
   useEffect(() => {
     if (data.length > 0) {
-      const newTimestamp = data[0].timestamp;
+      const newTimestamp = data[0].sent_at;
       setStickyTimestamp(newTimestamp);
       setStickyDayKey(dayKey(newTimestamp));
     }
@@ -920,14 +920,14 @@ export const MessageList = ({
 
     // Check if messages are within 2 minutes (for grouping)
     const isGroupedWithNewer = sameSenderAsNewer && newer &&
-      Math.abs(item.timestamp.getTime() - newer.timestamp.getTime()) < 2 * 60 * 1000;
+      Math.abs(item.sent_at.getTime() - newer.sent_at.getTime()) < 2 * 60 * 1000;
 
     // Gap ABOVE this message (marginTop creates space above in normal list)
     // Gap is between this message and the OLDER message above it
     let gap = 0;
     if (older) {
       const sameSenderAsOlder = !!older && older.isSent === item.isSent;
-      const isGroupedWithOlder = sameSenderAsOlder && Math.abs(item.timestamp.getTime() - older.timestamp.getTime()) < 2 * 60 * 1000;
+      const isGroupedWithOlder = sameSenderAsOlder && Math.abs(item.sent_at.getTime() - older.sent_at.getTime()) < 2 * 60 * 1000;
 
       if (sameSenderAsOlder) {
         // Same sender: use grouped gap if within 2 mins, otherwise base gap
@@ -942,8 +942,8 @@ export const MessageList = ({
     // Last = the one that is NOT grouped with the NEWER (next) message
     const isLastInSenderRun = !isGroupedWithNewer;
 
-    const showDatePill = !older || !isSameDay(older.timestamp, item.timestamp);
-    const itemDayKey = dayKey(item.timestamp);
+    const showDatePill = !older || !isSameDay(older.sent_at, item.sent_at);
+    const itemDayKey = dayKey(item.sent_at);
     const hideInlinePill = stickyActive && itemDayKey === stickyDayKey;
 
     return (
@@ -964,7 +964,7 @@ export const MessageList = ({
                   hideInlinePill && styles.datePillHidden,
                 ]}
               >
-                {getDatePillLabel(item.timestamp)}
+                {getDatePillLabel(item.sent_at)}
               </Text>
             </View>
           </View>

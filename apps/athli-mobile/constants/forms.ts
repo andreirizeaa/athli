@@ -1,4 +1,4 @@
-import type { ScheduleData } from '@/contexts/modal-callbacks';
+import type { ScheduleData } from '@/stores';
 
 export interface FormTemplateQuestion {
     question: string;

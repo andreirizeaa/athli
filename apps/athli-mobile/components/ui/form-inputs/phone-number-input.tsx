@@ -12,7 +12,7 @@ import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
-import { AsYouType } from 'libphonenumber-js';
+import { AsYouType, type CountryCode } from 'libphonenumber-js';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
@@ -46,7 +46,7 @@ export const formatPhoneNumber = (phoneNumber: string, countryCode: string): str
   if (!phoneNumber) return '';
 
   try {
-    const formatter = new AsYouType(countryCode);
+    const formatter = new AsYouType(countryCode as CountryCode);
     return formatter.input(phoneNumber);
   } catch (error) {
     // Fallback to unformatted number if formatting fails
@@ -79,7 +79,7 @@ export const PhoneNumberInput = ({
     if (!phoneNumber) return '';
 
     try {
-      const formatter = new AsYouType(selectedCountry.code);
+      const formatter = new AsYouType(selectedCountry.code as CountryCode);
       return formatter.input(phoneNumber);
     } catch (error) {
       // Fallback to unformatted number if formatting fails

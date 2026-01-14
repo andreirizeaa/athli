@@ -11,6 +11,7 @@ import {
     ArrowUp,
     X,
     Reply,
+    Play,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,6 +24,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useMessageInput } from './message-input-context';
+import { VoiceNoteRecorder } from '@/components/audio/voice-note-recorder';
 import type { Contact } from '@/components/app/app-shell';
 
 interface MessageInputProps {
@@ -36,156 +38,142 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
         setMessageInput,
         textareaHeight,
         setTextareaHeight,
-        attachedImages,
-        attachedPdf,
-        attachedVideo,
+        attachments,
         replyingToMessage,
-        addImages,
-        removeImage,
-        setPdf,
-        removePdf,
-        setVideo,
-        removeVideo,
+        isRecordingVoiceNote,
+        addAttachment,
+        addAttachments,
+        removeAttachment,
         setReplyingToMessage,
+        setIsRecordingVoiceNote,
         sendMessage,
+        sendVoiceNote,
+        canAddMoreAttachments,
         textareaRef,
         imageInputRef,
         pdfInputRef,
         videoInputRef,
     } = useMessageInput();
 
-    // Image preview URLs management
-    const imageUrlsMapRef = React.useRef<Map<File, string>>(new Map());
+    // Track maximum height reached to prevent flickering (WhatsApp-like behavior)
+    const [maxHeightReached, setMaxHeightReached] = React.useState(36);
 
-    const imagePreviewUrls = React.useMemo(() => {
-        const urlsMap = imageUrlsMapRef.current;
-        const currentFiles = new Set(attachedImages);
-
-        // Revoke URLs for removed images
-        for (const [file, url] of urlsMap.entries()) {
-            if (!currentFiles.has(file)) {
-                URL.revokeObjectURL(url);
-                urlsMap.delete(file);
-            }
-        }
-
-        // Create URLs for new images
-        return attachedImages.map((image) => {
-            if (!urlsMap.has(image)) {
-                urlsMap.set(image, URL.createObjectURL(image));
-            }
-            return urlsMap.get(image)!;
-        });
-    }, [attachedImages]);
-
-    // Cleanup URLs on unmount
+    // Reset height tracking when contact changes
     React.useEffect(() => {
-        return () => {
-            const urlsMap = imageUrlsMapRef.current;
-            for (const url of urlsMap.values()) {
-                URL.revokeObjectURL(url);
-            }
-            urlsMap.clear();
-        };
-    }, []);
+        setMaxHeightReached(36);
+    }, [selectedContact?.id]);
+
+    // Reset textarea height when attachments are removed (text deletion is handled in handleTextareaInput)
+    React.useEffect(() => {
+        const hasAttachments = replyingToMessage || attachments.length > 0;
+        const isEmpty = !messageInput.trim();
+
+        // When all attachments are removed and input is empty, reset to minimum height
+        if (!hasAttachments && isEmpty && textareaRef.current) {
+            const minHeight = 36;
+            textareaRef.current.style.height = `${minHeight}px`;
+            setTextareaHeight(minHeight);
+            setMaxHeightReached(minHeight);
+        }
+    }, [replyingToMessage, attachments.length, messageInput, textareaRef, setTextareaHeight]);
 
     // Handle file inputs
     const handleImageInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (files && files.length > 0) {
-            addImages(Array.from(files).filter(f => f.type.startsWith('image/')));
+            const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+            addAttachments(imageFiles, 'image');
         }
         if (imageInputRef.current) imageInputRef.current.value = '';
-    }, [addImages, imageInputRef]);
+    }, [addAttachments, imageInputRef]);
 
     const handlePdfInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file && (file.type === 'application/pdf' || file.name.endsWith('.pdf'))) {
-            setPdf(file);
+            addAttachment(file, 'pdf');
         }
         if (pdfInputRef.current) pdfInputRef.current.value = '';
-    }, [setPdf, pdfInputRef]);
+    }, [addAttachment, pdfInputRef]);
 
     const handleVideoInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file && (file.type === 'video/mp4' || file.name.endsWith('.mp4'))) {
-            setVideo(file);
+            addAttachment(file, 'video');
         }
         if (videoInputRef.current) videoInputRef.current.value = '';
-    }, [setVideo, videoInputRef]);
+    }, [addAttachment, videoInputRef]);
 
-    // Handle textarea auto-resize
+    // Handle textarea auto-resize (WhatsApp-like: grows but doesn't shrink, resets when empty)
     const handleTextareaInput = React.useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
         const textarea = e.currentTarget;
-        const hasAttachments = replyingToMessage || attachedPdf || attachedVideo || attachedImages.length > 0;
+        const hasAttachments = replyingToMessage || attachments.length > 0;
+        const isEmpty = !textarea.value.trim();
 
-        requestAnimationFrame(() => {
-            textarea.style.height = 'auto';
-            const scrollHeight = textarea.scrollHeight;
-            const minHeight = hasAttachments ? 60 : 36;
-            const maxHeight = 120;
-            const newHeight = Math.max(minHeight, Math.min(scrollHeight, maxHeight));
+        // Synchronous measurement for immediate response (no requestAnimationFrame to avoid visible jump)
+        textarea.style.height = 'auto';
+        const scrollHeight = textarea.scrollHeight;
+
+        const minHeight = hasAttachments ? 60 : 36;
+        const maxHeight = 120;
+        const contentHeight = Math.max(minHeight, Math.min(scrollHeight, maxHeight));
+
+        // Reset to minimum when empty, otherwise use WhatsApp-like grow-only behavior
+        if (isEmpty && !hasAttachments) {
+            textarea.style.height = `${minHeight}px`;
+            setTextareaHeight(minHeight);
+            setMaxHeightReached(minHeight);
+        } else {
+            // Only grow if content needs more space (never shrink during typing)
+            const newHeight = Math.max(maxHeightReached, contentHeight);
             textarea.style.height = `${newHeight}px`;
             setTextareaHeight(newHeight);
-        });
-    }, [replyingToMessage, attachedPdf, attachedVideo, attachedImages.length, setTextareaHeight]);
+            setMaxHeightReached(newHeight);
+        }
+    }, [replyingToMessage, attachments.length, setTextareaHeight, maxHeightReached]);
+
+    // Wrapper to send message and reset height tracking
+    const handleSendMessage = React.useCallback(() => {
+        sendMessage();
+        setMaxHeightReached(36); // Reset to minimum height after sending
+    }, [sendMessage]);
 
     // Handle keyboard shortcuts
     const handleKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            sendMessage();
+            handleSendMessage();
         }
-    }, [sendMessage]);
+    }, [handleSendMessage]);
 
-    // Download handlers
-    const handleDownloadImage = React.useCallback((image: File) => {
-        const url = URL.createObjectURL(image);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = image.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }, []);
-
-    const handleDownloadPdf = React.useCallback(() => {
-        if (!attachedPdf) return;
-        const url = URL.createObjectURL(attachedPdf);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = attachedPdf.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }, [attachedPdf]);
-
-    const handleDownloadVideo = React.useCallback(() => {
-        if (!attachedVideo) return;
-        const url = URL.createObjectURL(attachedVideo);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = attachedVideo.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }, [attachedVideo]);
-
-    const isInputEmpty =
-        !messageInput.trim() &&
-        !attachedPdf &&
-        !attachedVideo &&
-        attachedImages.length === 0;
+    const isInputEmpty = !messageInput.trim() && attachments.length === 0;
 
     const showExpandedInput =
         textareaHeight > 36 ||
         replyingToMessage ||
-        attachedPdf ||
-        attachedVideo ||
-        attachedImages.length > 0;
+        attachments.length > 0;
+
+    // Handle voice note recording
+    const handleStartVoiceNote = React.useCallback(() => {
+        setIsRecordingVoiceNote(true);
+    }, [setIsRecordingVoiceNote]);
+
+    const handleCancelVoiceNote = React.useCallback(() => {
+        setIsRecordingVoiceNote(false);
+    }, [setIsRecordingVoiceNote]);
+
+    const handleSendVoiceNote = React.useCallback((blob: Blob, url: string, durationMs: number) => {
+        sendVoiceNote(blob, url, durationMs);
+    }, [sendVoiceNote]);
+
+    // Show voice note recorder instead of normal input when recording
+    if (isRecordingVoiceNote) {
+        return (
+            <VoiceNoteRecorder
+                onSend={handleSendVoiceNote}
+                onCancel={handleCancelVoiceNote}
+            />
+        );
+    }
 
     return (
         <>
@@ -223,139 +211,58 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
                             : 'items-center min-h-[36px]'
                     )}
                 >
-                    {/* Images Preview */}
-                    {attachedImages.length > 0 && (
+                    {/* Unified Attachments Preview */}
+                    {attachments.length > 0 && (
                         <div
                             className="mb-2 px-3 py-2 bg-background/50"
                             style={{ borderRadius: '18px' }}
                         >
-                            <div className="flex gap-2 overflow-x-auto">
-                                {attachedImages.map((image, index) => (
+                            <div className="flex overflow-x-auto gap-2">
+                                {attachments.map((attachment, index) => (
                                     <div key={index} className="relative group flex-shrink-0">
-                                        <div
-                                            role="button"
-                                            tabIndex={0}
-                                            aria-label={t('messages.download', { name: image.name })}
-                                            onClick={() => handleDownloadImage(image)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter' || e.key === ' ') {
-                                                    e.preventDefault();
-                                                    handleDownloadImage(image);
-                                                }
-                                            }}
-                                            className="bg-muted rounded-lg p-1.5 cursor-pointer hover:bg-muted/80 transition-colors"
-                                        >
-                                            <div className="w-24 h-24 flex items-center justify-center overflow-hidden rounded-md">
-                                                <img
-                                                    src={imagePreviewUrls[index]}
-                                                    alt={image.name}
-                                                    className="w-full h-full object-cover"
-                                                />
+                                        <div className="bg-muted rounded-lg p-1.5 relative">
+                                            <div className="w-20 h-20 flex flex-col items-center justify-center overflow-hidden rounded-md relative">
+                                                {attachment.type === 'image' ? (
+                                                    <img
+                                                        src={attachment.preview || URL.createObjectURL(attachment.file)}
+                                                        alt={attachment.file.name}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : attachment.type === 'video' ? (
+                                                    <>
+                                                        <div className="absolute inset-0 bg-muted flex items-center justify-center">
+                                                            <Video className="h-8 w-8 text-muted-foreground" />
+                                                        </div>
+                                                        <div className="absolute inset-0 flex items-center justify-center">
+                                                            <div className="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center">
+                                                                <Play className="h-4 w-4 text-white ml-0.5" fill="currentColor" />
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="flex flex-col items-center justify-center gap-1 p-1">
+                                                        <div className="flex items-center justify-center w-10 h-10 rounded-md bg-orange-100 dark:bg-orange-900/30">
+                                                            <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                                                        </div>
+                                                        <p className="text-[9px] text-center text-muted-foreground line-clamp-2 w-full break-words px-0.5">
+                                                            {attachment.file.name}
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
+
+                                            {/* Overlay with blur and X icon */}
+                                            <button
+                                                type="button"
+                                                onClick={() => removeAttachment(index)}
+                                                className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                                aria-label={t('messages.remove', { name: attachment.file.name })}
+                                            >
+                                                <X className="h-8 w-8 text-primary" />
+                                            </button>
                                         </div>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="absolute -top-1 -right-1 h-5 w-5 bg-background border border-border hover:bg-destructive hover:text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                removeImage(index);
-                                            }}
-                                            aria-label={t('messages.remove', { name: image.name })}
-                                        >
-                                            <X className="h-3 w-3" />
-                                        </Button>
                                     </div>
                                 ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* PDF Preview */}
-                    {attachedPdf && (
-                        <div
-                            className="mb-2 px-3 py-2 bg-background/50"
-                            style={{ borderRadius: '18px' }}
-                        >
-                            <div className="flex items-start justify-between gap-2">
-                                <div
-                                    role="button"
-                                    tabIndex={0}
-                                    aria-label={t('messages.download', { name: attachedPdf.name })}
-                                    onClick={handleDownloadPdf}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' || e.key === ' ') {
-                                            e.preventDefault();
-                                            handleDownloadPdf();
-                                        }
-                                    }}
-                                    className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
-                                >
-                                    <div className="flex items-center justify-center h-10 w-10 rounded-md bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
-                                        <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-foreground truncate">
-                                            {attachedPdf.name}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">PDF</p>
-                                    </div>
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 flex-shrink-0"
-                                    onClick={removePdf}
-                                    aria-label={t('messages.removePdf')}
-                                >
-                                    <X className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Video Preview */}
-                    {attachedVideo && (
-                        <div
-                            className="mb-2 px-3 py-2 bg-background/50"
-                            style={{ borderRadius: '18px' }}
-                        >
-                            <div className="flex items-start justify-between gap-2">
-                                <div
-                                    role="button"
-                                    tabIndex={0}
-                                    aria-label={t('messages.download', { name: attachedVideo.name })}
-                                    onClick={handleDownloadVideo}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' || e.key === ' ') {
-                                            e.preventDefault();
-                                            handleDownloadVideo();
-                                        }
-                                    }}
-                                    className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
-                                >
-                                    <div className="flex items-center justify-center h-10 w-10 rounded-md bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
-                                        <Video className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-foreground truncate">
-                                            {attachedVideo.name}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">{t('messages.mp4')}</p>
-                                    </div>
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 flex-shrink-0"
-                                    onClick={removeVideo}
-                                    aria-label={t('messages.removeVideo')}
-                                >
-                                    <X className="h-4 w-4" />
-                                </Button>
                             </div>
                         </div>
                     )}
@@ -444,7 +351,11 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
                                                     type="button"
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
+                                                    disabled={!canAddMoreAttachments}
+                                                    className={cn(
+                                                        'h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10',
+                                                        !canAddMoreAttachments && 'opacity-50 cursor-not-allowed'
+                                                    )}
                                                     aria-label={t('messages.attachFile')}
                                                 >
                                                     <Plus className="h-4 w-4" />
@@ -467,7 +378,7 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                     <TooltipContent>
-                                        <p>{t('messages.attachFiles')}</p>
+                                        <p>{canAddMoreAttachments ? t('messages.attachFiles') : 'Maximum 4 files per message'}</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
@@ -479,13 +390,22 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
                                             type="button"
                                             variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
+                                            disabled={attachments.length > 0 || messageInput.trim() !== ''}
+                                            onClick={handleStartVoiceNote}
+                                            className={cn(
+                                                'h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10',
+                                                (attachments.length > 0 || messageInput.trim() !== '') && 'opacity-50 cursor-not-allowed'
+                                            )}
                                         >
                                             <Mic className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        <p>{t('messages.voiceNote')}</p>
+                                        <p>
+                                            {attachments.length > 0 || messageInput.trim() !== ''
+                                                ? 'Voice notes can only be sent on their own'
+                                                : t('messages.voiceNote')}
+                                        </p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
@@ -520,7 +440,11 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
                                                     type="button"
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
+                                                    disabled={!canAddMoreAttachments}
+                                                    className={cn(
+                                                        'h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10',
+                                                        !canAddMoreAttachments && 'opacity-50 cursor-not-allowed'
+                                                    )}
                                                     aria-label={t('messages.attachFile')}
                                                 >
                                                     <Plus className="h-4 w-4" />
@@ -543,7 +467,7 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                     <TooltipContent>
-                                        <p>{t('messages.attachFiles')}</p>
+                                        <p>{canAddMoreAttachments ? t('messages.attachFiles') : 'Maximum 4 files per message'}</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
@@ -552,7 +476,7 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
-                                            onClick={sendMessage}
+                                            onClick={handleSendMessage}
                                             disabled={isInputEmpty}
                                             className={cn(
                                                 'gap-2 !text-primary-foreground [&_svg]:!text-primary-foreground h-7 w-7 p-0 rounded-full transition-all duration-200',
@@ -579,7 +503,7 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Button
-                                        onClick={sendMessage}
+                                        onClick={handleSendMessage}
                                         disabled={isInputEmpty}
                                         className={cn(
                                             'gap-2 !text-primary-foreground [&_svg]:!text-primary-foreground h-7 w-7 p-0 rounded-full transition-all duration-200',

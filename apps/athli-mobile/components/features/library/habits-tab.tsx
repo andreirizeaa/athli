@@ -30,7 +30,7 @@ export const HabitsTab = () => {
   const isAuthenticated = !!coachProfile;
 
   // Fetch habits directly with TanStack Query
-  const { data: habits = [], isLoading, isError } = useQuery({
+  const { data: habits = [] } = useQuery({
     queryKey: ['habits'],
     queryFn: async () => {
       console.log('[HabitsTab] Fetching habits...');
@@ -57,8 +57,6 @@ export const HabitsTab = () => {
 
   console.log('[HabitsTab] Render:', {
     isAuthenticated,
-    isLoading,
-    isError,
     totalHabits: habits.length,
     filteredHabits: filteredHabits.length,
     searchQuery

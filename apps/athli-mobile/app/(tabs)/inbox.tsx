@@ -23,6 +23,8 @@ import {
   markCoachAsRead,
   type Coach,
 } from '@/services/inbox-service';
+import { useRealtimeConversations } from '@/hooks/use-realtime-messaging';
+import { supabase } from '@/lib/supabase';
 
 export default function InboxScreen() {
   const router = useRouter();
@@ -36,6 +38,7 @@ export default function InboxScreen() {
   const [selectedCoachIds, setSelectedCoachIds] = useState<Set<string>>(new Set());
   const [openRowCloseFn, setOpenRowCloseFn] = useState<(() => void) | null>(null);
   const isRowOpen = openRowCloseFn !== null;
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const registerOpenRow = useCallback((closeFn: () => void) => {
     if (openRowCloseFn && openRowCloseFn !== closeFn) {
@@ -50,6 +53,33 @@ export default function InboxScreen() {
       setOpenRowCloseFn(null);
     }
   }, [openRowCloseFn]);
+
+  // Get current user ID
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    };
+    getCurrentUser();
+  }, []);
+
+  // Realtime conversation updates
+  const { conversations: realtimeConversations } = useRealtimeConversations({
+    userId: currentUserId || '',
+    onConversationUpdated: (conversation) => {
+      console.log('[Inbox Realtime] Conversation updated:', conversation.id);
+      // Update the conversation in the list
+      setCoaches((prev) => {
+        const existing = prev.find((c) => c.id === conversation.id);
+        if (existing) {
+          return prev.map((c) => (c.id === conversation.id ? conversation : c));
+        }
+        return [...prev, conversation];
+      });
+    },
+  });
 
   useEffect(() => {
     const loadCoaches = async () => {
@@ -83,21 +113,21 @@ export default function InboxScreen() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (coach) =>
-          coach.name.toLowerCase().includes(query) ||
-          (coach.lastMessage?.toLowerCase().includes(query) ?? false),
+          (coach.other_user_name && coach.other_user_name.toLowerCase().includes(query)) ||
+          (coach.last_message_preview && coach.last_message_preview.toLowerCase().includes(query)),
       );
     }
 
     // Sort by last message time (most recent first)
     return filtered.sort((a, b) => {
-      const timeA = a.lastMessageTime?.getTime() ?? 0;
-      const timeB = b.lastMessageTime?.getTime() ?? 0;
+      const timeA = a.last_message_at?.getTime() ?? 0;
+      const timeB = b.last_message_at?.getTime() ?? 0;
       return timeB - timeA;
     });
   }, [coaches, searchQuery]);
 
   const totalUnreadCount = useMemo(() => {
-    return coaches.reduce((sum, coach) => sum + (coach.unreadCount ?? 0), 0);
+    return coaches.reduce((sum, coach) => sum + (coach.unread_count ?? 0), 0);
   }, [coaches]);
 
   const handleCoachPress = async (coachId: string) => {
@@ -243,9 +273,8 @@ export default function InboxScreen() {
       isSelected={selectedCoachIds.has(item.id)}
       onArchive={handleCoachArchive}
       onMarkAsRead={handleCoachMarkAsRead}
-      onOpen={registerOpenRow}
     />
-  ), [isEditMode, selectedCoachIds, handleCoachPress, handleCoachArchive, handleCoachMarkAsRead, registerOpenRow]);
+  ), [isEditMode, selectedCoachIds, handleCoachPress, handleCoachArchive, handleCoachMarkAsRead]);
 
   const renderEmptyComponent = useCallback(() => (
     <View style={styles.emptyContainer}>

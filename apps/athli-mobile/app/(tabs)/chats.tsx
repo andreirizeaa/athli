@@ -27,6 +27,8 @@ import {
   getChatMessages,
   type Chat,
 } from '@/services/chats-service';
+import { useRealtimeConversations } from '@/hooks/use-realtime-messaging';
+import { supabase } from '@/lib/supabase';
 
 export default function ChatsScreen() {
   const router = useRouter();
@@ -40,6 +42,7 @@ export default function ChatsScreen() {
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
   const [openRowCloseFn, setOpenRowCloseFn] = useState<(() => void) | null>(null);
   const isRowOpen = openRowCloseFn !== null;
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const registerOpenRow = useCallback((closeFn: () => void) => {
     if (openRowCloseFn && openRowCloseFn !== closeFn) {
@@ -58,6 +61,33 @@ export default function ChatsScreen() {
   const mutedSurfaceColor = themeColors.backgroundTertiary;
   const iconColor = themeColors.text;
 
+  // Get current user ID
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    };
+    getCurrentUser();
+  }, []);
+
+  // Realtime conversation updates
+  const { conversations: realtimeConversations } = useRealtimeConversations({
+    userId: currentUserId || '',
+    onConversationUpdated: (conversation) => {
+      console.log('[Chats Realtime] Conversation updated:', conversation.id);
+      // Update the conversation in the list
+      setChats((prev) => {
+        const existing = prev.find((c) => c.id === conversation.id);
+        if (existing) {
+          return prev.map((c) => (c.id === conversation.id ? conversation : c));
+        }
+        return [...prev, conversation];
+      });
+    },
+  });
+
   useEffect(() => {
     const loadChats = async () => {
       setIsLoading(true);
@@ -75,7 +105,7 @@ export default function ChatsScreen() {
   }, []);
 
   const totalUnreadCount = useMemo(() => {
-    return chats.reduce((sum, chat) => sum + chat.unreadCount, 0);
+    return chats.reduce((sum, chat) => sum + (chat.unread_count || 0), 0);
   }, [chats]);
 
   const filteredChats = useMemo(() => {
@@ -86,14 +116,18 @@ export default function ChatsScreen() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (chat) =>
-          chat.clientName.toLowerCase().includes(query) ||
-          (chat.lastMessage && chat.lastMessage.toLowerCase().includes(query)),
+          (chat.other_user_name && chat.other_user_name.toLowerCase().includes(query)) ||
+          (chat.last_message_preview && chat.last_message_preview.toLowerCase().includes(query)),
       );
     }
 
     // Sort by last message time (most recent first)
     return filtered.sort(
-      (a, b) => b.lastMessageTime.getTime() - a.lastMessageTime.getTime(),
+      (a, b) => {
+        const aTime = a.last_message_at?.getTime() || 0;
+        const bTime = b.last_message_at?.getTime() || 0;
+        return bTime - aTime;
+      },
     );
   }, [chats, searchQuery]);
 

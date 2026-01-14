@@ -76,7 +76,7 @@ export const ChatListItem = ({
       if (messages.length > 0) {
         // Get the last message (most recent)
         const sortedMessages = [...messages].sort(
-          (a, b) => b.timestamp.getTime() - a.timestamp.getTime(),
+          (a, b) => b.sent_at.getTime() - a.sent_at.getTime(),
         );
         setLastMessage(sortedMessages[0]);
       }
@@ -243,10 +243,10 @@ export const ChatListItem = ({
                   >
                     {chat.clientName}
                   </Text>
-                  <View style={styles.timestampContainer}>
+                  <View style={styles.sent_atContainer}>
                     <Text
                       style={[
-                        styles.timestamp,
+                        styles.sent_at,
                         {
                           color: chat.unreadCount > 0 ? themeColors.primary : themeColors.mutedText,
                         },

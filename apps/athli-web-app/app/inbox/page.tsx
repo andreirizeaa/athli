@@ -43,6 +43,11 @@ import {
   type Contact,
   type Message,
 } from '@/components/app/app-shell';
+import { useConversations } from '@/hooks/use-conversations';
+import { useMessages } from '@/hooks/use-messages';
+import { useRealtimeConversations, useRealtimeMessages, useSyncReadReceipt } from '@/hooks/use-realtime-messaging';
+import { sendMessage as sendMessageAPI, markConversationAsRead, addReaction, removeReaction } from '@/lib/messaging/messaging-api-client';
+import type { Conversation } from '@athli/shared-types';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ContactListItem } from './components/contact-list-item';
 import { format } from 'date-fns';
@@ -140,10 +145,10 @@ const MessageInputWrapper: React.FC<{
 };
 
 // Helper component to show a unified loading overlay for the inbox areas
-const InboxUnifiedLoader = () => {
+const InboxUnifiedLoader = ({ isNavigating }: { isNavigating: boolean }) => {
   const t = useTranslations();
   const { isLoading } = useClientProfileContext();
-  if (!isLoading) return null;
+  if (!isLoading && !isNavigating) return null;
   return <SectionLoader subtitle={t('messages.loadingConversation')} />;
 };
 
@@ -157,15 +162,54 @@ const InboxPage = () => {
   // State-based tab management (no URL routing for tabs to avoid flicker)
   const [activeClientTab, setActiveClientTab] = React.useState('overview');
 
-  // TODO: Replace with real inbox data when backend is connected
-  // Currently using coach_client view for contacts, but messages are still mock data
+  // Fetch real conversations from backend API
+  const { conversations, isLoading: isLoadingConversations, refetch: refetchConversations } = useConversations();
+
+  // Keep athletes list for client profile view
   const { clients: athletes, isLoading: isLoadingClients } = useCoachClients();
 
   const [selectedContactId, setSelectedContactId] = React.useState<string | undefined>(undefined);
+
+  // Get conversation for selected contact
+  const selectedConversation = React.useMemo(() =>
+    conversations.find((c) => c.other_user_id === selectedContactId),
+    [conversations, selectedContactId]
+  );
+
+  // Fetch messages for selected conversation
+  const {
+    messages: apiMessages,
+    isLoading: isLoadingMessages,
+    refetch: refetchMessages,
+  } = useMessages(selectedConversation?.id || null);
+  // Realtime subscriptions
+  const { realtimeMessages } = useRealtimeMessages({
+    conversationId: selectedConversation?.id || '',
+    onMessageReceived: () => {
+      // Refetch messages when new message arrives
+      refetchMessages();
+    },
+  });
+
+  const { conversations: realtimeConversations } = useRealtimeConversations({
+    userId: user?.id || '',
+    onConversationUpdated: () => {
+      // Refetch conversations when they update
+      refetchConversations();
+    },
+  });
+
+  // Auto-mark conversation as read when viewing it
+  useSyncReadReceipt({
+    conversationId: selectedConversation?.id || '',
+    userId: user?.id || '',
+    enabled: !!selectedConversation && !!user,
+  });
+
+  const [isNavigating, setIsNavigating] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(!!contactIdFromPath);
   const [messageInput, setMessageInput] = React.useState('');
-  const [messages, setMessages] = React.useState<Record<string, Message[]>>(mockMessages);
   const [isNewMessageOpen, setIsNewMessageOpen] = React.useState(false);
   const [isCreateNoteOpen, setIsCreateNoteOpen] = React.useState(false);
   const [isBroadcastOpen, setIsBroadcastOpen] = React.useState(false);
@@ -416,27 +460,65 @@ const InboxPage = () => {
     textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   } | null>(null);
 
-  // Map athletes to contacts format
-  // TODO: Replace temporary fields (lastMessage, timestamp, unreadCount, isOnline) with real data when inbox backend is connected
+  // Convert conversations to Contact format for UI compatibility
   const contacts = React.useMemo<Contact[]>(() => {
-    return athletes.map((athlete: Athlete) => ({
-      id: athlete.id,
-      publicId: athlete.publicId,
-      name: athlete.name,
-      avatar: athlete.avatarUrl,
-      lastMessage: '', // TODO: Get from inbox backend
-      timestamp: '', // TODO: Get from inbox backend
-      unreadCount: 0, // TODO: Get from inbox backend
-      isOnline: false, // TODO: Get from inbox backend
+    return conversations.map((conv) => ({
+      id: conv.other_user_id,
+      name: conv.other_user_name || 'Unknown',
+      avatar: conv.other_user_avatar,
+      lastMessage: conv.last_message_preview || '',
+      timestamp: conv.last_message_at ? format(conv.last_message_at, 'h:mm a') : '',
+      unreadCount: conv.unread_count || 0,
+      isOnline: false, // TODO: Add online status tracking
     }));
-  }, [athletes]);
+  }, [conversations]);
 
   // Derived state
   const selectedContact = selectedContactId
     ? contacts.find((contact) => contact.id === selectedContactId) || null
     : null;
 
-  const currentMessages = selectedContactId ? messages[selectedContactId] || [] : [];
+  // Convert API messages to UI Message format
+  const currentMessages = React.useMemo<Message[]>(() => {
+    if (!apiMessages || apiMessages.length === 0) return [];
+
+    return apiMessages.map((msg) => ({
+      id: msg.id,
+      text: msg.content || '',
+      timestamp: format(msg.sent_at, 'h:mm a'),
+      isSent: msg.sender_id === user?.id,
+      isRead: msg.status === 'read',
+      images: msg.attachments
+        ?.filter((a) => a.mime_type?.startsWith('image/'))
+        .map((a) => ({
+          name: a.filename,
+          data: '', // TODO: Get signed URL from storage
+          type: a.mime_type || 'image/jpeg',
+        })),
+      pdf: msg.attachments?.find((a) => a.mime_type === 'application/pdf')
+        ? {
+            name: msg.attachments.find((a) => a.mime_type === 'application/pdf')!.filename,
+            data: '', // TODO: Get signed URL from storage
+            type: 'application/pdf',
+          }
+        : undefined,
+      video: msg.attachments?.find((a) => a.mime_type?.startsWith('video/'))
+        ? {
+            name: msg.attachments.find((a) => a.mime_type?.startsWith('video/'))!.filename,
+            data: '', // TODO: Get signed URL from storage
+            type: msg.attachments.find((a) => a.mime_type?.startsWith('video/'))!.mime_type || 'video/mp4',
+          }
+        : undefined,
+      replyTo: msg.parent_message
+        ? {
+            id: msg.parent_message.id,
+            text: msg.parent_message.content || '',
+            isSent: msg.parent_message.sender_id === user?.id,
+          }
+        : undefined,
+      reaction: msg.reactions?.[0]?.reaction,
+    }));
+  }, [apiMessages, user?.id]);
 
   const filteredContacts = React.useMemo(() => {
     if (!searchQuery.trim()) return contacts;
@@ -457,19 +539,18 @@ const InboxPage = () => {
     );
   }, [searchQuery, athletes]);
 
-  const allSentMessages = React.useMemo(() => {
-    const sentMessages: Message[] = [];
-    Object.values(messages).forEach((contactMessages) => {
-      contactMessages.filter((msg) => msg.isSent).forEach((msg) => sentMessages.push(msg));
-    });
-    return sentMessages;
-  }, [messages]);
-
   React.useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [currentMessages]);
+
+  // Handler for contact click in sidebar - shows loading immediately
+  const handleContactClick = React.useCallback((contactId: string) => {
+    setIsNavigating(true);
+    setIsSidebarCollapsed(true);
+    router.push(`/inbox/${contactId}/overview`);
+  }, [router]);
 
   // Read contact ID from URL path params on mount and when path changes
   React.useEffect(() => {
@@ -480,12 +561,16 @@ const InboxPage = () => {
         setIsSidebarCollapsed(true);
         // Reset to overview tab when selecting a new contact
         setActiveClientTab('overview');
+        // Clear navigating state once contact is selected
+        setIsNavigating(false);
       } else { // Invalid contact ID, redirect to base inbox page
         router.replace('/inbox');
         setSelectedContactId(undefined);
+        setIsNavigating(false);
       }
     } else {
       setSelectedContactId(undefined);
+      setIsNavigating(false);
     }
   }, [contactIdFromPath, contacts, isLoadingClients, router]);
 
@@ -879,395 +964,98 @@ const InboxPage = () => {
     }
   }, [messageInput, replyingToMessage, attachedPdf, attachedVideo, attachedImages.length]);
 
-  const handleSendMessage = () => {
-    if (
-      (!messageInput.trim() && !attachedPdf && !attachedVideo && attachedImages.length === 0) ||
-      !selectedContactId
-    )
-      return;
 
-    // Get PDF data from draft if available, or convert attached PDF
-    const getPdfData = async (): Promise<Message['pdf'] | undefined> => {
-      if (!attachedPdf) return undefined;
-
-      // Try to get from draft first (already has base64)
-      const draft = messageDraftStorage.getDraft(selectedContactId);
-      if (draft.pdf && draft.pdf.data) {
-        return draft.pdf;
-      }
-
-      // Otherwise convert File to base64
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const base64 = reader.result as string;
-          resolve({
-            name: attachedPdf.name,
-            data: base64,
-            type: attachedPdf.type,
-            size: attachedPdf.size,
-          });
-        };
-        reader.onerror = () => resolve(undefined);
-        reader.readAsDataURL(attachedPdf);
-      });
-    };
-
-    // Convert images to base64
-    const getImagesData = async (): Promise<Message['images']> => {
-      if (attachedImages.length === 0) return undefined;
-
-      const convertImage = (
-        file: File
-      ): Promise<{ name: string; data: string; type: string; size: number }> => {
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const base64 = reader.result as string;
-            resolve({
-              name: file.name,
-              data: base64,
-              type: file.type,
-              size: file.size,
-            });
-          };
-          reader.onerror = () =>
-            resolve({
-              name: file.name,
-              data: '',
-              type: file.type,
-              size: file.size,
-            });
-          reader.readAsDataURL(file);
-        });
-      };
-
-      return Promise.all(attachedImages.map(convertImage));
-    };
-
-    // Get video data from draft if available, or convert attached video
-    const getVideoData = async (): Promise<Message['video'] | undefined> => {
-      if (!attachedVideo) return undefined;
-
-      // Try to get from draft first (already has base64)
-      const draft = messageDraftStorage.getDraft(selectedContactId);
-      if (draft.video && draft.video.data) {
-        return draft.video;
-      }
-
-      // Otherwise convert File to base64
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const base64 = reader.result as string;
-          resolve({
-            name: attachedVideo.name,
-            data: base64,
-            type: attachedVideo.type,
-            size: attachedVideo.size,
-          });
-        };
-        reader.onerror = () => resolve(undefined);
-        reader.readAsDataURL(attachedVideo);
-      });
-    };
-
-    // Create separate messages for each file
-    const createMessages = async () => {
-      const pdfData = await getPdfData();
-      const videoData = await getVideoData();
-      const imagesData = await getImagesData();
-      const messageText = messageInput.trim() || '';
-
-      const replyToData = replyingToMessage
-        ? {
-          id: replyingToMessage.id,
-          text: replyingToMessage.text,
-          isSent: replyingToMessage.isSent,
-          pdf: replyingToMessage.pdf,
-          images: replyingToMessage.images,
-          video: replyingToMessage.video,
-        }
-        : undefined;
-
-      const newMessages: Message[] = [];
-      let baseTimestamp = Date.now();
-
-      // If there's text, send it as a separate message first
-      if (messageText) {
-        const textMessage = {
-          id: `m${baseTimestamp}`,
-          text: messageText,
-          timestamp: new Date().toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-          }),
-          isSent: true,
-          replyTo: replyToData,
-        };
-        newMessages.push(textMessage);
-
-        // Call message service
-        if (selectedContactId) {
-          sendMessage({
-            contactId: selectedContactId,
-            text: messageText,
-            repliedTo: replyToData,
-          }).catch((error) => {
-            console.error('Failed to send text message:', error);
-          });
-        }
-
-        baseTimestamp += 1;
-      }
-
-      // Send each image as a separate message
-      if (imagesData && imagesData.length > 0) {
-        for (const image of imagesData) {
-          const imageMessage = {
-            id: `m${baseTimestamp}`,
-            text: '',
-            timestamp: new Date().toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              minute: '2-digit',
-            }),
-            isSent: true,
-            replyTo: replyToData,
-            images: [image],
-          };
-          newMessages.push(imageMessage);
-
-          // Call message service
-          if (selectedContactId) {
-            sendMessage({
-              contactId: selectedContactId,
-              images: [image],
-              repliedTo: replyToData,
-            }).catch((error) => {
-              console.error('Failed to send image message:', error);
-            });
-          }
-
-          baseTimestamp += 1;
-        }
-      }
-
-      // Send PDF as a separate message
-      if (pdfData) {
-        const pdfMessage = {
-          id: `m${baseTimestamp}`,
-          text: '',
-          timestamp: new Date().toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-          }),
-          isSent: true,
-          replyTo: replyToData,
-          pdf: pdfData,
-        };
-        newMessages.push(pdfMessage);
-
-        // Call message service
-        if (selectedContactId) {
-          sendMessage({
-            contactId: selectedContactId,
-            pdf: pdfData,
-            repliedTo: replyToData,
-          }).catch((error) => {
-            console.error('Failed to send PDF message:', error);
-          });
-        }
-
-        baseTimestamp += 1;
-      }
-
-      // Send video as a separate message
-      if (videoData) {
-        const videoMessage = {
-          id: `m${baseTimestamp}`,
-          text: '',
-          timestamp: new Date().toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-          }),
-          isSent: true,
-          replyTo: replyToData,
-          video: videoData,
-        };
-        newMessages.push(videoMessage);
-
-        // Call message service
-        if (selectedContactId) {
-          sendMessage({
-            contactId: selectedContactId,
-            video: videoData,
-            repliedTo: replyToData,
-          }).catch((error) => {
-            console.error('Failed to send video message:', error);
-          });
-        }
-      }
-
-      // Add all messages at once
-      if (newMessages.length > 0) {
-        setMessages((prev) => ({
-          ...prev,
-          [selectedContactId]: [...(prev[selectedContactId] || []), ...newMessages],
-        }));
-      }
-
-      setMessageInput('');
-      setReplyingToMessage(null);
-      setAttachedPdf(null);
-      setAttachedVideo(null);
-      setAttachedImages([]);
-      setTextareaHeight(36);
-
-      // Clear draft from localStorage
-      if (selectedContactId) {
-        messageDraftStorage.removeDraft(selectedContactId);
-        updateDraftsState();
-      }
-    };
-
-    createMessages();
-  };
-
-  // Handler for MessageInputProvider
+  // Handler for MessageInputProvider - uses real messaging API
   const handleSendMessageFromContext = React.useCallback(async (params: {
     text: string;
+    attachments?: Array<{
+      name: string;
+      data: string;
+      type: string;
+      size: number;
+      attachmentType: import('@/components/app/types').AttachmentType;
+    }>;
+    // Legacy support (will be removed after migration)
     images?: Array<{ name: string; data: string; type: string; size: number }>;
     pdf?: { name: string; data: string; type: string; size: number };
     video?: { name: string; data: string; type: string; size: number };
     replyTo?: Message['replyTo'];
   }) => {
-    if (!selectedContactId) return;
-
-    const newMessages: Message[] = [];
-    let baseTimestamp = Date.now();
-
-    // Send text message
-    if (params.text.trim()) {
-      const textMessage: Message = {
-        id: `m${baseTimestamp}`,
-        text: params.text,
-        timestamp: new Date().toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-        }),
-        isSent: true,
-        replyTo: params.replyTo,
-      };
-      newMessages.push(textMessage);
-
-      // Call API
-      sendMessage({
-        contactId: selectedContactId,
-        text: params.text,
-        repliedTo: params.replyTo,
-      }).catch((error) => {
-        console.error('Failed to send text message:', error);
-      });
-
-      baseTimestamp += 1;
+    if (!selectedContactId || !selectedConversation) {
+      console.error('No contact or conversation selected');
+      return;
     }
 
-    // Send each image as a separate message
-    if (params.images && params.images.length > 0) {
-      for (const image of params.images) {
-        const imageMessage: Message = {
-          id: `m${baseTimestamp}`,
-          text: '',
-          timestamp: new Date().toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-          }),
-          isSent: true,
-          replyTo: params.replyTo,
-          images: [image],
-        };
-        newMessages.push(imageMessage);
+    try {
+      // Determine message type based on attachments
+      let messageType: 'text' | 'image' | 'video' | 'audio' | 'file' = 'text';
 
-        // Call API
-        sendMessage({
-          contactId: selectedContactId,
-          images: [image],
-          repliedTo: params.replyTo,
-        }).catch((error) => {
-          console.error('Failed to send image message:', error);
-        });
-
-        baseTimestamp += 1;
+      if (params.attachments && params.attachments.length > 0) {
+        const firstAttachment = params.attachments[0];
+        if (firstAttachment.attachmentType === 'image') {
+          messageType = 'image';
+        } else if (firstAttachment.attachmentType === 'video') {
+          messageType = 'video';
+        } else if (firstAttachment.attachmentType === 'pdf') {
+          messageType = 'file';
+        }
       }
-    }
 
-    // Send PDF as a separate message
-    if (params.pdf) {
-      const pdfMessage: Message = {
-        id: `m${baseTimestamp}`,
-        text: '',
-        timestamp: new Date().toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-        }),
-        isSent: true,
-        replyTo: params.replyTo,
-        pdf: params.pdf,
-      };
-      newMessages.push(pdfMessage);
-
-      // Call API
-      sendMessage({
-        contactId: selectedContactId,
-        pdf: params.pdf,
-        repliedTo: params.replyTo,
-      }).catch((error) => {
-        console.error('Failed to send PDF message:', error);
+      // 1. Create message via API (this returns the message ID)
+      const message = await sendMessageAPI({
+        conversationId: selectedConversation.id,
+        content: params.text || null,
+        messageType,
+        parentMessageId: params.replyTo?.id,
       });
 
-      baseTimestamp += 1;
+      // 2. Upload attachments if present
+      if (params.attachments && params.attachments.length > 0) {
+        const { uploadAttachments } = await import('@/lib/messaging/upload-attachments');
+
+        await uploadAttachments({
+          conversationId: selectedConversation.id,
+          messageId: message.id,
+          attachments: params.attachments,
+        });
+      }
+
+      // Message will appear automatically via realtime subscription
+      // Refetch to ensure attachments are loaded
+      refetchMessages();
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      throw error; // Let MessageInputProvider handle the toast
+    }
+  }, [selectedContactId, selectedConversation, refetchMessages]);
+
+  // Handle message reactions
+  const handleReaction = React.useCallback(async (messageId: string, emoji: string) => {
+    if (!selectedConversation) {
+      console.error('No conversation selected');
+      return;
     }
 
-    // Send video as a separate message
-    if (params.video) {
-      const videoMessage: Message = {
-        id: `m${baseTimestamp}`,
-        text: '',
-        timestamp: new Date().toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-        }),
-        isSent: true,
-        replyTo: params.replyTo,
-        video: params.video,
-      };
-      newMessages.push(videoMessage);
+    try {
+      if (emoji) {
+        // Add or update reaction
+        await addReaction(
+          messageId,
+          selectedConversation.id,
+          emoji as '👍' | '❤️' | '😂' | '😮' | '😢' | '🙏'
+        );
+      } else {
+        // Remove reaction (emoji is empty string)
+        await removeReaction(messageId);
+      }
 
-      // Call API
-      sendMessage({
-        contactId: selectedContactId,
-        video: params.video,
-        repliedTo: params.replyTo,
-      }).catch((error) => {
-        console.error('Failed to send video message:', error);
-      });
+      // Reaction will update automatically via realtime subscription
+      refetchMessages();
+    } catch (error) {
+      console.error('Failed to update reaction:', error);
+      // Optionally show toast error to user
     }
-
-    // Add all messages to state at once
-    if (newMessages.length > 0) {
-      setMessages((prev) => ({
-        ...prev,
-        [selectedContactId]: [...(prev[selectedContactId] || []), ...newMessages],
-      }));
-    }
-  }, [selectedContactId]);
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      handleSendMessage();
-    }
-  };
+  }, [selectedConversation, refetchMessages]);
 
   const handleFileButtonClick = () => {
     fileInputRef.current?.click();
@@ -1784,6 +1572,7 @@ const InboxPage = () => {
               filteredContacts={filteredContacts}
               selectedContactId={selectedContactId}
               onOpenBroadcast={() => setIsBroadcastOpen(true)}
+              onContactClick={handleContactClick}
             />
           </div>
           {/* Scrollable content area for Chat + Client Profile */}
@@ -1797,7 +1586,7 @@ const InboxPage = () => {
             ) : (
               <ClientProfileProvider clientId={selectedContactId}>
                 <div className="h-full w-full relative">
-                  <InboxUnifiedLoader />
+                  <InboxUnifiedLoader isNavigating={isNavigating} />
                   <div className="h-full flex w-full min-w-0">
                     {/* Chat Area (32.5% when power view open, 100% otherwise) */}
                     <div
@@ -1860,6 +1649,7 @@ const InboxPage = () => {
                             onDeleteMessagePdf={handleDeleteMessagePdf}
                             onDeleteMessageVideo={handleDeleteMessageVideo}
                             onDeleteAllImages={handleDeleteAllImages}
+                            onReaction={handleReaction}
                             messagesEndRef={messagesEndRef}
                           />
 

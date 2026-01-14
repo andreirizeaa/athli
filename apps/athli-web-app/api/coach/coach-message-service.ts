@@ -5,6 +5,16 @@ export interface MessageFile {
   size: number;
 }
 
+export type AttachmentType = 'image' | 'video' | 'pdf';
+
+export interface MessageAttachment {
+  name: string;
+  data: string; // base64 encoded
+  type: string;
+  size: number;
+  attachmentType: AttachmentType;
+}
+
 export interface RepliedToMessage {
   id: string;
   text: string;
@@ -17,6 +27,9 @@ export interface RepliedToMessage {
 export interface SendMessageData {
   contactId: string;
   text?: string;
+  // New unified attachments array
+  attachments?: MessageAttachment[];
+  // Legacy fields (for backward compatibility)
   pdf?: MessageFile;
   images?: MessageFile[];
   video?: MessageFile;

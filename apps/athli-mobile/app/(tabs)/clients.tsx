@@ -78,7 +78,7 @@ const ClientListItem = React.memo(function ClientListItem({
               {formatSubtitle(client)}
             </Text>
           </View>
-          <ChevronRight size={16} color={themeColors.mutedText} />
+          <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
         </View>
       </PressableScale>
       <View style={styles.separatorContainer}>
@@ -103,7 +103,7 @@ export default function ClientsScreen() {
   const isAuthenticated = !!coachProfile;
 
   // Fetch clients directly with TanStack Query
-  const { data: clients = [], isLoading, isError } = useQuery({
+  const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
       const data = await getClients();
