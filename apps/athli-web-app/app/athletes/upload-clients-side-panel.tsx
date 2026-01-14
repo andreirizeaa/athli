@@ -315,12 +315,12 @@ export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: U
                             size="icon"
                             className="h-8 w-8 text-muted-foreground hover:text-destructive"
                             onClick={() => handleRemoveClient(index)}
-                            aria-label={t('athletes.uploadClients.removeClient', { name: `${client.firstName} ${client.lastName}` })}
+                            aria-label={t('athletes.uploadClients.removeClient', { name: client.fullName })}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
-                        <TableCell>{client.firstName} {client.lastName}</TableCell>
+                        <TableCell>{client.fullName}</TableCell>
                         <TableCell className="w-[200px]">{client.email}</TableCell>
                         <TableCell>{client.category}</TableCell>
                       </TableRow>

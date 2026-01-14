@@ -26,6 +26,7 @@ interface InboxSidebarProps {
     selectedContactId: string | undefined;
 
     onOpenBroadcast: () => void;
+    onContactClick: (contactId: string) => void;
 }
 
 export const InboxSidebar = React.memo(function InboxSidebar({
@@ -37,6 +38,7 @@ export const InboxSidebar = React.memo(function InboxSidebar({
     selectedContactId,
 
     onOpenBroadcast,
+    onContactClick,
 }: InboxSidebarProps) {
     const t = useTranslations();
     const router = useRouter();
@@ -215,8 +217,7 @@ export const InboxSidebar = React.memo(function InboxSidebar({
                                     isCollapsed={isSidebarCollapsed}
 
                                     onClick={() => {
-                                        setIsSidebarCollapsed(true);
-                                        router.push(`/inbox/${contact.id}/overview`);
+                                        onContactClick(contact.id);
                                     }}
                                     onViewProfile={() => router.push(`/athletes/${contact.id}/overview`)}
                                 />

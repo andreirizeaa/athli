@@ -69,3 +69,10 @@ export function internalError(res: Response, payload: ResponseData): void {
 export function noContent(res: Response): void {
   res.status(204).send();
 }
+
+export function badRequest(res: Response, payload: ResponseData): void {
+  res.status(400).json({
+    success: false,
+    ...payload,
+  });
+}

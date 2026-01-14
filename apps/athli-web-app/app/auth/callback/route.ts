@@ -73,15 +73,17 @@ export async function GET(request: NextRequest) {
 
       if (session) {
         const coachId = requestUrl.searchParams.get('coach_id');
-        const redirectPath = requestUrl.searchParams.get('redirect') || '/home';
+        let redirectPath = requestUrl.searchParams.get('redirect') || '/home';
 
         // For new Google OAuth users, set user_type based on context
         console.log('=== CHECKING USER_TYPE ===');
         console.log('session.user.user_metadata:', JSON.stringify(session.user.user_metadata, null, 2));
         console.log('session.user.user_metadata?.user_type:', session.user.user_metadata?.user_type);
 
-        if (!session.user.user_metadata?.user_type) {
-          const userType = coachId ? 'client' : 'coach';
+        let userType = session.user.user_metadata?.user_type;
+
+        if (!userType) {
+          userType = coachId ? 'client' : 'coach';
           console.log('=== CALLING updateUser with user_type:', userType, '===');
 
           const { data: updateData, error: updateError } = await supabase.auth.updateUser({
@@ -109,7 +111,14 @@ export async function GET(request: NextRequest) {
           return NextResponse.redirect(new URL('/home?refresh=true', request.url));
         }
 
-        // Redirect to specified path or default to home
+        // Check user type and redirect accordingly
+        // If user is a client (not a coach), redirect to download page
+        if (userType === 'client') {
+          console.log('=== User is client-only, redirecting to /download ===');
+          redirectPath = '/download';
+        }
+
+        // Redirect to specified path
         return NextResponse.redirect(new URL(redirectPath, request.url));
       }
 

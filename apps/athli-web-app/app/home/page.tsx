@@ -91,7 +91,7 @@ const HomePage = () => {
       </div>
       <div className="w-full flex-1 px-4 py-4">
         <div className="w-full flex justify-center">
-          <div className="flex flex-col" style={{ width: '50%', height: '1200px' }}>
+          <div className="flex flex-col" style={{ width: '65%', height: '1200px' }}>
             <CompletedWorkoutsCard />
             <div className="flex-1 overflow-y-auto mt-4">
               {/* Scrollable content below the card */}

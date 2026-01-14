@@ -2,12 +2,14 @@
  * @athli/shared-types
  *
  * Shared TypeScript types and utilities for the Athli platform.
- * This package ensures type consistency between web and mobile apps.
+ * This package ensures type consistency between web API, web frontend, and mobile apps.
  *
  * CRITICAL: This is the SINGLE source of truth for:
  * - Workout schema types
  * - Payload building (builder → API)
  * - Payload conversion (API → builder)
+ * - Messaging schema types
+ * - Messaging constants and utilities
  *
  * ONE SCHEMA - ONE BUILDER - ONE CONVERTER - NO DRIFT
  */
@@ -56,3 +58,16 @@ export {
   type ColumnValue,
   type OptionalColumn,
 } from './training-constants';
+
+// ================================================
+// MESSAGING SCHEMA & UTILITIES
+// ================================================
+
+// Messaging schema types
+export * from './messaging-schema';
+
+// Messaging constants
+export * from './messaging-constants';
+
+// Messaging utilities
+export * from './messaging-utils';

@@ -9,11 +9,15 @@ export type Contact = {
   isOnline?: boolean;
 };
 
+export type AttachmentType = 'image' | 'video' | 'pdf';
+
 export type Message = {
   id: string;
   text: string;
   timestamp: string;
   isSent: boolean;
+  isRead?: boolean;
+  reaction?: string;
   replyTo?: {
     id: string;
     text: string;
@@ -36,7 +40,16 @@ export type Message = {
       type: string;
       size: number;
     };
+    // New unified attachments array
+    attachments?: Array<{
+      name: string;
+      data: string; // base64 encoded
+      type: string; // MIME type
+      size: number;
+      attachmentType: AttachmentType;
+    }>;
   };
+  // Legacy fields (for backward compatibility)
   pdf?: {
     name: string;
     data: string; // base64 encoded
@@ -55,6 +68,14 @@ export type Message = {
     type: string;
     size: number;
   };
+  // New unified attachments array (replaces pdf, images, video)
+  attachments?: Array<{
+    name: string;
+    data: string; // base64 encoded
+    type: string; // MIME type
+    size: number;
+    attachmentType: AttachmentType;
+  }>;
 };
 
 export type Athlete = {

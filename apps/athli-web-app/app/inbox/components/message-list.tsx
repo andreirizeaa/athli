@@ -2,18 +2,43 @@
 
 import React from 'react';
 import { useTranslations } from 'next-intl';
-import { Reply, Trash2, FileText, Video } from 'lucide-react';
+import {
+    Reply,
+    Trash2,
+    FileText,
+    Video,
+    ChevronDown,
+    Smile,
+    Send,
+    CheckCircle,
+    Copy,
+    Download,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/general/utils';
 import { type Message, type Contact } from '@/components/app/app-shell';
+import { MessageReactionsDisplay } from './message-reactions-display';
+import { ReactionPicker } from './reaction-picker';
+import { MessageImageGrid } from './message-image-grid';
+import { MessageVideoPreview } from './message-video-preview';
+import { MessageAudioPreview } from './message-audio-preview';
+import { MessageAttachmentGrid } from './message-attachment-grid';
+import type { AttachmentType } from './message-input-context';
+import { REACTION_EMOJIS } from '@athli/shared-types';
 
 interface MessageListProps {
     messages: Message[];
@@ -24,6 +49,7 @@ interface MessageListProps {
     onDeleteMessagePdf: (messageId: string) => void;
     onDeleteMessageVideo: (messageId: string) => void;
     onDeleteAllImages: (messageId: string) => void;
+    onReaction?: (messageId: string, emoji: string) => void;
     messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -36,17 +62,19 @@ export const MessageList = React.memo(function MessageList({
     onDeleteMessagePdf,
     onDeleteMessageVideo,
     onDeleteAllImages,
+    onReaction,
     messagesEndRef,
 }: MessageListProps) {
     const t = useTranslations();
-    const [openDeleteMenuId, setOpenDeleteMenuId] = React.useState<string | null>(null);
+    const [emojiPickerMessageId, setEmojiPickerMessageId] = React.useState<string | null>(null);
 
     const formatTime = (timestamp: string) => {
-        return timestamp;
+        // Extract just the time portion (HH:MM)
+        const match = timestamp.match(/(\d+:\d+)/);
+        return match ? match[1] : timestamp;
     };
 
     const parseTimeToMinutes = (timeString: string): number => {
-        // Parse time string like "2:30 PM" or "14:30"
         const match = timeString.match(/(\d+):(\d+)\s*(AM|PM)?/i);
         if (!match) return 0;
 
@@ -66,42 +94,13 @@ export const MessageList = React.memo(function MessageList({
     const getTimeDifferenceInMinutes = (time1: string, time2: string): number => {
         const minutes1 = parseTimeToMinutes(time1);
         const minutes2 = parseTimeToMinutes(time2);
-        // Handle day rollover (e.g., 11:59 PM to 12:01 AM)
         if (minutes2 < minutes1) {
             return 24 * 60 - minutes1 + minutes2;
         }
         return minutes2 - minutes1;
     };
 
-    const shouldShowTimestamp = (message: Message, index: number, messages: Message[]): boolean => {
-        // Always show timestamp on the last message
-        if (index === messages.length - 1) {
-            return true;
-        }
-
-        const nextMessage = messages[index + 1];
-        if (!nextMessage) {
-            return true;
-        }
-
-        // Show timestamp if next message is from different sender
-        if (nextMessage.isSent !== message.isSent) {
-            return true;
-        }
-
-        // Show timestamp if next message is more than 2 minutes away
-        const timeDiff = getTimeDifferenceInMinutes(message.timestamp, nextMessage.timestamp);
-        if (timeDiff > 2) {
-            return true;
-        }
-
-        // Don't show timestamp if next message is from same sender and within 2 minutes
-        // (The timestamp will show on the last message of the group)
-        return false;
-    };
-
     const isInSameGroup = (message: Message, index: number, messages: Message[]): boolean => {
-        // Check if this message is part of the same group as the next message
         if (index === messages.length - 1) {
             return false;
         }
@@ -111,7 +110,6 @@ export const MessageList = React.memo(function MessageList({
             return false;
         }
 
-        // Same group if same sender and within 2 minutes
         if (nextMessage.isSent !== message.isSent) {
             return false;
         }
@@ -120,77 +118,40 @@ export const MessageList = React.memo(function MessageList({
         return timeDiff <= 2;
     };
 
-    const handleDownloadMessagePdf = (pdf: Message['pdf']) => {
-        if (!pdf || !pdf.data) return;
-
-        // Convert base64 to blob and download
-        const byteString = atob(pdf.data.split(',')[1]);
+    const handleDownload = (data: string, filename: string, mimeType: string) => {
+        const byteString = atob(data.split(',')[1]);
         const ab = new ArrayBuffer(byteString.length);
         const ia = new Uint8Array(ab);
         for (let i = 0; i < byteString.length; i++) {
             ia[i] = byteString.charCodeAt(i);
         }
-        const blob = new Blob([ab], { type: pdf.type });
+        const blob = new Blob([ab], { type: mimeType });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = pdf.name;
+        link.download = filename;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
     };
 
-    const handleMessagePdfPreviewKeyDown = (
-        event: React.KeyboardEvent<HTMLDivElement>,
-        pdf: Message['pdf']
-    ) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            handleDownloadMessagePdf(pdf);
-        }
+    const handleReactionSelect = (messageId: string, emoji: string) => {
+        onReaction?.(messageId, emoji);
     };
 
-    const handleDownloadMessageVideo = (
-        video: { name: string; data: string; type: string; size: number } | undefined
-    ) => {
-        if (!video) return;
-        const byteString = atob(video.data.split(',')[1]);
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++) {
-            ia[i] = byteString.charCodeAt(i);
-        }
-        const blob = new Blob([ab], { type: video.type });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = video.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    };
-
-    const handleMessageVideoPreviewKeyDown = (
-        event: React.KeyboardEvent<HTMLDivElement>,
-        video: { name: string; data: string; type: string; size: number } | undefined
-    ) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            handleDownloadMessageVideo(video);
-        }
+    const handleCopyText = (text: string) => {
+        navigator.clipboard.writeText(text);
     };
 
     return (
         <ScrollArea className="flex-1 min-h-0">
-            <div className="flex flex-col px-4 pt-2">
+            <div className="flex flex-col px-4 pt-2 pb-4">
                 {messages.map((message, index) => {
                     const isLastInSequence =
                         index === messages.length - 1 ||
                         messages[index + 1]?.isSent !== message.isSent;
 
-                    const showTimestamp = shouldShowTimestamp(message, index, messages);
                     const inSameGroup = isInSameGroup(message, index, messages);
 
                     return (
@@ -202,380 +163,128 @@ export const MessageList = React.memo(function MessageList({
                                 inSameGroup ? 'mb-1' : 'mb-4'
                             )}
                         >
-                            {/* Images Preview */}
-                            {message.images && message.images.length > 0 && (
+                            <div className={cn('flex items-center gap-2 group', message.isSent && 'flex-row-reverse')}>
+                                <div className="max-w-[60%] relative">
+                                    {/* Main Message Bubble */}
                                 <div
                                     className={cn(
-                                        'mb-2 max-w-[80%] px-2 bg-background/50 rounded-lg relative group',
-                                        message.isSent ? 'items-end' : 'items-start'
-                                    )}
-                                    style={{ borderRadius: '18px' }}
-                                >
-                                    <div className="flex gap-2 overflow-x-auto">
-                                        {message.images.map((image, imageIndex) => (
-                                            <div key={imageIndex} className="relative flex-shrink-0">
-                                                <div
-                                                    className="cursor-pointer"
-                                                    onClick={() => {
-                                                        // Download image
-                                                        const byteString = atob(image.data.split(',')[1]);
-                                                        const ab = new ArrayBuffer(byteString.length);
-                                                        const ia = new Uint8Array(ab);
-                                                        for (let i = 0; i < byteString.length; i++) {
-                                                            ia[i] = byteString.charCodeAt(i);
-                                                        }
-                                                        const blob = new Blob([ab], { type: image.type });
-                                                        const url = URL.createObjectURL(blob);
-                                                        const link = document.createElement('a');
-                                                        link.href = url;
-                                                        link.download = image.name;
-                                                        document.body.appendChild(link);
-                                                        link.click();
-                                                        document.body.removeChild(link);
-                                                        URL.revokeObjectURL(url);
-                                                    }}
-                                                    role="button"
-                                                    tabIndex={0}
-                                                    aria-label={t('messages.download', { name: image.name })}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' || e.key === ' ') {
-                                                            e.preventDefault();
-                                                            // Download image
-                                                            const byteString = atob(image.data.split(',')[1]);
-                                                            const ab = new ArrayBuffer(byteString.length);
-                                                            const ia = new Uint8Array(ab);
-                                                            for (let i = 0; i < byteString.length; i++) {
-                                                                ia[i] = byteString.charCodeAt(i);
-                                                            }
-                                                            const blob = new Blob([ab], { type: image.type });
-                                                            const url = URL.createObjectURL(blob);
-                                                            const link = document.createElement('a');
-                                                            link.href = url;
-                                                            link.download = image.name;
-                                                            document.body.appendChild(link);
-                                                            link.click();
-                                                            document.body.removeChild(link);
-                                                            URL.revokeObjectURL(url);
-                                                        }
-                                                    }}
-                                                >
-                                                    <div className="bg-muted rounded-lg p-1.5 hover:bg-muted/80 transition-colors">
-                                                        <div className="w-24 h-24 flex items-center justify-center overflow-hidden rounded-md">
-                                                            <img
-                                                                src={image.data}
-                                                                alt={image.name}
-                                                                className="w-full h-full object-cover"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div
-                                        className={cn(
-                                            'absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center gap-1',
-                                            message.isSent
-                                                ? 'right-full mr-2 flex-row-reverse'
-                                                : 'left-full ml-2'
-                                        )}
-                                    >
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                                        aria-label={t('messages.reply')}
-                                                        onClick={() => onReply(message)}
-                                                    >
-                                                        <Reply className="h-4 w-4" />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>{t('messages.reply')}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                        {message.isSent && (
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                                        aria-label={t('messages.deleteImages')}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align={message.isSent ? 'end' : 'start'}>
-                                                    <DropdownMenuItem
-                                                        onClick={() => onDeleteAllImages(message.id)}
-                                                    >
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        {t('messages.deleteAllImages')}
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                            {/* PDF Preview */}
-                            {message.pdf && (
-                                <div
-                                    className={cn(
-                                        'mb-2 max-w-[80%] px-3 py-2 bg-background/50 rounded-lg border relative group',
-                                        message.isSent ? 'items-end' : 'items-start'
-                                    )}
-                                    style={{ borderRadius: '18px' }}
-                                >
-                                    <div
-                                        role="button"
-                                        tabIndex={0}
-                                        aria-label={t('messages.download', { name: message.pdf.name })}
-                                        onClick={() => handleDownloadMessagePdf(message.pdf)}
-                                        onKeyDown={(e) => handleMessagePdfPreviewKeyDown(e, message.pdf)}
-                                        className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-                                    >
-                                        <div className="flex items-center justify-center h-10 w-10 rounded-md bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
-                                            <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-foreground truncate">
-                                                {message.pdf.name}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">{t('messages.pdf')}</p>
-                                        </div>
-                                    </div>
-                                    <div
-                                        className={cn(
-                                            'absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center gap-1',
-                                            message.isSent
-                                                ? 'right-full mr-2 flex-row-reverse'
-                                                : 'left-full ml-2'
-                                        )}
-                                    >
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                                        aria-label={t('messages.reply')}
-                                                        onClick={() => onReply(message)}
-                                                    >
-                                                        <Reply className="h-4 w-4" />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>{t('messages.reply')}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                        {message.isSent && (
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                                        aria-label={t('messages.deletePdf')}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align={message.isSent ? 'end' : 'start'}>
-                                                    <DropdownMenuItem
-                                                        onClick={() => {
-                                                            onDeleteMessagePdf(message.id);
-                                                        }}
-                                                    >
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        {t('general.delete')}
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                            {/* Video Preview */}
-                            {message.video && (
-                                <div
-                                    className={cn(
-                                        'mb-2 max-w-[80%] px-3 py-2 bg-background/50 rounded-lg border relative group',
-                                        message.isSent ? 'items-end' : 'items-start'
-                                    )}
-                                    style={{ borderRadius: '18px' }}
-                                >
-                                    <div
-                                        role="button"
-                                        tabIndex={0}
-                                        aria-label={t('messages.download', {
-                                            name: message.video?.name || t('messages.video'),
-                                        })}
-                                        onClick={() =>
-                                            message.video && handleDownloadMessageVideo(message.video)
-                                        }
-                                        onKeyDown={(e) =>
-                                            message.video &&
-                                            handleMessageVideoPreviewKeyDown(e, message.video)
-                                        }
-                                        className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-                                    >
-                                        <div className="flex items-center justify-center h-10 w-10 rounded-md bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
-                                            <Video className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-foreground truncate">
-                                                {message.video?.name || t('messages.video')}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">{t('messages.mp4')}</p>
-                                        </div>
-                                    </div>
-                                    <div
-                                        className={cn(
-                                            'absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center gap-1',
-                                            message.isSent
-                                                ? 'right-full mr-2 flex-row-reverse'
-                                                : 'left-full ml-2'
-                                        )}
-                                    >
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                                        aria-label={t('messages.reply')}
-                                                        onClick={() => onReply(message)}
-                                                    >
-                                                        <Reply className="h-4 w-4" />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>{t('messages.reply')}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                        {message.isSent && (
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                                        aria-label={t('messages.deleteVideo')}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align={message.isSent ? 'end' : 'start'}>
-                                                    <DropdownMenuItem
-                                                        onClick={() => {
-                                                            onDeleteMessageVideo(message.id);
-                                                        }}
-                                                    >
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        {t('general.delete')}
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                            {/* Message Bubble - show if there's text */}
-                            {message.text.trim() && (
-                                <div
-                                    className={cn(
-                                        'max-w-[80%] rounded-xl px-2 py-2 relative group',
+                                        'rounded-xl px-3 py-1.5 relative',
                                         message.isSent
                                             ? 'bg-primary text-primary-foreground'
                                             : 'bg-sidebar text-foreground',
-                                        isLastInSequence && message.isSent && 'rounded-br-sm',
-                                        isLastInSequence && !message.isSent && 'rounded-bl-sm'
+                                        isLastInSequence && message.isSent && 'rounded-br-[2px]',
+                                        isLastInSequence && !message.isSent && 'rounded-bl-[2px]'
                                     )}
                                 >
+                                    {/* WhatsApp-style dropdown button */}
                                     <div
                                         className={cn(
-                                            'absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center gap-1',
-                                            message.isSent
-                                                ? 'right-full mr-2 flex-row-reverse'
-                                                : 'left-full ml-2',
-                                            openDeleteMenuId === message.id && 'opacity-100'
+                                            'absolute -top-1 opacity-0 group-hover:opacity-100 transition-opacity z-20',
+                                            message.isSent ? '-right-1' : '-left-1'
                                         )}
                                     >
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                                        aria-label={t('messages.reply')}
-                                                        onClick={() => onReply(message)}
-                                                    >
-                                                        <Reply className="h-4 w-4" />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>{t('messages.reply')}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                        {message.isSent && (
-                                            <DropdownMenu
-                                                open={openDeleteMenuId === message.id}
-                                                onOpenChange={(open) => {
-                                                    setOpenDeleteMenuId(open ? message.id : null);
-                                                }}
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className={cn(
+                                                        'h-6 w-6 rounded-md',
+                                                        'bg-background border border-border shadow-sm',
+                                                        'hover:border-primary',
+                                                        'backdrop-blur-sm'
+                                                    )}
+                                                >
+                                                    <ChevronDown className="h-3 w-3 text-foreground" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent
+                                                align={message.isSent ? 'end' : 'start'}
+                                                className="w-48"
                                             >
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 data-[state=open]:bg-gray-200 dark:data-[state=open]:bg-white/10"
-                                                        aria-label={t('messages.deleteMessage')}
+                                                <DropdownMenuItem onClick={() => onReply(message)}>
+                                                    <Reply className="mr-2 h-4 w-4" />
+                                                    {t('messages.reply')}
+                                                </DropdownMenuItem>
+
+                                                {/* React menu item - opens dialog on click */}
+                                                <DropdownMenuItem onClick={() => setEmojiPickerMessageId(message.id)}>
+                                                    <Smile className="mr-2 h-4 w-4" />
+                                                    React
+                                                </DropdownMenuItem>
+
+                                                {message.text && (
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleCopyText(message.text)}
                                                     >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align={message.isSent ? 'end' : 'start'}>
+                                                        <Copy className="mr-2 h-4 w-4" />
+                                                        {t('general.copy')}
+                                                    </DropdownMenuItem>
+                                                )}
+
+                                                {/* Download option for attachments */}
+                                                {((message as any).attachments?.length > 0 || message.pdf || message.video || message.images) && (
                                                     <DropdownMenuItem
                                                         onClick={() => {
-                                                            onDeleteMessage(message.id);
-                                                            setOpenDeleteMenuId(null);
+                                                            // New format - attachments array
+                                                            if ((message as any).attachments?.length > 0) {
+                                                                const firstAttachment = (message as any).attachments[0];
+                                                                handleDownload(
+                                                                    firstAttachment.data,
+                                                                    firstAttachment.name,
+                                                                    firstAttachment.type
+                                                                );
+                                                            }
+                                                            // Legacy format fallbacks
+                                                            else if (message.pdf) {
+                                                                handleDownload(
+                                                                    message.pdf.data,
+                                                                    message.pdf.name,
+                                                                    message.pdf.type
+                                                                );
+                                                            } else if (message.video) {
+                                                                handleDownload(
+                                                                    message.video.data,
+                                                                    message.video.name,
+                                                                    message.video.type
+                                                                );
+                                                            } else if (message.images && message.images[0]) {
+                                                                handleDownload(
+                                                                    message.images[0].data,
+                                                                    message.images[0].name,
+                                                                    message.images[0].type
+                                                                );
+                                                            }
                                                         }}
                                                     >
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        {t('general.delete')}
+                                                        <Download className="mr-2 h-4 w-4" />
+                                                        Download
                                                     </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        )}
+                                                )}
+
+                                                {message.isSent && (
+                                                    <>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem onClick={() => onDeleteMessage(message.id)}>
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            {t('general.delete')}
+                                                        </DropdownMenuItem>
+                                                    </>
+                                                )}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </div>
+
+                                    {/* Reply preview */}
                                     {message.replyTo && (
                                         <div
                                             className={cn(
                                                 'mb-2 px-1.5 py-1.5 rounded-[10px] border-l-4',
                                                 message.isSent
                                                     ? message.replyTo.isSent
-                                                        ? 'bg-primary/15 border-primary'
-                                                        : 'bg-primary/15 border-muted'
+                                                        ? 'bg-primary-foreground/10 border-primary-foreground/50'
+                                                        : 'bg-primary-foreground/10 border-muted'
                                                     : 'bg-background/50 border-muted'
                                             )}
                                         >
@@ -583,52 +292,80 @@ export const MessageList = React.memo(function MessageList({
                                                 <Reply
                                                     className={cn(
                                                         'h-3 w-3 flex-shrink-0',
-                                                        'text-muted-foreground'
+                                                        message.isSent
+                                                            ? 'text-primary-foreground/70'
+                                                            : 'text-muted-foreground'
                                                     )}
                                                 />
                                                 <span
-                                                    className={cn('text-xs font-semibold', 'text-foreground')}
+                                                    className={cn(
+                                                        'text-xs font-semibold',
+                                                        message.isSent
+                                                            ? 'text-primary-foreground'
+                                                            : 'text-foreground'
+                                                    )}
                                                 >
                                                     {message.replyTo.isSent
                                                         ? t('messages.yourself')
                                                         : selectedContact?.name || 'user'}
                                                 </span>
                                             </div>
-                                            {message.replyTo.images &&
-                                                message.replyTo.images.length > 0 && (
-                                                    <div className="flex gap-1 mb-1 overflow-x-auto">
-                                                        {message.replyTo.images
-                                                            .slice(0, 3)
-                                                            .map((image, index) => (
-                                                                <div key={index} className="flex-shrink-0">
-                                                                    <div className="w-10 h-10 flex items-center justify-center overflow-hidden rounded-md bg-muted">
-                                                                        <img
-                                                                            src={image.data}
-                                                                            alt={image.name}
-                                                                            className="w-full h-full object-cover"
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        {message.replyTo.images.length > 3 && (
-                                                            <div className="w-10 h-10 flex items-center justify-center rounded-md bg-muted text-[10px] text-muted-foreground">
-                                                                +{message.replyTo.images.length - 3}
+                                            {message.replyTo.images && message.replyTo.images.length > 0 && (
+                                                <div className="flex gap-1 mb-1 overflow-x-auto">
+                                                    {message.replyTo.images.slice(0, 3).map((image, idx) => (
+                                                        <div key={idx} className="flex-shrink-0">
+                                                            <div className="w-10 h-10 flex items-center justify-center overflow-hidden rounded-md bg-muted">
+                                                                <img
+                                                                    src={image.data}
+                                                                    alt={image.name}
+                                                                    className="w-full h-full object-cover"
+                                                                />
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                )}
+                                                        </div>
+                                                    ))}
+                                                    {message.replyTo.images.length > 3 && (
+                                                        <div className="w-10 h-10 flex items-center justify-center rounded-md bg-muted text-[10px] text-muted-foreground">
+                                                            +{message.replyTo.images.length - 3}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                             {message.replyTo.pdf && (
                                                 <div className="flex items-center gap-1.5 mb-1">
-                                                    <FileText className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-                                                    <span className="text-xs text-foreground/80 truncate">
+                                                    <FileText
+                                                        className={cn(
+                                                            'h-3 w-3 flex-shrink-0',
+                                                            'text-orange-600 dark:text-orange-400'
+                                                        )}
+                                                    />
+                                                    <span
+                                                        className={cn(
+                                                            'text-xs truncate',
+                                                            message.isSent
+                                                                ? 'text-primary-foreground/80'
+                                                                : 'text-foreground/80'
+                                                        )}
+                                                    >
                                                         {message.replyTo.pdf.name}
                                                     </span>
                                                 </div>
                                             )}
                                             {message.replyTo.video && (
                                                 <div className="flex items-center gap-1.5 mb-1">
-                                                    <Video className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-                                                    <span className="text-xs text-foreground/80 truncate">
+                                                    <Video
+                                                        className={cn(
+                                                            'h-3 w-3 flex-shrink-0',
+                                                            'text-orange-600 dark:text-orange-400'
+                                                        )}
+                                                    />
+                                                    <span
+                                                        className={cn(
+                                                            'text-xs truncate',
+                                                            message.isSent
+                                                                ? 'text-primary-foreground/80'
+                                                                : 'text-foreground/80'
+                                                        )}
+                                                    >
                                                         {message.replyTo.video.name}
                                                     </span>
                                                 </div>
@@ -636,8 +373,10 @@ export const MessageList = React.memo(function MessageList({
                                             {message.replyTo.text && (
                                                 <p
                                                     className={cn(
-                                                        'text-xs line-clamp-2 truncate',
-                                                        'text-foreground/80'
+                                                        'text-xs line-clamp-2',
+                                                        message.isSent
+                                                            ? 'text-primary-foreground/80'
+                                                            : 'text-foreground/80'
                                                     )}
                                                 >
                                                     {message.replyTo.text}
@@ -645,11 +384,154 @@ export const MessageList = React.memo(function MessageList({
                                             )}
                                         </div>
                                     )}
+
+                                    {/* Unified Attachments Grid */}
+                                    {(message as any).attachments && (message as any).attachments.length > 0 && (
+                                        <MessageAttachmentGrid
+                                            attachments={(message as any).attachments}
+                                            isSent={message.isSent}
+                                            onImageClick={(images, index) => {
+                                                // Open image viewer/lightbox
+                                                const image = images[index];
+                                                handleDownload(image.data, image.name, image.type);
+                                            }}
+                                            onVideoClick={(video) => {
+                                                // Open video in dialog box
+                                                const overlay = document.createElement('div');
+                                                overlay.className =
+                                                    'fixed inset-0 z-50 bg-black/80 flex items-center justify-center cursor-pointer p-8';
+                                                overlay.onclick = (e) => {
+                                                    if (e.target === overlay) overlay.remove();
+                                                };
+
+                                                const dialogBox = document.createElement('div');
+                                                dialogBox.className = 'bg-black rounded-lg overflow-hidden shadow-2xl max-w-3xl w-full aspect-video';
+                                                dialogBox.onclick = (e) => e.stopPropagation();
+
+                                                const videoElement = document.createElement('video');
+                                                videoElement.src = video.data;
+                                                videoElement.controls = true;
+                                                videoElement.autoplay = true;
+                                                videoElement.className = 'w-full h-full object-contain';
+                                                videoElement.style.outline = 'none';
+
+                                                dialogBox.appendChild(videoElement);
+                                                overlay.appendChild(dialogBox);
+                                                document.body.appendChild(overlay);
+                                            }}
+                                            onPdfClick={(pdf) => {
+                                                handleDownload(pdf.data, pdf.name, pdf.type);
+                                            }}
+                                        />
+                                    )}
+
+                                    {/* PDF Document (legacy - for backward compatibility) */}
+                                    {message.pdf && !(message as any).attachments && (
+                                        <div
+                                            role="button"
+                                            tabIndex={0}
+                                            onClick={() =>
+                                                handleDownload(
+                                                    message.pdf!.data,
+                                                    message.pdf!.name,
+                                                    message.pdf!.type
+                                                )
+                                            }
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                    e.preventDefault();
+                                                    handleDownload(
+                                                        message.pdf!.data,
+                                                        message.pdf!.name,
+                                                        message.pdf!.type
+                                                    );
+                                                }
+                                            }}
+                                            className={cn(
+                                                'flex items-center gap-3 cursor-pointer p-2 rounded-lg mb-2',
+                                                'hover:opacity-80 transition-opacity',
+                                                message.isSent
+                                                    ? 'bg-primary-foreground/10'
+                                                    : 'bg-background/50'
+                                            )}
+                                        >
+                                            <div
+                                                className={cn(
+                                                    'flex items-center justify-center h-10 w-10 rounded-md flex-shrink-0',
+                                                    'bg-orange-100 dark:bg-orange-900/30'
+                                                )}
+                                            >
+                                                <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p
+                                                    className={cn(
+                                                        'text-sm font-medium truncate',
+                                                        message.isSent
+                                                            ? 'text-primary-foreground'
+                                                            : 'text-foreground'
+                                                    )}
+                                                >
+                                                    {message.pdf.name}
+                                                </p>
+                                                <p
+                                                    className={cn(
+                                                        'text-xs',
+                                                        message.isSent
+                                                            ? 'text-primary-foreground/70'
+                                                            : 'text-muted-foreground'
+                                                    )}
+                                                >
+                                                    {t('messages.pdf')}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Text message */}
                                     {message.text.trim() && (
-                                        <p className="text-sm whitespace-pre-wrap break-words">
+                                        <p className={cn(
+                                            "text-sm whitespace-pre-wrap break-words mb-1",
+                                            message.isSent ? "text-right" : "text-left"
+                                        )}>
                                             {message.text}
                                         </p>
                                     )}
+
+                                    {/* Timestamp and read receipt (always shown) */}
+                                    <div className="flex items-center justify-end gap-0.5 mt-0.5">
+                                        <span
+                                            className={cn(
+                                                'text-[11px] font-mono leading-none',
+                                                message.isSent
+                                                    ? 'text-primary-foreground/70'
+                                                    : 'text-muted-foreground'
+                                            )}
+                                        >
+                                            {formatTime(message.timestamp)}
+                                        </span>
+                                        {message.isSent && (
+                                            <div className="flex-shrink-0">
+                                                {message.isRead ? (
+                                                    <CheckCircle
+                                                        className={cn(
+                                                            'h-[11px] w-[11px]',
+                                                            'text-primary-foreground/70'
+                                                        )}
+                                                    />
+                                                ) : (
+                                                    <Send
+                                                        className={cn(
+                                                            'h-[11px] w-[11px]',
+                                                            'text-primary-foreground/70'
+                                                        )}
+                                                    />
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Tail for last message in sequence */}
                                     {isLastInSequence && (
                                         <>
                                             {message.isSent ? (
@@ -671,23 +553,82 @@ export const MessageList = React.memo(function MessageList({
                                             )}
                                         </>
                                     )}
+                                    </div>
                                 </div>
-                            )}
-                            {showTimestamp && (
-                                <p
-                                    className={cn(
-                                        'text-xs mt-1 text-muted-foreground',
-                                        message.isSent ? 'text-right' : 'text-left'
-                                    )}
-                                >
-                                    {formatTime(message.timestamp)}
-                                </p>
+
+                                {/* Emoji quick reaction button - outside bubble with gap */}
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                    <ReactionPicker
+                                        trigger={
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className={cn(
+                                                    'h-7 w-7 rounded-full',
+                                                    'bg-background border border-border shadow-sm',
+                                                    'hover:bg-muted'
+                                                )}
+                                            >
+                                                <Smile className="h-3.5 w-3.5" />
+                                            </Button>
+                                        }
+                                        onSelectReaction={(emoji) =>
+                                            handleReactionSelect(message.id, emoji)
+                                        }
+                                        currentReaction={message.reaction}
+                                        align={message.isSent ? 'end' : 'start'}
+                                        side="top"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Reactions display */}
+                            {message.reaction && (
+                                <MessageReactionsDisplay
+                                    reaction={{
+                                        senderReaction: message.isSent ? message.reaction : undefined,
+                                        recipientReaction: !message.isSent
+                                            ? message.reaction
+                                            : undefined,
+                                    }}
+                                    isSent={message.isSent}
+                                    onPress={() => {
+                                        // Open reaction details or remove reaction
+                                        handleReactionSelect(message.id, '');
+                                    }}
+                                />
                             )}
                         </div>
                     );
                 })}
                 <div ref={messagesEndRef} />
             </div>
+
+            {/* Emoji Picker Dialog */}
+            <Dialog open={emojiPickerMessageId !== null} onOpenChange={(open) => !open && setEmojiPickerMessageId(null)}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Choose a Reaction</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex gap-2 justify-center flex-wrap py-4">
+                        {REACTION_EMOJIS.map((emoji) => (
+                            <button
+                                key={emoji}
+                                onClick={() => {
+                                    if (emojiPickerMessageId) {
+                                        handleReactionSelect(emojiPickerMessageId, emoji);
+                                        setEmojiPickerMessageId(null);
+                                    }
+                                }}
+                                className="flex items-center justify-center h-12 w-12 rounded-lg hover:bg-muted transition-colors active:scale-95 transition-transform text-3xl"
+                            >
+                                {emoji}
+                            </button>
+                        ))}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </ScrollArea>
     );
 });
