@@ -13,7 +13,7 @@ export const coachMessagingController = {
             return;
         }
 
-        const { includeArchived = 'false', limit = '100' } = req.query;
+        const { includeArchived = false, limit = 100 } = req.body;
 
         try {
             const supabase = getSupabaseClient();
@@ -24,7 +24,7 @@ export const coachMessagingController = {
                 .select('*')
                 .or(`coach_id.eq.${userId},client_id.eq.${userId}`)
                 .order('last_message_at', { ascending: false, nullsFirst: false })
-                .limit(parseInt(limit as string));
+                .limit(limit);
 
             if (conversationsError) throw conversationsError;
             if (!conversations) {
@@ -72,7 +72,7 @@ export const coachMessagingController = {
                     );
 
                     // Skip if archived (unless includeArchived is true)
-                    if (includeArchived !== 'true' && participantSettings?.is_archived) {
+                    if (!includeArchived && participantSettings?.is_archived) {
                         return null;
                     }
 

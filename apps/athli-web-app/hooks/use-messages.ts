@@ -2,7 +2,7 @@
  * Hook to fetch and manage messages for a conversation
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getMessages } from '@/lib/messaging/messaging-api-client';
 import type { Message } from '@athli/shared-types';
 
@@ -11,7 +11,7 @@ export const useMessages = (conversationId: string | null) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     if (!conversationId) {
       setMessages([]);
       return;
@@ -28,22 +28,26 @@ export const useMessages = (conversationId: string | null) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [conversationId]);
 
   useEffect(() => {
     fetchMessages();
-  }, [conversationId]);
+  }, [fetchMessages]);
+
+  const addOptimisticMessage = useCallback((message: Message) => {
+    setMessages((prev) => [...prev, message]);
+  }, []);
+
+  const removeOptimisticMessage = useCallback((messageId: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+  }, []);
 
   return {
     messages,
     isLoading,
     error,
     refetch: fetchMessages,
-    addOptimisticMessage: (message: Message) => {
-      setMessages((prev) => [...prev, message]);
-    },
-    removeOptimisticMessage: (messageId: string) => {
-      setMessages((prev) => prev.filter((m) => m.id !== messageId));
-    },
+    addOptimisticMessage,
+    removeOptimisticMessage,
   };
 };
