@@ -70,7 +70,7 @@ export default function MetricsModal() {
                                 <Text style={[styles.metricName, { color: themeColors.text }]}>{metric.name}</Text>
                                 <Text style={[styles.metricUnit, { color: themeColors.mutedText }]}>{metric.unit}</Text>
                             </View>
-                            <ChevronRight size={18} color={themeColors.mutedText} />
+                            <ChevronRight {...({ size: 18, color: themeColors.mutedText } as any)} />
                         </PressableOpacity>
                     </React.Fragment>
                 ))}
@@ -118,7 +118,6 @@ export default function MetricsModal() {
                 <FlashList
                     data={filteredMetrics}
                     keyExtractor={(item) => item.section}
-                    estimatedItemSize={120}
                     renderItem={renderItem}
                     contentContainerStyle={[styles.listContent, { paddingTop: headerHeight + 16 }]}
                     ListHeaderComponent={

@@ -30,7 +30,7 @@ export const SectionsTab = () => {
   const isAuthenticated = !!coachProfile;
 
   // Fetch sections directly with TanStack Query
-  const { data: sections = [], isLoading, isError } = useQuery({
+  const { data: sections = [] } = useQuery({
     queryKey: ['sections'],
     queryFn: async () => {
       console.log('[SectionsTab] Fetching sections...');
@@ -56,8 +56,6 @@ export const SectionsTab = () => {
 
   console.log('[SectionsTab] Render:', {
     isAuthenticated,
-    isLoading,
-    isError,
     totalSections: sections.length,
     filteredSections: filteredSections.length,
     searchQuery

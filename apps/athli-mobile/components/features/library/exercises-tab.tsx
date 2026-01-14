@@ -31,7 +31,7 @@ export const ExercisesTab = () => {
   const isAuthenticated = !!coachProfile;
 
   // Fetch exercises directly with TanStack Query
-  const { data: exercises = [], isLoading, isError } = useQuery({
+  const { data: exercises = [] } = useQuery({
     queryKey: ['exercises'],
     queryFn: async () => {
       console.log('[ExercisesTab] Fetching exercises...');
@@ -58,8 +58,6 @@ export const ExercisesTab = () => {
 
   console.log('[ExercisesTab] Render:', {
     isAuthenticated,
-    isLoading,
-    isError,
     totalExercises: exercises.length,
     filteredExercises: filteredExercises.length,
     searchQuery

@@ -43,7 +43,7 @@ export default function AssignToClientsModal() {
     }, [params.itemIds]);
 
     // Fetch clients
-    const { data: clients = [], isLoading, isFetching, dataUpdatedAt } = useQuery({
+    const { data: clients = [] } = useQuery({
         queryKey: ['clients'],
         queryFn: async () => {
             const data = await getClients();
@@ -167,7 +167,6 @@ export default function AssignToClientsModal() {
                 <FlashList
                     data={filteredClients}
                     keyExtractor={(item) => item.id}
-                    estimatedItemSize={80}
                     renderItem={({ item }) => {
                         const isSelected = selectedClientIds.has(item.id);
 
@@ -234,7 +233,7 @@ export default function AssignToClientsModal() {
                                     ]}
                                 >
                                     {isSelected && (
-                                        <Check size={16} color={themeColors.primaryForeground} />
+                                        <Check {...({ size: 16, color: themeColors.primaryForeground } as any)} />
                                     )}
                                 </View>
                             </PressableOpacity>
@@ -252,11 +251,7 @@ export default function AssignToClientsModal() {
                         </View>
                     }
                     ListEmptyComponent={
-                        isLoading ? (
-                            <EmptyState message={t('general.loading') || 'Loading...'} />
-                        ) : (
-                            <EmptyState message={t('clients.empty')} />
-                        )
+                        <EmptyState message={t('clients.empty')} />
                     }
                     showsVerticalScrollIndicator={false}
                 />

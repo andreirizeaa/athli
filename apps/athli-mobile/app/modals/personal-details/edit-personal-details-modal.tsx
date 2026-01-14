@@ -177,7 +177,7 @@ export default function EditPersonalDetailsModal() {
                         : t('personalDetails.gender.preferNotToSay')}
                   </Text>
                   {clientGender === gender && (
-                    <Check size={iconSizes.navigationChevrons} color={themeColors.primary} />
+                    <Check {...({ size: iconSizes.navigationChevrons, color: themeColors.primary } as any)} />
                   )}
                 </PressableOpacity>
               </React.Fragment>

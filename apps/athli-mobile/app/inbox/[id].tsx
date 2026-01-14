@@ -793,7 +793,6 @@ export default function InboxDetailScreen() {
         onCancelReply={handleCancelReply}
         bottomInset={insets.bottom}
         keyboardHeight={keyboardHeight}
-        onToolbarHeightChange={handleToolbarHeightChange}
       />
 
       <MessageReactionsSheet

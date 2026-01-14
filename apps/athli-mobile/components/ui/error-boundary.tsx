@@ -1,7 +1,6 @@
 import React, { Component, ReactNode, ErrorInfo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { PressableOpacity } from 'pressto';
-import { AlertTriangle } from 'lucide-react-native';
+import { Image } from 'expo-image';
 
 import { typography } from '@/constants/typography';
 
@@ -52,13 +51,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     this.props.onError?.(error, errorInfo);
   }
 
-  handleReset = () => {
-    this.setState({
-      hasError: false,
-      error: null,
-    });
-  };
-
   render() {
     if (this.state.hasError) {
       // Render custom fallback if provided
@@ -69,16 +61,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       // Render default error UI
       return (
         <View style={styles.container}>
-          <AlertTriangle size={64} color="#EF4444" />
-          <Text style={styles.title}>Something went wrong</Text>
-          <Text style={styles.message}>
-            {__DEV__ && this.state.error
-              ? this.state.error.message
-              : 'An unexpected error occurred. Please try again.'}
+          <Image
+            source={require('@/assets/app-icons/splash-icon-dark.png')}
+            style={styles.logo}
+            contentFit="contain"
+          />
+          <Text style={styles.title}>Network Error</Text>
+          <Text style={styles.subtitle}>
+            We're having trouble connecting to our servers. Please check your internet connection and try again later.
           </Text>
-          <PressableOpacity onPress={this.handleReset} style={styles.button}>
-            <Text style={styles.buttonText}>Try Again</Text>
-          </PressableOpacity>
         </View>
       );
     }
@@ -92,35 +83,27 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
-    backgroundColor: '#FFFFFF',
+    padding: 32,
+    backgroundColor: '#000000',
+  },
+  logo: {
+    width: 130,
+    height: 200,
+    marginTop: -60,
+    marginBottom: 12,
   },
   title: {
-    ...typography.h4,
-    marginTop: 24,
+    ...typography.h1,
+    marginTop: -60,
     marginBottom: 12,
-    color: '#1F2937',
-    textAlign: 'center',
-  },
-  message: {
-    ...typography.p2,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 32,
-    paddingHorizontal: 16,
-  },
-  button: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 12,
-    minHeight: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  buttonText: {
-    ...typography.p1,
     color: '#FFFFFF',
-    fontWeight: '600',
+    textAlign: 'center',
+  },
+  subtitle: {
+    ...typography.p2,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    lineHeight: 24,
+    opacity: 0.8,
   },
 });

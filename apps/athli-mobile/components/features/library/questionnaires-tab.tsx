@@ -29,7 +29,7 @@ export const QuestionnairesTab = () => {
   const isAuthenticated = !!coachProfile;
 
   // Fetch questionnaires directly with TanStack Query
-  const { data: questionnaires = [], isLoading, isError } = useQuery({
+  const { data: questionnaires = [] } = useQuery({
     queryKey: ['questionnaires'],
     queryFn: async () => {
       console.log('[QuestionnairesTab] Fetching questionnaires...');
@@ -54,8 +54,6 @@ export const QuestionnairesTab = () => {
 
   console.log('[QuestionnairesTab] Render:', {
     isAuthenticated,
-    isLoading,
-    isError,
     totalQuestionnaires: questionnaires.length,
     filteredQuestionnaires: filteredQuestionnaires.length,
     searchQuery

@@ -83,7 +83,7 @@ export default function ClientProfileScreen() {
 
   const handleMenuItemPress = (route: string) => {
     haptics.medium();
-    router.push(route);
+    router.push(route as any);
   };
 
   // Menu items organized by section
@@ -237,7 +237,7 @@ export default function ClientProfileScreen() {
           ]}
           onPress={handleEditProfilePress}
         >
-          <Pencil size={16} color={themeColors.primary} />
+          <Pencil {...({ size: 16, color: themeColors.primary } as any)} />
           <Text style={[styles.editButtonText, { color: themeColors.primary }]}>
             {t('clientDetail.editProfile')}
           </Text>
