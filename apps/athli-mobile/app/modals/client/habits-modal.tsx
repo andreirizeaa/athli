@@ -74,7 +74,7 @@ export default function HabitsModal() {
                                     </Text>
                                 )}
                             </View>
-                            <ChevronRight size={18} color={themeColors.mutedText} />
+                            <ChevronRight {...({ size: 18, color: themeColors.mutedText } as any)} />
                         </PressableOpacity>
                     </React.Fragment>
                 ))}
@@ -122,7 +122,6 @@ export default function HabitsModal() {
                 <FlashList
                     data={filteredHabits}
                     keyExtractor={(item) => item.section}
-                    estimatedItemSize={120}
                     renderItem={renderItem}
                     contentContainerStyle={[styles.listContent, { paddingTop: headerHeight + 16 }]}
                     ListHeaderComponent={

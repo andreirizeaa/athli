@@ -220,7 +220,6 @@ const PanelContent = React.memo(({
                             />
                         )}
                         keyExtractor={(item) => item.id}
-                        estimatedItemSize={48}
                         contentContainerStyle={styles.sessionsList}
                     />
                 </Animated.View>

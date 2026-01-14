@@ -3,6 +3,12 @@
  * Shared across mobile and web applications
  */
 
+import type { SectionType as WorkoutSchemaSectionType, ExerciseType as WorkoutSchemaExerciseType } from './workout-schema';
+
+// Re-export types from workout-schema to avoid duplication
+export type SectionType = WorkoutSchemaSectionType;
+export type ExerciseType = WorkoutSchemaExerciseType;
+
 // Workout Types
 export const WORKOUT_TYPES = [
     { value: 'weightlifting', label: 'Weightlifting' },
@@ -64,16 +70,12 @@ export const SECTION_TYPES = [
     { value: 'circuits', label: 'Circuits', description: 'Multiple exercises performed in sequence with minimal rest' },
 ] as const;
 
-export type SectionType = typeof SECTION_TYPES[number]['value'];
-
 // Exercise Type/Category Options
 export const EXERCISE_TYPE_OPTIONS = [
     { value: 'weight_reps', label: 'Weight & Reps' },
     { value: 'reps', label: 'Reps Only' },
     { value: 'distance_duration', label: 'Distance & Duration' },
 ] as const;
-
-export type ExerciseType = typeof EXERCISE_TYPE_OPTIONS[number]['value'];
 
 // Muscle Group Options
 export const MUSCLE_GROUP_OPTIONS = [

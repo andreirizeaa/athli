@@ -243,9 +243,8 @@ export default function InboxScreen() {
       isSelected={selectedCoachIds.has(item.id)}
       onArchive={handleCoachArchive}
       onMarkAsRead={handleCoachMarkAsRead}
-      onOpen={registerOpenRow}
     />
-  ), [isEditMode, selectedCoachIds, handleCoachPress, handleCoachArchive, handleCoachMarkAsRead, registerOpenRow]);
+  ), [isEditMode, selectedCoachIds, handleCoachPress, handleCoachArchive, handleCoachMarkAsRead]);
 
   const renderEmptyComponent = useCallback(() => (
     <View style={styles.emptyContainer}>

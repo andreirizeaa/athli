@@ -231,7 +231,6 @@ export interface GenericExerciseDataForBuilder {
   tempo?: string;
   column1Label?: string;
   column2Label?: string;
-  optionalColumnType?: string;
 }
 
 /**
@@ -258,7 +257,6 @@ export const convertRegularExerciseToBuilderFormat = (
     tempo: exercise.tempo || undefined,
     column1Label,
     column2Label,
-    optionalColumnType: exercise.optionalColumnType || undefined,
   };
 };
 
@@ -318,7 +316,6 @@ export const convertCircuitExerciseToBuilderFormat = (
     tempo: exercise.tempo || undefined,
     column1Label,
     column2Label,
-    optionalColumnType: exercise.optionalColumnType || undefined,
   };
 };
 

@@ -11,11 +11,11 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import {
-    EXERCISE_CATEGORY_OPTIONS,
+    EXERCISE_TYPE_OPTIONS as EXERCISE_CATEGORY_OPTIONS,
     MUSCLE_GROUP_OPTIONS,
     EQUIPMENT_OPTIONS,
     MODALITY_OPTIONS,
-    type ExerciseCategory,
+    type ExerciseType as ExerciseCategory,
     type MuscleGroup,
     type Equipment,
     type Modality,

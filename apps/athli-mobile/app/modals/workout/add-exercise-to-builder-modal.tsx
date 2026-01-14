@@ -407,7 +407,6 @@ export default function AddExerciseToBuilderModal() {
                 <FlashList
                     data={filteredExercises}
                     keyExtractor={(item) => item.exerciseId}
-                    estimatedItemSize={64}
                     renderItem={renderExerciseItem}
                     ItemSeparatorComponent={() => <Separator style={styles.separator} />}
                     contentContainerStyle={[styles.listContent, { paddingTop: headerHeight + 16 }]}
