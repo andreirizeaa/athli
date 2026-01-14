@@ -207,7 +207,7 @@ export default function ClientProfileScreen() {
       </View>
 
       {/* Profile Card */}
-      <View style={[styles.profileCard, { backgroundColor: themeColors.backgroundSecondary }]}>
+      <View style={[styles.profileCard, { backgroundColor: themeColors.surfacePrimary }]}>
         <View style={styles.avatarLarge}>
           {client?.avatarUrl ? (
             <Image
@@ -232,7 +232,7 @@ export default function ClientProfileScreen() {
           style={[
             styles.editButton,
             {
-              backgroundColor: `${themeColors.backgroundTertiary}`,
+              backgroundColor: `${themeColors.surfaceSecondary}`,
             },
           ]}
           onPress={handleEditProfilePress}

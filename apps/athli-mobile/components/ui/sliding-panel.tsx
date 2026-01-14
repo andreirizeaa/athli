@@ -214,8 +214,16 @@ export const SlidingPanel = forwardRef<SlidingPanelRef, SlidingPanelProps>(
                 [SCREEN_WIDTH, openPosition]
             );
 
+            // Hide border when fully expanded (expansion = 1)
+            const borderWidth = interpolate(
+                expansion.value,
+                [0, 1],
+                [1, 0]
+            );
+
             return {
                 transform: [{ translateX }],
+                borderLeftWidth: borderWidth,
             };
         });
 
@@ -272,6 +280,5 @@ const styles = StyleSheet.create({
         top: 0,
         bottom: 0,
         right: 0,
-        borderLeftWidth: 1,
     },
 });
