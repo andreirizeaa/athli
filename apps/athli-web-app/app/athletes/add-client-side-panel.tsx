@@ -22,8 +22,7 @@ import { SidePanel } from '@/components/app/side-panel';
 import { cn } from '@/lib/general/utils';
 
 type AddAthleteFormValues = {
-  firstName: string;
-  lastName: string;
+  fullName: string;
   email: string;
   coachingType: 'online' | 'in-person' | 'hybrid';
 };
@@ -41,8 +40,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
   const t = useTranslations();
   const queryClient = useQueryClient();
   const addAthleteSchema = z.object({
-    firstName: z.string().min(1, t('athletes.addClient.firstNameRequiredError')),
-    lastName: z.string().min(1, t('athletes.addClient.lastNameRequiredError')),
+    fullName: z.string().min(1, t('athletes.addClient.fullNameRequiredError')),
     email: z.string().email(t('athletes.addClient.emailInvalidError')),
     coachingType: z.union([z.literal('online'), z.literal('in-person'), z.literal('hybrid')]),
   });
@@ -50,8 +48,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
     resolver: zodResolver(addAthleteSchema),
     mode: 'onChange',
     defaultValues: {
-      firstName: '',
-      lastName: '',
+      fullName: '',
       email: '',
       coachingType: 'online',
     },
@@ -69,8 +66,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
       form.reset();
       toast.success(t('athletes.addClient.invitationSent'), {
         description: t('athletes.addClient.invitationSentDescription', {
-          firstName: values.firstName,
-          lastName: values.lastName,
+          fullName: values.fullName,
           email: values.email,
         }),
         style: {
@@ -137,29 +133,14 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
         >
           <FormField
             control={form.control}
-            name="firstName"
+            name="fullName"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  <span>{t('athletes.addClient.firstName')}<RequiredAsterisk /></span>
+                  <span>{t('athletes.addClient.fullName')}<RequiredAsterisk /></span>
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder={t('athletes.addClient.firstNamePlaceholder')} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="lastName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  <span>{t('athletes.addClient.lastName')}<RequiredAsterisk /></span>
-                </FormLabel>
-                <FormControl>
-                  <Input placeholder={t('athletes.addClient.lastNamePlaceholder')} {...field} />
+                  <Input placeholder={t('athletes.addClient.fullNamePlaceholder')} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

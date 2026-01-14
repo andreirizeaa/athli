@@ -100,9 +100,9 @@ export const coachClientController = {
         let lastError: string | null = null;
 
         for (const clientData of clientsToCreate) {
-            const { email: rawEmail, firstName, lastName, category = 'online' } = clientData;
+            const { email: rawEmail, fullName: rawFullName, category = 'online' } = clientData;
             const email = rawEmail.toLowerCase().trim();
-            const fullName = `${firstName} ${lastName}`.trim();
+            const fullName = rawFullName.trim();
 
             try {
                 // 1. Check if any profiles exist for this email to get the clientId

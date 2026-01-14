@@ -125,7 +125,7 @@ export const MessageReplyPreview = ({
     if (replyTo.audio) {
       return (
         <Text style={[styles.messagePreview, { color: messageTextColor }]} numberOfLines={1}>
-          {`Audio message • ${formatAudioReplyStamp(replyTo.timestamp)}`}
+          {`Audio message • ${formatAudioReplyStamp(replyTo.sent_at)}`}
         </Text>
       );
     }

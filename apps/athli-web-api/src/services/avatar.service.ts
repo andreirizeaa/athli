@@ -1,10 +1,32 @@
 import { getSupabaseClient } from './supabase.service';
 
 class AvatarService {
+    // Darker color palette for better contrast with white text (WCAG AA compliant)
     private colors = [
-        '#FF5733', '#33FF57', '#3357FF', '#F333FF', '#FF33A1',
-        '#33FFF3', '#F3FF33', '#FF8C33', '#8C33FF', '#33FF8C'
+        '#1e40af', // Dark blue
+        '#b91c1c', // Dark red
+        '#047857', // Dark green
+        '#7e22ce', // Dark purple
+        '#ea580c', // Dark orange
+        '#0f766e', // Dark teal
+        '#be185d', // Dark pink
+        '#4338ca', // Dark indigo
+        '#065f46', // Dark emerald
+        '#d97706'  // Dark amber
     ];
+
+    /**
+     * Generate a simple hash from a string
+     */
+    private hashString(str: string): number {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return Math.abs(hash);
+    }
 
     /**
      * Generate a default SVG avatar and upload it to Supabase storage
@@ -17,7 +39,9 @@ class AvatarService {
             .toUpperCase()
             .slice(0, 2);
 
-        const color = this.colors[Math.floor(Math.random() * this.colors.length)];
+        // Use deterministic color selection based on userId
+        const colorIndex = this.hashString(userId) % this.colors.length;
+        const color = this.colors[colorIndex];
 
         const svg = `
       <svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">

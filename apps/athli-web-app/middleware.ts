@@ -8,6 +8,7 @@ const publicRoutes = [
   '/auth/forgot-password',
   '/client/invite',  // Client invite pages (public)
   '/coach/referral', // Coach referral pages (public)
+  '/download',       // Mobile download page (public)
 ];
 const restrictedAuthRoutes = ['/auth/reset-password', '/auth/verify-email', '/auth/new-client'];
 // OAuth callback must be publicly accessible for OAuth providers to redirect to
@@ -15,8 +16,21 @@ const oauthCallbackRoutes = ['/auth/callback'];
 // Routes that require authentication
 const protectedRoutes = ['/home', '/athletes', '/training', '/forms', '/todo', '/inbox', '/settings'];
 
+function isMobileDevice(userAgent: string): boolean {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Check if user is on a mobile device and redirect to download page
+  const userAgent = request.headers.get('user-agent') || '';
+  const isMobile = isMobileDevice(userAgent);
+
+  // If mobile and not already on /download page, redirect to download page
+  if (isMobile && !pathname.startsWith('/download')) {
+    return NextResponse.redirect(new URL('/download', request.url));
+  }
 
   // Allow public routes
   if (publicRoutes.some((route) => pathname.startsWith(route))) {

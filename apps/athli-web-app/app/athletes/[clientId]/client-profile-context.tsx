@@ -68,8 +68,6 @@ export const ClientProfileProvider = ({ children, clientId: clientIdProp }: Clie
     // Track client ID changes and loading state
     const previousClientId = useRef<string | null>(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
-    const loadStartTime = useRef<number>(Date.now());
-    const minimumLoadTime = 1200; // Minimum time to show loader (1.2s) - increased to ensure smooth loading
 
     // Use all the React Query hooks - they will only fetch when clientId is provided
     const { client: athlete, isLoading: isLoadingProfile, error: profileError, isFetching: isFetchingProfile } = useClientProfile(rawClientId);
@@ -107,31 +105,18 @@ export const ClientProfileProvider = ({ children, clientId: clientIdProp }: Clie
     useEffect(() => {
         if (previousClientId.current !== rawClientId) {
             setIsInitialLoad(true);
-            loadStartTime.current = Date.now();
             previousClientId.current = rawClientId;
         }
     }, [rawClientId]);
 
-    // Mark as loaded once ALL queries complete AND minimum time has passed AND user is loaded
+    // Mark as loaded once ALL queries complete AND user is loaded
     useEffect(() => {
         // Don't hide loader until:
         // 1. We have the athlete data
         // 2. We have the user data (needed for some queries)
         // 3. All queries that can run have completed (both loading and fetching)
-        // 4. Minimum load time has passed
         if (isInitialLoad && athlete && user && !isAnyLoading && !isAnyFetching) {
-            const elapsedTime = Date.now() - loadStartTime.current;
-            const remainingTime = Math.max(0, minimumLoadTime - elapsedTime);
-
-            if (remainingTime > 0) {
-                // Wait for minimum time before hiding loader
-                const timer = setTimeout(() => {
-                    setIsInitialLoad(false);
-                }, remainingTime);
-                return () => clearTimeout(timer);
-            } else {
-                setIsInitialLoad(false);
-            }
+            setIsInitialLoad(false);
         }
     }, [isInitialLoad, isAnyLoading, isAnyFetching, athlete, user]);
 

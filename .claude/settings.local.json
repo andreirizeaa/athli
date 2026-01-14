@@ -43,7 +43,10 @@
       "Bash(while read file)",
       "Bash(head:*)",
       "WebFetch(domain:tanstack.com)",
-      "WebFetch(domain:medium.com)"
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(xargs sed:*)",
+      "WebFetch(domain:supabase.com)"
     ]
   }
 }

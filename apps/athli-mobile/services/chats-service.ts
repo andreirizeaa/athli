@@ -1,741 +1,284 @@
-import type {
-  Chat,
-  ChatMessage,
-  DocumentAttachment,
-  ImageAttachment,
-  VideoAttachment,
-  AudioAttachment,
-} from '@/types';
+/**
+ * Chats Service - Coach View Wrapper
+ * Wrapper around messaging-service.ts that auto-injects current user ID
+ */
 
-// Re-export types for backward compatibility
+import { supabase } from '@/lib/supabase';
+import * as MessagingService from './messaging-service';
+
+// Re-export types
 export type {
-  Chat,
-  ChatMessage,
-  DocumentAttachment,
-  ImageAttachment,
-  VideoAttachment,
-  AudioAttachment,
-};
+  Message,
+  MessageAttachment,
+  MessageReaction,
+  Conversation,
+  ConversationParticipant,
+  ReadReceipt,
+  OptimisticMessage,
+  MessageStatus,
+  MessageType,
+} from './messaging-service';
+
+// Type aliases for backwards compatibility during migration
+export type { Conversation as Chat, Message as ChatMessage } from './messaging-service';
+
+// Attachment type aliases (unified MessageAttachment)
+export type {
+  MessageAttachment as DocumentAttachment,
+  MessageAttachment as ImageAttachment,
+  MessageAttachment as VideoAttachment,
+  MessageAttachment as AudioAttachment,
+} from './messaging-service';
+
+// ================================================
+// AUTH HELPER
+// ================================================
 
 /**
- * Service method to get all chats
- * This will be connected to the backend in the future
+ * Get current authenticated user ID
+ * @throws Error if no user is authenticated
  */
-export const getChats = async (): Promise<Chat[]> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
+async function getCurrentUserId(): Promise<string> {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
 
-  // Return mock data - in the future, this will come from the backend
-  return mockChats;
+  if (error || !user) {
+    throw new Error('No authenticated user found');
+  }
 
-  // In the future, this will make an actual API call:
-  // const response = await fetch('/api/chats', {
-  //   method: 'GET',
-  //   headers: { 'Content-Type': 'application/json' },
-  // })
-  // if (!response.ok) throw new Error('Failed to get chats')
-  // return await response.json()
-};
+  return user.id;
+}
+
+// ================================================
+// WRAPPED FUNCTIONS (Auto-inject userId)
+// ================================================
 
 /**
- * Service method to get archived chats
- * This will be connected to the backend in the future
+ * Get all conversations for current user
  */
-export const getArchivedChats = async (): Promise<Chat[]> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // Return mock archived chats - in the future, this will come from the backend
-  return mockArchivedChats;
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch('/api/chats/archived', {
-  //   method: 'GET',
-  //   headers: { 'Content-Type': 'application/json' },
-  // })
-  // if (!response.ok) throw new Error('Failed to get archived chats')
-  // return await response.json()
-};
+export async function getConversations(includeArchived = false) {
+  const userId = await getCurrentUserId();
+  return MessagingService.getConversations({
+    coachId: userId,
+    includeArchived,
+  });
+}
 
 /**
- * Service method to get messages for a specific chat
- * This will be connected to the backend in the future
+ * Get messages for a conversation
  */
-export const getChatMessages = async (chatId: string): Promise<ChatMessage[]> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // Return mock messages for the chat
-  const messages = mockMessages[chatId] || [];
-  return messages;
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/chats/${chatId}/messages`, {
-  //   method: 'GET',
-  //   headers: { 'Content-Type': 'application/json' },
-  // })
-  // if (!response.ok) throw new Error('Failed to get messages')
-  // return await response.json()
-};
+export async function getMessages(
+  conversationId: string,
+  options?: { limit?: number; offset?: number },
+) {
+  return MessagingService.getMessages({
+    conversationId,
+    ...options,
+  });
+}
 
 /**
- * Service method to unarchive a chat
- * This will be connected to the backend in the future
+ * Send a message
  */
-export const unarchiveChat = async (chatId: string): Promise<void> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/chats/${chatId}/unarchive`, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  // })
-  // if (!response.ok) throw new Error('Failed to unarchive chat')
-  // return await response.json()
-
-  console.log('Unarchiving chat:', chatId);
-};
+export async function sendMessage(
+  conversationId: string,
+  content: string,
+  options?: {
+    messageType?: MessagingService.MessageType;
+    parentMessageId?: string;
+  },
+) {
+  const userId = await getCurrentUserId();
+  return MessagingService.sendMessage({
+    conversationId,
+    senderId: userId,
+    content,
+    ...options,
+  });
+}
 
 /**
- * Service method to delete a chat
- * This will be connected to the backend in the future
+ * Archive a conversation
  */
-export const deleteChat = async (chatId: string): Promise<void> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/chats/${chatId}`, {
-  //   method: 'DELETE',
-  //   headers: { 'Content-Type': 'application/json' },
-  // })
-  // if (!response.ok) throw new Error('Failed to delete chat')
-  // return await response.json()
-
-  console.log('Deleting chat:', chatId);
-};
+export async function archiveConversation(conversationId: string) {
+  const userId = await getCurrentUserId();
+  return MessagingService.archiveConversation(conversationId, userId);
+}
 
 /**
- * Service method to read all chats (mark all as read)
- * This will be connected to the backend in the future
+ * Unarchive a conversation
  */
-export const readAllChats = async (): Promise<void> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch('/api/chats/read-all', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  // })
-  // if (!response.ok) throw new Error('Failed to read all chats')
-  // return await response.json()
-
-  console.log('Reading all chats');
-};
+export async function unarchiveConversation(conversationId: string) {
+  const userId = await getCurrentUserId();
+  return MessagingService.unarchiveConversation(conversationId, userId);
+}
 
 /**
- * Service method to archive a chat
- * This will be connected to the backend in the future
+ * Delete a conversation
+ * TODO: Implement in messaging-service.ts
  */
-export const archiveChat = async (chatId: string): Promise<void> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/chats/${chatId}/archive`, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  // })
-  // if (!response.ok) throw new Error('Failed to archive chat')
-  // return await response.json()
-
-  console.log('Archiving chat:', chatId);
-};
+export async function deleteConversation(conversationId: string) {
+  const userId = await getCurrentUserId();
+  console.log('[deleteConversation] Not implemented yet:', conversationId, userId);
+  // return MessagingService.deleteConversation(conversationId, userId);
+  return Promise.resolve();
+}
 
 /**
- * Service method to mark a chat as read
- * This will be connected to the backend in the future
+ * Mark conversation as read
  */
-export const markChatAsRead = async (chatId: string): Promise<void> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/chats/${chatId}/read`, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  // })
-  // if (!response.ok) throw new Error('Failed to mark chat as read')
-  // return await response.json()
-
-  console.log('Marking chat as read:', chatId);
-};
+export async function markConversationAsRead(conversationId: string) {
+  const userId = await getCurrentUserId();
+  return MessagingService.markConversationAsRead(conversationId, userId);
+}
 
 /**
- * Service method to react to a message
- * This will be connected to the backend in the future
+ * Mark all conversations as read
  */
-export const reactTo = async (
+export async function markAllConversationsAsRead() {
+  const userId = await getCurrentUserId();
+  return MessagingService.markAllConversationsAsRead(userId);
+}
+
+/**
+ * Delete a message
+ */
+export async function deleteMessage(messageId: string) {
+  const userId = await getCurrentUserId();
+  return MessagingService.deleteMessage(messageId, userId);
+}
+
+/**
+ * Add reaction to message
+ */
+export async function addReaction(
+  messageId: string,
+  conversationId: string,
+  reaction: MessagingService.ReactionEmoji,
+) {
+  const userId = await getCurrentUserId();
+  return MessagingService.addReaction(messageId, conversationId, userId, reaction);
+}
+
+/**
+ * Remove reaction from message
+ */
+export async function removeReaction(messageId: string) {
+  const userId = await getCurrentUserId();
+  return MessagingService.removeReaction(messageId, userId);
+}
+
+// Re-export utility functions that don't need userId
+export { createOptimisticMessage } from './messaging-service';
+
+// ================================================
+// LEGACY FUNCTION ALIASES (for backwards compatibility)
+// ================================================
+
+export const getChats = getConversations;
+export const getArchivedChats = (includeArchived = true) => getConversations(includeArchived);
+export const getChatMessages = getMessages;
+export const archiveChat = archiveConversation;
+export const unarchiveChat = unarchiveConversation;
+export const deleteChat = deleteConversation;
+export const markChatAsRead = markConversationAsRead;
+export const readAllChats = markAllConversationsAsRead;
+
+// Specialized message sending functions (map to sendMessage with appropriate type)
+export async function sendImageMessage(
+  conversationId: string,
+  imageUri: string,
+  caption?: string,
+) {
+  // TODO: Implement with file upload hook
+  const userId = await getCurrentUserId();
+  return MessagingService.sendMessage({
+    conversationId,
+    senderId: userId,
+    content: caption || '',
+    messageType: 'image',
+  });
+}
+
+export async function sendVideoMessage(
+  conversationId: string,
+  videoUri: string,
+  caption?: string,
+) {
+  // TODO: Implement with file upload hook
+  const userId = await getCurrentUserId();
+  return MessagingService.sendMessage({
+    conversationId,
+    senderId: userId,
+    content: caption || '',
+    messageType: 'video',
+  });
+}
+
+export async function sendDocumentMessage(
+  conversationId: string,
+  documentData: any, // Can be URI string or bytes array
+  filename: string,
+  mimeType?: string,
+  caption?: string,
+) {
+  // TODO: Implement with file upload hook
+  const userId = await getCurrentUserId();
+  return MessagingService.sendMessage({
+    conversationId,
+    senderId: userId,
+    content: caption || filename,
+    messageType: 'file',
+  });
+}
+
+// Create new conversation
+export async function createNewChat(
+  clientId: string,
+  metadata?: { clientName?: string; clientAvatar?: string },
+) {
+  const userId = await getCurrentUserId();
+  // TODO: Call get_or_create_conversation function
+  // For now, check if conversation exists, otherwise return placeholder
+  const conversations = await MessagingService.getConversations({ coachId: userId });
+  const existing = conversations.find((c) => c.client_id === clientId);
+  if (existing) return existing;
+
+  // Return a placeholder conversation object (will be created on first message)
+  return {
+    id: `temp-${clientId}`,
+    coach_id: userId,
+    client_id: clientId,
+    last_message_at: null,
+    last_message_preview: null,
+    last_message_type: null,
+    created_at: new Date(),
+    updated_at: new Date(),
+    other_user_id: clientId,
+    other_user_name: metadata?.clientName,
+    other_user_avatar: metadata?.clientAvatar,
+    unread_count: 0,
+  };
+}
+
+// React to message (legacy function with different signature)
+export async function reactTo(
   messageId: string,
   emoji: string,
-  isSender: boolean
-): Promise<void> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  isSender?: boolean, // Legacy parameter, not used
+) {
+  // If emoji is empty, it means removing reaction
+  if (!emoji) {
+    // TODO: Implement removing reaction by messageId
+    console.log('[reactTo] Remove reaction from message:', messageId);
+    return;
+  }
 
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/messages/${messageId}/react`, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ emoji, isSender }),
-  // })
-  // if (!response.ok) throw new Error('Failed to react to message')
-  // return await response.json()
-
-  console.log('Reacting to message:', messageId, emoji, isSender);
-};
-
-/**
- * Service method to remove a reaction from a message
- * This will be connected to the backend in the future
- */
-export const removeReaction = async (
-  messageId: string,
-  isSender: boolean
-): Promise<void> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/messages/${messageId}/remove-reaction`, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ isSender }),
-  // })
-  // if (!response.ok) throw new Error('Failed to remove reaction')
-  // return await response.json()
-
-  console.log('Removing reaction from message:', messageId, isSender);
-};
-
-/**
- * Service method to read all archived chats
- */
-export const markAllArchivedAsRead = async (): Promise<void> => {
-  console.log('Marking all archived chats as read');
-};
-
-/**
- * Service method to unarchive all chats
- */
-export const unarchiveAllChats = async (): Promise<void> => {
-  console.log('Unarchiving all chats');
-};
-
-/**
- * Service method to delete all archived chats
- */
-export const deleteAllArchivedChats = async (): Promise<void> => {
-  console.log('Deleting all archived chats');
-};
-
-/**
- * Service method to create a new chat with a client
- * This will be connected to the backend in the future
- */
-export const createNewChat = async (
-  clientId: string,
-  options?: { clientName?: string; clientAvatar?: string }
-): Promise<Chat> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch('/api/chats', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ clientId, ...options }),
-  // })
-  // if (!response.ok) throw new Error('Failed to create chat')
-  // return await response.json()
-
-  console.log('Creating new chat with client:', clientId, options);
-
-  // Return a mock chat for now
-  const newChat: Chat = {
-    id: `chat-${Date.now()}`,
-    clientId,
-    clientName: options?.clientName || 'New Client',
-    clientAvatar: options?.clientAvatar,
-    lastMessage: '',
-    lastMessageTime: new Date(),
-    unreadCount: 0,
-    isFavourite: false,
-  };
-
-  return newChat;
-};
-
-/**
- * Service method to send an image message
- * This will be connected to the backend in the future
- */
-export const sendImageMessage = async (
-  chatId: string,
-  imageBytes: Uint8Array | Uint8Array[],
-  caption?: string
-): Promise<void> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const formData = new FormData();
-  // formData.append('chatId', chatId);
-  // const images = Array.isArray(imageBytes) ? imageBytes : [imageBytes];
-  // images.forEach((bytes, index) => {
-  //   formData.append(`image${index}`, {
-  //     uri: imageUri,
-  //     type: 'image/jpeg',
-  //     name: `photo${index}.jpg`,
-  //   } as any);
-  // });
-  // if (caption) {
-  //   formData.append('caption', caption);
-  // }
-  // const response = await fetch(`/api/chats/${chatId}/messages/image`, {
-  //   method: 'POST',
-  //   body: formData,
-  // })
-  // if (!response.ok) throw new Error('Failed to send image message')
-  // return await response.json()
-
-  const images = Array.isArray(imageBytes) ? imageBytes : [imageBytes];
-  console.log('Sending image message:', {
-    chatId,
-    imageCount: images.length,
-    totalSize: images.reduce((sum, bytes) => sum + bytes.length, 0),
-    caption,
-  });
-};
-
-/**
- * Service method to send a document message
- * This will be connected to the backend in the future
- */
-export const sendDocumentMessage = async (
-  chatId: string,
-  documentBytes: Uint8Array,
-  documentName: string,
-  mimeType: string,
-  caption?: string
-): Promise<void> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const formData = new FormData();
-  // formData.append('chatId', chatId);
-  // formData.append('document', {
-  //   uri: documentUri,
-  //   type: mimeType,
-  //   name: documentName,
-  // } as any);
-  // if (caption) {
-  //   formData.append('caption', caption);
-  // }
-  // const response = await fetch(`/api/chats/${chatId}/messages/document`, {
-  //   method: 'POST',
-  //   body: formData,
-  // })
-  // if (!response.ok) throw new Error('Failed to send document message')
-  // return await response.json()
-
-  console.log('Sending document message:', {
-    chatId,
-    documentName,
-    mimeType,
-    size: documentBytes.length,
-    caption,
-  });
-};
-
-/**
- * Service method to send a video message
- * This will be connected to the backend in the future
- */
-export const sendVideoMessage = async (
-  chatId: string,
-  videoUri: string,
-  caption?: string
-): Promise<void> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const formData = new FormData();
-  // formData.append('chatId', chatId);
-  // formData.append('video', {
-  //   uri: videoUri,
-  //   type: 'video/mp4',
-  //   name: 'video.mp4',
-  // } as any);
-  // if (caption) {
-  //   formData.append('caption', caption);
-  // }
-  // const response = await fetch(`/api/chats/${chatId}/messages/video`, {
-  //   method: 'POST',
-  //   body: formData,
-  // })
-  // if (!response.ok) throw new Error('Failed to send video message')
-  // return await response.json()
-
-  console.log('Sending video message:', {
-    chatId,
-    videoUri,
-    caption,
-  });
-};
-
-// Mock chats data
-const mockChats: Chat[] = [
-  {
-    id: '1',
-    clientId: '1',
-    clientName: 'John Smith',
-    clientAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: '',
-    lastMessageTime: new Date(),
-    unreadCount: 0,
-    isFavourite: true,
-    isPinned: true,
-  },
-  {
-    id: '2',
-    clientId: '2',
-    clientName: 'Sarah Johnson',
-    clientAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: 'Can we schedule a session for next week?',
-    lastMessageTime: new Date(Date.now() - 15 * 60 * 1000), // 15 minutes ago
-    unreadCount: 0,
-    isFavourite: false,
-  },
-  {
-    id: '3',
-    clientId: '3',
-    clientName: 'Mike Wilson',
-    clientAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: 'The new exercises are working great!',
-    lastMessageTime: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
-    unreadCount: 1,
-    isFavourite: true,
-  },
-  {
-    id: '4',
-    clientId: '4',
-    clientName: 'Emily Davis',
-    clientAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: 'See you tomorrow at 10am',
-    lastMessageTime: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    unreadCount: 0,
-    isFavourite: false,
-  },
-  {
-    id: '5',
-    clientId: '5',
-    clientName: 'David Brown',
-    clientAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: 'I have a question about my nutrition plan',
-    lastMessageTime: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
-    unreadCount: 3,
-    isFavourite: false,
-  },
-  {
-    id: '6',
-    clientId: '6',
-    clientName: 'Lisa Anderson',
-    clientAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: 'Perfect, thanks!',
-    lastMessageTime: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
-    unreadCount: 0,
-    isFavourite: true,
-  },
-  {
-    id: '7',
-    clientId: '7',
-    clientName: 'Chris Martinez',
-    clientAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: 'Looking forward to our next session',
-    lastMessageTime: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
-    unreadCount: 0,
-    isFavourite: false,
-  },
-  {
-    id: '8',
-    clientId: '8',
-    clientName: 'Jessica Taylor',
-    clientAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: 'The progress is amazing!',
-    lastMessageTime: new Date(Date.now() - 12 * 60 * 60 * 1000), // 12 hours ago
-    unreadCount: 0,
-    isFavourite: false,
-  },
-  {
-    id: '9',
-    clientId: '9',
-    clientName: 'Robert Lee',
-    clientAvatar: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: 'Can we adjust the training schedule?',
-    lastMessageTime: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-    unreadCount: 1,
-    isFavourite: false,
-  },
-  {
-    id: '10',
-    clientId: '10',
-    clientName: 'Amanda White',
-    clientAvatar: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: 'Thanks for everything!',
-    lastMessageTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-    unreadCount: 0,
-    isFavourite: false,
-  },
-];
-
-// Mock archived chats data
-const mockArchivedChats: Chat[] = [
-  {
-    id: 'archived-1',
-    clientId: '11',
-    clientName: 'Michael Chen',
-    clientAvatar: 'https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: 'Thanks for the help!',
-    lastMessageTime: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-    unreadCount: 0,
-    isFavourite: false,
-  },
-  {
-    id: 'archived-2',
-    clientId: '12',
-    clientName: 'Sophie Martin',
-    clientAvatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: 'See you next month',
-    lastMessageTime: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
-    unreadCount: 0,
-    isFavourite: false,
-  },
-  {
-    id: 'archived-3',
-    clientId: '13',
-    clientName: 'James Thompson',
-    clientAvatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: 'All done, thanks!',
-    lastMessageTime: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 14 days ago
-    unreadCount: 0,
-    isFavourite: false,
-  },
-  {
-    id: 'archived-4',
-    clientId: '14',
-    clientName: 'Emma Garcia',
-    clientAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: 'Great session today',
-    lastMessageTime: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000), // 21 days ago
-    unreadCount: 0,
-    isFavourite: false,
-  },
-  {
-    id: 'archived-5',
-    clientId: '15',
-    clientName: 'Daniel Rodriguez',
-    clientAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: 'Thanks for everything',
-    lastMessageTime: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-    unreadCount: 0,
-    isFavourite: false,
-  },
-];
-
-// Mock messages data for each chat
-const mockMessages: Record<string, ChatMessage[]> = {
-  '1': [], // CLEARED FOR TESTING - John Smith messages removed
-  '2': [
-    // Messages from 3 days ago
-    {
-      id: 'm2-0-1',
-      text: 'Hi! I was wondering if we could set up a training session',
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    {
-      id: 'm2-0-2',
-      text: 'Of course! When were you thinking?',
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 1 * 60 * 60 * 1000 - 45 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    // Messages from yesterday
-    {
-      id: 'm2-0-3',
-      text: 'Maybe sometime next week?',
-      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 - 4 * 60 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    {
-      id: 'm2-0-4',
-      text: 'Let me check my calendar and get back to you',
-      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 - 3 * 60 * 60 * 1000 - 30 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    // Today's messages
-    {
-      id: 'm2-1',
-      text: 'Can we schedule a session for next week?',
-      timestamp: new Date(Date.now() - 15 * 60 * 1000), // 15 minutes ago
-      isSent: false,
-      isRead: true,
-    },
-    {
-      id: 'm2-2',
-      text: 'Absolutely! What day works best for you?',
-      timestamp: new Date(Date.now() - 10 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-  ],
-  '3': [
-    // Messages from 4 days ago
-    {
-      id: 'm3-0-1',
-      text: 'I started the new program you sent me',
-      timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000 - 3 * 60 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    {
-      id: 'm3-0-2',
-      text: 'Great! How does it feel?',
-      timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000 - 30 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    // Messages from 2 days ago
-    {
-      id: 'm3-0-3',
-      text: 'It\'s challenging but I like it',
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 5 * 60 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    {
-      id: 'm3-0-4',
-      text: 'That\'s the goal! Push yourself but stay safe',
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 4 * 60 * 60 * 1000 - 45 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    // Today's messages
-    {
-      id: 'm3-1',
-      text: 'The new exercises are working great!',
-      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
-      isSent: false,
-      isRead: false,
-    },
-    {
-      id: 'm3-2',
-      text: 'I\'m really happy to hear that',
-      timestamp: new Date(Date.now() - 55 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    {
-      id: 'm3-3',
-      text: 'Keep pushing yourself',
-      timestamp: new Date(Date.now() - 54 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    {
-      id: 'm3-4',
-      text: 'You\'re doing amazing',
-      timestamp: new Date(Date.now() - 53 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-  ],
-  '4': [
-    {
-      id: 'm4-1',
-      text: 'See you tomorrow at 10am',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-  ],
-  '5': [
-    // Messages from 6 days ago
-    {
-      id: 'm5-0-1',
-      text: 'I received the nutrition plan, thank you!',
-      timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    {
-      id: 'm5-0-2',
-      text: 'You\'re welcome! Let me know if you have any questions',
-      timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000 - 1 * 60 * 60 * 1000 - 30 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    // Messages from 3 days ago
-    {
-      id: 'm5-0-3',
-      text: 'I\'ve been following it for a few days now',
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 4 * 60 * 60 * 1000),
-      isSent: false,
-      isRead: true,
-    },
-    {
-      id: 'm5-0-4',
-      text: 'How is it going?',
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 3 * 60 * 60 * 1000 - 45 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    // Today's messages
-    {
-      id: 'm5-1',
-      text: 'I have a question about my nutrition plan',
-      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-      isSent: false,
-      isRead: false,
-    },
-    {
-      id: 'm5-2',
-      text: 'What would you like to know?',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 50 * 60 * 1000),
-      isSent: true,
-      isRead: true,
-    },
-    {
-      id: 'm5-3',
-      text: 'I\'m not sure about the protein intake',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 45 * 60 * 1000),
-      isSent: false,
-      isRead: false,
-    },
-    {
-      id: 'm5-4',
-      text: 'Should I increase it?',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 44 * 60 * 1000),
-      isSent: false,
-      isRead: false,
-    },
-  ],
-};
+  // For adding reaction, we need conversationId which we don't have here
+  // TODO: Need to fetch message to get conversationId, or refactor UI to pass it
+  console.log('[reactTo] Add reaction to message:', messageId, emoji);
+  // Placeholder - this needs proper implementation
+  return Promise.resolve();
+}

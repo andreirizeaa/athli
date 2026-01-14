@@ -39,18 +39,33 @@ export default function VerifyEmailPage() {
     try {
       const result = await verifyOTP(email, otp);
       if (result?.session?.user) {
-        const coachId = searchParams.get('coach_id');
-
         toast.success('Email verified successfully');
         // Wait for session to be fully established and cookies to be set
         await new Promise((resolve) => setTimeout(resolve, 500));
 
-        // If this is a client signup (has coach_id), redirect to new-client route
-        if (coachId) {
-          window.location.href = `/auth/new-client?coach_id=${coachId}`;
-        } else {
-          window.location.href = redirectPath;
+        // Check user type to determine redirect
+        let finalRedirect = redirectPath;
+
+        try {
+          const response = await fetch('/api/user/me', {
+            credentials: 'include',
+          });
+          const data = await response.json();
+
+          if (data?.data?.user) {
+            const userType = data.data.user.userType;
+
+            // If user is a client (not a coach), redirect to download page
+            if (userType === 'client') {
+              finalRedirect = '/download';
+            }
+          }
+        } catch (profileError) {
+          console.error('Failed to fetch user profile:', profileError);
+          // Continue with original redirect on error
         }
+
+        window.location.href = finalRedirect;
       }
     } catch (err: any) {
       toast.error(err.message || 'Verification failed');

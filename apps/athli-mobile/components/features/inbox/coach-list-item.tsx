@@ -162,10 +162,10 @@ export const CoachListItem = ({
                 {coach.name}
               </Text>
               {coach.lastMessageTime && (
-                <View style={styles.timestampContainer}>
+                <View style={styles.sent_atContainer}>
                   <Text
                     style={[
-                      styles.timestamp,
+                      styles.sent_at,
                       {
                         color: (coach.unreadCount ?? 0) > 0 ? themeColors.primary : themeColors.mutedText,
                       },

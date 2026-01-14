@@ -37,6 +37,29 @@ export default function SignInPage() {
         toast.success('Signed in successfully');
         // Wait for session to be fully established and cookies to be set
         await new Promise((resolve) => setTimeout(resolve, 500));
+
+        // Fetch user profile to check if user is client-only
+        try {
+          const response = await fetch('/api/user/me', {
+            credentials: 'include',
+          });
+          const data = await response.json();
+
+          if (data?.data?.user) {
+            const userType = data.data.user.userType;
+
+            // If user is a client (not a coach), redirect to download page
+            if (userType === 'client') {
+              window.location.href = '/download';
+              return;
+            }
+          }
+        } catch (profileError) {
+          console.error('Failed to fetch user profile:', profileError);
+          // Continue to /home on error to avoid blocking access
+        }
+
+        // User is a coach or profile fetch failed - continue to main app
         window.location.href = '/home';
       }
     } catch (err: any) {
