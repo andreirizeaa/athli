@@ -6,6 +6,7 @@ import {
   Text,
   View,
   Alert,
+  Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -20,6 +21,7 @@ import {
   Palette,
   Ruler,
   Sun,
+  Vibrate,
 } from 'lucide-react-native';
 import { typography, iconSizes } from '@/constants/typography';
 import { THEMES } from '@/constants/theme';
@@ -31,6 +33,7 @@ import {
 } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useUnits, type UnitsPreference } from '@/stores';
+import { useHaptics } from '@/stores';
 
 import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
@@ -63,6 +66,7 @@ export default function PreferencesScreen() {
   } = useThemePreference();
   const { t, locale } = useTranslations();
   const { units, setUnits } = useUnits();
+  const { hapticsEnabled, setHapticsEnabled } = useHaptics();
   const insets = useSafeAreaInsets();
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
@@ -91,6 +95,10 @@ export default function PreferencesScreen() {
 
   const handleUnitsChange = (newUnits: UnitsPreference) => {
     setUnits(newUnits);
+  };
+
+  const handleHapticsToggle = (value: boolean) => {
+    setHapticsEnabled(value);
   };
 
   const handleLogout = () => {
@@ -186,7 +194,7 @@ export default function PreferencesScreen() {
       style={[
         styles.safeArea,
         {
-          backgroundColor: themeColors.pageBackground,
+          backgroundColor: themeColors.backgroundPrimary,
           paddingTop: insets.top,
           paddingBottom: 0,
           paddingLeft: insets.left,
@@ -194,9 +202,9 @@ export default function PreferencesScreen() {
         },
       ]}
     >
-      <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton
-          icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}
           size="md"
           color={iconColor}
@@ -205,37 +213,28 @@ export default function PreferencesScreen() {
         <View style={styles.headerRightPlaceholder} />
       </View>
 
-      <View style={[styles.content, { backgroundColor: themeColors.pageBackground }]}>
+      <View style={[styles.content, { backgroundColor: themeColors.backgroundPrimary }]}>
         {/* Theme, Color Palette, Language, Units */}
         <Card style={{ paddingVertical: 12 }}>
           {/* Theme row with dropdown */}
           <DropdownMenuWrapper options={themeOptions}>
-            <View style={styles.themeRow}>
-              <View style={styles.themeRowLeft}>
-                <View style={styles.themeIconContainer}>
-                  <PlatformIcon
-                    sf={preference === 'light' ? 'sun.max' : preference === 'dark' ? 'moon' : 'circle.lefthalf.filled'}
-                    IconComponent={preference === 'light' ? Sun : Moon}
-                    size={iconSize}
-                    color={iconColor}
-                  />
-                </View>
-                <Text style={[styles.themeRowTitle, { color: themeColors.text }]}>
-                  {t('preferences.appearance')}
-                </Text>
-              </View>
-              <View style={styles.themeRowRight}>
-                <Text style={[styles.themeValue, { color: themeColors.mutedText }]}>
-                  {getThemeLabel()}
-                </Text>
+            <SettingsOption
+              icon={
                 <PlatformIcon
-                  sf="chevron.down"
-                  IconComponent={ChevronDown}
-                  size={14}
-                  color={themeColors.mutedText}
+                  sf={preference === 'light' ? 'sun.max' : preference === 'dark' ? 'moon' : 'circle.lefthalf.filled'}
+                  IconComponent={preference === 'light' ? Sun : Moon}
+                  size={iconSize}
+                  color={iconColor}
                 />
-              </View>
-            </View>
+              }
+              title={t('preferences.appearance')}
+              subtitle={getThemeLabel()}
+              subtitleRight
+              showChevron
+              chevronSize={14}
+              chevronIcon={{ sf: 'chevron.down', IconComponent: ChevronDown }}
+              onPress={() => {}}
+            />
           </DropdownMenuWrapper>
           <Separator />
           <SettingsOption
@@ -271,28 +270,35 @@ export default function PreferencesScreen() {
               onPress: () => handleUnitsChange('imperial'),
             },
           ]}>
-            <View style={styles.themeRow}>
-              <View style={styles.themeRowLeft}>
-                <View style={styles.themeIconContainer}>
-                  <PlatformIcon sf="ruler" IconComponent={Ruler} size={iconSize} color={iconColor} />
-                </View>
-                <Text style={[styles.themeRowTitle, { color: themeColors.text }]}>
-                  {t('preferences.units')}
-                </Text>
-              </View>
-              <View style={styles.themeRowRight}>
-                <Text style={[styles.themeValue, { color: themeColors.mutedText }]}>
-                  {getUnitsLabel()}
-                </Text>
-                <PlatformIcon
-                  sf="chevron.down"
-                  IconComponent={ChevronDown}
-                  size={14}
-                  color={themeColors.mutedText}
-                />
-              </View>
-            </View>
+            <SettingsOption
+              icon={<PlatformIcon sf="ruler" IconComponent={Ruler} size={iconSize} color={iconColor} />}
+              title={t('preferences.units')}
+              subtitle={getUnitsLabel()}
+              subtitleRight
+              showChevron
+              chevronSize={14}
+              chevronIcon={{ sf: 'chevron.down', IconComponent: ChevronDown }}
+              onPress={() => {}}
+            />
           </DropdownMenuWrapper>
+          <Separator />
+          {/* Haptics toggle row */}
+          <View style={styles.switchRow}>
+            <View style={styles.switchRowLeft}>
+              <PlatformIcon sf="waveform" IconComponent={Vibrate} size={iconSize} color={iconColor} />
+              <Text style={[styles.switchRowTitle, { color: themeColors.text }]}>
+                {t('preferences.haptics')}
+              </Text>
+            </View>
+            <Switch
+              value={hapticsEnabled}
+              onValueChange={handleHapticsToggle}
+              trackColor={{ false: themeColors.border, true: themeColors.primary }}
+              thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
+              ios_backgroundColor={themeColors.border}
+              style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+            />
+          </View>
         </Card>
       </View>
     </View>
@@ -330,34 +336,20 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 32,
   },
-  themeRow: {
+  switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 4,
   },
-  themeRowLeft: {
+  switchRowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    gap: 12,
   },
-  themeIconContainer: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 4,
-  },
-  themeRowTitle: {
+  switchRowTitle: {
     ...typography.p1,
-  },
-  themeRowRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  themeValue: {
-    ...typography.p2,
+    lineHeight: 22,
   },
 });
 

@@ -89,7 +89,7 @@ export const ChatToolbar = ({
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const headerBackgroundColor = themeColors.headerBackground;
+  const headerBackgroundColor = themeColors.translucentBackground;
   const iconColor = themeColors.text;
   const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.95);
 
@@ -166,7 +166,7 @@ export const ChatToolbar = ({
               />
             ) : (
               <>
-                <PressableOpacity style={styles.iconButton} onPress={onPlusPress}>
+                <PressableOpacity style={styles.backgroundSecondary} onPress={onPlusPress}>
                   <PlatformIcon
                     sf={showAttachmentPicker ? "xmark.circle" : "plus"}
                     IconComponent={showAttachmentPicker ? X : Plus}
@@ -191,7 +191,7 @@ export const ChatToolbar = ({
                 ) : (
                   <>
                     <PressableOpacity
-                      style={styles.iconButton}
+                      style={styles.backgroundSecondary}
                       onPress={() =>
                         router.push({
                           pathname: '/camera/camera',
@@ -212,7 +212,7 @@ export const ChatToolbar = ({
                       />
                     </PressableOpacity>
 
-                    <PressableOpacity style={styles.iconButton} onPress={onMicrophonePress}>
+                    <PressableOpacity style={styles.backgroundSecondary} onPress={onMicrophonePress}>
                       <PlatformIcon
                         sf="mic"
                         IconComponent={Mic}
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingBottom: 4,
   },
-  iconButton: {
+  backgroundSecondary: {
     alignItems: 'center',
     justifyContent: 'center',
     width: 30,

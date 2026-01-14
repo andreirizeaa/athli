@@ -31,7 +31,7 @@ const DocumentPreviewScreen = () => {
   }>();
 
   const { colors: themeColors } = useDarkModeTheme();
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
+  const mutedSurfaceColor = themeColors.backgroundTertiary;
   const iconColor = themeColors.text;
   const insets = useSafeAreaInsets();
 
@@ -332,7 +332,7 @@ const DocumentPreviewScreen = () => {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
         {showToolbar && <StatusBar hidden />}
         {renderDocumentContent()}
 

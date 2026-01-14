@@ -6,10 +6,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
+
 
 import { useThemePreference, useColorScheme } from '@/stores';
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import {
@@ -101,14 +102,14 @@ export default function EditClientDetailsModal() {
       await queryClient.refetchQueries({ queryKey: ['clients'] });
 
       // Success haptic feedback
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
 
       // Close modal
       handleClose();
     },
     onError: (error: Error) => {
       // Error haptic feedback
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
 
       // Show error alert
       Alert.alert(
@@ -294,57 +295,18 @@ export default function EditClientDetailsModal() {
   const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
   const gradientHeight = headerHeight + 12;
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-        <View style={[styles.fixedHeader, { height: headerHeight }]}>
-          <LinearGradient
-            colors={[
-              hexToRgba(themeColors.background, 1),
-              hexToRgba(themeColors.background, 0.85),
-              hexToRgba(themeColors.background, 0.5),
-              hexToRgba(themeColors.background, 0),
-            ]}
-            locations={[0, 0.5, 0.8, 1]}
-            style={[styles.headerGradient, { height: gradientHeight }]}
-            pointerEvents="none"
-          />
-          <View
-            style={[
-              styles.header,
-              {
-                paddingTop: Platform.OS === 'android' ? 12 + insets.top : 12,
-              },
-            ]}
-          >
-            <IconButton
-              icon={{ sf: 'xmark', IconComponent: X }}
-              onPress={handleClose}
-              size="md"
-              color={themeColors.text}
-            />
-            <Text style={[styles.title, { color: themeColors.text }]}>
-              {t('clients.editClientModal.title')}
-            </Text>
-            <View style={styles.closeButton} />
-          </View>
-        </View>
-      </View>
-    );
-  }
-
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
       <TouchableWithoutFeedback onPress={handleDismissKeyboard} accessible={false}>
         <View style={styles.container}>
           {/* Header with blur effect */}
           <View style={[styles.fixedHeader, { height: headerHeight }]}>
             <LinearGradient
               colors={[
-                hexToRgba(themeColors.background, 1),
-                hexToRgba(themeColors.background, 0.85),
-                hexToRgba(themeColors.background, 0.5),
-                hexToRgba(themeColors.background, 0),
+                hexToRgba(themeColors.backgroundSecondary, 1),
+                hexToRgba(themeColors.backgroundSecondary, 0.85),
+                hexToRgba(themeColors.backgroundSecondary, 0.5),
+                hexToRgba(themeColors.backgroundSecondary, 0),
               ]}
               locations={[0, 0.5, 0.8, 1]}
               style={[styles.headerGradient, { height: gradientHeight }]}

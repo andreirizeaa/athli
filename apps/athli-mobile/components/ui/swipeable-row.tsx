@@ -3,11 +3,11 @@ import { StyleSheet, View, Text, Alert, Animated as RNAnimated, ActivityIndicato
 import { Swipeable } from 'react-native-gesture-handler';
 import { PressableOpacity } from 'pressto';
 import { Trash2 } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
+import { haptics } from '@/utils/haptics';
 
 type SwipeableRowProps = {
     children: React.ReactNode;
@@ -97,7 +97,7 @@ export const SwipeableRow = ({
     );
 
     const handleSwipeableWillOpen = useCallback(() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        haptics.medium();
         if (onOpen) {
             onOpen(() => swipeableRef.current?.close());
         }
@@ -125,7 +125,7 @@ export const SwipeableRow = ({
 
                     {/* Loading Overlay on Row */}
                     {isDeleting && (
-                        <View style={[styles.rowLoadingOverlay, { backgroundColor: themeColors.pageBackground }]}>
+                        <View style={[styles.rowLoadingOverlay, { backgroundColor: themeColors.backgroundPrimary }]}>
                             <ActivityIndicator size="small" color={themeColors.primary} />
                             <Text style={[styles.loadingText, { color: themeColors.text }]}>
                                 {t('general.deleting')}

@@ -5,9 +5,10 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
+
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
@@ -108,13 +109,13 @@ export default function WorkoutDetailScreen() {
         mutationFn: createWorkout,
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['workouts'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             if (router.canGoBack()) {
                 router.back();
             }
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),
@@ -128,13 +129,13 @@ export default function WorkoutDetailScreen() {
         mutationFn: ({ id, data }: { id: string; data: any }) => editWorkout(id, data),
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['workouts'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             if (router.canGoBack()) {
                 router.back();
             }
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),
@@ -148,7 +149,7 @@ export default function WorkoutDetailScreen() {
         mutationFn: createSection,
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['sections'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             Alert.alert(
                 t('general.success'),
                 t('library.section.savedSuccessfully'),
@@ -156,7 +157,7 @@ export default function WorkoutDetailScreen() {
             );
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),
@@ -290,7 +291,7 @@ export default function WorkoutDetailScreen() {
                                         (group.exercises || []).map((ex: any) => transformExercise(ex))
                                     );
                                     // Fix isSupersetNext based on adjacent exercises
-                                    sectionExercises = allExercises.map((ex, idx) => {
+                                    sectionExercises = allExercises.map((ex: any, idx: number) => {
                                         const nextEx = idx < allExercises.length - 1 ? allExercises[idx + 1] : null;
                                         const isSupersetNext = nextEx && ex.supersetGroupId && ex.supersetGroupId === nextEx.supersetGroupId;
                                         return { ...ex, isSupersetNext: isSupersetNext || false };
@@ -308,7 +309,7 @@ export default function WorkoutDetailScreen() {
                                         })
                                     );
                                     // Fix isSupersetNext based on adjacent exercises
-                                    sectionExercises = allExercises.map((ex, idx) => {
+                                    sectionExercises = allExercises.map((ex: any, idx: number) => {
                                         const nextEx = idx < allExercises.length - 1 ? allExercises[idx + 1] : null;
                                         const isSupersetNext = nextEx && ex.supersetGroupId && ex.supersetGroupId === nextEx.supersetGroupId;
                                         return { ...ex, isSupersetNext: isSupersetNext || false };
@@ -363,7 +364,7 @@ export default function WorkoutDetailScreen() {
                                         } as BuilderExercise;
                                     });
                                     // Fix isSupersetNext based on adjacent exercises
-                                    sectionExercises = allExercises.map((ex, idx) => {
+                                    sectionExercises = allExercises.map((ex: any, idx: number) => {
                                         const nextEx = idx < allExercises.length - 1 ? allExercises[idx + 1] : null;
                                         const isSupersetNext = nextEx && ex.supersetGroupId && ex.supersetGroupId === nextEx.supersetGroupId;
                                         return { ...ex, isSupersetNext: isSupersetNext || false };
@@ -981,19 +982,19 @@ export default function WorkoutDetailScreen() {
         <View style={[
             styles.bottomBarContainer,
             {
-                backgroundColor: themeColors.pageBackground,
+                backgroundColor: themeColors.backgroundPrimary,
                 paddingBottom: insets.bottom + 12,
                 borderTopColor: themeColors.border,
             }
         ]}>
             <View style={styles.bottomBarContent}>
-                <View style={[styles.countCircle, { backgroundColor: themeColors.iconButton }]}>
+                <View style={[styles.countCircle, { backgroundColor: themeColors.surfacePrimary }]}>
                     <Text style={[styles.countText, { color: themeColors.text }]}>{totalExercises}</Text>
                 </View>
 
                 <View style={styles.buttonWrapper}>
                     <PressableScale
-                        style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+                        style={[styles.actionButton, { backgroundColor: themeColors.surfacePrimary }]}
                         onPress={handleReorder}
                     >
                         <Repeat {...({ size: 18, color: themeColors.text, style: styles.buttonIcon } as any)} />
@@ -1003,7 +1004,7 @@ export default function WorkoutDetailScreen() {
 
                 <View style={styles.buttonWrapper}>
                     <DropdownMenuWrapper options={addOptions}>
-                        <View style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}>
+                        <View style={[styles.actionButton, { backgroundColor: themeColors.surfacePrimary }]}>
                             <Plus {...({ size: 18, color: themeColors.text, style: styles.buttonIcon } as any)} />
                             <Text style={[styles.actionButtonText, { color: themeColors.text }]}>{t('library.workout.add')}</Text>
                         </View>
@@ -1017,15 +1018,15 @@ export default function WorkoutDetailScreen() {
     const gradientHeight = headerHeight + 12;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             {/* Fixed Header Gradient */}
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
                     colors={[
-                        hexToRgba(themeColors.background, 1),
-                        hexToRgba(themeColors.background, 0.85),
-                        hexToRgba(themeColors.background, 0.5),
-                        hexToRgba(themeColors.background, 0),
+                        hexToRgba(themeColors.backgroundSecondary, 1),
+                        hexToRgba(themeColors.backgroundSecondary, 0.85),
+                        hexToRgba(themeColors.backgroundSecondary, 0.5),
+                        hexToRgba(themeColors.backgroundSecondary, 0),
                     ]}
                     locations={[0, 0.5, 0.8, 1]}
                     style={[styles.headerGradient, { height: gradientHeight }]}
@@ -1047,7 +1048,7 @@ export default function WorkoutDetailScreen() {
                 <View style={styles.header}>
                     <View style={styles.headerLeft}>
                         <IconButton
-                            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+                            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                             onPress={handleBackPress}
                             size="md"
                             color={themeColors.text}
@@ -1202,7 +1203,7 @@ export default function WorkoutDetailScreen() {
                                                 style={[
                                                     styles.supersetButton,
                                                     {
-                                                        backgroundColor: isLinkedToNext ? themeColors.background : themeColors.surfaceSecondary,
+                                                        backgroundColor: isLinkedToNext ? themeColors.backgroundSecondary : themeColors.backgroundTertiary,
                                                         borderColor: themeColors.border,
                                                         paddingVertical: 4,
                                                         marginHorizontal: !isLinkedToNext ? 12 : 0,

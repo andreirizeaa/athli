@@ -1,9 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { Archive, Trash2, MailCheck, CheckCircle, MailOpen } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
-import { Alert } from 'react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/stores';
@@ -11,7 +9,7 @@ import { useTranslations } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { PressableOpacity } from 'pressto';
+import { PressableScale } from 'pressto';
 import { getChatMessages, type Chat, type ChatMessage } from '@/services/chats-service';
 
 type ChatListItemProps = {
@@ -185,18 +183,18 @@ export const ChatListItem = ({
         enabled={!isEditMode && !!onDelete}
       >
         <ContextMenuWrapper options={dropdownOptions}>
-          <PressableOpacity
+          <PressableScale
             onPress={handlePress}
             style={[
               styles.rowWrapper,
-              { backgroundColor: themeColors.pageBackground }
+              { backgroundColor: themeColors.backgroundPrimary }
             ]}
           >
             <View
               style={[
                 styles.chatContent,
                 isSelected && {
-                  backgroundColor: themeColors.surfaceSecondary,
+                  backgroundColor: themeColors.backgroundTertiary,
                 },
               ]}
             >
@@ -306,7 +304,7 @@ export const ChatListItem = ({
                 </View>
               </View>
             </View>
-          </PressableOpacity>
+          </PressableScale>
         </ContextMenuWrapper>
       </SwipeableRow>
       <View

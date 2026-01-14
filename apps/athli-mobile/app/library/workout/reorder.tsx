@@ -16,9 +16,10 @@ import {
     GestureDetector,
     GestureHandlerRootView,
 } from 'react-native-gesture-handler';
-import * as Haptics from 'expo-haptics';
+
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { useTranslations } from '@/stores';
@@ -183,7 +184,7 @@ const DraggableRow: React.FC<DraggableRowProps> = ({
             hoverIndex.value = index;
             const sectionId = isSection ? item.id : undefined;
             runOnJS(onDragStart)(sectionId);
-            runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+            runOnJS(haptics.medium)();
         })
         .onUpdate((event) => {
             'worklet';
@@ -205,7 +206,7 @@ const DraggableRow: React.FC<DraggableRowProps> = ({
 
             if (hoverIndex.value !== newHoverIndex) {
                 hoverIndex.value = newHoverIndex;
-                runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+                runOnJS(haptics.medium)();
             }
         })
         .onEnd(() => {
@@ -228,7 +229,7 @@ const DraggableRow: React.FC<DraggableRowProps> = ({
             }
 
             runOnJS(onDragEnd)(sectionId);
-            runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+            runOnJS(haptics.medium)();
         });
 
     // Style for the dragged item
@@ -281,7 +282,7 @@ const DraggableRow: React.FC<DraggableRowProps> = ({
     const draggingCardStyle = useAnimatedStyle(() => {
         return {
             shadowOpacity: isDragging.value ? 0.25 : 0,
-            backgroundColor: themeColors.surfaceSecondary,
+            backgroundColor: themeColors.backgroundTertiary,
         };
     });
 
@@ -393,7 +394,7 @@ export default function ReorderScreen() {
     }, [collapsedSections]);
 
     const handleToggleSection = useCallback((sectionId: string) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.medium();
         setCollapsedSections(prev => {
             const next = new Set(prev);
             if (next.has(sectionId)) {
@@ -517,15 +518,15 @@ export default function ReorderScreen() {
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-            <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+            <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
                 {/* Fixed Header Gradient */}
                 <View style={[styles.fixedHeader, { height: headerHeight }]}>
                     <LinearGradient
                         colors={[
-                            hexToRgba(themeColors.background, 1),
-                            hexToRgba(themeColors.background, 0.85),
-                            hexToRgba(themeColors.background, 0.5),
-                            hexToRgba(themeColors.background, 0),
+                            hexToRgba(themeColors.backgroundSecondary, 1),
+                            hexToRgba(themeColors.backgroundSecondary, 0.85),
+                            hexToRgba(themeColors.backgroundSecondary, 0.5),
+                            hexToRgba(themeColors.backgroundSecondary, 0),
                         ]}
                         locations={[0, 0.5, 0.8, 1]}
                         style={[styles.headerGradient, { height: gradientHeight }]}
@@ -545,7 +546,7 @@ export default function ReorderScreen() {
                     {/* Header */}
                     <View style={styles.header}>
                         <IconButton
-                            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+                            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                             onPress={handleBack}
                             size="md"
                             color={themeColors.text}

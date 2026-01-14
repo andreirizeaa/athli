@@ -5,10 +5,10 @@ import { Platform, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import type { LucideIcon } from 'lucide-react-native';
 import { ChevronRight } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
+import { haptics } from '@/utils/haptics';
 
 type PlatformIconProps = {
   sf: string;
@@ -33,9 +33,13 @@ export interface SettingsOptionProps {
   showChevron?: boolean;
   style?: object;
   chevronSize?: number;
+  chevronIcon?: {
+    sf: string;
+    IconComponent: LucideIcon;
+  };
 }
 
-export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, showChevron, style, chevronSize }: SettingsOptionProps) {
+export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, showChevron, style, chevronSize, chevronIcon }: SettingsOptionProps) {
   const { colors: themeColors } = useThemePreference();
 
   const handleOptionPress = (event: GestureResponderEvent) => {
@@ -43,9 +47,16 @@ export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, 
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.medium();
     onPress(event);
   };
+
+  const defaultChevronIcon = {
+    sf: 'chevron.right',
+    IconComponent: ChevronRight,
+  };
+
+  const chevron = chevronIcon || defaultChevronIcon;
 
   return (
     <Pressable
@@ -69,7 +80,7 @@ export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, 
       )}
       {showChevron && (
         <View style={styles.chevronContainer}>
-          <PlatformIcon sf="chevron.right" IconComponent={ChevronRight} size={chevronSize || iconSizes.extraSmallIcons} color={themeColors.mutedText} />
+          <PlatformIcon sf={chevron.sf} IconComponent={chevron.IconComponent} size={chevronSize || iconSizes.extraSmallIcons} color={themeColors.mutedText} />
         </View>
       )}
     </Pressable>
@@ -91,22 +102,26 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
+    justifyContent: 'center',
   },
   subtitleRightContainer: {
     marginRight: 4,
+    justifyContent: 'center',
   },
   chevronContainer: {
     marginLeft: 4,
   },
   optionTitle: {
     ...typography.p1,
+    lineHeight: 22,
   },
   optionSubtitle: {
     ...typography.p6,
     marginTop: 2,
   },
   optionSubtitleRight: {
-    ...typography.p2,
+    ...typography.p1,
+    lineHeight: 22,
   },
 });
 

@@ -2,18 +2,20 @@ import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, Text, View, Alert } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { ChevronRight, Dumbbell, Play } from 'lucide-react-native';
-import { PressableOpacity } from 'pressto';
-import * as Haptics from 'expo-haptics';
+import { ChevronRight, Dumbbell, Play, UserPlus, Trash2 } from 'lucide-react-native';
+import { PressableScale } from 'pressto';
+
 import { Image } from 'expo-image';
 import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { getExercises, deleteExercises, duplicateExercises, starExercises, archiveExercises } from '@/services/coach/coach-exercise-service';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
+import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { useLibraryTab } from '@/stores';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EXERCISE_CATEGORY_OPTIONS, EQUIPMENT_OPTIONS } from '@athli/shared-types';
@@ -68,10 +70,10 @@ export const ExercisesTab = () => {
     mutationFn: (id: string) => deleteExercises(id),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['exercises'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDeleting'),
@@ -85,10 +87,10 @@ export const ExercisesTab = () => {
     mutationFn: (id: string) => duplicateExercises(id),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['exercises'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDuplicating'),
@@ -102,10 +104,10 @@ export const ExercisesTab = () => {
     mutationFn: ({ id, starred }: { id: string; starred: boolean }) => starExercises(id, starred),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['exercises'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorUpdating'),
@@ -119,10 +121,10 @@ export const ExercisesTab = () => {
     mutationFn: ({ id, archived }: { id: string; archived: boolean }) => archiveExercises(id, archived),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['exercises'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorUpdating'),
@@ -175,6 +177,27 @@ export const ExercisesTab = () => {
     }
   }, [isRowOpen, closeOpenRow, router]);
 
+  const handleAssign = useCallback((exercise: typeof filteredExercises[0]) => {
+    // If a row is open, just close it and prevent navigation
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
+    router.push(`/modals/shared/assign-to-clients-modal?type=exercise&itemIds=${exercise.id}`);
+  }, [isRowOpen, closeOpenRow, router]);
+
+  // Prefetch clients when long press happens to make modal open instantly
+  const handleLongPress = useCallback(() => {
+    queryClient.prefetchQuery({
+      queryKey: ['clients'],
+      queryFn: async () => {
+        const { getClients } = await import('@/services/coach/coach-client-service');
+        return getClients();
+      },
+    });
+  }, [queryClient]);
+
   // Helper to get formatted label for category
   const getCategoryLabel = (value: string | null | undefined): string => {
     if (!value) return '';
@@ -225,6 +248,20 @@ export const ExercisesTab = () => {
     const hasCategory = Boolean(categoryLabel);
     const hasEquipment = Boolean(equipmentLabel);
 
+    const dropdownOptions: DropdownMenuOption[] = [
+      {
+        label: t('general.assign'),
+        icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
+        onPress: () => handleAssign(exercise),
+      },
+      {
+        label: `${t('general.delete')} Exercise`,
+        icon: { sf: 'trash', IconComponent: Trash2 },
+        destructive: true,
+        onPress: () => deleteMutation.mutateAsync(exercise.id),
+      }
+    ];
+
     return (
       <View>
         <SwipeableRow
@@ -232,72 +269,74 @@ export const ExercisesTab = () => {
           onOpen={registerOpenRow}
           deleteConfirmTitle={`${t('general.delete')} ${exercise.name}?`}
         >
-          <View style={styles.rowWrapper}>
-            <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
-              {/* Thumbnail - Separate Pressable */}
-              <PressableOpacity
-                onPress={() => handleThumbnailPress(exercise)}
-                style={styles.thumbnailWrapper}
-              >
-                {thumbnailUrl ? (
-                  <View style={styles.videoThumbnailContainer}>
-                    <Image
-                      source={{ uri: thumbnailUrl }}
-                      style={styles.thumbnailImage}
-                      contentFit="cover"
-                      transition={200}
-                    />
-                    <View style={styles.playOverlay}>
-                      <Play {...({ color: "#FFFFFF", size: 16 } as any)} />
+          <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
+            <View style={styles.rowWrapper}>
+              <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
+                {/* Thumbnail - Separate Pressable */}
+                <PressableScale
+                  onPress={() => handleThumbnailPress(exercise)}
+                  style={styles.thumbnailWrapper}
+                >
+                  {thumbnailUrl ? (
+                    <View style={styles.videoThumbnailContainer}>
+                      <Image
+                        source={{ uri: thumbnailUrl }}
+                        style={styles.thumbnailImage}
+                        contentFit="cover"
+                        transition={200}
+                      />
+                      <View style={styles.playOverlay}>
+                        <Play {...({ color: "#FFFFFF", size: 16 } as any)} />
+                      </View>
                     </View>
-                  </View>
-                ) : (
-                  <View style={[styles.iconContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
-                    <PlatformIcon
-                      sf="figure.strengthtraining.traditional"
-                      IconComponent={Dumbbell}
-                      size={24}
-                      color={themeColors.text}
-                    />
-                  </View>
-                )}
-              </PressableOpacity>
-
-              {/* Rest of row - Pressable for Edit */}
-              <PressableOpacity
-                onPress={() => handleExercisePress(exercise)}
-                style={styles.mainContentPressable}
-              >
-                <View style={styles.textContent}>
-                  <Text
-                    style={[styles.exerciseName, { color: themeColors.text }]}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {exercise.name}
-                  </Text>
-                  {(hasCategory || hasEquipment) && (
-                    <View style={styles.metaRow}>
-                      {hasCategory && (
-                        <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                          {categoryLabel}
-                        </Text>
-                      )}
-                      {hasCategory && hasEquipment && (
-                        <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                      )}
-                      {hasEquipment && (
-                        <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                          {equipmentLabel}
-                        </Text>
-                      )}
+                  ) : (
+                    <View style={[styles.iconContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
+                      <PlatformIcon
+                        sf="figure.strengthtraining.traditional"
+                        IconComponent={Dumbbell}
+                        size={24}
+                        color={themeColors.text}
+                      />
                     </View>
                   )}
-                </View>
-                <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-              </PressableOpacity>
+                </PressableScale>
+
+                {/* Rest of row - Pressable for Edit */}
+                <PressableScale
+                  onPress={() => handleExercisePress(exercise)}
+                  style={styles.mainContentPressable}
+                >
+                  <View style={styles.textContent}>
+                    <Text
+                      style={[styles.exerciseName, { color: themeColors.text }]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {exercise.name}
+                    </Text>
+                    {(hasCategory || hasEquipment) && (
+                      <View style={styles.metaRow}>
+                        {hasCategory && (
+                          <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                            {categoryLabel}
+                          </Text>
+                        )}
+                        {hasCategory && hasEquipment && (
+                          <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                        )}
+                        {hasEquipment && (
+                          <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                            {equipmentLabel}
+                          </Text>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                  <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                </PressableScale>
+              </View>
             </View>
-          </View>
+          </ContextMenuWrapper>
         </SwipeableRow>
 
         {!isLastItem && (
@@ -314,7 +353,7 @@ export const ExercisesTab = () => {
         {isLastItem && <View style={{ height: 24 }} />}
       </View>
     );
-  }, [filteredExercises.length, themeColors, t, deleteMutation, registerOpenRow, handleThumbnailPress, handleExercisePress]);
+  }, [filteredExercises.length, themeColors, t, deleteMutation, registerOpenRow, handleThumbnailPress, handleExercisePress, handleAssign, handleLongPress]);
 
   return (
     <FlashList

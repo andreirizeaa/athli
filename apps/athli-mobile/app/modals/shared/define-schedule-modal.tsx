@@ -316,17 +316,17 @@ export default function DefineScheduleModal() {
     const gradientHeight = headerHeight + 12;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             <TouchableWithoutFeedback onPress={handleDismissKeyboard} accessible={false}>
                 <View style={styles.container}>
                     {/* Fixed Header */}
                     <View style={[styles.fixedHeader, { height: headerHeight }]}>
                         <LinearGradient
                             colors={[
-                                hexToRgba(themeColors.background, 1),
-                                hexToRgba(themeColors.background, 0.85),
-                                hexToRgba(themeColors.background, 0.5),
-                                hexToRgba(themeColors.background, 0),
+                                hexToRgba(themeColors.backgroundSecondary, 1),
+                                hexToRgba(themeColors.backgroundSecondary, 0.85),
+                                hexToRgba(themeColors.backgroundSecondary, 0.5),
+                                hexToRgba(themeColors.backgroundSecondary, 0),
                             ]}
                             locations={[0, 0.5, 0.8, 1]}
                             style={[styles.headerGradient, { height: gradientHeight }]}
@@ -362,7 +362,7 @@ export default function DefineScheduleModal() {
                     >
                         <View style={styles.content}>
                             {/* Frequency Card */}
-                            <View style={[styles.card, { backgroundColor: themeColors.surfaceSecondary }]}>
+                            <View style={[styles.card, { backgroundColor: themeColors.surfacePrimary }]}>
                                 {/* Frequency Row */}
                                 <DropdownMenuWrapper options={frequencyOptions}>
                                     <View style={styles.fieldRow}>
@@ -421,7 +421,7 @@ export default function DefineScheduleModal() {
 
                             {/* Days Selection Card (only for daily/weekly/biweekly) */}
                             {(frequency === 'daily' || frequency === 'weekly' || frequency === 'biweekly') && (
-                                <View style={[styles.card, { backgroundColor: themeColors.surfaceSecondary }]}>
+                                <View style={[styles.card, { backgroundColor: themeColors.surfacePrimary }]}>
                                     {DAYS.map((day, index) => {
                                         const isSelected = selectedDays.has(day);
                                         return (

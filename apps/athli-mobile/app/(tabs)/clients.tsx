@@ -1,14 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { StyleSheet, Text, View, Share } from 'react-native';
-import { PressableOpacity } from 'pressto';
+import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Send } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+
 import { useQuery } from '@tanstack/react-query';
 import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
+import { fuzzyMatch } from '@/utils/searchUtils';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { getClients, type Athlete } from '@/services/coach/coach-client-service';
@@ -17,28 +19,80 @@ import { SearchBar } from '@/components/ui/search-bar';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { EmptyState } from '@/components/ui/empty-state';
 
-// Fuzzy search function - checks if query matches name (allowing for character skipping)
-const fuzzyMatch = (text: string, query: string): boolean => {
-  if (!query) return true;
-
-  const textLower = text.toLowerCase();
-  const queryLower = query.toLowerCase();
-
-  // Exact match
-  if (textLower.includes(queryLower)) return true;
-
-  // Fuzzy match: check if all query characters appear in order in the text
-  let textIndex = 0;
-  for (let i = 0; i < queryLower.length; i++) {
-    const char = queryLower[i];
-    const foundIndex = textLower.indexOf(char, textIndex);
-    if (foundIndex === -1) {
-      return false;
-    }
-    textIndex = foundIndex + 1;
-  }
-  return true;
+// Memoized list item component for better performance
+type ClientListItemProps = {
+  client: Athlete;
+  onPress: (clientId: string) => void;
+  formatSubtitle: (client: Athlete) => string;
+  isLastItem: boolean;
+  themeColors: any;
+  t: any;
 };
+
+const ClientListItem = React.memo(function ClientListItem({
+  client,
+  onPress,
+  formatSubtitle,
+  isLastItem,
+  themeColors,
+}: ClientListItemProps) {
+  return (
+    <View>
+      <PressableScale
+        onPress={() => onPress(client.id)}
+        style={styles.rowWrapper}
+      >
+        <View style={styles.rowContent}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatarCircle}>
+              {client.avatarUrl ? (
+                <Image
+                  source={{ uri: client.avatarUrl }}
+                  style={styles.avatarImage}
+                  contentFit="cover"
+                  contentPosition="center"
+                  cachePolicy="memory-disk"
+                />
+              ) : (
+                <View
+                  style={[
+                    styles.avatarImage,
+                    styles.avatarPlaceholder,
+                    { backgroundColor: themeColors.border },
+                  ]}
+                />
+              )}
+            </View>
+          </View>
+          <View style={styles.clientInfo}>
+            <Text
+              style={[styles.clientName, { color: themeColors.text }]}
+              numberOfLines={1}
+            >
+              {client.name}
+            </Text>
+            <Text
+              style={[styles.clientSubtitle, { color: themeColors.mutedText }]}
+              numberOfLines={2}
+            >
+              {formatSubtitle(client)}
+            </Text>
+          </View>
+          <ChevronRight size={16} color={themeColors.mutedText} />
+        </View>
+      </PressableScale>
+      <View style={styles.separatorContainer}>
+        <View
+          style={[
+            styles.separator,
+            { backgroundColor: themeColors.mutedText, opacity: 0.3 },
+          ]}
+        />
+      </View>
+      {isLastItem && <View style={{ height: 60 }} />}
+    </View>
+  );
+});
 
 export default function ClientsScreen() {
   const router = useRouter();
@@ -52,14 +106,12 @@ export default function ClientsScreen() {
   const { data: clients = [], isLoading, isError } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
-      console.log('[ClientsScreen] Fetching clients...');
       const data = await getClients();
-      console.log('[ClientsScreen] Received clients:', data.length, 'items');
       return data;
     },
     enabled: isAuthenticated,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 5 * 60 * 1000, // 5 minutes - cache data to reduce API calls
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
   });
 
@@ -83,21 +135,12 @@ export default function ClientsScreen() {
     });
   }, [clients, searchQuery]);
 
-  console.log('[ClientsScreen] Render:', {
-    isAuthenticated,
-    isLoading,
-    isError,
-    totalClients: clients.length,
-    filteredClients: filteredClients.length,
-    searchQuery
-  });
-
-  const handleClientPress = (clientId: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const handleClientPress = useCallback((clientId: string) => {
+    haptics.medium();
     router.push(`/client/${clientId}`);
-  };
+  }, [router]);
 
-  const formatSubtitle = (client: Athlete): string => {
+  const formatSubtitle = useCallback((client: Athlete): string => {
     const parts: string[] = [];
 
     if (client.age) {
@@ -116,10 +159,10 @@ export default function ClientsScreen() {
     }
 
     return parts.join(' · ');
-  };
+  }, [t]);
 
-  const handleShare = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const handleShare = useCallback(async () => {
+    haptics.medium();
     try {
       await Share.share({
         message: 'YOUR INVITE LINE HERE',
@@ -127,7 +170,7 @@ export default function ClientsScreen() {
     } catch (error: any) {
       console.error(error.message);
     }
-  };
+  }, []);
 
   return (
     <ScreenWrapper contentContainerStyle={styles.scrollContent}>
@@ -153,65 +196,16 @@ export default function ClientsScreen() {
       {/* Client List */}
       <FlashList
         data={filteredClients}
-        renderItem={({ item: client, index }) => {
-          const isLastItem = index === filteredClients.length - 1;
-          return (
-            <View>
-              <PressableOpacity
-                onPress={() => handleClientPress(client.id)}
-                style={styles.rowWrapper}
-              >
-                <View style={styles.rowContent}>
-                  <View style={styles.avatarContainer}>
-                    <View style={styles.avatarCircle}>
-                      {client.avatarUrl ? (
-                        <Image
-                          source={{ uri: client.avatarUrl }}
-                          style={styles.avatarImage}
-                          contentFit="cover"
-                          contentPosition="center"
-                          cachePolicy="memory-disk"
-                        />
-                      ) : (
-                        <View
-                          style={[
-                            styles.avatarImage,
-                            styles.avatarPlaceholder,
-                            { backgroundColor: themeColors.border },
-                          ]}
-                        />
-                      )}
-                    </View>
-                  </View>
-                  <View style={styles.clientInfo}>
-                    <Text
-                      style={[styles.clientName, { color: themeColors.text }]}
-                      numberOfLines={1}
-                    >
-                      {client.name}
-                    </Text>
-                    <Text
-                      style={[styles.clientSubtitle, { color: themeColors.mutedText }]}
-                      numberOfLines={2}
-                    >
-                      {formatSubtitle(client)}
-                    </Text>
-                  </View>
-                  <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-                </View>
-              </PressableOpacity>
-              <View style={styles.separatorContainer}>
-                <View
-                  style={[
-                    styles.separator,
-                    { backgroundColor: themeColors.mutedText, opacity: 0.3 },
-                  ]}
-                />
-              </View>
-              {isLastItem && <View style={{ height: 60 }} />}
-            </View>
-          );
-        }}
+        renderItem={({ item: client, index }) => (
+          <ClientListItem
+            client={client}
+            onPress={handleClientPress}
+            formatSubtitle={formatSubtitle}
+            isLastItem={index === filteredClients.length - 1}
+            themeColors={themeColors}
+            t={t}
+          />
+        )}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
           <EmptyState

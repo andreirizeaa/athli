@@ -9,12 +9,13 @@ import { Platform, View as RNView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import 'react-native-reanimated';
 import { PressablesConfig } from 'pressto';
-import * as Haptics from 'expo-haptics';
 
 import { useColorScheme, useThemePreference, useCoachProfileStore, useClientProfileStore } from '@/stores';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { useTranslationsStore } from '@/stores/useTranslationsStore';
 import { useUnitsStore } from '@/stores/useUnitsStore';
+import { useHapticsStore } from '@/stores/useHapticsStore';
+import { haptics } from '@/utils/haptics';
 import { useColorScheme as useNativeColorScheme } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -22,6 +23,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { restoreSession } from '@/services/auth/supabase-auth';
 import type { CoachProfile, ClientProfile } from '@/types/profile';
 import QueryProvider from '@/providers/query-provider';
+import { ErrorBoundary as CustomErrorBoundary } from '@/components/ui/error-boundary';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -74,12 +76,14 @@ export default function RootLayout() {
             animationConfig={{ duration: 150 }}
             config={{ minScale: 0.96, activeOpacity: 0.7 }}
             globalHandlers={{
-              onPress: () => Haptics.selectionAsync(),
+              onPress: () => haptics.medium(),
             }}
           >
-            <KeyboardProvider>
-              <RootLayoutNav />
-            </KeyboardProvider>
+            <CustomErrorBoundary>
+              <KeyboardProvider>
+                <RootLayoutNav />
+              </KeyboardProvider>
+            </CustomErrorBoundary>
           </PressablesConfig>
         </QueryProvider>
       </SafeAreaProvider>
@@ -97,6 +101,7 @@ function RootLayoutNav() {
     useThemeStore.getState().initialize();
     useTranslationsStore.getState().initialize();
     useUnitsStore.getState().initialize();
+    useHapticsStore.getState().initialize();
   }, []);
 
   // Now we can safely use theme hooks after initialization
@@ -157,7 +162,7 @@ function RootLayoutNav() {
         colors: {
           ...DarkTheme.colors,
           primary: primaryColor,
-          background: themeColors.pageBackground,
+          background: themeColors.backgroundPrimary,
         },
       }
       : {
@@ -165,12 +170,12 @@ function RootLayoutNav() {
         colors: {
           ...DefaultTheme.colors,
           primary: primaryColor,
-          background: themeColors.pageBackground,
+          background: themeColors.backgroundPrimary,
         },
       };
 
   return (
-    <RNView style={{ flex: 1, backgroundColor: themeColors.pageBackground }}>
+    <RNView style={{ flex: 1, backgroundColor: themeColors.backgroundPrimary }}>
       <ThemeProvider value={navigationTheme}>
         <StatusBar
           style={colorScheme === 'dark' ? 'light' : 'dark'}
@@ -182,7 +187,7 @@ function RootLayoutNav() {
           screenOptions={{
             headerTransparent: true,
             contentStyle: {
-              backgroundColor: themeColors.pageBackground,
+              backgroundColor: themeColors.backgroundPrimary,
             },
           }}
         >
@@ -219,7 +224,6 @@ function RootLayoutNav() {
           />
           <Stack.Screen name="client/[id]/activity" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/metrics" options={{ headerShown: false }} />
-          <Stack.Screen name="client/[id]/training-calendar" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/goals-injuries" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/notes" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/training" options={{ headerShown: false }} />
@@ -230,13 +234,25 @@ function RootLayoutNav() {
           <Stack.Screen name="client/[id]/questionaires" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/settings" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/assistant" options={{ headerShown: false }} />
+          <Stack.Screen name="client/[id]/goals" options={{ headerShown: false }} />
+          <Stack.Screen name="client/[id]/injuries" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="client/[id]/edit-details"
+            options={{
+              headerShadowVisible: true,
+              headerShown: false,
+              animation: 'slide_from_bottom',
+              animationDuration: 150,
+              presentation: 'card',
+            }}
+          />
           <Stack.Screen
             name="library/workout/[id]"
             options={{
               headerShown: false,
               animation: 'slide_from_right',
               contentStyle: {
-                backgroundColor: themeColors.pageBackground,
+                backgroundColor: themeColors.backgroundPrimary,
               },
             }}
           />
@@ -246,7 +262,7 @@ function RootLayoutNav() {
               headerShown: false,
               animation: 'slide_from_right',
               contentStyle: {
-                backgroundColor: themeColors.pageBackground,
+                backgroundColor: themeColors.backgroundPrimary,
               },
             }}
           />
@@ -256,7 +272,7 @@ function RootLayoutNav() {
               headerShown: false,
               animation: 'slide_from_right',
               contentStyle: {
-                backgroundColor: themeColors.pageBackground,
+                backgroundColor: themeColors.backgroundPrimary,
               },
             }}
           />

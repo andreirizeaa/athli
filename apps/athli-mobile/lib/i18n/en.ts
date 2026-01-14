@@ -741,6 +741,7 @@ export const en = {
     colorPalette: 'Color palette',
     searchPalettes: 'Search',
     searchLanguages: 'Search',
+    haptics: 'Haptic feedback',
   },
   clientDetail: {
     tabs: {
@@ -878,7 +879,11 @@ export const en = {
       bio: 'Bio',
       goals: 'Goals',
       injuries: 'Injuries',
+      noGoals: 'No goals yet',
+      noInjuries: 'No injuries',
     },
+    profile: 'Profile',
+    editProfile: 'Edit Profile',
   },
   shared: {
     defineSchedule: {

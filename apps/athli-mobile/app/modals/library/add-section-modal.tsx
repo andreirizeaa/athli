@@ -1,20 +1,19 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Platform, StyleSheet, Text, View, Keyboard, TouchableWithoutFeedback, Alert, TextInput } from 'react-native';
+import { Platform, StyleSheet, Text, View, Keyboard, TouchableWithoutFeedback, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check, ChevronDown } from 'lucide-react-native';
+import { X, Check } from 'lucide-react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { SECTION_TYPES, type SectionType } from '@athli/shared-types';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
-import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';
+import { InputBox, TextAreaInput, SectionTypeSelect } from '@/components/ui/form-inputs';
 import { hexToRgba } from '@/utils/colorUtils';
 import { createSection, updateSection } from '@/services/coach/coach-section-service';
 
@@ -54,11 +53,11 @@ export default function AddSectionModal() {
         onSuccess: async () => {
             // Refetch to update the cache and trigger Zustand store update
             await queryClient.refetchQueries({ queryKey: ['sections'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             handleClose();
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),
@@ -70,15 +69,6 @@ export default function AddSectionModal() {
     const handleDismissKeyboard = () => {
         Keyboard.dismiss();
     };
-
-    // Section type options with descriptions as subtitles from constants
-    const sectionTypeOptions = useMemo(() =>
-        SECTION_TYPES.map((type) => ({
-            value: type.value,
-            label: type.label,
-            subtitle: type.description,
-        }))
-        , []);
 
     // Form validation and change detection
     const { isFormValid, hasChanges, canComplete } = useMemo(() => {
@@ -239,17 +229,17 @@ export default function AddSectionModal() {
     const gradientHeight = headerHeight + 12;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             <TouchableWithoutFeedback onPress={handleDismissKeyboard} accessible={false}>
                 <View style={styles.container}>
                     {/* Header with gradient */}
                     <View style={[styles.fixedHeader, { height: headerHeight }]}>
                         <LinearGradient
                             colors={[
-                                hexToRgba(themeColors.background, 1),
-                                hexToRgba(themeColors.background, 0.85),
-                                hexToRgba(themeColors.background, 0.5),
-                                hexToRgba(themeColors.background, 0),
+                                hexToRgba(themeColors.backgroundSecondary, 1),
+                                hexToRgba(themeColors.backgroundSecondary, 0.85),
+                                hexToRgba(themeColors.backgroundSecondary, 0.5),
+                                hexToRgba(themeColors.backgroundSecondary, 0),
                             ]}
                             locations={[0, 0.5, 0.8, 1]}
                             style={[styles.headerGradient, { height: gradientHeight }]}
@@ -299,102 +289,16 @@ export default function AddSectionModal() {
                             required
                         />
 
-                        <View style={[styles.configCard, { backgroundColor: themeColors.surfaceSecondary }]}>
-                            <DropdownMenuWrapper options={SECTION_TYPES.map((type) => ({
-                                label: type.label,
-                                subtitle: type.description,
-                                onPress: () => setSectionType(type.value as SectionType),
-                            }))}>
-                                <View style={styles.fieldRow}>
-                                    <View style={styles.labelContainer}>
-                                        <Text style={[styles.fieldLabel, { color: themeColors.mutedText }]}>{t('library.addSection.type')}</Text>
-                                        <Text style={styles.requiredAsterisk}>*</Text>
-                                    </View>
-                                    <View style={styles.dropdownValueRow}>
-                                        <Text style={[styles.dropdownValue, { color: themeColors.text }]}>
-                                            {sectionType ? SECTION_TYPES.find(opt => opt.value === sectionType)?.label : t('library.addSection.typePlaceholder')}
-                                        </Text>
-                                        <ChevronDown {...({ size: 14, color: themeColors.mutedText } as any)} />
-                                    </View>
-                                </View>
-                            </DropdownMenuWrapper>
-
-                            {sectionType === 'amrap' && (
-                                <>
-                                    <View style={[styles.configDivider, { backgroundColor: themeColors.border }]} />
-                                    <View style={[
-                                        styles.fieldRow,
-                                        metadataErrors.durationError && styles.errorField
-                                    ]}>
-                                        <View style={styles.labelContainer}>
-                                            <Text style={[styles.fieldLabel, { color: metadataErrors.durationError ? '#EF4444' : themeColors.mutedText }]}>{t('library.section.duration')}</Text>
-                                            <Text style={styles.requiredAsterisk}>*</Text>
-                                        </View>
-                                        <View style={[styles.dropdownValueRow, { flex: 1, justifyContent: 'flex-end' }]}>
-                                            <TextInput
-                                                value={duration}
-                                                onChangeText={setDuration}
-                                                placeholder="0"
-                                                placeholderTextColor={themeColors.mutedText}
-                                                keyboardType="number-pad"
-                                                style={[styles.inputField, { color: metadataErrors.durationError ? '#EF4444' : themeColors.text }]}
-                                            />
-                                            <Text style={[styles.dropdownValue, { color: themeColors.mutedText }]}>m</Text>
-                                        </View>
-                                    </View>
-                                </>
-                            )}
-
-                            {sectionType === 'timed' && (
-                                <>
-                                    <View style={[styles.configDivider, { backgroundColor: themeColors.border }]} />
-                                    <View style={[
-                                        styles.fieldRow,
-                                        metadataErrors.roundsError && styles.errorField
-                                    ]}>
-                                        <View style={styles.labelContainer}>
-                                            <Text style={[styles.fieldLabel, { color: metadataErrors.roundsError ? '#EF4444' : themeColors.mutedText }]}>{t('library.section.rounds')}</Text>
-                                            <Text style={styles.requiredAsterisk}>*</Text>
-                                        </View>
-                                        <View style={[styles.dropdownValueRow, { flex: 1, justifyContent: 'flex-end' }]}>
-                                            <TextInput
-                                                value={rounds}
-                                                onChangeText={setRounds}
-                                                placeholder="0"
-                                                placeholderTextColor={themeColors.mutedText}
-                                                keyboardType="number-pad"
-                                                style={[styles.inputField, { color: metadataErrors.roundsError ? '#EF4444' : themeColors.text }]}
-                                            />
-                                        </View>
-                                    </View>
-                                </>
-                            )}
-
-                            {sectionType === 'circuits' && (
-                                <>
-                                    <View style={[styles.configDivider, { backgroundColor: themeColors.border }]} />
-                                    <View style={[
-                                        styles.fieldRow,
-                                        metadataErrors.roundsError && styles.errorField
-                                    ]}>
-                                        <View style={styles.labelContainer}>
-                                            <Text style={[styles.fieldLabel, { color: metadataErrors.roundsError ? '#EF4444' : themeColors.mutedText }]}>{t('library.section.rounds')}</Text>
-                                            <Text style={styles.requiredAsterisk}>*</Text>
-                                        </View>
-                                        <View style={[styles.dropdownValueRow, { flex: 1, justifyContent: 'flex-end' }]}>
-                                            <TextInput
-                                                value={rounds}
-                                                onChangeText={setRounds}
-                                                placeholder="0"
-                                                placeholderTextColor={themeColors.mutedText}
-                                                keyboardType="number-pad"
-                                                style={[styles.inputField, { color: metadataErrors.roundsError ? '#EF4444' : themeColors.text }]}
-                                            />
-                                        </View>
-                                    </View>
-                                </>
-                            )}
-                        </View>
+                        <SectionTypeSelect
+                            sectionType={sectionType}
+                            onSectionTypeChange={setSectionType}
+                            duration={duration}
+                            onDurationChange={setDuration}
+                            rounds={rounds}
+                            onRoundsChange={setRounds}
+                            metadataErrors={metadataErrors}
+                            required
+                        />
 
                         <TextAreaInput
                             label={t('library.addSection.description')}
@@ -447,54 +351,5 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingBottom: 16,
         gap: 12,
-    },
-    configCard: {
-        borderRadius: 16,
-        overflow: 'hidden',
-    },
-    fieldRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-    },
-    fieldLabel: {
-        ...typography.p4,
-    },
-    labelContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    requiredAsterisk: {
-        ...typography.p4,
-        color: '#EF4444',
-        marginLeft: 2,
-    },
-    dropdownValueRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    dropdownValue: {
-        ...typography.p2,
-    },
-    configDivider: {
-        height: 1,
-        marginHorizontal: 16,
-    },
-    inputField: {
-        ...typography.p2,
-        textAlign: 'right',
-        minWidth: 120,
-        height: '100%',
-    },
-    errorField: {
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-        borderWidth: 1,
-        borderColor: '#EF4444',
-        borderRadius: 8,
-        marginHorizontal: 8,
-        paddingHorizontal: 8,
     },
 });

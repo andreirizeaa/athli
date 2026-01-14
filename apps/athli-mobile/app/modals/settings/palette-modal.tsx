@@ -113,7 +113,7 @@ export default function PaletteModal() {
   const gradientHeight = headerHeight + 12;
 
   return (
-    <View style={[styles.modalContainer, { backgroundColor: themeColors.background }]}>
+    <View style={[styles.modalContainer, { backgroundColor: themeColors.backgroundSecondary }]}>
       {/* Palette List */}
       <View style={styles.listContainer}>
         <FlashList
@@ -142,10 +142,10 @@ export default function PaletteModal() {
       <View style={[styles.fixedHeader, { height: headerHeight }]}>
         <LinearGradient
           colors={[
-            hexToRgba(themeColors.background, 1),
-            hexToRgba(themeColors.background, 0.85),
-            hexToRgba(themeColors.background, 0.5),
-            hexToRgba(themeColors.background, 0),
+            hexToRgba(themeColors.backgroundSecondary, 1),
+            hexToRgba(themeColors.backgroundSecondary, 0.85),
+            hexToRgba(themeColors.backgroundSecondary, 0.5),
+            hexToRgba(themeColors.backgroundSecondary, 0),
           ]}
           locations={[0, 0.5, 0.8, 1]}
           style={[styles.headerGradient, { height: gradientHeight }]}

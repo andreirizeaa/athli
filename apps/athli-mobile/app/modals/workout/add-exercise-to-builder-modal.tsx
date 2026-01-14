@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, Text, View, Platform, FlatList } from 'react-native';
+import { StyleSheet, Text, View, Platform } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { X, Check } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -357,15 +358,15 @@ export default function AddExerciseToBuilderModal() {
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             {/* Header */}
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
                     colors={[
-                        hexToRgba(themeColors.background, 1),
-                        hexToRgba(themeColors.background, 0.85),
-                        hexToRgba(themeColors.background, 0.5),
-                        hexToRgba(themeColors.background, 0),
+                        hexToRgba(themeColors.backgroundSecondary, 1),
+                        hexToRgba(themeColors.backgroundSecondary, 0.85),
+                        hexToRgba(themeColors.backgroundSecondary, 0.5),
+                        hexToRgba(themeColors.backgroundSecondary, 0),
                     ]}
                     locations={[0, 0.5, 0.8, 1]}
                     style={[styles.headerGradient, { height: gradientHeight }]}
@@ -403,9 +404,10 @@ export default function AddExerciseToBuilderModal() {
             </View>
 
             <View style={styles.content}>
-                <FlatList
+                <FlashList
                     data={filteredExercises}
                     keyExtractor={(item) => item.exerciseId}
+                    estimatedItemSize={64}
                     renderItem={renderExerciseItem}
                     ItemSeparatorComponent={() => <Separator style={styles.separator} />}
                     contentContainerStyle={[styles.listContent, { paddingTop: headerHeight + 16 }]}

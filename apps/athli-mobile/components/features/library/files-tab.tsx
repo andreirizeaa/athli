@@ -2,13 +2,14 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { StyleSheet, Text, View, Alert } from 'react-native';
 import { ChevronRight, FileText, Image as ImageIcon, Video as VideoIcon, Play, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { PressableOpacity } from 'pressto';
+import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
+
 import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
@@ -68,10 +69,10 @@ export const FilesTab = () => {
     mutationFn: (id: string) => deleteFile({ fileId: id }),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['files'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDeleting'),
@@ -165,7 +166,7 @@ export const FilesTab = () => {
 
   // Helper to get formatted file type label
   const getFormattedFileTypeLabel = (mimeType: string | null | undefined): string => {
-    const fileType = getFileTypeFromMime(mimeType);
+    const fileType = getFileTypeFromMime(mimeType ?? null);
     const labels: Record<string, string> = {
       'image': 'Image',
       'video': 'Video',
@@ -209,7 +210,7 @@ export const FilesTab = () => {
 
       if (isLoading || !uri) {
         return (
-          <View style={[styles.imageThumbnailContainer, { backgroundColor: themeColors.surfaceSecondary, justifyContent: 'center', alignItems: 'center' }]}>
+          <View style={[styles.imageThumbnailContainer, { backgroundColor: themeColors.backgroundTertiary, justifyContent: 'center', alignItems: 'center' }]}>
             <Text style={{ color: themeColors.mutedText, fontSize: 10 }}>...</Text>
           </View>
         );
@@ -237,7 +238,7 @@ export const FilesTab = () => {
     const sf = fileType === 'pdf' ? 'doc.text' : 'doc.text';
 
     return (
-      <View style={[styles.iconThumbnailContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
+      <View style={[styles.iconThumbnailContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
         <PlatformIcon
           sf={sf}
           IconComponent={IconComponent}
@@ -273,18 +274,18 @@ export const FilesTab = () => {
         >
           <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
             <View style={styles.rowWrapper}>
-              <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
+              <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
 
                 {/* Thumbnail - Pressable separately */}
-                <PressableOpacity
+                <PressableScale
                   onPress={() => handleThumbnailPress(item)}
                   style={styles.thumbnailWrapper}
                 >
                   {renderThumbnail(item)}
-                </PressableOpacity>
+                </PressableScale>
 
                 {/* REST of row - Pressable for Edit */}
-                <PressableOpacity
+                <PressableScale
                   style={styles.mainContentPressable}
                   onPress={() => handleFilePress(item)}
                 >
@@ -307,7 +308,7 @@ export const FilesTab = () => {
                     </View>
                   </View>
                   <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-                </PressableOpacity>
+                </PressableScale>
               </View>
             </View>
           </ContextMenuWrapper>
