@@ -35,6 +35,7 @@ type SlidingPanelProps = {
     renderPanel: (expansion: SharedValue<number>) => React.ReactNode;
     collapsedWidthRatio?: number; // 0-1, default 0.8 (80% of screen when collapsed)
     overlayColor?: string;
+    borderColor?: string;
     onOpenChange?: (isOpen: boolean) => void;
     onExpansionChange?: (isExpanded: boolean) => void;
 };
@@ -46,6 +47,7 @@ export const SlidingPanel = forwardRef<SlidingPanelRef, SlidingPanelProps>(
             renderPanel,
             collapsedWidthRatio = 0.8,
             overlayColor = 'rgba(0, 0, 0, 0.3)',
+            borderColor = 'rgba(0, 0, 0, 0.1)',
             onOpenChange,
             onExpansionChange,
         },
@@ -245,7 +247,7 @@ export const SlidingPanel = forwardRef<SlidingPanelRef, SlidingPanelProps>(
 
                 {/* Sliding panel - always full width */}
                 <GestureDetector gesture={panGesture}>
-                    <Animated.View style={[styles.panel, { width: SCREEN_WIDTH }, panelStyle]}>
+                    <Animated.View style={[styles.panel, { width: SCREEN_WIDTH, borderLeftColor: borderColor }, panelStyle]}>
                         {renderPanel(expansion)}
                     </Animated.View>
                 </GestureDetector>
@@ -270,5 +272,6 @@ const styles = StyleSheet.create({
         top: 0,
         bottom: 0,
         right: 0,
+        borderLeftWidth: 1,
     },
 });

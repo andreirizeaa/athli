@@ -425,7 +425,8 @@ export default function ClientAssistantScreen() {
         <SlidingPanel
             ref={panelRef}
             collapsedWidthRatio={COLLAPSED_WIDTH_RATIO}
-            overlayColor={colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.3)'}
+            overlayColor={colorScheme === 'dark' ? 'rgba(0, 0, 0, 0.6)' : 'rgba(0, 0, 0, 0.5)'}
+            borderColor={themeColors.surfacePrimary}
             renderPanel={renderPanelContent}
             onExpansionChange={handleExpansionChange}
             onOpenChange={(isOpen) => {
