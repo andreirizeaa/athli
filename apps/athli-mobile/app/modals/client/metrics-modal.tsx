@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'expo-router';
-import { View, StyleSheet, Text, Platform, FlatList } from 'react-native';
+import { View, StyleSheet, Text, Platform } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Search, ChevronRight } from 'lucide-react-native';
@@ -57,7 +58,7 @@ export default function MetricsModal() {
     const renderItem = ({ item }: { item: { section: string; metrics: DefaultMetric[] } }) => (
         <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{item.section}</Text>
-            <View style={[styles.listContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
+            <View style={[styles.listContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
                 {item.metrics.map((metric, index) => (
                     <React.Fragment key={metric.name}>
                         {index > 0 && <Separator />}
@@ -69,7 +70,7 @@ export default function MetricsModal() {
                                 <Text style={[styles.metricName, { color: themeColors.text }]}>{metric.name}</Text>
                                 <Text style={[styles.metricUnit, { color: themeColors.mutedText }]}>{metric.unit}</Text>
                             </View>
-                            <ChevronRight {...({ size: 18, color: themeColors.mutedText } as any)} />
+                            <ChevronRight size={18} color={themeColors.mutedText} />
                         </PressableOpacity>
                     </React.Fragment>
                 ))}
@@ -78,15 +79,15 @@ export default function MetricsModal() {
     );
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             {/* Header */}
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
                     colors={[
-                        hexToRgba(themeColors.background, 1),
-                        hexToRgba(themeColors.background, 0.85),
-                        hexToRgba(themeColors.background, 0.5),
-                        hexToRgba(themeColors.background, 0),
+                        hexToRgba(themeColors.backgroundSecondary, 1),
+                        hexToRgba(themeColors.backgroundSecondary, 0.85),
+                        hexToRgba(themeColors.backgroundSecondary, 0.5),
+                        hexToRgba(themeColors.backgroundSecondary, 0),
                     ]}
                     locations={[0, 0.5, 0.8, 1]}
                     style={[styles.headerGradient, { height: gradientHeight }]}
@@ -114,9 +115,10 @@ export default function MetricsModal() {
             </View>
 
             <View style={[styles.content]}>
-                <FlatList
+                <FlashList
                     data={filteredMetrics}
                     keyExtractor={(item) => item.section}
+                    estimatedItemSize={120}
                     renderItem={renderItem}
                     contentContainerStyle={[styles.listContent, { paddingTop: headerHeight + 16 }]}
                     ListHeaderComponent={

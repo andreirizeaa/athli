@@ -1,5 +1,6 @@
 import React, { useCallback, useState, useMemo } from 'react';
-import { Platform, StyleSheet, Text, View, FlatList } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,29 +16,9 @@ import { IconButton } from '@/components/ui/icon-button';
 import { SearchBar } from '@/components/ui/search-bar';
 import { Separator } from '@/components/ui/separator';
 import { hexToRgba } from '@/utils/colorUtils';
+import { fuzzyMatch } from '@/utils/searchUtils';
 import { getClients, type Athlete } from '@/services/coach/coach-client-service';
 import { EmptyState } from '@/components/ui/empty-state';
-
-// Fuzzy search function
-const fuzzyMatch = (text: string, query: string): boolean => {
-    if (!query) return true;
-
-    const textLower = text.toLowerCase();
-    const queryLower = query.toLowerCase();
-
-    if (textLower.includes(queryLower)) return true;
-
-    let textIndex = 0;
-    for (let i = 0; i < queryLower.length; i++) {
-        const char = queryLower[i];
-        const foundIndex = textLower.indexOf(char, textIndex);
-        if (foundIndex === -1) {
-            return false;
-        }
-        textIndex = foundIndex + 1;
-    }
-    return true;
-};
 
 type AssignType = 'workout' | 'habit' | 'checkIn' | 'questionnaire' | 'file' | 'metric' | 'program';
 
@@ -65,22 +46,12 @@ export default function AssignToClientsModal() {
     const { data: clients = [], isLoading, isFetching, dataUpdatedAt } = useQuery({
         queryKey: ['clients'],
         queryFn: async () => {
-            console.log('[AssignToClientsModal] ❌ FETCHING FROM NETWORK (this should not happen if prefetch worked)');
             const data = await getClients();
-            console.log('[AssignToClientsModal] Received clients:', data.length, 'items');
             return data;
         },
         staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
         refetchOnMount: false, // Don't refetch if data exists in cache
         refetchOnWindowFocus: false,
-    });
-
-    console.log('[AssignToClientsModal] Query state:', {
-        isLoading,
-        isFetching,
-        hasData: clients.length > 0,
-        dataUpdatedAt: dataUpdatedAt ? new Date(dataUpdatedAt).toISOString() : 'never',
-        cacheStatus: dataUpdatedAt ? 'FROM CACHE ✅' : 'NO CACHE ❌'
     });
 
     // Filter clients based on search query
@@ -107,15 +78,16 @@ export default function AssignToClientsModal() {
     const modalTitle = useMemo(() => {
         const typeKey = params.type || 'workout';
         const capitalizedType = typeKey.charAt(0).toUpperCase() + typeKey.slice(1);
-        return t(`clientDetail.assignModals.assign${capitalizedType}` as any) || 'Assign to Clients';
+        const translationKey = `clientDetail.assignModals.assign${capitalizedType}` as
+            | 'clientDetail.assignModals.assignWorkout'
+            | 'clientDetail.assignModals.assignHabit'
+            | 'clientDetail.assignModals.assignCheckIn'
+            | 'clientDetail.assignModals.assignQuestionnaire'
+            | 'clientDetail.assignModals.assignFile'
+            | 'clientDetail.assignModals.assignMetric'
+            | 'clientDetail.assignModals.assignProgram';
+        return t(translationKey) || 'Assign to Clients';
     }, [params.type, t]);
-
-    console.log('[AssignToClientsModal] Render:', {
-        isLoading,
-        totalClients: clients.length,
-        filteredClients: filteredClients.length,
-        searchQuery
-    });
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -124,10 +96,14 @@ export default function AssignToClientsModal() {
     }, [router]);
 
     const handleSave = useCallback(() => {
+        if (selectedClientIds.size === 0) return;
+
         // TODO: Implement save functionality
         // Will use selectedClientIds and itemIds to assign items to clients
         handleClose();
     }, [handleClose, selectedClientIds, itemIds]);
+
+    const canSave = selectedClientIds.size > 0;
 
     const handleClientToggle = useCallback((clientId: string) => {
         setSelectedClientIds((prev) => {
@@ -145,15 +121,15 @@ export default function AssignToClientsModal() {
     const gradientHeight = headerHeight + 12;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             {/* Fixed Header with gradient */}
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
                     colors={[
-                        hexToRgba(themeColors.background, 1),
-                        hexToRgba(themeColors.background, 0.85),
-                        hexToRgba(themeColors.background, 0.5),
-                        hexToRgba(themeColors.background, 0),
+                        hexToRgba(themeColors.backgroundSecondary, 1),
+                        hexToRgba(themeColors.backgroundSecondary, 0.85),
+                        hexToRgba(themeColors.backgroundSecondary, 0.5),
+                        hexToRgba(themeColors.backgroundSecondary, 0),
                     ]}
                     locations={[0, 0.5, 0.8, 1]}
                     style={[styles.headerGradient, { height: gradientHeight }]}
@@ -180,16 +156,18 @@ export default function AssignToClientsModal() {
                         icon={{ sf: 'checkmark', IconComponent: Check }}
                         onPress={handleSave}
                         size="md"
-                        color={themeColors.text}
+                        variant={canSave ? 'primary' : 'default'}
+                        disabled={!canSave}
                     />
                 </View>
             </View>
 
             {/* Content */}
             <View style={styles.content}>
-                <FlatList
+                <FlashList
                     data={filteredClients}
                     keyExtractor={(item) => item.id}
+                    estimatedItemSize={80}
                     renderItem={({ item }) => {
                         const isSelected = selectedClientIds.has(item.id);
 

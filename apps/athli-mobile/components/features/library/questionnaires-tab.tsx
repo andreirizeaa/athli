@@ -2,12 +2,13 @@ import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, Text, View, Alert } from 'react-native';
 import { ChevronRight, ClipboardList, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { PressableOpacity } from 'pressto';
+import { PressableScale } from 'pressto';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
+
 import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
@@ -65,10 +66,10 @@ export const QuestionnairesTab = () => {
     mutationFn: (id: string) => deleteQuestionnaire(id),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['questionnaires'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDeleting'),
@@ -83,10 +84,10 @@ export const QuestionnairesTab = () => {
       duplicateQuestionnaire(id, original),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['questionnaires'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDuplicating'),
@@ -159,11 +160,11 @@ export const QuestionnairesTab = () => {
           deleteConfirmTitle={`${t('general.delete')} ${item.name}?`}
         >
           <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
-            <PressableOpacity
+            <PressableScale
               style={styles.rowWrapper}
               onPress={() => handleQuestionnairePress(item)}
             >
-              <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
+              <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
                 <View style={styles.iconContainer}>
                   <PlatformIcon
                     sf="list.bullet.rectangle.portrait.fill"
@@ -186,7 +187,7 @@ export const QuestionnairesTab = () => {
                 </View>
                 <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
               </View>
-            </PressableOpacity>
+            </PressableScale>
           </ContextMenuWrapper>
         </SwipeableRow>
 

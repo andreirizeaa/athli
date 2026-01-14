@@ -2,7 +2,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, Dimensions, LayoutChangeEvent, Pressable } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
-import * as Haptics from 'expo-haptics';
+
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -13,6 +13,7 @@ import { useFocusEffect } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
@@ -142,7 +143,7 @@ export default function LibraryScreen() {
         return;
       }
 
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      haptics.medium();
       closeOpenRow();
       setSelectedIndex(index);
       animateUnderline(index);

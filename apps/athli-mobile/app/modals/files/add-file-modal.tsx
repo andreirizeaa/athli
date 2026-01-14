@@ -10,9 +10,9 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
 
 import { typography, iconSizes } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
@@ -108,11 +108,11 @@ export default function AddFileModal() {
         mutationFn: uploadFile,
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['files'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             handleClose();
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),
@@ -126,11 +126,11 @@ export default function AddFileModal() {
         mutationFn: updateFile,
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['files'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             handleClose();
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),
@@ -312,17 +312,17 @@ export default function AddFileModal() {
     const gradientHeight = headerHeight + 12;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             <TouchableWithoutFeedback onPress={handleDismissKeyboard} accessible={false}>
                 <View style={styles.container}>
                     {/* Header with gradient */}
                     <View style={[styles.fixedHeader, { height: headerHeight }]}>
                         <LinearGradient
                             colors={[
-                                hexToRgba(themeColors.background, 1),
-                                hexToRgba(themeColors.background, 0.85),
-                                hexToRgba(themeColors.background, 0.5),
-                                hexToRgba(themeColors.background, 0),
+                                hexToRgba(themeColors.backgroundSecondary, 1),
+                                hexToRgba(themeColors.backgroundSecondary, 0.85),
+                                hexToRgba(themeColors.backgroundSecondary, 0.5),
+                                hexToRgba(themeColors.backgroundSecondary, 0),
                             ]}
                             locations={[0, 0.5, 0.8, 1]}
                             style={[styles.headerGradient, { height: gradientHeight }]}
@@ -373,7 +373,7 @@ export default function AddFileModal() {
                         />
 
                         {/* File Type Selection */}
-                        <View style={[styles.attachSection, { backgroundColor: themeColors.surfaceSecondary }]}>
+                        <View style={[styles.attachSection, { backgroundColor: themeColors.surfacePrimary }]}>
                             <View style={styles.attachLabelRow}>
                                 <Text style={[styles.attachLabel, { color: themeColors.mutedText }]}>
                                     {t('files.addFile.attachFile')}
@@ -489,7 +489,7 @@ export default function AddFileModal() {
                                                 hitSlop={8}
                                             >
                                                 <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                                                    <X {...({ size: 12, color: themeColors.surfaceSecondary, strokeWidth: 3 } as any)} />
+                                                    <X {...({ size: 12, color: themeColors.backgroundTertiary, strokeWidth: 3 } as any)} />
                                                 </View>
                                             </PressableOpacity>
                                         )}

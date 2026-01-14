@@ -16,7 +16,7 @@ export default function TrainingCalendarScreen() {
   const insets = useSafeAreaInsets();
 
   const iconColor = themeColors.text;
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
+  const mutedSurfaceColor = themeColors.backgroundTertiary;
 
   const handleBackPress = () => {
     router.back();
@@ -27,7 +27,7 @@ export default function TrainingCalendarScreen() {
       style={[
         styles.safeArea,
         {
-          backgroundColor: themeColors.pageBackground,
+          backgroundColor: themeColors.backgroundPrimary,
           paddingTop: insets.top,
           paddingBottom: 0,
           paddingLeft: insets.left,
@@ -35,9 +35,9 @@ export default function TrainingCalendarScreen() {
         },
       ]}
     >
-      <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton
-          icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}
           size="md"
           color={iconColor}

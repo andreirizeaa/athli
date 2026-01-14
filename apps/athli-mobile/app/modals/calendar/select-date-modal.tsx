@@ -5,9 +5,10 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
 import { Storage } from '@/lib/storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
+
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useModalCallbacks } from '@/stores';
@@ -302,7 +303,7 @@ export default function SelectDateModal() {
   const handlePageSelected = useCallback((event: PagerViewOnPageSelectedEvent) => {
     const index = event.nativeEvent.position;
     if (index === currentPageIndex) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.medium();
     setCurrentPageIndex(index);
   }, [currentPageIndex]);
 
@@ -315,7 +316,7 @@ export default function SelectDateModal() {
     isClosingRef.current = true;
 
     setSelectedDate(date);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    haptics.medium();
     Storage.setItem(storageKey, date.toISOString());
     triggerDateSelect(date);
 
@@ -336,7 +337,7 @@ export default function SelectDateModal() {
   }, [currentPageIndex, monthsData, handleDateSelect]);
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background, paddingBottom: 200 }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary, paddingBottom: 200 }]}>
       <View style={styles.header}>
         <View style={styles.headerSideLeft} />
         <Text style={[styles.title, { color: themeColors.text }]} pointerEvents="none">
@@ -344,7 +345,7 @@ export default function SelectDateModal() {
         </Text>
         <View style={styles.headerSideRight}>
           <PressableOpacity
-            style={[styles.todayButton, { backgroundColor: themeColors.iconButton }]}
+            style={[styles.todayButton, { backgroundColor: themeColors.backgroundSecondary }]}
             onPress={handleSelectToday}
           >
             <Text style={[styles.todayButtonText, { color: themeColors.text }]}>{t('calendar.today')}</Text>

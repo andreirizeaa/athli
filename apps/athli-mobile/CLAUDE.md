@@ -127,19 +127,25 @@ const MyComponent = () => {
 ```
 
 ### Available Theme Colors (`ThemeColors`)
-- `pageBackground` - Main page background
-- `background` - Component backgrounds
-- `surface` - Card/elevated surfaces
-- `surfaceSecondary` - Secondary surfaces
+
+**Backgrounds** (for pages, modals, containers):
+- `backgroundPrimary` - Main screen/page background
+- `backgroundSecondary` - Modal backgrounds, card containers
+- `backgroundTertiary` - Alternative background areas
+
+**Surfaces** (for buttons, inputs, interactive elements):
+- `surfacePrimary` - Primary buttons, inputs, clickable surfaces
+- `surfaceSecondary` - Secondary buttons, muted interactive elements
+- `surfaceTertiary` - Tertiary interactive surfaces, disabled states
+
+**Text & Accents**:
 - `text` - Primary text color
 - `mutedText` - Secondary/muted text
 - `primary` - Primary accent color
 - `primaryForeground` - Text on primary backgrounds
 - `primarySoft` - Soft primary accent
 - `border` - Border colors
-- `searchBarBackground` - Search input background
-- `iconButton` - Icon button backgrounds
-- `headerBackground` - Header backgrounds
+- `translucentBackground` - Translucent overlays and headers
 
 ### Typography
 
@@ -595,15 +601,47 @@ import { Image } from 'expo-image';
 
 ### Haptics
 
-Use `expo-haptics` for tactile feedback (already configured globally via `pressto`):
+**ALWAYS use the centralized haptics utility** - NEVER import `expo-haptics` directly:
 
 ```tsx
-import * as Haptics from 'expo-haptics';
+// ✅ CORRECT
+import { haptics } from '@/utils/haptics';
 
-Haptics.selectionAsync();           // Light tap
-Haptics.impactAsync(ImpactFeedbackStyle.Medium);  // Medium impact
-Haptics.notificationAsync(NotificationFeedbackType.Success);  // Success
+haptics.medium();    // Standard button press (default for all buttons)
+haptics.success();   // Successful operation
+haptics.error();     // Failed operation
+haptics.warning();   // Warning feedback
+
+// ❌ INCORRECT - Never use expo-haptics directly
+import * as Haptics from 'expo-haptics';
+Haptics.impactAsync(ImpactFeedbackStyle.Medium);
 ```
+
+**Available Haptic Functions:**
+- `haptics.selection()` - Light selection feedback (tab switches, minor selections)
+- `haptics.light()` - Light impact (subtle interactions)
+- `haptics.medium()` - **Medium impact (DEFAULT for all buttons)**
+- `haptics.heavy()` - Heavy impact (critical actions, confirmations)
+- `haptics.success()` - Success notification (form submissions, saves)
+- `haptics.warning()` - Warning notification (validation issues)
+- `haptics.error()` - Error notification (failed operations)
+
+**Haptics Preferences:**
+- Users can enable/disable haptics via `useHaptics()` hook
+- All haptic calls automatically respect user preference
+- Global configuration in `app/_layout.tsx` via pressto
+
+```tsx
+import { useHaptics } from '@/stores';
+
+const { hapticsEnabled, setHapticsEnabled } = useHaptics();
+```
+
+**When to Use:**
+- **Buttons/Actions:** `haptics.medium()` (configured globally via pressto)
+- **Success feedback:** `haptics.success()` after save/create/update operations
+- **Error feedback:** `haptics.error()` on failures
+- **Manual pressables:** Call `haptics.medium()` in custom onPress handlers
 
 ---
 
@@ -612,6 +650,7 @@ Haptics.notificationAsync(NotificationFeedbackType.Success);  // Success
 | Do ✅ | Don't ❌ |
 |-------|----------|
 | `PressableOpacity` from pressto | `TouchableOpacity` |
+| `haptics` utility from `@/utils/haptics` | `expo-haptics` directly |
 | `StyleSheet.create()` | Inline style objects |
 | `useThemePreference()` colors | Hardcoded hex colors |
 | `t('key.path')` translations | Hardcoded strings |

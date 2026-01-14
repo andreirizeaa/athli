@@ -150,25 +150,25 @@ export default function EmailSignInScreen() {
         return {
             backgroundColor: withTiming(isButtonEnabled
                 ? themeColors.text
-                : themeColors.surfaceSecondary, { duration: 200 }),
+                : themeColors.backgroundTertiary, { duration: 200 }),
         };
     }, [isButtonEnabled, themeColors]);
 
     const animatedTextStyle = useAnimatedStyle(() => {
         return {
             color: withTiming(isButtonEnabled
-                ? themeColors.pageBackground
+                ? themeColors.backgroundPrimary
                 : themeColors.mutedText, { duration: 200 }),
         };
     }, [isButtonEnabled, themeColors]);
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.pageBackground, paddingTop: insets.top }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top }]}>
             <AuthLoadingOverlay visible={isLoading} />
 
             <View style={styles.header}>
                 <IconButton
-                    icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+                    icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                     onPress={handleBackPress}
                     size="md"
                     color={themeColors.text}
@@ -224,14 +224,14 @@ export default function EmailSignInScreen() {
 
             <Animated.View style={[styles.toolbarContainer, toolbarAnimatedStyle]}>
                 {/* Background extension below toolbar */}
-                <View style={[styles.backgroundExtension, { backgroundColor: hexToRgba(themeColors.headerBackground, 0.95) }]} />
+                <View style={[styles.backgroundExtension, { backgroundColor: hexToRgba(themeColors.translucentBackground, 0.95) }]} />
                 <BlurView
                     intensity={30}
                     tint={isDark ? 'dark' : 'light'}
                     style={[
                         styles.toolbarBlur,
                         {
-                            backgroundColor: hexToRgba(themeColors.headerBackground, 0.95),
+                            backgroundColor: hexToRgba(themeColors.translucentBackground, 0.95),
                             borderTopWidth: 1,
                             borderTopColor: themeColors.border,
                         }

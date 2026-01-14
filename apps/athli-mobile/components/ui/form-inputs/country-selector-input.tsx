@@ -125,7 +125,7 @@ export const CountrySelectorInput = ({
   return (
     <>
       <PressableOpacity
-        style={[styles.inputBox, { backgroundColor: themeColors.surfaceSecondary }]}
+        style={[styles.inputBox, { backgroundColor: themeColors.surfacePrimary }]}
         onPress={handlePress}
       >
         <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
@@ -153,7 +153,7 @@ export const CountrySelectorInput = ({
         presentationStyle="pageSheet"
         onRequestClose={handleClose}
       >
-        <View style={[styles.modalContainer, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.modalContainer, { backgroundColor: themeColors.surfacePrimary }]}>
           {/* Country List */}
           <View style={styles.listContainer}>
             <FlashList
@@ -182,10 +182,10 @@ export const CountrySelectorInput = ({
           <View style={[styles.fixedHeader, { height: headerHeight }]}>
             <LinearGradient
               colors={[
-                hexToRgba(themeColors.background, 1),
-                hexToRgba(themeColors.background, 0.85),
-                hexToRgba(themeColors.background, 0.5),
-                hexToRgba(themeColors.background, 0),
+                hexToRgba(themeColors.surfacePrimary, 1),
+                hexToRgba(themeColors.surfacePrimary, 0.85),
+                hexToRgba(themeColors.surfacePrimary, 0.5),
+                hexToRgba(themeColors.surfacePrimary, 0),
               ]}
               locations={[0, 0.5, 0.8, 1]}
               style={[styles.headerGradient, { height: gradientHeight }]}

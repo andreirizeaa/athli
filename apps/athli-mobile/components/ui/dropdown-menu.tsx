@@ -1,8 +1,8 @@
 import React from 'react';
-import { Dimensions, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import * as ContextMenu from 'zeego/context-menu';
 import * as DropdownMenuZeego from 'zeego/dropdown-menu';
-import * as Haptics from 'expo-haptics';
 import type { LucideIcon } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -91,7 +91,7 @@ export const DropdownMenu = ({
         {
           left: leftPosition,
           top: topPosition,
-          backgroundColor: themeColors.surface,
+          backgroundColor: themeColors.backgroundSecondary,
           borderColor: themeColors.border,
           shadowColor: themeColors.shadowColor,
         },
@@ -99,10 +99,9 @@ export const DropdownMenu = ({
       onStartShouldSetResponder={() => true}
     >
       {options.map((option, index) => (
-        <TouchableOpacity
+        <PressableOpacity
           key={index}
           style={styles.menuItem}
-          activeOpacity={0.7}
           onPress={() => {
             option.onPress?.();
             onClose();
@@ -122,7 +121,7 @@ export const DropdownMenu = ({
           ]}>
             {option.label}
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
       ))}
     </View>
   );
@@ -169,7 +168,7 @@ export const ContextMenuWrapper = ({
       return React.cloneElement(children as React.ReactElement<any>, {
         style: [
           (children as React.ReactElement<any>).props.style,
-          { backgroundColor: themeColors.surface },
+          { backgroundColor: themeColors.backgroundSecondary},
         ],
       });
     }
@@ -189,7 +188,7 @@ export const ContextMenuWrapper = ({
       </ContextMenu.Trigger>
       <ContextMenu.Preview>
         {() => (
-          <View style={{ backgroundColor: themeColors.surface }}>
+          <View style={{ backgroundColor: themeColors.backgroundSecondary}}>
             {getPreviewChildren()}
           </View>
         )}
@@ -267,16 +266,12 @@ export const DropdownMenuWrapper = ({
   options,
   children,
 }: DropdownMenuWrapperProps) => {
-  const handleTouchStart = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
   return (
     <DropdownMenuZeego.Root>
       <DropdownMenuZeego.Trigger>
-        <Pressable onPressIn={handleTouchStart}>
+        <View style={{ alignSelf: 'stretch' }}>
           {children}
-        </Pressable>
+        </View>
       </DropdownMenuZeego.Trigger>
       <DropdownMenuZeego.Content>
         {options.map((option, index) => {

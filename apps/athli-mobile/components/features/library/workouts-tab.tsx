@@ -1,18 +1,20 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { StyleSheet, Text, View, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ChevronRight, Dumbbell } from 'lucide-react-native';
-import { PressableOpacity } from 'pressto';
+import { ChevronRight, Dumbbell, UserPlus, Trash2 } from 'lucide-react-native';
+import { PressableScale } from 'pressto';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
+
 import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { useLibraryTab } from '@/stores';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
+import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { getWorkouts, deleteWorkouts } from '@/services/coach/coach-workout-service';
 import { EmptyState } from '@/components/ui/empty-state';
 
@@ -66,10 +68,10 @@ export const WorkoutsTab = () => {
     mutationFn: (id: string) => deleteWorkouts(id),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['workouts'] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     },
     onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDeleting'),
@@ -110,11 +112,46 @@ export const WorkoutsTab = () => {
     });
   };
 
+  const handleAssign = (workout: typeof filteredWorkouts[0]) => {
+    // If a row is open, just close it and prevent navigation
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+
+    router.push(`/modals/shared/assign-to-clients-modal?type=workout&itemIds=${workout.id}`);
+  };
+
+  // Prefetch clients when long press happens to make modal open instantly
+  const handleLongPress = useCallback(() => {
+    queryClient.prefetchQuery({
+      queryKey: ['clients'],
+      queryFn: async () => {
+        const { getClients } = await import('@/services/coach/coach-client-service');
+        return getClients();
+      },
+    });
+  }, [queryClient]);
+
   return (
     <FlashList
       data={filteredWorkouts}
       renderItem={({ item: workout, index }) => {
         const isLastItem = index === filteredWorkouts.length - 1;
+
+        const dropdownOptions: DropdownMenuOption[] = [
+          {
+            label: t('general.assign'),
+            icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
+            onPress: () => handleAssign(workout),
+          },
+          {
+            label: `${t('general.delete')} Workout`,
+            icon: { sf: 'trash', IconComponent: Trash2 },
+            destructive: true,
+            onPress: () => deleteMutation.mutateAsync(workout.id),
+          }
+        ];
 
         return (
           <View>
@@ -123,37 +160,39 @@ export const WorkoutsTab = () => {
               onOpen={registerOpenRow}
               deleteConfirmTitle={`${t('general.delete')} ${workout.name}?`}
             >
-              <PressableOpacity
-                onPress={() => handleWorkoutPress(workout)}
-                style={styles.rowWrapper}
-              >
-                <View style={[styles.rowContent, { backgroundColor: themeColors.pageBackground }]}>
-                  <View style={styles.iconContainer}>
-                    <PlatformIcon
-                      sf="dumbbell.fill"
-                      IconComponent={Dumbbell}
-                      size={24}
-                      color={themeColors.text}
-                    />
+              <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
+                <PressableScale
+                  onPress={() => handleWorkoutPress(workout)}
+                  style={styles.rowWrapper}
+                >
+                  <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
+                    <View style={styles.iconContainer}>
+                      <PlatformIcon
+                        sf="dumbbell.fill"
+                        IconComponent={Dumbbell}
+                        size={24}
+                        color={themeColors.text}
+                      />
+                    </View>
+                    <View style={styles.textContent}>
+                      <Text
+                        style={[styles.workoutName, { color: themeColors.text }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {workout.name}
+                      </Text>
+                      <Text style={[styles.exerciseCount, { color: themeColors.mutedText }]}>
+                        {workout.totalExercises === 0
+                          ? 'Empty'
+                          : `${workout.totalExercises} ${workout.totalExercises === 1 ? t('library.exercise') : t('library.exercises')}`
+                        }
+                      </Text>
+                    </View>
+                    <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
                   </View>
-                  <View style={styles.textContent}>
-                    <Text
-                      style={[styles.workoutName, { color: themeColors.text }]}
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                    >
-                      {workout.name}
-                    </Text>
-                    <Text style={[styles.exerciseCount, { color: themeColors.mutedText }]}>
-                      {workout.totalExercises === 0
-                        ? 'Empty'
-                        : `${workout.totalExercises} ${workout.totalExercises === 1 ? t('library.exercise') : t('library.exercises')}`
-                      }
-                    </Text>
-                  </View>
-                  <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-                </View>
-              </PressableOpacity>
+                </PressableScale>
+              </ContextMenuWrapper>
             </SwipeableRow>
 
             {!isLastItem && (

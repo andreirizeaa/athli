@@ -14,10 +14,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
+
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import {
     HABIT_UNIT_OPTIONS,
     type HabitUnit,
@@ -102,11 +103,11 @@ export default function AddHabitModal() {
         onSuccess: async () => {
             // Refetch to update the cache and trigger Zustand store update
             await queryClient.refetchQueries({ queryKey: ['habits'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             handleClose();
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),
@@ -212,7 +213,7 @@ export default function AddHabitModal() {
 
     const handleTabPress = (tabKey: TabKey) => {
         if (selectedTab !== tabKey) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            haptics.medium();
             setSelectedTab(tabKey);
         }
     };
@@ -338,15 +339,15 @@ export default function AddHabitModal() {
     const gradientHeight = headerHeight + 12;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             {/* Fixed Header with gradient */}
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
                     colors={[
-                        hexToRgba(themeColors.background, 1),
-                        hexToRgba(themeColors.background, 0.85),
-                        hexToRgba(themeColors.background, 0.5),
-                        hexToRgba(themeColors.background, 0),
+                        hexToRgba(themeColors.backgroundSecondary, 1),
+                        hexToRgba(themeColors.backgroundSecondary, 0.85),
+                        hexToRgba(themeColors.backgroundSecondary, 0.5),
+                        hexToRgba(themeColors.backgroundSecondary, 0),
                     ]}
                     locations={[0, 0.5, 0.8, 1]}
                     style={[styles.headerGradient, { height: gradientHeight }]}
@@ -456,7 +457,7 @@ export default function AddHabitModal() {
                                         <Text style={[styles.categoryLabel, { color: themeColors.mutedText }]}>
                                             {section.label}
                                         </Text>
-                                        <Card style={{ backgroundColor: themeColors.surfaceSecondary }}>
+                                        <Card style={{ backgroundColor: themeColors.backgroundTertiary }}>
                                             {section.habits.map((habit, index) => (
                                                 <React.Fragment key={habit.name}>
                                                     {index > 0 && <Separator />}
@@ -536,7 +537,7 @@ export default function AddHabitModal() {
 
                             {/* Duration and Notification - Optional */}
                             <PressableOpacity
-                                style={[styles.optionsContainer, { backgroundColor: themeColors.surfaceSecondary }]}
+                                style={[styles.optionsContainer, { backgroundColor: themeColors.backgroundTertiary }]}
                                 onPress={handleOpenOptionsModal}
                             >
                                 <View style={styles.optionsContent}>
@@ -568,7 +569,7 @@ export default function AddHabitModal() {
                                                         hitSlop={8}
                                                     >
                                                         <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                                                            <X {...({ size: 12, color: themeColors.surfaceSecondary, strokeWidth: 3 } as any)} />
+                                                            <X {...({ size: 12, color: themeColors.backgroundTertiary, strokeWidth: 3 } as any)} />
                                                         </View>
                                                     </PressableOpacity>
                                                 </View>
@@ -592,7 +593,7 @@ export default function AddHabitModal() {
                                                         hitSlop={8}
                                                     >
                                                         <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                                                            <X {...({ size: 12, color: themeColors.surfaceSecondary, strokeWidth: 3 } as any)} />
+                                                            <X {...({ size: 12, color: themeColors.backgroundTertiary, strokeWidth: 3 } as any)} />
                                                         </View>
                                                     </PressableOpacity>
                                                 </View>

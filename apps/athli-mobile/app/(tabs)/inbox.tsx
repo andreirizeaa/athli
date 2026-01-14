@@ -10,6 +10,7 @@ import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { SearchBar } from '@/components/ui/search-bar';
+import { IconButton } from '@/components/ui/icon-button';
 import { CoachListItem } from '@/components/features/inbox/coach-list-item';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
@@ -271,7 +272,7 @@ export default function InboxScreen() {
               ]}
             >
               <PressableOpacity
-                style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+                style={[styles.actionButton, { backgroundColor: themeColors.backgroundSecondary }]}
                 onPress={handleArchivePress}
               >
                 <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
@@ -291,29 +292,20 @@ export default function InboxScreen() {
             </Text>
             <View style={styles.headerButtonContainer}>
               {isEditMode ? (
-                <PressableOpacity
-                  style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
+                <IconButton
+                  icon={{ sf: 'checkmark', IconComponent: Check }}
                   onPress={handleEllipsisPress}
-                >
-                  <PlatformIcon
-                    sf="checkmark"
-                    IconComponent={Check}
-                    size={iconSizes.navigationChevrons}
-                    color={themeColors.text}
-                  />
-                </PressableOpacity>
+                  size="md"
+                  color={themeColors.text}
+                />
               ) : (
                 <DropdownMenuWrapper options={dropdownOptions}>
-                  <PressableOpacity
-                    style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
-                  >
-                    <PlatformIcon
-                      sf="ellipsis"
-                      IconComponent={Ellipsis}
-                      size={iconSizes.navigationChevrons}
-                      color={themeColors.text}
-                    />
-                  </PressableOpacity>
+                  <IconButton
+                    icon={{ sf: 'ellipsis', IconComponent: Ellipsis }}
+                    onPress={() => {}}
+                    size="md"
+                    color={themeColors.text}
+                  />
                 </DropdownMenuWrapper>
               )}
             </View>
@@ -375,13 +367,6 @@ const styles = StyleSheet.create({
     right: 0,
     top: '50%',
     transform: [{ translateY: -22 }],
-  },
-  headerButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
   },
   coachListContainer: {
   },

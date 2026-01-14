@@ -279,12 +279,12 @@ export default function EditPersonalDetailsModal() {
       style={[
         styles.container,
         {
-          backgroundColor: themeColors.pageBackground,
+          backgroundColor: themeColors.backgroundPrimary,
           paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20,
         },
       ]}
     >
-      <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton
           icon={{ sf: 'xmark', IconComponent: X }}
           onPress={handleClose}

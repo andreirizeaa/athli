@@ -8,6 +8,7 @@
 export { useThemeStore, type ColorSchemePreference } from './useThemeStore';
 export { useTranslationsStore } from './useTranslationsStore';
 export { useUnitsStore, type UnitsPreference } from './useUnitsStore';
+export { useHapticsStore } from './useHapticsStore';
 export { useAppViewStore, type AppView } from './useAppViewStore';
 export { useLibraryTabStore, type LibraryTab } from './useLibraryTabStore';
 export { useTrainingOverlayStore } from './useTrainingOverlayStore';
@@ -32,6 +33,7 @@ export { useColorScheme } from './useThemeStore';
 import { useThemeStore } from './useThemeStore';
 import { useTranslationsStore } from './useTranslationsStore';
 import { useUnitsStore } from './useUnitsStore';
+import { useHapticsStore } from './useHapticsStore';
 import { useAppViewStore } from './useAppViewStore';
 import { useLibraryTabStore } from './useLibraryTabStore';
 import { useTrainingOverlayStore } from './useTrainingOverlayStore';
@@ -145,4 +147,15 @@ export const useModalCallbacks = () => {
     scheduleData: store.storedScheduleData,
     reorderItems: store.storedReorderItems,
   };
+};
+
+/**
+ * Hook to access haptics preferences (backward compatible)
+ * Replaces: direct expo-haptics calls
+ */
+export const useHaptics = () => {
+  const hapticsEnabled = useHapticsStore((state) => state.hapticsEnabled);
+  const setHapticsEnabled = useHapticsStore((state) => state.setHapticsEnabled);
+
+  return { hapticsEnabled, setHapticsEnabled };
 };

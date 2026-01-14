@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { PressableOpacity } from 'pressto';
+import { PressableScale } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Check } from 'lucide-react-native';
@@ -9,6 +9,7 @@ import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
+import { IconButton } from '@/components/ui/icon-button';
 import { ChatListItem } from '@/components/features/chats/chat-list-item';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import {
@@ -22,8 +23,7 @@ import {
 
 export default function ArchivedChatsScreen() {
   const router = useRouter();
-  const { unreadCount, archivedChats: archivedChatsParam } = useLocalSearchParams<{
-    unreadCount?: string;
+  const { archivedChats: archivedChatsParam } = useLocalSearchParams<{
     archivedChats?: string;
   }>();
   const { colors: themeColors } = useThemePreference();
@@ -68,8 +68,7 @@ export default function ArchivedChatsScreen() {
     }
   }, [openRowCloseFn]);
 
-  const unreadCountNum = unreadCount ? parseInt(unreadCount, 10) : 0;
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
+  const mutedSurfaceColor = themeColors.backgroundTertiary;
   const iconColor = themeColors.text;
 
   // Only fetch if no initial data was provided
@@ -196,68 +195,55 @@ export default function ArchivedChatsScreen() {
               },
             ]}
           >
-            <PressableOpacity
-              style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+            <PressableScale
+              style={[styles.actionButton, { backgroundColor: themeColors.surfacePrimary }]}
               onPress={handleUnarchivePress}
             >
               <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
                 {t('chats.archived.unarchive')}
               </Text>
-            </PressableOpacity>
-            <PressableOpacity
-              style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+            </PressableScale>
+            <PressableScale
+              style={[styles.actionButton, { backgroundColor: themeColors.surfacePrimary }]}
               onPress={handleDeletePress}
             >
               <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
                 {t('chats.archived.delete')}
               </Text>
-            </PressableOpacity>
+            </PressableScale>
           </View>
         ) : undefined
       }
     >
       <View style={styles.header}>
-        <PressableOpacity
-          style={[styles.backButton, { backgroundColor: themeColors.iconButton }]}
-          onPress={handleBackPress}
-        >
-          <PlatformIcon
-            sf="chevron.left"
-            IconComponent={ChevronLeft}
-            size={iconSizes.navigationChevrons}
+        <View style={styles.backButtonContainer}>
+          <IconButton
+            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+            onPress={handleBackPress}
+            size="md"
             color={iconColor}
           />
-          {unreadCountNum > 0 && (
-            <Text
-              style={[
-                styles.unreadCount,
-                { color: themeColors.text },
-              ]}
-            >
-              {unreadCountNum > 99 ? '99+' : unreadCountNum}
-            </Text>
-          )}
-        </PressableOpacity>
+        </View>
         <Text style={[styles.headerTitle, { color: themeColors.text }]} pointerEvents="none">
           {t('chats.archived.title')}
         </Text>
-        <PressableOpacity
-          style={[styles.editButton, { backgroundColor: themeColors.iconButton }]}
-          onPress={handleEditPress}
-        >
-          {isEditMode ? (
-            <PlatformIcon
-              sf="checkmark"
-              IconComponent={Check}
-              size={iconSizes.navigationChevrons}
-              color={iconColor}
-            />
-          ) : (
+        {isEditMode ? (
+          <IconButton
+            icon={{ sf: 'checkmark', IconComponent: Check }}
+            onPress={handleEditPress}
+            size="md"
+            color={iconColor}
+          />
+        ) : (
+          <PressableScale
+            style={[styles.editButton, { backgroundColor: themeColors.surfacePrimary }]}
+            onPress={handleEditPress}
+          >
             <Text style={[styles.editButtonText, { color: iconColor }]}>
               {t('chats.archived.edit')}
             </Text>
-          )}
-        </PressableOpacity>
+          </PressableScale>
+        )}
       </View>
 
       <View style={styles.dividerContainer}>
@@ -314,20 +300,10 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingBottom: 8,
   },
-  backButton: {
+  backButtonContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-    paddingHorizontal: 12,
-    paddingLeft: 8,
-    borderRadius: 22,
     gap: 6,
-  },
-  unreadCount: {
-    marginHorizontal: 8,
-    ...typography.p2,
-    fontWeight: '500',
   },
   headerTitle: {
     ...typography.h5,

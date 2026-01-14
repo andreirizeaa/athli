@@ -59,7 +59,7 @@ export const GenderInput = ({
 
   return (
     <DropdownMenuWrapper options={menuOptions}>
-      <View style={[styles.inputBox, { backgroundColor: themeColors.surfaceSecondary }]}>
+      <View style={[styles.inputBox, { backgroundColor: themeColors.surfacePrimary }]}>
         <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
           {label}
         </Text>
@@ -72,7 +72,7 @@ export const GenderInput = ({
           >
             {getDisplayValue()}
           </Text>
-          <ChevronDown size={20} color={themeColors.mutedText} />
+          <ChevronDown {...({ size: 20, color: themeColors.mutedText } as any)} />
         </View>
       </View>
     </DropdownMenuWrapper>

@@ -38,7 +38,7 @@ export const HeightInput = ({
   };
 
   return (
-    <View style={[styles.inputBox, { backgroundColor: themeColors.surfaceSecondary }]}>
+    <View style={[styles.inputBox, { backgroundColor: themeColors.surfacePrimary }]}>
       <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
         {label}
       </Text>

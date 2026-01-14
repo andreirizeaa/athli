@@ -388,7 +388,7 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
                 />
               ) : (
                 <>
-                  <View style={[styles.androidPickerWrapper, { backgroundColor: themeColors.surfaceSecondary }]}>
+                  <View style={[styles.androidPickerWrapper, { backgroundColor: themeColors.backgroundTertiary }]}>
                     <PressableOpacity
                       style={styles.androidPickerButton}
                       onPress={() => setShowAndroidDatePicker(true)}
@@ -431,7 +431,7 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
                 />
               ) : (
                 <>
-                  <View style={[styles.androidPickerWrapper, { backgroundColor: themeColors.surfaceSecondary }]}>
+                  <View style={[styles.androidPickerWrapper, { backgroundColor: themeColors.backgroundTertiary }]}>
                     <PressableOpacity
                       style={styles.androidPickerButton}
                       onPress={() => setShowAndroidFromTimePicker(true)}
@@ -475,7 +475,7 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
                 />
               ) : (
                 <>
-                  <View style={[styles.androidPickerWrapper, { backgroundColor: themeColors.surfaceSecondary }]}>
+                  <View style={[styles.androidPickerWrapper, { backgroundColor: themeColors.backgroundTertiary }]}>
                     <PressableOpacity
                       style={styles.androidPickerButton}
                       onPress={() => setShowAndroidToTimePicker(true)}

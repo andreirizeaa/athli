@@ -45,7 +45,7 @@ export const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     return (
       <View style={[
         styles.inputBox,
-        { backgroundColor: themeColors.surfaceSecondary },
+        { backgroundColor: themeColors.surfacePrimary },
         hideLabel && { paddingTop: 12, paddingBottom: 12 },
         containerStyle
       ]}>

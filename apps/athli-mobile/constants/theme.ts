@@ -1,6 +1,6 @@
 import type { ColorSchemeName } from 'react-native';
 
-import { tintHex, mixHex } from '@/utils/colorUtils';
+import { tintHex } from '@/utils/colorUtils';
 
 export type PresetValue =
   | 'default'
@@ -74,22 +74,20 @@ export const THEMES: {
   ];
 
 export type ThemeColors = {
-  pageBackground: string;
-  background: string;
-  surface: string;
+  backgroundPrimary: string;
+  backgroundSecondary: string;
+  backgroundTertiary: string;
+  surfacePrimary: string;
   surfaceSecondary: string;
+  surfaceTertiary: string;
   text: string;
   mutedText: string;
   primary: string;
   primaryForeground: string;
   primarySoft: string;
   border: string;
-  sidebar: string;
-  sidebarForeground: string;
   shadowColor: string;
-  searchBarBackground: string;
-  iconButton: string;
-  headerBackground: string;
+  translucentBackground: string;
 };
 
 export function resolveEffectiveScheme(
@@ -114,335 +112,303 @@ export function createPresetPalette(
   if (preset === 'underground') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#000000',
-        background: '#121212',
-        surface: '#1E1E1E',
+        backgroundPrimary: '#000000',
+        backgroundSecondary: '#121212',
+        backgroundTertiary: '#1E1E1E',
+        surfacePrimary: '#18181b',
         surfaceSecondary: '#2A2A2A',
+        surfaceTertiary: '#2F2F2F',
         text: '#E5E7EB',
         mutedText: '#9CA3AF',
         primary: '#0D9488',
         primaryForeground: '#ECFEFF',
         primarySoft: tintHex('#0D9488', 0.85),
         border: '#2F2F2F',
-        sidebar: '#1A1A1A',
-        sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: mixHex('#0D9488', '#1F2937', 0.35),
-        iconButton: '#18181b',
-        headerBackground: '#1E1E1E',
+        translucentBackground: '#1E1E1E',
       };
     }
 
     return {
-      pageBackground: '#FFFFFF',
-      background: '#FFFFFF',
-      surface: '#FFFFFF',
-      surfaceSecondary: '#F3F4F6',
+      backgroundPrimary: '#FFFFFF',
+      backgroundSecondary: '#FFFFFF',
+      backgroundTertiary: '#F9FAFB',
+      surfacePrimary: '#F3F4F6',
+      surfaceSecondary: '#E5E7EB',
+      surfaceTertiary: '#D1D5DB',
       text: '#020617',
       mutedText: '#6B7280',
       primary: '#0D9488',
       primaryForeground: '#ECFEFF',
       primarySoft: tintHex('#0D9488', 0.85),
       border: '#E5E7EB',
-      sidebar: '#F9FAFB',
-      sidebarForeground: '#020617',
       shadowColor: '#000000',
-      searchBarBackground: mixHex('#0D9488', '#6B7280', 0.35),
-      iconButton: '#f5f5f4',
-      headerBackground: '#F9FAFB',
+      translucentBackground: '#F9FAFB',
     };
   }
 
   if (preset === 'rose-garden') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#000000',
-        background: '#121212',
-        surface: '#1E1E1E',
+        backgroundPrimary: '#000000',
+        backgroundSecondary: '#121212',
+        backgroundTertiary: '#1E1E1E',
+        surfacePrimary: '#18181b',
         surfaceSecondary: '#2A2A2A',
+        surfaceTertiary: '#2F2F2F',
         text: '#F9FAFB',
         mutedText: '#9CA3AF',
         primary: '#E11D48',
         primaryForeground: '#FFFFFF',
         primarySoft: tintHex('#E11D48', 0.85),
         border: '#2F2F2F',
-        sidebar: '#1A1A1A',
-        sidebarForeground: '#F9FAFB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: mixHex('#E11D48', '#1F2937', 0.35),
-        iconButton: '#18181b',
-        headerBackground: '#1E1E1E',
+        translucentBackground: '#1E1E1E',
       };
     }
 
     return {
-      pageBackground: '#FFFFFF',
-      background: '#FFFFFF',
-      surface: '#FFFFFF',
-      surfaceSecondary: '#F3F4F6',
+      backgroundPrimary: '#FFFFFF',
+      backgroundSecondary: '#FFFFFF',
+      backgroundTertiary: '#F9FAFB',
+      surfacePrimary: '#f5f5f4',
+      surfaceSecondary: '#E5E7EB',
+      surfaceTertiary: '#D1D5DB',
       text: '#111827',
       mutedText: '#6B7280',
       primary: '#E11D48',
       primaryForeground: '#FFFFFF',
       primarySoft: tintHex('#E11D48', 0.85),
       border: '#E5E7EB',
-      sidebar: '#F9FAFB',
-      sidebarForeground: '#111827',
       shadowColor: '#000000',
-      searchBarBackground: mixHex('#E11D48', '#6B7280', 0.35),
-      iconButton: '#f5f5f4',
-      headerBackground: '#F9FAFB',
+      translucentBackground: '#F9FAFB',
     };
   }
 
   if (preset === 'lake-view') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#000000',
-        background: '#121212',
-        surface: '#1E1E1E',
+        backgroundPrimary: '#000000',
+        backgroundSecondary: '#121212',
+        backgroundTertiary: '#1E1E1E',
+        surfacePrimary: '#18181b',
         surfaceSecondary: '#2A2A2A',
+        surfaceTertiary: '#2F2F2F',
         text: '#E5E7EB',
         mutedText: '#94A3B8',
         primary: '#0EA5E9',
         primaryForeground: '#FFFFFF',
         primarySoft: tintHex('#0EA5E9', 0.85),
         border: '#2F2F2F',
-        sidebar: '#1A1A1A',
-        sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: mixHex('#0EA5E9', '#1F2937', 0.35),
-        iconButton: '#18181b',
-        headerBackground: '#1E1E1E',
+        translucentBackground: '#1E1E1E',
       };
     }
 
     return {
-      pageBackground: '#FFFFFF',
-      background: '#FFFFFF',
-      surface: '#FFFFFF',
-      surfaceSecondary: '#F3F4F6',
+      backgroundPrimary: '#FFFFFF',
+      backgroundSecondary: '#FFFFFF',
+      backgroundTertiary: '#F9FAFB',
+      surfacePrimary: '#f5f5f4',
+      surfaceSecondary: '#E5E7EB',
+      surfaceTertiary: '#D1D5DB',
       text: '#0F172A',
       mutedText: '#64748B',
       primary: '#0EA5E9',
       primaryForeground: '#FFFFFF',
       primarySoft: tintHex('#0EA5E9', 0.85),
       border: '#E5E7EB',
-      sidebar: '#F9FAFB',
-      sidebarForeground: '#0F172A',
       shadowColor: '#000000',
-      searchBarBackground: mixHex('#0EA5E9', '#6B7280', 0.35),
-      iconButton: '#f5f5f4',
-      headerBackground: '#F9FAFB',
+      translucentBackground: '#F9FAFB',
     };
   }
 
   if (preset === 'sunset-glow') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#000000',
-        background: '#121212',
-        surface: '#1E1E1E',
+        backgroundPrimary: '#000000',
+        backgroundSecondary: '#121212',
+        backgroundTertiary: '#1E1E1E',
+        surfacePrimary: '#18181b',
         surfaceSecondary: '#2A2A2A',
+        surfaceTertiary: '#2F2F2F',
         text: '#F9FAFB',
         mutedText: '#9CA3AF',
         primary: '#F97316',
         primaryForeground: '#FFFFFF',
         primarySoft: tintHex('#F97316', 0.85),
         border: '#2F2F2F',
-        sidebar: '#1A1A1A',
-        sidebarForeground: '#F9FAFB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: mixHex('#F97316', '#1F2937', 0.35),
-        iconButton: '#18181b',
-        headerBackground: '#1E1E1E',
+        translucentBackground: '#1E1E1E',
       };
     }
 
     return {
-      pageBackground: '#FFFFFF',
-      background: '#FFFFFF',
-      surface: '#FFFFFF',
-      surfaceSecondary: '#F3F4F6',
+      backgroundPrimary: '#FFFFFF',
+      backgroundSecondary: '#FFFFFF',
+      backgroundTertiary: '#F9FAFB',
+      surfacePrimary: '#f5f5f4',
+      surfaceSecondary: '#E5E7EB',
+      surfaceTertiary: '#D1D5DB',
       text: '#111827',
       mutedText: '#6B7280',
       primary: '#F97316',
       primaryForeground: '#FFFFFF',
       primarySoft: tintHex('#F97316', 0.85),
       border: '#E5E7EB',
-      sidebar: '#F9FAFB',
-      sidebarForeground: '#111827',
       shadowColor: '#000000',
-      searchBarBackground: mixHex('#F97316', '#6B7280', 0.35),
-      iconButton: '#f5f5f4',
-      headerBackground: '#F9FAFB',
+      translucentBackground: '#F9FAFB',
     };
   }
 
   if (preset === 'forest-whisper') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#000000',
-        background: '#121212',
-        surface: '#1E1E1E',
+        backgroundPrimary: '#000000',
+        backgroundSecondary: '#121212',
+        backgroundTertiary: '#1E1E1E',
+        surfacePrimary: '#18181b',
         surfaceSecondary: '#2A2A2A',
+        surfaceTertiary: '#2F2F2F',
         text: '#E5E7EB',
         mutedText: '#9CA3AF',
         primary: '#16A34A',
         primaryForeground: '#FFFFFF',
         primarySoft: tintHex('#16A34A', 0.85),
         border: '#2F2F2F',
-        sidebar: '#1A1A1A',
-        sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: mixHex('#16A34A', '#1F2937', 0.35),
-        iconButton: '#18181b',
-        headerBackground: '#1E1E1E',
+        translucentBackground: '#1E1E1E',
       };
     }
 
     return {
-      pageBackground: '#FFFFFF',
-      background: '#FFFFFF',
-      surface: '#FFFFFF',
-      surfaceSecondary: '#F3F4F6',
+      backgroundPrimary: '#FFFFFF',
+      backgroundSecondary: '#FFFFFF',
+      backgroundTertiary: '#F9FAFB',
+      surfacePrimary: '#f5f5f4',
+      surfaceSecondary: '#E5E7EB',
+      surfaceTertiary: '#D1D5DB',
       text: '#020617',
       mutedText: '#6B7280',
       primary: '#16A34A',
       primaryForeground: '#FFFFFF',
       primarySoft: tintHex('#16A34A', 0.85),
       border: '#E5E7EB',
-      sidebar: '#F9FAFB',
-      sidebarForeground: '#020617',
       shadowColor: '#000000',
-      searchBarBackground: mixHex('#16A34A', '#6B7280', 0.35),
-      iconButton: '#f5f5f4',
-      headerBackground: '#F9FAFB',
+      translucentBackground: '#F9FAFB',
     };
   }
 
   if (preset === 'ocean-breeze') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#000000',
-        background: '#121212',
-        surface: '#1E1E1E',
+        backgroundPrimary: '#000000',
+        backgroundSecondary: '#121212',
+        backgroundTertiary: '#1E1E1E',
+        surfacePrimary: '#18181b',
         surfaceSecondary: '#2A2A2A',
+        surfaceTertiary: '#2F2F2F',
         text: '#E5E7EB',
         mutedText: '#9CA3AF',
         primary: '#2563EB',
         primaryForeground: '#FFFFFF',
         primarySoft: tintHex('#2563EB', 0.85),
         border: '#2F2F2F',
-        sidebar: '#1A1A1A',
-        sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: mixHex('#2563EB', '#1F2937', 0.35),
-        iconButton: '#18181b',
-        headerBackground: '#1E1E1E',
+        translucentBackground: '#1E1E1E',
       };
     }
 
     return {
-      pageBackground: '#FFFFFF',
-      background: '#FFFFFF',
-      surface: '#FFFFFF',
-      surfaceSecondary: '#F3F4F6',
+      backgroundPrimary: '#FFFFFF',
+      backgroundSecondary: '#FFFFFF',
+      backgroundTertiary: '#F9FAFB',
+      surfacePrimary: '#f5f5f4',
+      surfaceSecondary: '#E5E7EB',
+      surfaceTertiary: '#D1D5DB',
       text: '#020617',
       mutedText: '#6B7280',
       primary: '#2563EB',
       primaryForeground: '#FFFFFF',
       primarySoft: tintHex('#2563EB', 0.85),
       border: '#E5E7EB',
-      sidebar: '#F9FAFB',
-      sidebarForeground: '#020617',
       shadowColor: '#000000',
-      searchBarBackground: mixHex('#2563EB', '#6B7280', 0.35),
-      iconButton: '#f5f5f4',
-      headerBackground: '#F9FAFB',
+      translucentBackground: '#F9FAFB',
     };
   }
 
   if (preset === 'lavender-dream') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#000000',
-        background: '#121212',
-        surface: '#1E1E1E',
+        backgroundPrimary: '#000000',
+        backgroundSecondary: '#121212',
+        backgroundTertiary: '#1E1E1E',
+        surfacePrimary: '#18181b',
         surfaceSecondary: '#2A2A2A',
+        surfaceTertiary: '#2F2F2F',
         text: '#E5E7EB',
         mutedText: '#9CA3AF',
         primary: '#7C3AED',
         primaryForeground: '#FFFFFF',
         primarySoft: tintHex('#7C3AED', 0.85),
         border: '#2F2F2F',
-        sidebar: '#1A1A1A',
-        sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: mixHex('#7C3AED', '#1F2937', 0.35),
-        iconButton: '#18181b',
-        headerBackground: '#1E1E1E',
+        translucentBackground: '#1E1E1E',
       };
     }
 
     return {
-      pageBackground: '#FFFFFF',
-      background: '#FFFFFF',
-      surface: '#FFFFFF',
-      surfaceSecondary: '#F3F4F6',
+      backgroundPrimary: '#FFFFFF',
+      backgroundSecondary: '#FFFFFF',
+      backgroundTertiary: '#F9FAFB',
+      surfacePrimary: '#f5f5f4',
+      surfaceSecondary: '#E5E7EB',
+      surfaceTertiary: '#D1D5DB',
       text: '#111827',
       mutedText: '#6B7280',
       primary: '#7C3AED',
       primaryForeground: '#FFFFFF',
       primarySoft: tintHex('#7C3AED', 0.85),
       border: '#E5E7EB',
-      sidebar: '#F9FAFB',
-      sidebarForeground: '#111827',
       shadowColor: '#000000',
-      searchBarBackground: mixHex('#7C3AED', '#6B7280', 0.35),
-      iconButton: '#f5f5f4',
-      headerBackground: '#F9FAFB',
+      translucentBackground: '#F9FAFB',
     };
   }
 
   if (scheme === 'dark') {
     return {
-      pageBackground: '#000000',
-      background: '#121212',
-      surface: '#1E1E1E',
+      backgroundPrimary: '#000000',
+      backgroundSecondary: '#121212',
+      backgroundTertiary: '#1E1E1E',
+      surfacePrimary: '#18181b',
       surfaceSecondary: '#2A2A2A',
+      surfaceTertiary: '#2F2F2F',
       text: '#E5E7EB',
       mutedText: '#9CA3AF',
       primary: '#FFFFFF',
       primaryForeground: '#000000',
       primarySoft: tintHex('#FFFFFF', 0.85),
       border: '#2F2F2F',
-      sidebar: '#1A1A1A',
-      sidebarForeground: '#E5E7EB',
       shadowColor: '#FFFFFF',
-      searchBarBackground: mixHex('#FFFFFF', '#1F2937', 0.35),
-      iconButton: '#18181b',
-      headerBackground: '#1E1E1E',
+      translucentBackground: '#1E1E1E',
     };
   }
 
   return {
-    pageBackground: '#FFFFFF',
-    background: '#F9FAFB',
-    surface: '#FFFFFF',
-    surfaceSecondary: '#F3F4F6',
+    backgroundPrimary: '#FFFFFF',
+    backgroundSecondary: '#F9FAFB',
+    backgroundTertiary: '#F3F4F6',
+    surfacePrimary: '#f5f5f4',
+    surfaceSecondary: '#E5E7EB',
+    surfaceTertiary: '#D1D5DB',
     text: '#020617',
     mutedText: '#6B7280',
     primary: '#000000',
     primaryForeground: '#FFFFFF',
     primarySoft: tintHex('#000000', 0.85),
     border: '#E5E7EB',
-    sidebar: '#FFFFFF',
-    sidebarForeground: '#020617',
     shadowColor: '#000000',
-    searchBarBackground: mixHex('#000000', '#6B7280', 0.35),
-    iconButton: '#f5f5f4',
-    headerBackground: '#F9FAFB',
+    translucentBackground: '#F9FAFB',
   };
 }
 

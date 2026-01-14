@@ -5,10 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
+
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import {
     EXERCISE_CATEGORY_OPTIONS,
     MUSCLE_GROUP_OPTIONS,
@@ -113,11 +114,11 @@ export default function AddExerciseModal() {
         mutationFn: createExercise,
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['exercises'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             handleClose();
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),
@@ -130,11 +131,11 @@ export default function AddExerciseModal() {
         mutationFn: ({ id, data }: { id: string; data: any }) => editExercise(id, data),
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['exercises'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             handleClose();
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),
@@ -283,17 +284,17 @@ export default function AddExerciseModal() {
     const gradientHeight = headerHeight + 12;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             <TouchableWithoutFeedback onPress={handleDismissKeyboard} accessible={false}>
                 <View style={styles.container}>
                     {/* Header with gradient */}
                     <View style={[styles.fixedHeader, { height: headerHeight }]}>
                         <LinearGradient
                             colors={[
-                                hexToRgba(themeColors.background, 1),
-                                hexToRgba(themeColors.background, 0.85),
-                                hexToRgba(themeColors.background, 0.5),
-                                hexToRgba(themeColors.background, 0),
+                                hexToRgba(themeColors.backgroundSecondary, 1),
+                                hexToRgba(themeColors.backgroundSecondary, 0.85),
+                                hexToRgba(themeColors.backgroundSecondary, 0.5),
+                                hexToRgba(themeColors.backgroundSecondary, 0),
                             ]}
                             locations={[0, 0.5, 0.8, 1]}
                             style={[styles.headerGradient, { height: gradientHeight }]}

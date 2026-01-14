@@ -1,18 +1,17 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { StyleSheet, Text, View, Platform, TextInput, Alert, ActivityIndicator } from 'react-native';
-import { ChevronLeft, Check, Plus, Repeat, ChevronDown, Link as LinkIcon } from 'lucide-react-native';
+import { StyleSheet, Text, View, Platform, Alert, ActivityIndicator } from 'react-native';
+import { ChevronLeft, Check, Plus, Repeat, Link as LinkIcon } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
-import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';
+import { InputBox, TextAreaInput, SectionTypeSelect } from '@/components/ui/form-inputs';
 import { PressableScale } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useModalCallbacks } from '@/stores';
@@ -332,13 +331,13 @@ export default function SectionBuilderScreen() {
         mutationFn: (sectionData: any) => createSection(sectionData),
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['sections'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             if (router.canGoBack()) {
                 router.back();
             }
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),
@@ -351,13 +350,13 @@ export default function SectionBuilderScreen() {
         mutationFn: ({ id, data }: { id: string; data: any }) => updateSection(id, data),
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['sections'] });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             if (router.canGoBack()) {
                 router.back();
             }
         },
         onError: (error: Error) => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             Alert.alert(
                 t('general.error'),
                 error.message || t('general.errorSaving'),
@@ -694,14 +693,14 @@ export default function SectionBuilderScreen() {
     const totalExercises = state.exercises.length;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
                     colors={[
-                        hexToRgba(themeColors.background, 1),
-                        hexToRgba(themeColors.background, 0.85),
-                        hexToRgba(themeColors.background, 0.5),
-                        hexToRgba(themeColors.background, 0),
+                        hexToRgba(themeColors.backgroundSecondary, 1),
+                        hexToRgba(themeColors.backgroundSecondary, 0.85),
+                        hexToRgba(themeColors.backgroundSecondary, 0.5),
+                        hexToRgba(themeColors.backgroundSecondary, 0),
                     ]}
                     locations={[0, 0.5, 0.8, 1]}
                     style={[styles.headerGradient, { height: gradientHeight }]}
@@ -722,7 +721,7 @@ export default function SectionBuilderScreen() {
                 <View style={styles.header}>
                     <View style={styles.headerLeft}>
                         <IconButton
-                            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+                            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                             onPress={handleBack}
                             size="md"
                             color={themeColors.text}
@@ -753,141 +752,33 @@ export default function SectionBuilderScreen() {
                         required
                     />
 
-                    <View style={[styles.configCard, { backgroundColor: themeColors.surfaceSecondary }]}>
-                        <DropdownMenuWrapper options={SECTION_TYPES.map((type) => ({
-                            label: type.label,
-                            subtitle: type.description,
-                            onPress: () => {
-                                const newType = type.value as SectionType;
-                                setState(prev => {
-                                    // If changing to amrap or timed, trim all exercises to one set each
-                                    // These section types only support one set per exercise (values per round)
-                                    if (newType === 'amrap' || newType === 'timed') {
-                                        const trimmedExercises = prev.exercises.map(ex => ({
-                                            ...ex,
-                                            sets: ex.sets.length > 0 ? [ex.sets[0]] : ex.sets,
-                                        }));
-                                        return {
-                                            ...prev,
-                                            sectionType: newType,
-                                            exercises: trimmedExercises,
-                                        };
-                                    }
-                                    return { ...prev, sectionType: newType };
-                                });
-                            }
-                        }))}>
-                            <View style={styles.fieldRow}>
-                                <View style={styles.labelContainer}>
-                                    <Text style={[styles.fieldLabel, { color: themeColors.mutedText }]}>{t('library.section.type')}</Text>
-                                    <Text style={styles.requiredAsterisk}>*</Text>
-                                </View>
-                                <View style={styles.dropdownValueRow}>
-                                    <Text style={[styles.dropdownValue, { color: themeColors.text }]}>
-                                        {SECTION_TYPES.find(opt => opt.value === state.sectionType)?.label}
-                                    </Text>
-                                    <ChevronDown {...({ size: 14, color: themeColors.mutedText } as any)} />
-                                </View>
-                            </View>
-                        </DropdownMenuWrapper>
-
-                        {state.sectionType === 'amrap' && (
-                            <>
-                                <View style={[styles.configDivider, { backgroundColor: themeColors.border }]} />
-                                <View style={[
-                                    styles.fieldRow,
-                                    metadataErrors.durationError && {
-                                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                                        borderWidth: 1,
-                                        borderColor: '#EF4444',
-                                        borderRadius: 8,
-                                        marginHorizontal: 8,
-                                        paddingHorizontal: 8,
-                                    }
-                                ]}>
-                                    <View style={styles.labelContainer}>
-                                        <Text style={[styles.fieldLabel, { color: metadataErrors.durationError ? '#EF4444' : themeColors.mutedText }]}>{t('library.section.duration')}</Text>
-                                        <Text style={styles.requiredAsterisk}>*</Text>
-                                    </View>
-                                    <View style={[styles.dropdownValueRow, { flex: 1, justifyContent: 'flex-end' }]}>
-                                        <TextInput
-                                            value={state.duration}
-                                            onChangeText={(text) => setState(prev => ({ ...prev, duration: text }))}
-                                            placeholder="0"
-                                            placeholderTextColor={themeColors.mutedText}
-                                            keyboardType="number-pad"
-                                            style={[styles.dropdownValue, { color: metadataErrors.durationError ? '#EF4444' : themeColors.text, textAlign: 'right', minWidth: 120, height: '100%' }]}
-                                        />
-                                        <Text style={[styles.dropdownValue, { color: themeColors.mutedText }]}>m</Text>
-                                    </View>
-                                </View>
-                            </>
-                        )}
-
-                        {state.sectionType === 'timed' && (
-                            <>
-                                <View style={[styles.configDivider, { backgroundColor: themeColors.border }]} />
-                                <View style={[
-                                    styles.fieldRow,
-                                    metadataErrors.roundsError && {
-                                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                                        borderWidth: 1,
-                                        borderColor: '#EF4444',
-                                        borderRadius: 8,
-                                        marginHorizontal: 8,
-                                        paddingHorizontal: 8,
-                                    }
-                                ]}>
-                                    <View style={styles.labelContainer}>
-                                        <Text style={[styles.fieldLabel, { color: metadataErrors.roundsError ? '#EF4444' : themeColors.mutedText }]}>{t('library.section.rounds')}</Text>
-                                        <Text style={styles.requiredAsterisk}>*</Text>
-                                    </View>
-                                    <View style={[styles.dropdownValueRow, { flex: 1, justifyContent: 'flex-end' }]}>
-                                        <TextInput
-                                            value={state.rounds}
-                                            onChangeText={(text) => setState(prev => ({ ...prev, rounds: text }))}
-                                            placeholder="0"
-                                            placeholderTextColor={themeColors.mutedText}
-                                            keyboardType="number-pad"
-                                            style={[styles.dropdownValue, { color: metadataErrors.roundsError ? '#EF4444' : themeColors.text, textAlign: 'right', minWidth: 120, height: '100%' }]}
-                                        />
-                                    </View>
-                                </View>
-                            </>
-                        )}
-
-                        {state.sectionType === 'circuits' && (
-                            <>
-                                <View style={[styles.configDivider, { backgroundColor: themeColors.border }]} />
-                                <View style={[
-                                    styles.fieldRow,
-                                    metadataErrors.roundsError && {
-                                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                                        borderWidth: 1,
-                                        borderColor: '#EF4444',
-                                        borderRadius: 8,
-                                        marginHorizontal: 8,
-                                        paddingHorizontal: 8,
-                                    }
-                                ]}>
-                                    <View style={styles.labelContainer}>
-                                        <Text style={[styles.fieldLabel, { color: metadataErrors.roundsError ? '#EF4444' : themeColors.mutedText }]}>{t('library.section.rounds')}</Text>
-                                        <Text style={styles.requiredAsterisk}>*</Text>
-                                    </View>
-                                    <View style={[styles.dropdownValueRow, { flex: 1, justifyContent: 'flex-end' }]}>
-                                        <TextInput
-                                            value={state.rounds}
-                                            onChangeText={(text) => setState(prev => ({ ...prev, rounds: text }))}
-                                            placeholder="0"
-                                            placeholderTextColor={themeColors.mutedText}
-                                            keyboardType="number-pad"
-                                            style={[styles.dropdownValue, { color: metadataErrors.roundsError ? '#EF4444' : themeColors.text, textAlign: 'right', minWidth: 120, height: '100%' }]}
-                                        />
-                                    </View>
-                                </View>
-                            </>
-                        )}
-                    </View>
+                    <SectionTypeSelect
+                        sectionType={state.sectionType}
+                        onSectionTypeChange={(newType) => {
+                            setState(prev => {
+                                // If changing to amrap or timed, trim all exercises to one set each
+                                // These section types only support one set per exercise (values per round)
+                                if (newType === 'amrap' || newType === 'timed') {
+                                    const trimmedExercises = prev.exercises.map(ex => ({
+                                        ...ex,
+                                        sets: ex.sets.length > 0 ? [ex.sets[0]] : ex.sets,
+                                    }));
+                                    return {
+                                        ...prev,
+                                        sectionType: newType,
+                                        exercises: trimmedExercises,
+                                    };
+                                }
+                                return { ...prev, sectionType: newType };
+                            });
+                        }}
+                        duration={state.duration}
+                        onDurationChange={(text) => setState(prev => ({ ...prev, duration: text }))}
+                        rounds={state.rounds}
+                        onRoundsChange={(text) => setState(prev => ({ ...prev, rounds: text }))}
+                        metadataErrors={metadataErrors}
+                        required
+                    />
 
                     <TextAreaInput
                         label={t('library.section.notes')}
@@ -973,7 +864,7 @@ export default function SectionBuilderScreen() {
                                             style={[
                                                 styles.supersetButton,
                                                 {
-                                                    backgroundColor: isLinkedToNext ? themeColors.background : themeColors.surfaceSecondary,
+                                                    backgroundColor: isLinkedToNext ? themeColors.backgroundSecondary : themeColors.backgroundTertiary,
                                                     borderColor: themeColors.border,
                                                     paddingVertical: 4,
                                                     marginHorizontal: !isLinkedToNext ? 12 : 0,
@@ -1006,19 +897,19 @@ export default function SectionBuilderScreen() {
             <View style={[
                 styles.bottomBarContainer,
                 {
-                    backgroundColor: themeColors.pageBackground,
+                    backgroundColor: themeColors.backgroundPrimary,
                     paddingBottom: insets.bottom + 12,
                     borderTopColor: themeColors.border,
                 }
             ]}>
                 <View style={styles.bottomBarContent}>
-                    <View style={[styles.countCircle, { backgroundColor: themeColors.iconButton }]}>
+                    <View style={[styles.countCircle, { backgroundColor: themeColors.surfacePrimary }]}>
                         <Text style={[styles.countText, { color: themeColors.text }]}>{totalExercises}</Text>
                     </View>
 
                     <View style={styles.buttonWrapper}>
                         <PressableScale
-                            style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+                            style={[styles.actionButton, { backgroundColor: themeColors.surfacePrimary }]}
                             onPress={handleReorder}
                         >
                             <Repeat {...({ size: 18, color: themeColors.text, style: styles.buttonIcon } as any)} />
@@ -1028,7 +919,7 @@ export default function SectionBuilderScreen() {
 
                     <View style={styles.buttonWrapper}>
                         <PressableScale
-                            style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+                            style={[styles.actionButton, { backgroundColor: themeColors.surfacePrimary }]}
                             onPress={handleAddExercise}
                         >
                             <Plus {...({ size: 18, color: themeColors.text, style: styles.buttonIcon } as any)} />
@@ -1069,45 +960,10 @@ const styles = StyleSheet.create({
         gap: 16,
         marginBottom: 24,
     },
-    configCard: {
-        borderRadius: 16,
-        overflow: 'hidden',
-    },
-    configDivider: {
-        height: 1,
-        marginHorizontal: 16,
-    },
     fullWidthDivider: {
         height: 1,
         marginHorizontal: -16,
         marginBottom: 24,
-    },
-    fieldRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-    },
-    fieldLabel: {
-        ...typography.p4,
-    },
-    labelContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    requiredAsterisk: {
-        ...typography.p4,
-        color: '#EF4444',
-        marginLeft: 2,
-    },
-    dropdownValueRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    dropdownValue: {
-        ...typography.p2,
     },
     header: {
         flexDirection: 'row',

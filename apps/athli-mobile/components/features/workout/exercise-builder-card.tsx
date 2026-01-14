@@ -57,7 +57,7 @@ const TempoInput = ({ value, onChange, themeColors, hasError }: { value: string;
                     color: themeColors.text,
                     borderColor: hasError ? RED_ERROR : themeColors.border,
                     borderWidth: hasError ? 2 : 1,
-                    backgroundColor: themeColors.pageBackground
+                    backgroundColor: themeColors.backgroundPrimary
                 }
             ]}
         />
@@ -348,7 +348,7 @@ export const ExerciseBuilderCard = ({
                     <View style={styles.headerButtons}>
                         <View style={styles.columnHeader}>
                             <DropdownMenuWrapper options={getColumnOptions(true)}>
-                                <View style={[styles.headerButton, { backgroundColor: themeColors.surfaceSecondary }]}>
+                                <View style={[styles.headerButton, { backgroundColor: themeColors.backgroundTertiary }]}>
                                     <Text style={[styles.headerButtonText, { color: themeColors.primary }]}>
                                         {COLUMN_OPTIONS.find(opt => opt.value === exercise.column1Type)?.label || exercise.column1Type}
                                     </Text>
@@ -358,7 +358,7 @@ export const ExerciseBuilderCard = ({
 
                         <View style={styles.columnHeader}>
                             <DropdownMenuWrapper options={getColumnOptions(false)}>
-                                <View style={[styles.headerButton, { backgroundColor: themeColors.surfaceSecondary }]}>
+                                <View style={[styles.headerButton, { backgroundColor: themeColors.backgroundTertiary }]}>
                                     <Text style={[styles.headerButtonText, { color: themeColors.primary }]}>
                                         {COLUMN_OPTIONS.find(opt => opt.value === exercise.column2Type)?.label || exercise.column2Type}
                                     </Text>
@@ -394,7 +394,7 @@ export const ExerciseBuilderCard = ({
                                                 {
                                                     borderColor: setError.column1 ? RED_ERROR : themeColors.border,
                                                     borderWidth: setError.column1 ? 2 : 1,
-                                                    backgroundColor: themeColors.pageBackground,
+                                                    backgroundColor: themeColors.backgroundPrimary,
                                                     justifyContent: 'center',
                                                     width: '100%'
                                                 }
@@ -413,7 +413,7 @@ export const ExerciseBuilderCard = ({
                                                 color: themeColors.text,
                                                 borderColor: setError.column1 ? RED_ERROR : themeColors.border,
                                                 borderWidth: setError.column1 ? 2 : 1,
-                                                backgroundColor: themeColors.pageBackground
+                                                backgroundColor: themeColors.backgroundPrimary
                                             }
                                         ]}
                                         value={set.column1}
@@ -432,7 +432,7 @@ export const ExerciseBuilderCard = ({
                                                 {
                                                     borderColor: setError.column2 ? RED_ERROR : themeColors.border,
                                                     borderWidth: setError.column2 ? 2 : 1,
-                                                    backgroundColor: themeColors.pageBackground,
+                                                    backgroundColor: themeColors.backgroundPrimary,
                                                     justifyContent: 'center',
                                                     width: '100%'
                                                 }
@@ -451,7 +451,7 @@ export const ExerciseBuilderCard = ({
                                                 color: themeColors.text,
                                                 borderColor: setError.column2 ? RED_ERROR : themeColors.border,
                                                 borderWidth: setError.column2 ? 2 : 1,
-                                                backgroundColor: themeColors.pageBackground
+                                                backgroundColor: themeColors.backgroundPrimary
                                             }
                                         ]}
                                         value={set.column2}
@@ -496,7 +496,7 @@ export const ExerciseBuilderCard = ({
                         </View>
                         <View style={styles.restTimerContainer}>
                             <DropdownMenuWrapper options={getRestTimerOptions()}>
-                                <View style={[styles.restTimerButton, { backgroundColor: themeColors.surfaceSecondary }]}>
+                                <View style={[styles.restTimerButton, { backgroundColor: themeColors.backgroundTertiary }]}>
                                     <Timer {...({ size: 16, color: themeColors.primary } as any)} />
                                     <Text style={[styles.restTimerText, { color: themeColors.primary }]}>
                                         {formatRestTime(exercise.setRestSec)}
