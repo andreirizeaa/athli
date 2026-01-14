@@ -1,33 +1,42 @@
 'use client';
 
 import React from 'react';
+import { toast } from 'sonner';
 import type { Message } from '@/components/app/app-shell';
 import { messageDraftStorage } from '@/lib/general/message-draft-storage';
+
+export type AttachmentType = 'image' | 'video' | 'pdf';
+
+export interface Attachment {
+  file: File;
+  type: AttachmentType;
+  preview?: string; // For images
+}
 
 interface MessageInputContextValue {
   // State
   messageInput: string;
   textareaHeight: number;
-  attachedImages: File[];
-  attachedPdf: File | null;
-  attachedVideo: File | null;
+  attachments: Attachment[];
   replyingToMessage: Message | null;
+  isRecordingVoiceNote: boolean;
 
   // Actions
   setMessageInput: (value: string) => void;
   setTextareaHeight: (height: number) => void;
-  addImages: (files: File[]) => void;
-  removeImage: (index: number) => void;
-  setPdf: (file: File | null) => void;
-  removePdf: () => void;
-  setVideo: (file: File | null) => void;
-  removeVideo: () => void;
+  addAttachment: (file: File, type: AttachmentType) => void;
+  addAttachments: (files: File[], type: AttachmentType) => void;
+  removeAttachment: (index: number) => void;
+  clearAttachments: () => void;
   setReplyingToMessage: (message: Message | null) => void;
+  setIsRecordingVoiceNote: (recording: boolean) => void;
   clearAll: () => void;
   sendMessage: () => void;
+  sendVoiceNote: (blob: Blob, url: string, durationMs: number) => Promise<void>;
 
   // Utilities
   hasDraft: (contactId: string) => boolean;
+  canAddMoreAttachments: boolean;
 
   // Refs
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
@@ -51,9 +60,13 @@ interface MessageInputProviderProps {
   selectedContactId: string | undefined;
   onSendMessage: (params: {
     text: string;
-    images?: Array<{ name: string; data: string; type: string; size: number }>;
-    pdf?: { name: string; data: string; type: string; size: number };
-    video?: { name: string; data: string; type: string; size: number };
+    attachments?: Array<{
+      name: string;
+      data: string;
+      type: string;
+      size: number;
+      attachmentType: AttachmentType;
+    }>;
     replyTo?: Message['replyTo'];
   }) => Promise<void>;
 }
@@ -66,10 +79,12 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
   // State
   const [messageInput, setMessageInput] = React.useState('');
   const [textareaHeight, setTextareaHeight] = React.useState(36);
-  const [attachedImages, setAttachedImages] = React.useState<File[]>([]);
-  const [attachedPdf, setAttachedPdf] = React.useState<File | null>(null);
-  const [attachedVideo, setAttachedVideo] = React.useState<File | null>(null);
+  const [attachments, setAttachments] = React.useState<Attachment[]>([]);
   const [replyingToMessage, setReplyingToMessage] = React.useState<Message | null>(null);
+  const [isRecordingVoiceNote, setIsRecordingVoiceNote] = React.useState(false);
+
+  // Computed
+  const canAddMoreAttachments = attachments.length < 4;
 
   // Refs
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -82,9 +97,7 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
   React.useEffect(() => {
     if (!selectedContactId) {
       setMessageInput('');
-      setAttachedPdf(null);
-      setAttachedVideo(null);
-      setAttachedImages([]);
+      setAttachments([]);
       setReplyingToMessage(null);
       setTextareaHeight(36);
       return;
@@ -95,9 +108,7 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
 
     // Immediately clear files and text to prevent save effects from saving old data to new contact
     setMessageInput('');
-    setAttachedPdf(null);
-    setAttachedVideo(null);
-    setAttachedImages([]);
+    setAttachments([]);
     setReplyingToMessage(null);
 
     // Use a small delay to ensure state clears before loading draft
@@ -109,37 +120,44 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
           setMessageInput(draft.text);
         }
 
-        // Restore PDF if it exists
+        // Restore attachments from draft (convert old format)
+        const restoredAttachments: Attachment[] = [];
+
+        // Convert PDFs
         if (draft.pdf) {
           try {
             const pdfFile = messageDraftStorage.pdfDataToFile(draft.pdf);
-            setAttachedPdf(pdfFile);
-            setTextareaHeight(60);
-          } catch {
-            setAttachedPdf(null);
+            restoredAttachments.push({ file: pdfFile, type: 'pdf' });
+          } catch (error) {
+            console.error('Failed to restore PDF from draft:', error);
           }
         }
 
-        // Restore video if it exists
+        // Convert videos
         if (draft.video) {
           try {
             const videoFile = messageDraftStorage.videoDataToFile(draft.video);
-            setAttachedVideo(videoFile);
-            setTextareaHeight(60);
-          } catch {
-            setAttachedVideo(null);
+            restoredAttachments.push({ file: videoFile, type: 'video' });
+          } catch (error) {
+            console.error('Failed to restore video from draft:', error);
           }
         }
 
-        // Restore images if they exist
+        // Convert images
         if (draft.images && draft.images.length > 0) {
           try {
             const imageFiles = draft.images.map((img) => messageDraftStorage.imageDataToFile(img));
-            setAttachedImages(imageFiles);
-            setTextareaHeight(60);
-          } catch {
-            setAttachedImages([]);
+            imageFiles.forEach((file) => {
+              restoredAttachments.push({ file, type: 'image', preview: URL.createObjectURL(file) });
+            });
+          } catch (error) {
+            console.error('Failed to restore images from draft:', error);
           }
+        }
+
+        if (restoredAttachments.length > 0) {
+          setAttachments(restoredAttachments.slice(0, 4)); // Enforce 4-file limit
+          setTextareaHeight(60);
         }
       }
 
@@ -150,234 +168,132 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
     }, 50);
   }, [selectedContactId]);
 
-  // Save draft as user types (with debouncing for text)
+  // Save draft as user types/updates attachments (with debouncing)
   React.useEffect(() => {
     if (!selectedContactId || isLoadingDraftRef.current) return;
 
-    const hasContent =
-      messageInput.trim().length > 1 || attachedPdf || attachedVideo || attachedImages.length > 0;
-    if (!hasContent) return;
+    const hasContent = messageInput.trim().length > 1 || attachments.length > 0;
 
     const timeoutId = setTimeout(() => {
-      messageDraftStorage.saveDraft(
-        selectedContactId,
-        messageInput,
-        attachedPdf,
-        attachedImages,
-        attachedVideo
-      );
+      if (hasContent) {
+        // Convert attachments back to old format for draft storage
+        const pdfAttachment = attachments.find((a) => a.type === 'pdf');
+        const videoAttachment = attachments.find((a) => a.type === 'video');
+        const imageAttachments = attachments.filter((a) => a.type === 'image');
+
+        messageDraftStorage.saveDraft(
+          selectedContactId,
+          messageInput,
+          pdfAttachment?.file || null,
+          imageAttachments.map((a) => a.file),
+          videoAttachment?.file || null
+        );
+      } else {
+        messageDraftStorage.removeDraft(selectedContactId);
+      }
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [messageInput, selectedContactId, attachedPdf, attachedImages, attachedVideo]);
-
-  // Save draft immediately when PDF changes
-  React.useEffect(() => {
-    if (!selectedContactId || isLoadingDraftRef.current) return;
-
-    const currentContactId = selectedContactId;
-    const currentPdf = attachedPdf;
-
-    // Check if this PDF is from a draft (to avoid re-saving during load)
-    const existingDraft = messageDraftStorage.getDraft(currentContactId);
-    const isPdfFromDraft =
-      existingDraft.pdf &&
-      currentPdf &&
-      existingDraft.pdf.name === currentPdf.name &&
-      existingDraft.pdf.size === currentPdf.size;
-
-    if (currentPdf && !isPdfFromDraft) {
-      messageDraftStorage.saveDraft(
-        currentContactId,
-        messageInput,
-        currentPdf,
-        attachedImages,
-        attachedVideo
-      );
-    } else if (
-      currentPdf === null &&
-      messageInput.trim().length <= 1 &&
-      attachedImages.length === 0 &&
-      !attachedVideo
-    ) {
-      messageDraftStorage.removeDraft(currentContactId);
-    }
-  }, [attachedPdf, selectedContactId, messageInput, attachedImages, attachedVideo]);
-
-  // Save draft immediately when images change
-  React.useEffect(() => {
-    if (!selectedContactId || isLoadingDraftRef.current) return;
-
-    const currentContactId = selectedContactId;
-    const currentImages = attachedImages;
-
-    // Check if these images are from a draft
-    const existingDraft = messageDraftStorage.getDraft(currentContactId);
-    const isImagesFromDraft =
-      existingDraft.images &&
-      existingDraft.images.length > 0 &&
-      currentImages.length > 0 &&
-      existingDraft.images.length === currentImages.length &&
-      existingDraft.images.every(
-        (draftImg, idx) =>
-          currentImages[idx] &&
-          draftImg.name === currentImages[idx].name &&
-          draftImg.size === currentImages[idx].size
-      );
-
-    if (currentImages.length > 0 && !isImagesFromDraft) {
-      messageDraftStorage.saveDraft(
-        currentContactId,
-        messageInput,
-        attachedPdf,
-        currentImages,
-        attachedVideo
-      );
-    } else if (
-      currentImages.length === 0 &&
-      messageInput.trim().length <= 1 &&
-      !attachedPdf &&
-      !attachedVideo
-    ) {
-      messageDraftStorage.removeDraft(currentContactId);
-    }
-  }, [attachedImages, selectedContactId, messageInput, attachedPdf, attachedVideo]);
-
-  // Save draft immediately when video changes
-  React.useEffect(() => {
-    if (!selectedContactId || isLoadingDraftRef.current) return;
-
-    const currentContactId = selectedContactId;
-    const currentVideo = attachedVideo;
-
-    // Check if this video is from a draft
-    const existingDraft = messageDraftStorage.getDraft(currentContactId);
-    const isVideoFromDraft =
-      existingDraft.video &&
-      currentVideo &&
-      existingDraft.video.name === currentVideo.name &&
-      existingDraft.video.size === currentVideo.size;
-
-    if (currentVideo && !isVideoFromDraft) {
-      messageDraftStorage.saveDraft(
-        currentContactId,
-        messageInput,
-        attachedPdf,
-        attachedImages,
-        currentVideo
-      );
-    } else if (
-      currentVideo === null &&
-      messageInput.trim().length <= 1 &&
-      attachedImages.length === 0 &&
-      !attachedPdf
-    ) {
-      messageDraftStorage.removeDraft(currentContactId);
-    }
-  }, [attachedVideo, selectedContactId, messageInput, attachedPdf, attachedImages]);
+  }, [messageInput, attachments, selectedContactId]);
 
   // Stable actions using useCallback
-  const addImages = React.useCallback((files: File[]) => {
-    setAttachedImages((prev) => [...prev, ...files]);
-    setTextareaHeight((h) => (h <= 36 ? 60 : h));
+  const addAttachment = React.useCallback((file: File, type: AttachmentType) => {
+    setAttachments((prev) => {
+      if (prev.length >= 4) {
+        toast.error('Maximum 4 files per message');
+        return prev;
+      }
+
+      const attachment: Attachment = {
+        file,
+        type,
+        preview: type === 'image' ? URL.createObjectURL(file) : undefined,
+      };
+
+      setTextareaHeight((h) => (h <= 36 ? 60 : h));
+      return [...prev, attachment];
+    });
   }, []);
 
-  const removeImage = React.useCallback((index: number) => {
-    setAttachedImages((prev) => {
+  const addAttachments = React.useCallback((files: File[], type: AttachmentType) => {
+    setAttachments((prev) => {
+      const remainingSlots = 4 - prev.length;
+      if (remainingSlots === 0) {
+        toast.error('Maximum 4 files per message');
+        return prev;
+      }
+
+      // Auto-take first N files based on remaining slots
+      const filesToAdd = files.slice(0, remainingSlots);
+      if (files.length > remainingSlots) {
+        toast.error(`Maximum 4 files per message. Only ${remainingSlots} file(s) added.`);
+      }
+
+      const newAttachments: Attachment[] = filesToAdd.map((file) => ({
+        file,
+        type,
+        preview: type === 'image' ? URL.createObjectURL(file) : undefined,
+      }));
+
+      setTextareaHeight((h) => (h <= 36 ? 60 : h));
+      return [...prev, ...newAttachments];
+    });
+  }, []);
+
+  const removeAttachment = React.useCallback((index: number) => {
+    setAttachments((prev) => {
+      const removed = prev[index];
+      // Revoke preview URL if it's an image
+      if (removed?.preview) {
+        URL.revokeObjectURL(removed.preview);
+      }
+
       const updated = prev.filter((_, i) => i !== index);
+
       // Reset height if no attachments left
       if (updated.length === 0) {
-        setAttachedPdf((pdf) => {
-          setAttachedVideo((video) => {
-            setReplyingToMessage((reply) => {
-              if (!pdf && !video && !reply) {
-                setTextareaHeight(36);
-              }
-              return reply;
-            });
-            return video;
-          });
-          return pdf;
+        setReplyingToMessage((reply) => {
+          if (!reply) {
+            setTextareaHeight(36);
+          }
+          return reply;
         });
       }
+
       return updated;
     });
   }, []);
 
-  const setPdf = React.useCallback((file: File | null) => {
-    setAttachedPdf(file);
-    if (file) {
-      setTextareaHeight(60);
-    }
-  }, []);
-
-  const removePdf = React.useCallback(() => {
-    setAttachedPdf(null);
-    if (pdfInputRef.current) {
-      pdfInputRef.current.value = '';
-    }
-    // Reset height if no other attachments
-    setAttachedImages((images) => {
-      setAttachedVideo((video) => {
-        setReplyingToMessage((reply) => {
-          if (images.length === 0 && !video && !reply) {
-            setTextareaHeight(36);
-          }
-          return reply;
-        });
-        return video;
+  const clearAttachments = React.useCallback(() => {
+    // Revoke all preview URLs
+    setAttachments((prev) => {
+      prev.forEach((att) => {
+        if (att.preview) {
+          URL.revokeObjectURL(att.preview);
+        }
       });
-      return images;
-    });
-  }, []);
-
-  const setVideo = React.useCallback((file: File | null) => {
-    setAttachedVideo(file);
-    if (file) {
-      setTextareaHeight(60);
-    }
-  }, []);
-
-  const removeVideo = React.useCallback(() => {
-    setAttachedVideo(null);
-    if (videoInputRef.current) {
-      videoInputRef.current.value = '';
-    }
-    // Reset height if no other attachments
-    setAttachedImages((images) => {
-      setAttachedPdf((pdf) => {
-        setReplyingToMessage((reply) => {
-          if (images.length === 0 && !pdf && !reply) {
-            setTextareaHeight(36);
-          }
-          return reply;
-        });
-        return pdf;
-      });
-      return images;
+      return [];
     });
   }, []);
 
   const clearAll = React.useCallback(() => {
     setMessageInput('');
     setReplyingToMessage(null);
-    setAttachedPdf(null);
-    setAttachedVideo(null);
-    setAttachedImages([]);
+    clearAttachments();
     setTextareaHeight(36);
 
     // Clear draft from localStorage
     if (selectedContactId) {
       messageDraftStorage.removeDraft(selectedContactId);
     }
-  }, [selectedContactId]);
+  }, [selectedContactId, clearAttachments]);
 
   const sendMessage = React.useCallback(async () => {
-    const hasContent = messageInput.trim() || attachedPdf || attachedVideo || attachedImages.length > 0;
+    const hasContent = messageInput.trim() || attachments.length > 0;
     if (!hasContent || !selectedContactId) return;
 
     try {
-      // Get draft data (already has base64 conversions)
+      // Get draft data (already has base64 conversions for faster sending)
       const draft = messageDraftStorage.getDraft(selectedContactId);
 
       // Convert files to base64
@@ -401,89 +317,111 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
           }
         : undefined;
 
-      // Send text message
-      if (messageInput.trim()) {
-        await onSendMessage({
-          text: messageInput.trim(),
-          replyTo: replyToData,
-        });
-      }
+      // Convert all attachments to API format
+      const attachmentData = await Promise.all(
+        attachments.map(async (att, index) => {
+          // Try to use draft data if available for faster sending
+          let data: string;
 
-      // Send images (use draft data if available for faster sending)
-      for (let i = 0; i < attachedImages.length; i++) {
-        const image = attachedImages[i];
-        const draftImage = draft.images?.[i];
+          if (att.type === 'image') {
+            const draftImage = draft.images?.find(
+              (img) => img.name === att.file.name && img.size === att.file.size
+            );
+            data = draftImage?.data || (await convertToBase64(att.file));
+          } else if (att.type === 'pdf') {
+            const draftPdf = draft.pdf;
+            data =
+              draftPdf?.name === att.file.name && draftPdf?.size === att.file.size && draftPdf?.data
+                ? draftPdf.data
+                : await convertToBase64(att.file);
+          } else if (att.type === 'video') {
+            const draftVideo = draft.video;
+            data =
+              draftVideo?.name === att.file.name &&
+              draftVideo?.size === att.file.size &&
+              draftVideo?.data
+                ? draftVideo.data
+                : await convertToBase64(att.file);
+          } else {
+            data = await convertToBase64(att.file);
+          }
 
-        // Use draft data if available and matches current file
-        const data = draftImage &&
-                     draftImage.name === image.name &&
-                     draftImage.size === image.size &&
-                     draftImage.data
-          ? draftImage.data
-          : await convertToBase64(image);
-
-        await onSendMessage({
-          text: '',
-          images: [{
-            name: image.name,
+          return {
+            name: att.file.name,
             data,
-            type: image.type,
-            size: image.size,
-          }],
-          replyTo: replyToData,
-        });
-      }
+            type: att.file.type,
+            size: att.file.size,
+            attachmentType: att.type,
+          };
+        })
+      );
 
-      // Send PDF (use draft data if available)
-      if (attachedPdf) {
-        const draftPdf = draft.pdf;
-        const data = draftPdf &&
-                     draftPdf.name === attachedPdf.name &&
-                     draftPdf.size === attachedPdf.size &&
-                     draftPdf.data
-          ? draftPdf.data
-          : await convertToBase64(attachedPdf);
-
-        await onSendMessage({
-          text: '',
-          pdf: {
-            name: attachedPdf.name,
-            data,
-            type: attachedPdf.type,
-            size: attachedPdf.size,
-          },
-          replyTo: replyToData,
-        });
-      }
-
-      // Send video (use draft data if available)
-      if (attachedVideo) {
-        const draftVideo = draft.video;
-        const data = draftVideo &&
-                     draftVideo.name === attachedVideo.name &&
-                     draftVideo.size === attachedVideo.size &&
-                     draftVideo.data
-          ? draftVideo.data
-          : await convertToBase64(attachedVideo);
-
-        await onSendMessage({
-          text: '',
-          video: {
-            name: attachedVideo.name,
-            data,
-            type: attachedVideo.type,
-            size: attachedVideo.size,
-          },
-          replyTo: replyToData,
-        });
-      }
+      // Send single message with text and all attachments
+      await onSendMessage({
+        text: messageInput.trim(),
+        attachments: attachmentData.length > 0 ? attachmentData : undefined,
+        replyTo: replyToData,
+      });
 
       // Clear all after sending
       clearAll();
     } catch (error) {
       console.error('Failed to send message:', error);
+      toast.error('Failed to send message');
     }
-  }, [messageInput, attachedImages, attachedPdf, attachedVideo, replyingToMessage, selectedContactId, onSendMessage, clearAll]);
+  }, [messageInput, attachments, replyingToMessage, selectedContactId, onSendMessage, clearAll]);
+
+  // Send voice note
+  const sendVoiceNote = React.useCallback(async (blob: Blob, url: string, durationMs: number) => {
+    if (!selectedContactId) return;
+
+    try {
+      // Convert blob to base64
+      const convertToBase64 = (blob: Blob): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      };
+
+      const data = await convertToBase64(blob);
+
+      const replyToData = replyingToMessage
+        ? {
+            id: replyingToMessage.id,
+            text: replyingToMessage.text,
+            isSent: replyingToMessage.isSent,
+            pdf: replyingToMessage.pdf,
+            images: replyingToMessage.images,
+            video: replyingToMessage.video,
+          }
+        : undefined;
+
+      // Send voice note as video attachment (since we don't have a separate voice note type)
+      await onSendMessage({
+        text: '',
+        attachments: [
+          {
+            name: `voice-note-${Date.now()}.webm`,
+            data,
+            type: blob.type,
+            size: blob.size,
+            attachmentType: 'video',
+          },
+        ],
+        replyTo: replyToData,
+      });
+
+      // Clear state
+      setIsRecordingVoiceNote(false);
+      setReplyingToMessage(null);
+    } catch (error) {
+      console.error('Failed to send voice note:', error);
+      setIsRecordingVoiceNote(false);
+    }
+  }, [selectedContactId, replyingToMessage, onSendMessage]);
 
   // Utility to check if a contact has a draft
   const hasDraft = React.useCallback((contactId: string): boolean => {
@@ -496,26 +434,37 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
     );
   }, []);
 
+  // Cleanup preview URLs on unmount
+  React.useEffect(() => {
+    return () => {
+      attachments.forEach((att) => {
+        if (att.preview) {
+          URL.revokeObjectURL(att.preview);
+        }
+      });
+    };
+  }, []);
+
   const value = React.useMemo(
     () => ({
       messageInput,
       textareaHeight,
-      attachedImages,
-      attachedPdf,
-      attachedVideo,
+      attachments,
       replyingToMessage,
+      isRecordingVoiceNote,
       setMessageInput,
       setTextareaHeight,
-      addImages,
-      removeImage,
-      setPdf,
-      removePdf,
-      setVideo,
-      removeVideo,
+      addAttachment,
+      addAttachments,
+      removeAttachment,
+      clearAttachments,
       setReplyingToMessage,
+      setIsRecordingVoiceNote,
       clearAll,
       sendMessage,
+      sendVoiceNote,
       hasDraft,
+      canAddMoreAttachments,
       textareaRef,
       imageInputRef,
       pdfInputRef,
@@ -524,19 +473,18 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
     [
       messageInput,
       textareaHeight,
-      attachedImages,
-      attachedPdf,
-      attachedVideo,
+      attachments,
       replyingToMessage,
-      addImages,
-      removeImage,
-      setPdf,
-      removePdf,
-      setVideo,
-      removeVideo,
+      isRecordingVoiceNote,
+      addAttachment,
+      addAttachments,
+      removeAttachment,
+      clearAttachments,
       clearAll,
       sendMessage,
+      sendVoiceNote,
       hasDraft,
+      canAddMoreAttachments,
     ]
   );
 

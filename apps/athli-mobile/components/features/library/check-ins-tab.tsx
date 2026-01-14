@@ -29,7 +29,7 @@ export const CheckInsTab = () => {
   const isAuthenticated = !!coachProfile;
 
   // Fetch check-ins directly with TanStack Query
-  const { data: checkIns = [], isLoading, isError } = useQuery({
+  const { data: checkIns = [] } = useQuery({
     queryKey: ['checkIns'],
     queryFn: async () => {
       console.log('[CheckInsTab] Fetching check-ins...');
@@ -55,8 +55,6 @@ export const CheckInsTab = () => {
 
   console.log('[CheckInsTab] Render:', {
     isAuthenticated,
-    isLoading,
-    isError,
     totalCheckIns: checkIns.length,
     filteredCheckIns: filteredCheckIns.length,
     searchQuery

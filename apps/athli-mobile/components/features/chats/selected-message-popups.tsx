@@ -367,7 +367,7 @@ export const SelectedMessagePopups = ({
                       : { color: themeColors.mutedText },
                   ]}
                 >
-                  {formatTime(selectedMessage.timestamp)}
+                  {formatTime(selectedMessage.sent_at)}
                 </Text>
                 {selectedMessage.isSent && (
                   <View style={[styles.readReceiptIcon, { opacity: 0.7 }]}>

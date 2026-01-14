@@ -30,7 +30,7 @@ export const FilesTab = () => {
   const isAuthenticated = !!coachProfile;
 
   // Fetch files directly with TanStack Query
-  const { data: files = [], isLoading, isError } = useQuery({
+  const { data: files = [] } = useQuery({
     queryKey: ['files'],
     queryFn: async () => {
       console.log('[FilesTab] Fetching files...');
@@ -57,8 +57,6 @@ export const FilesTab = () => {
 
   console.log('[FilesTab] Render:', {
     isAuthenticated,
-    isLoading,
-    isError,
     totalFiles: files.length,
     filteredFiles: filteredFiles.length,
     searchQuery

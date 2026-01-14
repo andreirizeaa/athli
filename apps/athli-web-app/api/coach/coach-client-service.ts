@@ -2,8 +2,7 @@ import { apiFetch } from '../api-client';
 import type { ClientData } from '../../lib/general/csv-parser';
 
 export interface AddClientData {
-  firstName: string;
-  lastName: string;
+  fullName: string;
   email: string;
   coachingType: 'online' | 'in-person' | 'hybrid';
 }
@@ -219,8 +218,7 @@ export const addClient = async (data: AddClientData): Promise<Athlete> => {
     method: 'POST',
     body: JSON.stringify({
       email: data.email.toLowerCase().trim(),
-      firstName: data.firstName.trim(),
-      lastName: data.lastName.trim(),
+      fullName: data.fullName.trim(),
       category: data.coachingType.toLowerCase().trim(),
     }) as any,
   });
@@ -261,8 +259,7 @@ export const addClient = async (data: AddClientData): Promise<Athlete> => {
 export const addClients = async (data: AddClientsData): Promise<Athlete[]> => {
   const payload = data.clients.map(c => ({
     email: c.email.toLowerCase().trim(),
-    firstName: c.firstName.trim(),
-    lastName: c.lastName.trim(),
+    fullName: c.fullName.trim(),
     category: c.category.toLowerCase().trim(),
   }));
 

@@ -391,7 +391,7 @@ export default function HabitOptionsModal() {
                                                     <Text style={[styles.dropdownValue, { color: themeColors.text }]}>
                                                         {getPeriodLabel()}
                                                     </Text>
-                                                    <ChevronDown size={14} color={themeColors.mutedText} />
+                                                    <ChevronDown {...({ size: 14, color: themeColors.mutedText } as any)} />
                                                 </View>
                                             </View>
                                         </DropdownMenuWrapper>

@@ -446,6 +446,18 @@ class UserService {
       throw new Error(`Failed to create client profile: ${insertError.message}`);
     }
 
+    // Create empty client_profiles entry (personal details filled later via app)
+    const { error: clientProfileError } = await supabase
+      .from('client_profiles')
+      .insert({
+        client_id: userId,
+      });
+
+    // Ignore if already exists (race condition)
+    if (clientProfileError && clientProfileError.code !== '23505') {
+      console.error('Failed to create client_profiles entry:', clientProfileError);
+    }
+
     // Update user metadata with coach_id
     await supabase.auth.admin.updateUserById(userId, {
       user_metadata: {

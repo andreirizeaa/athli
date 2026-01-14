@@ -7,8 +7,7 @@ export interface ParsedCSV {
 }
 
 export interface ClientData {
-  firstName: string;
-  lastName: string;
+  fullName: string;
   email: string;
   category: string;
 }
@@ -20,9 +19,9 @@ const removeDuplicates = (clients: ClientData[]): ClientData[] => {
   const unique: ClientData[] = [];
 
   for (const client of clients) {
-    // Use email as primary key for deduplication, fallback to name combination
+    // Use email as primary key for deduplication, fallback to full name
     const emailKey = client.email.toLowerCase().trim();
-    const nameKey = `${client.firstName.toLowerCase().trim()}-${client.lastName.toLowerCase().trim()}`;
+    const nameKey = client.fullName.toLowerCase().trim();
     const key = emailKey || nameKey;
 
     if (key && !seen.has(key)) {
@@ -93,19 +92,13 @@ export const parseCSV = async (file: File): Promise<ParsedCSV> => {
       const clients: ClientData[] = rows
         .filter((row) => row.length > 0 && row.some((cell) => cell.trim() !== ''))
         .map((row) => {
-          const fullName = row[fullNameIndex] || '';
-          const nameParts = fullName.trim().split(/\s+/);
-          const firstName = nameParts[0] || '';
-          const lastName = nameParts.slice(1).join(' ') || '';
-
           return {
-            firstName,
-            lastName,
+            fullName: row[fullNameIndex] || '',
             email: row[emailIndex] || '',
             category: row[categoryIndex] || '',
           };
         })
-        .filter((client) => client.firstName || client.lastName || client.email);
+        .filter((client) => client.fullName || client.email);
 
       // Remove duplicates based on email (case-insensitive)
       const uniqueClients = removeDuplicates(clients);

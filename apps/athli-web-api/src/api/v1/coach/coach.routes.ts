@@ -13,6 +13,7 @@ import { coachCheckInRouter } from './routes/forms/check-ins.routes';
 import { coachQuestionnaireRouter } from './routes/forms/questionnaires.routes';
 import { coachTodoRouter } from './routes/todo.routes';
 import { coachChecklistRouter } from './routes/new/checklist.routes';
+import { coachMessagingRouter } from './routes/messaging.routes';
 
 export const coachRouter = Router();
 
@@ -41,4 +42,5 @@ coachRouter.use('/habits', coachHabitRouter);
 coachRouter.use('/metrics', coachMetricRouter);
 coachRouter.use('/todo', coachTodoRouter);
 coachRouter.use('/new', newRouter);
+coachRouter.use('/messaging', coachMessagingRouter);
 coachRouter.use('/', coachCodeRouter);

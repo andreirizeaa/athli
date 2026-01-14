@@ -41,7 +41,12 @@
       "Bash(then if ! head -15 \"$file\")",
       "Bash(then echo \"MISSING X: $file\" fi fi done)",
       "Bash(while read file)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "WebFetch(domain:tanstack.com)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(xargs sed:*)",
+      "WebFetch(domain:supabase.com)"
     ]
   }
 }
