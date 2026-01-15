@@ -131,15 +131,18 @@ const MessageInputWrapper: React.FC<{
   contextRef: React.MutableRefObject<{
     setReplyingToMessage: (message: Message | null) => void;
     textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+    addAttachment: (file: File, type: import('@/components/app/types').AttachmentType) => void;
+    addAttachments: (files: File[], type: import('@/components/app/types').AttachmentType) => void;
+    canAddMoreAttachments: boolean;
   } | null>;
   selectedContact: Contact | null;
 }> = ({ contextRef, selectedContact }) => {
-  const { setReplyingToMessage, textareaRef } = useMessageInput();
+  const { setReplyingToMessage, textareaRef, addAttachment, addAttachments, canAddMoreAttachments } = useMessageInput();
 
   // Expose context methods via ref
   React.useEffect(() => {
-    contextRef.current = { setReplyingToMessage, textareaRef };
-  }, [contextRef, setReplyingToMessage, textareaRef]);
+    contextRef.current = { setReplyingToMessage, textareaRef, addAttachment, addAttachments, canAddMoreAttachments };
+  }, [contextRef, setReplyingToMessage, textareaRef, addAttachment, addAttachments, canAddMoreAttachments]);
 
   return <MessageInput selectedContact={selectedContact} />;
 };
@@ -458,6 +461,9 @@ const InboxPage = () => {
   const messageInputContextRef = React.useRef<{
     setReplyingToMessage: (message: Message | null) => void;
     textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+    addAttachment: (file: File, type: import('@/components/app/types').AttachmentType) => void;
+    addAttachments: (files: File[], type: import('@/components/app/types').AttachmentType) => void;
+    canAddMoreAttachments: boolean;
   } | null>(null);
 
   // Convert conversations to Contact format for UI compatibility
@@ -1338,46 +1344,44 @@ const InboxPage = () => {
       setIsDraggingOver(false);
       setDragCounter(0);
 
-      if (!selectedContactId) return;
+      if (!selectedContactId || !messageInputContextRef.current) return;
 
       const files = Array.from(event.dataTransfer.files);
       if (files.length === 0) return;
+
+      const { addAttachment, addAttachments, canAddMoreAttachments } = messageInputContextRef.current;
+
+      if (!canAddMoreAttachments) {
+        console.warn('Maximum 4 attachments allowed');
+        return;
+      }
 
       // Separate PDFs, videos, and images
       const pdfFiles = files.filter(
         (file) => file.type === 'application/pdf' || file.name.endsWith('.pdf')
       );
       const videoFiles = files.filter(
-        (file) => file.type === 'video/mp4' || file.name.endsWith('.mp4')
+        (file) => file.type.startsWith('video/')
       );
       const imageFiles = files.filter((file) => file.type.startsWith('image/'));
 
-      // Handle PDF (only one PDF can be attached)
+      // Add files to message input context
+      // PDFs
       if (pdfFiles.length > 0) {
-        const pdfFile = pdfFiles[0];
-        setAttachedPdf(pdfFile);
-        setTextareaHeight(60);
+        addAttachment(pdfFiles[0], 'pdf');
       }
 
-      // Handle video (only one video can be attached)
+      // Videos
       if (videoFiles.length > 0) {
-        const videoFile = videoFiles[0];
-        setAttachedVideo(videoFile);
-        setTextareaHeight(60);
+        addAttachment(videoFiles[0], 'video');
       }
 
-      // Handle images (multiple images can be attached)
+      // Images (can add multiple)
       if (imageFiles.length > 0) {
-        setAttachedImages((prev) => {
-          const updated = [...prev, ...imageFiles];
-          return updated;
-        });
-        if (textareaHeight <= 36) {
-          setTextareaHeight(60);
-        }
+        addAttachments(imageFiles, 'image');
       }
     },
-    [selectedContactId, textareaHeight]
+    [selectedContactId]
   );
 
   const handleDownloadPdf = () => {
