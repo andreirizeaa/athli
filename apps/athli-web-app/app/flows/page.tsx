@@ -53,6 +53,11 @@ const FlowsPage = () => {
 
   // Update optimistic state when flows data changes, maintaining fixed order
   useEffect(() => {
+    if (!flows || flows.length === 0) {
+      setOptimisticFlows([]);
+      return;
+    }
+
     const sortedFlows = [...flows].sort((a, b) => {
       const nameA = a.name || '';
       const nameB = b.name || '';
@@ -73,10 +78,25 @@ const FlowsPage = () => {
       return nameA.localeCompare(nameB);
     });
 
-    setOptimisticFlows(sortedFlows);
+    // Only update if the sorted flows are actually different
+    setOptimisticFlows((prev) => {
+      if (prev.length !== sortedFlows.length) return sortedFlows;
+
+      // Check if flows have actually changed
+      const hasChanged = sortedFlows.some((flow, index) =>
+        flow.id !== prev[index]?.id ||
+        flow.is_active !== prev[index]?.is_active ||
+        flow.name !== prev[index]?.name
+      );
+
+      return hasChanged ? sortedFlows : prev;
+    });
   }, [flows]);
 
   const handleToggleActive = async (flow: Flow, checked: boolean) => {
+    // Store previous state for rollback
+    const previousState = optimisticFlows;
+
     // Optimistically update the UI without refetching
     setOptimisticFlows(prev =>
       prev.map(f => f.id === flow.id ? { ...f, is_active: checked } : f)
@@ -88,8 +108,8 @@ const FlowsPage = () => {
     } catch (error) {
       console.error('Failed to update flow status:', error);
       toast.error(`Failed to update ${flow.name} status`);
-      // Revert optimistic update on error
-      setOptimisticFlows(flows);
+      // Revert optimistic update on error using previous state
+      setOptimisticFlows(previousState);
     }
   };
 
