@@ -47,7 +47,7 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
         name: '',
         email: '',
         birthDate: null,
-        category: 'online',
+        category: null,
         gender: null,
         phone: '',
         country: '',
@@ -65,7 +65,7 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
 
     const clientName = details?.name || athlete?.name || '';
     const clientEmail = details?.email || athlete?.email || '';
-    const clientCategory = (details?.category || athlete?.coachingType || 'online') as 'online' | 'in-person' | 'hybrid';
+    const clientCategory = (details?.category || athlete?.coachingType || null) as 'online' | 'in-person' | 'hybrid' | null;
     const clientGender = details?.gender || null;
     const clientPhone = details?.phone || athlete?.phone || '';
     const clientCountry = details?.country || athlete?.country || '';
@@ -331,7 +331,7 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
 
                 <div className="space-y-2">
                     <Label htmlFor="category"><span>{t('athletes.profile.category')}</span></Label>
-                    <Select value={formData.category} onValueChange={(value: any) => setFormData({ ...formData, category: value })}>
+                    <Select value={formData.category || undefined} onValueChange={(value: any) => setFormData({ ...formData, category: value })}>
                         <SelectTrigger className="w-full"><SelectValue placeholder={t('athletes.profile.selectCategory')} /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="online">{t('athletes.profile.online')}</SelectItem>

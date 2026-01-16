@@ -44,6 +44,7 @@ import {
   deleteChat,
   getChatMessages,
   sendMessage,
+  markConversationAsRead,
   type Chat,
   type ChatMessage,
   type Message,
@@ -54,6 +55,7 @@ import {
   useRealtimeMessages,
   useMessageMerging,
 } from '@/hooks/use-realtime-messaging';
+import { useSendMessageWithAttachment } from '@/hooks/use-file-upload';
 import { supabase } from '@/lib/supabase';
 
 const BAR_INTERVAL_MS = 100; // ✅ 10 bars/sec
@@ -205,6 +207,9 @@ export default function ChatDetailScreen() {
 
   // faster polling for better metering fidelity
   const recorderState = useAudioRecorderState(audioRecorder, 50);
+
+  // File upload hook for sending messages with attachments
+  const { sendWithAttachment, isUploading: isUploadingAttachment } = useSendMessageWithAttachment();
 
   const [waveform, setWaveform] = useState<number[]>([]);
   const waveformRef = useRef<number[]>([]);
@@ -369,142 +374,132 @@ export default function ChatDetailScreen() {
     }
   }, [recorderState.metering, recorderState.isRecording, isStopped]);
 
-  // Handle document sent - add to message list and close attachment picker
+  // Handle document sent - upload to Supabase and send message
   useEffect(() => {
-    if (documentSent === 'true' && sentDocument) {
-      try {
-        const documentData = JSON.parse(sentDocument);
+    if (documentSent === 'true' && sentDocument && currentUserId && id) {
+      const uploadDocument = async () => {
+        try {
+          const documentData = JSON.parse(sentDocument);
 
-        // Create new message with document attachment
-        const newMessage: ChatMessage = {
-          id: `m-${Date.now()}`,
-          text: documentData.caption || '',
-          timestamp: new Date(),
-          isSent: true,
-          isRead: false,
-          document: {
-            uri: documentData.uri,
-            name: documentData.name,
-            mimeType: documentData.mimeType,
-            size: documentData.size ? parseInt(documentData.size) : undefined,
-          },
-        };
+          console.log('[ChatDetail] Uploading document...', documentData.name);
 
-        // Add message to the list
-        setMessages((prev) => [...prev, newMessage]);
+          // Upload document and create message in one atomic operation
+          await sendWithAttachment(
+            id, // conversationId
+            currentUserId, // senderId
+            documentData.uri, // fileUri
+            documentData.mimeType || 'application/pdf', // mimeType
+            documentData.caption || undefined, // caption
+          );
 
-        // Clear draft text in input bar
-        setSearchQuery('');
+          console.log('[ChatDetail] Document uploaded successfully');
 
-        // Close attachment picker
-        setShowAttachmentPicker(false);
+          // Clear draft text in input bar
+          setSearchQuery('');
 
-        // Clear the params
-        router.setParams({
-          documentSent: '',
-          sentDocument: '',
-        });
-      } catch (error) {
-        console.error('Error parsing sent document:', error);
-        // Still close the picker even if parsing fails
-        setShowAttachmentPicker(false);
-        router.setParams({
-          documentSent: '',
-          sentDocument: '',
-        });
-      }
+          // Close attachment picker
+          setShowAttachmentPicker(false);
+        } catch (error) {
+          console.error('[ChatDetail] Error uploading document:', error);
+          Alert.alert('Upload Failed', 'Could not upload document. Please try again.');
+        } finally {
+          // Clear the params
+          router.setParams({
+            documentSent: '',
+            sentDocument: '',
+          });
+        }
+      };
+
+      uploadDocument();
     }
-  }, [documentSent, sentDocument, router]);
+  }, [documentSent, sentDocument, currentUserId, id, sendWithAttachment, router]);
 
-  // Handle images sent - add to message list and close attachment picker
+  // Handle images sent - upload to Supabase and send message
   useEffect(() => {
-    if (imagesSent === 'true' && sentImages) {
-      try {
-        const imageAttachments = JSON.parse(sentImages);
+    if (imagesSent === 'true' && sentImages && currentUserId && id) {
+      const uploadImages = async () => {
+        try {
+          const imageAttachments = JSON.parse(sentImages);
 
-        // Create new message with image attachments
-        const newMessage: ChatMessage = {
-          id: `m-${Date.now()}`,
-          text: sentImagesCaption || '',
-          timestamp: new Date(),
-          isSent: true,
-          isRead: false,
-          images: imageAttachments,
-        };
+          console.log('[ChatDetail] Uploading images...', imageAttachments.length);
 
-        // Add message to the list
-        setMessages((prev) => [...prev, newMessage]);
+          // Upload each image separately (multiple messages, one per image)
+          // This matches WhatsApp behavior where each image is a separate message
+          for (const image of imageAttachments) {
+            await sendWithAttachment(
+              id, // conversationId
+              currentUserId, // senderId
+              image.uri, // fileUri
+              'image/jpeg', // mimeType
+              sentImagesCaption || undefined, // caption (only first image gets caption)
+            );
+          }
 
-        // Clear draft text in input bar
-        setSearchQuery('');
+          console.log('[ChatDetail] Images uploaded successfully');
 
-        // Close attachment picker
-        setShowAttachmentPicker(false);
+          // Clear draft text in input bar
+          setSearchQuery('');
 
-        // Clear the params
-        router.setParams({
-          imagesSent: '',
-          sentImages: '',
-          sentImagesCaption: '',
-        });
-      } catch (error) {
-        console.error('Error parsing sent images:', error);
-        // Still close the picker even if parsing fails
-        setShowAttachmentPicker(false);
-        router.setParams({
-          imagesSent: '',
-          sentImages: '',
-          sentImagesCaption: '',
-        });
-      }
+          // Close attachment picker
+          setShowAttachmentPicker(false);
+        } catch (error) {
+          console.error('[ChatDetail] Error uploading images:', error);
+          Alert.alert('Upload Failed', 'Could not upload images. Please try again.');
+        } finally {
+          // Clear the params
+          router.setParams({
+            imagesSent: '',
+            sentImages: '',
+            sentImagesCaption: '',
+          });
+        }
+      };
+
+      uploadImages();
     }
-  }, [imagesSent, sentImages, sentImagesCaption, router]);
+  }, [imagesSent, sentImages, sentImagesCaption, currentUserId, id, sendWithAttachment, router]);
 
-  // Handle video sent - add to message list and close attachment picker
+  // Handle video sent - upload to Supabase and send message
   useEffect(() => {
-    if (videoSent === 'true' && sentVideo) {
-      try {
-        const videoData = JSON.parse(sentVideo);
+    if (videoSent === 'true' && sentVideo && currentUserId && id) {
+      const uploadVideo = async () => {
+        try {
+          const videoData = JSON.parse(sentVideo);
 
-        // Create new message with video attachment
-        const newMessage: ChatMessage = {
-          id: `m-${Date.now()}`,
-          text: videoData.caption || '',
-          timestamp: new Date(),
-          isSent: true,
-          isRead: false,
-          video: {
-            uri: videoData.uri,
-            duration: videoData.duration,
-            orientation: videoData.orientation,
-          },
-        };
+          console.log('[ChatDetail] Uploading video...');
 
-        // Add message to the list
-        setMessages((prev) => [...prev, newMessage]);
+          // Upload video and create message in one atomic operation
+          await sendWithAttachment(
+            id, // conversationId
+            currentUserId, // senderId
+            videoData.uri, // fileUri
+            'video/mp4', // mimeType
+            videoData.caption || undefined, // caption
+          );
 
-        // Clear draft text in input bar
-        setSearchQuery('');
+          console.log('[ChatDetail] Video uploaded successfully');
 
-        // Close attachment picker
-        setShowAttachmentPicker(false);
+          // Clear draft text in input bar
+          setSearchQuery('');
 
-        // Clear the params
-        router.setParams({
-          videoSent: '',
-          sentVideo: '',
-        });
-      } catch (error) {
-        console.error('Error parsing sent video:', error);
-        // Still close the picker even if parsing fails
-        setShowAttachmentPicker(false);
-        router.setParams({
-          videoSent: '',
-          sentVideo: '',
-        });
-      }
+          // Close attachment picker
+          setShowAttachmentPicker(false);
+        } catch (error) {
+          console.error('[ChatDetail] Error uploading video:', error);
+          Alert.alert('Upload Failed', 'Could not upload video. Please try again.');
+        } finally {
+          // Clear the params
+          router.setParams({
+            videoSent: '',
+            sentVideo: '',
+          });
+        }
+      };
+
+      uploadVideo();
     }
-  }, [videoSent, sentVideo, router]);
+  }, [videoSent, sentVideo, currentUserId, id, sendWithAttachment, router]);
 
   const hasText = searchQuery.trim().length > 0;
 
@@ -545,6 +540,23 @@ export default function ChatDetailScreen() {
       mounted = false;
     };
   }, [id, chatParam, messagesParam]);
+
+  // Mark conversation as read when opening/viewing
+  useEffect(() => {
+    if (!id || !currentUserId) return;
+
+    const markAsRead = async () => {
+      try {
+        console.log('[ChatDetail] Marking conversation as read:', id);
+        await markConversationAsRead(id);
+      } catch (error) {
+        console.error('[ChatDetail] Failed to mark conversation as read:', error);
+      }
+    };
+
+    // Mark as read immediately when opening
+    markAsRead();
+  }, [id, currentUserId]);
 
 
   const handleBackPress = () => {
@@ -624,7 +636,7 @@ export default function ChatDetailScreen() {
 
   const handleSendPress = async (pathOverride?: string | null) => {
     const pathToSend = pathOverride ?? previewPath;
-    if (!isMicrophoneMode || !pathToSend) return;
+    if (!isMicrophoneMode || !pathToSend || !currentUserId || !id) return;
 
     try {
       // Stop preview player and close microphone mode
@@ -632,25 +644,25 @@ export default function ChatDetailScreen() {
       setIsMicrophoneMode(false);
 
       // Use captured duration (recorderState can be 0 depending on platform)
-      const duration = lastVoiceNoteDurationMsRef.current;
+      const durationMs = lastVoiceNoteDurationMsRef.current;
+      const durationSeconds = Math.floor(durationMs / 1000);
       const audioUri = pathToSend.startsWith('file://') ? pathToSend : `file://${pathToSend}`;
 
-      // Create and send the message
-      const newMessage: ChatMessage = {
-        id: `m-${Date.now()}`,
-        text: '',
-        timestamp: new Date(),
-        isSent: true,
-        isRead: false,
-        audio: {
-          uri: audioUri,
-          duration: duration,
-        },
-      };
+      console.log('[ChatDetail] Uploading audio...', { durationMs, durationSeconds });
 
-      setMessages((prev) => [...prev, newMessage]);
+      // Upload audio and create message in one atomic operation
+      await sendWithAttachment(
+        id, // conversationId
+        currentUserId, // senderId
+        audioUri, // fileUri
+        'audio/mp4', // mimeType
+        undefined, // no caption for audio
+      );
+
+      console.log('[ChatDetail] Audio uploaded successfully');
     } catch (e) {
-      console.warn('Failed to send voice note:', e);
+      console.error('[ChatDetail] Failed to send voice note:', e);
+      Alert.alert('Upload Failed', 'Could not upload voice note. Please try again.');
       setIsMicrophoneMode(false);
     }
   };

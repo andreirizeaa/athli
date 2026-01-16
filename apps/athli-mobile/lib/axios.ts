@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { supabase } from './supabase';
 import Constants from 'expo-constants';
+import type { Session } from '@supabase/supabase-js';
 
 // Try process.env first, then Constants.expoConfig.extra, then fallback
 const API_BASE_URL = (
@@ -19,6 +20,22 @@ console.log('[API] Constants.expoConfig.extra:', Constants.expoConfig?.extra?.EX
 console.log('[API] Base URL:', API_BASE_URL);
 console.log('[API] Full API URL:', API_URL);
 
+// Cache session in memory to avoid calling getSession() on every request
+let cachedSession: Session | null = null;
+
+// Subscribe to auth state changes to keep cache in sync
+supabase.auth.onAuthStateChange((event, session) => {
+  console.log('[API] Auth state changed, updating cached session:', event);
+  cachedSession = session;
+});
+
+// Initialize cached session on module load
+(async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  cachedSession = session;
+  console.log('[API] Initial session cached');
+})();
+
 const axiosInstance = axios.create({
   baseURL: API_URL,
   headers: {},
@@ -31,12 +48,10 @@ axiosInstance.interceptors.request.use(
     console.log('[API] Making request:', config.method?.toUpperCase(), config.url);
     console.log('[API] Full URL:', `${config.baseURL}${config.url}`);
 
-    // Get the current session from Supabase
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (session?.access_token) {
-      config.headers.Authorization = `Bearer ${session.access_token}`;
-      console.log('[API] Auth token added');
+    // Use cached session instead of calling getSession() on every request
+    if (cachedSession?.access_token) {
+      config.headers.Authorization = `Bearer ${cachedSession.access_token}`;
+      console.log('[API] Auth token added from cache');
     } else {
       console.log('[API] No auth token available');
     }
@@ -55,7 +70,7 @@ axiosInstance.interceptors.response.use(
     console.log('[API] Response:', response.config.method?.toUpperCase(), response.config.url, response.status);
     return response;
   },
-  (error) => {
+  async (error) => {
     // Detailed error logging
     console.error('[API] Request failed:', {
       url: error.config?.url,
@@ -67,10 +82,39 @@ axiosInstance.interceptors.response.use(
       status: error.response?.status,
     });
 
-    // Handle 401 Unauthorized globally if needed
-    if (error.response?.status === 401) {
-      console.warn('[API] Unauthorized access - session may be expired');
-      // Could trigger a re-authentication flow here if needed
+    // Handle 401 Unauthorized - attempt token refresh and retry
+    if (error.response?.status === 401 && error.config && !error.config._retry) {
+      console.warn('[API] Unauthorized - attempting token refresh');
+
+      // Mark this request as retried to prevent infinite loops
+      error.config._retry = true;
+
+      try {
+        // Attempt to refresh the session
+        const { data, error: refreshError } = await supabase.auth.refreshSession();
+
+        if (refreshError || !data.session) {
+          console.error('[API] Token refresh failed:', refreshError);
+          // Session is invalid - user needs to re-authenticate
+          // The onAuthStateChange listener will handle the logout
+          cachedSession = null;
+          return Promise.reject(error);
+        }
+
+        console.log('[API] Token refreshed successfully, retrying request');
+
+        // Update cached session with new token
+        cachedSession = data.session;
+
+        // Update the failed request's auth header with new token
+        error.config.headers.Authorization = `Bearer ${data.session.access_token}`;
+
+        // Retry the original request
+        return axiosInstance.request(error.config);
+      } catch (refreshError) {
+        console.error('[API] Error during token refresh:', refreshError);
+        return Promise.reject(error);
+      }
     }
 
     // Handle network errors

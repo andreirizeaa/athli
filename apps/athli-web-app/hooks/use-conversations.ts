@@ -2,42 +2,27 @@
  * Hook to fetch and manage conversations
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getConversations } from '@/lib/messaging/messaging-api-client';
-import type { Conversation } from '@athli/shared-types';
 
-export const useConversations = () => {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const hasInitiallyFetchedRef = useRef(false);
-
-  const fetchConversations = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const data = await getConversations({});
-      setConversations(data);
-    } catch (err) {
-      setError(err as Error);
-      console.error('[useConversations] Error fetching conversations:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Prevent duplicate calls in React Strict Mode (development)
-    if (hasInitiallyFetchedRef.current) return;
-    hasInitiallyFetchedRef.current = true;
-
-    fetchConversations();
-  }, [fetchConversations]);
-
-  return {
-    conversations,
+export const useConversations = (options?: { enabled?: boolean }) => {
+  const {
+    data: conversations,
     isLoading,
     error,
-    refetch: fetchConversations,
+    refetch,
+  } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: () => getConversations({}),
+    staleTime: 30 * 60 * 1000, // 30 minutes - rely on realtime for updates
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    enabled: options?.enabled !== false,
+  });
+
+  return {
+    conversations: conversations || [],
+    isLoading,
+    error: error as Error | null,
+    refetch,
   };
 };

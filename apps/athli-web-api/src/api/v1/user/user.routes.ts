@@ -151,3 +151,30 @@ userRouter.delete('/delete-account', supabaseAuthenticate, userController.delete
  *         description: Client profile ready
  */
 userRouter.post('/new-client', supabaseAuthenticate, userController.newClient);
+
+/**
+ * @swagger
+ * /api/v1/user/generate-avatar:
+ *   post:
+ *     summary: Generate default avatar for user
+ *     description: Generates a default avatar for users without profile pictures (e.g., Apple OAuth)
+ *     tags: [User]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userName
+ *             properties:
+ *               userName:
+ *                 type: string
+ *                 description: User's name for generating initials
+ *     responses:
+ *       200:
+ *         description: Avatar generated successfully
+ */
+userRouter.post('/generate-avatar', supabaseAuthenticate, userController.generateAvatar);
