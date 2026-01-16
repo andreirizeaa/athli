@@ -1611,6 +1611,7 @@ export const enMessages = {
       hybrid: 'Hybrid',
       notConnected: 'Not Connected',
       invitationSent: 'Invitation Sent',
+      uncategorized: 'Not set',
     },
     actions: {
       addClient: 'Add Client',

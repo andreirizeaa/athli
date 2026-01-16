@@ -8,8 +8,7 @@ import { FlashList } from '@shopify/flash-list';
 
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/stores';
-import { useTranslations } from '@/stores';
+import { useThemePreference, useTranslations, useAuth } from '@/stores';
 import { SearchBar } from '@/components/ui/search-bar';
 import { IconButton } from '@/components/ui/icon-button';
 import { ChatListItem } from '@/components/features/chats/chat-list-item';
@@ -28,7 +27,6 @@ import {
   type Chat,
 } from '@/services/chats-service';
 import { useRealtimeConversations } from '@/hooks/use-realtime-messaging';
-import { supabase } from '@/lib/supabase';
 
 export default function ChatsScreen() {
   const router = useRouter();
@@ -42,7 +40,9 @@ export default function ChatsScreen() {
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
   const [openRowCloseFn, setOpenRowCloseFn] = useState<(() => void) | null>(null);
   const isRowOpen = openRowCloseFn !== null;
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Use unified auth hook - waits for BOTH session AND profile
+  const { userId, isReady, isAuthenticated } = useAuth();
 
   const registerOpenRow = useCallback((closeFn: () => void) => {
     if (openRowCloseFn && openRowCloseFn !== closeFn) {
@@ -61,20 +61,9 @@ export default function ChatsScreen() {
   const mutedSurfaceColor = themeColors.backgroundTertiary;
   const iconColor = themeColors.text;
 
-  // Get current user ID
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setCurrentUserId(user.id);
-      }
-    };
-    getCurrentUser();
-  }, []);
-
-  // Realtime conversation updates
+  // Realtime conversation updates - only subscribe when authenticated and ready
   const { conversations: realtimeConversations } = useRealtimeConversations({
-    userId: currentUserId || '',
+    userId: userId || '',
     onConversationUpdated: (conversation) => {
       console.log('[Chats Realtime] Conversation updated:', conversation.id);
       // Update the conversation in the list
@@ -88,21 +77,38 @@ export default function ChatsScreen() {
     },
   });
 
+  // Load chats only when auth is ready (session + profile loaded)
   useEffect(() => {
+    // If auth is not ready yet, keep loading state
+    if (!isReady) {
+      console.log('[ChatsScreen] Waiting for auth to be ready...', { isReady, isAuthenticated });
+      return;
+    }
+
+    // If not authenticated (logged out), stop loading
+    if (!isAuthenticated) {
+      console.log('[ChatsScreen] Not authenticated, stopping loading');
+      setIsLoading(false);
+      return;
+    }
+
+    // Auth is ready and authenticated - fetch chats
     const loadChats = async () => {
       setIsLoading(true);
       try {
+        console.log('[ChatsScreen] Loading chats...');
         const fetchedChats = await getChats();
         setChats(fetchedChats);
+        console.log('[ChatsScreen] Chats loaded successfully');
       } catch (error) {
-        console.error('Failed to load chats:', error);
+        console.error('[ChatsScreen] Failed to load chats:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
     loadChats();
-  }, []);
+  }, [isReady, isAuthenticated]);
 
   const totalUnreadCount = useMemo(() => {
     return chats.reduce((sum, chat) => sum + (chat.unread_count || 0), 0);

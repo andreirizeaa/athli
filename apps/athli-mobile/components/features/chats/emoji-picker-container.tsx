@@ -7,12 +7,13 @@ import { type EmojiType } from 'rn-emoji-keyboard';
 import { useThemePreference } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { Plus } from 'lucide-react-native';
-import { type ChatMessage, reactTo } from '@/services/chats-service';
+import { type ChatMessage, addReaction, removeReaction } from '@/services/chats-service';
 
 type EmojiPickerContainerProps = {
   visible: boolean;
   onClose: () => void;
   selectedMessage: ChatMessage | null;
+  conversationId: string; // Required for adding/removing reactions
   anchorPosition: {
     x: number;
     y: number;
@@ -30,6 +31,7 @@ export const EmojiPickerContainer = ({
   visible,
   onClose,
   selectedMessage,
+  conversationId,
   anchorPosition,
   alignRight = true,
   adjustedMessageTop,
@@ -61,26 +63,30 @@ export const EmojiPickerContainer = ({
 
   const handleEmojiShortcutPress = async (emoji: string) => {
     if (!selectedMessage) {
-      console.log('No selected message');
+      console.log('[EmojiPicker] No selected message');
       return;
     }
 
-    console.log('Emoji shortcut pressed:', emoji);
+    console.log('[EmojiPicker] Emoji shortcut pressed:', emoji);
     const isSender = selectedMessage.isSent;
     const isRemoving = emoji === currentReaction;
 
-    console.log('isSender:', isSender, 'isRemoving:', isRemoving, 'currentReaction:', currentReaction);
+    console.log('[EmojiPicker] isSender:', isSender, 'isRemoving:', isRemoving, 'currentReaction:', currentReaction);
 
-    if (isRemoving) {
-      // Remove reaction
-      console.log('Removing reaction');
-      await reactTo(selectedMessage.id, '', isSender);
-      onReactionUpdate?.(selectedMessage.id, undefined, isSender);
-    } else {
-      // Add or update reaction
-      console.log('Adding/updating reaction:', emoji);
-      await reactTo(selectedMessage.id, emoji, isSender);
-      onReactionUpdate?.(selectedMessage.id, emoji, isSender);
+    try {
+      if (isRemoving) {
+        // Remove reaction
+        console.log('[EmojiPicker] Removing reaction from message:', selectedMessage.id);
+        await removeReaction(selectedMessage.id);
+        onReactionUpdate?.(selectedMessage.id, undefined, isSender);
+      } else {
+        // Add or update reaction
+        console.log('[EmojiPicker] Adding/updating reaction on message:', selectedMessage.id, 'emoji:', emoji);
+        await addReaction(selectedMessage.id, conversationId, emoji as any); // Type assertion for ReactionEmoji
+        onReactionUpdate?.(selectedMessage.id, emoji, isSender);
+      }
+    } catch (error) {
+      console.error('[EmojiPicker] Failed to update reaction:', error);
     }
 
     // Close the popup after reaction
