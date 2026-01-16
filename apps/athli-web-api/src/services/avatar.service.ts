@@ -75,6 +75,47 @@ class AvatarService {
     }
 
     /**
+     * Ensure user has an avatar - generates one if missing and signin method doesn't provide one
+     * Only generates for non-Google OAuth and email signups
+     */
+    async ensureUserHasAvatar(userId: string, userName: string, signinMethod?: string): Promise<string | null> {
+        const supabase = getSupabaseClient();
+
+        // Check if user already has a profile picture
+        const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('profile_picture_url')
+            .eq('id', userId)
+            .single();
+
+        // If user already has a profile picture, return it
+        if (profile?.profile_picture_url) {
+            return profile.profile_picture_url;
+        }
+
+        // Don't generate avatar for Google users - they should use their Google picture
+        if (signinMethod === 'google') {
+            return null;
+        }
+
+        // Generate avatar for all other cases (email, apple, or any OAuth without picture)
+        try {
+            const avatarUrl = await this.generateDefaultAvatar(userId, userName);
+
+            // Update user profile with generated avatar
+            await supabase
+                .from('user_profiles')
+                .update({ profile_picture_url: avatarUrl })
+                .eq('id', userId);
+
+            return avatarUrl;
+        } catch (error) {
+            console.error('Failed to ensure user has avatar:', error);
+            return null;
+        }
+    }
+
+    /**
      * Upload a profile picture to Supabase storage
      */
     async uploadAvatar(userId: string, file: { buffer: Buffer, mimetype: string, originalname: string }): Promise<string> {

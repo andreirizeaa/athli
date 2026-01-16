@@ -21,27 +21,27 @@ interface ClientProfileContentProps {
 }
 
 export const ClientProfileContent = React.memo(function ClientProfileContent({ tab }: ClientProfileContentProps) {
-    const renderTab = (tabName: string, Component: React.ComponentType<any>) => {
-        return (
-            <div className={tab === tabName ? "block h-full" : "hidden"}>
-                <Component />
-            </div>
-        );
+    // Map of tab names to components
+    const tabComponents: Record<string, React.ComponentType<any>> = {
+        'overview': ClientOverviewPage,
+        'notes': ClientNotesPage,
+        'metrics': ClientMetricsPage,
+        'habits': ClientHabitsPage,
+        'photos': ClientPhotosPage,
+        'files': ClientFilesPage,
+        'check-in': ClientCheckInPage,
+        'questionnaires': ClientQuestionnairesPage,
+        'updates': ClientUpdatesPage,
+        'settings': ClientSettingsPage,
+        'training': TrainingCalendarPage,
     };
+
+    // Only render the active tab component
+    const ActiveComponent = tabComponents[tab] || ClientOverviewPage;
 
     return (
         <div className="h-full w-full">
-            {renderTab('overview', ClientOverviewPage)}
-            {renderTab('notes', ClientNotesPage)}
-            {renderTab('metrics', ClientMetricsPage)}
-            {renderTab('habits', ClientHabitsPage)}
-            {renderTab('photos', ClientPhotosPage)}
-            {renderTab('files', ClientFilesPage)}
-            {renderTab('check-in', ClientCheckInPage)}
-            {renderTab('questionnaires', ClientQuestionnairesPage)}
-            {renderTab('updates', ClientUpdatesPage)}
-            {renderTab('settings', ClientSettingsPage)}
-            {renderTab('training', TrainingCalendarPage)}
+            <ActiveComponent />
         </div>
     );
 });

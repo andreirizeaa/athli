@@ -10,7 +10,7 @@ import { Image } from 'expo-image';
 import 'react-native-reanimated';
 import { PressablesConfig } from 'pressto';
 
-import { useColorScheme, useThemePreference, useCoachProfileStore, useClientProfileStore } from '@/stores';
+import { useColorScheme, useThemePreference, useCoachProfileStore, useClientProfileStore, useAuthSessionStore, useAppInitStore } from '@/stores';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { useTranslationsStore } from '@/stores/useTranslationsStore';
 import { useUnitsStore } from '@/stores/useUnitsStore';
@@ -24,6 +24,9 @@ import { restoreSession } from '@/services/auth/supabase-auth';
 import type { CoachProfile, ClientProfile } from '@/types/profile';
 import QueryProvider from '@/providers/query-provider';
 import { ErrorBoundary as CustomErrorBoundary } from '@/components/ui/error-boundary';
+import { supabase } from '@/lib/supabase';
+import { useRouter } from 'expo-router';
+import { AppState } from 'react-native';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -95,6 +98,9 @@ function RootLayoutNav() {
   const [isAppReady, setIsAppReady] = useState(false);
   const setCoachProfile = useCoachProfileStore((state) => state.setProfile);
   const setClientProfile = useClientProfileStore((state) => state.setProfile);
+  const clearCoachProfile = useCoachProfileStore((state) => state.clearProfile);
+  const clearClientProfile = useClientProfileStore((state) => state.clearProfile);
+  const router = useRouter();
 
   // Initialize stores synchronously before first render
   useMemo(() => {
@@ -102,6 +108,8 @@ function RootLayoutNav() {
     useTranslationsStore.getState().initialize();
     useUnitsStore.getState().initialize();
     useHapticsStore.getState().initialize();
+    useCoachProfileStore.getState().initialize();
+    useClientProfileStore.getState().initialize();
   }, []);
 
   // Now we can safely use theme hooks after initialization
@@ -110,34 +118,125 @@ function RootLayoutNav() {
   const segments = useSegments();
   const systemScheme = useNativeColorScheme() ?? 'light';
 
-  // Restore auth session on mount
+  // Initialize auth session and restore profile on mount
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Restore auth session
-        const authResult = await restoreSession();
-        if (authResult && authResult.profile) {
-          if (authResult.profileType === 'coach') {
-            setCoachProfile(authResult.profile as CoachProfile);
-          } else if (authResult.profileType === 'client') {
-            setClientProfile(authResult.profile as ClientProfile);
+        console.log('[RootLayout] Starting app initialization...');
+
+        // STEP 1: Initialize Supabase session BEFORE anything else
+        // This ensures session is restored from MMKV storage and ready
+        await useAuthSessionStore.getState().initializeSession();
+        console.log('[RootLayout] Session initialized');
+
+        // STEP 2: Check if we have profiles in storage (already restored by initialize())
+        const coachProfile = useCoachProfileStore.getState().profile;
+        const clientProfile = useClientProfileStore.getState().profile;
+        console.log('[RootLayout] Profiles from storage:', {
+          hasCoach: !!coachProfile,
+          hasClient: !!clientProfile
+        });
+
+        // STEP 3: If no profile in storage but we have a session, fetch profile from DB
+        const session = useAuthSessionStore.getState().session;
+        if (session && !coachProfile && !clientProfile) {
+          console.log('[RootLayout] No profile in storage, fetching from database...');
+          const authResult = await restoreSession();
+          if (authResult && authResult.profile) {
+            if (authResult.profileType === 'coach') {
+              setCoachProfile(authResult.profile as CoachProfile);
+            } else if (authResult.profileType === 'client') {
+              setClientProfile(authResult.profile as ClientProfile);
+            }
+            console.log('[RootLayout] Profile fetched and stored');
           }
+        } else if (coachProfile || clientProfile) {
+          console.log('[RootLayout] Profile restored from storage, no fetch needed');
         }
 
         // Small delay to ensure first frame is rendered
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 50));
 
-        // Mark app as ready
+        // STEP 4: Mark app as ready - tabs can now safely render
         setIsAppReady(true);
+        useAppInitStore.getState().setAppReady(true);
+        console.log('[RootLayout] App ready');
       } catch (error) {
-        console.error('Error initializing app:', error);
+        console.error('[RootLayout] Error initializing app:', error);
         // Still mark as ready even on error to prevent infinite splash screen
         setIsAppReady(true);
+        useAppInitStore.getState().setAppReady(true);
       }
     };
 
     initializeApp();
   }, [setCoachProfile, setClientProfile]);
+
+  // Listen to Supabase auth state changes
+  useEffect(() => {
+    console.log('[RootLayout] Setting up auth state listener');
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('[RootLayout] Auth state changed:', event);
+
+        if (event === 'INITIAL_SESSION') {
+          // Session loaded from storage - already handled by initializeApp
+          useAuthSessionStore.getState().setSession(session);
+        } else if (event === 'SIGNED_IN') {
+          // User signed in - update session and fetch profile
+          useAuthSessionStore.getState().setSession(session);
+          const authResult = await restoreSession();
+          if (authResult && authResult.profile) {
+            if (authResult.profileType === 'coach') {
+              setCoachProfile(authResult.profile as CoachProfile);
+            } else if (authResult.profileType === 'client') {
+              setClientProfile(authResult.profile as ClientProfile);
+            }
+          }
+        } else if (event === 'SIGNED_OUT') {
+          // User signed out or session expired - clear everything
+          console.log('[RootLayout] User signed out, clearing state');
+          useAuthSessionStore.getState().clearSession();
+          clearCoachProfile();
+          clearClientProfile();
+          router.replace('/welcome');
+        } else if (event === 'TOKEN_REFRESHED') {
+          // Token was refreshed in background - update session
+          console.log('[RootLayout] Token refreshed');
+          useAuthSessionStore.getState().setSession(session);
+        }
+      }
+    );
+
+    return () => {
+      console.log('[RootLayout] Cleaning up auth state listener');
+      subscription.unsubscribe();
+    };
+  }, [setCoachProfile, setClientProfile, clearCoachProfile, clearClientProfile, router]);
+
+  // Listen to app state changes for foreground refresh
+  useEffect(() => {
+    console.log('[RootLayout] Setting up app state listener');
+
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (nextAppState === 'active') {
+        console.log('[RootLayout] App foregrounded, refreshing session');
+        const { data, error } = await supabase.auth.refreshSession();
+        if (error) {
+          console.error('[RootLayout] Foreground refresh failed:', error);
+        } else if (data.session) {
+          console.log('[RootLayout] Session refreshed on foreground');
+          useAuthSessionStore.getState().setSession(data.session);
+        }
+      }
+    });
+
+    return () => {
+      console.log('[RootLayout] Cleaning up app state listener');
+      subscription.remove();
+    };
+  }, []);
 
   // Listen to system color scheme changes
   useEffect(() => {

@@ -20,6 +20,7 @@ import { useCoachPrograms } from '@/hooks/use-coach-programs';
 import { useCoachExercises } from '@/hooks/use-coach-exercises';
 import { useCoachTodo } from '@/hooks/use-coach-todo';
 import { useCoachClients } from '@/hooks/use-coach-clients';
+import { useConversations } from '@/hooks/use-conversations';
 
 interface GlobalContextType {
     user: UserProfile | null;
@@ -62,7 +63,9 @@ import { usePathname } from 'next/navigation';
 const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
     const pathname = usePathname();
     const isAthleteProfile = pathname?.includes('/athletes/') && pathname?.split('/').filter(Boolean).length >= 2;
-    const shouldPrefetch = !isAthleteProfile;
+    const isDownloadRoute = pathname?.startsWith('/download/');
+    const isAuthRoute = pathname?.startsWith('/auth/');
+    const shouldPrefetch = !isAthleteProfile && !isDownloadRoute && !isAuthRoute;
 
     const { isLoading: isFilesLoading } = useCoachFiles({ enabled: shouldPrefetch });
     const { isLoading: isHabitsLoading } = useCoachHabits({ enabled: shouldPrefetch });
@@ -74,6 +77,7 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
     const { isLoading: isExercisesLoading } = useCoachExercises({ enabled: shouldPrefetch });
     const { isLoadingOwn: isOwnTodoLoading, isLoadingAuto: isAutoTodoLoading } = useCoachTodo({ enabled: shouldPrefetch });
     const { isLoading: isClientsLoading } = useCoachClients({ enabled: shouldPrefetch });
+    const { isLoading: isConversationsLoading } = useConversations({ enabled: shouldPrefetch });
 
     const isLoading = isFilesLoading ||
         isHabitsLoading ||
@@ -85,7 +89,8 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
         isExercisesLoading ||
         isOwnTodoLoading ||
         isAutoTodoLoading ||
-        isClientsLoading;
+        isClientsLoading ||
+        isConversationsLoading;
 
     // We only show the full screen loader for prefetching if we are NOT on a specific athlete's page
     // This allows the athlete profile to load its own data without being blocked by global coach data loading
@@ -132,20 +137,32 @@ export default function GlobalDataProvider({ children }: { children: ReactNode }
         isUpdatingCompany
     }), [userProfile, preferences, company, notifications, uniqueCode, isLoading, updatePreferences, updateCompany, uploadAndSetCompanyLogo, toggleNotification, isUploadingLogo, isUpdatingCompany]);
 
-    // Don't show loader on auth routes, error pages, client routes, or athlete profiles
+    // Don't show loader on auth routes, error pages, client routes, download routes, or athlete profiles
     const isAuthRoute = pathname?.startsWith('/auth/');
     const isErrorRoute = pathname?.startsWith('/pages/error');
     const isClientRoute = pathname?.startsWith('/client/');
     const isCoachReferralRoute = pathname?.startsWith('/coach/referral/');
+    const isDownloadRoute = pathname?.startsWith('/download/');
     const isAthleteProfile = pathname?.includes('/athletes/') && pathname?.split('/').filter(Boolean).length >= 2;
-    const shouldShowLoader = isLoading && !isAuthRoute && !isErrorRoute && !isClientRoute && !isCoachReferralRoute && !isAthleteProfile;
+    const shouldShowLoader = isLoading && !isAuthRoute && !isErrorRoute && !isClientRoute && !isCoachReferralRoute && !isDownloadRoute && !isAthleteProfile;
 
     if (shouldShowLoader) {
         return <FullScreenLoader subtitle="Just setting up your workspace, Coach..." />;
     }
 
     // If user is logged in, wrap with prefetcher to ensure data is loaded
+    // Skip prefetcher for download routes (clients don't need coach data)
     if (userProfile) {
+        const isDownloadRoute = pathname?.startsWith('/download/');
+
+        if (isDownloadRoute) {
+            return (
+                <GlobalContext.Provider value={value}>
+                    {children}
+                </GlobalContext.Provider>
+            );
+        }
+
         return (
             <GlobalContext.Provider value={value}>
                 <CoachDataPrefetcher>

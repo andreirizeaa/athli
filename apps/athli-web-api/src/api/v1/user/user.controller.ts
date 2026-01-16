@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { userService } from '../../../services/user.service';
 import { asyncHandler } from '../../../utils/async-handler';
-import { success, unauthorized, internalError } from '../../../utils/http-response';
+import { success, unauthorized, internalError, badRequest } from '../../../utils/http-response';
 import { avatarService } from '../../../services/avatar.service';
 
 export class UserController {
@@ -106,20 +106,73 @@ export class UserController {
     const userId = (req as any).userId;
     const { coachId, invitationToken } = req.body;
 
+    console.log('[Controller] newClient called', { userId, coachId, invitationToken: invitationToken ? 'provided' : 'none' });
+
+    if (!userId) {
+      console.error('[Controller] User not authenticated');
+      unauthorized(res, { message: 'User not authenticated' });
+      return;
+    }
+
+    if (!coachId) {
+      console.error('[Controller] Missing coachId');
+      badRequest(res, { message: 'Coach ID is required' });
+      return;
+    }
+
+    try {
+      const result = await userService.handleNewClient(userId, coachId, invitationToken);
+
+      console.log('[Controller] ✅ Client profile created/verified successfully', { userId, coachId, isNew: result.isNew });
+
+      success(res, {
+        message: result.isNew ? 'Client profile created successfully' : 'Client profile already exists',
+        data: {
+          profile: result.profile,
+          isNew: result.isNew,
+        },
+      });
+    } catch (error: any) {
+      console.error('[Controller] FAILED to create client profile', {
+        userId,
+        coachId,
+        error: error.message,
+        stack: error.stack
+      });
+      throw error; // Re-throw to let asyncHandler handle it
+    }
+  });
+
+  /**
+   * Generate default avatar for user (if they don't have one)
+   * Used for OAuth signups without profile pictures (Apple, etc.)
+   */
+  generateAvatar = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    const { userName } = req.body;
+
     if (!userId) {
       unauthorized(res, { message: 'User not authenticated' });
       return;
     }
 
-    const result = await userService.handleNewClient(userId, coachId, invitationToken);
+    if (!userName) {
+      badRequest(res, { message: 'User name is required' });
+      return;
+    }
 
-    success(res, {
-      message: result.isNew ? 'Client profile created successfully' : 'Client profile already exists',
-      data: {
-        profile: result.profile,
-        isNew: result.isNew,
-      },
-    });
+    try {
+      // Use the helper to ensure avatar exists (won't overwrite if already present)
+      const avatarUrl = await avatarService.ensureUserHasAvatar(userId, userName);
+
+      success(res, {
+        message: avatarUrl ? 'Avatar generated successfully' : 'User already has avatar',
+        data: { avatarUrl },
+      });
+    } catch (error: any) {
+      console.error('Failed to generate avatar:', error);
+      return internalError(res, { message: error.message || 'Failed to generate avatar' });
+    }
   });
 }
 

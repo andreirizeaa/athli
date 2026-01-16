@@ -73,6 +73,7 @@ export async function GET(request: NextRequest) {
 
       if (session) {
         const coachId = requestUrl.searchParams.get('coach_id');
+        const flow = requestUrl.searchParams.get('flow');
         let redirectPath = requestUrl.searchParams.get('redirect') || '/home';
 
         // For new Google OAuth users, set user_type based on context
@@ -101,6 +102,49 @@ export async function GET(request: NextRequest) {
 
           // Profile creation is handled by the database trigger (on_auth_user_updated)
           // which fires when user_type is set via updateUser()
+
+          // Generate default avatar if user doesn't have one (Apple, etc.)
+          // Fire-and-forget to avoid blocking the redirect
+          (async () => {
+            try {
+              // Small delay to let the trigger complete
+              await new Promise(resolve => setTimeout(resolve, 300));
+
+              const { data: { session: currentSession } } = await supabase.auth.getSession();
+              const hasPicture = currentSession?.user.user_metadata?.avatar_url ||
+                                currentSession?.user.user_metadata?.picture;
+
+              if (!hasPicture) {
+                console.log('=== No OAuth profile picture, generating default avatar ===');
+                // Call backend to generate avatar
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+                const userName = currentSession?.user.user_metadata?.name ||
+                                currentSession?.user.user_metadata?.full_name ||
+                                currentSession?.user.email?.split('@')[0] || 'User';
+
+                const response = await fetch(`${apiUrl}/user/generate-avatar`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${currentSession?.access_token}`,
+                  },
+                  body: JSON.stringify({
+                    userId: currentSession?.user.id,
+                    userName: userName,
+                  }),
+                });
+
+                if (response.ok) {
+                  console.log('=== Avatar generated successfully ===');
+                } else {
+                  console.error('Failed to generate avatar:', await response.text());
+                }
+              }
+            } catch (avatarError) {
+              console.error('Error generating avatar:', avatarError);
+              // Don't fail the authentication flow if avatar generation fails
+            }
+          })();
         } else {
           console.log('=== SKIPPING updateUser - user_type already set ===');
         }
@@ -111,12 +155,31 @@ export async function GET(request: NextRequest) {
           return NextResponse.redirect(new URL('/home?refresh=true', request.url));
         }
 
+        // Check if this is a client invite flow (OAuth from client invite page)
+        // Redirect to new-client page to complete profile creation with invitation token
+        if (flow === 'client_invite' && userType === 'client') {
+          console.log('=== Client invite OAuth flow, redirecting to /auth/new-client ===');
+          return NextResponse.redirect(new URL('/auth/new-client', request.url));
+        }
+
         // Check user type and redirect accordingly
         // If user is a client (not a coach), redirect to download page
+        console.log('=== REDIRECT DECISION ===');
+        console.log('userType:', userType);
+        console.log('coachId:', coachId);
+        console.log('flow:', flow);
+        console.log('current redirectPath:', redirectPath);
+
         if (userType === 'client') {
-          console.log('=== User is client-only, redirecting to /download ===');
-          redirectPath = '/download';
+          console.log('=== User is client-only, redirecting to /download/client ===');
+          redirectPath = '/download/client';
+        } else {
+          console.log('=== User is coach, using redirectPath:', redirectPath, '===');
         }
+
+        console.log('=== FINAL REDIRECT ===');
+        console.log('Final redirectPath:', redirectPath);
+        console.log('========================');
 
         // Redirect to specified path
         return NextResponse.redirect(new URL(redirectPath, request.url));

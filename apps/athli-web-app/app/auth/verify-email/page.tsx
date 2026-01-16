@@ -2,32 +2,44 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OTPInput } from '@/components/auth/otp-input';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
+import { AuthLayout } from '@/components/auth/auth-layout';
 import { toast } from 'sonner';
 import { createClient } from '@/supabase/client';
+import { Spinner } from '@/components/ui/spinner';
 
 export default function VerifyEmailPage() {
   const { verifyOTP, resendOTP } = useSupabaseAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = createClient();
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [otp, setOtp] = useState('');
-  const email = searchParams.get('email') || '';
-  const redirectPath = searchParams.get('redirect') || '/home';
+
+  // Get email and auth flow data from sessionStorage
+  const [email, setEmail] = useState('');
+  const [authFlowData, setAuthFlowData] = useState<any>(null);
 
   useEffect(() => {
-    if (!email) {
+    // Retrieve auth flow data from sessionStorage
+    const storedData = sessionStorage.getItem('auth_flow_data');
+    if (storedData) {
+      const parsed = JSON.parse(storedData);
+      setAuthFlowData(parsed);
+      if (parsed.email) {
+        setEmail(parsed.email);
+      }
+    } else {
+      // No sessionStorage data found, redirect to register
       toast.error('Email is required');
       router.push('/auth/register');
     }
-  }, [email, router]);
+  }, [router]);
 
   const handleVerify = async () => {
     if (otp.length !== 6) {
@@ -40,11 +52,22 @@ export default function VerifyEmailPage() {
       const result = await verifyOTP(email, otp);
       if (result?.session?.user) {
         toast.success('Email verified successfully');
-        // Wait for session to be fully established and cookies to be set
-        await new Promise((resolve) => setTimeout(resolve, 500));
 
-        // Check user type to determine redirect
-        let finalRedirect = redirectPath;
+        // Set redirecting state immediately for smooth transition
+        setIsRedirecting(true);
+
+        // Give React time to render the loading screen before navigating
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // If auth flow data exists (e.g., client invite), redirect to new-client
+        if (authFlowData?.flow === 'client_invite') {
+          console.log('[Verify Email] Client invite flow, redirecting to new-client');
+          window.location.href = '/auth/new-client';
+          return;
+        }
+
+        // Otherwise, check user type to determine redirect for default flow
+        let finalRedirect = '/home';
 
         try {
           const response = await fetch('/api/user/me', {
@@ -57,12 +80,12 @@ export default function VerifyEmailPage() {
 
             // If user is a client (not a coach), redirect to download page
             if (userType === 'client') {
-              finalRedirect = '/download';
+              finalRedirect = '/download/client';
             }
           }
         } catch (profileError) {
           console.error('Failed to fetch user profile:', profileError);
-          // Continue with original redirect on error
+          // Continue with home redirect on error
         }
 
         window.location.href = finalRedirect;
@@ -86,76 +109,75 @@ export default function VerifyEmailPage() {
     }
   };
 
+  // Show loading screen during redirect for smooth transition
+  if (isRedirecting) {
+    return (
+      <AuthLayout>
+        <div className="flex flex-col items-center justify-center gap-4 py-12">
+          <Spinner className="size-8 text-white" />
+          <p className="text-white/60 text-sm">Verified! Setting up your account...</p>
+        </div>
+      </AuthLayout>
+    );
+  }
+
   return (
-    <div className="flex h-screen w-screen fixed inset-0">
-      <div className="hidden h-full w-1/2 bg-gray-100 lg:block">
-        <Image
-          width={1000}
-          height={1000}
-          src="/images/auth-image.jpg"
-          alt="Verify email"
-          className="h-full w-full object-cover"
-          unoptimized
-        />
-      </div>
+    <AuthLayout>
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <h2 className="text-3xl font-bold text-white">Verify Your Email</h2>
+          <p className="text-white/60 text-sm">
+            We sent a 6-digit verification code to <strong className="text-white">{email}</strong>. Please enter it
+            below.
+          </p>
+        </div>
 
-      <div className="flex h-full w-full items-center justify-center lg:w-1/2 overflow-y-auto">
-        <div className="w-full max-w-md space-y-8 px-4">
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <OTPInput
+              length={6}
+              value={otp}
+              onChange={setOtp}
+              disabled={isVerifying}
+            />
+          </div>
+
+          <Button
+            onClick={handleVerify}
+            className="w-full h-12 rounded-xl bg-white text-black hover:bg-white/90"
+            disabled={isVerifying || otp.length !== 6}
+          >
+            {isVerifying ? (
+              <>
+                <Loader2 className="size-4 animate-spin mr-2" />
+                Verifying...
+              </>
+            ) : (
+              'Verify Email'
+            )}
+          </Button>
+
           <div className="text-center">
-            <h2 className="mt-6 text-3xl font-bold">Verify Your Email</h2>
-            <p className="text-muted-foreground mt-2 text-sm">
-              We sent a 6-digit verification code to <strong>{email}</strong>. Please enter it
-              below.
+            <p className="text-sm text-white/60 mb-2">
+              Didn&apos;t receive the code?
             </p>
-          </div>
-
-          <div className="mt-8 space-y-6">
-            <div className="space-y-4">
-              <OTPInput
-                length={6}
-                value={otp}
-                onChange={setOtp}
-                disabled={isVerifying}
-              />
-            </div>
-
             <Button
-              onClick={handleVerify}
-              className="w-full"
-              disabled={isVerifying || otp.length !== 6}
+              variant="link"
+              onClick={handleResend}
+              disabled={isResending}
+              className="text-sm text-white hover:text-white/80"
             >
-              {isVerifying ? (
-                <>
-                  <Loader2 className="size-4 animate-spin mr-2" />
-                  Verifying...
-                </>
-              ) : (
-                'Verify Email'
-              )}
+              {isResending ? 'Resending...' : 'Resend Code'}
             </Button>
-
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-2">
-                Didn&apos;t receive the code?
-              </p>
-              <Button
-                variant="link"
-                onClick={handleResend}
-                disabled={isResending}
-                className="text-sm"
-              >
-                {isResending ? 'Resending...' : 'Resend Code'}
-              </Button>
-            </div>
-          </div>
-
-          <div className="mt-6 text-center text-sm">
-            <Link href="/auth/login" className="underline">
-              Back to login
-            </Link>
           </div>
         </div>
+
+        <div className="text-center text-sm text-white/60">
+          <Link href="/auth/login" className="text-white underline hover:text-white/90">
+            Back to login
+          </Link>
+        </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

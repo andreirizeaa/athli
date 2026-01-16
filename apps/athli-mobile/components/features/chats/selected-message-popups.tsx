@@ -21,6 +21,7 @@ interface SelectedMessagePopupsProps {
   visible: boolean;
   onClose: () => void;
   selectedMessage: ChatMessage | null;
+  conversationId: string; // Required for reactions
   options: DropdownMenuOption[];
   anchorPosition: {
     x: number;
@@ -92,6 +93,7 @@ export const SelectedMessagePopups = ({
   visible,
   onClose,
   selectedMessage,
+  conversationId,
   options,
   anchorPosition,
   alignRight = true,
@@ -239,6 +241,7 @@ export const SelectedMessagePopups = ({
           visible={visible}
           onClose={onClose}
           selectedMessage={selectedMessage}
+          conversationId={conversationId}
           anchorPosition={anchorPosition}
           alignRight={alignRight}
           adjustedMessageTop={adjustedMessageTop}

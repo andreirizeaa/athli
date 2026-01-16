@@ -19,6 +19,7 @@ interface AuthContextType {
   resetPasswordForEmail: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInWithApple: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -84,8 +85,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
 
     // Supabase will automatically send the OTP email
-    // Redirect to verify email page
-    router.push(`/auth/verify-email?email=${encodeURIComponent(email)}`);
+    // Redirect to verify email page (email stored in sessionStorage by caller)
+    router.push('/auth/verify-email');
   };
 
   const signIn = async (email: string, password: string) => {
@@ -170,6 +171,18 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
+  const signInWithApple = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        scopes: 'email name',
+      },
+    });
+
+    if (error) throw error;
+  };
+
   const refreshUser = async () => {
     // Force refresh the session to get updated user data
     const { data: { session }, error } = await supabase.auth.refreshSession();
@@ -198,6 +211,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     resetPasswordForEmail,
     updatePassword,
     signInWithGoogle,
+    signInWithApple,
     refreshUser,
   };
 

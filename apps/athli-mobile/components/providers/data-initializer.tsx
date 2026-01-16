@@ -3,35 +3,38 @@
  *
  * This component uses centralized hooks to fetch data and sync to Zustand stores.
  * It should be rendered once at the app root level.
+ *
+ * Updated to use the unified useAuth hook which ensures BOTH session AND profile
+ * are ready before data fetching begins.
  */
 
 import { useEffect } from 'react';
 import { useLibraryData } from '@/hooks/use-library-data';
 import { useClientsData } from '@/hooks/use-clients-data';
-import { useCoachProfileStore } from '@/stores';
+import { useAuth } from '@/stores';
 
 export function DataInitializer() {
-  const coachProfile = useCoachProfileStore((state) => state.profile);
-
-  // Only fetch data if the user is authenticated as a coach
-  const isAuthenticated = !!coachProfile;
+  // Use unified auth hook - waits for BOTH session AND profile
+  const { isAuthenticated, isReady, coachProfile, isSessionReady } = useAuth();
 
   // Log authentication state changes
   useEffect(() => {
     console.log('[DataInitializer] Auth state changed:', {
+      isSessionReady,
       isAuthenticated,
+      isReady,
       hasProfile: !!coachProfile,
       profileId: coachProfile?.id
     });
-  }, [isAuthenticated, coachProfile]);
+  }, [isSessionReady, isAuthenticated, isReady, coachProfile]);
 
   // Initialize library data (check-ins, exercises, habits, etc.)
-  // Pass authentication status to prevent queries when logged out
-  const libraryData = useLibraryData(isAuthenticated);
+  // Wait until BOTH session AND profile are ready to prevent race conditions
+  const libraryData = useLibraryData(isAuthenticated && isReady);
 
   // Initialize clients data
-  // Pass authentication status to prevent queries when logged out
-  const clientsData = useClientsData(isAuthenticated);
+  // Wait until BOTH session AND profile are ready to prevent race conditions
+  const clientsData = useClientsData(isAuthenticated && isReady);
 
   // Log loading states
   useEffect(() => {

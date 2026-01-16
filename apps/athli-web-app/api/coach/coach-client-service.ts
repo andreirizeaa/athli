@@ -19,8 +19,8 @@ export interface Athlete {
   lastName: string;
   email: string;
   coachingType: 'online' | 'in-person' | 'hybrid';
-  category: string;
-  status: 'invited' | 'connected' | 'archived';
+  category: 'online' | 'in-person' | 'hybrid' | null;
+  status: 'invited' | 'accepted' | 'bounced' | 'connected' | 'archived';
   avatarUrl: string;
   createdAt: number; // timestamp in milliseconds
   phone: string;
@@ -66,7 +66,7 @@ export const getClients = async (): Promise<Athlete[]> => {
       lastName: names.slice(1).join(' ') || '',
       email: client.email || '',
       coachingType: (client.category as any) || 'online',
-      category: client.category || 'online',
+      category: client.category || null,
       status: client.status || 'invited',
       avatarUrl: client.avatar_url || '',
       createdAt: createdAt.getTime(),
@@ -79,7 +79,7 @@ export const getClients = async (): Promise<Athlete[]> => {
       age: calculateAge(client.date_of_birth),
       height: client.height_cm || null,
       clientFor: clientForDays.toString(),
-      connected: client.status === 'connected' ? true : client.status === 'invited' ? 'invitation-sent' : false,
+      connected: (client.status === 'accepted' || client.status === 'connected') ? true : client.status === 'invited' ? 'invitation-sent' : false,
     };
   });
 };
@@ -106,7 +106,7 @@ export const getClient = async (id: string): Promise<Athlete> => {
     lastName: names.slice(1).join(' ') || '',
     email: client.email || '',
     coachingType: (client.category as any) || 'online',
-    category: client.category || 'online',
+    category: client.category || null,
     status: client.status || 'invited',
     avatarUrl: client.avatar_url || '',
     createdAt: createdAt.getTime(),
@@ -119,7 +119,7 @@ export const getClient = async (id: string): Promise<Athlete> => {
     age: calculateAge(client.date_of_birth),
     height: client.height_cm || null,
     clientFor: clientForDays.toString(),
-    connected: client.status === 'connected' ? true : client.status === 'invited' ? 'invitation-sent' : false,
+    connected: (client.status === 'accepted' || client.status === 'connected') ? true : client.status === 'invited' ? 'invitation-sent' : false,
   };
 };
 
@@ -235,7 +235,7 @@ export const addClient = async (data: AddClientData): Promise<Athlete> => {
     lastName: names.slice(1).join(' ') || '',
     email: client.email || '',
     coachingType: (client.category as any) || 'online',
-    category: client.category || 'online',
+    category: client.category || null,
     status: client.status || 'invited',
     avatarUrl: client.avatar_url || '',
     createdAt: createdAt.getTime(),
@@ -248,7 +248,7 @@ export const addClient = async (data: AddClientData): Promise<Athlete> => {
     age: calculateAge(client.date_of_birth),
     height: client.height_cm || null,
     clientFor: clientForDays.toString(),
-    connected: client.status === 'connected' ? true : client.status === 'invited' ? 'invitation-sent' : false,
+    connected: (client.status === 'accepted' || client.status === 'connected') ? true : client.status === 'invited' ? 'invitation-sent' : false,
     invitationToken: client.invitation_token,
   };
 };
@@ -281,7 +281,7 @@ export const addClients = async (data: AddClientsData): Promise<Athlete[]> => {
       lastName: names.slice(1).join(' ') || '',
       email: client.email || '',
       coachingType: (client.category as any) || 'online',
-      category: client.category || 'online',
+      category: client.category || null,
       status: client.status || 'invited',
       avatarUrl: client.avatar_url || '',
       createdAt: createdAt.getTime(),
@@ -294,7 +294,7 @@ export const addClients = async (data: AddClientsData): Promise<Athlete[]> => {
       age: calculateAge(client.date_of_birth),
       height: client.height_cm || null,
       clientFor: clientForDays.toString(),
-      connected: client.status === 'connected' ? true : client.status === 'invited' ? 'invitation-sent' : false,
+      connected: (client.status === 'accepted' || client.status === 'connected') ? true : client.status === 'invited' ? 'invitation-sent' : false,
     };
   });
 };
@@ -330,7 +330,7 @@ export const getArchivedClients = async (): Promise<Athlete[]> => {
       lastName: names.slice(1).join(' ') || '',
       email: client.email || '',
       coachingType: (client.category as any) || 'online',
-      category: client.category || 'online',
+      category: client.category || null,
       status: 'archived',
       avatarUrl: client.avatar_url || '',
       createdAt: createdAt.getTime(),

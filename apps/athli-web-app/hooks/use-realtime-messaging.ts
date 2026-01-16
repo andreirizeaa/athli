@@ -374,6 +374,7 @@ type SyncReadReceiptOptions = {
   conversationId: string;
   userId: string;
   enabled?: boolean; // Enable/disable syncing
+  latestMessageId?: string; // Optional: pass latest message ID to avoid querying
 };
 
 /**
@@ -385,8 +386,9 @@ export const useSyncReadReceipt = ({
   conversationId,
   userId,
   enabled = true,
+  latestMessageId,
 }: SyncReadReceiptOptions) => {
-  const [isSyncing, setIsSyncing] = useState(false);
+  const isSyncingRef = useRef(false);
   const [isVisible, setIsVisible] = useState(!document.hidden);
 
   // Track page visibility
@@ -403,28 +405,32 @@ export const useSyncReadReceipt = ({
   }, []);
 
   const syncReadReceipt = useCallback(async () => {
-    if (!enabled || isSyncing) return;
+    if (!enabled || isSyncingRef.current) return;
 
-    setIsSyncing(true);
+    isSyncingRef.current = true;
 
     try {
       const supabase = createClient();
 
-      // Get latest message in conversation
-      const { data: messages, error: messagesError } = await supabase
-        .from('messages')
-        .select('id, sent_at')
-        .eq('conversation_id', conversationId)
-        .order('sent_at', { ascending: false })
-        .limit(1);
+      let messageIdToMark: string | undefined = latestMessageId;
 
-      if (messagesError) throw messagesError;
-      if (!messages || messages.length === 0) {
-        setIsSyncing(false);
-        return;
+      // If latestMessageId not provided, query for latest message
+      if (!messageIdToMark) {
+        const { data: messages, error: messagesError } = await supabase
+          .from('messages')
+          .select('id, sent_at')
+          .eq('conversation_id', conversationId)
+          .order('sent_at', { ascending: false })
+          .limit(1);
+
+        if (messagesError) throw messagesError;
+        if (!messages || messages.length === 0) {
+          isSyncingRef.current = false;
+          return;
+        }
+
+        messageIdToMark = messages[0].id;
       }
-
-      const latestMessage = messages[0];
 
       // Update read receipt
       const { error: receiptError } = await supabase
@@ -433,7 +439,7 @@ export const useSyncReadReceipt = ({
           {
             conversation_id: conversationId,
             user_id: userId,
-            last_read_message_id: latestMessage.id,
+            last_read_message_id: messageIdToMark,
             last_read_at: new Date().toISOString(),
           },
           {
@@ -447,22 +453,22 @@ export const useSyncReadReceipt = ({
     } catch (error) {
       console.error('[ReadReceipt] Error syncing:', error);
     } finally {
-      setIsSyncing(false);
+      isSyncingRef.current = false;
     }
-  }, [conversationId, userId, enabled, isSyncing]);
+  }, [conversationId, userId, enabled, latestMessageId]);
 
   useEffect(() => {
     if (!isVisible || !enabled) return;
 
-    // Debounce: update read receipt after 500ms of page visibility
+    // Debounce: update read receipt after 2s of page visibility
     const timer = setTimeout(() => {
       syncReadReceipt();
-    }, 500);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [isVisible, enabled, syncReadReceipt]);
 
-  return { syncReadReceipt, isSyncing };
+  return { syncReadReceipt, isSyncing: isSyncingRef.current };
 };
 
 // ================================================

@@ -16,7 +16,7 @@ export interface Athlete {
   email: string;
   coachingType: 'online' | 'in-person' | 'hybrid';
   category: string;
-  status: 'invited' | 'connected' | 'archived';
+  status: 'invited' | 'accepted' | 'bounced' | 'connected' | 'archived';
   avatarUrl: string;
   createdAt: number;
   phone: string;
@@ -75,7 +75,7 @@ export const getClients = async (): Promise<Athlete[]> => {
       age: calculateAge(client.date_of_birth),
       height: client.height_cm || null,
       clientFor: clientForDays.toString(),
-      connected: (client.status === 'connected' ? true : client.status === 'invited' ? 'invitation-sent' : false) as boolean | 'invitation-sent',
+      connected: ((client.status === 'accepted' || client.status === 'connected') ? true : client.status === 'invited' ? 'invitation-sent' : false) as boolean | 'invitation-sent',
     };
   });
   console.log('[coach-client-service] getClients returned:', clients.length, 'clients');
@@ -121,7 +121,7 @@ export const addClient = async (data: AddClientData): Promise<Athlete> => {
     age: calculateAge(client.date_of_birth),
     height: client.height_cm || null,
     clientFor: clientForDays.toString(),
-    connected: client.status === 'connected' ? true : client.status === 'invited' ? 'invitation-sent' : false,
+    connected: (client.status === 'accepted' || client.status === 'connected') ? true : client.status === 'invited' ? 'invitation-sent' : false,
     invitationToken: client.invitation_token,
   };
 };

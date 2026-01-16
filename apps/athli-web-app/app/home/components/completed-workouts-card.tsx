@@ -268,38 +268,37 @@ export const CompletedWorkoutsCard = () => {
       </div>
 
       {/* Dialogs */}
-      {selectedWorkout && workoutData && (
-        <>
-          {console.log('Home - selectedWorkout:', selectedWorkout, 'client_id:', selectedWorkout.client_id)}
-          <ClientTrainingDaySummary
-            open={isSummaryDialogOpen}
-            onOpenChange={setIsSummaryDialogOpen}
-            workoutName={workoutData?.name || 'Untitled Workout'}
-            clientId={selectedWorkout.client_id}
-            athlete={{
-              name: selectedWorkout.clientName,
-              avatarUrl: selectedWorkout.clientAvatar
-            }}
-            workoutData={workoutData}
-            stats={calculateStats(workoutData)}
-            completedSummary={
-              selectedWorkout.status === 'completed' || selectedWorkout.status === 'in_progress' ?
-                {
-                  status: selectedWorkout.status,
-                  totalDurationMin: workoutData?.workout_data?.completedSummary?.totalDurationMin || calculateStats(workoutData).duration,
-                  totalWeightLifted: workoutData?.workout_data?.completedSummary?.totalWeightLifted || calculateStats(workoutData).volume,
-                  startedAt: workoutData?.workout_data?.completedSummary?.startedAt,
-                  completedAt: workoutData?.workout_data?.completedSummary?.completedAt
-                } : undefined
-            }
-          />
+      {selectedWorkout && workoutData && isSummaryDialogOpen && (
+        <ClientTrainingDaySummary
+          open={isSummaryDialogOpen}
+          onOpenChange={setIsSummaryDialogOpen}
+          workoutName={workoutData?.name || 'Untitled Workout'}
+          clientId={selectedWorkout.client_id}
+          athlete={{
+            name: selectedWorkout.clientName,
+            avatarUrl: selectedWorkout.clientAvatar
+          }}
+          workoutData={workoutData}
+          stats={calculateStats(workoutData)}
+          completedSummary={
+            selectedWorkout.status === 'completed' || selectedWorkout.status === 'in_progress' ?
+              {
+                status: selectedWorkout.status,
+                totalDurationMin: workoutData?.workout_data?.completedSummary?.totalDurationMin || calculateStats(workoutData).duration,
+                totalWeightLifted: workoutData?.workout_data?.completedSummary?.totalWeightLifted || calculateStats(workoutData).volume,
+                startedAt: workoutData?.workout_data?.completedSummary?.startedAt,
+                completedAt: workoutData?.workout_data?.completedSummary?.completedAt
+              } : undefined
+          }
+        />
+      )}
 
-          <WorkoutPreviewDialog
-            open={isPreviewDialogOpen}
-            onOpenChange={setIsPreviewDialogOpen}
-            workoutData={workoutData}
-          />
-        </>
+      {selectedWorkout && workoutData && isPreviewDialogOpen && (
+        <WorkoutPreviewDialog
+          open={isPreviewDialogOpen}
+          onOpenChange={setIsPreviewDialogOpen}
+          workoutData={workoutData}
+        />
       )}
     </div>
   );
