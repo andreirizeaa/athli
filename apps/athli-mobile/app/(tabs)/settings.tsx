@@ -1,11 +1,15 @@
-import React from 'react';
-import { Platform, StyleSheet, Text, View, Linking } from 'react-native';
-import { PressableOpacity } from 'pressto';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Platform, StyleSheet, Text, View, Linking, ActivityIndicator } from 'react-native';
+import { PressableScale } from 'pressto';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
+import { Storage } from '@/lib/storage';
+import { haptics } from '@/utils/haptics';
 import { SymbolView } from 'expo-symbols';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { LucideIcon } from 'lucide-react-native';
 import {
+  Building2,
   Cog,
   FileText,
   IdCard,
@@ -47,14 +51,62 @@ const PlatformIcon = ({ sf, mdi, IconComponent, size = 24, color = '#000000' }: 
   return <IconComponent {...({ size, color } as any)} />;
 };
 
+const LAST_SYNC_KEY = 'athli:last-sync-time';
+
 export default function SettingsScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { colors: themeColors } = useThemePreference();
   const { appView, setAppView } = useAppView();
   const { t } = useTranslations();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
+
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  useEffect(() => {
+    const storedTime = Storage.getItem(LAST_SYNC_KEY);
+    if (storedTime) {
+      setLastSyncTime(storedTime);
+    }
+  }, []);
+
+  const formatLastSyncTime = useCallback((isoTime: string): string => {
+    const date = new Date(isoTime);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) {
+      return 'Just now';
+    } else if (diffMins < 60) {
+      return `${diffMins}m ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours}h ago`;
+    } else if (diffDays < 7) {
+      return `${diffDays}d ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  }, []);
+
+  const handleSyncData = useCallback(async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await queryClient.invalidateQueries();
+      const now = new Date().toISOString();
+      Storage.setItem(LAST_SYNC_KEY, now);
+      setLastSyncTime(now);
+      haptics.success();
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [queryClient, isSyncing]);
 
   const isAthleteView = appView === 'athlete';
   const isCoach = !!coachProfile;
@@ -68,9 +120,11 @@ export default function SettingsScreen() {
   };
 
   const handleOpenPersonalDetails = () => {
-    if (!isAthleteView) {
-      handleOpenWebURL('https://app.tryathli.com/');
-    }
+    router.push('/settings/personal-details');
+  };
+
+  const handleOpenCompanyDetails = () => {
+    router.push('/settings/company-details');
   };
 
   const handleOpenDeleteAccount = () => {
@@ -88,7 +142,10 @@ export default function SettingsScreen() {
   };
 
   const handleOpenSupportEmail = () => {
-    Linking.openURL('mailto:support@tryathli.com').catch((err) =>
+    const email = 'support@tryathli.com';
+    const subject = encodeURIComponent('Athli App Support Request');
+    const body = encodeURIComponent('Hi Athli Support Team,\n\nI need help with:\n\n');
+    Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`).catch((err) =>
       console.error('Failed to open email:', err)
     );
   };
@@ -109,7 +166,7 @@ export default function SettingsScreen() {
         {/* Profile Card - Only shown in athlete view */}
         {isAthleteView && (
           <Card>
-            <PressableOpacity style={styles.profileRow}>
+            <PressableScale style={styles.profileRow}>
               <View style={styles.profileAvatar}>
                 <View style={styles.fallbackAvatar}>
                   <PlatformIcon sf="person.fill" mdi="person" IconComponent={User} size={iconSizes.tabBarIcons} color="#ffffff" />
@@ -132,7 +189,7 @@ export default function SettingsScreen() {
                   {t('profile.memberSince')} 2024
                 </Text>
               </View>
-            </PressableOpacity>
+            </PressableScale>
           </Card>
         )}
 
@@ -145,6 +202,17 @@ export default function SettingsScreen() {
             showChevron
             onPress={handleOpenPersonalDetails}
           />
+          {!isAthleteView && (
+            <>
+              <Separator />
+              <SettingsOption
+                icon={<PlatformIcon sf="building.2" mdi="business" IconComponent={Building2} size={iconSize} color={iconColor} />}
+                title={t('profile.companyDetails')}
+                showChevron
+                onPress={handleOpenCompanyDetails}
+              />
+            </>
+          )}
           <Separator />
           <SettingsOption
             icon={<PlatformIcon sf="gear" mdi="settings" IconComponent={Cog} size={iconSize} color={iconColor} />}
@@ -171,8 +239,10 @@ export default function SettingsScreen() {
           <SettingsOption
             icon={<PlatformIcon sf="arrow.clockwise" mdi="refresh" IconComponent={RefreshCw} size={iconSize} color={iconColor} />}
             title={t('profile.syncData')}
-            subtitle={`${t('profile.lastSynced')} ${t('profile.never')}`}
+            subtitle={lastSyncTime ? `${t('profile.lastSynced')} ${formatLastSyncTime(lastSyncTime)}` : `${t('profile.lastSynced')} ${t('profile.never')}`}
             subtitleRight
+            onPress={handleSyncData}
+            rightElement={isSyncing ? <ActivityIndicator size="small" color={themeColors.mutedText} /> : undefined}
           />
         </Card>
 

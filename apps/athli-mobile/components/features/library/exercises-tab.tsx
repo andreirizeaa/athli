@@ -17,6 +17,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { useLibraryTab } from '@/stores';
+import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EXERCISE_CATEGORY_OPTIONS, EQUIPMENT_OPTIONS } from '@athli/shared-types';
 
@@ -24,14 +25,13 @@ export const ExercisesTab = () => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const { searchQuery, registerOpenRow, closeOpenRow, openRowCloseFn } = useLibraryTab();
+  const { registerOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
-  const isRowOpen = openRowCloseFn !== null;
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
 
   // Fetch exercises directly with TanStack Query
-  const { data: exercises = [] } = useQuery({
+  const { data: exercises = [], isRefetching, refetch } = useQuery({
     queryKey: ['exercises'],
     queryFn: async () => {
       console.log('[ExercisesTab] Fetching exercises...');
@@ -43,6 +43,12 @@ export const ExercisesTab = () => {
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
+  });
+
+  const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
+    searchPlaceholderKey: 'library.searchPlaceholders.exercises',
+    isRefetching,
+    refetch,
   });
 
   // Filter exercises based on search query
@@ -358,12 +364,15 @@ export const ExercisesTab = () => {
       data={filteredExercises}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      ListHeaderComponent={ListHeaderComponent}
+      refreshControl={refreshControl}
+      showsVerticalScrollIndicator={false}
       ListEmptyComponent={
         <EmptyState
           message={t('library.empty.exercises')}
         />
       }
-      contentContainerStyle={styles.container}
     />
   );
 };

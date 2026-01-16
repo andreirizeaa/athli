@@ -14,6 +14,7 @@ import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
+import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { getAllMetrics, deleteMetric, duplicateMetric } from '@/services/coach/coach-metric-service';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -22,14 +23,13 @@ export const MetricsTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const router = useRouter();
-  const { searchQuery, registerOpenRow, closeOpenRow, openRowCloseFn } = useLibraryTab();
+  const { registerOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
-  const isRowOpen = openRowCloseFn !== null;
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
 
   // Fetch metrics directly with TanStack Query
-  const { data: metrics = [] } = useQuery({
+  const { data: metrics = [], isRefetching, refetch } = useQuery({
     queryKey: ['metrics'],
     queryFn: async () => {
       console.log('[MetricsTab] Fetching metrics...');
@@ -41,6 +41,12 @@ export const MetricsTab = () => {
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
+  });
+
+  const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
+    searchPlaceholderKey: 'library.searchPlaceholders.metrics',
+    isRefetching,
+    refetch,
   });
 
   // Filter metrics based on search query
@@ -219,12 +225,15 @@ export const MetricsTab = () => {
       data={filteredMetrics}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      ListHeaderComponent={ListHeaderComponent}
+      refreshControl={refreshControl}
+      showsVerticalScrollIndicator={false}
       ListEmptyComponent={
         <EmptyState
           message={t('library.empty.metrics')}
         />
       }
-      contentContainerStyle={styles.container}
     />
   );
 };

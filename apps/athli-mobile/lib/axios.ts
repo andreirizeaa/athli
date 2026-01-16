@@ -29,13 +29,6 @@ supabase.auth.onAuthStateChange((event, session) => {
   cachedSession = session;
 });
 
-// Initialize cached session on module load
-(async () => {
-  const { data: { session } } = await supabase.auth.getSession();
-  cachedSession = session;
-  console.log('[API] Initial session cached');
-})();
-
 const axiosInstance = axios.create({
   baseURL: API_URL,
   headers: {},
@@ -48,7 +41,26 @@ axiosInstance.interceptors.request.use(
     console.log('[API] Making request:', config.method?.toUpperCase(), config.url);
     console.log('[API] Full URL:', `${config.baseURL}${config.url}`);
 
-    // Use cached session instead of calling getSession() on every request
+    // If no cached session, try to get from auth store (already initialized by _layout.tsx)
+    if (!cachedSession) {
+      const { useAuthSessionStore } = await import('@/stores/useAuthSessionStore');
+      const storeSession = useAuthSessionStore.getState().session;
+      if (storeSession) {
+        cachedSession = storeSession;
+        console.log('[API] Session retrieved from auth store');
+      }
+    }
+
+    // If still no cached session, fetch directly from Supabase (handles fresh login case)
+    if (!cachedSession) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        cachedSession = session;
+        console.log('[API] Session retrieved from Supabase');
+      }
+    }
+
+    // Use cached session
     if (cachedSession?.access_token) {
       config.headers.Authorization = `Bearer ${cachedSession.access_token}`;
       console.log('[API] Auth token added from cache');

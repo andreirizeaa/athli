@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/supabase/client';
 import type { User } from '@supabase/supabase-js';
@@ -17,6 +17,8 @@ interface AuthContextType {
   verifyOTP: (email: string, token: string) => Promise<any>;
   resendOTP: (email: string) => Promise<void>;
   resetPasswordForEmail: (email: string) => Promise<void>;
+  verifyRecoveryOTP: (email: string, token: string) => Promise<any>;
+  resendRecoveryOTP: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
@@ -28,6 +30,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const isSigningOutRef = useRef(false);
   const router = useRouter();
   const supabase = createClient();
   const queryClient = useQueryClient();
@@ -43,6 +46,9 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Skip state updates when signing out to keep the loading overlay visible
+      if (isSigningOutRef.current) return;
+
       setSupabaseUser(session?.user ?? null);
       setIsAuthLoading(false);
 
@@ -107,11 +113,20 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Set flag to prevent auth state change listener from updating state
+    // This keeps the loading overlay visible until navigation completes
+    isSigningOutRef.current = true;
+
     const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    queryClient.removeQueries({ queryKey: ['user-profile'] });
-    setSupabaseUser(null);
-    router.push('/auth/login');
+    if (error) {
+      isSigningOutRef.current = false;
+      throw error;
+    }
+
+    // Use window.location for full page navigation - keeps overlay visible until redirect completes
+    // Don't update React state here since we're navigating away
+    const landingPage = process.env.NEXT_PUBLIC_LANDING_PAGE || '/';
+    window.location.href = landingPage;
   };
 
   const verifyOTP = async (email: string, token: string) => {
@@ -137,6 +152,26 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const resetPasswordForEmail = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+
+    if (error) throw error;
+  };
+
+  const verifyRecoveryOTP = async (email: string, token: string) => {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'recovery',
+    });
+
+    if (error) throw error;
+
+    return data;
+  };
+
+  const resendRecoveryOTP = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-password`,
     });
@@ -209,6 +244,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     verifyOTP,
     resendOTP,
     resetPasswordForEmail,
+    verifyRecoveryOTP,
+    resendRecoveryOTP,
     updatePassword,
     signInWithGoogle,
     signInWithApple,

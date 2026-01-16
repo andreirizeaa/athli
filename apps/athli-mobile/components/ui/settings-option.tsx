@@ -1,7 +1,8 @@
 import React from 'react';
 import type { JSX } from 'react';
 import type { GestureResponderEvent } from 'react-native';
-import { Platform, StyleSheet, Text, View, Pressable } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import { PressableScale } from 'pressto';
 import { SymbolView } from 'expo-symbols';
 import type { LucideIcon } from 'lucide-react-native';
 import { ChevronRight } from 'lucide-react-native';
@@ -37,9 +38,10 @@ export interface SettingsOptionProps {
     sf: string;
     IconComponent: LucideIcon;
   };
+  rightElement?: JSX.Element;
 }
 
-export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, showChevron, style, chevronSize, chevronIcon }: SettingsOptionProps) {
+export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, showChevron, style, chevronSize, chevronIcon, rightElement }: SettingsOptionProps) {
   const { colors: themeColors } = useThemePreference();
 
   const handleOptionPress = (event: GestureResponderEvent) => {
@@ -59,7 +61,7 @@ export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, 
   const chevron = chevronIcon || defaultChevronIcon;
 
   return (
-    <Pressable
+    <PressableScale
       style={[
         styles.optionRow,
         style,
@@ -73,9 +75,14 @@ export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, 
           <Text style={[styles.optionSubtitle, { color: themeColors.mutedText }]}>{subtitle}</Text>
         )}
       </View>
-      {subtitle && subtitleRight && (
+      {subtitle && subtitleRight && !rightElement && (
         <View style={styles.subtitleRightContainer}>
           <Text style={[styles.optionSubtitleRight, { color: themeColors.mutedText }]}>{subtitle}</Text>
+        </View>
+      )}
+      {rightElement && (
+        <View style={styles.subtitleRightContainer}>
+          {rightElement}
         </View>
       )}
       {showChevron && (
@@ -83,7 +90,7 @@ export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, 
           <PlatformIcon sf={chevron.sf} IconComponent={chevron.IconComponent} size={chevronSize || iconSizes.extraSmallIcons} color={themeColors.mutedText} />
         </View>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -120,8 +127,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   optionSubtitleRight: {
-    ...typography.p1,
-    lineHeight: 22,
+    ...typography.p3,
   },
 });
 

@@ -161,13 +161,18 @@ const SecurityPage = () => {
       const { error: emailError } = await supabase.auth.updateUser(
         { email: newEmailValue },
         {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?type=email_change`,
         }
       );
       if (emailError) throw emailError;
 
-      toast.success(t('settings.security.emailUpdateInitiated'));
+      // Show success message and close dialog
+      toast.success('Please confirm your new email address via the link sent to your inbox');
       setIsEmailDialogOpen(false);
+
+      // Log out the user and redirect to login page immediately
+      await supabase.auth.signOut();
+      window.location.href = '/auth/login';
     } catch (error: any) {
       toast.error(error.message || t('settings.security.emailUpdateFailed'));
       throw error;
