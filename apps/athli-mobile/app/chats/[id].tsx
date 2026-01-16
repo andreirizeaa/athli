@@ -510,6 +510,12 @@ export default function ChatDetailScreen() {
         const parsed = JSON.parse(messagesParam) as ChatMessage[];
         return parsed.map((msg) => ({
           ...msg,
+          // Convert all date fields from strings (JSON) to Date objects
+          sent_at: new Date(msg.sent_at),
+          read_at: msg.read_at ? new Date(msg.read_at) : null,
+          edited_at: msg.edited_at ? new Date(msg.edited_at) : null,
+          deleted_at: msg.deleted_at ? new Date(msg.deleted_at) : null,
+          created_at: msg.created_at ? new Date(msg.created_at) : new Date(),
           timestamp: new Date(msg.sent_at),
         }));
       } catch {
@@ -596,16 +602,13 @@ export default function ChatDetailScreen() {
     getCurrentUser();
   }, []);
 
-  // Realtime messages subscription
+  // Realtime messages subscription (uses broadcast events for scalability)
   const { realtimeMessages } = useRealtimeMessages({
     conversationId: id,
-    onMessageReceived: (message) => {
-      console.log('[Realtime] New message received:', message.id);
-    },
   });
 
-  // Merge saved, realtime, and optimistic messages
-  const allMessages = useMessageMerging(messages, realtimeMessages, optimisticMessages);
+  // Merge saved, realtime, and optimistic messages - transforms to UIMessage[]
+  const allMessages = useMessageMerging(messages, realtimeMessages, optimisticMessages, currentUserId);
 
   useEffect(() => {
     const handleKeyboardHide = () => {
@@ -739,8 +742,6 @@ export default function ChatDetailScreen() {
         try {
           const documentData = JSON.parse(sentDocument);
 
-          console.log('[ChatDetail] Uploading document...', documentData.name);
-
           // Upload document and create message in one atomic operation
           await sendWithAttachment(
             id, // conversationId
@@ -749,8 +750,6 @@ export default function ChatDetailScreen() {
             documentData.mimeType || 'application/pdf', // mimeType
             documentData.caption || undefined, // caption
           );
-
-          console.log('[ChatDetail] Document uploaded successfully');
 
           // Clear draft text in input bar
           setSearchQuery('');
@@ -780,8 +779,6 @@ export default function ChatDetailScreen() {
         try {
           const imageAttachments = JSON.parse(sentImages);
 
-          console.log('[ChatDetail] Uploading images...', imageAttachments.length);
-
           // Upload each image separately (multiple messages, one per image)
           // This matches WhatsApp behavior where each image is a separate message
           for (const image of imageAttachments) {
@@ -793,8 +790,6 @@ export default function ChatDetailScreen() {
               sentImagesCaption || undefined, // caption (only first image gets caption)
             );
           }
-
-          console.log('[ChatDetail] Images uploaded successfully');
 
           // Clear draft text in input bar
           setSearchQuery('');
@@ -825,8 +820,6 @@ export default function ChatDetailScreen() {
         try {
           const videoData = JSON.parse(sentVideo);
 
-          console.log('[ChatDetail] Uploading video...');
-
           // Upload video and create message in one atomic operation
           await sendWithAttachment(
             id, // conversationId
@@ -835,8 +828,6 @@ export default function ChatDetailScreen() {
             'video/mp4', // mimeType
             videoData.caption || undefined, // caption
           );
-
-          console.log('[ChatDetail] Video uploaded successfully');
 
           // Clear draft text in input bar
           setSearchQuery('');
@@ -905,10 +896,9 @@ export default function ChatDetailScreen() {
 
     const markAsRead = async () => {
       try {
-        console.log('[ChatDetail] Marking conversation as read:', id);
         await markConversationAsRead(id);
-      } catch (error) {
-        console.error('[ChatDetail] Failed to mark conversation as read:', error);
+      } catch {
+        // Silently handle mark as read errors - not critical
       }
     };
 
@@ -987,11 +977,7 @@ export default function ChatDetailScreen() {
       setIsMicrophoneMode(false);
 
       // Use captured duration (recorderState can be 0 depending on platform)
-      const durationMs = lastVoiceNoteDurationMsRef.current;
-      const durationSeconds = Math.floor(durationMs / 1000);
       const audioUri = pathToSend.startsWith('file://') ? pathToSend : `file://${pathToSend}`;
-
-      console.log('[ChatDetail] Uploading audio...', { durationMs, durationSeconds });
 
       // Upload audio and create message in one atomic operation
       await sendWithAttachment(
@@ -1001,8 +987,6 @@ export default function ChatDetailScreen() {
         'audio/mp4', // mimeType
         undefined, // no caption for audio
       );
-
-      console.log('[ChatDetail] Audio uploaded successfully');
     } catch (e) {
       console.error('[ChatDetail] Failed to send voice note:', e);
       Alert.alert('Upload Failed', 'Could not upload voice note. Please try again.');
@@ -1107,7 +1091,7 @@ export default function ChatDetailScreen() {
     const parentMessageId = replyingToMessage?.id;
     setReplyingToMessage(null);
 
-    // Create optimistic message
+    // Create optimistic message for immediate UI update
     const optimisticMsg = createOptimisticMessage(
       id, // conversationId
       currentUserId,
@@ -1126,10 +1110,12 @@ export default function ChatDetailScreen() {
         parentMessageId,
       });
 
-      // Remove optimistic message (realtime will add the real one)
+      // Remove optimistic message and refetch to get the real one
+      // This ensures message appears even if realtime isn't working
       setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      const updatedMessages = await getChatMessages(id);
+      setMessages(updatedMessages);
     } catch (error) {
-      console.error('[Chat] Failed to send message:', error);
       // Mark as failed (keep in optimistic list but update status)
       setOptimisticMessages((prev) =>
         prev.map((m) =>
@@ -1143,7 +1129,6 @@ export default function ChatDetailScreen() {
   const handleMessageEdit = (message: ChatMessage) => {
     // TODO: Implement edit functionality
     // This could set the message to edit mode and populate the input with the message text
-    console.log('Edit message:', message);
     setSearchQuery(message.text);
   };
 
