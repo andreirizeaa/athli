@@ -1,5 +1,5 @@
 export const DEFAULT_THEME = {
-    preset: "sunset-glow",
+    preset: "default",
     radius: "default",
     scale: "none",
     contentLayout: "full"

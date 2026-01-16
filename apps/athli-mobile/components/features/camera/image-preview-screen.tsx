@@ -1,13 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Pressable, View, Text, ScrollView, Image as RNImage, Alert, Keyboard, TouchableWithoutFeedback, Dimensions } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Pressable, View, Text, ScrollView, Image as RNImage, Alert, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { X, Download, Plus, Trash2, MoreHorizontal, CheckCircle2, Check } from 'lucide-react-native';
+import { X, Download, Trash2, MoreHorizontal, CheckCircle2, Check } from 'lucide-react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import * as Sharing from 'expo-sharing';
 import Share from 'react-native-share';
+import { useKeyboardHandler } from 'react-native-keyboard-controller';
+import { useSharedValue } from 'react-native-reanimated';
+import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
 
 import { iconSizes, typography } from '@/constants/typography';
 import { PlatformIcon } from '@/components/ui/platform-icon';
@@ -18,6 +21,7 @@ import { sendImageMessage } from '@/services/chats-service';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { useDarkModeTheme } from '@/components/ui/dark-mode-wrapper';
 import { StatusBar } from 'expo-status-bar';
+import { haptics } from '@/utils/haptics';
 
 const ImagePreviewScreen = () => {
   const router = useRouter();
@@ -54,19 +58,29 @@ const ImagePreviewScreen = () => {
   }, [params.caption]);
   const [images, setImages] = useState<ImageAttachment[]>(initialImages);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(initialImages[0]?.id || null);
-  const scrollViewRef = useRef<ScrollView>(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
+  const pagerRef = useRef<PagerView>(null);
+  const isProgrammaticChange = useRef(false);
 
-  const screenWidth = Dimensions.get('window').width;
-  const thumbnailSize = 45;
-  const addButtonWidth = 45;
-  const horizontalPadding = 32; // 16 on each side
-  const gap = 8;
-  const scrollableWidth = screenWidth - addButtonWidth - horizontalPadding - gap;
+  // Keyboard animation - use onMove for frame-by-frame tracking
+  const keyboardHeight = useSharedValue(0);
+
+  useKeyboardHandler(
+    {
+      onMove: (event) => {
+        'worklet';
+        keyboardHeight.value = event.height;
+      },
+      onEnd: (event) => {
+        'worklet';
+        keyboardHeight.value = event.height;
+      },
+    },
+    []
+  );
 
   const selectedImage = images.find((img) => img.id === selectedImageId) || images[0];
-  const inactiveBorderColor = '#FFFFFF';
 
   const handleClose = () => {
     if (fromPicker && params.chatId) {
@@ -254,8 +268,42 @@ const ImagePreviewScreen = () => {
     },
   ];
 
+  // Helper functions for ID↔index conversion
+  const getIndexFromId = (id: string | null) => {
+    if (!id || !images) return 0;
+    const index = images.findIndex((img) => img.id === id);
+    return index >= 0 ? index : 0;
+  };
+
+  const getIdFromIndex = (index: number) => {
+    return images?.[index]?.id ?? null;
+  };
+
   const handleImagePress = (imageId: string) => {
+    isProgrammaticChange.current = true;
+    const index = images.findIndex((img) => img.id === imageId);
+    pagerRef.current?.setPage(index);
     setSelectedImageId(imageId);
+  };
+
+  const handlePageSelected = (event: PagerViewOnPageSelectedEvent) => {
+    const index = event.nativeEvent.position;
+    const expectedIndex = getIndexFromId(selectedImageId);
+
+    // Skip if this is a programmatic change (thumbnail tap)
+    if (isProgrammaticChange.current) {
+      if (index === expectedIndex) {
+        isProgrammaticChange.current = false;
+      }
+      return;
+    }
+
+    // User swipe - update thumbnail selection
+    const newId = getIdFromIndex(index);
+    if (newId && newId !== selectedImageId) {
+      haptics.selection();
+      setSelectedImageId(newId);
+    }
   };
 
   const handleDeletePress = (imageId: string, event: any) => {
@@ -267,36 +315,33 @@ const ImagePreviewScreen = () => {
     }
   };
 
+  const MAX_MEDIA_FILES = 4;
+
   const handleAddMore = async () => {
+    // Check if we've reached the limit
+    if (images.length >= MAX_MEDIA_FILES) {
+      Alert.alert('Limit reached', `You can only add up to ${MAX_MEDIA_FILES} photos per message.`);
+      return;
+    }
+
     try {
-      // Request permissions
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      // Request camera permissions
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission required', 'Please grant permission to access your photos.');
+        Alert.alert('Permission required', 'Please grant permission to use the camera.');
         return;
       }
 
-      // Get current image URIs to filter out duplicates
-      const currentUris = images.map((img) => img.uri);
-
-      // Open image picker with single selection
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsMultipleSelection: false,
+      // Open native camera
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images', 'videos'],
         quality: 1,
+        videoMaxDuration: 60,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
         if (!asset.uri) return;
-
-        // Check if this image is already in our list
-        const existingImage = images.find((img) => img.uri === asset.uri);
-        if (existingImage) {
-          // Image already exists - just select it
-          setSelectedImageId(existingImage.id);
-          return;
-        }
 
         // New image - add it to the list
         const newImage: ImageAttachment = {
@@ -307,10 +352,14 @@ const ImagePreviewScreen = () => {
         const updatedImages = [...images, newImage];
         setImages(updatedImages);
         setSelectedImageId(newImage.id);
+        // Scroll pager to the new image (at the end of the array)
+        setTimeout(() => {
+          pagerRef.current?.setPage(updatedImages.length - 1);
+        }, 100);
       }
     } catch (error) {
-      console.error('Error adding more images:', error);
-      Alert.alert('Error', 'Failed to add images');
+      console.error('Error adding more from camera:', error);
+      Alert.alert('Error', 'Failed to capture image');
     }
   };
 
@@ -580,7 +629,18 @@ const ImagePreviewScreen = () => {
       <View style={styles.container}>
         {showToolbar && <StatusBar hidden />}
         <View style={styles.imagePreviewContainer}>
-          <RNImage source={{ uri: selectedImage.uri }} style={styles.previewImage} resizeMode="contain" />
+          <PagerView
+            ref={pagerRef}
+            style={StyleSheet.absoluteFill}
+            initialPage={getIndexFromId(selectedImageId)}
+            onPageSelected={handlePageSelected}
+          >
+            {images.map((image) => (
+              <View key={image.id} style={styles.pagerPage}>
+                <RNImage source={{ uri: image.uri }} style={styles.previewImage} resizeMode="contain" />
+              </View>
+            ))}
+          </PagerView>
         </View>
         <View
           style={[
@@ -599,67 +659,8 @@ const ImagePreviewScreen = () => {
               icon={{ sf: 'xmark', IconComponent: X }}
               onPress={handleClose}
               size="md"
-              color={iconColor}
+              scheme="light"
             />
-          </View>
-        </View>
-
-        {/* Image gallery row above toolbar */}
-        <View style={styles.galleryContainer}>
-          <ScrollView
-            ref={scrollViewRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.galleryScrollContent}
-            style={styles.galleryScroll}
-          >
-            {images.map((image) => {
-              const isSelected = selectedImageId === image.id;
-              return (
-                <PressableOpacity
-                  key={image.id}
-                  style={[
-                    styles.thumbnailContainer,
-                    {
-                      borderColor: '#FFFFFF',
-                      borderWidth: 2,
-                    },
-                  ]}
-                  onPress={() => handleImagePress(image.id)}
-                >
-                  <RNImage source={{ uri: image.uri }} style={styles.thumbnail} resizeMode="cover" />
-                  {isSelected && (
-                    <View style={styles.trashOverlay}>
-                      <PressableOpacity
-                        style={styles.trashButton}
-                        onPress={(e) => handleDeletePress(image.id, e)}
-                      >
-                        <PlatformIcon
-                          sf="trash"
-                          IconComponent={Trash2}
-                          size={18}
-                          color="#FFFFFF"
-                        />
-                      </PressableOpacity>
-                    </View>
-                  )}
-                </PressableOpacity>
-              );
-            })}
-          </ScrollView>
-          <View style={styles.addButtonWrapper}>
-            <PressableOpacity
-              style={[
-                styles.addButtonContainer,
-                {
-                  borderColor: '#FFFFFF',
-                  borderWidth: 2,
-                },
-              ]}
-              onPress={handleAddMore}
-            >
-              <PlatformIcon sf="photo.badge.plus" IconComponent={Plus} size={24} color="#FFFFFF" />
-            </PressableOpacity>
           </View>
         </View>
 
@@ -669,6 +670,13 @@ const ImagePreviewScreen = () => {
           onChangeText={setCaption}
           clientName={params.clientName}
           onSend={handleSend}
+          keyboardHeight={keyboardHeight}
+          images={images}
+          selectedImageId={selectedImageId}
+          onImageSelect={handleImagePress}
+          onDeleteImage={handleDeletePress}
+          onAddMore={handleAddMore}
+          maxImages={MAX_MEDIA_FILES}
         />
       </View>
     </TouchableWithoutFeedback>
@@ -833,64 +841,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
-  galleryContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    alignItems: 'center',
-    position: 'relative',
-    height: 45,
-  },
-  galleryScroll: {
-    flex: 1,
-    marginRight: 8,
-    height: 45,
-  },
-  galleryScrollContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingRight: 53, // Space for add button (45 + 8 gap)
-    height: 45,
-  },
-  thumbnailContainer: {
-    width: 45,
-    height: 45,
-    borderRadius: 8,
-    marginRight: 8,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  addButtonWrapper: {
-    width: 45,
-    height: 45,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  thumbnail: {
-    width: '100%',
-    height: '100%',
-  },
-  trashOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  trashButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addButtonContainer: {
-    width: 45,
-    height: 45,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-  },
   imagePreviewContainer: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#000',
@@ -900,6 +850,9 @@ const styles = StyleSheet.create({
   previewImage: {
     width: '100%',
     height: '100%',
+  },
+  pagerPage: {
+    flex: 1,
   },
 });
 

@@ -74,10 +74,14 @@ export default function SignUpPage() {
 
   return (
     <AuthLayout>
-      <AuthErrorAlert pathname={pathname} />
       <div className="space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="w-14 h-14 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center">
+              <Image src="/icons/athli.png" alt="Athli" width={64} height={64} />
+            </div>
+          </div>
           <h2 className="text-3xl font-bold text-white">Create an Account</h2>
           <p className="text-sm text-white/60">
             Already have an account?{' '}
@@ -87,11 +91,14 @@ export default function SignUpPage() {
           </p>
         </div>
 
+        {/* Error Alert - shown under header */}
+        <AuthErrorAlert pathname={pathname} />
+
         {/* Provider Buttons */}
         <div className="grid grid-cols-2 gap-3">
           <Button
             variant="outline"
-            className="h-12 rounded-xl bg-white/10 border-white/20 text-white hover:bg-white hover:text-black hover:border-white transition-colors"
+            className="h-12 rounded-xl !bg-white/10 !border-white/20 !text-white hover:!bg-white hover:!text-black hover:!border-white transition-all"
             onClick={handleGoogleSignIn}
             disabled={isSigningUp || isGoogleLoading || isAppleLoading}
           >
@@ -112,7 +119,7 @@ export default function SignUpPage() {
 
           <Button
             variant="outline"
-            className="h-12 rounded-xl bg-white/10 border-white/20 text-white hover:bg-white hover:text-black hover:border-white transition-colors"
+            className="h-12 rounded-xl !bg-white/10 !border-white/20 !text-white hover:!bg-white hover:!text-black hover:!border-white transition-all"
             onClick={handleAppleSignIn}
             disabled={isSigningUp || isGoogleLoading || isAppleLoading}
           >
@@ -148,7 +155,7 @@ export default function SignUpPage() {
                 name="name"
                 type="text"
                 required
-                className="w-full h-12 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
+                className="w-full h-12 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
                 placeholder="John Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -165,7 +172,7 @@ export default function SignUpPage() {
                 type="email"
                 autoComplete="email"
                 required
-                className="w-full h-12 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
+                className="w-full h-12 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -183,7 +190,7 @@ export default function SignUpPage() {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  className="w-full h-12 pr-10 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
+                  className="w-full h-12 pr-10 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
                   placeholder="Create a password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -210,7 +217,7 @@ export default function SignUpPage() {
           <div className="pt-2">
             <Button
               type="submit"
-              className="w-full h-12 rounded-xl bg-white text-black hover:bg-white/90"
+              className="w-full h-12 rounded-xl !bg-white !text-black hover:!bg-white/90"
               disabled={isSigningUp || isGoogleLoading || isAppleLoading}
             >
               {isSigningUp ? (
@@ -226,7 +233,7 @@ export default function SignUpPage() {
         </form>
 
         {/* Terms */}
-        <div className="text-center text-xs text-white/50">
+        <div className="text-center text-sm text-white/50">
           By signing up, you agree to our{' '}
           <Link href="/terms" className="underline hover:text-white/70">
             Terms

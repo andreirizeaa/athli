@@ -16,6 +16,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { useLibraryTab } from '@/stores';
+import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { getSections, deleteSections, duplicateSection, starSections, archiveSections } from '@/services/coach/coach-section-service';
 import { EmptyState } from '@/components/ui/empty-state';
 
@@ -23,14 +24,13 @@ export const SectionsTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const router = useRouter();
-  const { searchQuery, registerOpenRow, closeOpenRow, openRowCloseFn } = useLibraryTab();
+  const { registerOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
-  const isRowOpen = openRowCloseFn !== null;
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
 
   // Fetch sections directly with TanStack Query
-  const { data: sections = [] } = useQuery({
+  const { data: sections = [], isRefetching, refetch } = useQuery({
     queryKey: ['sections'],
     queryFn: async () => {
       console.log('[SectionsTab] Fetching sections...');
@@ -42,6 +42,12 @@ export const SectionsTab = () => {
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
+  });
+
+  const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
+    searchPlaceholderKey: 'library.searchPlaceholders.sections',
+    isRefetching,
+    refetch,
   });
 
   // Filter sections based on search query
@@ -281,12 +287,15 @@ export const SectionsTab = () => {
       data={filteredSections}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      ListHeaderComponent={ListHeaderComponent}
+      refreshControl={refreshControl}
+      showsVerticalScrollIndicator={false}
       ListEmptyComponent={
         <EmptyState
           message={t('library.empty.sections')}
         />
       }
-      contentContainerStyle={styles.container}
     />
   );
 };

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -51,22 +52,26 @@ export default function VerifyEmailPage() {
     try {
       const result = await verifyOTP(email, otp);
       if (result?.session?.user) {
+        // Set loading state IMMEDIATELY before any other operations
+        // This prevents the form from appearing blank during async work
+        setIsRedirecting(true);
         toast.success('Email verified successfully');
 
-        // Set redirecting state immediately for smooth transition
-        setIsRedirecting(true);
-
-        // Give React time to render the loading screen before navigating
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // If auth flow data exists (e.g., client invite), redirect to new-client
+        // Client invite flow
         if (authFlowData?.flow === 'client_invite') {
           console.log('[Verify Email] Client invite flow, redirecting to new-client');
           window.location.href = '/auth/new-client';
           return;
         }
 
-        // Otherwise, check user type to determine redirect for default flow
+        // Register flow → redirect to /get-started
+        if (authFlowData?.flow === 'register') {
+          console.log('[Verify Email] Register flow, redirecting to get-started');
+          window.location.href = '/get-started';
+          return;
+        }
+
+        // Default/other flows → check user type to determine redirect
         let finalRedirect = '/home';
 
         try {
@@ -124,7 +129,12 @@ export default function VerifyEmailPage() {
   return (
     <AuthLayout>
       <div className="space-y-6">
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="w-14 h-14 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center">
+              <Image src="/icons/athli.png" alt="Athli" width={64} height={64} />
+            </div>
+          </div>
           <h2 className="text-3xl font-bold text-white">Verify Your Email</h2>
           <p className="text-white/60 text-sm">
             We sent a 6-digit verification code to <strong className="text-white">{email}</strong>. Please enter it
@@ -144,7 +154,7 @@ export default function VerifyEmailPage() {
 
           <Button
             onClick={handleVerify}
-            className="w-full h-12 rounded-xl bg-white text-black hover:bg-white/90"
+            className="w-full h-12 rounded-xl !bg-white !text-black hover:!bg-white/90"
             disabled={isVerifying || otp.length !== 6}
           >
             {isVerifying ? (
@@ -165,7 +175,7 @@ export default function VerifyEmailPage() {
               variant="link"
               onClick={handleResend}
               disabled={isResending}
-              className="text-sm text-white hover:text-white/80"
+              className="text-sm !text-white hover:!text-white/90 underline"
             >
               {isResending ? 'Resending...' : 'Resend Code'}
             </Button>

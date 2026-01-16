@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View, Alert } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, View, Alert, InteractionManager } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { Image, Video, FileText, Camera } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 
@@ -33,10 +34,14 @@ export const AttachmentPickerRow = ({
 }: AttachmentPickerRowProps) => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
+  const { t } = useTranslations();
   const slideAnim = useRef(new Animated.Value(0)).current;
 
   // Create translucent background color - more transparent since parent already has BlurView
   const translucentBg = backgroundColor ? hexToRgba(backgroundColor, 0.3) : hexToRgba(themeColors.translucentBackground, 0.3);
+
+  // Maximum number of media files allowed per message
+  const MAX_MEDIA_FILES = 4;
 
   // WhatsApp-style colors for each attachment type
   const attachmentColors = {
@@ -67,16 +72,20 @@ export const AttachmentPickerRow = ({
         return;
       }
 
-      // Open image picker for photos with multi-select enabled
+      // Open image picker for photos with multi-select enabled (limited to 4)
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsMultipleSelection: true,
+        selectionLimit: MAX_MEDIA_FILES,
         quality: 1,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
+        // Enforce max limit (in case selectionLimit isn't respected on some platforms)
+        const selectedAssets = result.assets.slice(0, MAX_MEDIA_FILES);
+
         // Convert selected images to ImageAttachment format
-        const imageAttachments = result.assets
+        const imageAttachments = selectedAssets
           .map((asset, index) => {
             if (!asset.uri) return null;
             return {
@@ -179,16 +188,58 @@ export const AttachmentPickerRow = ({
     }
   };
 
-  const handleCameraPress = () => {
-    router.push({
-      pathname: '/camera/camera',
-      params: {
-        chatId: chatId || '',
-        clientId: clientId || '',
-        clientName: clientName || '',
-        caption: caption || '',
-      },
+  const handleCameraPress = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(t('general.permissionRequired'), t('camera.permissionMessage'));
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images', 'videos'],
+      quality: 1,
+      videoMaxDuration: 60,
     });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      const isVideo = asset.type === 'video';
+
+      // Wait for JS bridge to fully restore after returning from native camera
+      InteractionManager.runAfterInteractions(() => {
+        if (isVideo) {
+          router.push({
+            pathname: '/chats/video-preview',
+            params: {
+              uri: asset.uri,
+              duration: (asset.duration || 0).toString(),
+              orientation: asset.width && asset.height && asset.width > asset.height ? 'landscape' : 'portrait',
+              chatId: chatId || '',
+              clientId: clientId || '',
+              clientName: clientName || '',
+              caption: caption || '',
+              fromCamera: 'true',
+            },
+          });
+        } else {
+          const imageAttachment = {
+            uri: asset.uri,
+            id: `photo-${Date.now()}-${Math.random()}`,
+          };
+          router.push({
+            pathname: '/chats/message-image-preview',
+            params: {
+              images: JSON.stringify([imageAttachment]),
+              chatId: chatId || '',
+              clientId: clientId || '',
+              clientName: clientName || '',
+              fromPicker: 'true',
+              caption: caption || '',
+            },
+          });
+        }
+      });
+    }
   };
 
   const translateY = slideAnim.interpolate({

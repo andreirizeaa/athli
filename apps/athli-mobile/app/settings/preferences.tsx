@@ -16,7 +16,6 @@ import {
   ChevronDown,
   ChevronLeft,
   Languages,
-  LogOut,
   Moon,
   Palette,
   Ruler,

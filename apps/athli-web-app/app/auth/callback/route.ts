@@ -9,6 +9,11 @@ export async function GET(request: NextRequest) {
   const type = requestUrl.searchParams.get('type');
   const code = requestUrl.searchParams.get('code');
 
+  // Check for error parameters from Supabase
+  const error = requestUrl.searchParams.get('error');
+  const errorDescription = requestUrl.searchParams.get('error_description');
+  const errorCode = requestUrl.searchParams.get('error_code');
+
   // Debug: Log all parameters
   console.log('=== AUTH CALLBACK DEBUG ===');
   console.log('Full URL:', requestUrl.toString());
@@ -16,7 +21,26 @@ export async function GET(request: NextRequest) {
   console.log('token_hash:', token_hash);
   console.log('type:', type);
   console.log('code:', code);
+  console.log('error:', error);
+  console.log('errorDescription:', errorDescription);
   console.log('========================');
+
+  // If Supabase returned an error, handle based on verification type
+  if (error) {
+    // For email_change verification, the email is already changed in the backend
+    // Just redirect to login without showing an error
+    if (type === 'email_change') {
+      console.log('Email change verification - redirecting to login (email was changed)');
+      return NextResponse.redirect(new URL('/auth/login', request.url));
+    }
+
+    // For other errors, forward to login page with error details
+    const errorParams = new URLSearchParams();
+    errorParams.set('error', error);
+    if (errorDescription) errorParams.set('error_description', errorDescription);
+    if (errorCode) errorParams.set('error_code', errorCode);
+    return NextResponse.redirect(new URL(`/auth/login?${errorParams.toString()}`, request.url));
+  }
 
   const cookieStore = await cookies();
   cookieStore.getAll();

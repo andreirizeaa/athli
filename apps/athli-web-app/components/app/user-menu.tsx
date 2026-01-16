@@ -3,7 +3,6 @@
 import React from 'react';
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Check, Laptop, LogOut, Moon, Settings, Sun } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,26 +22,23 @@ import { cn } from '@/lib/general/utils';
 import { availableLanguages } from '@/lib/providers/intl-provider';
 import { useThemeConfig } from '@/components/app/active-theme';
 import { DEFAULT_THEME, THEMES } from '@/lib/theme';
-import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
+import { useLogout } from '@/lib/providers/logout-provider';
 import { useGlobalData } from '@/providers/global-data-provider';
 
 type UserMenuProps = {
   isThemeMounted: boolean;
   currentLanguage: string;
   setCurrentLanguage: (lang: string) => void;
-  setIsLoggingOut: (value: boolean) => void;
 };
 
 export function UserMenu({
   isThemeMounted,
   currentLanguage,
   setCurrentLanguage,
-  setIsLoggingOut,
 }: UserMenuProps) {
   const t = useTranslations();
-  const { signOut } = useSupabaseAuth();
+  const { triggerLogout } = useLogout();
   const { user } = useGlobalData();
-  const router = useRouter();
   const { resolvedTheme, setTheme, theme } = useTheme();
   const { theme: themeConfig, setTheme: setThemeConfig } = useThemeConfig();
   const { user: globalUser, preferences, updatePreferences } = useGlobalData();
@@ -265,15 +261,7 @@ export function UserMenu({
         <DropdownMenuItem
           className="cursor-pointer px-3 py-2 rounded-t-none"
           variant="destructive"
-          onClick={async () => {
-            setIsLoggingOut(true);
-            try {
-              await signOut();
-            } catch (error) {
-              console.error('Sign out error:', error);
-              setIsLoggingOut(false);
-            }
-          }}
+          onClick={triggerLogout}
         >
           <LogOut className="mr-2 size-4" />
           <span>{t('sidebar.profile.logOut')}</span>

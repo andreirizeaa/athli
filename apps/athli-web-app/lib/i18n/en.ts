@@ -537,6 +537,9 @@ export const enMessages = {
         nonAdmin: 'Non admin',
         addTeamMember: 'Add team member',
       },
+      branding: {
+        title: 'Branding',
+      },
     },
     billing: {
       title: 'Billing',

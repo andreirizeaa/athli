@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +8,7 @@ import { FlashList } from '@shopify/flash-list';
 
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference, useTranslations, useAuth } from '@/stores';
+import { useThemePreference, useTranslations, useAuth, useChatsStore } from '@/stores';
 import { SearchBar } from '@/components/ui/search-bar';
 import { IconButton } from '@/components/ui/icon-button';
 import { ChatListItem } from '@/components/features/chats/chat-list-item';
@@ -17,12 +17,7 @@ import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dr
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import {
-  getChats,
   getArchivedChats,
-  readAllChats,
-  archiveChat,
-  deleteChat,
-  markChatAsRead,
   getChatMessages,
   type Chat,
 } from '@/services/chats-service';
@@ -34,15 +29,22 @@ export default function ChatsScreen() {
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
   const [openRowCloseFn, setOpenRowCloseFn] = useState<(() => void) | null>(null);
   const isRowOpen = openRowCloseFn !== null;
 
   // Use unified auth hook - waits for BOTH session AND profile
-  const { userId, isReady, isAuthenticated } = useAuth();
+  const { userId } = useAuth();
+
+  // Use chats store
+  const chats = useChatsStore((state) => state.chats);
+  const isLoading = useChatsStore((state) => state.isLoading);
+  const updateChat = useChatsStore((state) => state.updateChat);
+  const storArchiveChat = useChatsStore((state) => state.archiveChat);
+  const storeDeleteChat = useChatsStore((state) => state.deleteChat);
+  const storeMarkAsRead = useChatsStore((state) => state.markAsRead);
+  const storeMarkAllAsRead = useChatsStore((state) => state.markAllAsRead);
 
   const registerOpenRow = useCallback((closeFn: () => void) => {
     if (openRowCloseFn && openRowCloseFn !== closeFn) {
@@ -61,54 +63,15 @@ export default function ChatsScreen() {
   const mutedSurfaceColor = themeColors.backgroundTertiary;
   const iconColor = themeColors.text;
 
-  // Realtime conversation updates - only subscribe when authenticated and ready
+  // Realtime conversation updates - only subscribe when authenticated
   const { conversations: realtimeConversations } = useRealtimeConversations({
     userId: userId || '',
     onConversationUpdated: (conversation) => {
       console.log('[Chats Realtime] Conversation updated:', conversation.id);
-      // Update the conversation in the list
-      setChats((prev) => {
-        const existing = prev.find((c) => c.id === conversation.id);
-        if (existing) {
-          return prev.map((c) => (c.id === conversation.id ? conversation : c));
-        }
-        return [...prev, conversation];
-      });
+      // Update the conversation in the store
+      updateChat(conversation);
     },
   });
-
-  // Load chats only when auth is ready (session + profile loaded)
-  useEffect(() => {
-    // If auth is not ready yet, keep loading state
-    if (!isReady) {
-      console.log('[ChatsScreen] Waiting for auth to be ready...', { isReady, isAuthenticated });
-      return;
-    }
-
-    // If not authenticated (logged out), stop loading
-    if (!isAuthenticated) {
-      console.log('[ChatsScreen] Not authenticated, stopping loading');
-      setIsLoading(false);
-      return;
-    }
-
-    // Auth is ready and authenticated - fetch chats
-    const loadChats = async () => {
-      setIsLoading(true);
-      try {
-        console.log('[ChatsScreen] Loading chats...');
-        const fetchedChats = await getChats();
-        setChats(fetchedChats);
-        console.log('[ChatsScreen] Chats loaded successfully');
-      } catch (error) {
-        console.error('[ChatsScreen] Failed to load chats:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadChats();
-  }, [isReady, isAuthenticated]);
 
   const totalUnreadCount = useMemo(() => {
     return chats.reduce((sum, chat) => sum + (chat.unread_count || 0), 0);
@@ -199,10 +162,7 @@ export default function ChatsScreen() {
   };
 
   const handleReadAllPress = async () => {
-    await readAllChats();
-    // Reload chats to update unread counts
-    const fetchedChats = await getChats();
-    setChats(fetchedChats);
+    await storeMarkAllAsRead();
   };
 
 
@@ -212,42 +172,30 @@ export default function ChatsScreen() {
 
   const handleArchivePress = async () => {
     for (const chatId of selectedChatIds) {
-      await archiveChat(chatId);
+      await storArchiveChat(chatId);
     }
     setIsEditMode(false);
     setSelectedChatIds(new Set());
-    // Reload chats
-    const fetchedChats = await getChats();
-    setChats(fetchedChats);
   };
 
   const handleDeletePress = async () => {
     for (const chatId of selectedChatIds) {
-      await deleteChat(chatId);
+      await storeDeleteChat(chatId);
     }
     setIsEditMode(false);
     setSelectedChatIds(new Set());
-    // Reload chats
-    const fetchedChats = await getChats();
-    setChats(fetchedChats);
   };
 
   const handleChatArchive = async (chatId: string) => {
-    await archiveChat(chatId);
-    const fetchedChats = await getChats();
-    setChats(fetchedChats);
+    await storArchiveChat(chatId);
   };
 
   const handleChatDelete = async (chatId: string) => {
-    await deleteChat(chatId);
-    const fetchedChats = await getChats();
-    setChats(fetchedChats);
+    await storeDeleteChat(chatId);
   };
 
   const handleChatMarkAsRead = async (chatId: string) => {
-    await markChatAsRead(chatId);
-    const fetchedChats = await getChats();
-    setChats(fetchedChats);
+    await storeMarkAsRead(chatId);
   };
 
 

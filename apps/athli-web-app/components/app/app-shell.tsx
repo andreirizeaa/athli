@@ -11,6 +11,10 @@ import { AppSidebar } from './app-sidebar';
 import { AppHeader } from './app-header';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/general/utils';
+import { LogoutProvider, useLogout } from '@/lib/providers/logout-provider';
+import { useGlobalData } from '@/providers/global-data-provider';
+import { useThemeConfig } from '@/components/app/active-theme';
+import { PresetValue } from '@/lib/theme';
 
 // Re-export types for backward compatibility
 export type {
@@ -39,7 +43,9 @@ type AppShellProps = {
 export const AppShell = ({ children }: AppShellProps) => {
   return (
     <UnsavedChangesProvider>
-      <AppShellWithProvider>{children}</AppShellWithProvider>
+      <LogoutProvider>
+        <AppShellWithProvider>{children}</AppShellWithProvider>
+      </LogoutProvider>
     </UnsavedChangesProvider>
   );
 };
@@ -49,13 +55,22 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
   const pathname = usePathname();
   const { locale, setLocale } = useLanguage();
   const [isThemeMounted, setIsThemeMounted] = React.useState(false);
-  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+  const { isLoggingOut } = useLogout();
+  const { preferences } = useGlobalData();
+  const { theme: themeConfig, setTheme: setThemeConfig } = useThemeConfig();
 
   const isGetStartedPage = pathname === '/get-started';
 
   React.useEffect(() => {
     setIsThemeMounted(true);
   }, []);
+
+  // Sync color preset from API preferences to theme
+  React.useEffect(() => {
+    if (preferences?.color_preset && preferences.color_preset !== themeConfig.preset) {
+      setThemeConfig({ ...themeConfig, preset: preferences.color_preset as PresetValue });
+    }
+  }, [preferences?.color_preset]);
 
   return (
     <SidebarProvider
@@ -82,7 +97,6 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
             isThemeMounted={isThemeMounted}
             currentLanguage={locale}
             setCurrentLanguage={setLocale}
-            setIsLoggingOut={setIsLoggingOut}
           />
         )}
         <div className="flex-1 overflow-y-auto min-h-0">{children}</div>

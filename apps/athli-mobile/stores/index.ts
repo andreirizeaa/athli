@@ -13,6 +13,7 @@ export { useAppViewStore, type AppView } from './useAppViewStore';
 export { useLibraryTabStore, type LibraryTab } from './useLibraryTabStore';
 export { useTrainingOverlayStore } from './useTrainingOverlayStore';
 export { useCoachProfileStore } from './useCoachProfileStore';
+export { useCoachCompanyStore } from './useCoachCompanyStore';
 export { useClientProfileStore } from './useClientProfileStore';
 export { useAuthSessionStore } from './useAuthSessionStore';
 export { useAppInitStore } from './useAppInitStore';
@@ -25,6 +26,7 @@ export {
 } from './useModalCallbacksStore';
 export { useLibraryStore } from './useLibraryStore';
 export { useClientsStore } from './useClientsStore';
+export { useChatsStore } from './useChatsStore';
 
 // Export auth hook
 export { useAuth } from '../hooks/useAuth';
@@ -43,29 +45,44 @@ import { useAppViewStore } from './useAppViewStore';
 import { useLibraryTabStore } from './useLibraryTabStore';
 import { useTrainingOverlayStore } from './useTrainingOverlayStore';
 import { useModalCallbacksStore } from './useModalCallbacksStore';
+import { DEFAULT_THEME, createPresetPalette } from '@/constants/theme';
 
 /**
  * Hook to access theme preferences (backward compatible)
  * Replaces: useThemePreference from contexts/useColorScheme
  */
 export const useThemePreference = () => {
-  const preference = useThemeStore((state) => state.preference);
-  const setPreference = useThemeStore((state) => state.setPreference);
-  const preset = useThemeStore((state) => state.preset);
-  const setPreset = useThemeStore((state) => state.setPreset);
-  const primaryColor = useThemeStore((state) => state.primaryColor);
-  const primarySoftColor = useThemeStore((state) => state.primarySoftColor);
-  const colors = useThemeStore((state) => state.colors);
+  try {
+    const preference = useThemeStore((state) => state.preference);
+    const setPreference = useThemeStore((state) => state.setPreference);
+    const preset = useThemeStore((state) => state.preset);
+    const setPreset = useThemeStore((state) => state.setPreset);
+    const primaryColor = useThemeStore((state) => state.primaryColor);
+    const primarySoftColor = useThemeStore((state) => state.primarySoftColor);
+    const colors = useThemeStore((state) => state.colors);
 
-  return {
-    preference,
-    setPreference,
-    preset,
-    setPreset,
-    primaryColor,
-    primarySoftColor,
-    colors,
-  };
+    return {
+      preference,
+      setPreference,
+      preset,
+      setPreset,
+      primaryColor,
+      primarySoftColor,
+      colors,
+    };
+  } catch {
+    // Fallback when store not available (e.g., returning from native camera)
+    const fallbackColors = createPresetPalette(DEFAULT_THEME.preset, 'dark');
+    return {
+      preference: 'system' as const,
+      setPreference: () => {},
+      preset: DEFAULT_THEME.preset,
+      setPreset: () => {},
+      primaryColor: fallbackColors.primary,
+      primarySoftColor: fallbackColors.primarySoft,
+      colors: fallbackColors,
+    };
+  }
 };
 
 /**

@@ -23,7 +23,31 @@ export function createExpressApp() {
 
   // Security
   app.disable('x-powered-by');
-  app.use(helmet());
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+    hsts: {
+      maxAge: 31536000, // 1 year
+      includeSubDomains: true,
+      preload: true,
+    },
+    noSniff: true, // X-Content-Type-Options: nosniff
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    xssFilter: true,
+    frameguard: { action: 'deny' },
+  }));
 
   // CORS configuration - must specify origin when using credentials
   // Allow web app (localhost:3001) and mobile app (local network IPs) in development
@@ -63,10 +87,33 @@ export function createExpressApp() {
   };
   app.use(cors(corsOptions));
 
-  // Performance
+  // Performance with security limits
   app.use(compression());
+
+  // Request timeout middleware - prevents slow loris attacks
+  app.use((req, res, next) => {
+    // Set timeout for all requests (30 seconds)
+    req.setTimeout(30000, () => {
+      if (!res.headersSent) {
+        res.status(408).json({
+          error: {
+            message: 'Request timeout',
+            code: 'REQUEST_TIMEOUT',
+          },
+        });
+      }
+    });
+    next();
+  });
+
+  // Body parsing with size limits to prevent memory exhaustion
+  // Default limit for general API endpoints
   app.use(express.json({ limit: '1mb' }));
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+  // Stricter limits for auth routes (they don't need large payloads)
+  app.use('/api/v1/auth', express.json({ limit: '16kb' }));
+  app.use('/api/v1/auth', express.urlencoded({ extended: true, limit: '16kb' }));
 
   // Logging
   app.use(
@@ -185,29 +232,39 @@ export function createExpressApp() {
   }
 
   // API v1 base route info
+  // In production, don't expose version or endpoint details
   app.get('/api/v1', (_req, res) => {
-    res.status(200).json({
-      message: 'Athli API v1',
-      version: '1.0.0',
-      endpoints: {
-        health: '/health',
-        docs: '/api-docs',
-        auth: '/api/v1/auth',
-        intercom: '/api/v1/intercom',
-      },
-    });
+    if (env.NODE_ENV === 'production') {
+      res.status(200).json({
+        status: 'ok',
+      });
+    } else {
+      // In development, show helpful info for debugging
+      res.status(200).json({
+        message: 'Athli API v1',
+        version: '1.0.0',
+        endpoints: {
+          health: '/health',
+          docs: '/api-docs',
+          auth: '/api/v1/auth',
+          intercom: '/api/v1/intercom',
+        },
+      });
+    }
   });
 
   // API v1 routes
   app.use('/api/v1', v1Router);
 
-  // Debug: Log all 404s before handling
-  app.use((req, res, next) => {
-    if (!res.headersSent) {
-      console.log(`[DEBUG] 404 Candidate: ${req.method} ${req.originalUrl}`);
-    }
-    next();
-  });
+  // Debug: Log all 404s before handling (only in development)
+  if (env.NODE_ENV !== 'production') {
+    app.use((req, res, next) => {
+      if (!res.headersSent) {
+        logger.debug({ method: req.method, url: req.originalUrl }, '404 Candidate');
+      }
+      next();
+    });
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -23,11 +23,12 @@ const MOCK_ACTIVITY = {
 
 export default function ClientActivityScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, fromChat } = useLocalSearchParams<{ id: string; fromChat?: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
 
   const iconColor = themeColors.text;
+  const isFromChat = fromChat === 'true';
 
   const handleBackPress = () => {
     haptics.medium();
@@ -53,12 +54,16 @@ export default function ClientActivityScreen() {
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>
           {t('clientDetail.overview.activity')}
         </Text>
-        <IconButton
-          icon={{ sf: 'message', IconComponent: MessageCircle }}
-          onPress={handleMessagePress}
-          size="md"
-          color={iconColor}
-        />
+        {isFromChat ? (
+          <View style={styles.headerPlaceholder} />
+        ) : (
+          <IconButton
+            icon={{ sf: 'message', IconComponent: MessageCircle }}
+            onPress={handleMessagePress}
+            size="md"
+            color={iconColor}
+          />
+        )}
       </View>
 
       {/* Activity Stats Card */}
@@ -120,6 +125,10 @@ const styles = StyleSheet.create({
     ...typography.h5,
     flex: 1,
     textAlign: 'center',
+  },
+  headerPlaceholder: {
+    width: 44,
+    height: 44,
   },
   content: {
     padding: 16,

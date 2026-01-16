@@ -439,6 +439,9 @@ export const esMessages = {
         nonAdmin: 'No administrador',
         addTeamMember: 'Agregar miembro del equipo',
       },
+      branding: {
+        title: 'Marca',
+      },
     },
   },
   sidebar: {

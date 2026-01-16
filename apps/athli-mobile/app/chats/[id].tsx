@@ -3,9 +3,11 @@ import {
   Alert,
   Dimensions,
   Keyboard,
+  ScrollView,
   StyleSheet,
   TextInput,
   View,
+  Text,
 } from 'react-native';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
 import { useSharedValue } from 'react-native-reanimated';
@@ -13,7 +15,24 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Archive, Trash2 } from 'lucide-react-native';
+import {
+  Activity,
+  BarChart3,
+  ChevronRight,
+  ClipboardCheck,
+  Dumbbell,
+  File,
+  Heart,
+  HelpCircle,
+  Image as ImageIcon,
+  Notebook,
+  Pencil,
+  Repeat,
+  Settings,
+  Sparkles,
+  Target,
+} from 'lucide-react-native';
+import { PressableScale, PressableOpacity } from 'pressto';
 import {
   useAudioRecorder,
   useAudioRecorderState,
@@ -27,7 +46,11 @@ import { type IWaveformRef, PlayerState, FinishMode } from '@/components/feature
 import { useThemePreference, useColorScheme } from '@/stores';
 import { hexToRgba } from '@/utils/colorUtils';
 import { useTranslations } from '@/stores';
-import { type DropdownMenuOption } from '@/components/ui/dropdown-menu';
+import { haptics } from '@/utils/haptics';
+import { typography } from '@/constants/typography';
+import { SlidingPanel, SlidingPanelRef } from '@/components/ui/sliding-panel';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { Separator } from '@/components/ui/separator';
 import { MessageList } from '@/components/features/message/message-list-flashlist';
 import { MessageReactionsSheet } from '@/components/features/message/message-reactions-sheet';
 import { ReplyPreviewRow } from '@/components/features/chats/reply-preview-row';
@@ -40,8 +63,6 @@ import { stopAllWaveformPlayers } from '@/components/features/message/message-au
 import {
   getChats,
   getArchivedChats,
-  archiveChat,
-  deleteChat,
   getChatMessages,
   sendMessage,
   markConversationAsRead,
@@ -104,6 +125,287 @@ const copyToCacheWithExtension = async (uri: string) => {
 
 // The waveform lib often prefers raw paths (no file://) on iOS.
 const toWaveformPath = (uri: string) => uri.startsWith('file://') ? uri.replace('file://', '') : uri;
+
+type MenuItem = {
+  id: string;
+  icon: {
+    sf: string;
+    IconComponent: any;
+  };
+  title: string;
+  route: string;
+};
+
+type ClientPanelContentProps = {
+  clientId?: string;
+  clientName?: string;
+  clientAvatar?: string;
+  onClose?: () => void;
+};
+
+const COLLAPSED_WIDTH_RATIO = 0.85;
+
+const ClientPanelContent = ({ clientId, clientName, clientAvatar, onClose }: ClientPanelContentProps) => {
+  const router = useRouter();
+  const { colors: themeColors } = useThemePreference();
+  const { t } = useTranslations();
+  const insets = useSafeAreaInsets();
+  const { width: screenWidth } = Dimensions.get('window');
+  const iconColor = themeColors.text;
+
+  // Calculate right padding to account for the hidden portion of the sidebar
+  const hiddenWidth = screenWidth * (1 - COLLAPSED_WIDTH_RATIO);
+  const rightPadding = hiddenWidth + 16; // Add extra 16 for margin
+
+  const handleEditProfilePress = () => {
+    haptics.medium();
+    // Don't close sidebar - modal opens on top
+    router.push(`/modals/client/edit-client-details-modal?id=${clientId}`);
+  };
+
+  const menuItems: MenuItem[] = [
+    // Quick Actions
+    {
+      id: 'activity',
+      icon: { sf: 'figure.walk', IconComponent: Activity },
+      title: t('clientDetail.overview.activity'),
+      route: `/client/${clientId}/activity?fromChat=true`,
+    },
+    {
+      id: 'goals',
+      icon: { sf: 'target', IconComponent: Target },
+      title: t('clientDetail.overview.goals'),
+      route: `/client/${clientId}/goals?fromChat=true`,
+    },
+    {
+      id: 'injuries',
+      icon: { sf: 'heart', IconComponent: Heart },
+      title: t('clientDetail.overview.injuries'),
+      route: `/client/${clientId}/injuries?fromChat=true`,
+    },
+    // Coaching
+    {
+      id: 'assistant',
+      icon: { sf: 'sparkles', IconComponent: Sparkles },
+      title: t('clientDetail.sections.assistant'),
+      route: `/client/${clientId}/assistant?fromChat=true`,
+    },
+    {
+      id: 'notes',
+      icon: { sf: 'note.text', IconComponent: Notebook },
+      title: t('clientDetail.sections.notes'),
+      route: `/client/${clientId}/notes?fromChat=true`,
+    },
+    {
+      id: 'training',
+      icon: { sf: 'figure.run', IconComponent: Dumbbell },
+      title: t('clientDetail.sections.training'),
+      route: `/client/${clientId}/training?fromChat=true`,
+    },
+    // Data
+    {
+      id: 'metrics',
+      icon: { sf: 'chart.bar', IconComponent: BarChart3 },
+      title: t('clientDetail.sections.metrics'),
+      route: `/client/${clientId}/metrics?fromChat=true`,
+    },
+    {
+      id: 'habits',
+      icon: { sf: 'repeat', IconComponent: Repeat },
+      title: t('clientDetail.sections.habits'),
+      route: `/client/${clientId}/habits?fromChat=true`,
+    },
+    {
+      id: 'photos',
+      icon: { sf: 'photo', IconComponent: ImageIcon },
+      title: t('clientDetail.sections.photos'),
+      route: `/client/${clientId}/photos?fromChat=true`,
+    },
+    {
+      id: 'files',
+      icon: { sf: 'doc', IconComponent: File },
+      title: t('clientDetail.sections.files'),
+      route: `/client/${clientId}/files?fromChat=true`,
+    },
+    // Forms & Settings
+    {
+      id: 'check-ins',
+      icon: { sf: 'checkmark.circle', IconComponent: ClipboardCheck },
+      title: t('clientDetail.sections.checkIns'),
+      route: `/client/${clientId}/check-ins?fromChat=true`,
+    },
+    {
+      id: 'questionnaires',
+      icon: { sf: 'questionmark.circle', IconComponent: HelpCircle },
+      title: t('clientDetail.sections.questionnaires'),
+      route: `/client/${clientId}/questionaires?fromChat=true`,
+    },
+    {
+      id: 'settings',
+      icon: { sf: 'gear', IconComponent: Settings },
+      title: t('clientDetail.sections.settings'),
+      route: `/client/${clientId}/settings?fromChat=true`,
+    },
+  ];
+
+  const handleMenuItemPress = (route: string) => {
+    haptics.medium();
+    // Don't close sidebar - let the new page push in smoothly
+    // When user goes back, sidebar will still be open
+    router.push(route as any);
+  };
+
+  return (
+    <View style={[panelStyles.container, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top }]}>
+      <ScrollView
+        style={panelStyles.scrollView}
+        contentContainerStyle={[panelStyles.scrollContent, { paddingRight: rightPadding }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Profile Card */}
+        <View style={[panelStyles.profileCard, { backgroundColor: themeColors.surfacePrimary, marginRight: 0 }]}>
+          <View style={panelStyles.avatarLarge}>
+            {clientAvatar ? (
+              <Image
+                source={{ uri: clientAvatar }}
+                style={panelStyles.avatarLargeImage}
+                contentFit="cover"
+                contentPosition="center"
+              />
+            ) : (
+              <View style={[panelStyles.avatarLargeImage, panelStyles.avatarPlaceholder, { backgroundColor: themeColors.border }]}>
+                <Text style={[panelStyles.avatarInitial, { color: themeColors.mutedText }]}>
+                  {clientName?.charAt(0)}
+                </Text>
+              </View>
+            )}
+          </View>
+          <Text style={[panelStyles.profileName, { color: themeColors.text }]}>
+            {clientName}
+          </Text>
+          <PressableOpacity
+            style={[
+              panelStyles.editButton,
+              { backgroundColor: themeColors.surfaceSecondary },
+            ]}
+            onPress={handleEditProfilePress}
+          >
+            <Pencil {...({ size: 16, color: themeColors.primary } as any)} />
+            <Text style={[panelStyles.editButtonText, { color: themeColors.primary }]}>
+              {t('clientDetail.editProfile')}
+            </Text>
+          </PressableOpacity>
+        </View>
+
+        {/* Menu Items */}
+        <View style={panelStyles.menuContainer}>
+          {menuItems.map((item) => (
+            <View key={item.id}>
+              <PressableScale onPress={() => handleMenuItemPress(item.route)}>
+                <View style={panelStyles.menuItem}>
+                  <View style={panelStyles.menuItemLeft}>
+                    <PlatformIcon
+                      sf={item.icon.sf}
+                      IconComponent={item.icon.IconComponent}
+                      size={24}
+                      color={iconColor}
+                    />
+                    <Text style={[panelStyles.menuItemTitle, { color: themeColors.text }]}>
+                      {item.title}
+                    </Text>
+                  </View>
+                  <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                </View>
+              </PressableScale>
+              <Separator />
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
+  );
+};
+
+const panelStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  profileCard: {
+    borderRadius: 28,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    marginBottom: 24,
+    marginTop: 8,
+    marginLeft: 16,
+    marginRight: 16,
+  },
+  avatarLarge: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  avatarLargeImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  avatarPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitial: {
+    ...typography.h3,
+    fontWeight: '600',
+  },
+  profileName: {
+    ...typography.h6,
+    fontWeight: '500',
+    marginBottom: 16,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 24,
+    alignSelf: 'center',
+  },
+  editButtonText: {
+    ...typography.p2,
+    fontWeight: '500',
+  },
+  menuContainer: {
+    paddingTop: 0,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  menuItemTitle: {
+    ...typography.p1,
+    fontWeight: '500',
+  },
+});
 
 export default function ChatDetailScreen() {
   const router = useRouter();
@@ -184,6 +486,18 @@ export default function ChatDetailScreen() {
   const inputRef = useRef<TextInput>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Panel ref for sliding sidebar
+  const panelRef = useRef<SlidingPanelRef>(null);
+
+  const handleOpenPanel = () => {
+    Keyboard.dismiss();
+    panelRef.current?.open();
+  };
+
+  const handleClosePanel = () => {
+    panelRef.current?.close();
+  };
 
   const formatMmSs = (ms: number) => {
     const totalSec = Math.max(0, Math.floor(ms / 1000));
@@ -569,21 +883,6 @@ export default function ChatDetailScreen() {
     }
   };
 
-
-  const handleArchivePress = async () => {
-    if (chat?.id) {
-      await archiveChat(chat.id);
-      router.back();
-    }
-  };
-
-  const handleDeletePress = async () => {
-    if (chat?.id) {
-      await deleteChat(chat.id);
-      router.back();
-    }
-  };
-
   const handleMessageReply = (message: ChatMessage) => {
     setReplyingToMessage(message);
     // Focus the input to open keyboard
@@ -880,33 +1179,6 @@ export default function ChatDetailScreen() {
     );
   };
 
-  const dropdownOptions: DropdownMenuOption[] = [
-    {
-      label: t('chats.archive'),
-      icon: { sf: 'archivebox', IconComponent: Archive },
-      onPress: handleArchivePress,
-    },
-    {
-      label: t('chats.delete'),
-      icon: { sf: 'trash', IconComponent: Trash2 },
-      destructive: true,
-      onPress: () => {
-        Alert.alert(
-          t('chats.delete'),
-          t('library.deleteConfirmMessage'),
-          [
-            { text: t('general.cancel'), style: 'cancel' },
-            {
-              text: t('general.delete'),
-              style: 'destructive',
-              onPress: handleDeletePress
-            },
-          ]
-        );
-      },
-    },
-  ];
-
   if (isLoading) {
     return <ChatLoadingState />;
   }
@@ -917,82 +1189,97 @@ export default function ChatDetailScreen() {
 
 
   return (
-    <View style={[styles.container, { backgroundColor: 'transparent' }]}>
-      <StatusBar style={isDark ? 'light' : 'dark'} translucent backgroundColor="transparent" />
-      {/* Background image covering entire screen */}
-      <Image
-        source={isDark ? require('@/assets/chat/bg-dark.png') : require('@/assets/chat/bg-light.png')}
-        style={styles.fullScreenBackgroundImage}
-        contentFit="cover"
-      />
+    <SlidingPanel
+      ref={panelRef}
+      collapsedWidthRatio={0.85}
+      overlayColor={isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.5)'}
+      borderColor={themeColors.surfacePrimary}
+      renderPanel={() => (
+        <ClientPanelContent
+          clientId={chat?.client_id}
+          clientName={chat?.clientName || chat?.other_user_name}
+          clientAvatar={chat?.clientAvatar}
+          onClose={handleClosePanel}
+        />
+      )}
+    >
+      <View style={[styles.container, { backgroundColor: 'transparent' }]}>
+        <StatusBar style={isDark ? 'light' : 'dark'} translucent backgroundColor="transparent" />
+        {/* Background image covering entire screen */}
+        <Image
+          source={isDark ? require('@/assets/chat/bg-dark.png') : require('@/assets/chat/bg-light.png')}
+          style={styles.fullScreenBackgroundImage}
+          contentFit="cover"
+        />
 
-      {/* ROW 1: HEADER - Absolutely positioned with blur (extends into status bar area) */}
-      <ChatHeader
-        chat={chat}
-        onBackPress={handleBackPress}
-        onUserProfilePress={handleUserProfilePress}
-        dropdownOptions={dropdownOptions}
-      />
+        {/* ROW 1: HEADER - Absolutely positioned with blur (extends into status bar area) */}
+        <ChatHeader
+          chat={chat}
+          onBackPress={handleBackPress}
+          onUserProfilePress={handleUserProfilePress}
+          onPanelOpen={handleOpenPanel}
+        />
 
-      {/* ROW 2: SCROLL WINDOW - Fills space between header and toolbar */}
-      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-        <MessageList
-          messages={allMessages}
-          backgroundColor="transparent"
-          themeColors={themeColors}
-          clientName={chat.other_user_name || 'Client'}
+        {/* ROW 2: SCROLL WINDOW - Fills space between header and toolbar */}
+        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+          <MessageList
+            messages={allMessages}
+            backgroundColor="transparent"
+            themeColors={themeColors}
+            clientName={chat.other_user_name || 'Client'}
+            keyboardHeight={keyboardHeight}
+            onReply={handleMessageReply}
+            onEdit={handleMessageEdit}
+            onDelete={handleMessageDelete}
+            onReactionPress={handleReactionPress}
+            onDocumentPress={handleDocumentPress}
+            onImagePress={handleImagePress}
+            onVideoPress={handleVideoPress}
+            headerHeight={insets.top + 60}
+            bottomOffset={toolbarHeight}
+          />
+        </View>
+
+        {/* ROW 3: TOOLBAR - Absolutely positioned */}
+        <ChatToolbar
+          chat={chat}
+          replyingToMessage={replyingToMessage}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          inputRef={inputRef}
+          hasText={hasText}
+          isMicrophoneMode={isMicrophoneMode}
+          isStopped={isStopped}
+          showAttachmentPicker={showAttachmentPicker}
+          durationLabel={durationLabel}
+          waveform={waveform}
+          previewPath={previewPath}
+          previewPlayerState={previewPlayerState}
+          onPlayerStateChange={setPreviewPlayerState}
+          onTogglePreviewPlay={handleTogglePreviewPlay}
+          previewWaveRef={previewWaveRef}
+          onPlusPress={handlePlusPress}
+          onMicrophonePress={handleMicrophonePress}
+          onSendMessage={handleSendMessage}
+          onTrashPress={handleTrashPress}
+          onStopToggle={handleStopToggle}
+          onSendPress={handleSendPress}
+          onCancelReply={handleCancelReply}
+          bottomInset={insets.bottom}
           keyboardHeight={keyboardHeight}
-          onReply={handleMessageReply}
-          onEdit={handleMessageEdit}
-          onDelete={handleMessageDelete}
-          onReactionPress={handleReactionPress}
-          onDocumentPress={handleDocumentPress}
-          onImagePress={handleImagePress}
-          onVideoPress={handleVideoPress}
-          headerHeight={insets.top + 60}
-          bottomOffset={toolbarHeight}
+        />
+
+        <MessageReactionsSheet
+          visible={reactionsSheetVisible}
+          onClose={() => {
+            setReactionsSheetVisible(false);
+            setSelectedMessageForReactions(null);
+          }}
+          message={selectedMessageForReactions}
+          onReactionRemoved={handleReactionRemoved}
         />
       </View>
-
-      {/* ROW 3: TOOLBAR - Absolutely positioned */}
-      <ChatToolbar
-        chat={chat}
-        replyingToMessage={replyingToMessage}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        inputRef={inputRef}
-        hasText={hasText}
-        isMicrophoneMode={isMicrophoneMode}
-        isStopped={isStopped}
-        showAttachmentPicker={showAttachmentPicker}
-        durationLabel={durationLabel}
-        waveform={waveform}
-        previewPath={previewPath}
-        previewPlayerState={previewPlayerState}
-        onPlayerStateChange={setPreviewPlayerState}
-        onTogglePreviewPlay={handleTogglePreviewPlay}
-        previewWaveRef={previewWaveRef}
-        onPlusPress={handlePlusPress}
-        onMicrophonePress={handleMicrophonePress}
-        onSendMessage={handleSendMessage}
-        onTrashPress={handleTrashPress}
-        onStopToggle={handleStopToggle}
-        onSendPress={handleSendPress}
-        onCancelReply={handleCancelReply}
-        bottomInset={insets.bottom}
-        keyboardHeight={keyboardHeight}
-      />
-
-      <MessageReactionsSheet
-        visible={reactionsSheetVisible}
-        onClose={() => {
-          setReactionsSheetVisible(false);
-          setSelectedMessageForReactions(null);
-        }}
-        message={selectedMessageForReactions}
-        onReactionRemoved={handleReactionRemoved}
-      />
-    </View>
+    </SlidingPanel>
   );
 }
 
