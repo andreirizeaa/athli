@@ -308,6 +308,28 @@ export const coachClientController = {
                     .eq('coach_id', coachId);
 
                 if (assignmentError) throw assignmentError;
+
+                // 2.1 Sync archive status with conversation_participants
+                if (assignmentUpdates.is_archived === true) {
+                    // Find conversation between coach and client
+                    const { data: conversation } = await supabase
+                        .from('conversations')
+                        .select('id')
+                        .eq('coach_id', coachId)
+                        .eq('client_id', targetClientId)
+                        .single();
+
+                    if (conversation) {
+                        // Archive conversation for both participants
+                        await supabase
+                            .from('conversation_participants')
+                            .update({
+                                is_archived: true,
+                                archived_at: new Date().toISOString(),
+                            })
+                            .eq('conversation_id', conversation.id);
+                    }
+                }
             }
 
             // 3. Update profile if needed
@@ -432,6 +454,13 @@ export const coachClientController = {
                 await supabase.from(table).delete().eq('client_id', id).eq('coach_id', coachId);
             }
 
+            // Delete conversation (cascades to messages, participants, attachments)
+            await supabase
+                .from('conversations')
+                .delete()
+                .eq('coach_id', coachId)
+                .eq('client_id', id);
+
             // 5. Finally delete the main assignment
             const { error } = await supabase
                 .from('coach_client_assignments')
@@ -525,6 +554,26 @@ export const coachClientController = {
 
         if (updateError) {
             return res.status(500).json({ success: false, message: updateError.message });
+        }
+
+        // Unarchive conversation_participants for each restored client
+        for (const clientId of clientIds) {
+            const { data: conversation } = await supabase
+                .from('conversations')
+                .select('id')
+                .eq('coach_id', coachId)
+                .eq('client_id', clientId)
+                .single();
+
+            if (conversation) {
+                await supabase
+                    .from('conversation_participants')
+                    .update({
+                        is_archived: false,
+                        archived_at: null,
+                    })
+                    .eq('conversation_id', conversation.id);
+            }
         }
 
         success(res, {

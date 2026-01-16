@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -73,7 +74,12 @@ export default function ResetPasswordPage() {
   return (
     <AuthLayout>
       <div className="space-y-6">
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="w-14 h-14 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center">
+              <Image src="/icons/athli.png" alt="Athli" width={64} height={64} />
+            </div>
+          </div>
           <h2 className="text-3xl font-bold text-white">Reset Your Password</h2>
           <p className="text-white/60 text-sm">
             Enter your new password below.
@@ -93,7 +99,7 @@ export default function ResetPasswordPage() {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  className="w-full h-12 pr-10 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
+                  className="w-full h-12 pr-10 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
                   placeholder="Create a new password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -129,7 +135,7 @@ export default function ResetPasswordPage() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  className="w-full h-12 pr-10 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
+                  className="w-full h-12 pr-10 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
                   placeholder="Confirm your password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -155,7 +161,7 @@ export default function ResetPasswordPage() {
           <div className="pt-2">
             <Button
               type="submit"
-              className="w-full h-12 rounded-xl bg-white text-black hover:bg-white/90"
+              className="w-full h-12 rounded-xl !bg-white !text-black hover:!bg-white/90"
               disabled={isResetting || !newPassword || !confirmPassword}
             >
               {isResetting ? (

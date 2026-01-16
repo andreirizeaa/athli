@@ -7,11 +7,108 @@
 
 import type {
   Message,
+  MessageAttachment,
+  MessageReaction,
   MessageStatus,
   MessageType,
   OptimisticMessage,
   ReadReceipt,
 } from './messaging-schema';
+
+// ================================================
+// UI MESSAGE TYPE (for rendering)
+// ================================================
+
+/**
+ * UIMessage - Message type with computed fields for UI rendering
+ *
+ * This type extends the base Message with fields the UI needs:
+ * - text: mapped from content (UI components expect 'text')
+ * - isSent: true if current user sent this message
+ * - isRead: true if message has been read
+ * - replyTo: transformed parent message for threading UI
+ */
+export interface UIMessage {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  message_type: MessageType;
+  parent_message_id: string | null;
+  status: MessageStatus;
+  sent_at: Date | string;
+  read_at: Date | string | null;
+  edited_at: Date | string | null;
+  is_deleted: boolean;
+  deleted_at: Date | string | null;
+  created_at: Date | string;
+  attachments?: MessageAttachment[];
+  reactions?: MessageReaction[];
+
+  // UI-specific computed fields
+  text: string | null;
+  isSent: boolean;
+  isRead: boolean;
+  replyTo?: UIMessage;
+}
+
+/**
+ * Transform a Message or OptimisticMessage to UIMessage for rendering
+ *
+ * @param msg - Message from database or optimistic message
+ * @param currentUserId - ID of current user (for isSent calculation)
+ * @returns UIMessage with computed fields
+ */
+export function transformToUIMessage(
+  msg: Message | OptimisticMessage,
+  currentUserId: string,
+): UIMessage {
+  // Defensive check: parent_message might be [] instead of null from API
+  const parentMsg = (msg as Message).parent_message;
+  const hasValidParent =
+    parentMsg &&
+    !Array.isArray(parentMsg) &&
+    typeof parentMsg === 'object' &&
+    'id' in parentMsg;
+
+  return {
+    id: msg.id,
+    conversation_id: msg.conversation_id,
+    sender_id: msg.sender_id,
+    message_type: msg.message_type,
+    parent_message_id: msg.parent_message_id ?? null,
+    status: msg.status,
+    sent_at: msg.sent_at,
+    read_at: (msg as Message).read_at ?? null,
+    edited_at: (msg as Message).edited_at ?? null,
+    is_deleted: msg.is_deleted,
+    deleted_at: (msg as Message).deleted_at ?? null,
+    created_at: (msg as Message).created_at ?? msg.sent_at,
+    attachments: (msg as Message).attachments,
+    reactions: (msg as Message).reactions,
+
+    // Computed fields
+    text: msg.content,
+    isSent: msg.sender_id === currentUserId,
+    isRead: (msg as Message).read_at !== null,
+    replyTo: hasValidParent
+      ? transformToUIMessage(parentMsg as Message, currentUserId)
+      : undefined,
+  };
+}
+
+/**
+ * Transform an array of messages to UIMessages
+ *
+ * @param messages - Array of messages from database/realtime/optimistic
+ * @param currentUserId - ID of current user
+ * @returns Array of UIMessages ready for rendering
+ */
+export function transformMessages(
+  messages: Array<Message | OptimisticMessage>,
+  currentUserId: string,
+): UIMessage[] {
+  return messages.map((m) => transformToUIMessage(m, currentUserId));
+}
 
 // ================================================
 // OPTIMISTIC MESSAGE HELPERS
@@ -92,6 +189,17 @@ export function isOptimisticMessage(
 // ================================================
 
 /**
+ * Helper to safely get timestamp from sent_at (handles both Date and string)
+ */
+function getTimestamp(sentAt: Date | string): number {
+  if (sentAt instanceof Date) {
+    return sentAt.getTime();
+  }
+  // sent_at might be a string if parsed from JSON
+  return new Date(sentAt).getTime();
+}
+
+/**
  * Merge and deduplicate messages from multiple sources
  *
  * Priority (highest to lowest):
@@ -133,8 +241,9 @@ export function deduplicateMessages(
   });
 
   // Convert back to array and sort by sent_at (oldest first)
+  // Use getTimestamp helper to safely handle both Date and string
   return Array.from(messageMap.values()).sort(
-    (a, b) => a.sent_at.getTime() - b.sent_at.getTime(),
+    (a, b) => getTimestamp(a.sent_at) - getTimestamp(b.sent_at),
   );
 }
 
@@ -188,7 +297,7 @@ export function calculateMessageStatus(
   if (recipientReceipt) {
     if (
       recipientReceipt.last_read_at &&
-      message.sent_at <= recipientReceipt.last_read_at
+      getTimestamp(message.sent_at) <= getTimestamp(recipientReceipt.last_read_at)
     ) {
       return 'read';
     }
@@ -236,7 +345,7 @@ export function calculateUnreadCount(
 
   // Count messages sent after last read time
   return otherUserMessages.filter(
-    (msg) => msg.sent_at > readReceipt.last_read_at,
+    (msg) => getTimestamp(msg.sent_at) > getTimestamp(readReceipt.last_read_at),
   ).length;
 }
 
@@ -362,7 +471,7 @@ export function canEditMessage(
 
   // Check edit time window
   const now = new Date();
-  const timeSinceSent = now.getTime() - message.sent_at.getTime();
+  const timeSinceSent = now.getTime() - getTimestamp(message.sent_at);
   if (timeSinceSent > maxEditTimeMs) {
     return false;
   }

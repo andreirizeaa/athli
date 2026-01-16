@@ -1,0 +1,292 @@
+import { apiFetch } from '@/lib/api-client';
+
+/**
+ * Client service for coach to view/manage client data
+ * Mirrors apps/athli-web-app/api/client/client-service.ts
+ */
+
+export interface AthleteDetails {
+  id: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  birthDate: string | null;
+  category: 'online' | 'in-person' | 'hybrid';
+  gender: 'male' | 'female' | 'prefer-not-to-say' | null;
+  phone: string;
+  country: string;
+  height: string | null;
+  avatarUrl?: string | null;
+  status: 'invited' | 'accepted' | 'bounced' | 'connected' | 'archived';
+  createdAt: number;
+  clientFor: string;
+}
+
+export interface AthleteGoal {
+  id: string;
+  goal: string;
+  target_date: string | null;
+  achieved: boolean;
+}
+
+export interface AthleteInjury {
+  id: string;
+  injury: string;
+  date: string | null;
+}
+
+export interface TrainingCalendarItem {
+  id: string;
+  workout: string;
+  description: string;
+  type: string;
+  difficulty: string;
+  length: string;
+  totalExercises: number;
+  equipment: string | string[];
+  created: string;
+  workout_data?: any;
+  day_status?: 'not_started' | 'in_progress' | 'completed';
+}
+
+export interface TrainingCalendarSchema {
+  [date: string]: TrainingCalendarItem[];
+}
+
+export interface WorkoutCompletionStatus {
+  workoutId: string;
+  status: 'not_started' | 'in_progress' | 'completed';
+  completedAt?: number;
+  startedAt?: number;
+}
+
+export interface SetCompletionStatus {
+  workoutId: string;
+  exerciseInstanceId: string;
+  setNumber: number;
+  status: 'not_started' | 'completed';
+  completedAt?: number;
+}
+
+export interface SectionCompletionStatus {
+  workoutId: string;
+  sectionId: string;
+  status: 'not_started' | 'in_progress' | 'completed';
+  completedAt?: number;
+  startedAt?: number;
+}
+
+export interface TrainingCalendarCompletionLogs {
+  workouts: WorkoutCompletionStatus[];
+  sets: SetCompletionStatus[];
+  sections: SectionCompletionStatus[];
+}
+
+const calculateAge = (dateOfBirth: string | null): number | null => {
+  if (!dateOfBirth) return null;
+  const birthDate = new Date(dateOfBirth);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
+
+/**
+ * Get client details by ID (for coach viewing client)
+ */
+export const getClientDetails = async (clientId: string): Promise<AthleteDetails> => {
+  const response = await apiFetch<{ success: boolean; data: { profile: any } }>('/client', {
+    headers: { 'x-client-id': clientId },
+  });
+
+  const profile = response.data.profile;
+
+  if (!profile) {
+    throw new Error('Client not found');
+  }
+
+  const names = profile.name?.split(' ') || ['', ''];
+  const createdAt = new Date(profile.created_at || Date.now());
+  const clientForDays = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+
+  return {
+    id: profile.client_id || clientId,
+    name: profile.name || '',
+    firstName: names[0] || '',
+    lastName: names.slice(1).join(' ') || '',
+    email: profile.email || '',
+    birthDate: profile.date_of_birth || null,
+    category: profile.category || 'online',
+    gender: profile.gender || null,
+    phone: profile.phone || '',
+    country: profile.country || '',
+    height: profile.height_cm || null,
+    avatarUrl: profile.profile_picture_url || null,
+    status: profile.status || 'invited',
+    createdAt: createdAt.getTime(),
+    clientFor: clientForDays.toString(),
+  };
+};
+
+/**
+ * Get athlete bio
+ */
+export const getAthleteBio = async (clientId: string, coachId: string): Promise<string> => {
+  const response = await apiFetch<{ success: boolean; data: { bio: string } }>('/clients/bio', {
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId,
+    },
+  });
+  return response.data.bio || '';
+};
+
+/**
+ * Save athlete bio
+ */
+export const saveAthleteBio = async (clientId: string, coachId: string, bio: string): Promise<void> => {
+  await apiFetch('/clients/bio', {
+    method: 'PATCH',
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId,
+    },
+    body: JSON.stringify({ bio }),
+  });
+};
+
+/**
+ * Get athlete goals
+ */
+export const getAthleteGoals = async (clientId: string, coachId: string): Promise<AthleteGoal[]> => {
+  const response = await apiFetch<{ success: boolean; data: { goals: AthleteGoal[] } }>('/clients/goals', {
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId,
+    },
+  });
+  return response.data.goals || [];
+};
+
+/**
+ * Save athlete goals
+ */
+export const saveAthleteGoals = async (
+  clientId: string,
+  coachId: string,
+  goals: Partial<AthleteGoal>[]
+): Promise<void> => {
+  await apiFetch('/clients/goals', {
+    method: 'PATCH',
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId,
+    },
+    body: JSON.stringify({ goals }),
+  });
+};
+
+/**
+ * Get athlete injuries
+ */
+export const getAthleteInjuries = async (clientId: string, coachId: string): Promise<AthleteInjury[]> => {
+  const response = await apiFetch<{ success: boolean; data: { injuries: AthleteInjury[] } }>('/clients/injuries', {
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId,
+    },
+  });
+  return response.data.injuries || [];
+};
+
+/**
+ * Save athlete injuries
+ */
+export const saveAthleteInjuries = async (
+  clientId: string,
+  coachId: string,
+  injuries: Partial<AthleteInjury>[]
+): Promise<void> => {
+  await apiFetch('/clients/injuries', {
+    method: 'PATCH',
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId,
+    },
+    body: JSON.stringify({ injuries }),
+  });
+};
+
+/**
+ * Save athlete details
+ */
+export const saveAthleteDetails = async (
+  clientId: string,
+  details: Partial<AthleteDetails>
+): Promise<void> => {
+  const updatePayload: any = {
+    id: clientId,
+    name: details.name,
+    phone: details.phone,
+    gender: details.gender,
+    country: details.country,
+    birth_date: details.birthDate,
+    height_cm: details.height ? parseInt(details.height, 10) : null,
+  };
+
+  if (details.avatarUrl) {
+    updatePayload.profile_picture_url = details.avatarUrl;
+  }
+
+  await apiFetch('/client', {
+    method: 'PATCH',
+    headers: { 'x-client-id': clientId },
+    body: JSON.stringify(updatePayload),
+  });
+};
+
+/**
+ * Get training calendar for a client within a date range
+ */
+export const getTrainingCalendarRange = async (
+  clientId: string,
+  coachId: string,
+  startDate: string,
+  endDate: string
+): Promise<TrainingCalendarSchema> => {
+  const response = await apiFetch<{ success: boolean; data: { calendar: TrainingCalendarSchema } }>(
+    '/client/trainings/calendar',
+    {
+      method: 'POST',
+      headers: {
+        'x-client-id': clientId,
+        'x-coach-id': coachId,
+      },
+      body: JSON.stringify({ startDate, endDate }),
+    }
+  );
+  return response.data.calendar || {};
+};
+
+/**
+ * Get training calendar completion logs for a client
+ */
+export const getTrainingCalendarCompletionLogs = async (
+  clientId: string,
+  coachId: string
+): Promise<TrainingCalendarCompletionLogs> => {
+  const response = await apiFetch<{ success: boolean; data: TrainingCalendarCompletionLogs }>(
+    '/client/trainings/completion-logs',
+    {
+      headers: {
+        'x-client-id': clientId,
+        'x-coach-id': coachId,
+      },
+    }
+  );
+  return response.data || { workouts: [], sets: [], sections: [] };
+};

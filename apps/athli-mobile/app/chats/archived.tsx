@@ -8,14 +8,13 @@ import { ChevronLeft, Check } from 'lucide-react-native';
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
+import { useChatsStore } from '@/stores/useChatsStore';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { ChatListItem } from '@/components/features/chats/chat-list-item';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import {
   getArchivedChats,
-  unarchiveChat,
-  deleteChat,
   getChatMessages,
   markChatAsRead,
   type Chat,
@@ -29,6 +28,10 @@ export default function ArchivedChatsScreen() {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
+
+  // Get store state and actions
+  const storeArchivedChats = useChatsStore((state) => state.archivedChats);
+  const storeUnarchiveChat = useChatsStore((state) => state.unarchiveChat);
 
   // Parse initial chats from params to prevent flash
   const initialChats = React.useMemo(() => {
@@ -90,6 +93,14 @@ export default function ArchivedChatsScreen() {
     }
   }, [archivedChatsParam]);
 
+  // Sync local state with store when store changes (e.g., after unarchive)
+  useEffect(() => {
+    if (storeArchivedChats.length > 0 || archivedChats.length > 0) {
+      // Only sync if store has data or we need to reflect removals
+      setArchivedChats(storeArchivedChats);
+    }
+  }, [storeArchivedChats]);
+
   const handleBackPress = () => {
     // If a row is open, just close it and prevent navigation/action
     if (isRowOpen) {
@@ -146,39 +157,29 @@ export default function ArchivedChatsScreen() {
   };
 
   const handleUnarchivePress = async () => {
-    for (const chatId of selectedChatIds) {
-      await unarchiveChat(chatId);
-    }
+    const selectedIds = Array.from(selectedChatIds);
     setIsEditMode(false);
     setSelectedChatIds(new Set());
-  };
 
-  const handleDeletePress = async () => {
-    for (const chatId of selectedChatIds) {
-      await deleteChat(chatId);
+    // Use store action which handles optimistic updates
+    for (const chatId of selectedIds) {
+      await storeUnarchiveChat(chatId);
     }
-    setIsEditMode(false);
-    setSelectedChatIds(new Set());
-    const fetchedChats = await getArchivedChats();
-    setArchivedChats(fetchedChats);
   };
 
   const handleChatUnarchive = async (chatId: string) => {
-    await unarchiveChat(chatId);
-    const fetchedChats = await getArchivedChats();
-    setArchivedChats(fetchedChats);
-  };
-
-  const handleChatDelete = async (chatId: string) => {
-    await deleteChat(chatId);
-    const fetchedChats = await getArchivedChats();
-    setArchivedChats(fetchedChats);
+    // Use store action which handles optimistic updates
+    await storeUnarchiveChat(chatId);
   };
 
   const handleChatMarkAsRead = async (chatId: string) => {
     await markChatAsRead(chatId);
     const fetchedChats = await getArchivedChats();
     setArchivedChats(fetchedChats);
+  };
+
+  const handleViewProfile = (clientId: string) => {
+    router.push({ pathname: '/client/[id]', params: { id: clientId } });
   };
 
   return (
@@ -201,14 +202,6 @@ export default function ArchivedChatsScreen() {
             >
               <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
                 {t('chats.archived.unarchive')}
-              </Text>
-            </PressableScale>
-            <PressableScale
-              style={[styles.actionButton, { backgroundColor: themeColors.surfacePrimary }]}
-              onPress={handleDeletePress}
-            >
-              <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
-                {t('chats.archived.delete')}
               </Text>
             </PressableScale>
           </View>
@@ -279,9 +272,9 @@ export default function ArchivedChatsScreen() {
               onPress={handleChatPress}
               isEditMode={isEditMode}
               isSelected={selectedChatIds.has(chat.id)}
+              onViewProfile={handleViewProfile}
               onMarkAsRead={handleChatMarkAsRead}
               onUnarchive={handleChatUnarchive}
-              onDelete={handleChatDelete}
               onOpen={registerOpenRow}
             />
           ))}

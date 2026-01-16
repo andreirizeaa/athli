@@ -116,6 +116,14 @@ class AuthService {
         });
     }
 
+    async checkAuthProvider(email: string): Promise<{ provider: 'email' | 'google' | 'apple' | null; exists: boolean }> {
+        const response = await this.authRequest('/check-auth-provider', {
+            method: 'POST',
+            body: JSON.stringify({ email }),
+        });
+        return response.data as { provider: 'email' | 'google' | 'apple' | null; exists: boolean };
+    }
+
     async forgotPassword(email: string): Promise<AuthResponse> {
         return this.authRequest('/forgot-password', {
             method: 'POST',

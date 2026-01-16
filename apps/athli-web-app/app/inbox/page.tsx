@@ -203,11 +203,12 @@ const InboxPage = () => {
     setOptimisticMessages([]);
   }, [selectedConversation?.id]);
 
-  // Merge all 3 message sources: API + realtime + optimistic
+  // Merge all 3 message sources: API + realtime + optimistic - transforms to UIMessage[]
   const mergedMessages = useMessageMerging(
     apiMessages || [],
     realtimeMessages,
-    optimisticMessages
+    optimisticMessages,
+    user?.id || null
   );
 
   // Auto-mark conversation as read when viewing it
@@ -495,16 +496,16 @@ const InboxPage = () => {
     ? contacts.find((contact) => contact.id === selectedContactId) || null
     : null;
 
-  // Convert merged messages (API + realtime) to UI Message format
+  // Convert merged UIMessages to local Message format for MessageList component
   const currentMessages = React.useMemo<Message[]>(() => {
     if (!mergedMessages || mergedMessages.length === 0) return [];
 
     return mergedMessages.map((msg) => ({
       id: msg.id,
-      text: msg.content || '',
-      timestamp: format(msg.sent_at, 'h:mm a'),
-      isSent: msg.sender_id === user?.id,
-      isRead: msg.status === 'read',
+      text: msg.text || '',  // UIMessage.text (already transformed from content)
+      timestamp: format(new Date(msg.sent_at), 'h:mm a'),
+      isSent: msg.isSent,    // UIMessage.isSent (already computed)
+      isRead: msg.isRead,    // UIMessage.isRead (already computed)
       images: msg.attachments
         ?.filter((a) => a.mime_type?.startsWith('image/'))
         .map((a) => ({
@@ -526,16 +527,17 @@ const InboxPage = () => {
             type: msg.attachments.find((a) => a.mime_type?.startsWith('video/'))!.mime_type || 'video/mp4',
           }
         : undefined,
-      replyTo: msg.parent_message
+      // UIMessage.replyTo is already transformed, use it directly
+      replyTo: msg.replyTo
         ? {
-            id: msg.parent_message.id,
-            text: msg.parent_message.content || '',
-            isSent: msg.parent_message.sender_id === user?.id,
+            id: msg.replyTo.id,
+            text: msg.replyTo.text || '',
+            isSent: msg.replyTo.isSent,
           }
         : undefined,
       reaction: msg.reactions?.[0]?.reaction,
     }));
-  }, [mergedMessages, user?.id]);
+  }, [mergedMessages]);
 
   const filteredContacts = React.useMemo(() => {
     if (!searchQuery.trim()) return contacts;
@@ -1049,8 +1051,10 @@ const InboxPage = () => {
         });
       }
 
-      // Remove optimistic message - realtime subscription will add the real one
+      // Remove optimistic message and refetch to get the real one from database
+      // This ensures message appears even if realtime isn't working
       setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      await refetchMessages();
     } catch (error) {
       console.error('Failed to send message:', error);
 
@@ -1059,7 +1063,7 @@ const InboxPage = () => {
 
       throw error; // Let MessageInputProvider handle the toast
     }
-  }, [selectedContactId, selectedConversation, user?.id]);
+  }, [selectedContactId, selectedConversation, user?.id, refetchMessages]);
 
   // Handle message reactions
   const handleReaction = React.useCallback(async (messageId: string, emoji: string) => {

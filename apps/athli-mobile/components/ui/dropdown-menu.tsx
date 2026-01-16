@@ -194,12 +194,15 @@ export const ContextMenuWrapper = ({
         )}
       </ContextMenu.Preview>
       <ContextMenu.Content>
-        {options.map((option, index) => {
+        {options.map((option) => {
+          // Generate unique key from label (sanitized for safety)
+          const itemKey = option.label?.toLowerCase().replace(/\s+/g, '-') || `item-${Math.random()}`;
+
           // If option has subActions, render a submenu
           if (option.subActions && option.subActions.length > 0) {
             return (
-              <ContextMenu.Sub key={`submenu-${index}`}>
-                <ContextMenu.SubTrigger>
+              <ContextMenu.Sub key={`sub-${itemKey}`}>
+                <ContextMenu.SubTrigger key={`trigger-${itemKey}`}>
                   <ContextMenu.ItemTitle>{option.label}</ContextMenu.ItemTitle>
                   {option.icon && (
                     <ContextMenu.ItemIcon
@@ -210,22 +213,25 @@ export const ContextMenuWrapper = ({
                   )}
                 </ContextMenu.SubTrigger>
                 <ContextMenu.SubContent>
-                  {option.subActions.map((subOption, subIndex) => (
-                    <ContextMenu.Item
-                      key={`subitem-${index}-${subIndex}`}
-                      onSelect={subOption.onPress}
-                      destructive={subOption.destructive}
-                    >
-                      <ContextMenu.ItemTitle>{subOption.label}</ContextMenu.ItemTitle>
-                      {subOption.icon && (
-                        <ContextMenu.ItemIcon
-                          ios={{
-                            name: subOption.icon.sf,
-                          }}
-                        />
-                      )}
-                    </ContextMenu.Item>
-                  ))}
+                  {option.subActions.map((subOption) => {
+                    const subKey = subOption.label?.toLowerCase().replace(/\s+/g, '-') || `subitem-${Math.random()}`;
+                    return (
+                      <ContextMenu.Item
+                        key={subKey}
+                        onSelect={subOption.onPress}
+                        destructive={subOption.destructive}
+                      >
+                        <ContextMenu.ItemTitle>{subOption.label}</ContextMenu.ItemTitle>
+                        {subOption.icon && (
+                          <ContextMenu.ItemIcon
+                            ios={{
+                              name: subOption.icon.sf,
+                            }}
+                          />
+                        )}
+                      </ContextMenu.Item>
+                    );
+                  })}
                 </ContextMenu.SubContent>
               </ContextMenu.Sub>
             );
@@ -234,7 +240,7 @@ export const ContextMenuWrapper = ({
           // Regular menu item
           return (
             <ContextMenu.Item
-              key={`item-${index}`}
+              key={itemKey}
               onSelect={option.onPress}
               destructive={option.destructive}
             >
@@ -275,12 +281,15 @@ export const DropdownMenuWrapper = ({
       </DropdownMenuZeego.Trigger>
       <DropdownMenuZeego.Content>
         {options.map((option, index) => {
+          // Generate unique key from label (sanitized for safety)
+          const itemKey = option.label?.toLowerCase().replace(/\s+/g, '-') || `item-${index}`;
+
           if (option.separator) {
             return <DropdownMenuZeego.Separator key={`separator-${index}`} />;
           }
           return (
             <DropdownMenuZeego.Item
-              key={`item-${index}`}
+              key={itemKey}
               onSelect={option.onPress!}
               destructive={option.destructive}
             >

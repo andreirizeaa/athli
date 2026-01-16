@@ -23,6 +23,8 @@ export function useCoachClients(options?: { enabled?: boolean }) {
             queryClient.setQueryData(['coach-clients'], (old: Athlete[] | undefined) => {
                 return old?.filter(c => c.id !== clientId);
             });
+            // Invalidate conversations cache so archived client disappears from inbox
+            queryClient.invalidateQueries({ queryKey: ['conversations'] });
         },
         onError: (error: Error) => {
             toast.error(error.message || 'Failed to archive client');
@@ -35,6 +37,8 @@ export function useCoachClients(options?: { enabled?: boolean }) {
             queryClient.setQueryData(['coach-clients'], (old: Athlete[] | undefined) => {
                 return old?.filter(c => c.id !== clientId);
             });
+            // Invalidate conversations cache so deleted client disappears from inbox
+            queryClient.invalidateQueries({ queryKey: ['conversations'] });
         },
         onError: (error: Error) => {
             toast.error(error.message || 'Failed to delete client');

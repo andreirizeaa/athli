@@ -274,6 +274,7 @@ const styles = StyleSheet.create({
     },
     overlay: {
         ...StyleSheet.absoluteFillObject,
+        zIndex: 100,
     },
     panel: {
         position: 'absolute',

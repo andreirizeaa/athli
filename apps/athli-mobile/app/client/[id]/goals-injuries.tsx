@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
 
@@ -13,6 +13,7 @@ export default function GoalsInjuriesScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors: themeColors } = useThemePreference();
+  const { t } = useTranslations();
   const insets = useSafeAreaInsets();
 
   const iconColor = themeColors.text;
@@ -42,7 +43,7 @@ export default function GoalsInjuriesScreen() {
           size="md"
           color={iconColor}
         />
-        <Text style={[styles.headerTitle, { color: themeColors.text }]}>Goals & Injuries</Text>
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('clientDetail.sections.goalsAndInjuries')}</Text>
         <View style={styles.headerRightPlaceholder} />
       </View>
     </View>

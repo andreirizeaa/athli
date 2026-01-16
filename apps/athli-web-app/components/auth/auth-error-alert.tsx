@@ -76,15 +76,15 @@ export function AuthErrorAlert({ pathname }: AuthErrorAlertProps) {
   }
 
   return (
-    <div className="absolute top-0 left-0 right-0 z-50 p-4 animate-in slide-in-from-top-2 duration-300">
-      <Alert className="bg-destructive/10 border-destructive/30 text-destructive relative pr-12">
-        <AlertCircle className="size-4" />
-        <AlertDescription className="min-w-0">
+    <div className="w-full animate-in fade-in duration-300">
+      <Alert className="bg-red-500/20 border-red-500/30 text-red-200 relative pr-12">
+        <AlertCircle className="size-4 text-red-400" />
+        <AlertDescription className="min-w-0 text-red-200">
           {errorMessage}
         </AlertDescription>
         <button
           onClick={handleDismiss}
-          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-red-300"
           aria-label="Dismiss error"
         >
           <X className="h-4 w-4" />

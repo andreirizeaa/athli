@@ -16,6 +16,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { useLibraryTab } from '@/stores';
+import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { getSections, deleteSections, duplicateSection, starSections, archiveSections } from '@/services/coach/coach-section-service';
 import { EmptyState } from '@/components/ui/empty-state';
 
@@ -23,14 +24,13 @@ export const SectionsTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const router = useRouter();
-  const { searchQuery, registerOpenRow, closeOpenRow, openRowCloseFn } = useLibraryTab();
+  const { registerOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
-  const isRowOpen = openRowCloseFn !== null;
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
 
   // Fetch sections directly with TanStack Query
-  const { data: sections = [] } = useQuery({
+  const { data: sections = [], isRefetching, refetch } = useQuery({
     queryKey: ['sections'],
     queryFn: async () => {
       console.log('[SectionsTab] Fetching sections...');
@@ -42,6 +42,12 @@ export const SectionsTab = () => {
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
+  });
+
+  const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
+    searchPlaceholderKey: 'library.searchPlaceholders.sections',
+    isRefetching,
+    refetch,
   });
 
   // Filter sections based on search query
@@ -61,20 +67,42 @@ export const SectionsTab = () => {
     searchQuery
   });
 
-  // Delete mutation
+  // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteSections(id),
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ['sections'] });
-      haptics.success();
+    onMutate: async (id) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['sections'] });
+
+      // Snapshot previous value
+      const previousSections = queryClient.getQueryData<typeof sections>(['sections']);
+
+      // Optimistically remove from cache
+      queryClient.setQueryData<typeof sections>(['sections'], (old) =>
+        old?.filter((s) => s.id !== id) ?? []
+      );
+
+      // Return context with snapshot for rollback
+      return { previousSections };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _id, context) => {
+      // Rollback on error
+      if (context?.previousSections) {
+        queryClient.setQueryData(['sections'], context.previousSections);
+      }
       haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDeleting'),
         [{ text: t('general.ok') }]
       );
+    },
+    onSettled: () => {
+      // Refetch to ensure server state
+      queryClient.invalidateQueries({ queryKey: ['sections'] });
+    },
+    onSuccess: () => {
+      haptics.success();
     },
   });
 
@@ -281,12 +309,15 @@ export const SectionsTab = () => {
       data={filteredSections}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      ListHeaderComponent={ListHeaderComponent}
+      refreshControl={refreshControl}
+      showsVerticalScrollIndicator={false}
       ListEmptyComponent={
         <EmptyState
           message={t('library.empty.sections')}
         />
       }
-      contentContainerStyle={styles.container}
     />
   );
 };

@@ -157,11 +157,15 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
 // Hook to get current color scheme (respects preference)
 export const useColorScheme = (): 'light' | 'dark' => {
   const systemScheme = useNativeColorScheme() ?? 'light';
-  const preference = useThemeStore((state) => state.preference);
 
-  if (preference === 'system') {
+  try {
+    const preference = useThemeStore((state) => state.preference);
+    if (preference === 'system') {
+      return systemScheme;
+    }
+    return preference;
+  } catch {
+    // Fallback to system scheme if store not available
     return systemScheme;
   }
-
-  return preference;
 };

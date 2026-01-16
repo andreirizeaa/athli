@@ -145,7 +145,7 @@ export default function HeroSection() {
                     key={1}
                     className="bg-foreground/10 rounded-[calc(var(--radius-xl)+0.125rem)] border p-0.5"
                   >
-                    <Link href={`${APP_URL}/sign-up`}>
+                    <Link href={`${APP_URL}/auth/register`}>
                       <Button
                         size="lg"
                         className="rounded-xl px-5 text-base"

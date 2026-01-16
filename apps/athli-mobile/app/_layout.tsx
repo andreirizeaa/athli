@@ -10,7 +10,7 @@ import { Image } from 'expo-image';
 import 'react-native-reanimated';
 import { PressablesConfig } from 'pressto';
 
-import { useColorScheme, useThemePreference, useCoachProfileStore, useClientProfileStore, useAuthSessionStore, useAppInitStore } from '@/stores';
+import { useColorScheme, useThemePreference, useCoachProfileStore, useCoachCompanyStore, useClientProfileStore, useAuthSessionStore, useAppInitStore, useChatsStore } from '@/stores';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { useTranslationsStore } from '@/stores/useTranslationsStore';
 import { useUnitsStore } from '@/stores/useUnitsStore';
@@ -109,6 +109,7 @@ function RootLayoutNav() {
     useUnitsStore.getState().initialize();
     useHapticsStore.getState().initialize();
     useCoachProfileStore.getState().initialize();
+    useCoachCompanyStore.getState().initialize();
     useClientProfileStore.getState().initialize();
   }, []);
 
@@ -154,10 +155,22 @@ function RootLayoutNav() {
           console.log('[RootLayout] Profile restored from storage, no fetch needed');
         }
 
+        // STEP 4: Load company data and chats if coach profile exists
+        const finalCoachProfile = useCoachProfileStore.getState().profile;
+        if (finalCoachProfile) {
+          console.log('[RootLayout] Loading coach data...');
+          // Load company and chats in parallel
+          await Promise.all([
+            useCoachCompanyStore.getState().loadCompany(),
+            useChatsStore.getState().loadChats(),
+          ]);
+          console.log('[RootLayout] Coach company and chats data loaded');
+        }
+
         // Small delay to ensure first frame is rendered
         await new Promise(resolve => setTimeout(resolve, 50));
 
-        // STEP 4: Mark app as ready - tabs can now safely render
+        // STEP 5: Mark app as ready - tabs can now safely render
         setIsAppReady(true);
         useAppInitStore.getState().setAppReady(true);
         console.log('[RootLayout] App ready');
@@ -190,6 +203,11 @@ function RootLayoutNav() {
           if (authResult && authResult.profile) {
             if (authResult.profileType === 'coach') {
               setCoachProfile(authResult.profile as CoachProfile);
+              // Load company data and chats for coach
+              await Promise.all([
+                useCoachCompanyStore.getState().loadCompany(),
+                useChatsStore.getState().loadChats(),
+              ]);
             } else if (authResult.profileType === 'client') {
               setClientProfile(authResult.profile as ClientProfile);
             }
@@ -199,6 +217,8 @@ function RootLayoutNav() {
           console.log('[RootLayout] User signed out, clearing state');
           useAuthSessionStore.getState().clearSession();
           clearCoachProfile();
+          useCoachCompanyStore.getState().clearCompany();
+          useChatsStore.getState().clearChats();
           clearClientProfile();
           router.replace('/welcome');
         } else if (event === 'TOKEN_REFRESHED') {
@@ -243,11 +263,10 @@ function RootLayoutNav() {
     useThemeStore.getState().updateColorsFromSystemScheme(systemScheme);
   }, [systemScheme]);
 
-  // Hide status bar only for camera and preview screens (not message-image-preview since it's from a message)
+  // Hide status bar only for preview screens
   const shouldHideStatusBar = useMemo(() => {
     const currentRoute = segments[segments.length - 1] || '';
     const hideStatusBarRoutes = [
-      'camera/camera',
       'chats/document-preview',
       'chats/video-preview',
     ];
@@ -512,6 +531,44 @@ function RootLayoutNav() {
                 animation: 'slide_from_bottom',
                 gestureDirection: 'vertical',
               }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/settings/edit-personal-details-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/settings/edit-company-details-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="settings/personal-details"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="settings/company-details"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
             }}
           />
           <Stack.Screen
@@ -879,15 +936,6 @@ function RootLayoutNav() {
                 animation: 'slide_from_bottom',
                 gestureDirection: 'vertical',
               }),
-            }}
-          />
-          <Stack.Screen
-            name="camera/camera"
-            options={{
-              presentation: 'card',
-              headerShown: false,
-              animation: 'slide_from_bottom',
-              animationDuration: 200,
             }}
           />
           <Stack.Screen

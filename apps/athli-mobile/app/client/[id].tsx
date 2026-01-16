@@ -1,11 +1,9 @@
-import React from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ChevronLeft,
-  Sparkles,
-  MessageCircle,
   Settings,
   ChevronRight,
   BarChart3,
@@ -24,27 +22,13 @@ import {
 
 import { PressableScale, PressableOpacity } from 'pressto';
 
-import { typography, iconSizes } from '@/constants/typography';
+import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference } from '@/stores';
-import { useTranslations } from '@/stores';
+import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
-import { OutlinedButton } from '@/components/ui/buttons';
 import { Separator } from '@/components/ui/separator';
-
-// Mock client data
-const MOCK_CLIENT = {
-  id: '1',
-  name: 'Sarah Johnson',
-  firstName: 'Sarah',
-  lastName: 'Johnson',
-  avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face',
-  email: 'sarah.johnson@email.com',
-  age: 28,
-  coachingType: 'hybrid' as const,
-};
 
 type MenuItem = {
   id: string;
@@ -63,18 +47,28 @@ export default function ClientProfileScreen() {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
 
-  const client = MOCK_CLIENT;
+  // Use Zustand store for client data
+  const client = useClientDetailStore((state) => state.client);
+  const isLoading = useClientDetailStore((state) => state.isLoading);
+  const isLoadingClient = useClientDetailStore((state) => state.isLoadingClient);
+  const error = useClientDetailStore((state) => state.error);
+  const loadClientData = useClientDetailStore((state) => state.loadClientData);
+
   const iconColor = themeColors.text;
+
+  // Load client data when screen mounts or id changes
+  useEffect(() => {
+    if (id) {
+      loadClientData(id);
+    }
+  }, [id, loadClientData]);
 
   const handleBackPress = () => {
     haptics.medium();
     router.back();
   };
 
-  const handleAssistantPress = () => {
-    haptics.medium();
-    router.push(`/client/${id}/assistant`);
-  };
+
 
   const handleEditProfilePress = () => {
     haptics.medium();
@@ -111,13 +105,6 @@ export default function ClientProfileScreen() {
       section: 'quick',
     },
     // Coaching
-    {
-      id: 'assistant',
-      icon: { sf: 'sparkles', IconComponent: Sparkles },
-      title: t('clientDetail.sections.assistant'),
-      route: `/client/${id}/assistant`,
-      section: 'coaching',
-    },
     {
       id: 'notes',
       icon: { sf: 'note.text', IconComponent: Notebook },
@@ -185,6 +172,57 @@ export default function ClientProfileScreen() {
     },
   ];
 
+  // Loading state - show while client basic info is loading
+  if (isLoadingClient && !client) {
+    return (
+      <ScreenWrapper>
+        <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+          <IconButton
+            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+            onPress={handleBackPress}
+            size="md"
+            color={iconColor}
+          />
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+            {t('clientDetail.profile')}
+          </Text>
+          <View style={styles.headerPlaceholder} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={themeColors.primary} />
+          <Text style={[styles.loadingText, { color: themeColors.mutedText }]}>
+            {t('general.loading')}
+          </Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
+  // Error state
+  if (error || !client) {
+    return (
+      <ScreenWrapper>
+        <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+          <IconButton
+            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+            onPress={handleBackPress}
+            size="md"
+            color={iconColor}
+          />
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+            {t('clientDetail.profile')}
+          </Text>
+          <View style={styles.headerPlaceholder} />
+        </View>
+        <View style={styles.errorContainer}>
+          <Text style={[styles.errorText, { color: themeColors.mutedText }]}>
+            {error || t('clientDetail.clientNotFound')}
+          </Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
   return (
     <ScreenWrapper scrollable={true}>
       {/* Header */}
@@ -198,18 +236,13 @@ export default function ClientProfileScreen() {
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>
           {t('clientDetail.profile')}
         </Text>
-        <IconButton
-          icon={{ sf: 'sparkles', IconComponent: Sparkles }}
-          onPress={handleAssistantPress}
-          size="md"
-          color={iconColor}
-        />
+        <View style={styles.headerPlaceholder} />
       </View>
 
       {/* Profile Card */}
       <View style={[styles.profileCard, { backgroundColor: themeColors.surfacePrimary }]}>
         <View style={styles.avatarLarge}>
-          {client?.avatarUrl ? (
+          {client.avatarUrl ? (
             <Image
               source={{ uri: client.avatarUrl }}
               style={styles.avatarLargeImage}
@@ -218,21 +251,21 @@ export default function ClientProfileScreen() {
               cachePolicy="memory-disk"
             />
           ) : (
-            <View style={[styles.avatarLargeImage, styles.avatarPlaceholder]}>
+            <View style={[styles.avatarLargeImage, styles.avatarPlaceholder, { backgroundColor: themeColors.border }]}>
               <Text style={[styles.avatarInitial, { color: themeColors.mutedText }]}>
-                {client?.name?.charAt(0)}
+                {client.name?.charAt(0)}
               </Text>
             </View>
           )}
         </View>
         <Text style={[styles.profileName, { color: themeColors.text }]}>
-          {client?.name}
+          {client.name}
         </Text>
         <PressableOpacity
           style={[
             styles.editButton,
             {
-              backgroundColor: `${themeColors.surfaceSecondary}`,
+              backgroundColor: themeColors.surfaceSecondary,
             },
           ]}
           onPress={handleEditProfilePress}
@@ -246,30 +279,27 @@ export default function ClientProfileScreen() {
 
       {/* Menu Items */}
       <View style={styles.menuContainer}>
-        {menuItems.map((item, index) => {
-          const isLastItem = index === menuItems.length - 1;
-          return (
-            <View key={item.id}>
-              <PressableScale onPress={() => handleMenuItemPress(item.route)}>
-                <View style={styles.menuItem}>
-                  <View style={styles.menuItemLeft}>
-                    <PlatformIcon
-                      sf={item.icon.sf}
-                      IconComponent={item.icon.IconComponent}
-                      size={24}
-                      color={iconColor}
-                    />
-                    <Text style={[styles.menuItemTitle, { color: themeColors.text }]}>
-                      {item.title}
-                    </Text>
-                  </View>
-                  <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+        {menuItems.map((item) => (
+          <View key={item.id}>
+            <PressableScale onPress={() => handleMenuItemPress(item.route)}>
+              <View style={styles.menuItem}>
+                <View style={styles.menuItemLeft}>
+                  <PlatformIcon
+                    sf={item.icon.sf}
+                    IconComponent={item.icon.IconComponent}
+                    size={24}
+                    color={iconColor}
+                  />
+                  <Text style={[styles.menuItemTitle, { color: themeColors.text }]}>
+                    {item.title}
+                  </Text>
                 </View>
-              </PressableScale>
-              <Separator />
-            </View>
-          );
-        })}
+                <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+              </View>
+            </PressableScale>
+            <Separator />
+          </View>
+        ))}
       </View>
     </ScreenWrapper>
   );
@@ -287,6 +317,30 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...typography.h5,
     flex: 1,
+    textAlign: 'center',
+  },
+  headerPlaceholder: {
+    width: 44,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    gap: 16,
+  },
+  loadingText: {
+    ...typography.p2,
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 24,
+  },
+  errorText: {
+    ...typography.p1,
     textAlign: 'center',
   },
   profileCard: {
@@ -311,7 +365,6 @@ const styles = StyleSheet.create({
     borderRadius: 40,
   },
   avatarPlaceholder: {
-    backgroundColor: '#e0e0e0',
     alignItems: 'center',
     justifyContent: 'center',
   },

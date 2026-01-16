@@ -179,40 +179,42 @@ export const CoachListItem = ({
                 </View>
               )}
             </View>
-            {coach.last_message_preview && (
-              <View style={styles.messageFooter}>
-                <View style={styles.lastMessageContainer}>
-                  <Text
+            <View style={styles.messageFooter}>
+              <View style={styles.lastMessageContainer}>
+                <Text
+                  style={[
+                    styles.lastMessage,
+                    {
+                      color: themeColors.mutedText,
+                      fontStyle: coach.last_message_preview ? 'normal' : 'italic',
+                      opacity: coach.last_message_preview ? 1 : 0.6,
+                    },
+                  ]}
+                  numberOfLines={2}
+                >
+                  {coach.last_message_preview || t('chats.beFirstToMessage')}
+                </Text>
+              </View>
+              <View style={styles.rightColumn}>
+                {coach.unreadCount != null && coach.unreadCount > 0 ? (
+                  <View
                     style={[
-                      styles.lastMessage,
-                      { color: themeColors.mutedText },
+                      styles.unreadBadge,
+                      { backgroundColor: themeColors.primary },
                     ]}
-                    numberOfLines={2}
                   >
-                    {coach.last_message_preview}
-                  </Text>
-                </View>
-                <View style={styles.rightColumn}>
-                  {(coach.unreadCount ?? 0) > 0 && (
-                    <View
+                    <Text
                       style={[
-                        styles.unreadBadge,
-                        { backgroundColor: themeColors.primary },
+                        styles.unreadCount,
+                        { color: themeColors.primaryForeground },
                       ]}
                     >
-                      <Text
-                        style={[
-                          styles.unreadCount,
-                          { color: themeColors.primaryForeground },
-                        ]}
-                      >
-                        {coach.unreadCount! > 99 ? '99+' : coach.unreadCount}
-                      </Text>
-                    </View>
-                  )}
-                </View>
+                      {coach.unreadCount > 99 ? '99+' : coach.unreadCount}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
-            )}
+            </View>
           </View>
         </View>
       <View

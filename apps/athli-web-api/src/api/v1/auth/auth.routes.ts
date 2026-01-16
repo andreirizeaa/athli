@@ -4,11 +4,17 @@ import { validate } from '../../../middlewares/validate';
 import { authenticate } from '../../../middlewares/auth';
 import { supabaseAuthenticate } from '../../../middlewares/supabase-auth';
 import {
+  loginRateLimiter,
+  otpRateLimiter,
+  passwordResetRateLimiter,
+} from '../../../middlewares/rate-limit';
+import {
   registerSchema,
   loginSchema,
   verifyEmailSchema,
   resendOTPSchema,
   forgotPasswordSchema,
+  checkAuthProviderSchema,
   resetPasswordSchema,
   googleAuthSchema,
   sendSecurityOTPSchema,
@@ -74,7 +80,7 @@ authRouter.post('/register', validate(registerSchema), authController.register);
  *       200:
  *         description: Email verified successfully
  */
-authRouter.post('/verify-email', validate(verifyEmailSchema), authController.verifyEmail);
+authRouter.post('/verify-email', otpRateLimiter, validate(verifyEmailSchema), authController.verifyEmail);
 
 /**
  * @swagger
@@ -97,7 +103,7 @@ authRouter.post('/verify-email', validate(verifyEmailSchema), authController.ver
  *       200:
  *         description: OTP sent successfully
  */
-authRouter.post('/resend-otp', validate(resendOTPSchema), authController.resendOTP);
+authRouter.post('/resend-otp', passwordResetRateLimiter, validate(resendOTPSchema), authController.resendOTP);
 
 /**
  * @swagger
@@ -123,7 +129,30 @@ authRouter.post('/resend-otp', validate(resendOTPSchema), authController.resendO
  *       200:
  *         description: Login successful
  */
-authRouter.post('/login', validate(loginSchema), authController.login);
+authRouter.post('/login', loginRateLimiter, validate(loginSchema), authController.login);
+
+/**
+ * @swagger
+ * /api/v1/auth/check-auth-provider:
+ *   post:
+ *     summary: Check auth provider for a user by email
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Auth provider info returned
+ */
+authRouter.post('/check-auth-provider', validate(checkAuthProviderSchema), authController.checkAuthProvider);
 
 /**
  * @swagger
@@ -146,7 +175,7 @@ authRouter.post('/login', validate(loginSchema), authController.login);
  *       200:
  *         description: OTP sent successfully
  */
-authRouter.post('/forgot-password', validate(forgotPasswordSchema), authController.forgotPassword);
+authRouter.post('/forgot-password', passwordResetRateLimiter, validate(forgotPasswordSchema), authController.forgotPassword);
 
 /**
  * @swagger
@@ -175,7 +204,7 @@ authRouter.post('/forgot-password', validate(forgotPasswordSchema), authControll
  *       200:
  *         description: Password reset successfully
  */
-authRouter.post('/reset-password', validate(resetPasswordSchema), authController.resetPassword);
+authRouter.post('/reset-password', otpRateLimiter, validate(resetPasswordSchema), authController.resetPassword);
 
 /**
  * @swagger
@@ -266,5 +295,5 @@ authRouter.post('/send-security-otp', supabaseAuthenticate, validate(sendSecurit
  *       200:
  *         description: OTP verified successfully
  */
-authRouter.post('/verify-security-otp', supabaseAuthenticate, validate(verifySecurityOTPSchema), authController.verifySecurityOTP);
+authRouter.post('/verify-security-otp', otpRateLimiter, supabaseAuthenticate, validate(verifySecurityOTPSchema), authController.verifySecurityOTP);
 

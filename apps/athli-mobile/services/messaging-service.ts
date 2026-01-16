@@ -97,12 +97,6 @@ export const getConversations = async ({
       throw profilesError;
     }
 
-    console.log('[getConversations] Fetched profiles:', {
-      count: profiles?.length,
-      requestedCount: otherUserIds.length,
-      profileIds: profiles?.map(p => p.id),
-    });
-
     // Transform and compute fields
     const result: (Conversation | null)[] = await Promise.all(
       conversations.map(async (conv) => {
@@ -183,17 +177,27 @@ export const getConversations = async ({
 export const getArchivedConversations = async (
   coachId: string,
 ): Promise<Conversation[]> => {
-  return getConversations({ coachId, includeArchived: true }).then((convs) =>
-    convs.filter(async (conv) => {
-      const { data } = await supabase
-        .from('conversation_participants')
-        .select('is_archived')
-        .eq('conversation_id', conv.id)
-        .eq('user_id', coachId)
-        .single();
-      return data?.is_archived === true;
-    }),
-  );
+  // First get archived conversation IDs
+  const { data: archivedParticipants, error: participantsError } = await supabase
+    .from('conversation_participants')
+    .select('conversation_id')
+    .eq('user_id', coachId)
+    .eq('is_archived', true);
+
+  if (participantsError) {
+    console.error('[getArchivedConversations] Error:', participantsError);
+    throw participantsError;
+  }
+
+  if (!archivedParticipants || archivedParticipants.length === 0) {
+    return [];
+  }
+
+  const archivedIds = new Set(archivedParticipants.map((p) => p.conversation_id));
+
+  // Get all conversations including archived, then filter to only archived
+  const allConversations = await getConversations({ coachId, includeArchived: true });
+  return allConversations.filter((conv) => archivedIds.has(conv.id));
 };
 
 /**
@@ -339,7 +343,9 @@ export const sendMessage = async ({
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     return {
       ...message,

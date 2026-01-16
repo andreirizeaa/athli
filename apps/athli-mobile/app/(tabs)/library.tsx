@@ -28,7 +28,6 @@ import {
   FilesTab,
 } from '@/components/features/library';
 import { useLibraryTab, type LibraryTab } from '@/stores';
-import { SearchBar } from '@/components/ui/search-bar';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -40,13 +39,14 @@ type TabComponent = {
 export default function LibraryScreen() {
   const { primaryColor, colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const { setCurrentLibraryTab, searchQuery, setSearchQuery, closeOpenRow, openRowCloseFn } = useLibraryTab();
+  const { setCurrentLibraryTab, setSearchQuery, closeOpenRow, openRowCloseFn } = useLibraryTab();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const pagerRef = useRef<PagerView>(null);
   const tabBarScrollRef = useRef<ScrollView>(null);
   const underlinePosition = useSharedValue(0);
   const underlineWidth = useSharedValue(0);
   const tabLayoutsRef = useRef<{ [key: number]: { x: number; width: number } }>({});
+  const isProgrammaticChange = useRef(false);
   const queryClient = useQueryClient();
 
   // Track if a row is currently open
@@ -117,6 +117,7 @@ export default function LibraryScreen() {
     }
 
     closeOpenRow();
+    isProgrammaticChange.current = true; // Mark as programmatic to prevent handlePageSelected from animating
     setSelectedIndex(index);
     animateUnderline(index);
     setCurrentLibraryTab(tabs[index]);
@@ -136,6 +137,17 @@ export default function LibraryScreen() {
 
   const handlePageSelected = (event: PagerViewOnPageSelectedEvent) => {
     const index = event.nativeEvent.position;
+
+    // Skip if this is a programmatic change (tab press handles animation)
+    if (isProgrammaticChange.current) {
+      if (index === selectedIndex) {
+        // Final page reached, reset flag
+        isProgrammaticChange.current = false;
+      }
+      return;
+    }
+
+    // User swipe - handle normally
     if (index !== selectedIndex) {
       // If a row is open, just close it and prevent page change
       if (isRowOpen) {
@@ -158,13 +170,6 @@ export default function LibraryScreen() {
           animated: true,
         });
       }
-    }
-  };
-
-  const handleSearchBarPress = () => {
-    // If a row is open, close it and prevent search bar interaction
-    if (isRowOpen) {
-      closeOpenRow();
     }
   };
 
@@ -264,35 +269,7 @@ export default function LibraryScreen() {
                   }
                 }}
               >
-                <ScrollView
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={styles.tabScrollContent}
-                  keyboardShouldPersistTaps="handled"
-                  bounces={false}
-                  scrollEnabled={!isRowOpen}
-                >
-                  <View onStartShouldSetResponder={() => isRowOpen}>
-                    <Pressable
-                      onPress={handleSearchBarPress}
-                      style={{ pointerEvents: isRowOpen ? 'auto' : 'box-none' }}
-                    >
-                      <SearchBar
-                        value={searchQuery}
-                        onChangeText={(text) => {
-                          // If a row is open, close it and prevent search input
-                          if (isRowOpen) {
-                            closeOpenRow();
-                            return;
-                          }
-                          setSearchQuery(text);
-                        }}
-                        placeholder={t(`library.searchPlaceholders.${key}`)}
-                        style={styles.searchBar}
-                      />
-                    </Pressable>
-                  </View>
-                  <Component />
-                </ScrollView>
+                <Component />
               </Pressable>
             </View>
           ))}
@@ -354,14 +331,5 @@ const styles = StyleSheet.create({
   },
   tabContentItem: {
     flex: 1,
-  },
-  tabScrollContent: {
-    paddingTop: 16,
-    paddingBottom: 40,
-    flexGrow: 1,
-  },
-  searchBar: {
-    marginBottom: 16,
-    marginHorizontal: 16,
   },
 });
