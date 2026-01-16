@@ -14,6 +14,8 @@ export { useLibraryTabStore, type LibraryTab } from './useLibraryTabStore';
 export { useTrainingOverlayStore } from './useTrainingOverlayStore';
 export { useCoachProfileStore } from './useCoachProfileStore';
 export { useClientProfileStore } from './useClientProfileStore';
+export { useAuthSessionStore } from './useAuthSessionStore';
+export { useAppInitStore } from './useAppInitStore';
 export {
   useModalCallbacksStore,
   type HabitOptionsData,
@@ -23,6 +25,9 @@ export {
 } from './useModalCallbacksStore';
 export { useLibraryStore } from './useLibraryStore';
 export { useClientsStore } from './useClientsStore';
+
+// Export auth hook
+export { useAuth } from '../hooks/useAuth';
 
 // Re-export useColorScheme from useThemeStore
 export { useColorScheme } from './useThemeStore';

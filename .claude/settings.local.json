@@ -46,7 +46,9 @@
       "WebFetch(domain:medium.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(xargs sed:*)",
-      "WebFetch(domain:supabase.com)"
+      "WebFetch(domain:supabase.com)",
+      "Bash(npx supabase:*)",
+      "WebFetch(domain:api.github.com)"
     ]
   }
 }

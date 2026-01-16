@@ -18,6 +18,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { SearchBar } from '@/components/ui/search-bar';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { EmptyState } from '@/components/ui/empty-state';
+import { SkeletonList } from '@/components/ui/skeleton-list';
 
 // Memoized list item component for better performance
 type ClientListItemProps = {
@@ -103,7 +104,7 @@ export default function ClientsScreen() {
   const isAuthenticated = !!coachProfile;
 
   // Fetch clients directly with TanStack Query
-  const { data: clients = [] } = useQuery({
+  const { data: clients = [], isLoading } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
       const data = await getClients();
@@ -194,26 +195,30 @@ export default function ClientsScreen() {
       </View>
 
       {/* Client List */}
-      <FlashList
-        data={filteredClients}
-        renderItem={({ item: client, index }) => (
-          <ClientListItem
-            client={client}
-            onPress={handleClientPress}
-            formatSubtitle={formatSubtitle}
-            isLastItem={index === filteredClients.length - 1}
-            themeColors={themeColors}
-            t={t}
-          />
-        )}
-        keyExtractor={(item) => item.id}
-        ListEmptyComponent={
-          <EmptyState
-            message={t('clients.empty')}
-          />
-        }
-        contentContainerStyle={styles.listContainer}
-      />
+      {isLoading && clients.length === 0 ? (
+        <SkeletonList itemCount={8} />
+      ) : (
+        <FlashList
+          data={filteredClients}
+          renderItem={({ item: client, index }) => (
+            <ClientListItem
+              client={client}
+              onPress={handleClientPress}
+              formatSubtitle={formatSubtitle}
+              isLastItem={index === filteredClients.length - 1}
+              themeColors={themeColors}
+              t={t}
+            />
+          )}
+          keyExtractor={(item) => item.id}
+          ListEmptyComponent={
+            <EmptyState
+              message={t('clients.empty')}
+            />
+          }
+          contentContainerStyle={styles.listContainer}
+        />
+      )}
     </ScreenWrapper>
   );
 }

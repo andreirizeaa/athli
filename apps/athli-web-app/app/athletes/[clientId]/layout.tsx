@@ -290,6 +290,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
     );
   }
 
+  const displayName = athlete?.name?.trim() || '--';
   const names = (athlete?.name || '').split(' ');
   const firstName = names[0] || '';
   const lastName = names.slice(1).join(' ') || '';
@@ -297,7 +298,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
     ? `${firstName.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`
     : firstName
       ? firstName.charAt(0).toUpperCase()
-      : 'U';
+      : '?';
 
   return (
     <div className="h-full w-full flex flex-col overflow-auto relative">
@@ -320,7 +321,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
                   <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                    {athlete?.name || ''}
+                    {displayName}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
@@ -334,7 +335,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
 
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-3">
-                <h1 className="text-xl font-semibold leading-none">{athlete?.name || ''}</h1>
+                <h1 className="text-xl font-semibold leading-none">{displayName}</h1>
                 <Badge
                   variant="outline"
                   className={
@@ -378,7 +379,9 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
                       ? t('athletes.profile.online')
                       : athlete?.coachingType === 'in-person'
                         ? t('athletes.profile.inPerson')
-                        : t('athletes.profile.hybrid')}
+                        : athlete?.coachingType === 'hybrid'
+                          ? t('athletes.profile.hybrid')
+                          : t('athletes.filters.uncategorized', { defaultValue: 'Not set' })}
                   </Badge>
                   <Badge variant="outline" className="h-6 px-1.5 text-xs rounded-sm border-muted-foreground/30 font-medium">
                     +3

@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
@@ -156,14 +156,15 @@ export default function TabLayout() {
     return modalRoutes[currentLibraryTab];
   };
 
-  // Use useLayoutEffect for initial mount to prevent any flash of add-modal content
-  useLayoutEffect(() => {
+  // Use useEffect for initial mount to prevent navigation before layout is ready
+  useEffect(() => {
     if (!isInitialMount.current) {
       return;
     }
 
     isInitialMount.current = false;
     previousAppView.current = appView;
+
     // On initial mount with NativeTabs, ensure we navigate to the correct initial route
     // This prevents add-modal from being shown on app load
     if (hasLiquidGlass) {
@@ -174,7 +175,10 @@ export default function TabLayout() {
         pathname === '/(tabs)' ||
         (pathname !== initialRoute && !pathname.startsWith('/clients') && !pathname.startsWith('/chats') && !pathname.startsWith('/library') && !pathname.startsWith('/settings') && !pathname.startsWith('/home') && !pathname.startsWith('/training') && !pathname.startsWith('/progress') && !pathname.startsWith('/inbox') && !pathname.startsWith('/profile') && !pathname.startsWith('/add-modal'))
       ) {
-        router.replace(initialRoute);
+        // Delay navigation to ensure layout is mounted
+        setTimeout(() => {
+          router.replace(initialRoute);
+        }, 50);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

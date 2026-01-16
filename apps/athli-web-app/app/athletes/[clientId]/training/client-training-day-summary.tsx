@@ -85,8 +85,6 @@ export const ClientTrainingDaySummary = ({
     // Use prop if provided, otherwise fallback to URL params
     const clientId = clientIdProp || (params.clientId as string);
 
-    console.log('ClientTrainingDaySummary - clientIdProp:', clientIdProp, 'params.clientId:', params.clientId, 'clientId:', clientId);
-
     const [historyExercise, setHistoryExercise] = React.useState<any | null>(null);
     const { user } = useUserProfile();
     const coachId = user?.id;

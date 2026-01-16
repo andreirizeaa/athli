@@ -45,9 +45,10 @@ import {
 } from '@/components/app/app-shell';
 import { useConversations } from '@/hooks/use-conversations';
 import { useMessages } from '@/hooks/use-messages';
-import { useRealtimeConversations, useRealtimeMessages, useSyncReadReceipt } from '@/hooks/use-realtime-messaging';
+import { useRealtimeConversations, useRealtimeMessages, useSyncReadReceipt, useMessageMerging } from '@/hooks/use-realtime-messaging';
 import { sendMessage as sendMessageAPI, markConversationAsRead, addReaction, removeReaction } from '@/lib/messaging/messaging-api-client';
-import type { Conversation } from '@athli/shared-types';
+import type { Conversation, OptimisticMessage } from '@athli/shared-types';
+import { createOptimisticMessage } from '@athli/shared-types';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ContactListItem } from './components/contact-list-item';
 import { format } from 'date-fns';
@@ -131,15 +132,18 @@ const MessageInputWrapper: React.FC<{
   contextRef: React.MutableRefObject<{
     setReplyingToMessage: (message: Message | null) => void;
     textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+    addAttachment: (file: File, type: import('@/components/app/types').AttachmentType) => void;
+    addAttachments: (files: File[], type: import('@/components/app/types').AttachmentType) => void;
+    canAddMoreAttachments: boolean;
   } | null>;
   selectedContact: Contact | null;
 }> = ({ contextRef, selectedContact }) => {
-  const { setReplyingToMessage, textareaRef } = useMessageInput();
+  const { setReplyingToMessage, textareaRef, addAttachment, addAttachments, canAddMoreAttachments } = useMessageInput();
 
   // Expose context methods via ref
   React.useEffect(() => {
-    contextRef.current = { setReplyingToMessage, textareaRef };
-  }, [contextRef, setReplyingToMessage, textareaRef]);
+    contextRef.current = { setReplyingToMessage, textareaRef, addAttachment, addAttachments, canAddMoreAttachments };
+  }, [contextRef, setReplyingToMessage, textareaRef, addAttachment, addAttachments, canAddMoreAttachments]);
 
   return <MessageInput selectedContact={selectedContact} />;
 };
@@ -185,25 +189,35 @@ const InboxPage = () => {
   // Realtime subscriptions
   const { realtimeMessages } = useRealtimeMessages({
     conversationId: selectedConversation?.id || '',
-    onMessageReceived: () => {
-      // Refetch messages when new message arrives
-      refetchMessages();
-    },
   });
 
   const { conversations: realtimeConversations } = useRealtimeConversations({
     userId: user?.id || '',
-    onConversationUpdated: () => {
-      // Refetch conversations when they update
-      refetchConversations();
-    },
   });
 
+  // Optimistic messages state for instant UI feedback when sending
+  const [optimisticMessages, setOptimisticMessages] = React.useState<OptimisticMessage[]>([]);
+
+  // Clear optimistic messages when switching conversations
+  React.useEffect(() => {
+    setOptimisticMessages([]);
+  }, [selectedConversation?.id]);
+
+  // Merge all 3 message sources: API + realtime + optimistic
+  const mergedMessages = useMessageMerging(
+    apiMessages || [],
+    realtimeMessages,
+    optimisticMessages
+  );
+
   // Auto-mark conversation as read when viewing it
+  // Pass latest message ID to avoid unnecessary database queries
+  const latestMessage = mergedMessages[mergedMessages.length - 1];
   useSyncReadReceipt({
     conversationId: selectedConversation?.id || '',
     userId: user?.id || '',
     enabled: !!selectedConversation && !!user,
+    latestMessageId: latestMessage?.id,
   });
 
   const [isNavigating, setIsNavigating] = React.useState(false);
@@ -458,6 +472,9 @@ const InboxPage = () => {
   const messageInputContextRef = React.useRef<{
     setReplyingToMessage: (message: Message | null) => void;
     textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+    addAttachment: (file: File, type: import('@/components/app/types').AttachmentType) => void;
+    addAttachments: (files: File[], type: import('@/components/app/types').AttachmentType) => void;
+    canAddMoreAttachments: boolean;
   } | null>(null);
 
   // Convert conversations to Contact format for UI compatibility
@@ -478,11 +495,11 @@ const InboxPage = () => {
     ? contacts.find((contact) => contact.id === selectedContactId) || null
     : null;
 
-  // Convert API messages to UI Message format
+  // Convert merged messages (API + realtime) to UI Message format
   const currentMessages = React.useMemo<Message[]>(() => {
-    if (!apiMessages || apiMessages.length === 0) return [];
+    if (!mergedMessages || mergedMessages.length === 0) return [];
 
-    return apiMessages.map((msg) => ({
+    return mergedMessages.map((msg) => ({
       id: msg.id,
       text: msg.content || '',
       timestamp: format(msg.sent_at, 'h:mm a'),
@@ -518,7 +535,7 @@ const InboxPage = () => {
         : undefined,
       reaction: msg.reactions?.[0]?.reaction,
     }));
-  }, [apiMessages, user?.id]);
+  }, [mergedMessages, user?.id]);
 
   const filteredContacts = React.useMemo(() => {
     if (!searchQuery.trim()) return contacts;
@@ -965,7 +982,7 @@ const InboxPage = () => {
   }, [messageInput, replyingToMessage, attachedPdf, attachedVideo, attachedImages.length]);
 
 
-  // Handler for MessageInputProvider - uses real messaging API
+  // Handler for MessageInputProvider - uses real messaging API with optimistic updates
   const handleSendMessageFromContext = React.useCallback(async (params: {
     text: string;
     attachments?: Array<{
@@ -981,30 +998,42 @@ const InboxPage = () => {
     video?: { name: string; data: string; type: string; size: number };
     replyTo?: Message['replyTo'];
   }) => {
-    if (!selectedContactId || !selectedConversation) {
+    if (!selectedContactId || !selectedConversation || !user?.id) {
       console.error('No contact or conversation selected');
       return;
     }
 
-    try {
-      // Determine message type based on attachments
-      let messageType: 'text' | 'image' | 'video' | 'audio' | 'file' = 'text';
+    // Determine message type based on attachments
+    let messageType: 'text' | 'image' | 'video' | 'audio' | 'file' = 'text';
 
-      if (params.attachments && params.attachments.length > 0) {
-        const firstAttachment = params.attachments[0];
-        if (firstAttachment.attachmentType === 'image') {
-          messageType = 'image';
-        } else if (firstAttachment.attachmentType === 'video') {
-          messageType = 'video';
-        } else if (firstAttachment.attachmentType === 'pdf') {
-          messageType = 'file';
-        }
+    if (params.attachments && params.attachments.length > 0) {
+      const firstAttachment = params.attachments[0];
+      if (firstAttachment.attachmentType === 'image') {
+        messageType = 'image';
+      } else if (firstAttachment.attachmentType === 'video') {
+        messageType = 'video';
+      } else if (firstAttachment.attachmentType === 'pdf') {
+        messageType = 'file';
       }
+    }
 
+    // Create optimistic message for instant UI feedback
+    const optimisticMsg = createOptimisticMessage(
+      selectedConversation.id,
+      user.id,
+      params.text || '',
+      messageType,
+      params.replyTo?.id
+    );
+
+    // Add to optimistic messages state for immediate display
+    setOptimisticMessages((prev) => [...prev, optimisticMsg]);
+
+    try {
       // 1. Create message via API (this returns the message ID)
       const message = await sendMessageAPI({
         conversationId: selectedConversation.id,
-        content: params.text || null,
+        content: params.text || undefined,
         messageType,
         parentMessageId: params.replyTo?.id,
       });
@@ -1020,14 +1049,17 @@ const InboxPage = () => {
         });
       }
 
-      // Message will appear automatically via realtime subscription
-      // Refetch to ensure attachments are loaded
-      refetchMessages();
+      // Remove optimistic message - realtime subscription will add the real one
+      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
     } catch (error) {
       console.error('Failed to send message:', error);
+
+      // Remove optimistic message on failure (error toast will show)
+      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+
       throw error; // Let MessageInputProvider handle the toast
     }
-  }, [selectedContactId, selectedConversation, refetchMessages]);
+  }, [selectedContactId, selectedConversation, user?.id]);
 
   // Handle message reactions
   const handleReaction = React.useCallback(async (messageId: string, emoji: string) => {
@@ -1050,12 +1082,11 @@ const InboxPage = () => {
       }
 
       // Reaction will update automatically via realtime subscription
-      refetchMessages();
     } catch (error) {
       console.error('Failed to update reaction:', error);
       // Optionally show toast error to user
     }
-  }, [selectedConversation, refetchMessages]);
+  }, [selectedConversation]);
 
   const handleFileButtonClick = () => {
     fileInputRef.current?.click();
@@ -1338,46 +1369,44 @@ const InboxPage = () => {
       setIsDraggingOver(false);
       setDragCounter(0);
 
-      if (!selectedContactId) return;
+      if (!selectedContactId || !messageInputContextRef.current) return;
 
       const files = Array.from(event.dataTransfer.files);
       if (files.length === 0) return;
+
+      const { addAttachment, addAttachments, canAddMoreAttachments } = messageInputContextRef.current;
+
+      if (!canAddMoreAttachments) {
+        console.warn('Maximum 4 attachments allowed');
+        return;
+      }
 
       // Separate PDFs, videos, and images
       const pdfFiles = files.filter(
         (file) => file.type === 'application/pdf' || file.name.endsWith('.pdf')
       );
       const videoFiles = files.filter(
-        (file) => file.type === 'video/mp4' || file.name.endsWith('.mp4')
+        (file) => file.type.startsWith('video/')
       );
       const imageFiles = files.filter((file) => file.type.startsWith('image/'));
 
-      // Handle PDF (only one PDF can be attached)
+      // Add files to message input context
+      // PDFs
       if (pdfFiles.length > 0) {
-        const pdfFile = pdfFiles[0];
-        setAttachedPdf(pdfFile);
-        setTextareaHeight(60);
+        addAttachment(pdfFiles[0], 'pdf');
       }
 
-      // Handle video (only one video can be attached)
+      // Videos
       if (videoFiles.length > 0) {
-        const videoFile = videoFiles[0];
-        setAttachedVideo(videoFile);
-        setTextareaHeight(60);
+        addAttachment(videoFiles[0], 'video');
       }
 
-      // Handle images (multiple images can be attached)
+      // Images (can add multiple)
       if (imageFiles.length > 0) {
-        setAttachedImages((prev) => {
-          const updated = [...prev, ...imageFiles];
-          return updated;
-        });
-        if (textareaHeight <= 36) {
-          setTextareaHeight(60);
-        }
+        addAttachments(imageFiles, 'image');
       }
     },
-    [selectedContactId, textareaHeight]
+    [selectedContactId]
   );
 
   const handleDownloadPdf = () => {

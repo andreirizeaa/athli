@@ -21,7 +21,10 @@ type CoachListItemProps = {
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-const formatMessageTime = (date: Date): string => {
+const formatMessageTime = (date: Date | null | undefined): string => {
+  // Handle null/undefined dates
+  if (!date) return '';
+
   const now = new Date();
   const diffInMs = now.getTime() - date.getTime();
   const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
@@ -161,7 +164,7 @@ export const CoachListItem = ({
               >
                 {coach.name}
               </Text>
-              {coach.lastMessageTime && (
+              {coach.last_message_at && (
                 <View style={styles.sent_atContainer}>
                   <Text
                     style={[
@@ -171,12 +174,12 @@ export const CoachListItem = ({
                       },
                     ]}
                   >
-                    {formatMessageTime(coach.lastMessageTime)}
+                    {formatMessageTime(coach.last_message_at)}
                   </Text>
                 </View>
               )}
             </View>
-            {coach.lastMessage && (
+            {coach.last_message_preview && (
               <View style={styles.messageFooter}>
                 <View style={styles.lastMessageContainer}>
                   <Text
@@ -186,7 +189,7 @@ export const CoachListItem = ({
                     ]}
                     numberOfLines={2}
                   >
-                    {coach.lastMessage}
+                    {coach.last_message_preview}
                   </Text>
                 </View>
                 <View style={styles.rightColumn}>

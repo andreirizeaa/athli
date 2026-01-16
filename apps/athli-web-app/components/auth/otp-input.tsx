@@ -94,8 +94,8 @@ export function OTPInput({ length = 8, value, onChange, disabled = false }: OTPI
           onBlur={() => setFocusedIndex(null)}
           disabled={disabled}
           className={cn(
-            'w-12 h-14 text-center text-lg font-semibold',
-            focusedIndex === index && 'ring-2 ring-primary'
+            'w-12 h-14 text-center text-lg font-semibold bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20',
+            focusedIndex === index && 'ring-2 ring-white/40'
           )}
         />
       ))}

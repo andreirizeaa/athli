@@ -26,7 +26,10 @@ type ChatListItemProps = {
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-const formatMessageTime = (date: Date): string => {
+const formatMessageTime = (date: Date | null | undefined): string => {
+  // Handle null/undefined dates
+  if (!date) return '';
+
   const now = new Date();
   const diffInMs = now.getTime() - date.getTime();
   const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
@@ -103,7 +106,7 @@ export const ChatListItem = ({
         ]
       );
     }
-  }, [onDelete, chat.clientName, chat.id, t]);
+  }, [onDelete, chat.other_user_name, chat.id, t]);
 
 
   // Use the same color as dividers for checkbox border in light mode
@@ -223,8 +226,8 @@ export const ChatListItem = ({
                 </View>
               )}
               <View style={styles.avatarContainer}>
-                {chat.clientAvatar ? (
-                  <Image source={{ uri: chat.clientAvatar }} style={styles.avatar} />
+                {chat.other_user_avatar ? (
+                  <Image source={{ uri: chat.other_user_avatar }} style={styles.avatar} />
                 ) : (
                   <View
                     style={[
@@ -241,7 +244,7 @@ export const ChatListItem = ({
                     style={[styles.clientName, { color: themeColors.text }]}
                     numberOfLines={1}
                   >
-                    {chat.clientName}
+                    {chat.other_user_name}
                   </Text>
                   <View style={styles.sent_atContainer}>
                     <Text
@@ -252,7 +255,7 @@ export const ChatListItem = ({
                         },
                       ]}
                     >
-                      {formatMessageTime(chat.lastMessageTime)}
+                      {formatMessageTime(chat.last_message_at)}
                     </Text>
                   </View>
                 </View>
@@ -279,7 +282,7 @@ export const ChatListItem = ({
                       ]}
                       numberOfLines={2}
                     >
-                      {lastMessage?.text || chat.lastMessage}
+                      {lastMessage?.text || chat.last_message_preview}
                     </Text>
                   </View>
                   <View style={styles.rightColumn}>

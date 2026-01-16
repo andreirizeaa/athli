@@ -89,18 +89,49 @@ export const getConversations = async ({
       .select('id, name, profile_picture_url')
       .in('id', otherUserIds);
 
-    if (profilesError) throw profilesError;
+    if (profilesError) {
+      console.error('[getConversations] Error fetching profiles:', {
+        error: profilesError,
+        userIds: otherUserIds,
+      });
+      throw profilesError;
+    }
+
+    console.log('[getConversations] Fetched profiles:', {
+      count: profiles?.length,
+      requestedCount: otherUserIds.length,
+      profileIds: profiles?.map(p => p.id),
+    });
 
     // Transform and compute fields
-    const result: Conversation[] = await Promise.all(
+    const result: (Conversation | null)[] = await Promise.all(
       conversations.map(async (conv) => {
         const isCoach = conv.coach_id === coachId;
         const otherUserId = isCoach ? conv.client_id : conv.coach_id;
+
+        // Validate other user ID exists
+        if (!otherUserId) {
+          console.error('[getConversations] Missing other user ID:', {
+            conversationId: conv.id,
+            coachId: conv.coach_id,
+            clientId: conv.client_id,
+            currentUserId: coachId,
+          });
+          return null;
+        }
 
         // Find participant settings
         const participantSettings = participants?.find(
           (p) => p.conversation_id === conv.id,
         );
+
+        // Log if participant settings are missing (could indicate database issue)
+        if (!participantSettings) {
+          console.warn('[getConversations] No participant settings found:', {
+            conversationId: conv.id,
+            userId: coachId,
+          });
+        }
 
         // Skip if archived (unless includeArchived is true)
         if (!includeArchived && participantSettings?.is_archived) {
@@ -109,6 +140,15 @@ export const getConversations = async ({
 
         // Find other user's profile
         const otherProfile = profiles?.find((p) => p.id === otherUserId);
+
+        // Log if profile not found (this is the "Unknown" issue)
+        if (!otherProfile) {
+          console.error('[getConversations] Profile not found for user:', {
+            conversationId: conv.id,
+            otherUserId,
+            availableProfileIds: profiles?.map(p => p.id),
+          });
+        }
 
         // Calculate unread count
         const receipt = readReceipts?.find((r) => r.conversation_id === conv.id);
@@ -122,7 +162,7 @@ export const getConversations = async ({
           created_at: new Date(conv.created_at),
           updated_at: new Date(conv.updated_at),
           other_user_id: otherUserId,
-          other_user_name: otherProfile?.name || 'Unknown',
+          other_user_name: otherProfile?.name || `Unknown User (${otherUserId.slice(0, 8)}...)`,
           other_user_avatar: otherProfile?.profile_picture_url,
           unread_count: unreadCount,
         } as Conversation;
@@ -176,12 +216,13 @@ const getUnreadCount = async (
   }
 
   // Count messages sent after last read time
+  // Note: receipt.last_read_at is already an ISO string from Supabase
   const { count } = await supabase
     .from('messages')
     .select('*', { count: 'exact', head: true })
     .eq('conversation_id', conversationId)
     .neq('sender_id', userId)
-    .gte('sent_at', receipt.last_read_at.toISOString());
+    .gte('sent_at', receipt.last_read_at);
 
   return count || 0;
 };
@@ -215,7 +256,7 @@ export const getMessages = async ({
         *,
         attachments:message_attachments(*),
         reactions:message_reactions(*),
-        parent_message:messages!messages_parent_message_id_fkey(id, content, message_type, sender_id)
+        parent_message:messages!parent_message_id(id, content, message_type, sender_id)
       `,
       )
       .eq('conversation_id', conversationId)

@@ -222,7 +222,7 @@ export const getMessages = async ({
         *,
         attachments:message_attachments(*),
         reactions:message_reactions(*),
-        parent_message:messages!messages_parent_message_id_fkey(id, content, message_type, sender_id)
+        parent_message:messages!parent_message_id(id, content, message_type, sender_id)
       `,
       )
       .eq('conversation_id', conversationId)

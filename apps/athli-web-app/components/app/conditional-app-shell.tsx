@@ -13,8 +13,9 @@ export const ConditionalAppShell = ({ children }: ConditionalAppShellProps) => {
   const isErrorRoute = pathname?.startsWith('/pages/error');
   const isClientRoute = pathname?.startsWith('/client/');
   const isCoachReferralRoute = pathname?.startsWith('/coach/referral/');
+  const isDownloadRoute = pathname?.startsWith('/download/');
 
-  if (isAuthRoute || isErrorRoute || isClientRoute || isCoachReferralRoute) {
+  if (isAuthRoute || isErrorRoute || isClientRoute || isCoachReferralRoute || isDownloadRoute) {
     return <>{children}</>;
   }
 

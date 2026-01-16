@@ -228,9 +228,9 @@ class UserService {
     const profilePictureUrl = authUser.user.user_metadata?.avatar_url ||
       authUser.user.user_metadata?.picture || null;
 
-    // Generate default avatar if not present and using email
+    // Generate default avatar if not present (for email, apple, and other OAuth without pictures)
     let finalProfilePictureUrl = profilePictureUrl;
-    if (!finalProfilePictureUrl && signinMethod === 'email') {
+    if (!finalProfilePictureUrl) {
       try {
         finalProfilePictureUrl = await avatarService.generateDefaultAvatar(userId, userName);
       } catch (avatarErr) {
@@ -354,12 +354,17 @@ class UserService {
   async ensureClientProfile(userId: string, coachId: string, invitationToken?: string): Promise<UserProfile> {
     const supabase = getSupabaseClient();
 
+    console.log('[Service] ensureClientProfile START', { userId, coachId, invitationToken });
+
     // Get user from auth
     const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
 
     if (authError || !authUser.user) {
+      console.error('[Service] User not found', { userId, error: authError });
       throw new Error('User not found');
     }
+
+    console.log('[Service] User fetched from auth', { userId, email: authUser.user.email });
 
     // Check if client profile already exists
     const { data: existingProfile, error: fetchError } = await supabase
@@ -373,8 +378,144 @@ class UserService {
       throw new Error(`Failed to check profile: ${fetchError.message}`);
     }
 
-    // If profile exists, return it
+    // Get user info for later use
+    const userEmail = authUser.user.email || '';
+    const userName = authUser.user.user_metadata?.name || existingProfile?.name || userEmail.split('@')[0];
+    const signinMethod = authUser.user.app_metadata?.provider === 'google' ? 'google' : 'email';
+    const profilePictureUrl = authUser.user.user_metadata?.avatar_url ||
+      authUser.user.user_metadata?.picture || null;
+
+    // Generate default avatar if not present (for email, apple, and other OAuth without pictures)
+    let finalProfilePictureUrl = profilePictureUrl;
+    if (!finalProfilePictureUrl) {
+      try {
+        finalProfilePictureUrl = await avatarService.generateDefaultAvatar(userId, userName);
+      } catch (avatarErr) {
+        console.error('Failed to generate default avatar during profile creation:', avatarErr);
+      }
+    }
+
+    // If user_profiles exists, we still need to ensure client_profiles and coach_client_assignments exist
+    // This handles the case where the trigger created user_profiles but not the other tables
     if (existingProfile) {
+      // Check if client_profiles exists, create if not
+      const { data: existingClientProfile } = await supabase
+        .from('client_profiles')
+        .select('client_id')
+        .eq('client_id', userId)
+        .maybeSingle();
+
+      if (!existingClientProfile) {
+        console.log('[Service] Creating client_profiles entry', { userId, email: userEmail, name: userName });
+
+        const { error: clientProfileError } = await supabase
+          .from('client_profiles')
+          .insert({
+            client_id: userId,
+            email: userEmail,
+            name: userName,
+            profile_picture_url: finalProfilePictureUrl,
+            signin_method: signinMethod,
+          });
+
+        if (clientProfileError) {
+          if (clientProfileError.code === '23505') {
+            console.log('[Service] client_profiles already exists (race condition)');
+          } else {
+            console.error('[Service] FAILED to create client_profiles', { error: clientProfileError });
+            throw new Error(`Failed to create client_profiles entry: ${clientProfileError.message}`);
+          }
+        } else {
+          console.log('[Service] ✅ client_profiles created successfully');
+        }
+      } else {
+        console.log('[Service] client_profiles already exists, skipping insert');
+      }
+
+      // Update user metadata with coach_id
+      await supabase.auth.admin.updateUserById(userId, {
+        user_metadata: {
+          ...authUser.user.user_metadata,
+          coach_id: coachId,
+        },
+      });
+
+      // Handle invitation token and coach_client_assignments
+      let invitationProcessed = false;
+      if (invitationToken) {
+        const { data: assignment } = await supabase
+          .from('coach_client_assignments')
+          .select('*')
+          .eq('invitation_token', invitationToken)
+          .maybeSingle();
+
+        if (assignment) {
+          invitationProcessed = true;
+          if (assignment.client_id !== userId) {
+            const stubClientId = assignment.client_id;
+
+            // 1. Update assignment to new user
+            await supabase
+              .from('coach_client_assignments')
+              .update({
+                client_id: userId,
+                status: 'accepted',
+                category: null, // Will be set when coach categorizes the client
+                invitation_token: null // Clear token after use
+              })
+              .eq('invitation_token', invitationToken);
+
+            // 2. Transfer other assignments
+            const assignmentTables = [
+              'client_metrics',
+              'client_habits',
+              'client_files',
+              'client_checkins',
+              'client_questionnaires'
+            ];
+
+            for (const table of assignmentTables) {
+              await supabase
+                .from(table)
+                .update({ client_id: userId })
+                .eq('client_id', stubClientId);
+            }
+
+            // 3. Cleanup stub user
+            await supabase.auth.admin.deleteUser(stubClientId);
+          }
+        }
+      }
+
+      if (!invitationProcessed) {
+        // If no token or token not found (could be a general coach code),
+        // just ensure the assignment exists
+        console.log('[Service] Creating/updating coach_client_assignments', { coachId, userId, status: 'accepted' });
+
+        const { data: assignmentData, error: assignmentError } = await supabase
+          .from('coach_client_assignments')
+          .upsert({
+            coach_id: coachId,
+            client_id: userId,
+            status: 'accepted',
+            category: null // Will be set when coach categorizes the client
+          }, { onConflict: 'coach_id, client_id' })
+          .select();
+
+        if (assignmentError) {
+          console.error('[Service] FAILED to create coach_client_assignments', {
+            error: assignmentError,
+            code: assignmentError.code,
+            message: assignmentError.message,
+            details: assignmentError.details,
+            hint: assignmentError.hint
+          });
+          throw new Error(`Failed to create coach-client assignment: ${assignmentError.message}`);
+        } else {
+          console.log('[Service] ✅ coach_client_assignments created successfully', { data: assignmentData });
+        }
+      }
+
       return {
         id: authUser.user.id,
         email: existingProfile.email,
@@ -386,23 +527,6 @@ class UserService {
         createdAt: authUser.user.created_at,
         updatedAt: existingProfile.updated_at,
       };
-    }
-
-    // Create client profile
-    const userEmail = authUser.user.email || '';
-    const userName = authUser.user.user_metadata?.name || userEmail.split('@')[0];
-    const signinMethod = authUser.user.app_metadata?.provider === 'google' ? 'google' : 'email';
-    const profilePictureUrl = authUser.user.user_metadata?.avatar_url ||
-      authUser.user.user_metadata?.picture || null;
-
-    // Generate default avatar if not present and using email
-    let finalProfilePictureUrl = profilePictureUrl;
-    if (!finalProfilePictureUrl && signinMethod === 'email') {
-      try {
-        finalProfilePictureUrl = await avatarService.generateDefaultAvatar(userId, userName);
-      } catch (avatarErr) {
-        console.error('Failed to generate default avatar during profile creation:', avatarErr);
-      }
     }
 
     const { data: newProfile, error: insertError } = await supabase
@@ -446,16 +570,24 @@ class UserService {
       throw new Error(`Failed to create client profile: ${insertError.message}`);
     }
 
-    // Create empty client_profiles entry (personal details filled later via app)
+    // Create client_profiles entry with email and name (other details filled later via app)
     const { error: clientProfileError } = await supabase
       .from('client_profiles')
       .insert({
         client_id: userId,
+        email: userEmail,
+        name: userName,
+        profile_picture_url: finalProfilePictureUrl,
+        signin_method: signinMethod,
       });
 
-    // Ignore if already exists (race condition)
-    if (clientProfileError && clientProfileError.code !== '23505') {
-      console.error('Failed to create client_profiles entry:', clientProfileError);
+    // Ignore if already exists (race condition), but throw for other errors
+    if (clientProfileError) {
+      if (clientProfileError.code === '23505') {
+        console.log('client_profiles entry already exists for user:', userId);
+      } else {
+        throw new Error(`Failed to create client_profiles entry: ${clientProfileError.message}`);
+      }
     }
 
     // Update user metadata with coach_id
@@ -485,7 +617,7 @@ class UserService {
             .from('coach_client_assignments')
             .update({
               client_id: userId,
-              status: 'connected',
+              status: 'accepted',
               connected_at: new Date().toISOString(),
               invitation_token: null // Clear token after use
             })
@@ -514,14 +646,14 @@ class UserService {
     }
 
     if (!invitationProcessed) {
-      // If no token or token not found (could be a general coach code), 
+      // If no token or token not found (could be a general coach code),
       // just ensure the assignment exists
       await supabase
         .from('coach_client_assignments')
         .upsert({
           coach_id: coachId,
           client_id: userId,
-          status: 'connected',
+          status: 'accepted',
           connected_at: new Date().toISOString()
         }, { onConflict: 'coach_id, client_id' });
     }

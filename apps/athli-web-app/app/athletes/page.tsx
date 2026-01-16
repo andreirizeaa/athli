@@ -109,6 +109,7 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
 const AthleteNameTooltip = ({ name }: { name: string }) => {
   const [isTruncated, setIsTruncated] = useState(false);
   const checkTruncationRef = useRef<(() => void) | null>(null);
+  const displayName = name?.trim() || '--';
 
   const handleRef = (element: HTMLSpanElement | null) => {
     if (element) {
@@ -126,16 +127,16 @@ const AthleteNameTooltip = ({ name }: { name: string }) => {
 
   const nameSpan = (
     <span ref={handleRef} className="text-sm truncate cursor-default">
-      {name}
+      {displayName}
     </span>
   );
 
-  if (isTruncated) {
+  if (isTruncated && displayName !== '--') {
     return (
       <Tooltip>
         <TooltipTrigger asChild>{nameSpan}</TooltipTrigger>
         <TooltipContent>
-          <p>{name}</p>
+          <p>{displayName}</p>
         </TooltipContent>
       </Tooltip>
     );
@@ -255,7 +256,9 @@ const AthletesPage = () => {
             ? t('athletes.filters.inPerson')
             : row.category === 'hybrid'
               ? t('athletes.filters.hybrid')
-              : row.category,
+              : row.category === null
+                ? t('athletes.filters.uncategorized', { defaultValue: 'Not set' })
+                : row.category,
       [t('athletes.export.connected')]:
         row.connected === true
           ? t('athletes.status.connected')
@@ -670,6 +673,12 @@ const AthletesPage = () => {
                     {t('athletes.filters.hybrid')}
                   </Badge>
                 );
+              } else if (category === null) {
+                return (
+                  <Badge variant="secondary" className="text-xs">
+                    {t('athletes.filters.uncategorized', { defaultValue: 'Not set' })}
+                  </Badge>
+                );
               }
               return (
                 <div className="flex items-center w-full">
@@ -1045,11 +1054,11 @@ const AthletesPage = () => {
 
   // Create first column renderer
   const renderFirstColumn = (athlete: Athlete, isSelected: boolean) => {
-    const initials = athlete.name
+    const initials = (athlete.name?.trim() || '')
       .split(' ')
       .map((part) => part.charAt(0).toUpperCase())
       .slice(0, 2)
-      .join('');
+      .join('') || '?';
     const fieldKey = getFieldKey(athlete.id, 'name');
     const isCopied = copiedFields.has(fieldKey);
 
@@ -1235,7 +1244,9 @@ const AthletesPage = () => {
                 ? t('athletes.filters.inPerson')
                 : row.category === 'hybrid'
                   ? t('athletes.filters.hybrid')
-                  : row.category,
+                  : row.category === null
+                    ? t('athletes.filters.uncategorized', { defaultValue: 'Not set' })
+                    : row.category,
           [t('athletes.export.connected')]:
             row.connected === true
               ? t('athletes.status.connected')
