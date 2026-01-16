@@ -55,6 +55,7 @@ type ChatToolbarProps = {
   onCancelReply: () => void;
   bottomInset?: number;
   keyboardHeight?: SharedValue<number>;
+  onHeightChange?: (height: number) => void;
 };
 
 export const ChatToolbar = ({
@@ -84,6 +85,7 @@ export const ChatToolbar = ({
   onCancelReply,
   bottomInset = 0,
   keyboardHeight,
+  onHeightChange,
 }: ChatToolbarProps) => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
@@ -194,6 +196,7 @@ export const ChatToolbar = ({
         intensity={30}
         tint={isDark ? 'dark' : 'light'}
         style={[styles.toolbarBlur, { backgroundColor: translucentHeaderBg }]}
+        onLayout={(e) => onHeightChange?.(e.nativeEvent.layout.height)}
       >
         <Animated.View style={safePaddingStyle}>
           {replyingToMessage && (
@@ -240,7 +243,7 @@ export const ChatToolbar = ({
                     <PlatformIcon
                       sf="paperplane.circle.fill"
                       IconComponent={Send}
-                      size={iconSizes.tabBarIconsIOS + 2}
+                      size={iconSizes.tabBarIconsIOS + 6}
                       color={themeColors.primary}
                     />
                   </PressableOpacity>
@@ -253,7 +256,7 @@ export const ChatToolbar = ({
                       <PlatformIcon
                         sf="camera"
                         IconComponent={Camera}
-                        size={iconSizes.tabBarIcons - 2}
+                        size={iconSizes.tabBarIcons + 2}
                         color={iconColor}
                       />
                     </PressableOpacity>
@@ -307,7 +310,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: 6,
     paddingHorizontal: 16,
     paddingTop: 4,
@@ -317,12 +320,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: 30,
-    height: 36,
+    height: 38,
     borderRadius: 18,
   },
   sendButton: {
     alignItems: 'center',
     justifyContent: 'center',
+    width: 38,
+    height: 38,
   },
   searchBarContainer: {
     flex: 1,

@@ -570,6 +570,7 @@ export const en = {
       code: 'Code',
       phoneNumber: 'Phone Number',
       phoneNumberPlaceholder: 'Enter your phone',
+      errorUpdating: 'Failed to update client details',
     },
   },
   calendar: {
@@ -675,6 +676,7 @@ export const en = {
   chats: {
     title: 'Chats',
     searchPlaceholder: 'Search',
+    beFirstToMessage: 'Be the first to message...',
     newChat: {
       title: 'New Chat',
       searchPlaceholder: 'Search',
@@ -682,8 +684,8 @@ export const en = {
     readAll: 'Read all',
     markAsRead: 'Mark as read',
     selectChats: 'Select chats',
+    viewProfile: 'View Profile',
     archive: 'Archive Chat',
-    delete: 'Delete Chat',
     filters: {
       all: 'All',
       unread: 'Unread',
@@ -812,6 +814,8 @@ export const en = {
       data: 'Data',
       forms: 'Forms',
       settingsTitle: 'Settings',
+      goalsAndInjuries: 'Goals & Injuries',
+      trainingCalendar: 'Training Calendar',
     },
     notFound: 'Client Not Found',
     loading: 'Loading...',
@@ -869,6 +873,41 @@ export const en = {
       assignWorkout: 'Assign Workout',
       assignProgram: 'Assign Program',
       placeholder: 'Content coming soon',
+    },
+    notes: {
+      emptyTitle: 'No notes yet',
+      emptyDescription: 'Notes and updates for this client will appear here',
+    },
+    metrics: {
+      emptyTitle: 'No metrics assigned',
+      emptyDescription: 'Assign or create metrics to track progress',
+    },
+    habits: {
+      emptyTitle: 'No habits assigned',
+      emptyDescription: 'Assign or create habits for this client',
+    },
+    photos: {
+      emptyTitle: 'No photos yet',
+      emptyDescription: 'Progress photos for this client will appear here',
+    },
+    checkIns: {
+      emptyTitle: 'No check-ins assigned',
+      emptyDescription: 'Assign or create check-ins for this client',
+    },
+    questionnaires: {
+      emptyTitle: 'No questionnaires assigned',
+      emptyDescription: 'Assign or create questionnaires for this client',
+    },
+    files: {
+      emptyTitle: 'No files uploaded yet',
+      emptyDescription: 'Shared files and documents will appear here',
+    },
+    training: {
+      noWorkouts: 'No workouts planned',
+      noWorkoutsDescription: 'There are no workouts scheduled for this day',
+      completed: 'Completed',
+      inProgress: 'In Progress',
+      notStarted: 'Not Started',
     },
     addPhotoModal: {
       title: 'Add Photo',
@@ -931,6 +970,15 @@ export const en = {
       injuries: 'Injuries',
       noGoals: 'No goals yet',
       noInjuries: 'No injuries',
+      noActivity: 'No activity yet',
+      today: 'Today',
+      yesterday: 'Yesterday',
+      daysAgo: '{{count}} days ago',
+      weeksAgo: '{{count}} weeks ago',
+      monthsAgo: '{{count}} months ago',
+      summary: 'Summary',
+      clientFor: 'Client for',
+      days: 'days',
     },
     profile: 'Profile',
     editProfile: 'Edit Profile',

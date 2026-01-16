@@ -21,6 +21,14 @@ export const formatDateDDMMYYYY = (date: Date): string => {
   return `${day}-${month}-${year}`;
 };
 
+// Format date as yyyy-mm-dd (ISO format for API keys)
+export const formatDateYYYYMMDD = (date: Date): string => {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${year}-${month}-${day}`;
+};
+
 // Format date as "Mar 24" for button
 export const formatDateShort = (date: Date): string => {
   const month = MONTH_NAMES_SHORT[date.getMonth()];

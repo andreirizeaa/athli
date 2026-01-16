@@ -138,7 +138,7 @@ const PanelContent = React.memo(({
         const paddingRight = interpolate(
             expansion.value,
             [0, 1],
-            [collapsedOffset, 0]
+            [collapsedOffset + 16, 16]
         );
         return {
             paddingRight,

@@ -66,20 +66,42 @@ export const CheckInsTab = () => {
     searchQuery
   });
 
-  // Delete mutation
+  // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteCheckIn(id),
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ['checkIns'] });
-      haptics.success();
+    onMutate: async (id) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['checkIns'] });
+
+      // Snapshot previous value
+      const previousCheckIns = queryClient.getQueryData<typeof checkIns>(['checkIns']);
+
+      // Optimistically remove from cache
+      queryClient.setQueryData<typeof checkIns>(['checkIns'], (old) =>
+        old?.filter((c) => c.id !== id) ?? []
+      );
+
+      // Return context with snapshot for rollback
+      return { previousCheckIns };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _id, context) => {
+      // Rollback on error
+      if (context?.previousCheckIns) {
+        queryClient.setQueryData(['checkIns'], context.previousCheckIns);
+      }
       haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDeleting'),
         [{ text: t('general.ok') }]
       );
+    },
+    onSettled: () => {
+      // Refetch to ensure server state
+      queryClient.invalidateQueries({ queryKey: ['checkIns'] });
+    },
+    onSuccess: () => {
+      haptics.success();
     },
   });
 

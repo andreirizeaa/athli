@@ -61,13 +61,16 @@ export function ContactListItem({
         </div>
         <div className="flex items-center justify-between gap-2 mt-0.5 whitespace-nowrap">
           <div className="flex items-center gap-2 min-w-0">
-            {contact.unreadCount && contact.unreadCount > 0 && (
-              <div className="size-4 rounded-full bg-primary flex items-center justify-center text-[9px] font-bold text-primary-foreground flex-none">
+            {contact.unreadCount != null && contact.unreadCount > 0 ? (
+              <span className="inline-flex items-center justify-center h-[18px] min-w-[18px] px-1.5 rounded-full bg-primary text-[10px] font-semibold text-primary-foreground flex-none">
                 {contact.unreadCount}
-              </div>
-            )}
-            <span className="text-muted-foreground truncate text-start text-xs flex-1">
-              {contact.lastMessage}
+              </span>
+            ) : null}
+            <span className={cn(
+              "truncate text-start text-xs flex-1",
+              contact.lastMessage ? "text-muted-foreground" : "text-muted-foreground/60 italic"
+            )}>
+              {contact.lastMessage || "Be the first to message..."}
             </span>
             {hasDraft && (
               <span className="font-medium text-[10px] text-primary/70 flex-shrink-0">

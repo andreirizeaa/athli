@@ -45,8 +45,9 @@ export const ChatHeader = ({
   const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.95);
 
   // Determine avatar and name from either chat or coach
-  const avatar = chat?.clientAvatar || coach?.avatar;
-  const name = chat?.clientName || coach?.name || '';
+  // Note: Conversation type uses other_user_name and other_user_avatar
+  const avatar = chat?.other_user_avatar || coach?.avatar;
+  const name = chat?.other_user_name || coach?.name || '';
   const showBackButton = !!onBackPress;
   const showActionButtons = !!onUserProfilePress || !!onPanelOpen || (dropdownOptions?.length ?? 0) > 0;
 

@@ -27,6 +27,7 @@ export {
 export { useLibraryStore } from './useLibraryStore';
 export { useClientsStore } from './useClientsStore';
 export { useChatsStore } from './useChatsStore';
+export { useClientDetailStore } from './useClientDetailStore';
 
 // Export auth hook
 export { useAuth } from '../hooks/useAuth';

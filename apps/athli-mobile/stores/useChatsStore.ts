@@ -3,6 +3,7 @@ import {
   getChats,
   getArchivedChats,
   archiveChat,
+  unarchiveChat,
   deleteChat,
   markChatAsRead,
   readAllChats,
@@ -21,6 +22,7 @@ type ChatsStore = {
   loadChats: () => Promise<void>;
   loadArchivedChats: () => Promise<void>;
   archiveChat: (chatId: string) => Promise<void>;
+  unarchiveChat: (chatId: string) => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   markAsRead: (chatId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
@@ -68,20 +70,56 @@ export const useChatsStore = create<ChatsStore>((set, get) => ({
     }
   },
 
-  // Archive a chat
+  // Archive a chat (optimistic update)
   archiveChat: async (chatId) => {
+    const { chats } = get();
+    const chatToArchive = chats.find((c) => c.id === chatId);
+
+    // Optimistic update - remove from list immediately
+    set({
+      chats: chats.filter((c) => c.id !== chatId),
+      archivedChats: chatToArchive
+        ? [...get().archivedChats, chatToArchive]
+        : get().archivedChats,
+    });
+
     try {
       await archiveChat(chatId);
-      const { chats } = get();
-      const chatToArchive = chats.find((c) => c.id === chatId);
-      set({
-        chats: chats.filter((c) => c.id !== chatId),
-        archivedChats: chatToArchive
-          ? [...get().archivedChats, chatToArchive]
-          : get().archivedChats,
-      });
     } catch (error: any) {
+      // Rollback on error
       console.error('[ChatsStore] Error archiving chat:', error);
+      if (chatToArchive) {
+        set({
+          chats: [...get().chats, chatToArchive],
+          archivedChats: get().archivedChats.filter((c) => c.id !== chatId),
+        });
+      }
+      throw error;
+    }
+  },
+
+  // Unarchive a chat (optimistic update)
+  unarchiveChat: async (chatId) => {
+    const { archivedChats, chats } = get();
+    const chatToUnarchive = archivedChats.find((c) => c.id === chatId);
+
+    // Optimistic update - move from archived to main list immediately
+    set({
+      archivedChats: archivedChats.filter((c) => c.id !== chatId),
+      chats: chatToUnarchive ? [chatToUnarchive, ...chats] : chats,
+    });
+
+    try {
+      await unarchiveChat(chatId);
+    } catch (error: any) {
+      // Rollback on error
+      console.error('[ChatsStore] Error unarchiving chat:', error);
+      if (chatToUnarchive) {
+        set({
+          archivedChats: [...get().archivedChats, chatToUnarchive],
+          chats: get().chats.filter((c) => c.id !== chatId),
+        });
+      }
       throw error;
     }
   },

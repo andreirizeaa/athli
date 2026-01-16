@@ -68,20 +68,42 @@ export const FilesTab = () => {
     searchQuery
   });
 
-  // Delete mutation
+  // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteFile({ fileId: id }),
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ['files'] });
-      haptics.success();
+    onMutate: async (id) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['files'] });
+
+      // Snapshot previous value
+      const previousFiles = queryClient.getQueryData<typeof files>(['files']);
+
+      // Optimistically remove from cache
+      queryClient.setQueryData<typeof files>(['files'], (old) =>
+        old?.filter((f) => f.id !== id) ?? []
+      );
+
+      // Return context with snapshot for rollback
+      return { previousFiles };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _id, context) => {
+      // Rollback on error
+      if (context?.previousFiles) {
+        queryClient.setQueryData(['files'], context.previousFiles);
+      }
       haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDeleting'),
         [{ text: t('general.ok') }]
       );
+    },
+    onSettled: () => {
+      // Refetch to ensure server state
+      queryClient.invalidateQueries({ queryKey: ['files'] });
+    },
+    onSuccess: () => {
+      haptics.success();
     },
   });
 

@@ -7,7 +7,6 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Archive, Trash2 } from 'lucide-react';
-import { archiveUser } from '@/api/coach/coach-client-service';
 import { toast } from 'sonner';
 import { mockAthletes } from '@/components/app/app-shell';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
@@ -28,7 +27,7 @@ const AthleteSettingsPage = () => {
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-  const { deleteClient } = useCoachClients();
+  const { deleteClient, archiveClient } = useCoachClients();
 
   const handleNavigateToAthletes = () => {
     router.push('/athletes');
@@ -38,7 +37,7 @@ const AthleteSettingsPage = () => {
     if (!clientId) return;
 
     try {
-      await archiveUser(clientId);
+      await archiveClient(clientId);
       setIsArchiveModalOpen(false);
       toast.success(t('athletes.profile.archivedSuccessfully'), {
         style: {
@@ -87,8 +86,8 @@ const AthleteSettingsPage = () => {
   return (
     <div className="flex justify-center items-start px-4 pt-4 pb-2">
       <Card className="bg-background max-w-3xl w-full">
-        <CardHeader className="px-4 bg-red-500/10 rounded-t-lg">
-          <CardTitle className="text-red-600 dark:text-red-400">{t('athletes.profile.settings.danger.cardTitle')}</CardTitle>
+        <CardHeader className="px-4">
+          <CardTitle>{t('athletes.profile.settings.danger.cardTitle')}</CardTitle>
         </CardHeader>
         <Separator className="w-full mt-[-8px] mb-[-4px]" />
         <div className="w-full">

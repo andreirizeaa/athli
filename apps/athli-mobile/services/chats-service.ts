@@ -178,7 +178,10 @@ export { createOptimisticMessage } from './messaging-service';
 // ================================================
 
 export const getChats = getConversations;
-export const getArchivedChats = (includeArchived = true) => getConversations(includeArchived);
+export async function getArchivedChats() {
+  const userId = await getCurrentUserId();
+  return MessagingService.getArchivedConversations(userId);
+}
 export const getChatMessages = getMessages;
 export const archiveChat = archiveConversation;
 export const unarchiveChat = unarchiveConversation;
