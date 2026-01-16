@@ -8,6 +8,7 @@
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useClientsStore } from '@/stores/useClientsStore';
+import { useChatsStore } from '@/stores/useChatsStore';
 import {
   getClients,
   addClient,
@@ -57,6 +58,7 @@ export function useClientsData(isAuthenticated: boolean = false) {
  */
 export function useClientMutations() {
   const queryClient = useQueryClient();
+  const loadChats = useChatsStore((state) => state.loadChats);
 
   const addClientMutation = useMutation({
     mutationFn: (data: AddClientData) => addClient(data),
@@ -77,6 +79,8 @@ export function useClientMutations() {
     mutationFn: (id: string) => deleteClient(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      // Reload chats so deleted client disappears from inbox
+      loadChats();
     },
   });
 
@@ -84,6 +88,8 @@ export function useClientMutations() {
     mutationFn: (id: string) => archiveClient(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      // Reload chats so archived client disappears from inbox
+      loadChats();
     },
   });
 

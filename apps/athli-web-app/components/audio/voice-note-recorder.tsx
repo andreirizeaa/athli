@@ -29,12 +29,21 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
   const MAX_BARS = 50;
   const BAR_INTERVAL_MS = 100; // 10 bars/second
 
+  // Store cancel in a ref for cleanup to avoid stale closures
+  const cancelRef = useRef(cancel);
+  cancelRef.current = cancel;
+
   // Start recording when component mounts
   useEffect(() => {
     start().catch((error) => {
       console.error('Failed to start recording:', error);
       onCancel();
     });
+
+    // Cleanup on unmount - ensures microphone is released
+    return () => {
+      cancelRef.current();
+    };
   }, []);
 
   // Format duration as M:SS

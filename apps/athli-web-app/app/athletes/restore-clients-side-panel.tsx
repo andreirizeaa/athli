@@ -77,6 +77,8 @@ export const RestoreClientsSidePanel = ({
 
             // Invalidate the coach-clients query to refresh the main list without page reload
             queryClient.invalidateQueries({ queryKey: ['coach-clients'] });
+            // Invalidate conversations so restored clients appear in inbox
+            queryClient.invalidateQueries({ queryKey: ['conversations'] });
 
             onOpenChange(false);
             if (onClientRestored) onClientRestored();

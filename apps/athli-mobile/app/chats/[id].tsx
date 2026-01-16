@@ -29,7 +29,6 @@ import {
   Pencil,
   Repeat,
   Settings,
-  Sparkles,
   Target,
 } from 'lucide-react-native';
 import { PressableScale, PressableOpacity } from 'pressto';
@@ -78,6 +77,7 @@ import {
 } from '@/hooks/use-realtime-messaging';
 import { useSendMessageWithAttachment } from '@/hooks/use-file-upload';
 import { supabase } from '@/lib/supabase';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 
 const BAR_INTERVAL_MS = 100; // ✅ 10 bars/sec
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -145,13 +145,63 @@ type ClientPanelContentProps = {
 
 const COLLAPSED_WIDTH_RATIO = 0.85;
 
-const ClientPanelContent = ({ clientId, clientName, clientAvatar, onClose }: ClientPanelContentProps) => {
+const ClientPanelContent = ({ clientId, clientName: initialClientName, clientAvatar: initialClientAvatar, onClose }: ClientPanelContentProps) => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = Dimensions.get('window');
   const iconColor = themeColors.text;
+
+  // State for client data - use initial values from chat, then fetch full details
+  const [clientData, setClientData] = React.useState<{
+    name: string;
+    avatarUrl: string | null;
+    isLoading: boolean;
+  }>({
+    name: initialClientName || '',
+    avatarUrl: initialClientAvatar || null,
+    isLoading: false,
+  });
+
+  // Fetch client details when clientId changes (only if we don't have full data)
+  React.useEffect(() => {
+    const fetchClientData = async () => {
+      if (!clientId) return;
+
+      // Only fetch if we don't have a name (indicating we need fresh data)
+      if (initialClientName) {
+        setClientData({
+          name: initialClientName,
+          avatarUrl: initialClientAvatar || null,
+          isLoading: false,
+        });
+        return;
+      }
+
+      setClientData((prev) => ({ ...prev, isLoading: true }));
+
+      try {
+        // Dynamic import to avoid circular dependencies
+        const { getClientDetails } = await import('@/services/client');
+        const details = await getClientDetails(clientId);
+        setClientData({
+          name: details.name,
+          avatarUrl: details.avatarUrl || null,
+          isLoading: false,
+        });
+      } catch (error) {
+        console.error('[ClientPanel] Failed to fetch client details:', error);
+        setClientData((prev) => ({ ...prev, isLoading: false }));
+      }
+    };
+
+    fetchClientData();
+  }, [clientId, initialClientName, initialClientAvatar]);
+
+  // Use fetched data or fallback to props
+  const clientName = clientData.name || initialClientName;
+  const clientAvatar = clientData.avatarUrl || initialClientAvatar;
 
   // Calculate right padding to account for the hidden portion of the sidebar
   const hiddenWidth = screenWidth * (1 - COLLAPSED_WIDTH_RATIO);
@@ -182,13 +232,6 @@ const ClientPanelContent = ({ clientId, clientName, clientAvatar, onClose }: Cli
       icon: { sf: 'heart', IconComponent: Heart },
       title: t('clientDetail.overview.injuries'),
       route: `/client/${clientId}/injuries?fromChat=true`,
-    },
-    // Coaching
-    {
-      id: 'assistant',
-      icon: { sf: 'sparkles', IconComponent: Sparkles },
-      title: t('clientDetail.sections.assistant'),
-      route: `/client/${clientId}/assistant?fromChat=true`,
     },
     {
       id: 'notes',
@@ -256,10 +299,11 @@ const ClientPanelContent = ({ clientId, clientName, clientAvatar, onClose }: Cli
   };
 
   return (
-    <View style={[panelStyles.container, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top }]}>
+    <View style={[panelStyles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <StatusBarBlur />
       <ScrollView
         style={panelStyles.scrollView}
-        contentContainerStyle={[panelStyles.scrollContent, { paddingRight: rightPadding }]}
+        contentContainerStyle={[panelStyles.scrollContent, { paddingRight: rightPadding, paddingTop: insets.top + 8 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Card */}
@@ -446,8 +490,8 @@ export default function ChatDetailScreen() {
     []
   );
 
-  // Fixed toolbar height - container has static bottom padding for toolbar
-  const toolbarHeight = 60 + insets.bottom;
+  // Dynamic toolbar height - tracks actual height for proper scroll offset
+  const [toolbarHeight, setToolbarHeight] = useState(60 + insets.bottom);
 
   const [chat, setChat] = useState<Chat | null>(() => {
     if (chatParam) {
@@ -1197,8 +1241,8 @@ export default function ChatDetailScreen() {
       renderPanel={() => (
         <ClientPanelContent
           clientId={chat?.client_id}
-          clientName={chat?.clientName || chat?.other_user_name}
-          clientAvatar={chat?.clientAvatar}
+          clientName={chat?.other_user_name}
+          clientAvatar={chat?.other_user_avatar}
           onClose={handleClosePanel}
         />
       )}
@@ -1267,6 +1311,7 @@ export default function ChatDetailScreen() {
           onCancelReply={handleCancelReply}
           bottomInset={insets.bottom}
           keyboardHeight={keyboardHeight}
+          onHeightChange={setToolbarHeight}
         />
 
         <MessageReactionsSheet

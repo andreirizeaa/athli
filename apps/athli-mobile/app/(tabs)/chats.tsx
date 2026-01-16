@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Check, Ellipsis, MailCheck, CheckCircle2, Archive, Trash2 } from 'lucide-react-native';
+import { Check, Ellipsis, MailCheck, CheckCircle2, Archive } from 'lucide-react-native';
 import { FlashList } from '@shopify/flash-list';
 
 
@@ -42,7 +42,6 @@ export default function ChatsScreen() {
   const isLoading = useChatsStore((state) => state.isLoading);
   const updateChat = useChatsStore((state) => state.updateChat);
   const storArchiveChat = useChatsStore((state) => state.archiveChat);
-  const storeDeleteChat = useChatsStore((state) => state.deleteChat);
   const storeMarkAsRead = useChatsStore((state) => state.markAsRead);
   const storeMarkAllAsRead = useChatsStore((state) => state.markAllAsRead);
 
@@ -178,24 +177,16 @@ export default function ChatsScreen() {
     setSelectedChatIds(new Set());
   };
 
-  const handleDeletePress = async () => {
-    for (const chatId of selectedChatIds) {
-      await storeDeleteChat(chatId);
-    }
-    setIsEditMode(false);
-    setSelectedChatIds(new Set());
-  };
-
   const handleChatArchive = async (chatId: string) => {
     await storArchiveChat(chatId);
   };
 
-  const handleChatDelete = async (chatId: string) => {
-    await storeDeleteChat(chatId);
-  };
-
   const handleChatMarkAsRead = async (chatId: string) => {
     await storeMarkAsRead(chatId);
+  };
+
+  const handleViewProfile = (clientId: string) => {
+    router.push({ pathname: '/client/[id]', params: { id: clientId } });
   };
 
 
@@ -208,14 +199,6 @@ export default function ChatsScreen() {
           IconComponent: Archive,
         },
         onPress: handleArchivePress,
-      },
-      {
-        label: t('chats.delete'),
-        icon: {
-          sf: 'trash',
-          IconComponent: Trash2,
-        },
-        onPress: handleDeletePress,
       },
     ]
     : [
@@ -244,12 +227,12 @@ export default function ChatsScreen() {
       onPress={handleChatPress}
       isEditMode={isEditMode}
       isSelected={selectedChatIds.has(item.id)}
+      onViewProfile={handleViewProfile}
       onArchive={handleChatArchive}
-      onDelete={handleChatDelete}
       onMarkAsRead={handleChatMarkAsRead}
       onOpen={registerOpenRow}
     />
-  ), [isEditMode, selectedChatIds, handleChatPress, handleChatArchive, handleChatDelete, handleChatMarkAsRead, registerOpenRow]);
+  ), [isEditMode, selectedChatIds, handleChatPress, handleViewProfile, handleChatArchive, handleChatMarkAsRead, registerOpenRow]);
 
   const renderListHeader = useCallback(() => {
     if (!searchQuery.trim()) {
@@ -288,14 +271,6 @@ export default function ChatsScreen() {
               >
                 <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
                   {t('chats.archive')}
-                </Text>
-              </PressableOpacity>
-              <PressableOpacity
-                style={[styles.actionButton, { backgroundColor: themeColors.backgroundSecondary }]}
-                onPress={handleDeletePress}
-              >
-                <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
-                  {t('chats.delete')}
                 </Text>
               </PressableOpacity>
             </View>

@@ -67,20 +67,42 @@ export const WorkoutsTab = () => {
     searchQuery
   });
 
-  // Delete mutation
+  // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteWorkouts(id),
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ['workouts'] });
-      haptics.success();
+    onMutate: async (id) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['workouts'] });
+
+      // Snapshot previous value
+      const previousWorkouts = queryClient.getQueryData<typeof workouts>(['workouts']);
+
+      // Optimistically remove from cache
+      queryClient.setQueryData<typeof workouts>(['workouts'], (old) =>
+        old?.filter((w) => w.id !== id) ?? []
+      );
+
+      // Return context with snapshot for rollback
+      return { previousWorkouts };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _id, context) => {
+      // Rollback on error
+      if (context?.previousWorkouts) {
+        queryClient.setQueryData(['workouts'], context.previousWorkouts);
+      }
       haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDeleting'),
         [{ text: t('general.ok') }]
       );
+    },
+    onSettled: () => {
+      // Refetch to ensure server state
+      queryClient.invalidateQueries({ queryKey: ['workouts'] });
+    },
+    onSuccess: () => {
+      haptics.success();
     },
   });
 

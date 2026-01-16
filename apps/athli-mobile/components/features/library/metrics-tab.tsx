@@ -67,20 +67,42 @@ export const MetricsTab = () => {
     searchQuery
   });
 
-  // Delete mutation
+  // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteMetric(id),
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ['metrics'] });
-      haptics.success();
+    onMutate: async (id) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['metrics'] });
+
+      // Snapshot previous value
+      const previousMetrics = queryClient.getQueryData<typeof metrics>(['metrics']);
+
+      // Optimistically remove from cache
+      queryClient.setQueryData<typeof metrics>(['metrics'], (old) =>
+        old?.filter((m) => m.id !== id) ?? []
+      );
+
+      // Return context with snapshot for rollback
+      return { previousMetrics };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _id, context) => {
+      // Rollback on error
+      if (context?.previousMetrics) {
+        queryClient.setQueryData(['metrics'], context.previousMetrics);
+      }
       haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDeleting'),
         [{ text: t('general.ok') }]
       );
+    },
+    onSettled: () => {
+      // Refetch to ensure server state
+      queryClient.invalidateQueries({ queryKey: ['metrics'] });
+    },
+    onSuccess: () => {
+      haptics.success();
     },
   });
 

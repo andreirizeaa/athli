@@ -38,9 +38,10 @@ export const MessageInputBar = forwardRef<TextInput, MessageInputBarProps>(
           placeholderTextColor={themeColors.mutedText}
           value={value}
           onChangeText={onChangeText}
-          textAlignVertical="center"
-          multiline={false}
-          numberOfLines={1}
+          textAlignVertical="top"
+          multiline={true}
+          blurOnSubmit={false}
+          scrollEnabled={true}
         />
         {value.length > 0 && (
           <PressableOpacity
@@ -74,24 +75,27 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 28,
+    borderRadius: 18,
     paddingHorizontal: 12,
-    minHeight: 30,
-    height: 30,
+    paddingVertical: 4,
+    minHeight: 36,
+    maxHeight: 120,
   },
   input: {
     flex: 1,
     ...typography.p2,
-    padding: 0,
-    height: 18,
-    maxHeight: 18,
+    lineHeight: 22,
+    paddingTop: 3,
+    paddingBottom: 0,
   },
   clearIcon: {
     marginLeft: 8,
     padding: 4,
+    alignSelf: 'flex-end',
   },
   rightIcon: {
     marginLeft: 8,
-    padding: 4,
+    padding: 10,
+    alignSelf: 'flex-end',
   },
 });

@@ -65,20 +65,42 @@ export const QuestionnairesTab = () => {
     searchQuery
   });
 
-  // Delete mutation
+  // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteQuestionnaire(id),
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ['questionnaires'] });
-      haptics.success();
+    onMutate: async (id) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['questionnaires'] });
+
+      // Snapshot previous value
+      const previousQuestionnaires = queryClient.getQueryData<typeof questionnaires>(['questionnaires']);
+
+      // Optimistically remove from cache
+      queryClient.setQueryData<typeof questionnaires>(['questionnaires'], (old) =>
+        old?.filter((q) => q.id !== id) ?? []
+      );
+
+      // Return context with snapshot for rollback
+      return { previousQuestionnaires };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _id, context) => {
+      // Rollback on error
+      if (context?.previousQuestionnaires) {
+        queryClient.setQueryData(['questionnaires'], context.previousQuestionnaires);
+      }
       haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDeleting'),
         [{ text: t('general.ok') }]
       );
+    },
+    onSettled: () => {
+      // Refetch to ensure server state
+      queryClient.invalidateQueries({ queryKey: ['questionnaires'] });
+    },
+    onSuccess: () => {
+      haptics.success();
     },
   });
 
