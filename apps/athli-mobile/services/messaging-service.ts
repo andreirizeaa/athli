@@ -97,12 +97,6 @@ export const getConversations = async ({
       throw profilesError;
     }
 
-    console.log('[getConversations] Fetched profiles:', {
-      count: profiles?.length,
-      requestedCount: otherUserIds.length,
-      profileIds: profiles?.map(p => p.id),
-    });
-
     // Transform and compute fields
     const result: (Conversation | null)[] = await Promise.all(
       conversations.map(async (conv) => {
@@ -349,7 +343,9 @@ export const sendMessage = async ({
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     return {
       ...message,

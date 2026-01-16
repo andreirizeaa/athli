@@ -21,6 +21,7 @@ import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { type ThemeColors } from '@/constants/theme';
 import { type ChatMessage, reactTo } from '@/services/chats-service';
+import { type UIMessage } from '@athli/shared-types';
 import { type DropdownMenuOption, ContextMenuWrapper } from '@/components/ui/dropdown-menu';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
@@ -31,18 +32,25 @@ import { MessageVideoPreview } from '@/components/features/message/message-video
 import { MessageAudioPreview } from '@/components/features/message/message-audio-preview';
 import { useColorScheme, useThemePreference } from '@/stores';
 
+/**
+ * Message type used by MessageList - accepts both ChatMessage and UIMessage
+ * UIMessage comes from the realtime hook transformer (has text, isSent, isRead computed)
+ * ChatMessage is the legacy type from chats-service
+ */
+type MessageListMessage = ChatMessage | UIMessage;
+
 interface MessageListProps {
-  messages: ChatMessage[];
+  messages: MessageListMessage[];
   backgroundColor: string;
   themeColors: ThemeColors;
   clientName: string;
   headerHeight?: number;
   bottomOffset?: number;
   keyboardHeight?: SharedValue<number>;
-  onReply?: (message: ChatMessage) => void;
-  onEdit?: (message: ChatMessage) => void;
-  onDelete?: (message: ChatMessage) => void;
-  onReactionPress?: (message: ChatMessage) => void;
+  onReply?: (message: MessageListMessage) => void;
+  onEdit?: (message: MessageListMessage) => void;
+  onDelete?: (message: MessageListMessage) => void;
+  onReactionPress?: (message: MessageListMessage) => void;
   onDocumentPress?: (document: import('@/services/chats-service').DocumentAttachment) => void;
   onImagePress?: (images: import('@/services/chats-service').ImageAttachment[], senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
   onVideoPress?: (video: import('@/services/chats-service').VideoAttachment, senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
@@ -502,7 +510,11 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
   );
 });
 
-export const MessageList = ({
+/**
+ * MessageList component with React.memo to prevent re-renders from parent state changes
+ * (e.g., typing in the input field shouldn't re-render the message list)
+ */
+export const MessageList = React.memo(function MessageList({
   messages,
   backgroundColor,
   themeColors,
@@ -517,7 +529,7 @@ export const MessageList = ({
   onDocumentPress,
   onImagePress,
   onVideoPress,
-}: MessageListProps) => {
+}: MessageListProps) {
   const { t } = useTranslations();
   const listRef = useRef<any>(null);
   const offsetYRef = useRef(0);
@@ -1131,7 +1143,7 @@ export const MessageList = ({
       </Reanimated.View>
     </>
   );
-};
+});
 
 const STICKY_EXTRA = 32; // Extra space for sticky header pill height
 

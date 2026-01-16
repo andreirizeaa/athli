@@ -214,16 +214,13 @@ export default function InboxDetailScreen() {
     getCurrentUser();
   }, []);
 
-  // Realtime messages subscription
+  // Realtime messages subscription (uses broadcast events for scalability)
   const { realtimeMessages } = useRealtimeMessages({
     conversationId: id,
-    onMessageReceived: (message) => {
-      console.log('[Inbox Realtime] New message received:', message.id);
-    },
   });
 
-  // Merge saved, realtime, and optimistic messages
-  const allMessages = useMessageMerging(messages, realtimeMessages, optimisticMessages);
+  // Merge saved, realtime, and optimistic messages - transforms to UIMessage[]
+  const allMessages = useMessageMerging(messages, realtimeMessages, optimisticMessages, currentUserId);
 
   useEffect(() => {
     const handleKeyboardHide = () => {
@@ -678,8 +675,11 @@ export default function InboxDetailScreen() {
         parentMessageId,
       });
 
-      // Remove optimistic message (realtime will add the real one)
+      // Remove optimistic message and refetch to get the real one
+      // This ensures message appears even if realtime isn't working
       setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      const updatedMessages = await getInboxMessages(id);
+      setMessages(updatedMessages);
     } catch (error) {
       console.error('[Inbox] Failed to send message:', error);
       // Mark as failed
@@ -693,7 +693,6 @@ export default function InboxDetailScreen() {
   };
 
   const handleMessageEdit = (message: InboxMessage) => {
-    console.log('Edit message:', message);
     setSearchQuery(message.text);
   };
 

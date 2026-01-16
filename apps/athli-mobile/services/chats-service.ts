@@ -91,12 +91,13 @@ export async function sendMessage(
   },
 ) {
   const userId = await getCurrentUserId();
-  return MessagingService.sendMessage({
+  const result = await MessagingService.sendMessage({
     conversationId,
     senderId: userId,
     content,
     ...options,
   });
+  return result;
 }
 
 /**
