@@ -13,6 +13,7 @@ import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { useLibraryTab } from '@/stores';
+import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { getWorkouts, deleteWorkouts } from '@/services/coach/coach-workout-service';
@@ -22,14 +23,13 @@ export const WorkoutsTab = () => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const { searchQuery, registerOpenRow, closeOpenRow, openRowCloseFn } = useLibraryTab();
+  const { registerOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
-  const isRowOpen = openRowCloseFn !== null;
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
 
   // Fetch workouts directly with TanStack Query
-  const { data: workouts = [] } = useQuery({
+  const { data: workouts = [], isRefetching, refetch } = useQuery({
     queryKey: ['workouts'],
     queryFn: async () => {
       console.log('[WorkoutsTab] Fetching workouts...');
@@ -41,6 +41,12 @@ export const WorkoutsTab = () => {
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
+  });
+
+  const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
+    searchPlaceholderKey: 'library.searchPlaceholders.workouts',
+    isRefetching,
+    refetch,
   });
 
   // Filter workouts based on search query
@@ -61,20 +67,42 @@ export const WorkoutsTab = () => {
     searchQuery
   });
 
-  // Delete mutation
+  // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteWorkouts(id),
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ['workouts'] });
-      haptics.success();
+    onMutate: async (id) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['workouts'] });
+
+      // Snapshot previous value
+      const previousWorkouts = queryClient.getQueryData<typeof workouts>(['workouts']);
+
+      // Optimistically remove from cache
+      queryClient.setQueryData<typeof workouts>(['workouts'], (old) =>
+        old?.filter((w) => w.id !== id) ?? []
+      );
+
+      // Return context with snapshot for rollback
+      return { previousWorkouts };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _id, context) => {
+      // Rollback on error
+      if (context?.previousWorkouts) {
+        queryClient.setQueryData(['workouts'], context.previousWorkouts);
+      }
       haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDeleting'),
         [{ text: t('general.ok') }]
       );
+    },
+    onSettled: () => {
+      // Refetch to ensure server state
+      queryClient.invalidateQueries({ queryKey: ['workouts'] });
+    },
+    onSuccess: () => {
+      haptics.success();
     },
   });
 
@@ -134,6 +162,9 @@ export const WorkoutsTab = () => {
   return (
     <FlashList
       data={filteredWorkouts}
+      ListHeaderComponent={ListHeaderComponent}
+      refreshControl={refreshControl}
+      showsVerticalScrollIndicator={false}
       renderItem={({ item: workout, index }) => {
         const isLastItem = index === filteredWorkouts.length - 1;
 
@@ -209,6 +240,7 @@ export const WorkoutsTab = () => {
         );
       }}
       keyExtractor={(item) => item.id}
+      contentContainerStyle={{ paddingBottom: 40 }}
       ListEmptyComponent={
         <EmptyState
           message={t('library.empty.workouts')}

@@ -1,10 +1,11 @@
-import React, { RefObject } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import React, { RefObject, useCallback } from 'react';
+import { StyleSheet, TextInput, View, Alert, InteractionManager } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { BlurView } from 'expo-blur';
 import { Camera, Mic, Plus, Send, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { useColorScheme } from '@/stores';
+import * as ImagePicker from 'expo-image-picker';
+import { useColorScheme, useTranslations } from '@/stores';
 
 import { iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
@@ -54,6 +55,7 @@ type ChatToolbarProps = {
   onCancelReply: () => void;
   bottomInset?: number;
   keyboardHeight?: SharedValue<number>;
+  onHeightChange?: (height: number) => void;
 };
 
 export const ChatToolbar = ({
@@ -83,11 +85,13 @@ export const ChatToolbar = ({
   onCancelReply,
   bottomInset = 0,
   keyboardHeight,
+  onHeightChange,
 }: ChatToolbarProps) => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { t } = useTranslations();
 
   const headerBackgroundColor = themeColors.translucentBackground;
   const iconColor = themeColors.text;
@@ -130,6 +134,60 @@ export const ChatToolbar = ({
     };
   });
 
+  const handleCameraPress = useCallback(async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(t('general.permissionRequired'), t('camera.permissionMessage'));
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images', 'videos'],
+      quality: 1,
+      videoMaxDuration: 60,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      const isVideo = asset.type === 'video';
+
+      // Wait for JS bridge to fully restore after returning from native camera
+      InteractionManager.runAfterInteractions(() => {
+        if (isVideo) {
+          router.push({
+            pathname: '/chats/video-preview',
+            params: {
+              uri: asset.uri,
+              duration: (asset.duration || 0).toString(),
+              orientation: asset.width && asset.height && asset.width > asset.height ? 'landscape' : 'portrait',
+              chatId: participantInfo.chatId,
+              clientId: participantInfo.participantId,
+              clientName: participantInfo.participantName,
+              caption: searchQuery,
+              fromCamera: 'true',
+            },
+          });
+        } else {
+          const imageAttachment = {
+            uri: asset.uri,
+            id: `photo-${Date.now()}-${Math.random()}`,
+          };
+          router.push({
+            pathname: '/chats/message-image-preview',
+            params: {
+              images: JSON.stringify([imageAttachment]),
+              chatId: participantInfo.chatId,
+              clientId: participantInfo.participantId,
+              clientName: participantInfo.participantName,
+              fromPicker: 'true',
+              caption: searchQuery,
+            },
+          });
+        }
+      });
+    }
+  }, [participantInfo, router, searchQuery, t]);
+
   return (
     <Animated.View style={[styles.absoluteContainer, toolbarAnimatedStyle]} pointerEvents="box-none">
       {/* Background extension below toolbar */}
@@ -138,6 +196,7 @@ export const ChatToolbar = ({
         intensity={30}
         tint={isDark ? 'dark' : 'light'}
         style={[styles.toolbarBlur, { backgroundColor: translucentHeaderBg }]}
+        onLayout={(e) => onHeightChange?.(e.nativeEvent.layout.height)}
       >
         <Animated.View style={safePaddingStyle}>
           {replyingToMessage && (
@@ -184,7 +243,7 @@ export const ChatToolbar = ({
                     <PlatformIcon
                       sf="paperplane.circle.fill"
                       IconComponent={Send}
-                      size={iconSizes.tabBarIconsIOS + 2}
+                      size={iconSizes.tabBarIconsIOS + 6}
                       color={themeColors.primary}
                     />
                   </PressableOpacity>
@@ -192,22 +251,12 @@ export const ChatToolbar = ({
                   <>
                     <PressableOpacity
                       style={styles.backgroundSecondary}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/camera/camera',
-                          params: {
-                            chatId: participantInfo.chatId,
-                            clientId: participantInfo.participantId,
-                            clientName: participantInfo.participantName,
-                            caption: searchQuery,
-                          },
-                        })
-                      }
+                      onPress={handleCameraPress}
                     >
                       <PlatformIcon
                         sf="camera"
                         IconComponent={Camera}
-                        size={iconSizes.tabBarIcons - 2}
+                        size={iconSizes.tabBarIcons + 2}
                         color={iconColor}
                       />
                     </PressableOpacity>
@@ -261,7 +310,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: 6,
     paddingHorizontal: 16,
     paddingTop: 4,
@@ -271,12 +320,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: 30,
-    height: 36,
+    height: 38,
     borderRadius: 18,
   },
   sendButton: {
     alignItems: 'center',
     justifyContent: 'center',
+    width: 38,
+    height: 38,
   },
   searchBarContainer: {
     flex: 1,

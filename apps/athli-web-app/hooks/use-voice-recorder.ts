@@ -171,32 +171,47 @@ export function useVoiceRecorder() {
   }, [state]);
 
   const cancel = useCallback(() => {
-    const mr = mediaRecorderRef.current;
-    if (mr && state === "recording") {
-      // Clear timer
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-
-      mr.stop();
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-      mediaRecorderRef.current = null;
-      chunksRef.current = [];
-
-      // Clean up audio analyzer
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-        audioContextRef.current = null;
-      }
-      analyzerRef.current = null;
-      dataArrayRef.current = null;
+    // Clear timer
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
+
+    // Stop media recorder if active
+    const mr = mediaRecorderRef.current;
+    if (mr) {
+      try {
+        if (mr.state !== 'inactive') {
+          mr.stop();
+        }
+      } catch (e) {
+        // Ignore errors when stopping already stopped recorder
+      }
+    }
+    mediaRecorderRef.current = null;
+
+    // Stop all tracks - this is the key to releasing the microphone
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+
+    // Reset chunks
+    chunksRef.current = [];
+
+    // Clean up audio analyzer
+    if (audioContextRef.current) {
+      try {
+        audioContextRef.current.close();
+      } catch (e) {
+        // Ignore errors when closing
+      }
+      audioContextRef.current = null;
+    }
+    analyzerRef.current = null;
+    dataArrayRef.current = null;
 
     setState("idle");
     setDurationMs(0);
-  }, [state]);
+  }, []);
 
   const reset = useCallback(() => {
     cancel();

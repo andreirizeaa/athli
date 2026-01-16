@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import React, { useRef } from 'react';
+import { StyleSheet, TextInput, View, type TextInput as TextInputType } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { Search, X } from 'lucide-react-native';
 
@@ -29,9 +29,12 @@ export const SearchBar = ({
   style,
 }: SearchBarProps) => {
   const { colors: themeColors } = useThemePreference();
+  const inputRef = useRef<TextInputType>(null);
 
   const handleClear = () => {
     onChangeText('');
+    // Keep focus on input after clearing
+    inputRef.current?.focus();
   };
 
   return (
@@ -53,6 +56,7 @@ export const SearchBar = ({
         />
       </View>
       <TextInput
+        ref={inputRef}
         style={[styles.searchInput, { color: themeColors.text }]}
         placeholder={placeholder}
         placeholderTextColor={themeColors.mutedText}
@@ -65,11 +69,14 @@ export const SearchBar = ({
         numberOfLines={1}
       />
       {value.length > 0 && (
-        <PressableOpacity style={styles.clearIcon} onPress={handleClear}>
+        <PressableOpacity
+          style={styles.clearIcon}
+          onPress={handleClear}
+        >
           <PlatformIcon
             sf="xmark.circle.fill"
             IconComponent={X}
-            size={22}
+            size={20}
             color={themeColors.mutedText}
           />
         </PressableOpacity>

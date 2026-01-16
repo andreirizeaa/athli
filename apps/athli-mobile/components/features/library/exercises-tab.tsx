@@ -17,6 +17,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { useLibraryTab } from '@/stores';
+import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EXERCISE_CATEGORY_OPTIONS, EQUIPMENT_OPTIONS } from '@athli/shared-types';
 
@@ -24,14 +25,13 @@ export const ExercisesTab = () => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const { searchQuery, registerOpenRow, closeOpenRow, openRowCloseFn } = useLibraryTab();
+  const { registerOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
-  const isRowOpen = openRowCloseFn !== null;
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
 
   // Fetch exercises directly with TanStack Query
-  const { data: exercises = [] } = useQuery({
+  const { data: exercises = [], isRefetching, refetch } = useQuery({
     queryKey: ['exercises'],
     queryFn: async () => {
       console.log('[ExercisesTab] Fetching exercises...');
@@ -43,6 +43,12 @@ export const ExercisesTab = () => {
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
+  });
+
+  const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
+    searchPlaceholderKey: 'library.searchPlaceholders.exercises',
+    isRefetching,
+    refetch,
   });
 
   // Filter exercises based on search query
@@ -63,20 +69,42 @@ export const ExercisesTab = () => {
     searchQuery
   });
 
-  // Delete mutation
+  // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteExercises(id),
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ['exercises'] });
-      haptics.success();
+    onMutate: async (id) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['exercises'] });
+
+      // Snapshot previous value
+      const previousExercises = queryClient.getQueryData<typeof exercises>(['exercises']);
+
+      // Optimistically remove from cache
+      queryClient.setQueryData<typeof exercises>(['exercises'], (old) =>
+        old?.filter((e) => e.id !== id) ?? []
+      );
+
+      // Return context with snapshot for rollback
+      return { previousExercises };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _id, context) => {
+      // Rollback on error
+      if (context?.previousExercises) {
+        queryClient.setQueryData(['exercises'], context.previousExercises);
+      }
       haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDeleting'),
         [{ text: t('general.ok') }]
       );
+    },
+    onSettled: () => {
+      // Refetch to ensure server state
+      queryClient.invalidateQueries({ queryKey: ['exercises'] });
+    },
+    onSuccess: () => {
+      haptics.success();
     },
   });
 
@@ -358,12 +386,15 @@ export const ExercisesTab = () => {
       data={filteredExercises}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      ListHeaderComponent={ListHeaderComponent}
+      refreshControl={refreshControl}
+      showsVerticalScrollIndicator={false}
       ListEmptyComponent={
         <EmptyState
           message={t('library.empty.exercises')}
         />
       }
-      contentContainerStyle={styles.container}
     />
   );
 };

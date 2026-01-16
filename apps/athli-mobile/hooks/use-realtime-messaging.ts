@@ -1,6 +1,9 @@
 /**
  * Supabase Realtime Hooks for Messaging System
  * Implements WhatsApp-like realtime messaging with optimistic updates
+ *
+ * Uses broadcast events (not postgres_changes) for better scalability.
+ * CRITICAL: Calls setAuth() before subscribing to private channels.
  */
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
@@ -22,6 +25,8 @@ import type {
 import {
   deduplicateMessages,
   calculateMessageStatus,
+  transformMessages,
+  type UIMessage,
 } from '@athli/shared-types';
 
 // ================================================
@@ -29,28 +34,34 @@ import {
 // ================================================
 
 /**
- * Merges three message sources with deduplication:
+ * Merges three message sources with deduplication and transforms to UIMessage:
  * 1. Saved messages (from database)
- * 2. Realtime messages (from Supabase subscription)
+ * 2. Realtime messages (from Supabase broadcast subscription)
  * 3. Optimistic messages (just sent, not confirmed yet)
  *
- * Uses shared deduplicateMessages utility from @athli/shared-types
+ * Returns UIMessages with computed fields (text, isSent, isRead) for rendering.
  */
 export const useMessageMerging = (
   savedMessages: Message[],
   realtimeMessages: Message[],
   optimisticMessages: OptimisticMessage[],
-) => {
-  const allMessages = useMemo(
-    () => deduplicateMessages(savedMessages, realtimeMessages, optimisticMessages),
-    [savedMessages, realtimeMessages, optimisticMessages],
-  );
+  currentUserId: string | null,
+): UIMessage[] => {
+  return useMemo(() => {
+    if (!currentUserId) return [];
 
-  return allMessages;
+    const allMessages = deduplicateMessages(
+      savedMessages,
+      realtimeMessages,
+      optimisticMessages,
+    );
+
+    return transformMessages(allMessages, currentUserId);
+  }, [savedMessages, realtimeMessages, optimisticMessages, currentUserId]);
 };
 
 // ================================================
-// REALTIME MESSAGES SUBSCRIPTION
+// REALTIME MESSAGES SUBSCRIPTION (BROADCAST)
 // ================================================
 
 type RealtimeMessagesOptions = {
@@ -61,7 +72,29 @@ type RealtimeMessagesOptions = {
 };
 
 /**
- * Subscribe to realtime message updates for a conversation
+ * Helper to convert broadcast payload timestamps to Date objects
+ */
+function convertBroadcastTimestamps(payload: Record<string, unknown>): Message {
+  return {
+    ...payload,
+    sent_at: payload.sent_at ? new Date(payload.sent_at as string) : new Date(),
+    read_at: payload.read_at ? new Date(payload.read_at as string) : null,
+    edited_at: payload.edited_at ? new Date(payload.edited_at as string) : null,
+    deleted_at: payload.deleted_at
+      ? new Date(payload.deleted_at as string)
+      : null,
+    created_at: payload.created_at
+      ? new Date(payload.created_at as string)
+      : new Date(),
+  } as Message;
+}
+
+/**
+ * Subscribe to realtime message updates for a conversation using broadcast events.
+ *
+ * CRITICAL: Calls setAuth() before subscribing to ensure private channels work.
+ * Uses broadcast events (triggered by database triggers) instead of postgres_changes
+ * for better scalability.
  */
 export const useRealtimeMessages = ({
   conversationId,
@@ -88,106 +121,59 @@ export const useRealtimeMessages = ({
   useEffect(() => {
     if (!conversationId) return;
 
-    // Create private channel for this conversation
-    const newChannel = supabase.channel(`conversation:${conversationId}`, {
-      config: {
-        private: true, // Requires RLS policies
-      },
+    let isCancelled = false;
+
+    // CRITICAL: Set auth token before subscribing to private channels
+    supabase.realtime.setAuth().then(() => {
+      if (isCancelled) return;
+
+      // Create private channel matching the database trigger topic format
+      const newChannel = supabase.channel(
+        `conversation:${conversationId}:messages`,
+        {
+          config: { private: true },
+        },
+      );
+
+      // Subscribe to broadcast events from database trigger
+      newChannel
+        .on('broadcast', { event: 'message_change' }, (payload) => {
+          const data = payload.payload as Record<string, unknown>;
+          const eventType = data.type as string;
+
+          if (eventType === 'INSERT') {
+            const message = convertBroadcastTimestamps(data);
+            setRealtimeMessages((prev) => [...prev, message]);
+            onMessageReceivedRef.current?.(message);
+          } else if (eventType === 'UPDATE') {
+            const message = convertBroadcastTimestamps(data);
+            setRealtimeMessages((prev) =>
+              prev.map((m) => (m.id === message.id ? message : m)),
+            );
+            onMessageUpdatedRef.current?.(message);
+          } else if (eventType === 'DELETE') {
+            const deletedId = data.id as string;
+            setRealtimeMessages((prev) =>
+              prev.filter((m) => m.id !== deletedId),
+            );
+            onMessageDeletedRef.current?.(deletedId);
+          }
+        })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            setIsSubscribed(true);
+          }
+        });
+
+      setChannel(newChannel);
     });
 
-    // Subscribe to INSERT events (new messages)
-    newChannel
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload: RealtimePostgresChangesPayload<Message>) => {
-          const newMessage = payload.new as Message;
-
-          // Convert timestamps to Date objects
-          const message: Message = {
-            ...newMessage,
-            sent_at: new Date(newMessage.sent_at),
-            read_at: newMessage.read_at ? new Date(newMessage.read_at) : null,
-            edited_at: newMessage.edited_at
-              ? new Date(newMessage.edited_at)
-              : null,
-            deleted_at: newMessage.deleted_at
-              ? new Date(newMessage.deleted_at)
-              : null,
-            created_at: new Date(newMessage.created_at),
-          };
-
-          setRealtimeMessages((prev) => [...prev, message]);
-          onMessageReceivedRef.current?.(message);
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload: RealtimePostgresChangesPayload<Message>) => {
-          const updatedMessage = payload.new as Message;
-
-          // Convert timestamps to Date objects
-          const message: Message = {
-            ...updatedMessage,
-            sent_at: new Date(updatedMessage.sent_at),
-            read_at: updatedMessage.read_at
-              ? new Date(updatedMessage.read_at)
-              : null,
-            edited_at: updatedMessage.edited_at
-              ? new Date(updatedMessage.edited_at)
-              : null,
-            deleted_at: updatedMessage.deleted_at
-              ? new Date(updatedMessage.deleted_at)
-              : null,
-            created_at: new Date(updatedMessage.created_at),
-          };
-
-          setRealtimeMessages((prev) =>
-            prev.map((m) => (m.id === message.id ? message : m)),
-          );
-          onMessageUpdatedRef.current?.(message);
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload: RealtimePostgresChangesPayload<Message>) => {
-          const deletedMessageId = payload.old.id;
-          setRealtimeMessages((prev) =>
-            prev.filter((m) => m.id !== deletedMessageId),
-          );
-          onMessageDeletedRef.current?.(deletedMessageId);
-        },
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          setIsSubscribed(true);
-          console.log('[Realtime] Subscribed to conversation:', conversationId);
-        }
-      });
-
-    setChannel(newChannel);
-
     return () => {
-      newChannel.unsubscribe();
+      isCancelled = true;
+      if (channel) {
+        channel.unsubscribe();
+      }
       setIsSubscribed(false);
-      console.log('[Realtime] Unsubscribed from conversation:', conversationId);
     };
   }, [conversationId]); // Only re-subscribe when conversationId changes
 
@@ -257,11 +243,7 @@ export const useRealtimeReadReceipts = ({
           callbackRef.current?.(readReceipt);
         },
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('[Realtime] Subscribed to read receipts:', conversationId);
-        }
-      });
+      .subscribe();
 
     setChannel(newChannel);
 
@@ -346,11 +328,7 @@ export const useRealtimeReactions = ({
           onReactionRemovedRef.current?.(deletedReactionId);
         },
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('[Realtime] Subscribed to reactions:', conversationId);
-        }
-      });
+      .subscribe();
 
     setChannel(newChannel);
 
@@ -422,10 +400,8 @@ export const useSyncReadReceipt = ({
         );
 
       if (receiptError) throw receiptError;
-
-      console.log('[ReadReceipt] Synced for conversation:', conversationId);
     } catch (error) {
-      console.error('[ReadReceipt] Error syncing:', error);
+      // Silently handle sync errors - not critical
     } finally {
       setIsSyncing(false);
     }
@@ -544,11 +520,7 @@ export const useRealtimeConversations = ({
           callbackRef.current?.(conv);
         },
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('[Realtime] Subscribed to conversations for user:', userId);
-        }
-      });
+      .subscribe();
 
     setChannel(newChannel);
 

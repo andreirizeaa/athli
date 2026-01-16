@@ -14,14 +14,12 @@ type AppHeaderProps = {
   isThemeMounted: boolean;
   currentLanguage: string;
   setCurrentLanguage: (lang: string) => void;
-  setIsLoggingOut: (value: boolean) => void;
 };
 
 export function AppHeader({
   isThemeMounted,
   currentLanguage,
   setCurrentLanguage,
-  setIsLoggingOut,
 }: AppHeaderProps) {
   const t = useTranslations();
   const [isAiAssistantPopoverOpen, setIsAiAssistantPopoverOpen] = React.useState(false);
@@ -116,7 +114,6 @@ export function AppHeader({
             isThemeMounted={isThemeMounted}
             currentLanguage={currentLanguage}
             setCurrentLanguage={setCurrentLanguage}
-            setIsLoggingOut={setIsLoggingOut}
           />
         </div>
       </div>

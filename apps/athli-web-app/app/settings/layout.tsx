@@ -7,9 +7,10 @@ import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/general/utils';
-import { User, Building2, Search, Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { User, Building2, Search, Settings, ChevronDown, ChevronUp, LogOut } from 'lucide-react';
 import { UnsavedChangesProvider, useUnsavedChanges } from './context/unsaved-changes-context';
 import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
+import { useLogout } from '@/lib/providers/logout-provider';
 
 interface SectionConfig {
   id: string;
@@ -32,6 +33,7 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const { hasUnsavedChanges, setHasUnsavedChanges } = useUnsavedChanges();
+  const { triggerLogout } = useLogout();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
@@ -226,7 +228,7 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
       <div className="flex flex-1 min-h-0">
         {/* Left Sidebar - 1/7 width */}
         <div ref={sidebarRef} className="w-[14.285714%] flex flex-col border-r bg-background">
-          <div className="flex flex-col py-2">
+          <div className="flex flex-col py-2 flex-1">
             {/* Search Bar */}
             <div className="px-2 mb-2">
               <div className="relative flex items-center">
@@ -342,6 +344,22 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
                 </div>
               );
             })}
+            {/* Logout Button */}
+            <div className="mt-auto px-2 py-2 border-t">
+              <button
+                type="button"
+                onClick={triggerLogout}
+                className={cn(
+                  'w-full text-left rounded-md p-2 h-8 text-xs transition-colors font-semibold flex items-center gap-2',
+                  'hover:bg-destructive/10 hover:text-destructive',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  'text-destructive'
+                )}
+              >
+                <LogOut className="size-4" />
+                {t('sidebar.profile.logOut')}
+              </button>
+            </div>
           </div>
         </div>
 

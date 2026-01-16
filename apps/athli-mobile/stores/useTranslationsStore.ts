@@ -10,7 +10,7 @@ const messagesMap: Record<string, TranslationMessages> = {
   en,
 };
 
-const getNestedValue = (obj: any, path: string): string => {
+const getNestedValue = (obj: any, path: string, params?: Record<string, string | number>): string => {
   const keys = path.split('.');
   let value = obj;
   for (const key of keys) {
@@ -20,13 +20,24 @@ const getNestedValue = (obj: any, path: string): string => {
       return path;
     }
   }
-  return typeof value === 'string' ? value : path;
+
+  if (typeof value === 'string') {
+    if (params) {
+      let result = value;
+      Object.entries(params).forEach(([key, val]) => {
+        result = result.replace(new RegExp(`{{${key}}}`, 'g'), String(val));
+      });
+      return result;
+    }
+    return value;
+  }
+  return path;
 };
 
 type TranslationsStore = {
   locale: string;
   setLocale: (locale: string) => void;
-  t: (key: string) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
   initialize: () => void;
 };
 
@@ -55,9 +66,9 @@ export const useTranslationsStore = create<TranslationsStore>((set, get) => ({
     }
   },
 
-  t: (key: string): string => {
+  t: (key: string, params?: Record<string, string | number>): string => {
     const state = get();
     const messages = messagesMap[state.locale] || messagesMap.en;
-    return getNestedValue(messages, key);
+    return getNestedValue(messages, key, params);
   },
 }));

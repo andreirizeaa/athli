@@ -34,6 +34,12 @@ export const forgotPasswordSchema = z.object({
   }),
 });
 
+export const checkAuthProviderSchema = z.object({
+  body: z.object({
+    email: z.string().email('Invalid email address'),
+  }),
+});
+
 export const resetPasswordSchema = z.object({
   body: z.object({
     email: z.string().email('Invalid email address'),

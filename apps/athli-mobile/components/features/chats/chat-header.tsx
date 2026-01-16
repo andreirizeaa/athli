@@ -23,6 +23,8 @@ type ChatHeaderProps = {
   onUserProfilePress?: () => void;
   // Dropdown options for the ellipsis button
   dropdownOptions?: DropdownMenuOption[];
+  // Optional callback for opening panel (replaces dropdown when provided)
+  onPanelOpen?: () => void;
 };
 
 export const ChatHeader = ({
@@ -31,6 +33,7 @@ export const ChatHeader = ({
   onBackPress,
   onUserProfilePress,
   dropdownOptions,
+  onPanelOpen,
 }: ChatHeaderProps) => {
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
@@ -42,10 +45,11 @@ export const ChatHeader = ({
   const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.95);
 
   // Determine avatar and name from either chat or coach
-  const avatar = chat?.clientAvatar || coach?.avatar;
-  const name = chat?.clientName || coach?.name || '';
+  // Note: Conversation type uses other_user_name and other_user_avatar
+  const avatar = chat?.other_user_avatar || coach?.avatar;
+  const name = chat?.other_user_name || coach?.name || '';
   const showBackButton = !!onBackPress;
-  const showActionButtons = !!onUserProfilePress && dropdownOptions && dropdownOptions.length > 0;
+  const showActionButtons = !!onUserProfilePress || !!onPanelOpen || (dropdownOptions?.length ?? 0) > 0;
 
   return (
     <View style={[styles.headerSafeArea, { paddingTop: 0 }]} pointerEvents="box-none">
@@ -86,22 +90,40 @@ export const ChatHeader = ({
 
           {showActionButtons && (
             <View style={styles.actionButtons}>
-              <IconButton
-                icon={{ sf: 'person', IconComponent: User }}
-                onPress={onUserProfilePress}
-                size="md"
-                color={iconColor}
-                scheme={isDark ? 'dark' : 'light'}
-              />
-              <DropdownMenuWrapper options={dropdownOptions}>
+              {onPanelOpen ? (
+                // When panel is available, User button opens the panel
                 <IconButton
-                  icon={{ sf: 'ellipsis', IconComponent: Ellipsis }}
-                  onPress={() => { }}
+                  icon={{ sf: 'person', IconComponent: User }}
+                  onPress={onPanelOpen}
                   size="md"
                   color={iconColor}
                   scheme={isDark ? 'dark' : 'light'}
                 />
-              </DropdownMenuWrapper>
+              ) : (
+                // Fallback: existing behavior with profile + dropdown
+                <>
+                  {onUserProfilePress && (
+                    <IconButton
+                      icon={{ sf: 'person', IconComponent: User }}
+                      onPress={onUserProfilePress}
+                      size="md"
+                      color={iconColor}
+                      scheme={isDark ? 'dark' : 'light'}
+                    />
+                  )}
+                  {dropdownOptions && dropdownOptions.length > 0 && (
+                    <DropdownMenuWrapper options={dropdownOptions}>
+                      <IconButton
+                        icon={{ sf: 'ellipsis', IconComponent: Ellipsis }}
+                        onPress={() => { }}
+                        size="md"
+                        color={iconColor}
+                        scheme={isDark ? 'dark' : 'light'}
+                      />
+                    </DropdownMenuWrapper>
+                  )}
+                </>
+              )}
             </View>
           )}
         </View>

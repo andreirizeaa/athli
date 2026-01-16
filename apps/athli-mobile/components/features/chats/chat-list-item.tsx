@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { Pressable, StyleSheet, Text, View, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Archive, Trash2, MailCheck, CheckCircle, MailOpen } from 'lucide-react-native';
+import { Archive, MailCheck, CheckCircle, User } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/stores';
@@ -17,8 +17,8 @@ type ChatListItemProps = {
   onPress: (chatId: string) => void | Promise<void>;
   isEditMode?: boolean;
   isSelected?: boolean;
+  onViewProfile?: (clientId: string) => void;
   onArchive?: (chatId: string) => void;
-  onDelete?: (chatId: string) => void;
   onMarkAsRead?: (chatId: string) => void;
   onUnarchive?: (chatId: string) => void;
   onOpen?: (close: () => void) => void;
@@ -62,8 +62,8 @@ export const ChatListItem = ({
   onPress,
   isEditMode = false,
   isSelected = false,
+  onViewProfile,
   onArchive,
-  onDelete,
   onMarkAsRead,
   onUnarchive,
   onOpen,
@@ -91,23 +91,6 @@ export const ChatListItem = ({
     onPress(chat.id);
   };
 
-  const handleDelete = useCallback(() => {
-    if (onDelete) {
-      Alert.alert(
-        t('chats.delete'),
-        t('library.deleteConfirmMessage'),
-        [
-          { text: t('general.cancel'), style: 'cancel' },
-          {
-            text: t('general.delete'),
-            style: 'destructive',
-            onPress: () => onDelete(chat.id)
-          },
-        ]
-      );
-    }
-  }, [onDelete, chat.other_user_name, chat.id, t]);
-
 
   // Use the same color as dividers for checkbox border in light mode
   const checkboxBorderColor =
@@ -118,6 +101,24 @@ export const ChatListItem = ({
         : themeColors.mutedText;
 
   const dropdownOptions: DropdownMenuOption[] = [
+    ...(onViewProfile
+      ? [
+        {
+          label: t('chats.viewProfile'),
+          icon: {
+            sf: 'person.crop.circle',
+            IconComponent: User,
+          },
+          onPress: () => {
+            // Use client_id if available, otherwise use other_user_id
+            const clientId = chat.client_id || chat.other_user_id;
+            if (clientId) {
+              onViewProfile(clientId);
+            }
+          },
+        },
+      ]
+      : []),
     ...(onMarkAsRead && chat.unreadCount > 0
       ? [
         {
@@ -160,30 +161,13 @@ export const ChatListItem = ({
         },
       ]
       : []),
-    ...(onDelete
-      ? [
-        {
-          label: t('chats.delete'),
-          icon: {
-            sf: 'trash',
-            IconComponent: Trash2,
-          },
-          destructive: true,
-          onPress: () => {
-            onDelete(chat.id);
-          },
-        },
-      ]
-      : []),
   ];
 
   return (
     <View style={styles.container}>
       <SwipeableRow
-        onDelete={handleDelete}
         onOpen={onOpen}
-        deleteConfirmTitle={t('chats.delete')}
-        enabled={!isEditMode && !!onDelete}
+        enabled={false}
       >
         <ContextMenuWrapper options={dropdownOptions}>
           <PressableScale
@@ -278,15 +262,19 @@ export const ChatListItem = ({
                     <Text
                       style={[
                         styles.lastMessage,
-                        { color: themeColors.mutedText },
+                        {
+                          color: themeColors.mutedText,
+                          fontStyle: (lastMessage?.text || chat.last_message_preview) ? 'normal' : 'italic',
+                          opacity: (lastMessage?.text || chat.last_message_preview) ? 1 : 0.6,
+                        },
                       ]}
                       numberOfLines={2}
                     >
-                      {lastMessage?.text || chat.last_message_preview}
+                      {lastMessage?.text || chat.last_message_preview || t('chats.beFirstToMessage')}
                     </Text>
                   </View>
                   <View style={styles.rightColumn}>
-                    {chat.unreadCount > 0 && (
+                    {chat.unreadCount != null && chat.unreadCount > 0 ? (
                       <View
                         style={[
                           styles.unreadBadge,
@@ -302,7 +290,7 @@ export const ChatListItem = ({
                           {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                         </Text>
                       </View>
-                    )}
+                    ) : null}
                   </View>
                 </View>
               </View>

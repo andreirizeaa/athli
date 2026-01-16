@@ -14,6 +14,7 @@ import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
+import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { getQuestionnaires, deleteQuestionnaire, duplicateQuestionnaire } from '@/services/coach/coach-questionnaire-service';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -22,14 +23,13 @@ export const QuestionnairesTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const router = useRouter();
-  const { searchQuery, registerOpenRow, closeOpenRow, openRowCloseFn } = useLibraryTab();
-  const isRowOpen = openRowCloseFn !== null;
+  const { registerOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
 
   // Fetch questionnaires directly with TanStack Query
-  const { data: questionnaires = [] } = useQuery({
+  const { data: questionnaires = [], isRefetching, refetch } = useQuery({
     queryKey: ['questionnaires'],
     queryFn: async () => {
       console.log('[QuestionnairesTab] Fetching questionnaires...');
@@ -41,6 +41,12 @@ export const QuestionnairesTab = () => {
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
+  });
+
+  const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
+    searchPlaceholderKey: 'library.searchPlaceholders.questionnaires',
+    isRefetching,
+    refetch,
   });
 
   // Filter questionnaires based on search query
@@ -59,20 +65,42 @@ export const QuestionnairesTab = () => {
     searchQuery
   });
 
-  // Delete mutation
+  // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteQuestionnaire(id),
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ['questionnaires'] });
-      haptics.success();
+    onMutate: async (id) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['questionnaires'] });
+
+      // Snapshot previous value
+      const previousQuestionnaires = queryClient.getQueryData<typeof questionnaires>(['questionnaires']);
+
+      // Optimistically remove from cache
+      queryClient.setQueryData<typeof questionnaires>(['questionnaires'], (old) =>
+        old?.filter((q) => q.id !== id) ?? []
+      );
+
+      // Return context with snapshot for rollback
+      return { previousQuestionnaires };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _id, context) => {
+      // Rollback on error
+      if (context?.previousQuestionnaires) {
+        queryClient.setQueryData(['questionnaires'], context.previousQuestionnaires);
+      }
       haptics.error();
       Alert.alert(
         t('general.error'),
         error.message || t('general.errorDeleting'),
         [{ text: t('general.ok') }]
       );
+    },
+    onSettled: () => {
+      // Refetch to ensure server state
+      queryClient.invalidateQueries({ queryKey: ['questionnaires'] });
+    },
+    onSuccess: () => {
+      haptics.success();
     },
   });
 
@@ -210,12 +238,15 @@ export const QuestionnairesTab = () => {
       data={filteredQuestionnaires}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      ListHeaderComponent={ListHeaderComponent}
+      refreshControl={refreshControl}
+      showsVerticalScrollIndicator={false}
       ListEmptyComponent={
         <EmptyState
           message={t('library.empty.questionnaires')}
         />
       }
-      contentContainerStyle={styles.container}
     />
   );
 };

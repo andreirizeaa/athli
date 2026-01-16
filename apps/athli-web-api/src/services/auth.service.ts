@@ -48,7 +48,8 @@ class AuthService {
     });
 
     if (authError) {
-      throw new Error(`Registration failed: ${authError.message}`);
+      console.error('Registration error:', authError.message);
+      throw new Error('Registration failed. Please try again.');
     }
 
     if (!authData.user) {
@@ -79,7 +80,8 @@ class AuthService {
     });
 
     if (verifyError || !sessionData.session || !sessionData.user) {
-      throw new Error(`Email verification failed: ${verifyError?.message || 'Invalid OTP'}`);
+      console.error('Email verification error:', verifyError?.message);
+      throw new Error('Invalid or expired verification code');
     }
 
     // Get user profile
@@ -107,7 +109,8 @@ class AuthService {
     });
 
     if (error) {
-      throw new Error(`Failed to resend OTP: ${error.message}`);
+      console.error('Resend OTP error:', error.message);
+      throw new Error('Failed to send verification code. Please try again.');
     }
   }
 
@@ -123,7 +126,8 @@ class AuthService {
     const { data: users, error: listError } = await supabase.auth.admin.listUsers();
 
     if (listError) {
-      throw new Error(`Failed to check user: ${listError.message}`);
+      console.error('Security OTP user check error:', listError.message);
+      throw new Error('Failed to send security verification code. Please try again.');
     }
 
     const userExists = users.users.some((u) => u.email === email);
@@ -159,7 +163,8 @@ class AuthService {
           console.warn('Signups disabled warning, but OTP may have been sent:', otpError.message);
           return; // OTP was likely sent, so we'll return successfully
         }
-        throw new Error(`Failed to send security OTP: ${otpError.message}`);
+        console.error('Security OTP send error:', otpError.message);
+        throw new Error('Failed to send security verification code. Please try again.');
       }
       // OTP sent successfully (data may be null, which is fine)
     } else {
@@ -175,7 +180,8 @@ class AuthService {
       });
 
       if (createError) {
-        throw new Error(`Failed to send security OTP: ${createError.message}`);
+        console.error('Security OTP create user error:', createError.message);
+        throw new Error('Failed to send security verification code. Please try again.');
       }
 
       // Supabase automatically sends OTP email when email_confirm is false
@@ -216,7 +222,8 @@ class AuthService {
     });
 
     if (loginError || !sessionData.session) {
-      throw new Error(`Login failed: ${loginError?.message || 'Invalid credentials'}`);
+      console.error('Login error:', loginError?.message);
+      throw new Error('Invalid email or password');
     }
 
     // Get user profile
@@ -233,7 +240,88 @@ class AuthService {
   }
 
   /**
+   * Check auth provider for a user by email
+   * Returns the signin method (email, google, apple) or null if user doesn't exist
+   */
+  async checkAuthProvider(email: string): Promise<{ provider: 'email' | 'google' | 'apple' | null; exists: boolean }> {
+    const supabase = getSupabaseClient();
+
+    // Check if user exists using admin API
+    const { data: users, error: listError } = await supabase.auth.admin.listUsers();
+
+    if (listError) {
+      console.error('Auth provider check error:', listError.message);
+      throw new Error('Unable to check authentication provider. Please try again.');
+    }
+
+    const user = users.users.find((u) => u.email === email);
+
+    if (!user) {
+      return { provider: null, exists: false };
+    }
+
+    // Check app_metadata for provider (most reliable)
+    const appProvider = user.app_metadata?.provider as string;
+
+    if (appProvider === 'google') {
+      return { provider: 'google', exists: true };
+    }
+
+    if (appProvider === 'apple') {
+      return { provider: 'apple', exists: true };
+    }
+
+    // Check user_metadata for additional indicators
+    const userMetadata = user.user_metadata || {};
+
+    // Check issuer (iss) field
+    if (userMetadata.iss) {
+      if (userMetadata.iss.includes('appleid.apple.com')) {
+        return { provider: 'apple', exists: true };
+      }
+      if (userMetadata.iss.includes('accounts.google.com') || userMetadata.iss.includes('google')) {
+        return { provider: 'google', exists: true };
+      }
+    }
+
+    // Check for Apple private relay email
+    if (email.includes('@privaterelay.appleid.com')) {
+      return { provider: 'apple', exists: true };
+    }
+
+    // Check for Google-specific indicators
+    if (userMetadata.picture && userMetadata.picture.includes('googleusercontent.com')) {
+      return { provider: 'google', exists: true };
+    }
+
+    // Also check the profile tables for signin_method
+    const { data: coachProfile } = await supabase
+      .from('coach_profiles')
+      .select('signin_method')
+      .eq('id', user.id)
+      .single();
+
+    if (coachProfile?.signin_method && coachProfile.signin_method !== 'email') {
+      return { provider: coachProfile.signin_method as 'google' | 'apple', exists: true };
+    }
+
+    const { data: clientProfile } = await supabase
+      .from('client_profiles')
+      .select('signin_method')
+      .eq('client_id', user.id)
+      .single();
+
+    if (clientProfile?.signin_method && clientProfile.signin_method !== 'email') {
+      return { provider: clientProfile.signin_method as 'google' | 'apple', exists: true };
+    }
+
+    // Default to email
+    return { provider: 'email', exists: true };
+  }
+
+  /**
    * Forgot password - send reset email
+   * Always succeeds to prevent email enumeration
    */
   async forgotPassword(email: string) {
     const supabase = getSupabaseClient();
@@ -242,9 +330,11 @@ class AuthService {
       redirectTo: `${process.env.CORS_ORIGIN || 'http://localhost:3001'}/auth/reset-password`,
     });
 
+    // Log error but don't expose it - always return success to prevent email enumeration
     if (error) {
-      throw new Error(`Failed to send password reset email: ${error.message}`);
+      console.error('Forgot password error:', error.message);
     }
+    // Always succeed to prevent email enumeration attacks
   }
 
   /**
@@ -261,7 +351,8 @@ class AuthService {
     });
 
     if (verifyError || !sessionData.session || !sessionData.user) {
-      throw new Error(`OTP verification failed: ${verifyError?.message || 'Invalid OTP'}`);
+      console.error('Password reset OTP verification error:', verifyError?.message);
+      throw new Error('Invalid or expired verification code');
     }
 
     // Use admin API to update password
@@ -270,7 +361,8 @@ class AuthService {
     });
 
     if (updateError) {
-      throw new Error(`Failed to reset password: ${updateError.message}`);
+      console.error('Password update error:', updateError.message);
+      throw new Error('Password reset failed. Please try again.');
     }
   }
 
@@ -284,7 +376,8 @@ class AuthService {
     const { data: existingUsers, error: listError } = await supabase.auth.admin.listUsers();
 
     if (listError) {
-      throw new Error(`Failed to check existing users: ${listError.message}`);
+      console.error('Google auth user check error:', listError.message);
+      throw new Error('Authentication failed. Please try again.');
     }
 
     const existingUser = existingUsers.users.find((u) => u.email === googleUser.email);
@@ -310,7 +403,8 @@ class AuthService {
       });
 
       if (createError || !newUser.user) {
-        throw new Error(`Failed to create user: ${createError?.message || 'Unknown error'}`);
+        console.error('Google auth user creation error:', createError?.message);
+        throw new Error('Authentication failed. Please try again.');
       }
 
       userId = newUser.user.id;

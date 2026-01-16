@@ -76,6 +76,20 @@ export class AuthController {
   });
 
   /**
+   * Check auth provider for a user
+   */
+  checkAuthProvider = asyncHandler(async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    const result = await authService.checkAuthProvider(email);
+
+    success(res, {
+      message: 'Auth provider checked successfully',
+      data: result,
+    });
+  });
+
+  /**
    * Forgot password - send OTP
    */
   forgotPassword = asyncHandler(async (req: Request, res: Response) => {

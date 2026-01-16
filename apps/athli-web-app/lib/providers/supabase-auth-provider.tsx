@@ -1,11 +1,20 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { UserProfile, getUserProfileSafe } from '@/api/user/user-service';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -17,6 +26,8 @@ interface AuthContextType {
   verifyOTP: (email: string, token: string) => Promise<any>;
   resendOTP: (email: string) => Promise<void>;
   resetPasswordForEmail: (email: string) => Promise<void>;
+  verifyRecoveryOTP: (email: string, token: string) => Promise<any>;
+  resendRecoveryOTP: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
@@ -28,13 +39,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [showSessionExpiredDialog, setShowSessionExpiredDialog] = useState(false);
+  const isSigningOutRef = useRef(false);
+  const wasAuthenticatedRef = useRef(false);
   const router = useRouter();
   const supabase = createClient();
   const queryClient = useQueryClient();
 
+  // Track if user was authenticated (for detecting unexpected sign-outs)
+  useEffect(() => {
+    wasAuthenticatedRef.current = !!supabaseUser;
+  }, [supabaseUser]);
+
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error?.message?.includes('Refresh Token') || error?.message?.includes('refresh_token')) {
+        setShowSessionExpiredDialog(true);
+        setSupabaseUser(null);
+        setIsAuthLoading(false);
+        return;
+      }
       setSupabaseUser(session?.user ?? null);
       setIsAuthLoading(false);
     });
@@ -42,7 +67,24 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Skip state updates when signing out to keep the loading overlay visible
+      if (isSigningOutRef.current) return;
+
+      // Handle token refresh errors
+      if (event === 'TOKEN_REFRESHED' && !session) {
+        setShowSessionExpiredDialog(true);
+        setSupabaseUser(null);
+        setIsAuthLoading(false);
+        return;
+      }
+
+      // Handle sign out due to invalid session
+      if (event === 'SIGNED_OUT' && wasAuthenticatedRef.current && !isSigningOutRef.current) {
+        // User was signed out unexpectedly (likely due to invalid refresh token)
+        setShowSessionExpiredDialog(true);
+      }
+
       setSupabaseUser(session?.user ?? null);
       setIsAuthLoading(false);
 
@@ -107,11 +149,20 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Set flag to prevent auth state change listener from updating state
+    // This keeps the loading overlay visible until navigation completes
+    isSigningOutRef.current = true;
+
     const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    queryClient.removeQueries({ queryKey: ['user-profile'] });
-    setSupabaseUser(null);
-    router.push('/auth/login');
+    if (error) {
+      isSigningOutRef.current = false;
+      throw error;
+    }
+
+    // Use window.location for full page navigation - keeps overlay visible until redirect completes
+    // Don't update React state here since we're navigating away
+    const landingPage = process.env.NEXT_PUBLIC_LANDING_PAGE || '/';
+    window.location.href = landingPage;
   };
 
   const verifyOTP = async (email: string, token: string) => {
@@ -137,6 +188,26 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const resetPasswordForEmail = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+
+    if (error) throw error;
+  };
+
+  const verifyRecoveryOTP = async (email: string, token: string) => {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'recovery',
+    });
+
+    if (error) throw error;
+
+    return data;
+  };
+
+  const resendRecoveryOTP = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-password`,
     });
@@ -189,6 +260,11 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
     if (error) {
       console.error('Error refreshing session:', error);
+      // Check if it's a refresh token error
+      if (error.message?.includes('Refresh Token') || error.message?.includes('refresh_token')) {
+        setShowSessionExpiredDialog(true);
+        setSupabaseUser(null);
+      }
       return;
     }
 
@@ -209,13 +285,39 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     verifyOTP,
     resendOTP,
     resetPasswordForEmail,
+    verifyRecoveryOTP,
+    resendRecoveryOTP,
     updatePassword,
     signInWithGoogle,
     signInWithApple,
     refreshUser,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  const handleSessionExpiredLogin = () => {
+    setShowSessionExpiredDialog(false);
+    window.location.href = '/auth/login';
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <Dialog open={showSessionExpiredDialog} onOpenChange={() => {}}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Session Expired</DialogTitle>
+            <DialogDescription>
+              Your session has expired. Please log in again to continue.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={handleSessionExpiredLogin} className="w-full sm:w-auto">
+              Log In
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </AuthContext.Provider>
+  );
 }
 
 export function useSupabaseAuth() {

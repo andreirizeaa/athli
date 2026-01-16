@@ -103,14 +103,14 @@ export const HeroHeader = () => {
               <div className="flex w-full justify-end md:w-fit">
                 <div className="flex items-center gap-1.5">
                   {!isScrolled && (
-                    <Link href={`${APP_URL}/sign-in`}>
+                    <Link href={`${APP_URL}/auth/login`}>
                       <Button variant="outline" size="sm">
                       <span>Login</span>
                     </Button>
                     </Link>
                   )}
                   {isScrolled && (
-                    <Link href={`${APP_URL}/sign-up`}>
+                    <Link href={`${APP_URL}/auth/register`}>
                       <Button size="sm">
                       <span>Grow Today</span>
                     </Button>

@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   logoutButton: {
     width: '100%',
     height: 55,
-    borderRadius: 18,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   cancelButton: {
     width: '100%',
     height: 55,
-    borderRadius: 18,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
