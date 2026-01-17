@@ -4,8 +4,6 @@ import {
   LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  PanResponder,
-  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,8 +12,15 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { Reply, Copy, Pencil, Trash2, Send, CheckCircle } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
-
-import Reanimated from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Reanimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  runOnJS,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
@@ -374,177 +379,155 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
   onHorizontalDragEnd?: () => void;
   dropdownOptions: DropdownMenuOption[];
 }) {
-  const MAX = 100;
-  const THRESHOLD = 60; // pixels to trigger reply
-  const translateX = useRef(new Animated.Value(0)).current;
-  const didCancelRef = useRef(false);
-  const currentDistanceRef = useRef(0);
-  const isDraggingRef = useRef(false);
+  const MAX = 80;
+  const THRESHOLD = 50;
+  const translateX = useSharedValue(0);
   const hapticFiredRef = useRef(false);
 
-  const iconOpacity = useMemo(
-    () =>
-      translateX.interpolate({
-        inputRange: [0, 15, MAX],
-        outputRange: [0, 0.7, 1],
-        extrapolate: 'clamp',
-      }),
-    [translateX]
-  );
+  // Trigger haptic feedback - called from worklet via runOnJS
+  const triggerHaptic = () => {
+    haptics.medium();
+  };
 
-  const iconScale = useMemo(
-    () =>
-      translateX.interpolate({
-        inputRange: [0, THRESHOLD, MAX],
-        outputRange: [0.8, 1.1, 1.15],
-        extrapolate: 'clamp',
-      }),
-    [translateX]
-  );
+  // Trigger reply callback - called from worklet via runOnJS
+  const triggerReply = () => {
+    onReply?.(message);
+  };
 
-  // Bubble translateX: positive for sent (right), negative for received (left)
-  const bubbleTranslateX = useMemo(
-    () =>
-      translateX.interpolate({
-        inputRange: [0, MAX],
-        outputRange: alignRight ? [0, MAX] : [0, -MAX],
-        extrapolate: 'clamp',
-      }),
-    [translateX, alignRight]
-  );
+  // Notify drag start - called from worklet via runOnJS
+  const notifyDragStart = () => {
+    onCancelLongPress();
+    onHorizontalDragStart?.();
+  };
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => false,
-        onMoveShouldSetPanResponder: (_evt, g) => {
-          const { dx, dy } = g;
-          // Require minimum horizontal movement
-          if (Math.abs(dx) < 5) return false;
-          // Must be primarily horizontal - horizontal movement must be at least 2x vertical
-          if (Math.abs(dx) < Math.abs(dy) * 2) return false;
-          // Direction-aware: sent (alignRight) = right swipe, received = left swipe
-          if (alignRight && dx <= 0) return false;
-          if (!alignRight && dx >= 0) return false;
-          return true;
-        },
-        onPanResponderGrant: () => {
-          translateX.stopAnimation();
-          didCancelRef.current = false;
-          currentDistanceRef.current = 0;
-          hapticFiredRef.current = false;
-          if (!isDraggingRef.current) {
-            isDraggingRef.current = true;
-            onHorizontalDragStart?.();
-          }
-        },
-        onShouldBlockNativeResponder: () => true,
-        onPanResponderMove: (_evt, g) => {
-          if (!didCancelRef.current) {
-            onCancelLongPress();
-            didCancelRef.current = true;
-          }
+  // Notify drag end - called from worklet via runOnJS
+  const notifyDragEnd = () => {
+    onHorizontalDragEnd?.();
+  };
 
-          // Allow swipe based on message alignment
-          const rawDx = g.dx;
-          const clamped = Math.min(MAX, Math.max(0, Math.abs(rawDx)));
+  const panGesture = Gesture.Pan()
+    .activeOffsetX(alignRight ? [10, 999] : [-999, -10])
+    .failOffsetY([-15, 15])
+    .onStart(() => {
+      'worklet';
+      hapticFiredRef.current = false;
+      runOnJS(notifyDragStart)();
+    })
+    .onUpdate((event) => {
+      'worklet';
+      const rawDx = Math.abs(event.translationX);
+      const clamped = Math.min(MAX, Math.max(0, rawDx));
+      translateX.value = clamped;
 
-          currentDistanceRef.current = clamped;
-          translateX.setValue(clamped);
+      // Haptic feedback when crossing threshold
+      if (clamped >= THRESHOLD && !hapticFiredRef.current) {
+        hapticFiredRef.current = true;
+        runOnJS(triggerHaptic)();
+      } else if (clamped < THRESHOLD && hapticFiredRef.current) {
+        hapticFiredRef.current = false;
+      }
+    })
+    .onEnd((event) => {
+      'worklet';
+      const distance = Math.min(MAX, Math.abs(event.translationX));
+      const shouldReply = distance >= THRESHOLD && onReply;
 
-          // Haptic feedback when crossing threshold
-          if (clamped >= THRESHOLD && !hapticFiredRef.current) {
-            hapticFiredRef.current = true;
-            haptics.medium();
-          } else if (clamped < THRESHOLD && hapticFiredRef.current) {
-            hapticFiredRef.current = false;
-          }
-        },
-        onPanResponderRelease: () => {
-          const distance = currentDistanceRef.current;
-          const shouldReply = distance >= THRESHOLD && onReply;
+      if (shouldReply) {
+        runOnJS(triggerReply)();
+      }
 
-          if (shouldReply) {
-            onReply(message);
-          }
+      // Return with velocity preservation for smooth feel
+      translateX.value = withSpring(0, {
+        damping: 15,
+        stiffness: 150,
+        mass: 1,
+        overshootClamping: true,
+        velocity: event.velocityX / 1000,
+      });
 
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 200,
-            friction: 35,
-            velocity: 0,
-          }).start();
+      hapticFiredRef.current = false;
+      runOnJS(notifyDragEnd)();
+    })
+    .onFinalize(() => {
+      'worklet';
+      // Ensure we return to 0 if gesture is cancelled
+      if (translateX.value !== 0) {
+        translateX.value = withSpring(0, {
+          damping: 15,
+          stiffness: 150,
+          overshootClamping: true,
+        });
+      }
+      runOnJS(notifyDragEnd)();
+    });
 
-          currentDistanceRef.current = 0;
-          hapticFiredRef.current = false;
-          if (isDraggingRef.current) {
-            isDraggingRef.current = false;
-            onHorizontalDragEnd?.();
-          }
-        },
-        onPanResponderTerminate: () => {
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 200,
-            friction: 35,
-            velocity: 0,
-          }).start();
-          currentDistanceRef.current = 0;
-          hapticFiredRef.current = false;
-          if (isDraggingRef.current) {
-            isDraggingRef.current = false;
-            onHorizontalDragEnd?.();
-          }
-        },
-        onPanResponderTerminationRequest: () => {
-          // Prevent termination if we're actively dragging
-          return !isDraggingRef.current;
-        },
-      }),
-    [onCancelLongPress, translateX, onReply, message, onHorizontalDragStart, onHorizontalDragEnd, alignRight]
-  );
+  // Animated styles using Reanimated
+  const iconAnimatedStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      translateX.value,
+      [0, 15, MAX],
+      [0, 0.7, 1],
+      Extrapolation.CLAMP
+    );
+    const scale = interpolate(
+      translateX.value,
+      [0, THRESHOLD, MAX],
+      [0.8, 1.1, 1.15],
+      Extrapolation.CLAMP
+    );
+    return {
+      opacity,
+      transform: [{ scale }],
+    };
+  });
+
+  const bubbleAnimatedStyle = useAnimatedStyle(() => {
+    const tx = interpolate(
+      translateX.value,
+      [0, MAX],
+      alignRight ? [0, MAX] : [0, -MAX],
+      Extrapolation.CLAMP
+    );
+    return {
+      transform: [{ translateX: tx }],
+    };
+  });
 
   return (
     <ContextMenuWrapper options={dropdownOptions}>
-      <View
-        style={styles.swipeContainer}
-        {...panResponder.panHandlers}
-      >
-        {/* Icon - positioned based on alignRight */}
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.replyUnderlay,
-            alignRight ? styles.underlayLeft : styles.underlayRight,
-            {
-              opacity: iconOpacity,
-              transform: [{ scale: iconScale }],
-            },
-          ]}
-        >
-          <View style={[styles.replyIconContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
-            <PlatformIcon
-              sf="arrowshape.turn.up.left.fill"
-              IconComponent={Reply}
-              size={16}
-              color={themeColors.primary}
-            />
-          </View>
-        </Animated.View>
+      <GestureDetector gesture={panGesture}>
+        <Reanimated.View style={styles.swipeContainer}>
+          {/* Icon - positioned based on alignRight */}
+          <Reanimated.View
+            pointerEvents="none"
+            style={[
+              styles.replyUnderlay,
+              alignRight ? styles.underlayLeft : styles.underlayRight,
+              iconAnimatedStyle,
+            ]}
+          >
+            <View style={[styles.replyIconContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
+              <PlatformIcon
+                sf="arrowshape.turn.up.left.fill"
+                IconComponent={Reply}
+                size={16}
+                color={themeColors.primary}
+              />
+            </View>
+          </Reanimated.View>
 
-        {/* Bubble - aligned based on alignRight */}
-        <Animated.View
-          style={[
-            styles.swipeBubbleHost,
-            alignRight ? styles.bubbleAlignRight : styles.bubbleAlignLeft,
-            { transform: [{ translateX: bubbleTranslateX }] },
-          ]}
-        >
-          {children}
-        </Animated.View>
-      </View>
+          {/* Bubble - aligned based on alignRight */}
+          <Reanimated.View
+            style={[
+              styles.swipeBubbleHost,
+              alignRight ? styles.bubbleAlignRight : styles.bubbleAlignLeft,
+              bubbleAnimatedStyle,
+            ]}
+          >
+            {children}
+          </Reanimated.View>
+        </Reanimated.View>
+      </GestureDetector>
     </ContextMenuWrapper>
   );
 });
