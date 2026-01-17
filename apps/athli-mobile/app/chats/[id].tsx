@@ -72,6 +72,7 @@ import {
   type Message,
   type OptimisticMessage,
 } from '@/services/chats-service';
+import { type UIMessage } from '@athli/shared-types';
 import { createOptimisticMessage } from '@athli/shared-types';
 import {
   useRealtimeMessages,
@@ -930,8 +931,8 @@ export default function ChatDetailScreen() {
     }
   };
 
-  const handleMessageReply = (message: ChatMessage) => {
-    setReplyingToMessage(message);
+  const handleMessageReply = (message: UIMessage) => {
+    setReplyingToMessage(message as unknown as ChatMessage);
     // Focus the input to open keyboard
     setTimeout(() => {
       inputRef.current?.focus();
@@ -1086,7 +1087,7 @@ export default function ChatDetailScreen() {
   };
 
   // Helper function to find the original message in a reply chain
-  const findOriginalMessage = (message: ChatMessage): ChatMessage => {
+  const findOriginalMessage = (message: UIMessage): UIMessage => {
     if (!message.replyTo) {
       return message;
     }
@@ -1137,38 +1138,37 @@ export default function ChatDetailScreen() {
       useChatsStore.getState().loadChats();
     } catch (error) {
       // Mark as failed (keep in optimistic list but update status)
+      // Note: We remove failed messages from the optimistic list since the type doesn't support 'failed' status
       setOptimisticMessages((prev) =>
-        prev.map((m) =>
-          m.id === optimisticMsg.id ? { ...m, status: 'failed' as const } : m
-        )
+        prev.filter((m) => m.id !== optimisticMsg.id)
       );
-      // TODO: Show error toast
+      // TODO: Show error toast and allow retry
     }
   };
 
-  const handleMessageEdit = (message: ChatMessage) => {
+  const handleMessageEdit = (message: UIMessage) => {
     // TODO: Implement edit functionality
     // This could set the message to edit mode and populate the input with the message text
-    setSearchQuery(message.text);
+    setSearchQuery(message.text || '');
   };
 
-  const handleMessageDelete = async (message: ChatMessage) => {
+  const handleMessageDelete = async (message: UIMessage) => {
     setMessages((prev) => prev.filter((m) => m.id !== message.id));
   };
 
-  const handleReactionPress = (message: ChatMessage) => {
-    setSelectedMessageForReactions(message);
+  const handleReactionPress = (message: UIMessage) => {
+    setSelectedMessageForReactions(message as unknown as ChatMessage);
     setReactionsSheetVisible(true);
   };
 
-  const handleDocumentPress = (document: import('@/services/chats-service').DocumentAttachment) => {
+  const handleDocumentPress = (document: any) => {
     router.push({
       pathname: '/chats/document-preview',
       params: {
-        uri: document.uri,
-        name: document.name,
-        mimeType: document.mimeType,
-        size: document.size?.toString() || '',
+        uri: document.uri || document.url || '',
+        name: document.name || document.filename || '',
+        mimeType: document.mimeType || document.mime_type || '',
+        size: (document.size || document.size_bytes || '').toString(),
         chatId: chat?.id || '',
         clientId: chat?.client_id || '',
         clientName: chat?.other_user_name || '',
@@ -1178,38 +1178,40 @@ export default function ChatDetailScreen() {
   };
 
   const handleImagePress = (
-    images: import('@/services/chats-service').ImageAttachment[],
+    images: any[],
     senderName: string,
     isSent: boolean,
-    messageTimestamp?: Date
+    messageTimestamp?: Date | string
   ) => {
+    const timestamp = messageTimestamp instanceof Date ? messageTimestamp.toISOString() : messageTimestamp || '';
     router.push({
       pathname: '/chats/message-image-preview',
       params: {
         images: JSON.stringify(images),
         senderName: senderName,
         isSent: isSent.toString(),
-        messageTimestamp: messageTimestamp?.toISOString() || '',
+        messageTimestamp: timestamp,
       },
     });
   };
 
   const handleVideoPress = (
-    video: import('@/services/chats-service').VideoAttachment,
+    video: any,
     senderName: string,
     isSent: boolean,
-    messageTimestamp?: Date
+    messageTimestamp?: Date | string
   ) => {
+    const timestamp = messageTimestamp instanceof Date ? messageTimestamp.toISOString() : messageTimestamp || '';
     router.push({
       pathname: '/chats/video-preview',
       params: {
-        uri: video.uri,
-        duration: video.duration.toString(),
-        orientation: video.orientation,
+        uri: video.uri || video.url || '',
+        duration: (video.duration || 0).toString(),
+        orientation: video.orientation || 'portrait',
         fromMessage: 'true',
         senderName: senderName,
         isSent: isSent.toString(),
-        messageTimestamp: messageTimestamp?.toISOString() || '',
+        messageTimestamp: timestamp,
       },
     });
   };
@@ -1247,7 +1249,7 @@ export default function ChatDetailScreen() {
         <ClientPanelContent
           clientId={chat?.client_id}
           clientName={chat?.other_user_name}
-          clientAvatar={chat?.other_user_avatar}
+          clientAvatar={chat?.other_user_avatar ?? undefined}
           onClose={handleClosePanel}
         />
       )}

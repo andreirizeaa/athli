@@ -93,8 +93,6 @@ export const ClientSelectionList = ({
                 renderItem={renderItem}
                 ItemSeparatorComponent={renderSeparator}
                 ListHeaderComponent={ListHeaderComponent}
-                // @ts-ignore - estimatedItemSize is a valid FlashList prop but types may be outdated
-                estimatedItemSize={60}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContent}
                 keyboardShouldPersistTaps="handled"

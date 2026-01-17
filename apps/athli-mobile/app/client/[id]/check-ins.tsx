@@ -29,15 +29,15 @@ export default function ClientCheckInsScreen() {
   };
 
   const handleAssignCheckIn = () => {
-    router.push(`/modals/shared/assign-to-clients-modal?type=checkIn&clientId=${id}`);
+    router.push(`/modals/shared/assign-to-clients-modal?type=checkIn&clientId=${id}` as any);
   };
 
   const handleAddCheckIn = () => {
-    router.push(`/modals/library/add-check-in-modal?clientId=${id}`);
+    router.push(`/modals/library/add-check-in-modal?clientId=${id}` as any);
   };
 
   const handleCheckInPress = (checkInId: string) => {
-    router.push(`/modals/client/check-in-detail-modal?clientId=${id}&checkInId=${checkInId}`);
+    router.push(`/modals/client/check-in-detail-modal?clientId=${id}&checkInId=${checkInId}` as any);
   };
 
   const formatDate = (dateString: string) => {
@@ -52,11 +52,11 @@ export default function ClientCheckInsScreen() {
   const getStatusColor = (status: string | undefined) => {
     switch (status?.toLowerCase()) {
       case 'completed':
-        return themeColors.success;
+        return '#16A34A'; // Green - success
       case 'pending':
-        return themeColors.warning || '#F5A623';
+        return '#F5A623'; // Orange - warning
       case 'overdue':
-        return themeColors.error;
+        return '#DC2626'; // Red - error
       default:
         return themeColors.mutedText;
     }
@@ -126,8 +126,8 @@ export default function ClientCheckInsScreen() {
           showsVerticalScrollIndicator={false}
         >
           {checkIns.map((checkIn) => (
-            <View key={checkIn.id || checkIn.assignment_id}>
-              <PressableScale onPress={() => handleCheckInPress(checkIn.id || checkIn.assignment_id)}>
+            <View key={checkIn.id}>
+              <PressableScale onPress={() => handleCheckInPress(checkIn.id)}>
                 <View style={styles.checkInItem}>
                   <View
                     style={[styles.checkInIconContainer, { backgroundColor: `${themeColors.primary}15` }]}
@@ -141,24 +141,12 @@ export default function ClientCheckInsScreen() {
                   </View>
                   <View style={styles.checkInInfo}>
                     <Text style={[styles.checkInName, { color: themeColors.text }]} numberOfLines={1}>
-                      {checkIn.name || checkIn.title}
+                      {checkIn.name}
                     </Text>
                     <View style={styles.checkInMeta}>
-                      {checkIn.status && (
-                        <Text
-                          style={[
-                            styles.checkInStatus,
-                            { color: getStatusColor(checkIn.status) },
-                          ]}
-                        >
-                          {checkIn.status}
-                        </Text>
-                      )}
-                      {checkIn.due_date && (
-                        <Text style={[styles.checkInDate, { color: themeColors.mutedText }]}>
-                          {formatDate(checkIn.due_date)}
-                        </Text>
-                      )}
+                      <Text style={[styles.checkInDate, { color: themeColors.mutedText }]}>
+                        {checkIn.schedule}
+                      </Text>
                     </View>
                   </View>
                   <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />

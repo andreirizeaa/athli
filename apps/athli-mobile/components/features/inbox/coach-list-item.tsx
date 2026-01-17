@@ -81,7 +81,7 @@ export const CoachListItem = ({
         : themeColors.mutedText;
 
   const dropdownOptions: DropdownMenuOption[] = [
-    ...(onMarkAsRead && (coach.unreadCount ?? 0) > 0
+    ...(onMarkAsRead && (coach.unread_count ?? 0) > 0
       ? [
         {
           label: t('chats.markAsRead'),
@@ -149,8 +149,8 @@ export const CoachListItem = ({
             </View>
           )}
           <View style={styles.avatarContainer}>
-            {coach.avatar ? (
-              <Image source={{ uri: coach.avatar }} style={styles.avatar} />
+            {coach.other_user_avatar ? (
+              <Image source={{ uri: coach.other_user_avatar }} style={styles.avatar} />
             ) : (
               <View
                 style={[
@@ -167,15 +167,15 @@ export const CoachListItem = ({
                 style={[styles.coachName, { color: themeColors.text }]}
                 numberOfLines={1}
               >
-                {coach.name}
+                {coach.other_user_name}
               </Text>
               {coach.last_message_at && (
-                <View style={styles.sent_atContainer}>
+                <View style={styles.timestampContainer}>
                   <Text
                     style={[
-                      styles.sent_at,
+                      styles.timestamp,
                       {
-                        color: (coach.unreadCount ?? 0) > 0 ? themeColors.primary : themeColors.mutedText,
+                        color: (coach.unread_count ?? 0) > 0 ? themeColors.primary : themeColors.mutedText,
                       },
                     ]}
                   >
@@ -215,7 +215,7 @@ export const CoachListItem = ({
                 </Text>
               </View>
               <View style={styles.rightColumn}>
-                {coach.unreadCount != null && coach.unreadCount > 0 ? (
+                {coach.unread_count != null && coach.unread_count > 0 ? (
                   <View
                     style={[
                       styles.unreadBadge,
@@ -228,7 +228,7 @@ export const CoachListItem = ({
                         { color: themeColors.primaryForeground },
                       ]}
                     >
-                      {coach.unreadCount > 99 ? '99+' : coach.unreadCount}
+                      {coach.unread_count > 99 ? '99+' : coach.unread_count}
                     </Text>
                   </View>
                 ) : null}

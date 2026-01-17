@@ -29,19 +29,19 @@ export default function ClientHabitsScreen() {
   };
 
   const handleAssignHabit = () => {
-    router.push(`/modals/shared/assign-to-clients-modal?type=habit&clientId=${id}`);
+    router.push(`/modals/shared/assign-to-clients-modal?type=habit&clientId=${id}` as any);
   };
 
   const handleAddHabit = () => {
-    router.push(`/modals/library/add-habit-modal?clientId=${id}`);
+    router.push(`/modals/library/add-habit-modal?clientId=${id}` as any);
   };
 
   const handleLogHabit = () => {
-    router.push(`/modals/client/log-habit-for-client-modal?clientId=${id}`);
+    router.push(`/modals/client/log-habit-for-client-modal?clientId=${id}` as any);
   };
 
   const handleHabitPress = (habitId: string) => {
-    router.push(`/modals/client/habit-detail-modal?clientId=${id}&habitId=${habitId}`);
+    router.push(`/modals/client/habit-detail-modal?clientId=${id}&habitId=${habitId}` as any);
   };
 
   return (

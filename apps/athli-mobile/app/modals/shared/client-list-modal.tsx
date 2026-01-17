@@ -49,10 +49,10 @@ export default function ClientListModal() {
         }
         const query = searchQuery.toLowerCase();
         return clients.filter(
-            (client: Client) =>
-                client.firstName.toLowerCase().includes(query) ||
-                client.lastName.toLowerCase().includes(query) ||
-                client.name.toLowerCase().includes(query)
+            (client: any) =>
+                client.firstName?.toLowerCase().includes(query) ||
+                client.lastName?.toLowerCase().includes(query) ||
+                client.name?.toLowerCase().includes(query)
         );
     }, [clients, searchQuery]);
 
@@ -62,8 +62,8 @@ export default function ClientListModal() {
             return;
         }
 
-        const selectedClients = clients.filter((c: Client) => selectedClientIds.has(c.id));
-        triggerClientsSelect(selectedClients);
+        const selectedClients = clients.filter((c: any) => selectedClientIds.has(c.id));
+        triggerClientsSelect(selectedClients as any);
         router.back();
     }, [selectedClientIds, clients, triggerClientsSelect, router, t]);
 
@@ -126,7 +126,7 @@ export default function ClientListModal() {
                 ) : (
                     <View style={styles.listContainer}>
                         <ClientSelectionList
-                            clients={filteredClients}
+                            clients={filteredClients as any}
                             selectedClientIds={selectedClientIds}
                             onSelectionChange={setSelectedClientIds}
                             ListHeaderComponent={

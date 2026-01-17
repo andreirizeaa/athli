@@ -29,16 +29,16 @@ export default function ClientQuestionairesScreen() {
   };
 
   const handleAssignQuestionnaire = () => {
-    router.push(`/modals/shared/assign-to-clients-modal?type=questionnaire&clientId=${id}`);
+    router.push(`/modals/shared/assign-to-clients-modal?type=questionnaire&clientId=${id}` as any);
   };
 
   const handleAddQuestionnaire = () => {
-    router.push(`/modals/library/add-questionnaire-modal?clientId=${id}`);
+    router.push(`/modals/library/add-questionnaire-modal?clientId=${id}` as any);
   };
 
   const handleQuestionnairePress = (questionnaireId: string) => {
     router.push(
-      `/modals/client/questionnaire-detail-modal?clientId=${id}&questionnaireId=${questionnaireId}`
+      `/modals/client/questionnaire-detail-modal?clientId=${id}&questionnaireId=${questionnaireId}` as any
     );
   };
 
@@ -128,10 +128,10 @@ export default function ClientQuestionairesScreen() {
           showsVerticalScrollIndicator={false}
         >
           {questionnaires.map((questionnaire) => (
-            <View key={questionnaire.id || questionnaire.assignment_id}>
+            <View key={questionnaire.id}>
               <PressableScale
                 onPress={() =>
-                  handleQuestionnairePress(questionnaire.id || questionnaire.assignment_id)
+                  handleQuestionnairePress(questionnaire.id)
                 }
               >
                 <View style={styles.questionnaireItem}>
@@ -153,7 +153,7 @@ export default function ClientQuestionairesScreen() {
                       style={[styles.questionnaireName, { color: themeColors.text }]}
                       numberOfLines={1}
                     >
-                      {questionnaire.name || questionnaire.title}
+                      {questionnaire.name}
                     </Text>
                     <View style={styles.questionnaireMeta}>
                       {questionnaire.status && (
@@ -166,9 +166,9 @@ export default function ClientQuestionairesScreen() {
                           {questionnaire.status}
                         </Text>
                       )}
-                      {questionnaire.created_at && (
+                      {questionnaire.sentAt && (
                         <Text style={[styles.questionnaireDate, { color: themeColors.mutedText }]}>
-                          {formatDate(questionnaire.created_at)}
+                          {formatDate(questionnaire.sentAt instanceof Date ? questionnaire.sentAt.toISOString() : String(questionnaire.sentAt))}
                         </Text>
                       )}
                     </View>

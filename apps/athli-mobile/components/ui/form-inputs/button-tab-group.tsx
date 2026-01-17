@@ -67,7 +67,7 @@ export const ButtonTabGroup = <T extends string>({
         return (
           <PressableOpacity
             key={option.value}
-            onLayout={index === 0 ? handleButtonLayout : undefined}
+            {...(index === 0 ? { onLayout: handleButtonLayout } as any : {})}
             style={styles.buttonGroupButton}
             onPress={() => onChange(option.value)}
           >

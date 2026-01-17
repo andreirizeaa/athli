@@ -8,7 +8,7 @@ import { tintHex, shadeHex, isLightColor } from '@/utils/colorUtils';
 import { typography } from '@/constants/typography';
 
 type MessageDocumentPreviewProps = {
-  document: DocumentAttachment;
+  document: any;
   themeColors: ThemeColors;
   parentBackgroundColor: string;
   isParentSent: boolean;

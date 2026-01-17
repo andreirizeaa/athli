@@ -128,8 +128,6 @@ export default function LanguageModal() {
               />
             </View>
           }
-          // @ts-ignore - estimatedItemSize is a valid FlashList prop but types may be outdated
-          estimatedItemSize={52}
           keyExtractor={(item) => item.code}
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="handled"

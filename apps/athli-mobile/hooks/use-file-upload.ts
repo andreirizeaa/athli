@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { supabase } from '@/lib/supabase';
 import type { MessageAttachment, UploadStatus } from '@/types/chat';

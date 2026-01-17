@@ -108,7 +108,7 @@ export const ChatListItem = ({
         },
       ]
       : []),
-    ...(onMarkAsRead && chat.unreadCount > 0
+    ...(onMarkAsRead && (chat.unread_count ?? 0) > 0
       ? [
         {
           label: t('chats.markAsRead'),
@@ -156,6 +156,7 @@ export const ChatListItem = ({
     <View style={styles.container}>
       <SwipeableRow
         onOpen={onOpen}
+        onDelete={() => {}}
         enabled={false}
       >
         <ContextMenuWrapper options={dropdownOptions}>
@@ -219,12 +220,12 @@ export const ChatListItem = ({
                   >
                     {chat.other_user_name}
                   </Text>
-                  <View style={styles.sent_atContainer}>
+                  <View style={styles.timestampContainer}>
                     <Text
                       style={[
-                        styles.sent_at,
+                        styles.timestamp,
                         {
-                          color: chat.unreadCount > 0 ? themeColors.primary : themeColors.mutedText,
+                          color: (chat.unread_count ?? 0) > 0 ? themeColors.primary : themeColors.mutedText,
                         },
                       ]}
                     >
@@ -263,7 +264,7 @@ export const ChatListItem = ({
                     </Text>
                   </View>
                   <View style={styles.rightColumn}>
-                    {chat.unreadCount != null && chat.unreadCount > 0 ? (
+                    {chat.unread_count != null && chat.unread_count > 0 ? (
                       <View
                         style={[
                           styles.unreadBadge,
@@ -276,7 +277,7 @@ export const ChatListItem = ({
                             { color: themeColors.primaryForeground },
                           ]}
                         >
-                          {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+                          {chat.unread_count > 99 ? '99+' : chat.unread_count}
                         </Text>
                       </View>
                     ) : null}

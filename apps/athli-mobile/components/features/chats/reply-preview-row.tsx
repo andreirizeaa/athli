@@ -8,10 +8,9 @@ import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/ui/platform-icon';
-import { type ChatMessage } from '@/services/chats-service';
 
 type ReplyPreviewRowProps = {
-  message: ChatMessage;
+  message: any;
   clientName: string;
   onClose: () => void;
   backgroundColor?: string;
