@@ -1,6 +1,6 @@
-import React, { RefObject, useCallback } from 'react';
+import React, { RefObject, useCallback, useEffect } from 'react';
 import { StyleSheet, TextInput, View, Alert, InteractionManager, ViewStyle } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { PressableOpacity } from 'pressto';
 import { BlurView } from 'expo-blur';
 import { Camera, Mic, Plus, Send, X } from 'lucide-react-native';
@@ -94,6 +94,22 @@ export const ChatToolbar = ({
   const headerBackgroundColor = themeColors.translucentBackground;
   const iconColor = themeColors.text;
   const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.95);
+
+  // Animated height for attachment picker row (0 when closed, 110 when open)
+  const attachmentPickerHeight = useSharedValue(showAttachmentPicker ? 110 : 0);
+
+  useEffect(() => {
+    attachmentPickerHeight.value = withTiming(showAttachmentPicker ? 110 : 0, {
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [showAttachmentPicker]);
+
+  const attachmentPickerAnimatedStyle = useAnimatedStyle(() => ({
+    height: attachmentPickerHeight.value,
+    opacity: attachmentPickerHeight.value / 110,
+    overflow: 'hidden',
+  }));
 
   // Determine participant info from either chat or coach
   const participantInfo: ParticipantInfo = chat
@@ -255,15 +271,17 @@ export const ChatToolbar = ({
             )}
           </View>
 
-          {showAttachmentPicker && (
-            <AttachmentPickerRow
-              backgroundColor={translucentHeaderBg}
-              chatId={participantInfo.chatId}
-              clientId={participantInfo.participantId}
-              clientName={participantInfo.participantName}
-              caption={searchQuery}
-            />
-          )}
+          <Animated.View style={attachmentPickerAnimatedStyle}>
+            {showAttachmentPicker && (
+              <AttachmentPickerRow
+                backgroundColor={translucentHeaderBg}
+                chatId={participantInfo.chatId}
+                clientId={participantInfo.participantId}
+                clientName={participantInfo.participantName}
+                caption={searchQuery}
+              />
+            )}
+          </Animated.View>
         </View>
       </BlurView>
     </Animated.View>

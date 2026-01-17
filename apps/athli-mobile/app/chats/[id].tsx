@@ -11,7 +11,7 @@ import {
   unstable_batchedUpdates,
 } from 'react-native';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -550,14 +550,15 @@ export default function ChatDetailScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Dynamic toolbar height - calculated from current state (fixed values, no insets dependency)
+  // Dynamic toolbar height - calculated from current state
+  // Base toolbar: ~46px (input row with buttons)
+  // Reply preview: adds ~50px
+  // Attachment picker: adds ~110px (32px padding + 56px icon + 8px gap + 14px text)
   const toolbarHeight = useMemo(() => {
-    if (replyingToMessage) {
-      return 96;
-    } else if (showAttachmentPicker) {
-      return 126;
-    }
-    return 46;
+    let height = 46;
+    if (replyingToMessage) height += 50;
+    if (showAttachmentPicker) height += 110;
+    return height;
   }, [replyingToMessage, showAttachmentPicker]);
 
   // Panel ref for sliding sidebar
@@ -939,7 +940,6 @@ export default function ChatDetailScreen() {
 
   const handleCancelReply = () => {
     setReplyingToMessage(null);
-    Keyboard.dismiss();
   };
 
   const handlePlusPress = () => {
