@@ -1,5 +1,6 @@
 import React, { RefObject, useCallback } from 'react';
-import { StyleSheet, TextInput, View, Alert, InteractionManager } from 'react-native';
+import { StyleSheet, TextInput, View, Alert, InteractionManager, ViewStyle } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { PressableOpacity } from 'pressto';
 import { BlurView } from 'expo-blur';
 import { Camera, Mic, Plus, Send, X } from 'lucide-react-native';
@@ -53,6 +54,7 @@ type ChatToolbarProps = {
   onSendPress: (pathOverride?: string | null) => void;
   onCancelReply: () => void;
   bottomInset?: number;
+  animatedBottomStyle?: Animated.AnimateStyle<ViewStyle>;
 };
 
 export const ChatToolbar = ({
@@ -81,6 +83,7 @@ export const ChatToolbar = ({
   onSendPress,
   onCancelReply,
   bottomInset = 0,
+  animatedBottomStyle,
 }: ChatToolbarProps) => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
@@ -167,7 +170,7 @@ export const ChatToolbar = ({
   }, [participantInfo, router, searchQuery, t]);
 
   return (
-    <View style={styles.absoluteContainer} pointerEvents="box-none">
+    <Animated.View style={[styles.absoluteContainer, animatedBottomStyle]} pointerEvents="box-none">
       {/* Background extension below toolbar */}
       <View style={[styles.backgroundExtension, { backgroundColor: translucentHeaderBg }]} />
       <BlurView
@@ -175,7 +178,7 @@ export const ChatToolbar = ({
         tint={isDark ? 'dark' : 'light'}
         style={[styles.toolbarBlur, { backgroundColor: translucentHeaderBg }]}
       >
-        <View style={{ paddingBottom: bottomInset }}>
+        <View>
           {replyingToMessage && (
             <ReplyPreviewRow
               message={replyingToMessage}
@@ -263,7 +266,7 @@ export const ChatToolbar = ({
           )}
         </View>
       </BlurView>
-    </View>
+    </Animated.View>
   );
 };
 

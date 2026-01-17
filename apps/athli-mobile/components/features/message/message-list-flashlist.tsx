@@ -574,9 +574,12 @@ export const MessageList = React.memo(function MessageList({
   const contentHeightRef = useRef(0);
   const layoutHeightRef = useRef(0);
   const prevMessagesLengthRef = useRef(messages.length);
-  const didInitialScroll = useRef(false);
-  const initialScrollAttemptsRef = useRef(0);
   const pinnedToBottomRef = useRef(true);
+
+  // Init gating refs to prevent multiple scroll calls on mount
+  const didInitScrollRef = useRef(false);
+  const layoutReadyRef = useRef(false);
+  const contentReadyRef = useRef(false);
   const prevBottomOffsetRef = useRef<number | null>(null);
   const [localMessages, setLocalMessages] = useState<UIMessage[]>(messages);
   const [isHorizontalDragActive, setIsHorizontalDragActive] = useState(false);
@@ -926,17 +929,36 @@ export const MessageList = React.memo(function MessageList({
     }, 50);
   };
 
+  // Single init gate to prevent multiple scroll calls on mount
+  const maybeInitScroll = () => {
+    if (didInitScrollRef.current) return;
+    if (!layoutReadyRef.current || !contentReadyRef.current) return;
+    if (data.length === 0) return;
+
+    didInitScrollRef.current = true;
+    pinnedToBottomRef.current = true;
+
+    listRef.current?.scrollToEnd({ animated: false });
+  };
+
   const handleContentSizeChange = (_width: number, height: number) => {
     contentHeightRef.current = height;
 
-    // Auto-scroll on content size change if pinned to bottom
-    if (pinnedToBottomRef.current) {
-      scrollToBottom(false);
+    if (!contentReadyRef.current && height > 0) {
+      contentReadyRef.current = true;
+      maybeInitScroll();
+      return; // Don't auto-scroll during init
+    }
+
+    if (didInitScrollRef.current && pinnedToBottomRef.current) {
+      listRef.current?.scrollToEnd({ animated: false });
     }
   };
 
   const handleLayout = (event: LayoutChangeEvent) => {
     layoutHeightRef.current = event.nativeEvent.layout.height;
+    layoutReadyRef.current = true;
+    maybeInitScroll();
   };
 
   useEffect(() => {
@@ -944,15 +966,6 @@ export const MessageList = React.memo(function MessageList({
       const newTimestamp = data[0].sent_at;
       setStickyTimestamp(newTimestamp);
       setStickyDayKey(dayKey(newTimestamp));
-    }
-  }, [data.length]);
-
-  // Initial scroll to bottom on mount
-  useEffect(() => {
-    if (data.length > 0 && !didInitialScroll.current) {
-      didInitialScroll.current = true;
-      pinnedToBottomRef.current = true;
-      scrollToBottom(false);
     }
   }, [data.length]);
 
@@ -1144,6 +1157,7 @@ export const MessageList = React.memo(function MessageList({
           data={data}
           keyExtractor={(m) => m.id}
           renderItem={renderItem}
+          estimatedItemSize={72}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           scrollEnabled={!isHorizontalDragActive}

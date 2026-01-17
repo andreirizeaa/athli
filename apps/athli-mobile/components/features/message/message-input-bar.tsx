@@ -38,10 +38,10 @@ export const MessageInputBar = forwardRef<TextInput, MessageInputBarProps>(
           placeholderTextColor={themeColors.mutedText}
           value={value}
           onChangeText={onChangeText}
-          textAlignVertical="top"
+          textAlignVertical="center"
           multiline={true}
           blurOnSubmit={false}
-          scrollEnabled={true}
+          scrollEnabled={false}
         />
         {value.length > 0 && (
           <PressableOpacity
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     flex: 1,
     ...typography.p2,
     lineHeight: 22,
-    paddingTop: 3,
+    paddingTop: 0,
     paddingBottom: 0,
   },
   clearIcon: {
