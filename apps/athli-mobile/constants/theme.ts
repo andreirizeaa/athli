@@ -88,6 +88,9 @@ export type ThemeColors = {
   border: string;
   shadowColor: string;
   translucentBackground: string;
+  success: string;
+  warning: string;
+  error: string;
 };
 
 export function resolveEffectiveScheme(
@@ -126,6 +129,9 @@ export function createPresetPalette(
         border: '#2F2F2F',
         shadowColor: '#FFFFFF',
         translucentBackground: '#1E1E1E',
+        success: '#16A34A',
+        warning: '#F5A623',
+        error: '#DC2626',
       };
     }
 
@@ -144,6 +150,9 @@ export function createPresetPalette(
       border: '#E5E7EB',
       shadowColor: '#000000',
       translucentBackground: '#F9FAFB',
+      success: '#16A34A',
+      warning: '#F5A623',
+      error: '#DC2626',
     };
   }
 
@@ -164,6 +173,9 @@ export function createPresetPalette(
         border: '#2F2F2F',
         shadowColor: '#FFFFFF',
         translucentBackground: '#1E1E1E',
+        success: '#16A34A',
+        warning: '#F5A623',
+        error: '#DC2626',
       };
     }
 
@@ -182,6 +194,9 @@ export function createPresetPalette(
       border: '#E5E7EB',
       shadowColor: '#000000',
       translucentBackground: '#F9FAFB',
+      success: '#16A34A',
+      warning: '#F5A623',
+      error: '#DC2626',
     };
   }
 
@@ -202,6 +217,9 @@ export function createPresetPalette(
         border: '#2F2F2F',
         shadowColor: '#FFFFFF',
         translucentBackground: '#1E1E1E',
+        success: '#16A34A',
+        warning: '#F5A623',
+        error: '#DC2626',
       };
     }
 
@@ -220,6 +238,9 @@ export function createPresetPalette(
       border: '#E5E7EB',
       shadowColor: '#000000',
       translucentBackground: '#F9FAFB',
+      success: '#16A34A',
+      warning: '#F5A623',
+      error: '#DC2626',
     };
   }
 
@@ -240,6 +261,9 @@ export function createPresetPalette(
         border: '#2F2F2F',
         shadowColor: '#FFFFFF',
         translucentBackground: '#1E1E1E',
+        success: '#16A34A',
+        warning: '#F5A623',
+        error: '#DC2626',
       };
     }
 
@@ -258,6 +282,9 @@ export function createPresetPalette(
       border: '#E5E7EB',
       shadowColor: '#000000',
       translucentBackground: '#F9FAFB',
+      success: '#16A34A',
+      warning: '#F5A623',
+      error: '#DC2626',
     };
   }
 
@@ -278,6 +305,9 @@ export function createPresetPalette(
         border: '#2F2F2F',
         shadowColor: '#FFFFFF',
         translucentBackground: '#1E1E1E',
+        success: '#16A34A',
+        warning: '#F5A623',
+        error: '#DC2626',
       };
     }
 
@@ -296,6 +326,9 @@ export function createPresetPalette(
       border: '#E5E7EB',
       shadowColor: '#000000',
       translucentBackground: '#F9FAFB',
+      success: '#16A34A',
+      warning: '#F5A623',
+      error: '#DC2626',
     };
   }
 
@@ -316,6 +349,9 @@ export function createPresetPalette(
         border: '#2F2F2F',
         shadowColor: '#FFFFFF',
         translucentBackground: '#1E1E1E',
+        success: '#16A34A',
+        warning: '#F5A623',
+        error: '#DC2626',
       };
     }
 
@@ -334,6 +370,9 @@ export function createPresetPalette(
       border: '#E5E7EB',
       shadowColor: '#000000',
       translucentBackground: '#F9FAFB',
+      success: '#16A34A',
+      warning: '#F5A623',
+      error: '#DC2626',
     };
   }
 
@@ -354,6 +393,9 @@ export function createPresetPalette(
         border: '#2F2F2F',
         shadowColor: '#FFFFFF',
         translucentBackground: '#1E1E1E',
+        success: '#16A34A',
+        warning: '#F5A623',
+        error: '#DC2626',
       };
     }
 
@@ -372,6 +414,9 @@ export function createPresetPalette(
       border: '#E5E7EB',
       shadowColor: '#000000',
       translucentBackground: '#F9FAFB',
+      success: '#16A34A',
+      warning: '#F5A623',
+      error: '#DC2626',
     };
   }
 
@@ -391,6 +436,9 @@ export function createPresetPalette(
       border: '#2F2F2F',
       shadowColor: '#FFFFFF',
       translucentBackground: '#1E1E1E',
+      success: '#16A34A',
+      warning: '#F5A623',
+      error: '#DC2626',
     };
   }
 
@@ -409,6 +457,9 @@ export function createPresetPalette(
     border: '#E5E7EB',
     shadowColor: '#000000',
     translucentBackground: '#F9FAFB',
+    success: '#16A34A',
+    warning: '#F5A623',
+    error: '#DC2626',
   };
 }
 

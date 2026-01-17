@@ -4,13 +4,12 @@ import { PressableOpacity } from 'pressto';
 import { Camera, Video, FileText } from 'lucide-react-native';
 import { useColorScheme } from '@/stores';
 import { type ThemeColors } from '@/constants/theme';
-import { type ChatMessage } from '@/services/chats-service';
 import { tintHex, shadeHex, isLightColor } from '@/utils/colorUtils';
 import { typography, iconSizes } from '@/constants/typography';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 
 type MessageReplyPreviewProps = {
-  replyTo: ChatMessage;
+  replyTo: any;
   clientName: string;
   themeColors: ThemeColors;
   parentBackgroundColor: string;

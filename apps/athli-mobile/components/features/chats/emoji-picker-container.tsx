@@ -7,12 +7,12 @@ import { type EmojiType } from 'rn-emoji-keyboard';
 import { useThemePreference } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { Plus } from 'lucide-react-native';
-import { type ChatMessage, addReaction, removeReaction } from '@/services/chats-service';
+import { addReaction, removeReaction } from '@/services/chats-service';
 
 type EmojiPickerContainerProps = {
   visible: boolean;
   onClose: () => void;
-  selectedMessage: ChatMessage | null;
+  selectedMessage: any | null;
   conversationId: string; // Required for adding/removing reactions
   anchorPosition: {
     x: number;

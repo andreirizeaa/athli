@@ -5,7 +5,6 @@ import EmojiPicker, { type EmojiType } from 'rn-emoji-keyboard';
 
 import { typography } from '@/constants/typography';
 import { type ThemeColors } from '@/constants/theme';
-import { type ChatMessage } from '@/services/chats-service';
 import { DropdownMenu, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { Send, CheckCircle } from 'lucide-react-native';
@@ -20,7 +19,7 @@ import { useColorScheme } from '@/stores';
 interface SelectedMessagePopupsProps {
   visible: boolean;
   onClose: () => void;
-  selectedMessage: ChatMessage | null;
+  selectedMessage: any | null;
   conversationId: string; // Required for reactions
   options: DropdownMenuOption[];
   anchorPosition: {
@@ -81,7 +80,7 @@ const softWrapText = (text: string) => {
 };
 
 // Helper function to find the original message in a reply chain
-const findOriginalMessage = (message: ChatMessage): ChatMessage => {
+const findOriginalMessage = (message: any): any => {
   if (!message.replyTo) {
     return message;
   }

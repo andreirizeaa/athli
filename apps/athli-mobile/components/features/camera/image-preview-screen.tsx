@@ -15,7 +15,7 @@ import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager
 import { iconSizes, typography } from '@/constants/typography';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
-import { type ImageAttachment } from '@/components/features/chats/message-image-preview';
+import { type ImageAttachment } from '@/components/features/message/message-image-preview';
 import { AttachmentPreviewToolbar } from '@/components/features/camera/attachment-preview-toolbar';
 import { sendImageMessage } from '@/services/chats-service';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
@@ -41,13 +41,13 @@ const ImagePreviewScreen = () => {
   const insets = useSafeAreaInsets();
   const mutedSurfaceColor = themeColors.backgroundTertiary;
   const iconColor = themeColors.text;
-  const showToolbar = fromPicker;
 
   const initialImages: ImageAttachment[] = params.images ? JSON.parse(params.images) : [];
   const senderName = params.senderName || 'Unknown';
   const isSent = params.isSent === 'true';
   const displayName = isSent ? 'You' : senderName;
   const fromPicker = params.fromPicker === 'true';
+  const showToolbar = fromPicker;
   const [caption, setCaption] = useState(params.caption || '');
 
   // Update caption when params change (for hydration)
@@ -396,7 +396,7 @@ const ImagePreviewScreen = () => {
       // Send image message
       await sendImageMessage(
         params.chatId,
-        imageBytesArray,
+        imageBytesArray as any,
         caption.trim() || undefined
       );
 

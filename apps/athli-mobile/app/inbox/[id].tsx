@@ -337,7 +337,7 @@ export default function InboxDetailScreen() {
       try {
         const documentData = JSON.parse(sentDocument);
 
-        const newMessage: InboxMessage = {
+        const newMessage = {
           id: `inbox-${Date.now()}`,
           text: documentData.caption || '',
           timestamp: new Date(),
@@ -349,7 +349,7 @@ export default function InboxDetailScreen() {
             mimeType: documentData.mimeType,
             size: documentData.size ? parseInt(documentData.size) : undefined,
           },
-        };
+        } as any;
 
         setMessages((prev) => [...prev, newMessage]);
         setSearchQuery('');
@@ -374,14 +374,14 @@ export default function InboxDetailScreen() {
       try {
         const imageAttachments = JSON.parse(sentImages);
 
-        const newMessage: InboxMessage = {
+        const newMessage = {
           id: `inbox-${Date.now()}`,
           text: sentImagesCaption || '',
           timestamp: new Date(),
           isSent: true,
           isRead: false,
           images: imageAttachments,
-        };
+        } as any;
 
         setMessages((prev) => [...prev, newMessage]);
         setSearchQuery('');
@@ -408,7 +408,7 @@ export default function InboxDetailScreen() {
       try {
         const videoData = JSON.parse(sentVideo);
 
-        const newMessage: InboxMessage = {
+        const newMessage = {
           id: `inbox-${Date.now()}`,
           text: videoData.caption || '',
           timestamp: new Date(),
@@ -419,7 +419,7 @@ export default function InboxDetailScreen() {
             duration: videoData.duration,
             orientation: videoData.orientation,
           },
-        };
+        } as any;
 
         setMessages((prev) => [...prev, newMessage]);
         setSearchQuery('');
@@ -484,7 +484,7 @@ export default function InboxDetailScreen() {
     router.back();
   };
 
-  const handleMessageReply = (message: InboxMessage) => {
+  const handleMessageReply = (message: any) => {
     setReplyingToMessage(message);
     setTimeout(() => {
       inputRef.current?.focus();
@@ -540,7 +540,7 @@ export default function InboxDetailScreen() {
       const duration = lastVoiceNoteDurationMsRef.current;
       const audioUri = pathToSend.startsWith('file://') ? pathToSend : `file://${pathToSend}`;
 
-      const newMessage: InboxMessage = {
+      const newMessage = {
         id: `inbox-${Date.now()}`,
         text: '',
         timestamp: new Date(),
@@ -550,7 +550,7 @@ export default function InboxDetailScreen() {
           uri: audioUri,
           duration: duration,
         },
-      };
+      } as any;
 
       setMessages((prev) => [...prev, newMessage]);
     } catch (e) {
@@ -632,7 +632,7 @@ export default function InboxDetailScreen() {
     }
   };
 
-  const findOriginalMessage = (message: InboxMessage): InboxMessage => {
+  const findOriginalMessage = (message: any): any => {
     if (!message.replyTo) {
       return message;
     }
@@ -679,27 +679,27 @@ export default function InboxDetailScreen() {
       // Mark as failed
       setOptimisticMessages((prev) =>
         prev.map((m) =>
-          m.id === optimisticMsg.id ? { ...m, status: 'failed' as const } : m
+          m.id === optimisticMsg.id ? { ...m, status: 'failed' } as any : m
         )
       );
       // TODO: Show error toast
     }
   };
 
-  const handleMessageEdit = (message: InboxMessage) => {
+  const handleMessageEdit = (message: any) => {
     setSearchQuery(message.text);
   };
 
-  const handleMessageDelete = async (message: InboxMessage) => {
+  const handleMessageDelete = async (message: any) => {
     setMessages((prev) => prev.filter((m) => m.id !== message.id));
   };
 
-  const handleReactionPress = (message: InboxMessage) => {
+  const handleReactionPress = (message: any) => {
     setSelectedMessageForReactions(message);
     setReactionsSheetVisible(true);
   };
 
-  const handleDocumentPress = (document: import('@/services/chats-service').DocumentAttachment) => {
+  const handleDocumentPress = (document: any) => {
     router.push({
       pathname: '/chats/document-preview',
       params: {
@@ -709,17 +709,17 @@ export default function InboxDetailScreen() {
         size: document.size?.toString() || '',
         chatId: 'inbox',
         clientId: coach?.id || '',
-        clientName: coach?.name || '',
+        clientName: coach?.other_user_name || '',
         fromMessage: 'true',
       },
-    });
+    } as any);
   };
 
   const handleImagePress = (
-    images: import('@/services/chats-service').ImageAttachment[],
+    images: any[],
     senderName: string,
     isSent: boolean,
-    messageTimestamp?: Date
+    messageTimestamp?: Date | string
   ) => {
     router.push({
       pathname: '/chats/message-image-preview',
@@ -727,16 +727,16 @@ export default function InboxDetailScreen() {
         images: JSON.stringify(images),
         senderName: senderName,
         isSent: isSent.toString(),
-        messageTimestamp: messageTimestamp?.toISOString() || '',
+        messageTimestamp: messageTimestamp instanceof Date ? messageTimestamp.toISOString() : messageTimestamp?.toString() || '',
       },
-    });
+    } as any);
   };
 
   const handleVideoPress = (
-    video: import('@/services/chats-service').VideoAttachment,
+    video: any,
     senderName: string,
     isSent: boolean,
-    messageTimestamp?: Date
+    messageTimestamp?: Date | string
   ) => {
     router.push({
       pathname: '/chats/video-preview',
@@ -747,9 +747,9 @@ export default function InboxDetailScreen() {
         fromMessage: 'true',
         senderName: senderName,
         isSent: isSent.toString(),
-        messageTimestamp: messageTimestamp?.toISOString() || '',
+        messageTimestamp: messageTimestamp instanceof Date ? messageTimestamp.toISOString() : messageTimestamp?.toString() || '',
       },
-    });
+    } as any);
   };
 
   const handleReactionRemoved = (messageId: string, isSender: boolean) => {
@@ -800,7 +800,6 @@ export default function InboxDetailScreen() {
           backgroundColor="transparent"
           themeColors={themeColors}
           clientName={coach.other_user_name || 'Coach'}
-          keyboardHeight={keyboardHeight}
           onReply={handleMessageReply}
           onEdit={handleMessageEdit}
           onDelete={handleMessageDelete}
@@ -815,7 +814,7 @@ export default function InboxDetailScreen() {
 
       {/* TOOLBAR */}
       <ChatToolbar
-        coach={coach}
+        coach={coach ? { id: coach.id, name: coach.other_user_name || '' } : undefined}
         replyingToMessage={replyingToMessage}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}

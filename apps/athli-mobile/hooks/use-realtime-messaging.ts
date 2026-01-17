@@ -321,7 +321,9 @@ export const useRealtimeReactions = ({
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload: RealtimePostgresChangesPayload<MessageReaction>) => {
-          const deletedReactionId = payload.old.id;
+          const oldReaction = payload.old as MessageReaction | undefined;
+          const deletedReactionId = oldReaction?.id;
+          if (!deletedReactionId) return;
           setReactions((prev) =>
             prev.filter((r) => r.id !== deletedReactionId),
           );

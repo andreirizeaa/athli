@@ -31,7 +31,7 @@ export const stopAllWaveformPlayers = async () => {
 };
 
 type MessageAudioPreviewProps = {
-  audio: AudioAttachment;
+  audio: any;
   themeColors: ThemeColors;
   parentBackgroundColor: string;
   isParentSent: boolean;

@@ -181,7 +181,7 @@ export const ContextMenuWrapper = ({
         onLongPress();
       }
     }}>
-      <ContextMenu.Trigger action="longPress">
+      <ContextMenu.Trigger>
         <View>
           {children}
         </View>

@@ -18,12 +18,12 @@ import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
-import { type ChatMessage, removeReaction } from '@/services/chats-service';
+import { removeReaction } from '@/services/chats-service';
 
 interface MessageReactionsSheetProps {
   visible: boolean;
   onClose: () => void;
-  message: ChatMessage | null;
+  message: any | null;
   onReactionRemoved?: (messageId: string, isSender: boolean) => void;
 }
 
@@ -103,7 +103,7 @@ export const MessageReactionsSheet = ({
   const handleRemoveReaction = async (isSender: boolean) => {
     if (!message) return;
 
-    await removeReaction(message.id, isSender);
+    await removeReaction(message.id);
     onReactionRemoved?.(message.id, isSender);
 
     // Close sheet after removal

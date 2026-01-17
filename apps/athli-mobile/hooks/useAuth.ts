@@ -60,7 +60,7 @@ export function useAuth(): AuthState {
     const hasProfile = !!(coachProfile || clientProfile);
 
     // Determine user type
-    const userType = coachProfile ? 'coach' : clientProfile ? 'client' : null;
+    const userType: 'coach' | 'client' | null = coachProfile ? 'coach' : clientProfile ? 'client' : null;
 
     // User is authenticated if they have both session and profile
     const isAuthenticated = isSessionReady && hasProfile;

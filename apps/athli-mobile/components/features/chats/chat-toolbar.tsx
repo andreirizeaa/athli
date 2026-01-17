@@ -42,10 +42,10 @@ type ChatToolbarProps = {
   durationLabel: string;
   waveform: number[];
   previewPath: string | null;
-  previewPlayerState: import('@/components/audio').PlayerState;
-  onPlayerStateChange: (state: import('@/components/audio').PlayerState) => void;
+  previewPlayerState: import('@/components/features/audio').PlayerState;
+  onPlayerStateChange: (state: import('@/components/features/audio').PlayerState) => void;
   onTogglePreviewPlay: () => void;
-  previewWaveRef: React.RefObject<import('@/components/audio').IWaveformRef | null>;
+  previewWaveRef: React.RefObject<import('@/components/features/audio').IWaveformRef | null>;
   onPlusPress: () => void;
   onMicrophonePress: () => void;
   onSendMessage: () => void;
@@ -54,7 +54,9 @@ type ChatToolbarProps = {
   onSendPress: (pathOverride?: string | null) => void;
   onCancelReply: () => void;
   bottomInset?: number;
-  animatedBottomStyle?: Animated.AnimateStyle<ViewStyle>;
+  animatedBottomStyle?: any;
+  keyboardHeight?: any;
+  onHeightChange?: (height: number) => void;
 };
 
 export const ChatToolbar = ({
@@ -115,14 +117,14 @@ export const ChatToolbar = ({
   const participantInfo: ParticipantInfo = chat
     ? {
       chatId: chat.id,
-      participantId: chat.clientId,
-      participantName: chat.clientName,
+      participantId: chat.client_id,
+      participantName: chat.other_user_name || '',
     }
     : coach
       ? {
         chatId: 'inbox',
         participantId: coach.id,
-        participantName: coach.name,
+        participantName: coach.name || '',
       }
       : {
         chatId: '',

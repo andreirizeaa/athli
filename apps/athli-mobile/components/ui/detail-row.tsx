@@ -58,7 +58,7 @@ export function DetailRow({
   return (
     <PressableScale
       style={[styles.row, style]}
-      onPress={onPress ? handlePress : undefined}
+      onPress={onPress ? handlePress as any : undefined}
     >
       <Text style={[styles.label, { color: themeColors.text }]}>{label}</Text>
       <View style={styles.rightSection}>
@@ -82,7 +82,7 @@ export function DetailRow({
                 type="monochrome"
               />
             ) : (
-              <Pencil size={iconSizes.smallIcons} color={themeColors.mutedText} />
+              <Pencil {...({ size: iconSizes.smallIcons, color: themeColors.mutedText } as any)} />
             )}
           </View>
         )}

@@ -29,19 +29,19 @@ export default function MetricsScreen() {
   };
 
   const handleAssignMetric = () => {
-    router.push(`/modals/shared/assign-to-clients-modal?type=metric&clientId=${id}`);
+    router.push(`/modals/shared/assign-to-clients-modal?type=metric&clientId=${id}` as any);
   };
 
   const handleAddMetric = () => {
-    router.push(`/modals/library/add-metric-modal?clientId=${id}`);
+    router.push(`/modals/library/add-metric-modal?clientId=${id}` as any);
   };
 
   const handleLogMetric = () => {
-    router.push(`/modals/client/log-metric-for-client-modal?clientId=${id}`);
+    router.push(`/modals/client/log-metric-for-client-modal?clientId=${id}` as any);
   };
 
   const handleMetricPress = (metricId: string) => {
-    router.push(`/modals/client/metric-detail-modal?clientId=${id}&metricId=${metricId}`);
+    router.push(`/modals/client/metric-detail-modal?clientId=${id}&metricId=${metricId}` as any);
   };
 
   const handleRefresh = async () => {

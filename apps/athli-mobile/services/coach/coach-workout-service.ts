@@ -1,6 +1,6 @@
 import { apiFetch, type ApiResponse } from '@/lib/api-client';
 import type { WorkoutProgramPayload } from '@/components/features/workout/workout-schema';
-import type { Workout } from '@/components/app/app-shell';
+import type { Workout } from '@/stores/useLibraryStore';
 
 /**
  * Service methods for workout operations
