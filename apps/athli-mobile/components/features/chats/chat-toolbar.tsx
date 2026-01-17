@@ -17,7 +17,6 @@ import { AttachmentPickerRow } from '@/components/features/chats/attachment-pick
 import { VoiceNoteRecordingContainer } from '@/components/features/chats/voice-note-recording-container';
 import { type Chat, type ChatMessage } from '@/services/chats-service';
 import { type InboxMessage } from '@/services/inbox-service';
-import Animated, { useAnimatedStyle, type SharedValue, interpolate, Extrapolation } from 'react-native-reanimated';
 
 // Generic participant type that works for both Chat and Coach
 type ParticipantInfo = {
@@ -54,8 +53,6 @@ type ChatToolbarProps = {
   onSendPress: (pathOverride?: string | null) => void;
   onCancelReply: () => void;
   bottomInset?: number;
-  keyboardHeight?: SharedValue<number>;
-  onHeightChange?: (height: number) => void;
 };
 
 export const ChatToolbar = ({
@@ -84,8 +81,6 @@ export const ChatToolbar = ({
   onSendPress,
   onCancelReply,
   bottomInset = 0,
-  keyboardHeight,
-  onHeightChange,
 }: ChatToolbarProps) => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
@@ -116,23 +111,6 @@ export const ChatToolbar = ({
         participantName: '',
       };
 
-  // Move toolbar up by keyboard height
-  const toolbarAnimatedStyle = useAnimatedStyle(() => {
-    const h = keyboardHeight?.value ?? 0;
-    return {
-      transform: [{ translateY: -h }],
-    };
-  });
-
-  // Safe-area padding only when keyboard is closed
-  const safePaddingStyle = useAnimatedStyle(() => {
-    const h = keyboardHeight?.value ?? 0;
-    // Small padding when keyboard opens to prevent bumpiness
-    const pb = interpolate(h, [0, 40], [bottomInset, 0], Extrapolation.CLAMP);
-    return {
-      paddingBottom: pb,
-    };
-  });
 
   const handleCameraPress = useCallback(async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -189,16 +167,15 @@ export const ChatToolbar = ({
   }, [participantInfo, router, searchQuery, t]);
 
   return (
-    <Animated.View style={[styles.absoluteContainer, toolbarAnimatedStyle]} pointerEvents="box-none">
+    <View style={styles.absoluteContainer} pointerEvents="box-none">
       {/* Background extension below toolbar */}
       <View style={[styles.backgroundExtension, { backgroundColor: translucentHeaderBg }]} />
       <BlurView
         intensity={30}
         tint={isDark ? 'dark' : 'light'}
         style={[styles.toolbarBlur, { backgroundColor: translucentHeaderBg }]}
-        onLayout={(e) => onHeightChange?.(e.nativeEvent.layout.height)}
       >
-        <Animated.View style={safePaddingStyle}>
+        <View style={{ paddingBottom: bottomInset }}>
           {replyingToMessage && (
             <ReplyPreviewRow
               message={replyingToMessage}
@@ -284,9 +261,9 @@ export const ChatToolbar = ({
               caption={searchQuery}
             />
           )}
-        </Animated.View>
+        </View>
       </BlurView>
-    </Animated.View>
+    </View>
   );
 };
 

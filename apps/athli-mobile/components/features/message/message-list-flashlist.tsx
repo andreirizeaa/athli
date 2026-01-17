@@ -15,7 +15,7 @@ import { FlashList } from '@shopify/flash-list';
 import { Reply, Copy, Pencil, Trash2, Send, CheckCircle } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 
-import Reanimated, { useAnimatedStyle, SharedValue } from 'react-native-reanimated';
+import Reanimated from 'react-native-reanimated';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
@@ -72,7 +72,6 @@ interface MessageListProps {
   clientName: string;
   headerHeight?: number;
   bottomOffset?: number;
-  keyboardHeight?: SharedValue<number>;
   onReply?: (message: UIMessage) => void;
   onEdit?: (message: UIMessage) => void;
   onDelete?: (message: UIMessage) => void;
@@ -129,7 +128,6 @@ const BubbleMeta = React.memo(function BubbleMeta({
   onImagePress,
   onVideoPress,
   flashOpacity,
-  dropdownOptions,
 }: {
   item: UIMessage;
   themeColors: ThemeColors;
@@ -144,7 +142,6 @@ const BubbleMeta = React.memo(function BubbleMeta({
   onImagePress?: (images: any[], senderName: string, isSent: boolean, messageTimestamp?: Date | string) => void;
   onVideoPress?: (video: any, senderName: string, isSent: boolean, messageTimestamp?: Date | string) => void;
   flashOpacity?: Animated.Value;
-  dropdownOptions: DropdownMenuOption[];
 }) {
   const [metaWidth, setMetaWidth] = useState(0);
   const [spaceWidth, setSpaceWidth] = useState(0);
@@ -350,11 +347,9 @@ const BubbleMeta = React.memo(function BubbleMeta({
   );
 
   return (
-    <ContextMenuWrapper options={dropdownOptions}>
-      <View ref={registerRef} style={bubbleStyle}>
-        {bubbleContent}
-      </View>
-    </ContextMenuWrapper>
+    <View ref={registerRef} style={bubbleStyle}>
+      {bubbleContent}
+    </View>
   );
 });
 
@@ -367,6 +362,7 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
   message,
   onHorizontalDragStart,
   onHorizontalDragEnd,
+  dropdownOptions,
 }: {
   children: React.ReactNode;
   themeColors: ThemeColors;
@@ -376,6 +372,7 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
   message: UIMessage;
   onHorizontalDragStart?: () => void;
   onHorizontalDragEnd?: () => void;
+  dropdownOptions: DropdownMenuOption[];
 }) {
   const MAX = 100;
   const THRESHOLD = 60; // pixels to trigger reply
@@ -405,6 +402,17 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
     [translateX]
   );
 
+  // Bubble translateX: positive for sent (right), negative for received (left)
+  const bubbleTranslateX = useMemo(
+    () =>
+      translateX.interpolate({
+        inputRange: [0, MAX],
+        outputRange: alignRight ? [0, MAX] : [0, -MAX],
+        extrapolate: 'clamp',
+      }),
+    [translateX, alignRight]
+  );
+
   const panResponder = useMemo(
     () =>
       PanResponder.create({
@@ -415,8 +423,9 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
           if (Math.abs(dx) < 5) return false;
           // Must be primarily horizontal - horizontal movement must be at least 2x vertical
           if (Math.abs(dx) < Math.abs(dy) * 2) return false;
-          // Only trigger on right swipe
-          if (dx <= 0) return false;
+          // Direction-aware: sent (alignRight) = right swipe, received = left swipe
+          if (alignRight && dx <= 0) return false;
+          if (!alignRight && dx >= 0) return false;
           return true;
         },
         onPanResponderGrant: () => {
@@ -494,45 +503,49 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
           return !isDraggingRef.current;
         },
       }),
-    [onCancelLongPress, translateX, onReply, message, onHorizontalDragStart, onHorizontalDragEnd]
+    [onCancelLongPress, translateX, onReply, message, onHorizontalDragStart, onHorizontalDragEnd, alignRight]
   );
 
   return (
-    <View
-      style={[
-        styles.swipeContainer,
-        alignRight ? styles.swipeContainerRight : styles.swipeContainerLeft,
-      ]}
-    >
-      {/* Underlay (revealed as bubble moves right) */}
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.replyUnderlay,
-          {
-            opacity: iconOpacity,
-            transform: [{ scale: iconScale }],
-          },
-        ]}
-      >
-        <View style={[styles.replyIconContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
-          <PlatformIcon
-            sf="arrowshape.turn.up.left.fill"
-            IconComponent={Reply}
-            size={16}
-            color={themeColors.primary}
-          />
-        </View>
-      </Animated.View>
-
-      {/* Bubble */}
-      <Animated.View
-        style={[styles.swipeBubbleHost, { transform: [{ translateX }] }]}
+    <ContextMenuWrapper options={dropdownOptions}>
+      <View
+        style={styles.swipeContainer}
         {...panResponder.panHandlers}
       >
-        {children}
-      </Animated.View>
-    </View>
+        {/* Icon - positioned based on alignRight */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.replyUnderlay,
+            alignRight ? styles.underlayLeft : styles.underlayRight,
+            {
+              opacity: iconOpacity,
+              transform: [{ scale: iconScale }],
+            },
+          ]}
+        >
+          <View style={[styles.replyIconContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
+            <PlatformIcon
+              sf="arrowshape.turn.up.left.fill"
+              IconComponent={Reply}
+              size={16}
+              color={themeColors.primary}
+            />
+          </View>
+        </Animated.View>
+
+        {/* Bubble - aligned based on alignRight */}
+        <Animated.View
+          style={[
+            styles.swipeBubbleHost,
+            alignRight ? styles.bubbleAlignRight : styles.bubbleAlignLeft,
+            { transform: [{ translateX: bubbleTranslateX }] },
+          ]}
+        >
+          {children}
+        </Animated.View>
+      </View>
+    </ContextMenuWrapper>
   );
 });
 
@@ -547,7 +560,6 @@ export const MessageList = React.memo(function MessageList({
   clientName,
   headerHeight = 0,
   bottomOffset = 0,
-  keyboardHeight,
   onReply,
   onEdit,
   onDelete,
@@ -1044,6 +1056,7 @@ export const MessageList = React.memo(function MessageList({
             message={item}
             onHorizontalDragStart={() => setIsHorizontalDragActive(true)}
             onHorizontalDragEnd={() => setIsHorizontalDragActive(false)}
+            dropdownOptions={getDropdownOptions(item)}
           >
             <BubbleMeta
               item={item}
@@ -1061,7 +1074,6 @@ export const MessageList = React.memo(function MessageList({
               onImagePress={onImagePress}
               onVideoPress={onVideoPress}
               flashOpacity={flashAnimations.current[item.id]}
-              dropdownOptions={getDropdownOptions(item)}
             />
           </SwipeToReplyBubble>
 
@@ -1120,23 +1132,11 @@ export const MessageList = React.memo(function MessageList({
     };
   }, []);
 
-  // Animated style for keyboard
-  const animatedContainerStyle = useAnimatedStyle(() => {
-    if (!keyboardHeight) return {};
-    return {
-      transform: [{ translateY: -keyboardHeight.value }],
-    };
-  }, [keyboardHeight]);
-
   return (
     <>
       <Reanimated.View
         ref={containerRef}
-        style={[
-          styles.fill,
-          { backgroundColor },
-          keyboardHeight ? animatedContainerStyle : undefined,
-        ]}
+        style={[styles.fill, { backgroundColor }]}
         onLayout={handleLayout}
       >
         <FlashList
@@ -1149,7 +1149,7 @@ export const MessageList = React.memo(function MessageList({
           scrollEnabled={!isHorizontalDragActive}
           contentContainerStyle={{
             paddingHorizontal: 16,
-            // Normal list: paddingTop = space at top (header), paddingBottom = space at bottom (toolbar)
+            // Normal list: paddingTop = space at top (header), paddingBottom = space at bottom (toolbar + 8px gap)
             paddingTop: headerHeight + 16 + STICKY_EXTRA,
             paddingBottom: bottomOffset,
             flexGrow: 1,
@@ -1204,12 +1204,12 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   messageWrapper: {
-    maxWidth: '100%',
+    width: '100%',
     overflow: 'visible',
     position: 'relative',
   },
-  messageWrapperLeft: { alignSelf: 'flex-start' },
-  messageWrapperRight: { alignSelf: 'flex-end' },
+  messageWrapperLeft: {},
+  messageWrapperRight: {},
   messageBubble: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -1328,28 +1328,33 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   swipeContainer: {
+    width: '100%',
     position: 'relative',
-    flexShrink: 1,
     overflow: 'visible',
-  },
-  swipeContainerLeft: {
-    alignSelf: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  swipeContainerRight: {
-    alignSelf: 'flex-end',
-    alignItems: 'flex-end',
   },
   swipeBubbleHost: {
     maxWidth: '80%',
   },
+  bubbleAlignLeft: {
+    alignSelf: 'flex-start',
+  },
+  bubbleAlignRight: {
+    alignSelf: 'flex-end',
+  },
   replyUnderlay: {
     position: 'absolute',
-    left: 16,
     top: 0,
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  underlayLeft: {
+    left: 0,
+    paddingLeft: 16,
+  },
+  underlayRight: {
+    right: 0,
+    paddingRight: 16,
   },
   replyIconContainer: {
     width: 32,

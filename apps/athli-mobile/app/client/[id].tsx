@@ -18,6 +18,7 @@ import {
   Target,
   Heart,
   Pencil,
+  Sparkles,
 } from 'lucide-react-native';
 
 import { PressableScale, PressableOpacity } from 'pressto';
@@ -68,7 +69,10 @@ export default function ClientProfileScreen() {
     router.back();
   };
 
-
+  const handleAssistantPress = () => {
+    haptics.medium();
+    router.push(`/client/${id}/assistant`);
+  };
 
   const handleEditProfilePress = () => {
     haptics.medium();
@@ -236,7 +240,12 @@ export default function ClientProfileScreen() {
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>
           {t('clientDetail.profile')}
         </Text>
-        <View style={styles.headerPlaceholder} />
+        <IconButton
+          icon={{ sf: 'sparkles', IconComponent: Sparkles }}
+          onPress={handleAssistantPress}
+          size="md"
+          color={iconColor}
+        />
       </View>
 
       {/* Profile Card */}
