@@ -13,6 +13,7 @@ import {
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { Image } from 'expo-image';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -494,6 +495,14 @@ export default function ChatDetailScreen() {
     transform: [{ translateY: -keyboardHeight.value }],
   }));
 
+  // Animated bottom offset for toolbar - smoothly transitions as keyboard opens/closes
+  // When keyboard fully closed: bottom = insets.bottom (toolbar above safe area)
+  // When keyboard opens past insets.bottom: bottom = 0 (toolbar flush with keyboard)
+  const toolbarBottomStyle = useAnimatedStyle(() => {
+    'worklet';
+    const bottom = Math.max(0, insets.bottom - keyboardHeight.value);
+    return { bottom };
+  });
 
   const [chat, setChat] = useState<Chat | null>(() => {
     if (chatParam) {
@@ -1277,7 +1286,7 @@ export default function ChatDetailScreen() {
               onImagePress={handleImagePress}
               onVideoPress={handleVideoPress}
               headerHeight={insets.top + 60}
-              bottomOffset={toolbarHeight + 8 + insets.bottom}
+              bottomOffset={toolbarHeight + 8}
             />
           </View>
 
@@ -1306,9 +1315,32 @@ export default function ChatDetailScreen() {
             onStopToggle={handleStopToggle}
             onSendPress={handleSendPress}
             onCancelReply={handleCancelReply}
-            bottomInset={insets.bottom}
+            bottomInset={0}
+            animatedBottomStyle={toolbarBottomStyle}
           />
         </Animated.View>
+
+        {/* Fixed bottom filler - doesn't move with keyboard */}
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: insets.bottom,
+            overflow: 'hidden',
+          }}
+          pointerEvents="none"
+        >
+          <BlurView
+            intensity={30}
+            tint={isDark ? 'dark' : 'light'}
+            style={{
+              flex: 1,
+              backgroundColor: hexToRgba(themeColors.translucentBackground, 0.95),
+            }}
+          />
+        </View>
 
         <MessageReactionsSheet
           visible={reactionsSheetVisible}
