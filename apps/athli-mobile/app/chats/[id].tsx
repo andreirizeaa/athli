@@ -1286,7 +1286,7 @@ export default function ChatDetailScreen() {
               onImagePress={handleImagePress}
               onVideoPress={handleVideoPress}
               headerHeight={insets.top + 60}
-              bottomOffset={toolbarHeight + 8}
+              bottomOffset={toolbarHeight + 8 + insets.bottom}
             />
           </View>
 
