@@ -7,6 +7,8 @@ export type Contact = {
   timestamp: string;
   unreadCount?: number;
   isOnline?: boolean;
+  lastMessageSenderId?: string | null;
+  lastMessageIsRead?: boolean;
 };
 
 export type AttachmentType = 'image' | 'video' | 'pdf';
@@ -15,6 +17,7 @@ export type Message = {
   id: string;
   text: string;
   timestamp: string;
+  sentAt?: Date; // Full date for grouping messages by day
   isSent: boolean;
   isRead?: boolean;
   reaction?: string;

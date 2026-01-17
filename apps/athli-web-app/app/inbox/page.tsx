@@ -43,6 +43,7 @@ import {
   type Contact,
   type Message,
 } from '@/components/app/app-shell';
+import { useQueryClient } from '@tanstack/react-query';
 import { useConversations } from '@/hooks/use-conversations';
 import { useMessages } from '@/hooks/use-messages';
 import { useRealtimeConversations, useRealtimeMessages, useSyncReadReceipt, useMessageMerging } from '@/hooks/use-realtime-messaging';
@@ -158,6 +159,7 @@ const InboxUnifiedLoader = ({ isNavigating }: { isNavigating: boolean }) => {
 
 const InboxPage = () => {
   const t = useTranslations();
+  const queryClient = useQueryClient();
   const router = useRouter();
   const params = useParams();
   const contactIdFromPath = params?.contactId as string | undefined;
@@ -485,9 +487,11 @@ const InboxPage = () => {
       name: conv.other_user_name || 'Unknown',
       avatar: conv.other_user_avatar,
       lastMessage: conv.last_message_preview || '',
-      timestamp: conv.last_message_at ? format(conv.last_message_at, 'h:mm a') : '',
+      timestamp: conv.last_message_at ? format(conv.last_message_at, 'HH:mm') : '',
       unreadCount: conv.unread_count || 0,
       isOnline: false, // TODO: Add online status tracking
+      lastMessageSenderId: conv.last_message_sender_id,
+      lastMessageIsRead: conv.last_message_is_read,
     }));
   }, [conversations]);
 
@@ -503,7 +507,8 @@ const InboxPage = () => {
     return mergedMessages.map((msg) => ({
       id: msg.id,
       text: msg.text || '',  // UIMessage.text (already transformed from content)
-      timestamp: format(new Date(msg.sent_at), 'h:mm a'),
+      timestamp: format(new Date(msg.sent_at), 'HH:mm'),
+      sentAt: new Date(msg.sent_at), // Full date for date pill grouping
       isSent: msg.isSent,    // UIMessage.isSent (already computed)
       isRead: msg.isRead,    // UIMessage.isRead (already computed)
       images: msg.attachments
@@ -1055,6 +1060,9 @@ const InboxPage = () => {
       // This ensures message appears even if realtime isn't working
       setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
       await refetchMessages();
+
+      // Invalidate conversations to update last_message_preview and last_message_at
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
     } catch (error) {
       console.error('Failed to send message:', error);
 
@@ -1063,7 +1071,7 @@ const InboxPage = () => {
 
       throw error; // Let MessageInputProvider handle the toast
     }
-  }, [selectedContactId, selectedConversation, user?.id, refetchMessages]);
+  }, [selectedContactId, selectedConversation, user?.id, refetchMessages, queryClient]);
 
   // Handle message reactions
   const handleReaction = React.useCallback(async (messageId: string, emoji: string) => {
@@ -1149,9 +1157,10 @@ const InboxPage = () => {
     const newMessage: Message = {
       id: `m${Date.now()}`,
       text: `📎 ${file.name}`,
-      timestamp: new Date().toLocaleTimeString('en-US', {
-        hour: 'numeric',
+      timestamp: new Date().toLocaleTimeString('en-GB', {
+        hour: '2-digit',
         minute: '2-digit',
+        hour12: false,
       }),
       isSent: true,
     };

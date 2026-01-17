@@ -726,6 +726,8 @@ export const enMessages = {
     comments: 'Comments',
     active: 'Active',
     archived: 'Archived',
+    today: 'Today',
+    yesterday: 'Yesterday',
     deleteSection: 'Delete Section',
     deleteSectionDescription: 'Are you sure you want to delete this section? This action cannot be undone.',
   },

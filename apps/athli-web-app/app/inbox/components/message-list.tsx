@@ -74,49 +74,27 @@ export const MessageList = React.memo(function MessageList({
         return match ? match[1] : timestamp;
     };
 
-    const parseTimeToMinutes = (timeString: string): number => {
-        const match = timeString.match(/(\d+):(\d+)\s*(AM|PM)?/i);
-        if (!match) return 0;
+    // Helper functions for date pills
+    const isSameDay = (a: Date, b: Date) =>
+        a.getFullYear() === b.getFullYear() &&
+        a.getMonth() === b.getMonth() &&
+        a.getDate() === b.getDate();
 
-        let hours = parseInt(match[1], 10);
-        const minutes = parseInt(match[2], 10);
-        const period = match[3]?.toUpperCase();
+    const getDatePillLabel = (date: Date) => {
+        const now = new Date();
+        const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const diffDays = Math.round(
+            (startOfDay(now).getTime() - startOfDay(date).getTime()) / (1000 * 60 * 60 * 24)
+        );
 
-        if (period === 'PM' && hours !== 12) {
-            hours += 12;
-        } else if (period === 'AM' && hours === 12) {
-            hours = 0;
-        }
+        if (diffDays === 0) return t('general.today');
+        if (diffDays === 1) return t('general.yesterday');
 
-        return hours * 60 + minutes;
+        return date
+            .toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })
+            .replace(',', '');
     };
 
-    const getTimeDifferenceInMinutes = (time1: string, time2: string): number => {
-        const minutes1 = parseTimeToMinutes(time1);
-        const minutes2 = parseTimeToMinutes(time2);
-        if (minutes2 < minutes1) {
-            return 24 * 60 - minutes1 + minutes2;
-        }
-        return minutes2 - minutes1;
-    };
-
-    const isInSameGroup = (message: Message, index: number, messages: Message[]): boolean => {
-        if (index === messages.length - 1) {
-            return false;
-        }
-
-        const nextMessage = messages[index + 1];
-        if (!nextMessage) {
-            return false;
-        }
-
-        if (nextMessage.isSent !== message.isSent) {
-            return false;
-        }
-
-        const timeDiff = getTimeDifferenceInMinutes(message.timestamp, nextMessage.timestamp);
-        return timeDiff <= 2;
-    };
 
     const handleDownload = (data: string, filename: string, mimeType: string) => {
         const byteString = atob(data.split(',')[1]);
@@ -148,27 +126,44 @@ export const MessageList = React.memo(function MessageList({
         <ScrollArea className="flex-1 min-h-0">
             <div className="flex flex-col px-4 pt-2 pb-4">
                 {messages.map((message, index) => {
+                    const nextMessage = messages[index + 1];
+
+                    // Check if this is the last message before sender changes or day changes
                     const isLastInSequence =
                         index === messages.length - 1 ||
-                        messages[index + 1]?.isSent !== message.isSent;
+                        nextMessage?.isSent !== message.isSent ||
+                        (message.sentAt && nextMessage?.sentAt && !isSameDay(message.sentAt, nextMessage.sentAt));
 
-                    const inSameGroup = isInSameGroup(message, index, messages);
+                    // Check if we need to show a date pill
+                    const previousMessage = index > 0 ? messages[index - 1] : null;
+                    const showDatePill = message.sentAt && (
+                        !previousMessage?.sentAt ||
+                        !isSameDay(previousMessage.sentAt, message.sentAt)
+                    );
 
                     return (
-                        <div
-                            key={message.id}
-                            className={cn(
-                                'flex flex-col relative',
-                                message.isSent ? 'items-end' : 'items-start',
-                                inSameGroup ? 'mb-1' : 'mb-4'
+                        <React.Fragment key={message.id}>
+                            {/* Date Divider Pill */}
+                            {showDatePill && message.sentAt && (
+                                <div className="flex justify-center w-full my-3">
+                                    <div className="px-3 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium">
+                                        {getDatePillLabel(message.sentAt)}
+                                    </div>
+                                </div>
                             )}
-                        >
-                            <div className={cn('flex items-center gap-2 group', message.isSent && 'flex-row-reverse')}>
-                                <div className="max-w-[60%] relative">
+                            <div
+                                className={cn(
+                                    'flex flex-col relative',
+                                    message.isSent ? 'items-end' : 'items-start',
+                                    isLastInSequence ? 'mb-4' : 'mb-1'
+                                )}
+                            >
+                            <div className={cn('flex items-center gap-2 group max-w-full', message.isSent && 'flex-row-reverse')}>
+                                <div className="max-w-[80%] min-w-0 relative">
                                     {/* Main Message Bubble */}
                                 <div
                                     className={cn(
-                                        'rounded-xl px-3 py-1.5 relative',
+                                        'rounded-[11px] px-3 py-1.5 relative',
                                         message.isSent
                                             ? 'bg-primary text-primary-foreground'
                                             : 'bg-sidebar text-foreground',
@@ -179,7 +174,7 @@ export const MessageList = React.memo(function MessageList({
                                     {/* WhatsApp-style dropdown button */}
                                     <div
                                         className={cn(
-                                            'absolute -top-1 opacity-0 group-hover:opacity-100 transition-opacity z-20',
+                                            'absolute -top-1 opacity-0 group-hover:opacity-100 transition-opacity z-50',
                                             message.isSent ? '-right-1' : '-left-1'
                                         )}
                                     >
@@ -190,13 +185,13 @@ export const MessageList = React.memo(function MessageList({
                                                     variant="ghost"
                                                     size="icon"
                                                     className={cn(
-                                                        'h-6 w-6 rounded-md',
+                                                        'h-5 w-5 rounded-sm p-0',
                                                         'bg-background border border-border shadow-sm',
                                                         'hover:border-primary',
                                                         'backdrop-blur-sm'
                                                     )}
                                                 >
-                                                    <ChevronDown className="h-3 w-3 text-foreground" />
+                                                    <ChevronDown className="h-2.5 w-2.5 text-foreground" />
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent
@@ -490,10 +485,8 @@ export const MessageList = React.memo(function MessageList({
 
                                     {/* Text message */}
                                     {message.text.trim() && (
-                                        <p className={cn(
-                                            "text-sm whitespace-pre-wrap break-words mb-1",
-                                            message.isSent ? "text-right" : "text-left"
-                                        )}>
+                                        <p className="text-sm whitespace-pre-wrap break-words mb-1"
+                                        style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                                             {message.text}
                                         </p>
                                     )}
@@ -502,7 +495,7 @@ export const MessageList = React.memo(function MessageList({
                                     <div className="flex items-center justify-end gap-0.5 mt-0.5">
                                         <span
                                             className={cn(
-                                                'text-[11px] font-mono leading-none',
+                                                'text-[9px] leading-none',
                                                 message.isSent
                                                     ? 'text-primary-foreground/70'
                                                     : 'text-muted-foreground'
@@ -515,14 +508,14 @@ export const MessageList = React.memo(function MessageList({
                                                 {message.isRead ? (
                                                     <CheckCircle
                                                         className={cn(
-                                                            'h-[11px] w-[11px]',
+                                                            'h-[9px] w-[9px]',
                                                             'text-primary-foreground/70'
                                                         )}
                                                     />
                                                 ) : (
                                                     <Send
                                                         className={cn(
-                                                            'h-[11px] w-[11px]',
+                                                            'h-[9px] w-[9px]',
                                                             'text-primary-foreground/70'
                                                         )}
                                                     />
@@ -599,7 +592,8 @@ export const MessageList = React.memo(function MessageList({
                                     }}
                                 />
                             )}
-                        </div>
+                            </div>
+                        </React.Fragment>
                     );
                 })}
                 <div ref={messagesEndRef} />

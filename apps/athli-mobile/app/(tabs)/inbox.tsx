@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,8 +22,19 @@ import {
   archiveCoach,
   markCoachAsRead,
   type Coach,
+  type InboxMessage,
 } from '@/services/inbox-service';
 import { useRealtimeConversations } from '@/hooks/use-realtime-messaging';
+
+// Messages cache for instant navigation
+type MessagesCache = {
+  [coachId: string]: {
+    messages: InboxMessage[];
+    fetchedAt: number;
+  };
+};
+
+const MESSAGES_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 export default function InboxScreen() {
   const router = useRouter();
@@ -70,6 +82,75 @@ export default function InboxScreen() {
     },
   });
 
+  // Track if initial load has happened
+  const hasLoadedRef = useRef(false);
+
+  // Messages cache for instant navigation
+  const messagesCacheRef = useRef<MessagesCache>({});
+
+  const getCachedMessages = useCallback((coachId: string): InboxMessage[] | null => {
+    const cached = messagesCacheRef.current[coachId];
+    if (!cached) return null;
+
+    // Check if cache is still valid
+    const now = Date.now();
+    if (now - cached.fetchedAt > MESSAGES_CACHE_TTL_MS) {
+      // Cache expired, remove it
+      delete messagesCacheRef.current[coachId];
+      return null;
+    }
+
+    return cached.messages;
+  }, []);
+
+  const prefetchMessages = useCallback(async (coachId: string) => {
+    const cached = getCachedMessages(coachId);
+    if (cached) return cached;
+
+    try {
+      const messages = await getInboxMessages(coachId);
+      messagesCacheRef.current[coachId] = {
+        messages,
+        fetchedAt: Date.now(),
+      };
+      return messages;
+    } catch (error) {
+      console.error('[Inbox] Error prefetching messages:', error);
+      return [];
+    }
+  }, [getCachedMessages]);
+
+  // Extracted loadCoaches function for reuse
+  const loadCoaches = useCallback(async (showLoading = true) => {
+    if (!isReady || !isAuthenticated) {
+      return;
+    }
+
+    if (showLoading) {
+      setIsLoading(true);
+    }
+    try {
+      console.log('[InboxScreen] Loading coaches...');
+      const fetchedCoaches = await getCoaches();
+      // Filter to only show coaches that have messages
+      const coachesWithMessages = await Promise.all(
+        fetchedCoaches.map(async (coach) => {
+          const messages = await getInboxMessages(coach.id);
+          return messages.length > 0 ? coach : null;
+        }),
+      );
+      const filtered = coachesWithMessages.filter((coach) => coach !== null) as Coach[];
+      setCoaches(filtered);
+      console.log('[InboxScreen] Coaches loaded successfully');
+    } catch (error) {
+      console.error('[InboxScreen] Failed to load coaches:', error);
+    } finally {
+      if (showLoading) {
+        setIsLoading(false);
+      }
+    }
+  }, [isReady, isAuthenticated]);
+
   // Load coaches only when auth is ready (session + profile loaded)
   useEffect(() => {
     // If auth is not ready yet, keep loading state
@@ -86,30 +167,38 @@ export default function InboxScreen() {
     }
 
     // Auth is ready and authenticated - fetch coaches
-    const loadCoaches = async () => {
-      setIsLoading(true);
-      try {
-        console.log('[InboxScreen] Loading coaches...');
-        const fetchedCoaches = await getCoaches();
-        // Filter to only show coaches that have messages
-        const coachesWithMessages = await Promise.all(
-          fetchedCoaches.map(async (coach) => {
-            const messages = await getInboxMessages(coach.id);
-            return messages.length > 0 ? coach : null;
-          }),
-        );
-        const filtered = coachesWithMessages.filter((coach) => coach !== null) as Coach[];
-        setCoaches(filtered);
-        console.log('[InboxScreen] Coaches loaded successfully');
-      } catch (error) {
-        console.error('[InboxScreen] Failed to load coaches:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    loadCoaches(true);
+    hasLoadedRef.current = true;
+  }, [isReady, isAuthenticated, loadCoaches]);
 
-    loadCoaches();
-  }, [isReady, isAuthenticated]);
+  // Refetch coaches when screen regains focus (to update last_message_preview)
+  useFocusEffect(
+    useCallback(() => {
+      // Only refetch if initial load has happened (avoid double load)
+      if (hasLoadedRef.current && isReady && isAuthenticated) {
+        loadCoaches(false); // Don't show loading spinner on refocus
+      }
+    }, [loadCoaches, isReady, isAuthenticated])
+  );
+
+  // Pre-fetch messages for top coaches when list loads
+  useEffect(() => {
+    if (coaches.length === 0 || isLoading) return;
+
+    // Pre-fetch messages for the first 5 coaches (most recent)
+    const sortedCoaches = [...coaches].sort((a, b) => {
+      const timeA = a.last_message_at?.getTime() ?? 0;
+      const timeB = b.last_message_at?.getTime() ?? 0;
+      return timeB - timeA;
+    });
+
+    const topCoaches = sortedCoaches.slice(0, 5);
+
+    // Pre-fetch in background (don't await)
+    topCoaches.forEach((coach) => {
+      prefetchMessages(coach.id);
+    });
+  }, [coaches, isLoading, prefetchMessages]);
 
   const filteredCoaches = useMemo(() => {
     let filtered = coaches;
@@ -155,16 +244,30 @@ export default function InboxScreen() {
       // Find the coach object
       const coach = coaches.find((c) => c.id === coachId);
       if (coach) {
-        // Load messages before navigating
-        const messages = await getInboxMessages(coachId);
-        router.push({
-          pathname: '/inbox/[id]',
-          params: {
-            id: coachId,
-            coach: JSON.stringify(coach),
-            messages: JSON.stringify(messages),
-          },
-        });
+        // Try to get cached messages first for instant navigation
+        const cachedMessages = getCachedMessages(coachId);
+        if (cachedMessages) {
+          // Navigate immediately with cached messages
+          router.push({
+            pathname: '/inbox/[id]',
+            params: {
+              id: coachId,
+              coach: JSON.stringify(coach),
+              messages: JSON.stringify(cachedMessages),
+            },
+          });
+        } else {
+          // No cache - load messages before navigating
+          const messages = await getInboxMessages(coachId);
+          router.push({
+            pathname: '/inbox/[id]',
+            params: {
+              id: coachId,
+              coach: JSON.stringify(coach),
+              messages: JSON.stringify(messages),
+            },
+          });
+        }
       } else {
         // Fallback to just id if coach not found
         router.push({ pathname: '/inbox/[id]', params: { id: coachId } });

@@ -1,16 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Archive, MailCheck, CheckCircle, User } from 'lucide-react-native';
+import { Archive, MailCheck, Send, CheckCircle, User } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useColorScheme, useThemePreference } from '@/stores';
+import { useColorScheme, useThemePreference, useAuthSessionStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { PressableScale } from 'pressto';
-import { getChatMessages, type Chat, type ChatMessage } from '@/services/chats-service';
+import { type Chat } from '@/services/chats-service';
 
 type ChatListItemProps = {
   chat: Chat;
@@ -71,21 +71,10 @@ export const ChatListItem = ({
   const colorScheme = useColorScheme();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const [lastMessage, setLastMessage] = useState<ChatMessage | null>(null);
+  const userId = useAuthSessionStore((state) => state.userId);
 
-  useEffect(() => {
-    const loadLastMessage = async () => {
-      const messages = await getChatMessages(chat.id);
-      if (messages.length > 0) {
-        // Get the last message (most recent)
-        const sortedMessages = [...messages].sort(
-          (a, b) => b.sent_at.getTime() - a.sent_at.getTime(),
-        );
-        setLastMessage(sortedMessages[0]);
-      }
-    };
-    loadLastMessage();
-  }, [chat.id]);
+  // Check if we sent the last message
+  const weSentLastMessage = chat.last_message_sender_id === userId;
 
   const handlePress = () => {
     onPress(chat.id);
@@ -245,14 +234,14 @@ export const ChatListItem = ({
                 </View>
                 <View style={styles.messageFooter}>
                   <View style={styles.lastMessageContainer}>
-                    {lastMessage?.isSent && (
+                    {weSentLastMessage && chat.last_message_preview && (
                       <View style={styles.readReceiptContainer}>
                         <PlatformIcon
-                          sf="checkmark.circle"
-                          IconComponent={CheckCircle}
+                          sf={chat.last_message_is_read ? "checkmark.circle" : "paperplane"}
+                          IconComponent={chat.last_message_is_read ? CheckCircle : Send}
                           size={iconSizes.extraSmallIcons}
                           color={
-                            lastMessage.isRead
+                            chat.last_message_is_read
                               ? themeColors.primary
                               : themeColors.mutedText
                           }
@@ -264,13 +253,13 @@ export const ChatListItem = ({
                         styles.lastMessage,
                         {
                           color: themeColors.mutedText,
-                          fontStyle: (lastMessage?.text || chat.last_message_preview) ? 'normal' : 'italic',
-                          opacity: (lastMessage?.text || chat.last_message_preview) ? 1 : 0.6,
+                          fontStyle: chat.last_message_preview ? 'normal' : 'italic',
+                          opacity: chat.last_message_preview ? 1 : 0.6,
                         },
                       ]}
                       numberOfLines={2}
                     >
-                      {lastMessage?.text || chat.last_message_preview || t('chats.beFirstToMessage')}
+                      {chat.last_message_preview || t('chats.beFirstToMessage')}
                     </Text>
                   </View>
                   <View style={styles.rightColumn}>

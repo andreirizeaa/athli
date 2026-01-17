@@ -40,13 +40,22 @@ export const coachMessagingController = {
 
             if (participantsError) throw participantsError;
 
-            // Get read receipts for unread count
+            // Get read receipts for unread count (current user)
             const { data: readReceipts, error: receiptsError } = await supabase
                 .from('message_read_receipts')
                 .select('*')
                 .eq('user_id', userId);
 
             if (receiptsError) throw receiptsError;
+
+            // Get all read receipts for these conversations (to compute last_message_is_read)
+            const conversationIds = conversations.map((c) => c.id);
+            const { data: allReadReceipts, error: allReceiptsError } = await supabase
+                .from('message_read_receipts')
+                .select('*')
+                .in('conversation_id', conversationIds);
+
+            if (allReceiptsError) throw allReceiptsError;
 
             // Get other user IDs (client if user is coach, coach if user is client)
             const otherUserIds = conversations.map((conv) =>
@@ -104,12 +113,25 @@ export const coachMessagingController = {
                         unreadCount = count || 0;
                     }
 
+                    // Compute last_message_is_read: true if we sent the last message and other user has read it
+                    let lastMessageIsRead = false;
+                    if (conv.last_message_sender_id === userId && conv.last_message_at) {
+                        const otherReceipt = allReadReceipts?.find(
+                            (r) => r.conversation_id === conv.id && r.user_id === otherUserId,
+                        );
+                        if (otherReceipt?.last_read_at) {
+                            lastMessageIsRead =
+                                new Date(otherReceipt.last_read_at) >= new Date(conv.last_message_at);
+                        }
+                    }
+
                     return {
                         ...conv,
                         other_user_id: otherUserId,
                         other_user_name: otherProfile?.name || 'Unknown',
                         other_user_avatar: otherProfile?.profile_picture_url,
                         unread_count: unreadCount,
+                        last_message_is_read: lastMessageIsRead,
                     };
                 }),
             );
