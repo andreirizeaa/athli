@@ -11,6 +11,8 @@
 import { cn } from '@/lib/general/utils';
 import { type Contact } from '@/components/app/app-shell';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Send, CheckCircle } from 'lucide-react';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 const getInitials = (name: string) => {
   return name
@@ -34,6 +36,10 @@ export function ContactListItem({
   onViewProfile?: () => void;
   isCollapsed?: boolean;
 }) {
+  const { user } = useUserProfile();
+
+  // Check if we sent the last message
+  const weSentLastMessage = contact.lastMessageSenderId === user?.id;
   return (
     <div
       className={cn(
@@ -66,6 +72,13 @@ export function ContactListItem({
                 {contact.unreadCount}
               </span>
             ) : null}
+            {weSentLastMessage && contact.lastMessage && (
+              contact.lastMessageIsRead ? (
+                <CheckCircle className="h-3.5 w-3.5 flex-none text-primary" />
+              ) : (
+                <Send className="h-3.5 w-3.5 flex-none text-muted-foreground" />
+              )
+            )}
             <span className={cn(
               "truncate text-start text-xs flex-1",
               contact.lastMessage ? "text-muted-foreground" : "text-muted-foreground/60 italic"

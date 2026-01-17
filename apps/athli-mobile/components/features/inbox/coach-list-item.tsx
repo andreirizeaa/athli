@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Archive, MailCheck } from 'lucide-react-native';
+import { Archive, MailCheck, Send, CheckCircle } from 'lucide-react-native';
 
-import { typography } from '@/constants/typography';
-import { useColorScheme, useThemePreference } from '@/stores';
+import { typography, iconSizes } from '@/constants/typography';
+import { useColorScheme, useThemePreference, useAuthSessionStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
+import { PlatformIcon } from '@/components/ui/platform-icon';
 import { PressableScale } from 'pressto';
 import { type Coach } from '@/services/inbox-service';
 
@@ -63,6 +64,10 @@ export const CoachListItem = ({
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const colorScheme = useColorScheme();
+  const userId = useAuthSessionStore((state) => state.userId);
+
+  // Check if we sent the last message
+  const weSentLastMessage = coach.last_message_sender_id === userId;
 
   const handlePress = () => {
     onPress(coach.id);
@@ -181,6 +186,20 @@ export const CoachListItem = ({
             </View>
             <View style={styles.messageFooter}>
               <View style={styles.lastMessageContainer}>
+                {weSentLastMessage && coach.last_message_preview && (
+                  <View style={styles.readReceiptContainer}>
+                    <PlatformIcon
+                      sf={coach.last_message_is_read ? "checkmark.circle" : "paperplane"}
+                      IconComponent={coach.last_message_is_read ? CheckCircle : Send}
+                      size={iconSizes.extraSmallIcons}
+                      color={
+                        coach.last_message_is_read
+                          ? themeColors.primary
+                          : themeColors.mutedText
+                      }
+                    />
+                  </View>
+                )}
                 <Text
                   style={[
                     styles.lastMessage,
@@ -326,6 +345,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginRight: 8,
+  },
+  readReceiptContainer: {
+    marginRight: 4,
+    marginTop: 2,
   },
   lastMessage: {
     ...typography.p3,

@@ -118,6 +118,7 @@ export interface Conversation {
   last_message_at: Date | null;
   last_message_preview: string | null;
   last_message_type: MessageType | null;
+  last_message_sender_id: string | null;
 
   created_at: Date;
   updated_at: Date;
@@ -127,6 +128,7 @@ export interface Conversation {
   other_user_name?: string;
   other_user_avatar?: string | null;
   unread_count?: number;
+  last_message_is_read?: boolean; // True if recipient has read our last message (only relevant when we sent it)
 }
 
 /**

@@ -8,9 +8,10 @@ import {
   TextInput,
   View,
   Text,
+  unstable_batchedUpdates,
 } from 'react-native';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
-import { useSharedValue } from 'react-native-reanimated';
+import { useSharedValue, withTiming } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -42,7 +43,7 @@ import {
 import * as FileSystem from 'expo-file-system/legacy';
 import { type IWaveformRef, PlayerState, FinishMode } from '@/components/features/audio';
 
-import { useThemePreference, useColorScheme } from '@/stores';
+import { useThemePreference, useColorScheme, useChatsStore, useAuthSessionStore } from '@/stores';
 import { hexToRgba } from '@/utils/colorUtils';
 import { useTranslations } from '@/stores';
 import { haptics } from '@/utils/haptics';
@@ -76,7 +77,6 @@ import {
   useMessageMerging,
 } from '@/hooks/use-realtime-messaging';
 import { useSendMessageWithAttachment } from '@/hooks/use-file-upload';
-import { supabase } from '@/lib/supabase';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 
 const BAR_INTERVAL_MS = 100; // ✅ 10 bars/sec
@@ -492,6 +492,7 @@ export default function ChatDetailScreen() {
 
   // Dynamic toolbar height - tracks actual height for proper scroll offset
   const [toolbarHeight, setToolbarHeight] = useState(60 + insets.bottom);
+  const toolbarHeightAnimated = useSharedValue(60 + insets.bottom);
 
   const [chat, setChat] = useState<Chat | null>(() => {
     if (chatParam) {
@@ -525,7 +526,9 @@ export default function ChatDetailScreen() {
     return [];
   });
   const [optimisticMessages, setOptimisticMessages] = useState<OptimisticMessage[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Get current user ID synchronously from auth store (already available)
+  const currentUserId = useAuthSessionStore((state) => state.userId);
 
   const [isLoading, setIsLoading] = useState(!chatParam || !messagesParam);
   const [reactionsSheetVisible, setReactionsSheetVisible] = useState(false);
@@ -590,17 +593,6 @@ export default function ChatDetailScreen() {
   const [durationLabel, setDurationLabel] = useState('0:00');
   const lastVoiceNoteDurationMsRef = useRef(0);
   const recordingStartedAtMsRef = useRef<number | null>(null);
-
-  // Get current user ID
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setCurrentUserId(user.id);
-      }
-    };
-    getCurrentUser();
-  }, []);
 
   // Realtime messages subscription (uses broadcast events for scalability)
   const { realtimeMessages } = useRealtimeMessages({
@@ -1110,11 +1102,19 @@ export default function ChatDetailScreen() {
         parentMessageId,
       });
 
-      // Remove optimistic message and refetch to get the real one
-      // This ensures message appears even if realtime isn't working
-      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      // Fetch first while optimistic is still visible
       const updatedMessages = await getChatMessages(id);
-      setMessages(updatedMessages);
+      // Batch both state updates to prevent flicker
+      unstable_batchedUpdates(() => {
+        setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+        setMessages(updatedMessages);
+      });
+
+      // Update the messages cache with fresh data
+      useChatsStore.getState().setCachedMessages(id, updatedMessages);
+
+      // Refresh chats list to update last_message_preview and last_message_at
+      useChatsStore.getState().loadChats();
     } catch (error) {
       // Mark as failed (keep in optimistic list but update status)
       setOptimisticMessages((prev) =>
@@ -1296,7 +1296,10 @@ export default function ChatDetailScreen() {
           onCancelReply={handleCancelReply}
           bottomInset={insets.bottom}
           keyboardHeight={keyboardHeight}
-          onHeightChange={setToolbarHeight}
+          onHeightChange={(height) => {
+            setToolbarHeight(height);
+            toolbarHeightAnimated.value = withTiming(height, { duration: 150 });
+          }}
         />
 
         <MessageReactionsSheet

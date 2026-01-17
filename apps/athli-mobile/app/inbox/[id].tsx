@@ -5,9 +5,10 @@ import {
   StyleSheet,
   TextInput,
   View,
+  unstable_batchedUpdates,
 } from 'react-native';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
-import { useSharedValue } from 'react-native-reanimated';
+import { useSharedValue, withTiming } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -22,7 +23,7 @@ import {
 import * as FileSystem from 'expo-file-system/legacy';
 import { type IWaveformRef, PlayerState, FinishMode } from '@/components/features/audio';
 
-import { useThemePreference, useColorScheme } from '@/stores';
+import { useThemePreference, useColorScheme, useAuthSessionStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { MessageList } from '@/components/features/message/message-list-flashlist';
 import { MessageReactionsSheet } from '@/components/features/message/message-reactions-sheet';
@@ -45,7 +46,6 @@ import {
   useRealtimeMessages,
   useMessageMerging,
 } from '@/hooks/use-realtime-messaging';
-import { supabase } from '@/lib/supabase';
 
 const BAR_INTERVAL_MS = 100;
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -127,6 +127,7 @@ export default function InboxDetailScreen() {
 
   // Dynamic toolbar height - tracks actual height including reply preview and attachment picker
   const [toolbarHeight, setToolbarHeight] = useState(60 + insets.bottom);
+  const toolbarHeightAnimated = useSharedValue(60 + insets.bottom);
   const prevToolbarHeightRef = useRef(toolbarHeight);
 
   const [coach, setCoach] = useState<Coach | null>(() => {
@@ -155,7 +156,9 @@ export default function InboxDetailScreen() {
     return [];
   });
   const [optimisticMessages, setOptimisticMessages] = useState<OptimisticMessage[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Get current user ID synchronously from auth store (already available)
+  const currentUserId = useAuthSessionStore((state) => state.userId);
 
   const [isLoading, setIsLoading] = useState(!coachParam || !messagesParam);
   const [reactionsSheetVisible, setReactionsSheetVisible] = useState(false);
@@ -202,17 +205,6 @@ export default function InboxDetailScreen() {
   const [durationLabel, setDurationLabel] = useState('0:00');
   const lastVoiceNoteDurationMsRef = useRef(0);
   const recordingStartedAtMsRef = useRef<number | null>(null);
-
-  // Get current user ID
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setCurrentUserId(user.id);
-      }
-    };
-    getCurrentUser();
-  }, []);
 
   // Realtime messages subscription (uses broadcast events for scalability)
   const { realtimeMessages } = useRealtimeMessages({
@@ -675,11 +667,13 @@ export default function InboxDetailScreen() {
         parentMessageId,
       });
 
-      // Remove optimistic message and refetch to get the real one
-      // This ensures message appears even if realtime isn't working
-      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      // Fetch first while optimistic is still visible
       const updatedMessages = await getInboxMessages(id);
-      setMessages(updatedMessages);
+      // Batch both state updates to prevent flicker
+      unstable_batchedUpdates(() => {
+        setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+        setMessages(updatedMessages);
+      });
     } catch (error) {
       console.error('[Inbox] Failed to send message:', error);
       // Mark as failed
@@ -774,6 +768,7 @@ export default function InboxDetailScreen() {
 
   const handleToolbarHeightChange = (height: number) => {
     setToolbarHeight(height);
+    toolbarHeightAnimated.value = withTiming(height, { duration: 150 });
   };
 
   if (isLoading) {
@@ -845,6 +840,7 @@ export default function InboxDetailScreen() {
         onCancelReply={handleCancelReply}
         bottomInset={insets.bottom}
         keyboardHeight={keyboardHeight}
+        onHeightChange={handleToolbarHeightChange}
       />
 
       <MessageReactionsSheet

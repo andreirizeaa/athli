@@ -20,8 +20,8 @@ import Reanimated, { useAnimatedStyle, SharedValue } from 'react-native-reanimat
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { type ThemeColors } from '@/constants/theme';
-import { type ChatMessage, reactTo } from '@/services/chats-service';
-import { type UIMessage } from '@athli/shared-types';
+import { reactTo } from '@/services/chats-service';
+import { type UIMessage, type MessageAttachment } from '@athli/shared-types';
 import { type DropdownMenuOption, ContextMenuWrapper } from '@/components/ui/dropdown-menu';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
@@ -32,28 +32,54 @@ import { MessageVideoPreview } from '@/components/features/message/message-video
 import { MessageAudioPreview } from '@/components/features/message/message-audio-preview';
 import { useColorScheme, useThemePreference } from '@/stores';
 
+// Helper functions to extract attachments by type
+const getImageAttachments = (msg: UIMessage): MessageAttachment[] =>
+  msg.attachments?.filter(a => a.mime_type?.startsWith('image/')) ?? [];
+
+const getVideoAttachment = (msg: UIMessage): MessageAttachment | undefined =>
+  msg.attachments?.find(a => a.mime_type?.startsWith('video/'));
+
+const getAudioAttachment = (msg: UIMessage): MessageAttachment | undefined =>
+  msg.attachments?.find(a => a.mime_type?.startsWith('audio/'));
+
+const getDocumentAttachment = (msg: UIMessage): MessageAttachment | undefined =>
+  msg.attachments?.find(a =>
+    a.mime_type &&
+    !a.mime_type.startsWith('image/') &&
+    !a.mime_type.startsWith('video/') &&
+    !a.mime_type.startsWith('audio/')
+  );
+
+// Helper to get user's reaction from reactions array
+const getUserReaction = (msg: UIMessage, isSender: boolean, currentUserId?: string): string | undefined => {
+  if (!msg.reactions || !currentUserId) return undefined;
+  const userReaction = msg.reactions.find(r =>
+    isSender ? r.user_id === msg.sender_id : r.user_id !== msg.sender_id
+  );
+  return userReaction?.reaction;
+};
+
 /**
- * Message type used by MessageList - accepts both ChatMessage and UIMessage
- * UIMessage comes from the realtime hook transformer (has text, isSent, isRead computed)
- * ChatMessage is the legacy type from chats-service
+ * Message type used by MessageList - uses UIMessage from shared-types
+ * UIMessage has computed fields: text, isSent, isRead, replyTo
  */
-type MessageListMessage = ChatMessage | UIMessage;
+type MessageListMessage = UIMessage;
 
 interface MessageListProps {
-  messages: MessageListMessage[];
+  messages: UIMessage[];
   backgroundColor: string;
   themeColors: ThemeColors;
   clientName: string;
   headerHeight?: number;
   bottomOffset?: number;
   keyboardHeight?: SharedValue<number>;
-  onReply?: (message: MessageListMessage) => void;
-  onEdit?: (message: MessageListMessage) => void;
-  onDelete?: (message: MessageListMessage) => void;
-  onReactionPress?: (message: MessageListMessage) => void;
-  onDocumentPress?: (document: import('@/services/chats-service').DocumentAttachment) => void;
-  onImagePress?: (images: import('@/services/chats-service').ImageAttachment[], senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
-  onVideoPress?: (video: import('@/services/chats-service').VideoAttachment, senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
+  onReply?: (message: UIMessage) => void;
+  onEdit?: (message: UIMessage) => void;
+  onDelete?: (message: UIMessage) => void;
+  onReactionPress?: (message: UIMessage) => void;
+  onDocumentPress?: (document: any) => void;
+  onImagePress?: (images: any[], senderName: string, isSent: boolean, messageTimestamp?: Date | string) => void;
+  onVideoPress?: (video: any, senderName: string, isSent: boolean, messageTimestamp?: Date | string) => void;
 }
 
 const ZWSP = '\u200B';
@@ -81,7 +107,7 @@ const softWrapText = (text: string) => {
 };
 
 // Helper function to find the original message in a reply chain
-const findOriginalMessage = (message: ChatMessage): ChatMessage => {
+const findOriginalMessage = (message: UIMessage): UIMessage => {
   if (!message.replyTo) {
     return message;
   }
@@ -105,18 +131,18 @@ const BubbleMeta = React.memo(function BubbleMeta({
   flashOpacity,
   dropdownOptions,
 }: {
-  item: ChatMessage;
+  item: UIMessage;
   themeColors: ThemeColors;
   recipientBackgroundColor: string;
-  formatTime: (d: Date) => string;
+  formatTime: (d: Date | string) => string;
   softWrapText: (t: string) => string;
   registerRef: (ref: View | null) => void;
   isLastInSenderRun: boolean;
   clientName: string;
   onReplyPreviewPress?: (messageId: string) => void;
-  onDocumentPress?: (document: import('@/services/chats-service').DocumentAttachment) => void;
-  onImagePress?: (images: import('@/services/chats-service').ImageAttachment[], senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
-  onVideoPress?: (video: import('@/services/chats-service').VideoAttachment, senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
+  onDocumentPress?: (document: any) => void;
+  onImagePress?: (images: any[], senderName: string, isSent: boolean, messageTimestamp?: Date | string) => void;
+  onVideoPress?: (video: any, senderName: string, isSent: boolean, messageTimestamp?: Date | string) => void;
   flashOpacity?: Animated.Value;
   dropdownOptions: DropdownMenuOption[];
 }) {
@@ -151,6 +177,12 @@ const BubbleMeta = React.memo(function BubbleMeta({
     return NBSP + NBSP.repeat(Math.max(4, count));
   }, [metaWidth, spaceWidth]);
 
+  // Extract attachments using helper functions
+  const images = getImageAttachments(item);
+  const video = getVideoAttachment(item);
+  const audio = getAudioAttachment(item);
+  const document = getDocumentAttachment(item);
+
   const bubbleStyle = [
     styles.messageBubble,
     item.isSent
@@ -159,7 +191,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
     isLastInSenderRun && item.isSent && styles.messageBubbleTailRight,
     isLastInSenderRun && !item.isSent && styles.messageBubbleTailLeft,
     // Make bubble full width when it contains a document or is a reply
-    ...(item.document || item.replyTo || item.audio ? [styles.messageBubbleFullWidth] : []),
+    ...(document || item.replyTo || audio ? [styles.messageBubbleFullWidth] : []),
   ];
 
   const baseTextColor = item.isSent ? themeColors.primaryForeground : themeColors.text;
@@ -188,7 +220,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
       {/* Reply preview if this message is a reply - show original message, not nested reply */}
       {originalMessage && (
         <MessageReplyPreview
-          replyTo={originalMessage}
+          replyTo={originalMessage as any}
           clientName={clientName}
           themeColors={themeColors}
           parentBackgroundColor={
@@ -202,60 +234,54 @@ const BubbleMeta = React.memo(function BubbleMeta({
       )}
 
       {/* Image preview if this message has images */}
-      {item.images && item.images.length > 0 && onImagePress && (
+      {images.length > 0 && onImagePress && (
         <MessageImagePreview
-          images={item.images}
+          images={images as any}
           themeColors={themeColors}
           parentBackgroundColor={
             item.isSent ? themeColors.primary : recipientBackgroundColor
           }
           isParentSent={item.isSent}
           onPress={() => {
-            if (item.images) {
-              onImagePress(item.images, clientName, item.isSent, item.sent_at);
-            }
+            onImagePress(images, clientName, item.isSent, item.sent_at);
           }}
         />
       )}
 
       {/* Video preview if this message has a video */}
-      {item.video && onVideoPress && (
+      {video && onVideoPress && (
         <MessageVideoPreview
-          video={item.video}
+          video={video as any}
           themeColors={themeColors}
           parentBackgroundColor={
             item.isSent ? themeColors.primary : recipientBackgroundColor
           }
           isParentSent={item.isSent}
           onPress={() => {
-            if (item.video) {
-              onVideoPress(item.video, clientName, item.isSent, item.sent_at);
-            }
+            onVideoPress(video, clientName, item.isSent, item.sent_at);
           }}
         />
       )}
 
       {/* Document preview if this message has a document */}
-      {item.document && onDocumentPress && (
+      {document && onDocumentPress && (
         <MessageDocumentPreview
-          document={item.document}
+          document={document as any}
           themeColors={themeColors}
           parentBackgroundColor={
             item.isSent ? themeColors.primary : recipientBackgroundColor
           }
           isParentSent={item.isSent}
           onPress={() => {
-            if (item.document) {
-              onDocumentPress(item.document);
-            }
+            onDocumentPress(document);
           }}
         />
       )}
 
       {/* Audio preview if this message has audio */}
-      {item.audio && (
+      {audio && (
         <MessageAudioPreview
-          audio={item.audio}
+          audio={audio as any}
           themeColors={themeColors}
           parentBackgroundColor={
             item.isSent ? themeColors.primary : recipientBackgroundColor
@@ -346,8 +372,8 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
   themeColors: ThemeColors;
   onCancelLongPress: () => void;
   alignRight: boolean;
-  onReply?: (message: ChatMessage) => void;
-  message: ChatMessage;
+  onReply?: (message: UIMessage) => void;
+  message: UIMessage;
   onHorizontalDragStart?: () => void;
   onHorizontalDragEnd?: () => void;
 }) {
@@ -540,7 +566,7 @@ export const MessageList = React.memo(function MessageList({
   const initialScrollAttemptsRef = useRef(0);
   const pinnedToBottomRef = useRef(true);
   const prevBottomOffsetRef = useRef<number | null>(null);
-  const [localMessages, setLocalMessages] = useState<ChatMessage[]>(messages);
+  const [localMessages, setLocalMessages] = useState<UIMessage[]>(messages);
   const [isHorizontalDragActive, setIsHorizontalDragActive] = useState(false);
   const colorScheme = useColorScheme();
   const isLightMode = colorScheme === 'light';
@@ -554,17 +580,17 @@ export const MessageList = React.memo(function MessageList({
     setLocalMessages(messages);
   }, [messages]);
 
-  const handleReactionPress = (message: ChatMessage) => {
+  const handleReactionPress = (message: UIMessage) => {
     onReactionPress?.(message);
   };
 
-  const handleQuickReaction = async (message: ChatMessage, emoji: string) => {
+  const handleQuickReaction = async (message: UIMessage, emoji: string) => {
     const isSender = message.isSent;
 
-    // Get current user's reaction
-    const currentReaction = isSender
-      ? message.senderReaction
-      : message.recipientReaction;
+    // Get current user's reaction from reactions array
+    const currentReaction = message.reactions?.find(r =>
+      isSender ? r.user_id === message.sender_id : r.user_id !== message.sender_id
+    )?.reaction;
 
     // If clicking the same emoji, remove reaction
     const isRemoving = emoji === currentReaction;
@@ -574,10 +600,27 @@ export const MessageList = React.memo(function MessageList({
     setLocalMessages((prev) =>
       prev.map((msg) => {
         if (msg.id === message.id) {
-          return {
-            ...msg,
-            ...(isSender ? { senderReaction: isRemoving ? undefined : emoji } : { recipientReaction: isRemoving ? undefined : emoji }),
-          };
+          const updatedReactions = [...(msg.reactions || [])];
+          const existingIndex = updatedReactions.findIndex(r =>
+            isSender ? r.user_id === msg.sender_id : r.user_id !== msg.sender_id
+          );
+          if (isRemoving && existingIndex >= 0) {
+            updatedReactions.splice(existingIndex, 1);
+          } else if (!isRemoving) {
+            if (existingIndex >= 0) {
+              updatedReactions[existingIndex] = { ...updatedReactions[existingIndex], reaction: emoji as any };
+            } else {
+              updatedReactions.push({
+                id: `temp-${Date.now()}`,
+                message_id: msg.id,
+                conversation_id: msg.conversation_id,
+                user_id: msg.sender_id, // This is a simplification - should use actual user ID
+                reaction: emoji as any,
+                created_at: new Date(),
+              });
+            }
+          }
+          return { ...msg, reactions: updatedReactions };
         }
         return msg;
       })
@@ -588,14 +631,11 @@ export const MessageList = React.memo(function MessageList({
       await reactTo(message.id, newEmoji, isSender);
     } catch (error) {
       console.error('Failed to react to message:', error);
-      // Revert on error
+      // Revert on error by restoring original message
       setLocalMessages((prev) =>
         prev.map((msg) => {
           if (msg.id === message.id) {
-            return {
-              ...msg,
-              ...(isSender ? { senderReaction: currentReaction } : { recipientReaction: currentReaction }),
-            };
+            return message; // Restore original message
           }
           return msg;
         })
@@ -673,42 +713,54 @@ export const MessageList = React.memo(function MessageList({
     }, 600);
   };
 
+  // Helper to convert sent_at to Date
+  const toDate = (d: Date | string): Date => typeof d === 'string' ? new Date(d) : d;
+
   // Normal list (NOT inverted): chronological order (oldest first)
   // Index 0 (oldest) = TOP, last index (newest) = BOTTOM (above toolbar)
   const data = useMemo(() => {
-    const sorted = [...localMessages].sort((a, b) => a.sent_at.getTime() - b.sent_at.getTime());
+    const sorted = [...localMessages].sort((a, b) => toDate(a.sent_at).getTime() - toDate(b.sent_at).getTime());
     return sorted;
   }, [localMessages]);
 
-  const BASE_GAP = 6;
-  const GROUPED_GAP = 2; // Tight gap for messages within 2 minutes from same sender
-  const EXTRA_ON_SENDER_CHANGE = 10;
+  // Gap sizes matching web app: mb-1 (4px) within sequence, mb-4 (16px) after last in sequence
+  const GAP_WITHIN_SEQUENCE = 4;
+  const GAP_AFTER_SEQUENCE = 16;
 
-  const isSameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
+  const isSameDay = (a: Date | string, b: Date | string) => {
+    const da = toDate(a);
+    const db = toDate(b);
+    return da.getFullYear() === db.getFullYear() &&
+      da.getMonth() === db.getMonth() &&
+      da.getDate() === db.getDate();
+  };
 
-  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const startOfDay = (d: Date | string) => {
+    const date = toDate(d);
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  };
 
-  const dayKey = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const dayKey = (d: Date | string) => {
+    const date = toDate(d);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
 
-  const getDatePillLabel = (d: Date) => {
+  const getDatePillLabel = (d: Date | string) => {
+    const date = toDate(d);
     const now = new Date();
     const diffDays = Math.round(
-      (startOfDay(now).getTime() - startOfDay(d).getTime()) / (1000 * 60 * 60 * 24)
+      (startOfDay(now).getTime() - startOfDay(date).getTime()) / (1000 * 60 * 60 * 24)
     );
 
     if (diffDays === 0) return t?.('general.today') ?? 'Today';
     if (diffDays === 1) return t?.('general.yesterday') ?? 'Yesterday';
 
-    return d
+    return date
       .toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })
       .replace(',', '');
   };
 
-  const [stickyTimestamp, setStickyTimestamp] = useState<Date>(() => data[0]?.sent_at ?? new Date());
+  const [stickyTimestamp, setStickyTimestamp] = useState<Date | string>(() => data[0]?.sent_at ?? new Date());
   const [stickyDayKey, setStickyDayKey] = useState(() => {
     const first = data[0];
     return first ? dayKey(first.sent_at) : dayKey(new Date());
@@ -718,10 +770,10 @@ export const MessageList = React.memo(function MessageList({
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 5 }).current;
 
   const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: Array<{ item: ChatMessage; index: number | null }> }) => {
+    ({ viewableItems }: { viewableItems: Array<{ item: UIMessage; index: number | null }> }) => {
       if (!viewableItems?.length) return;
 
-      let topMost = null as { item: ChatMessage; index: number | null } | null;
+      let topMost = null as { item: UIMessage; index: number | null } | null;
 
       for (const v of viewableItems) {
         if (!v?.item?.sent_at) continue;
@@ -752,43 +804,44 @@ export const MessageList = React.memo(function MessageList({
 
   const stickyDateForLabel = stickyTimestamp;
 
-  const formatTime = (date: Date): string => {
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
+  const formatTime = (date: Date | string): string => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    const hours = d.getHours().toString().padStart(2, '0');
+    const minutes = d.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
   };
 
-  const isMessageWithinOneHour = (message: ChatMessage): boolean => {
+  const isMessageWithinOneHour = (message: UIMessage): boolean => {
     const now = new Date();
-    const messageTime = message.sent_at;
+    const messageTime = typeof message.sent_at === 'string' ? new Date(message.sent_at) : message.sent_at;
     const diffInMs = now.getTime() - messageTime.getTime();
     const diffInHours = diffInMs / (1000 * 60 * 60);
     return diffInHours <= 1;
   };
 
-  const handleReply = (message: ChatMessage) => {
+  const handleReply = (message: UIMessage) => {
     if (onReply) {
       onReply(message);
     }
   };
 
-  const handleCopy = async (message: ChatMessage) => {
-    await Clipboard.setStringAsync(message.text);
+  const handleCopy = async (message: UIMessage) => {
+    await Clipboard.setStringAsync(message.text || '');
   };
 
-  const handleEdit = (message: ChatMessage) => {
+  const handleEdit = (message: UIMessage) => {
     if (onEdit) {
       onEdit(message);
     }
   };
 
-  const handleDelete = (message: ChatMessage) => {
+  const handleDelete = (message: UIMessage) => {
     if (onDelete) {
       onDelete(message);
     }
   };
 
-  const getDropdownOptions = (message: ChatMessage): DropdownMenuOption[] => {
+  const getDropdownOptions = (message: UIMessage): DropdownMenuOption[] => {
     const options: DropdownMenuOption[] = [
       {
         label: t('general.reply'),
@@ -922,41 +975,38 @@ export const MessageList = React.memo(function MessageList({
     }
   }, [bottomOffset]);
 
-  const renderItem = ({ item, index }: { item: ChatMessage; index: number }) => {
+  const renderItem = ({ item, index }: { item: UIMessage; index: number }) => {
     // Normal list (NOT inverted): chronological order
     // Index 0 (oldest) = TOP of screen, last index (newest) = BOTTOM of screen
     const older = index > 0 ? data[index - 1] : null; // Previous index = older in time
     const newer = index + 1 < data.length ? data[index + 1] : null; // Next index = newer in time
 
-    const sameSenderAsNewer = !!newer && newer.isSent === item.isSent;
-
-    // Check if messages are within 2 minutes (for grouping)
-    const isGroupedWithNewer = sameSenderAsNewer && newer &&
-      Math.abs(item.sent_at.getTime() - newer.sent_at.getTime()) < 2 * 60 * 1000;
+    // Match web app logic: isLastInSequence when last message, or next is different sender, or next is different day
+    const isLastInSequence =
+      index === data.length - 1 ||
+      (newer !== null && newer.isSent !== item.isSent) ||
+      (newer !== null && !isSameDay(item.sent_at, newer.sent_at));
 
     // Gap ABOVE this message (marginTop creates space above in normal list)
-    // Gap is between this message and the OLDER message above it
+    // Check if the PREVIOUS message was the last in its sequence
     let gap = 0;
     if (older) {
-      const sameSenderAsOlder = !!older && older.isSent === item.isSent;
-      const isGroupedWithOlder = sameSenderAsOlder && Math.abs(item.sent_at.getTime() - older.sent_at.getTime()) < 2 * 60 * 1000;
+      const wasOlderLastInSequence =
+        older.isSent !== item.isSent ||
+        !isSameDay(older.sent_at, item.sent_at);
 
-      if (sameSenderAsOlder) {
-        // Same sender: use grouped gap if within 2 mins, otherwise base gap
-        gap = isGroupedWithOlder ? GROUPED_GAP : BASE_GAP;
-      } else {
-        // Different sender: base gap + extra
-        gap = BASE_GAP + EXTRA_ON_SENDER_CHANGE;
-      }
+      gap = wasOlderLastInSequence ? GAP_AFTER_SEQUENCE : GAP_WITHIN_SEQUENCE;
     }
 
-    // Determine if this is LAST in sender run (show tail corner, no bottom border radius)
-    // Last = the one that is NOT grouped with the NEWER (next) message
-    const isLastInSenderRun = !isGroupedWithNewer;
+    // Show tail (reduced border radius) only on last message in sequence
+    const isLastInSenderRun = isLastInSequence;
 
     const showDatePill = !older || !isSameDay(older.sent_at, item.sent_at);
-    const itemDayKey = dayKey(item.sent_at);
-    const hideInlinePill = stickyActive && itemDayKey === stickyDayKey;
+
+    // Extract reactions from reactions array
+    const senderReaction = item.reactions?.find(r => r.user_id === item.sender_id)?.reaction;
+    const recipientReaction = item.reactions?.find(r => r.user_id !== item.sender_id)?.reaction;
+    const hasReactions = senderReaction || recipientReaction;
 
     return (
       <View>
@@ -966,14 +1016,12 @@ export const MessageList = React.memo(function MessageList({
               style={[
                 styles.datePill,
                 { backgroundColor: themeColors.backgroundTertiary },
-                hideInlinePill && styles.datePillHidden,
               ]}
             >
               <Text
                 style={[
                   styles.datePillText,
                   { color: themeColors.text },
-                  hideInlinePill && styles.datePillHidden,
                 ]}
               >
                 {getDatePillLabel(item.sent_at)}
@@ -1018,7 +1066,7 @@ export const MessageList = React.memo(function MessageList({
           </SwipeToReplyBubble>
 
           {/* Reactions container */}
-          {(item.senderReaction || item.recipientReaction) && (
+          {hasReactions && (
             <TouchableOpacity
               style={[
                 styles.reactionsContainer,
@@ -1037,21 +1085,21 @@ export const MessageList = React.memo(function MessageList({
                   },
                 ]}
               >
-                {item.senderReaction && item.recipientReaction && item.senderReaction === item.recipientReaction ? (
+                {senderReaction && recipientReaction && senderReaction === recipientReaction ? (
                   <>
-                    <Text style={styles.reactionEmoji}>{item.senderReaction}</Text>
+                    <Text style={styles.reactionEmoji}>{senderReaction}</Text>
                     <Text style={[styles.reactionCount, { color: themeColors.mutedText }]}>2</Text>
                   </>
                 ) : (
                   <>
-                    {item.senderReaction && (
+                    {senderReaction && (
                       <View style={styles.reactionItem}>
-                        <Text style={styles.reactionEmoji}>{item.senderReaction}</Text>
+                        <Text style={styles.reactionEmoji}>{senderReaction}</Text>
                       </View>
                     )}
-                    {item.recipientReaction && (
+                    {recipientReaction && (
                       <View style={styles.reactionItem}>
-                        <Text style={styles.reactionEmoji}>{item.recipientReaction}</Text>
+                        <Text style={styles.reactionEmoji}>{recipientReaction}</Text>
                       </View>
                     )}
                   </>
@@ -1228,9 +1276,6 @@ const styles = StyleSheet.create({
   datePillText: {
     ...typography.p3,
     fontWeight: '600',
-  },
-  datePillHidden: {
-    opacity: 0,
   },
   stickyHeaderRow: {
     position: 'absolute',
