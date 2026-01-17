@@ -11,7 +11,7 @@ import {
   unstable_batchedUpdates,
 } from 'react-native';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
-import { useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -483,16 +483,17 @@ export default function ChatDetailScreen() {
       },
       onEnd: (event) => {
         'worklet';
-        // Snap to final position to prevent lag at the end
         keyboardHeight.value = event.height;
       },
     },
     []
   );
 
-  // Dynamic toolbar height - tracks actual height for proper scroll offset
-  const [toolbarHeight, setToolbarHeight] = useState(60 + insets.bottom);
-  const toolbarHeightAnimated = useSharedValue(60 + insets.bottom);
+  // Single animated style for the entire chat content (messages + toolbar move together)
+  const chatContentAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -keyboardHeight.value }],
+  }));
+
 
   const [chat, setChat] = useState<Chat | null>(() => {
     if (chatParam) {
@@ -539,6 +540,16 @@ export default function ChatDetailScreen() {
   const inputRef = useRef<TextInput>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Dynamic toolbar height - calculated from current state (fixed values, no insets dependency)
+  const toolbarHeight = useMemo(() => {
+    if (replyingToMessage) {
+      return 96;
+    } else if (showAttachmentPicker) {
+      return 126;
+    }
+    return 46;
+  }, [replyingToMessage, showAttachmentPicker]);
 
   // Panel ref for sliding sidebar
   const panelRef = useRef<SlidingPanelRef>(null);
@@ -1249,58 +1260,55 @@ export default function ChatDetailScreen() {
           onPanelOpen={handleOpenPanel}
         />
 
-        {/* ROW 2: SCROLL WINDOW - Fills space between header and toolbar */}
-        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-          <MessageList
-            messages={allMessages}
-            backgroundColor="transparent"
-            themeColors={themeColors}
-            clientName={chat.other_user_name || 'Client'}
-            keyboardHeight={keyboardHeight}
-            onReply={handleMessageReply}
-            onEdit={handleMessageEdit}
-            onDelete={handleMessageDelete}
-            onReactionPress={handleReactionPress}
-            onDocumentPress={handleDocumentPress}
-            onImagePress={handleImagePress}
-            onVideoPress={handleVideoPress}
-            headerHeight={insets.top + 60}
-            bottomOffset={toolbarHeight}
-          />
-        </View>
+        {/* Messages + Toolbar container - moves together with keyboard */}
+        <Animated.View style={[{ flex: 1 }, chatContentAnimatedStyle]}>
+          {/* SCROLL WINDOW - Fills space between header and toolbar */}
+          <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+            <MessageList
+              messages={allMessages}
+              backgroundColor="transparent"
+              themeColors={themeColors}
+              clientName={chat.other_user_name || 'Client'}
+              onReply={handleMessageReply}
+              onEdit={handleMessageEdit}
+              onDelete={handleMessageDelete}
+              onReactionPress={handleReactionPress}
+              onDocumentPress={handleDocumentPress}
+              onImagePress={handleImagePress}
+              onVideoPress={handleVideoPress}
+              headerHeight={insets.top + 60}
+              bottomOffset={toolbarHeight + 8 + insets.bottom}
+            />
+          </View>
 
-        {/* ROW 3: TOOLBAR - Absolutely positioned */}
-        <ChatToolbar
-          chat={chat}
-          replyingToMessage={replyingToMessage}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          inputRef={inputRef}
-          hasText={hasText}
-          isMicrophoneMode={isMicrophoneMode}
-          isStopped={isStopped}
-          showAttachmentPicker={showAttachmentPicker}
-          durationLabel={durationLabel}
-          waveform={waveform}
-          previewPath={previewPath}
-          previewPlayerState={previewPlayerState}
-          onPlayerStateChange={setPreviewPlayerState}
-          onTogglePreviewPlay={handleTogglePreviewPlay}
-          previewWaveRef={previewWaveRef}
-          onPlusPress={handlePlusPress}
-          onMicrophonePress={handleMicrophonePress}
-          onSendMessage={handleSendMessage}
-          onTrashPress={handleTrashPress}
-          onStopToggle={handleStopToggle}
-          onSendPress={handleSendPress}
-          onCancelReply={handleCancelReply}
-          bottomInset={insets.bottom}
-          keyboardHeight={keyboardHeight}
-          onHeightChange={(height) => {
-            setToolbarHeight(height);
-            toolbarHeightAnimated.value = withTiming(height, { duration: 150 });
-          }}
-        />
+          {/* TOOLBAR - Absolutely positioned within this container */}
+          <ChatToolbar
+            chat={chat}
+            replyingToMessage={replyingToMessage}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            inputRef={inputRef}
+            hasText={hasText}
+            isMicrophoneMode={isMicrophoneMode}
+            isStopped={isStopped}
+            showAttachmentPicker={showAttachmentPicker}
+            durationLabel={durationLabel}
+            waveform={waveform}
+            previewPath={previewPath}
+            previewPlayerState={previewPlayerState}
+            onPlayerStateChange={setPreviewPlayerState}
+            onTogglePreviewPlay={handleTogglePreviewPlay}
+            previewWaveRef={previewWaveRef}
+            onPlusPress={handlePlusPress}
+            onMicrophonePress={handleMicrophonePress}
+            onSendMessage={handleSendMessage}
+            onTrashPress={handleTrashPress}
+            onStopToggle={handleStopToggle}
+            onSendPress={handleSendPress}
+            onCancelReply={handleCancelReply}
+            bottomInset={insets.bottom}
+          />
+        </Animated.View>
 
         <MessageReactionsSheet
           visible={reactionsSheetVisible}
