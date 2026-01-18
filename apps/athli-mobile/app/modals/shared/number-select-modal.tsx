@@ -65,7 +65,7 @@ export default function NumberSelectModal() {
               <View key={num}>
                 <PressableOpacity
                   style={styles.optionRow}
-                  onPress={() => handleSelect(num)}
+                  onPress={() => handleSelect(num as number | 'ever')}
                 >
                   <Text style={[styles.optionText, { color: themeColors.text }]}>{label}</Text>
                 </PressableOpacity>

@@ -33,11 +33,11 @@ export default function ClientPhotosScreen() {
   };
 
   const handleAddPhoto = () => {
-    router.push(`/modals/client/add-photo-to-client-modal?clientId=${id}`);
+    router.push(`/modals/client/add-photo-to-client-modal?clientId=${id}` as any);
   };
 
   const handlePhotoPress = (photoId: string) => {
-    router.push(`/modals/client/photo-detail-modal?clientId=${id}&photoId=${photoId}`);
+    router.push(`/modals/client/photo-detail-modal?clientId=${id}&photoId=${photoId}` as any);
   };
 
   const formatDate = (dateString: string) => {
@@ -52,7 +52,18 @@ export default function ClientPhotosScreen() {
   // Group photos by date
   const groupedPhotos = photos.reduce(
     (groups, photo) => {
-      const date = formatDate(photo.photo_date || photo.created_at);
+      const recordedAt = photo.recordedAt;
+      const createdAt = photo.createdAt;
+      const dateValue = recordedAt instanceof Date
+        ? recordedAt.toISOString()
+        : recordedAt
+          ? String(recordedAt)
+          : createdAt instanceof Date
+            ? createdAt.toISOString()
+            : createdAt
+              ? String(createdAt)
+              : '';
+      const date = formatDate(dateValue);
       if (!groups[date]) {
         groups[date] = [];
       }
@@ -109,7 +120,7 @@ export default function ClientPhotosScreen() {
                   <PressableScale key={photo.id} onPress={() => handlePhotoPress(photo.id)}>
                     <View style={styles.photoWrapper}>
                       <Image
-                        source={{ uri: photo.photo_url }}
+                        source={{ uri: photo.url }}
                         style={styles.photoImage}
                         contentFit="cover"
                         cachePolicy="memory-disk"

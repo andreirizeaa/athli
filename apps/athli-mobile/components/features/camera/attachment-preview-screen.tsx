@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Pressable, View, Keyboard, TouchableWithoutFeedback, Image as RNImage } from 'react-native';
+import { StyleSheet, Pressable, View, Text, Keyboard, TouchableWithoutFeedback, Image as RNImage } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { X } from 'lucide-react-native';
@@ -7,6 +7,7 @@ import { useKeyboardHandler } from 'react-native-keyboard-controller';
 import { useSharedValue } from 'react-native-reanimated';
 import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
 
+import { typography } from '@/constants/typography';
 import { IconButton } from '@/components/ui/icon-button';
 import { AttachmentPreviewToolbar } from '@/components/features/camera/attachment-preview-toolbar';
 import { useDarkModeTheme } from '@/components/ui/dark-mode-wrapper';
@@ -170,7 +171,7 @@ export const AttachmentPreviewScreen = ({
             },
           ]}
         >
-          {/* Top header - only X button */}
+          {/* Top header - X button on left, recipient name on right */}
           <View style={styles.topHeader}>
             <IconButton
               icon={{ sf: 'xmark', IconComponent: X }}
@@ -178,6 +179,16 @@ export const AttachmentPreviewScreen = ({
               size="md"
               scheme="light"
             />
+            {/* Spacer to push recipient to the right */}
+            <View style={styles.headerSpacer} />
+            {/* Recipient name tag */}
+            {clientName && (
+              <View style={[styles.recipientTag, { backgroundColor: themeColors.backgroundTertiary }]}>
+                <Text style={[styles.recipientTagText, { color: themeColors.text }]} numberOfLines={1}>
+                  {clientName}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -185,7 +196,6 @@ export const AttachmentPreviewScreen = ({
         <AttachmentPreviewToolbar
           value={caption}
           onChangeText={onCaptionChange}
-          clientName={clientName}
           onSend={onSend}
           keyboardHeight={keyboardHeight}
           images={images}
@@ -215,6 +225,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
+  },
+  headerSpacer: {
+    flex: 1,
+  },
+  recipientTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    maxWidth: 200,
+  },
+  recipientTagText: {
+    ...typography.p2,
+    fontWeight: '500',
   },
   keyboardOverlay: {
     ...StyleSheet.absoluteFillObject,

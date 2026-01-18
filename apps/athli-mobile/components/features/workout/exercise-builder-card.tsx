@@ -548,7 +548,7 @@ export const ExerciseBuilderCard = ({
                                 Alternative Exercises
                             </Text>
                             {validAlternatives.map((alt, index) => (
-                                <View key={alt.id || alt.exerciseId || `alt-${index}`}>
+                                <View key={alt.id || `alt-${index}`}>
                                     <View style={styles.alternativeItem}>
                                         <PressableScale onPress={() => handleThumbnailPress(alt.name)}>
                                             <Image

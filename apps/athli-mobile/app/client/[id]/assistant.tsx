@@ -446,7 +446,7 @@ export default function ClientAssistantScreen() {
                     ]}
                 >
                     <IconButton
-                        icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+                        icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                         onPress={handleBackPress}
                         size="md"
                         color={iconColor}

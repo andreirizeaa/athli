@@ -44,6 +44,8 @@ export default function ChatsScreen() {
   const storArchiveChat = useChatsStore((state) => state.archiveChat);
   const storeMarkAsRead = useChatsStore((state) => state.markAsRead);
   const storeMarkAllAsRead = useChatsStore((state) => state.markAllAsRead);
+  const getCachedMessages = useChatsStore((state) => state.getCachedMessages);
+  const prefetchMessages = useChatsStore((state) => state.prefetchMessages);
 
   const registerOpenRow = useCallback((closeFn: () => void) => {
     if (openRowCloseFn && openRowCloseFn !== closeFn) {
@@ -71,6 +73,25 @@ export default function ChatsScreen() {
       updateChat(conversation);
     },
   });
+
+  // Pre-fetch messages for top chats when list loads
+  React.useEffect(() => {
+    if (chats.length === 0 || isLoading) return;
+
+    // Pre-fetch messages for the first 5 chats (most recent)
+    const sortedChats = [...chats].sort((a, b) => {
+      const aTime = a.last_message_at?.getTime() || 0;
+      const bTime = b.last_message_at?.getTime() || 0;
+      return bTime - aTime;
+    });
+
+    const topChats = sortedChats.slice(0, 5);
+
+    // Pre-fetch in background (don't await)
+    topChats.forEach((chat) => {
+      prefetchMessages(chat.id);
+    });
+  }, [chats, isLoading, prefetchMessages]);
 
   const totalUnreadCount = useMemo(() => {
     return chats.reduce((sum, chat) => sum + (chat.unread_count || 0), 0);
@@ -136,16 +157,30 @@ export default function ChatsScreen() {
       // Find the chat object
       const chat = chats.find((c) => c.id === chatId);
       if (chat) {
-        // Load messages before navigating
-        const messages = await getChatMessages(chatId);
-        router.push({
-          pathname: '/chats/[id]',
-          params: {
-            id: chatId,
-            chat: JSON.stringify(chat),
-            messages: JSON.stringify(messages),
-          },
-        });
+        // Try to get cached messages first for instant navigation
+        const cachedMessages = getCachedMessages(chatId);
+        if (cachedMessages) {
+          // Navigate immediately with cached messages
+          router.push({
+            pathname: '/chats/[id]',
+            params: {
+              id: chatId,
+              chat: JSON.stringify(chat),
+              messages: JSON.stringify(cachedMessages),
+            },
+          });
+        } else {
+          // No cache - load messages before navigating
+          const messages = await getChatMessages(chatId);
+          router.push({
+            pathname: '/chats/[id]',
+            params: {
+              id: chatId,
+              chat: JSON.stringify(chat),
+              messages: JSON.stringify(messages),
+            },
+          });
+        }
       } else {
         // Fallback to just id if chat not found
         router.push({ pathname: '/chats/[id]', params: { id: chatId } });

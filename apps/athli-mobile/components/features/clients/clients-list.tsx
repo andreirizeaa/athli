@@ -137,8 +137,6 @@ export const ClientsList = forwardRef<ClientsListRef, ClientsListProps>(
         data={clients}
         renderItem={renderClientCard}
         keyExtractor={(item: Client) => item.id}
-        // @ts-ignore - estimatedItemSize is a valid FlashList prop but types may be outdated
-        estimatedItemSize={88}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={ListHeaderComponent}

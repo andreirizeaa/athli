@@ -130,8 +130,6 @@ export default function PaletteModal() {
               />
             </View>
           }
-          // @ts-ignore - estimatedItemSize is a valid FlashList prop but types may be outdated
-          estimatedItemSize={52}
           keyExtractor={(item) => item.value}
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="handled"

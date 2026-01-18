@@ -71,7 +71,7 @@ export async function getConversations(includeArchived = false) {
  */
 export async function getMessages(
   conversationId: string,
-  options?: { limit?: number; offset?: number },
+  options?: { limit?: number; offset?: number; beforeTimestamp?: Date },
 ) {
   return MessagingService.getMessages({
     conversationId,

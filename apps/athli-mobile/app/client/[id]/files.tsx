@@ -29,15 +29,15 @@ export default function ClientFilesScreen() {
   };
 
   const handleAssignFile = () => {
-    router.push(`/modals/shared/assign-to-clients-modal?type=file&clientId=${id}`);
+    router.push(`/modals/shared/assign-to-clients-modal?type=file&clientId=${id}` as any);
   };
 
   const handleAddFile = () => {
-    router.push(`/modals/files/add-file-modal?clientId=${id}`);
+    router.push(`/modals/files/add-file-modal?clientId=${id}` as any);
   };
 
   const handleFilePress = (fileId: string) => {
-    router.push(`/modals/client/file-detail-modal?clientId=${id}&fileId=${fileId}`);
+    router.push(`/modals/client/file-detail-modal?clientId=${id}&fileId=${fileId}` as any);
   };
 
   const formatDate = (dateString: string) => {
@@ -127,20 +127,20 @@ export default function ClientFilesScreen() {
           {files.map((file) => {
             const FileIcon = getFileIcon(file.mime_type);
             return (
-              <View key={file.id || file.assignment_id}>
-                <PressableScale onPress={() => handleFilePress(file.id || file.assignment_id)}>
+              <View key={file.id}>
+                <PressableScale onPress={() => handleFilePress(file.id)}>
                   <View style={styles.fileItem}>
                     <View style={[styles.fileIconContainer, { backgroundColor: `${themeColors.primary}15` }]}>
                       <PlatformIcon sf="doc" IconComponent={FileIcon} size={24} color={themeColors.primary} />
                     </View>
                     <View style={styles.fileInfo}>
                       <Text style={[styles.fileName, { color: themeColors.text }]} numberOfLines={1}>
-                        {file.name || file.file_name}
+                        {file.name}
                       </Text>
                       <View style={styles.fileMeta}>
-                        {file.file_size && (
+                        {file.size && (
                           <Text style={[styles.fileSize, { color: themeColors.mutedText }]}>
-                            {formatFileSize(file.file_size)}
+                            {formatFileSize(file.size)}
                           </Text>
                         )}
                         {file.created_at && (

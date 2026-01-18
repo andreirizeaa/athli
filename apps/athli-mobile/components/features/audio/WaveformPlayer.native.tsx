@@ -14,7 +14,7 @@ export { PlayerState, FinishMode };
 type Props = Omit<ComponentProps<typeof Waveform>, 'ref'>;
 
 export const WaveformPlayer = React.forwardRef<IWaveformRef, Props>((props, ref) => {
-  return <Waveform ref={ref} {...props} />;
+  return <Waveform ref={ref} {...props as any} />;
 });
 
 WaveformPlayer.displayName = 'WaveformPlayer';

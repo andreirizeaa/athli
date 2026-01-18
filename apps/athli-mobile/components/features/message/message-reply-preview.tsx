@@ -4,13 +4,12 @@ import { PressableOpacity } from 'pressto';
 import { Camera, Video, FileText } from 'lucide-react-native';
 import { useColorScheme } from '@/stores';
 import { type ThemeColors } from '@/constants/theme';
-import { type ChatMessage } from '@/services/chats-service';
 import { tintHex, shadeHex, isLightColor } from '@/utils/colorUtils';
 import { typography, iconSizes } from '@/constants/typography';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 
 type MessageReplyPreviewProps = {
-  replyTo: ChatMessage;
+  replyTo: any;
   clientName: string;
   themeColors: ThemeColors;
   parentBackgroundColor: string;
@@ -77,6 +76,21 @@ export const MessageReplyPreview = ({
 
   // Determine preview content based on message type
   const renderPreviewContent = () => {
+    // Check if the replied-to message was deleted
+    if (replyTo.is_deleted) {
+      return (
+        <Text
+          style={[
+            styles.messagePreview,
+            { color: messageTextColor, fontStyle: 'italic', opacity: 0.7 },
+          ]}
+          numberOfLines={1}
+        >
+          Deleted message
+        </Text>
+      );
+    }
+
     // Check for images
     if (replyTo.images && replyTo.images.length > 0) {
       const imageCount = replyTo.images.length;

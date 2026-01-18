@@ -10,8 +10,9 @@ import {
   Text,
 } from 'react-native';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
-import { useSharedValue } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { Image } from 'expo-image';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -42,7 +43,7 @@ import {
 import * as FileSystem from 'expo-file-system/legacy';
 import { type IWaveformRef, PlayerState, FinishMode } from '@/components/features/audio';
 
-import { useThemePreference, useColorScheme } from '@/stores';
+import { useThemePreference, useColorScheme, useChatsStore, useAuthSessionStore } from '@/stores';
 import { hexToRgba } from '@/utils/colorUtils';
 import { useTranslations } from '@/stores';
 import { haptics } from '@/utils/haptics';
@@ -62,21 +63,22 @@ import { stopAllWaveformPlayers } from '@/components/features/message/message-au
 import {
   getChats,
   getArchivedChats,
-  getChatMessages,
   sendMessage,
   markConversationAsRead,
+  deleteMessage,
   type Chat,
   type ChatMessage,
   type Message,
   type OptimisticMessage,
 } from '@/services/chats-service';
+import { type UIMessage } from '@athli/shared-types';
 import { createOptimisticMessage } from '@athli/shared-types';
 import {
   useRealtimeMessages,
   useMessageMerging,
 } from '@/hooks/use-realtime-messaging';
 import { useSendMessageWithAttachment } from '@/hooks/use-file-upload';
-import { supabase } from '@/lib/supabase';
+import { useInfiniteMessages } from '@/hooks/use-infinite-messages';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 
 const BAR_INTERVAL_MS = 100; // ✅ 10 bars/sec
@@ -483,15 +485,25 @@ export default function ChatDetailScreen() {
       },
       onEnd: (event) => {
         'worklet';
-        // Snap to final position to prevent lag at the end
         keyboardHeight.value = event.height;
       },
     },
     []
   );
 
-  // Dynamic toolbar height - tracks actual height for proper scroll offset
-  const [toolbarHeight, setToolbarHeight] = useState(60 + insets.bottom);
+  // Single animated style for the entire chat content (messages + toolbar move together)
+  const chatContentAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -keyboardHeight.value }],
+  }));
+
+  // Animated bottom offset for toolbar - smoothly transitions as keyboard opens/closes
+  // When keyboard fully closed: bottom = insets.bottom (toolbar above safe area)
+  // When keyboard opens past insets.bottom: bottom = 0 (toolbar flush with keyboard)
+  const toolbarBottomStyle = useAnimatedStyle(() => {
+    'worklet';
+    const bottom = Math.max(0, insets.bottom - keyboardHeight.value);
+    return { bottom };
+  });
 
   const [chat, setChat] = useState<Chat | null>(() => {
     if (chatParam) {
@@ -504,30 +516,28 @@ export default function ChatDetailScreen() {
     return null;
   });
 
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    if (messagesParam) {
-      try {
-        const parsed = JSON.parse(messagesParam) as ChatMessage[];
-        return parsed.map((msg) => ({
-          ...msg,
-          // Convert all date fields from strings (JSON) to Date objects
-          sent_at: new Date(msg.sent_at),
-          read_at: msg.read_at ? new Date(msg.read_at) : null,
-          edited_at: msg.edited_at ? new Date(msg.edited_at) : null,
-          deleted_at: msg.deleted_at ? new Date(msg.deleted_at) : null,
-          created_at: msg.created_at ? new Date(msg.created_at) : new Date(),
-          timestamp: new Date(msg.sent_at),
-        }));
-      } catch {
-        return [];
-      }
-    }
-    return [];
+  // Use infinite scroll for messages
+  const {
+    messages: savedMessages,
+    isLoadingInitial,
+    isLoadingMore,
+    hasMore: hasMoreMessages,
+    loadMore: loadMoreMessages,
+    removeMessage: removeSavedMessage,
+    updateMessage: updateSavedMessage,
+    refetch: refetchMessages,
+  } = useInfiniteMessages({
+    conversationId: id,
+    enabled: !!id,
   });
-  const [optimisticMessages, setOptimisticMessages] = useState<OptimisticMessage[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  const [isLoading, setIsLoading] = useState(!chatParam || !messagesParam);
+  const [optimisticMessages, setOptimisticMessages] = useState<OptimisticMessage[]>([]);
+
+  // Get current user ID synchronously from auth store (already available)
+  const currentUserId = useAuthSessionStore((state) => state.userId);
+
+  // Use isLoadingInitial from infinite messages hook
+  const isLoading = isLoadingInitial && !chatParam;
   const [reactionsSheetVisible, setReactionsSheetVisible] = useState(false);
   const [selectedMessageForReactions, setSelectedMessageForReactions] = useState<ChatMessage | null>(null);
   const [replyingToMessage, setReplyingToMessage] = useState<ChatMessage | null>(null);
@@ -536,6 +546,17 @@ export default function ChatDetailScreen() {
   const inputRef = useRef<TextInput>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Dynamic toolbar height - calculated from current state
+  // Base toolbar: ~46px (input row with buttons)
+  // Reply preview: adds ~50px
+  // Attachment picker: adds ~110px (32px padding + 56px icon + 8px gap + 14px text)
+  const toolbarHeight = useMemo(() => {
+    let height = 46;
+    if (replyingToMessage) height += 50;
+    if (showAttachmentPicker) height += 110;
+    return height;
+  }, [replyingToMessage, showAttachmentPicker]);
 
   // Panel ref for sliding sidebar
   const panelRef = useRef<SlidingPanelRef>(null);
@@ -591,24 +612,52 @@ export default function ChatDetailScreen() {
   const lastVoiceNoteDurationMsRef = useRef(0);
   const recordingStartedAtMsRef = useRef<number | null>(null);
 
-  // Get current user ID
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setCurrentUserId(user.id);
-      }
-    };
-    getCurrentUser();
-  }, []);
-
   // Realtime messages subscription (uses broadcast events for scalability)
+  // When a real message arrives via realtime, immediately remove matching optimistic message
+  // to prevent visual glitch/duplication
   const { realtimeMessages } = useRealtimeMessages({
     conversationId: id,
+    userId: currentUserId || undefined,
+    onMessageReceived: (message) => {
+      // Remove optimistic message that matches this real message
+      setOptimisticMessages((prev) => prev.filter((opt) => {
+        // ALWAYS keep optimistic messages that have attachments
+        // Let the send handler's cleanup handle these after upload confirms
+        if (opt.attachments && opt.attachments.length > 0) {
+          return true;
+        }
+
+        // For text-only messages, check if this is a match
+        // Keep if different sender
+        if (opt.sender_id !== message.sender_id) return true;
+        // Keep if different content
+        if (opt.content !== message.content) return true;
+        // Keep if outside 30 second window
+        const optTime = opt.sent_at instanceof Date ? opt.sent_at.getTime() : new Date(opt.sent_at).getTime();
+        const msgTime = message.sent_at instanceof Date ? message.sent_at.getTime() : new Date(message.sent_at).getTime();
+        const timeDiff = Math.abs(msgTime - optTime);
+        if (timeDiff > 30000) return true;
+        // Match found for text-only - safe to remove
+        return false;
+      }));
+    },
+    onMessageUpdated: (message) => {
+      // If a message is soft-deleted (is_deleted=true), remove it from local state
+      if (message.is_deleted) {
+        removeSavedMessage(message.id);
+      } else {
+        // Otherwise, update the message in local state
+        updateSavedMessage(message.id, message);
+      }
+    },
+    onMessageDeleted: (messageId) => {
+      // Remove the deleted message from local state
+      removeSavedMessage(messageId);
+    },
   });
 
   // Merge saved, realtime, and optimistic messages - transforms to UIMessage[]
-  const allMessages = useMessageMerging(messages, realtimeMessages, optimisticMessages, currentUserId);
+  const allMessages = useMessageMerging(savedMessages, realtimeMessages, optimisticMessages, currentUserId);
 
   useEffect(() => {
     const handleKeyboardHide = () => {
@@ -739,28 +788,47 @@ export default function ChatDetailScreen() {
   useEffect(() => {
     if (documentSent === 'true' && sentDocument && currentUserId && id) {
       const uploadDocument = async () => {
-        try {
-          const documentData = JSON.parse(sentDocument);
+        const documentData = JSON.parse(sentDocument);
+        const mimeType = documentData.mimeType || 'application/pdf';
 
-          // Upload document and create message in one atomic operation
+        // Create optimistic message for instant display
+        const optimisticMsg = createOptimisticMessage(
+          id,
+          currentUserId,
+          documentData.caption || '',
+          'file',
+          undefined,
+          [{ local_uri: documentData.uri, mime_type: mimeType, filename: documentData.name || 'document.pdf' }]
+        );
+
+        setOptimisticMessages((prev) => [...prev, optimisticMsg]);
+
+        // Clear UI immediately
+        setSearchQuery('');
+        setShowAttachmentPicker(false);
+
+        try {
           await sendWithAttachment(
-            id, // conversationId
-            currentUserId, // senderId
-            documentData.uri, // fileUri
-            documentData.mimeType || 'application/pdf', // mimeType
-            documentData.caption || undefined, // caption
+            id,
+            currentUserId,
+            documentData.uri,
+            mimeType,
+            documentData.caption || undefined,
           );
 
-          // Clear draft text in input bar
-          setSearchQuery('');
+          // Remove optimistic message - realtime will add real one
+          setOptimisticMessages((prev) =>
+            prev.filter((m) => m.id !== optimisticMsg.id)
+          );
 
-          // Close attachment picker
-          setShowAttachmentPicker(false);
+          useChatsStore.getState().loadChats();
         } catch (error) {
           console.error('[ChatDetail] Error uploading document:', error);
+          setOptimisticMessages((prev) =>
+            prev.filter((m) => m.id !== optimisticMsg.id)
+          );
           Alert.alert('Upload Failed', 'Could not upload document. Please try again.');
         } finally {
-          // Clear the params
           router.setParams({
             documentSent: '',
             sentDocument: '',
@@ -776,28 +844,69 @@ export default function ChatDetailScreen() {
   useEffect(() => {
     if (imagesSent === 'true' && sentImages && currentUserId && id) {
       const uploadImages = async () => {
-        try {
-          const imageAttachments = JSON.parse(sentImages);
+        const imageAttachments = JSON.parse(sentImages);
+        const optimisticIds: string[] = [];
 
-          // Upload each image separately (multiple messages, one per image)
-          // This matches WhatsApp behavior where each image is a separate message
-          for (const image of imageAttachments) {
-            await sendWithAttachment(
-              id, // conversationId
-              currentUserId, // senderId
-              image.uri, // fileUri
-              'image/jpeg', // mimeType
-              sentImagesCaption || undefined, // caption (only first image gets caption)
+        try {
+          // Create optimistic messages FIRST for instant UI feedback
+          for (let i = 0; i < imageAttachments.length; i++) {
+            const image = imageAttachments[i];
+            const isFirstImage = i === 0;
+
+            // Create optimistic message with local image for instant display
+            const optimisticMsg = createOptimisticMessage(
+              id,
+              currentUserId,
+              isFirstImage ? (sentImagesCaption || '') : '',
+              'image',
+              undefined, // no parent message
+              [{ local_uri: image.uri, mime_type: 'image/jpeg', filename: 'photo.jpg' }]
             );
+
+            optimisticIds.push(optimisticMsg.id);
+            setOptimisticMessages((prev) => [...prev, optimisticMsg]);
           }
 
-          // Clear draft text in input bar
+          // Clear draft text and close picker immediately
           setSearchQuery('');
-
-          // Close attachment picker
           setShowAttachmentPicker(false);
+
+          // Upload each image in background (messages already shown optimistically)
+          for (let i = 0; i < imageAttachments.length; i++) {
+            const image = imageAttachments[i];
+            const isFirstImage = i === 0;
+
+            try {
+              await sendWithAttachment(
+                id,
+                currentUserId,
+                image.uri,
+                'image/jpeg',
+                isFirstImage ? (sentImagesCaption || undefined) : undefined,
+              );
+
+              // Remove optimistic message after successful upload
+              // Realtime will add the real message
+              setOptimisticMessages((prev) =>
+                prev.filter((m) => m.id !== optimisticIds[i])
+              );
+            } catch (uploadError) {
+              console.error('[ChatDetail] Error uploading image:', uploadError);
+              // Remove failed optimistic message
+              setOptimisticMessages((prev) =>
+                prev.filter((m) => m.id !== optimisticIds[i])
+              );
+            }
+          }
+
+          // Refresh chats list
+          useChatsStore.getState().loadChats();
         } catch (error) {
           console.error('[ChatDetail] Error uploading images:', error);
+          // Remove all optimistic messages on error
+          setOptimisticMessages((prev) =>
+            prev.filter((m) => !optimisticIds.includes(m.id))
+          );
           Alert.alert('Upload Failed', 'Could not upload images. Please try again.');
         } finally {
           // Clear the params
@@ -817,28 +926,46 @@ export default function ChatDetailScreen() {
   useEffect(() => {
     if (videoSent === 'true' && sentVideo && currentUserId && id) {
       const uploadVideo = async () => {
-        try {
-          const videoData = JSON.parse(sentVideo);
+        const videoData = JSON.parse(sentVideo);
 
-          // Upload video and create message in one atomic operation
+        // Create optimistic message for instant display
+        const optimisticMsg = createOptimisticMessage(
+          id,
+          currentUserId,
+          videoData.caption || '',
+          'video',
+          undefined,
+          [{ local_uri: videoData.uri, mime_type: 'video/mp4', filename: 'video.mp4' }]
+        );
+
+        setOptimisticMessages((prev) => [...prev, optimisticMsg]);
+
+        // Clear UI immediately
+        setSearchQuery('');
+        setShowAttachmentPicker(false);
+
+        try {
           await sendWithAttachment(
-            id, // conversationId
-            currentUserId, // senderId
-            videoData.uri, // fileUri
-            'video/mp4', // mimeType
-            videoData.caption || undefined, // caption
+            id,
+            currentUserId,
+            videoData.uri,
+            'video/mp4',
+            videoData.caption || undefined,
           );
 
-          // Clear draft text in input bar
-          setSearchQuery('');
+          // Remove optimistic message - realtime will add real one
+          setOptimisticMessages((prev) =>
+            prev.filter((m) => m.id !== optimisticMsg.id)
+          );
 
-          // Close attachment picker
-          setShowAttachmentPicker(false);
+          useChatsStore.getState().loadChats();
         } catch (error) {
           console.error('[ChatDetail] Error uploading video:', error);
+          setOptimisticMessages((prev) =>
+            prev.filter((m) => m.id !== optimisticMsg.id)
+          );
           Alert.alert('Upload Failed', 'Could not upload video. Please try again.');
         } finally {
-          // Clear the params
           router.setParams({
             videoSent: '',
             sentVideo: '',
@@ -852,14 +979,13 @@ export default function ChatDetailScreen() {
 
   const hasText = searchQuery.trim().length > 0;
 
+  // Load chat metadata if not provided via params
   useEffect(() => {
-    // Only load if not provided via params
-    if (chatParam && messagesParam) return;
+    if (chatParam) return;
 
     let mounted = true;
 
     const loadChat = async () => {
-      setIsLoading(true);
       try {
         const chats = await getChats();
         let foundChat = chats.find((c) => c.id === id);
@@ -869,17 +995,11 @@ export default function ChatDetailScreen() {
           foundChat = archivedChats.find((c) => c.id === id);
         }
 
-        if (!foundChat) return;
-
-        const chatMessages = await getChatMessages(foundChat.id);
-        if (!mounted) return;
+        if (!foundChat || !mounted) return;
 
         setChat(foundChat);
-        setMessages(chatMessages);
       } catch (error) {
         console.error('Failed to load chat:', error);
-      } finally {
-        if (mounted) setIsLoading(false);
       }
     };
 
@@ -888,7 +1008,7 @@ export default function ChatDetailScreen() {
     return () => {
       mounted = false;
     };
-  }, [id, chatParam, messagesParam]);
+  }, [id, chatParam]);
 
   // Mark conversation as read when opening/viewing
   useEffect(() => {
@@ -917,8 +1037,8 @@ export default function ChatDetailScreen() {
     }
   };
 
-  const handleMessageReply = (message: ChatMessage) => {
-    setReplyingToMessage(message);
+  const handleMessageReply = (message: UIMessage) => {
+    setReplyingToMessage(message as unknown as ChatMessage);
     // Focus the input to open keyboard
     setTimeout(() => {
       inputRef.current?.focus();
@@ -927,7 +1047,6 @@ export default function ChatDetailScreen() {
 
   const handleCancelReply = () => {
     setReplyingToMessage(null);
-    Keyboard.dismiss();
   };
 
   const handlePlusPress = () => {
@@ -971,26 +1090,45 @@ export default function ChatDetailScreen() {
     const pathToSend = pathOverride ?? previewPath;
     if (!isMicrophoneMode || !pathToSend || !currentUserId || !id) return;
 
+    // Stop preview player and close microphone mode immediately
+    previewWaveRef.current?.stopPlayer?.();
+    setIsMicrophoneMode(false);
+
+    const audioUri = pathToSend.startsWith('file://') ? pathToSend : `file://${pathToSend}`;
+
+    // Create optimistic message for instant display
+    const optimisticMsg = createOptimisticMessage(
+      id,
+      currentUserId,
+      '',
+      'audio',
+      undefined,
+      [{ local_uri: audioUri, mime_type: 'audio/mp4', filename: 'voicenote.m4a' }]
+    );
+
+    setOptimisticMessages((prev) => [...prev, optimisticMsg]);
+
     try {
-      // Stop preview player and close microphone mode
-      previewWaveRef.current?.stopPlayer?.();
-      setIsMicrophoneMode(false);
-
-      // Use captured duration (recorderState can be 0 depending on platform)
-      const audioUri = pathToSend.startsWith('file://') ? pathToSend : `file://${pathToSend}`;
-
-      // Upload audio and create message in one atomic operation
       await sendWithAttachment(
-        id, // conversationId
-        currentUserId, // senderId
-        audioUri, // fileUri
-        'audio/mp4', // mimeType
-        undefined, // no caption for audio
+        id,
+        currentUserId,
+        audioUri,
+        'audio/mp4',
+        undefined,
       );
+
+      // Remove optimistic message - realtime will add real one
+      setOptimisticMessages((prev) =>
+        prev.filter((m) => m.id !== optimisticMsg.id)
+      );
+
+      useChatsStore.getState().loadChats();
     } catch (e) {
       console.error('[ChatDetail] Failed to send voice note:', e);
+      setOptimisticMessages((prev) =>
+        prev.filter((m) => m.id !== optimisticMsg.id)
+      );
       Alert.alert('Upload Failed', 'Could not upload voice note. Please try again.');
-      setIsMicrophoneMode(false);
     }
   };
 
@@ -1074,7 +1212,7 @@ export default function ChatDetailScreen() {
   };
 
   // Helper function to find the original message in a reply chain
-  const findOriginalMessage = (message: ChatMessage): ChatMessage => {
+  const findOriginalMessage = (message: UIMessage): UIMessage => {
     if (!message.replyTo) {
       return message;
     }
@@ -1110,45 +1248,55 @@ export default function ChatDetailScreen() {
         parentMessageId,
       });
 
-      // Remove optimistic message and refetch to get the real one
-      // This ensures message appears even if realtime isn't working
+      // Remove optimistic message after successful send
+      // The realtime subscription will add the actual message
       setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
-      const updatedMessages = await getChatMessages(id);
-      setMessages(updatedMessages);
+
+      // Refresh chats list to update last_message_preview and last_message_at
+      useChatsStore.getState().loadChats();
     } catch (error) {
       // Mark as failed (keep in optimistic list but update status)
+      // Note: We remove failed messages from the optimistic list since the type doesn't support 'failed' status
       setOptimisticMessages((prev) =>
-        prev.map((m) =>
-          m.id === optimisticMsg.id ? { ...m, status: 'failed' as const } : m
-        )
+        prev.filter((m) => m.id !== optimisticMsg.id)
       );
-      // TODO: Show error toast
+      // TODO: Show error toast and allow retry
     }
   };
 
-  const handleMessageEdit = (message: ChatMessage) => {
+  const handleMessageEdit = (message: UIMessage) => {
     // TODO: Implement edit functionality
     // This could set the message to edit mode and populate the input with the message text
-    setSearchQuery(message.text);
+    setSearchQuery(message.text || '');
   };
 
-  const handleMessageDelete = async (message: ChatMessage) => {
-    setMessages((prev) => prev.filter((m) => m.id !== message.id));
+  const handleMessageDelete = async (message: UIMessage) => {
+    // Optimistically remove from local state first for instant UI feedback
+    removeSavedMessage(message.id);
+
+    try {
+      // Call the real delete API (soft delete)
+      await deleteMessage(message.id);
+    } catch (error) {
+      console.error('[ChatDetail] Error deleting message:', error);
+      // Optionally: restore the message on error, or show a toast
+      // For now, the realtime subscription will sync the correct state
+    }
   };
 
-  const handleReactionPress = (message: ChatMessage) => {
-    setSelectedMessageForReactions(message);
+  const handleReactionPress = (message: UIMessage) => {
+    setSelectedMessageForReactions(message as unknown as ChatMessage);
     setReactionsSheetVisible(true);
   };
 
-  const handleDocumentPress = (document: import('@/services/chats-service').DocumentAttachment) => {
+  const handleDocumentPress = (document: any) => {
     router.push({
       pathname: '/chats/document-preview',
       params: {
-        uri: document.uri,
-        name: document.name,
-        mimeType: document.mimeType,
-        size: document.size?.toString() || '',
+        uri: document.uri || document.url || '',
+        name: document.name || document.filename || '',
+        mimeType: document.mimeType || document.mime_type || '',
+        size: (document.size || document.size_bytes || '').toString(),
         chatId: chat?.id || '',
         clientId: chat?.client_id || '',
         clientName: chat?.other_user_name || '',
@@ -1158,53 +1306,51 @@ export default function ChatDetailScreen() {
   };
 
   const handleImagePress = (
-    images: import('@/services/chats-service').ImageAttachment[],
+    images: any[],
     senderName: string,
     isSent: boolean,
-    messageTimestamp?: Date
+    messageTimestamp?: Date | string
   ) => {
+    const timestamp = messageTimestamp instanceof Date ? messageTimestamp.toISOString() : messageTimestamp || '';
     router.push({
       pathname: '/chats/message-image-preview',
       params: {
         images: JSON.stringify(images),
         senderName: senderName,
         isSent: isSent.toString(),
-        messageTimestamp: messageTimestamp?.toISOString() || '',
+        messageTimestamp: timestamp,
       },
     });
   };
 
   const handleVideoPress = (
-    video: import('@/services/chats-service').VideoAttachment,
+    video: any,
     senderName: string,
     isSent: boolean,
-    messageTimestamp?: Date
+    messageTimestamp?: Date | string
   ) => {
+    const timestamp = messageTimestamp instanceof Date ? messageTimestamp.toISOString() : messageTimestamp || '';
     router.push({
       pathname: '/chats/video-preview',
       params: {
-        uri: video.uri,
-        duration: video.duration.toString(),
-        orientation: video.orientation,
+        uri: video.uri || video.url || '',
+        duration: (video.duration || 0).toString(),
+        orientation: video.orientation || 'portrait',
         fromMessage: 'true',
         senderName: senderName,
         isSent: isSent.toString(),
-        messageTimestamp: messageTimestamp?.toISOString() || '',
+        messageTimestamp: timestamp,
       },
     });
   };
 
   const handleReactionRemoved = (messageId: string, isSender: boolean) => {
-    setMessages((prev) =>
-      prev.map((msg) => {
-        if (msg.id === messageId) {
-          return {
-            ...msg,
-            ...(isSender ? { senderReaction: undefined } : { recipientReaction: undefined }),
-          };
-        }
-        return msg;
-      })
+    // Update the message to remove the reaction
+    // Note: This uses the deprecated senderReaction/recipientReaction fields
+    // The actual reactions are stored in the reactions array and handled by realtime
+    updateSavedMessage(
+      messageId,
+      (isSender ? { senderReaction: undefined } : { recipientReaction: undefined }) as unknown as Partial<Message>
     );
   };
 
@@ -1227,7 +1373,7 @@ export default function ChatDetailScreen() {
         <ClientPanelContent
           clientId={chat?.client_id}
           clientName={chat?.other_user_name}
-          clientAvatar={chat?.other_user_avatar}
+          clientAvatar={chat?.other_user_avatar ?? undefined}
           onClose={handleClosePanel}
         />
       )}
@@ -1249,55 +1395,81 @@ export default function ChatDetailScreen() {
           onPanelOpen={handleOpenPanel}
         />
 
-        {/* ROW 2: SCROLL WINDOW - Fills space between header and toolbar */}
-        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-          <MessageList
-            messages={allMessages}
-            backgroundColor="transparent"
-            themeColors={themeColors}
-            clientName={chat.other_user_name || 'Client'}
-            keyboardHeight={keyboardHeight}
-            onReply={handleMessageReply}
-            onEdit={handleMessageEdit}
-            onDelete={handleMessageDelete}
-            onReactionPress={handleReactionPress}
-            onDocumentPress={handleDocumentPress}
-            onImagePress={handleImagePress}
-            onVideoPress={handleVideoPress}
-            headerHeight={insets.top + 60}
-            bottomOffset={toolbarHeight}
+        {/* Messages + Toolbar container - moves together with keyboard */}
+        <Animated.View style={[{ flex: 1 }, chatContentAnimatedStyle]}>
+          {/* SCROLL WINDOW - Fills space between header and toolbar */}
+          <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+            <MessageList
+              messages={allMessages}
+              backgroundColor="transparent"
+              themeColors={themeColors}
+              clientName={chat.other_user_name || 'Client'}
+              onReply={handleMessageReply}
+              onEdit={handleMessageEdit}
+              onDelete={handleMessageDelete}
+              onReactionPress={handleReactionPress}
+              onDocumentPress={handleDocumentPress}
+              onImagePress={handleImagePress}
+              onVideoPress={handleVideoPress}
+              headerHeight={insets.top + 60}
+              bottomOffset={toolbarHeight + 8 + insets.bottom}
+              onLoadMore={loadMoreMessages}
+              isLoadingMore={isLoadingMore}
+              hasMoreMessages={hasMoreMessages}
+            />
+          </View>
+
+          {/* TOOLBAR - Absolutely positioned within this container */}
+          <ChatToolbar
+            chat={chat}
+            replyingToMessage={replyingToMessage}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            inputRef={inputRef}
+            hasText={hasText}
+            isMicrophoneMode={isMicrophoneMode}
+            isStopped={isStopped}
+            showAttachmentPicker={showAttachmentPicker}
+            durationLabel={durationLabel}
+            waveform={waveform}
+            previewPath={previewPath}
+            previewPlayerState={previewPlayerState}
+            onPlayerStateChange={setPreviewPlayerState}
+            onTogglePreviewPlay={handleTogglePreviewPlay}
+            previewWaveRef={previewWaveRef}
+            onPlusPress={handlePlusPress}
+            onMicrophonePress={handleMicrophonePress}
+            onSendMessage={handleSendMessage}
+            onTrashPress={handleTrashPress}
+            onStopToggle={handleStopToggle}
+            onSendPress={handleSendPress}
+            onCancelReply={handleCancelReply}
+            bottomInset={0}
+            animatedBottomStyle={toolbarBottomStyle}
+          />
+        </Animated.View>
+
+        {/* Fixed bottom filler - doesn't move with keyboard */}
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: insets.bottom,
+            overflow: 'hidden',
+          }}
+          pointerEvents="none"
+        >
+          <BlurView
+            intensity={30}
+            tint={isDark ? 'dark' : 'light'}
+            style={{
+              flex: 1,
+              backgroundColor: hexToRgba(themeColors.translucentBackground, 0.95),
+            }}
           />
         </View>
-
-        {/* ROW 3: TOOLBAR - Absolutely positioned */}
-        <ChatToolbar
-          chat={chat}
-          replyingToMessage={replyingToMessage}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          inputRef={inputRef}
-          hasText={hasText}
-          isMicrophoneMode={isMicrophoneMode}
-          isStopped={isStopped}
-          showAttachmentPicker={showAttachmentPicker}
-          durationLabel={durationLabel}
-          waveform={waveform}
-          previewPath={previewPath}
-          previewPlayerState={previewPlayerState}
-          onPlayerStateChange={setPreviewPlayerState}
-          onTogglePreviewPlay={handleTogglePreviewPlay}
-          previewWaveRef={previewWaveRef}
-          onPlusPress={handlePlusPress}
-          onMicrophonePress={handleMicrophonePress}
-          onSendMessage={handleSendMessage}
-          onTrashPress={handleTrashPress}
-          onStopToggle={handleStopToggle}
-          onSendPress={handleSendPress}
-          onCancelReply={handleCancelReply}
-          bottomInset={insets.bottom}
-          keyboardHeight={keyboardHeight}
-          onHeightChange={setToolbarHeight}
-        />
 
         <MessageReactionsSheet
           visible={reactionsSheetVisible}

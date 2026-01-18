@@ -28,11 +28,11 @@ export default function ClientNotesScreen() {
   };
 
   const handleAddNote = () => {
-    router.push(`/modals/client/add-note-to-client-modal?clientId=${id}`);
+    router.push(`/modals/client/add-note-to-client-modal?clientId=${id}` as any);
   };
 
   const handleNotePress = (updateId: string) => {
-    router.push(`/modals/client/edit-note-modal?clientId=${id}&updateId=${updateId}`);
+    router.push(`/modals/client/edit-note-modal?clientId=${id}&updateId=${updateId}` as any);
   };
 
   const formatDate = (dateString: string) => {

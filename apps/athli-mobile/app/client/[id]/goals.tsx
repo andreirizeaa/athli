@@ -145,7 +145,6 @@ export default function ClientGoalsScreen() {
           data={goals}
           renderItem={renderGoal}
           keyExtractor={(item) => item.id}
-          estimatedItemSize={80}
           ListEmptyComponent={<EmptyState message={t('clientDetail.overview.noGoals')} />}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}

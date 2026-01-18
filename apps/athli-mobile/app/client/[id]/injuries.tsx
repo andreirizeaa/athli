@@ -39,7 +39,7 @@ export default function ClientInjuriesScreen() {
     router.push({
       pathname: '/modals/client/add-client-injury-modal',
       params: { id },
-    });
+    } as any);
   };
 
   const handleInjuryPress = (injuryId: string) => {
@@ -47,7 +47,7 @@ export default function ClientInjuriesScreen() {
     router.push({
       pathname: '/modals/client/edit-client-injury-modal',
       params: { id, injuryId },
-    });
+    } as any);
   };
 
   const formatDate = (dateString: string) => {
@@ -59,16 +59,8 @@ export default function ClientInjuriesScreen() {
     });
   };
 
-  const getSeverityColor = (severity: string | undefined) => {
-    switch (severity?.toLowerCase()) {
-      case 'severe':
-        return themeColors.error;
-      case 'moderate':
-        return themeColors.warning || '#F5A623';
-      case 'mild':
-      default:
-        return themeColors.success;
-    }
+  const getInjuryColor = () => {
+    return themeColors.error;
   };
 
   const renderInjury = ({ item, index }: { item: AthleteInjury; index: number }) => (
@@ -76,12 +68,12 @@ export default function ClientInjuriesScreen() {
       {index > 0 && <Separator style={styles.separator} />}
       <PressableScale onPress={() => handleInjuryPress(item.id)}>
         <View style={styles.injuryItem}>
-          <View style={[styles.injuryIconContainer, { backgroundColor: `${getSeverityColor(item.severity)}15` }]}>
+          <View style={[styles.injuryIconContainer, { backgroundColor: `${getInjuryColor()}15` }]}>
             <PlatformIcon
               sf="heart"
               IconComponent={Heart}
               size={20}
-              color={getSeverityColor(item.severity)}
+              color={getInjuryColor()}
             />
           </View>
           <View style={styles.injuryContent}>
@@ -89,14 +81,9 @@ export default function ClientInjuriesScreen() {
               {item.injury}
             </Text>
             <View style={styles.injuryMeta}>
-              {item.severity && (
-                <Text style={[styles.injurySeverity, { color: getSeverityColor(item.severity) }]}>
-                  {item.severity}
-                </Text>
-              )}
-              {item.date_of_injury && (
+              {item.date && (
                 <Text style={[styles.injuryDate, { color: themeColors.mutedText }]}>
-                  {formatDate(item.date_of_injury)}
+                  {formatDate(item.date)}
                 </Text>
               )}
             </View>
@@ -157,7 +144,6 @@ export default function ClientInjuriesScreen() {
           data={injuries}
           renderItem={renderInjury}
           keyExtractor={(item) => item.id}
-          estimatedItemSize={80}
           ListEmptyComponent={<EmptyState message={t('clientDetail.overview.noInjuries')} />}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}

@@ -1,5 +1,5 @@
 import { apiFetch } from '@/lib/api-client';
-import { type MetricScheduleData } from '@/api/client/client-metric-service';
+import { type MetricScheduleData } from '@/services/client/client-metric-service';
 
 export interface Metric {
   id: string;

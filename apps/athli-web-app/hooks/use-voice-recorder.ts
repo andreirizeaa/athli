@@ -217,5 +217,17 @@ export function useVoiceRecorder() {
     cancel();
   }, [cancel]);
 
-  return { state, durationMs, start, stop, cancel, reset, getAmplitude };
+  return { 
+    state, 
+    durationMs, 
+    start, 
+    stop, 
+    cancel, 
+    reset, 
+    getAmplitude,
+    // Expose MediaRecorder for external visualizers
+    mediaRecorder: mediaRecorderRef.current,
+    // Expose MediaStream for live waveform visualization
+    stream: streamRef.current,
+  };
 }
