@@ -245,6 +245,12 @@ export const VideoPreviewScreen = () => {
                   color={iconColor}
                 />
               </PressableOpacity>
+            ) : params.clientName ? (
+              <View style={[styles.recipientTag, { backgroundColor: themeColors.backgroundTertiary }]}>
+                <Text style={[styles.recipientTagText, { color: themeColors.text }]} numberOfLines={1}>
+                  {params.clientName}
+                </Text>
+              </View>
             ) : (
               <View style={styles.spacer} />
             )}
@@ -267,7 +273,6 @@ export const VideoPreviewScreen = () => {
           <AttachmentPreviewToolbar
             value={caption}
             onChangeText={setCaption}
-            clientName={params.clientName}
             onSend={handleSend}
           />
         </View>
@@ -338,6 +343,16 @@ const styles = StyleSheet.create({
   },
   spacer: {
     width: 44,
+  },
+  recipientTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    maxWidth: 120,
+  },
+  recipientTagText: {
+    ...typography.p2,
+    fontWeight: '500',
   },
   closeButton: {
     width: 44,

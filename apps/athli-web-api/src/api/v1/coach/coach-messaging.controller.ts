@@ -189,10 +189,11 @@ export const coachMessagingController = {
                     *,
                     attachments:message_attachments(*),
                     reactions:message_reactions(*),
-                    parent_message:messages!parent_message_id(id, content, message_type, sender_id, sent_at)
+                    parent_message:messages!parent_message_id(id, content, message_type, sender_id, sent_at, is_deleted)
                 `,
                 )
                 .eq('conversation_id', conversationId)
+                .or('is_deleted.is.null,is_deleted.eq.false')  // Filter out soft-deleted messages
                 .order('sent_at', { ascending: false })
                 .range(parseInt(offset as string), parseInt(offset as string) + parseInt(limit as string) - 1);
 
@@ -416,20 +417,15 @@ export const coachMessagingController = {
 
             const latestMessage = messages[0];
 
-            // Update read receipt
+            // Update read receipt (Supabase auto-detects unique constraint)
             const { error: receiptError } = await supabase
                 .from('message_read_receipts')
-                .upsert(
-                    {
-                        conversation_id: conversationId,
-                        user_id: userId,
-                        last_read_message_id: latestMessage.id,
-                        last_read_at: new Date().toISOString(),
-                    },
-                    {
-                        onConflict: 'conversation_id,user_id',
-                    },
-                );
+                .upsert({
+                    conversation_id: conversationId,
+                    user_id: userId,
+                    last_read_message_id: latestMessage.id,
+                    last_read_at: new Date().toISOString(),
+                });
 
             if (receiptError) throw receiptError;
 

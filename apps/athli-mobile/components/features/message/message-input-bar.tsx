@@ -84,9 +84,9 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     ...typography.p2,
-    lineHeight: 22,
     paddingTop: 0,
     paddingBottom: 0,
+    includeFontPadding: false,
   },
   clearIcon: {
     marginLeft: 8,

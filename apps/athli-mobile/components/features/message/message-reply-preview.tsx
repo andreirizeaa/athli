@@ -76,6 +76,21 @@ export const MessageReplyPreview = ({
 
   // Determine preview content based on message type
   const renderPreviewContent = () => {
+    // Check if the replied-to message was deleted
+    if (replyTo.is_deleted) {
+      return (
+        <Text
+          style={[
+            styles.messagePreview,
+            { color: messageTextColor, fontStyle: 'italic', opacity: 0.7 },
+          ]}
+          numberOfLines={1}
+        >
+          Deleted message
+        </Text>
+      );
+    }
+
     // Check for images
     if (replyTo.images && replyTo.images.length > 0) {
       const imageCount = replyTo.images.length;

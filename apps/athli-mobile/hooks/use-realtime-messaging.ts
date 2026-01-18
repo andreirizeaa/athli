@@ -66,6 +66,7 @@ export const useMessageMerging = (
 
 type RealtimeMessagesOptions = {
   conversationId: string;
+  userId?: string;
   onMessageReceived?: (message: Message) => void;
   onMessageUpdated?: (message: Message) => void;
   onMessageDeleted?: (messageId: string) => void;
@@ -98,6 +99,7 @@ function convertBroadcastTimestamps(payload: Record<string, unknown>): Message {
  */
 export const useRealtimeMessages = ({
   conversationId,
+  userId,
   onMessageReceived,
   onMessageUpdated,
   onMessageDeleted,
@@ -121,6 +123,9 @@ export const useRealtimeMessages = ({
   useEffect(() => {
     if (!conversationId) return;
 
+    // Clear old realtime messages when conversation changes
+    setRealtimeMessages([]);
+
     let isCancelled = false;
 
     // CRITICAL: Set auth token before subscribing to private channels
@@ -128,10 +133,14 @@ export const useRealtimeMessages = ({
       if (isCancelled) return;
 
       // Create private channel matching the database trigger topic format
+      // Include presence config with userId for proper authorization
       const newChannel = supabase.channel(
         `conversation:${conversationId}:messages`,
         {
-          config: { private: true },
+          config: {
+            private: true,
+            presence: userId ? { key: userId } : undefined,
+          },
         },
       );
 
@@ -175,7 +184,7 @@ export const useRealtimeMessages = ({
       }
       setIsSubscribed(false);
     };
-  }, [conversationId]); // Only re-subscribe when conversationId changes
+  }, [conversationId, userId]); // Re-subscribe when conversationId or userId changes
 
   return { realtimeMessages, isSubscribed, channel };
 };

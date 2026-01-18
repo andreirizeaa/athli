@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { flushSync } from 'react-dom';
 import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
@@ -45,9 +46,9 @@ import {
 } from '@/components/app/app-shell';
 import { useQueryClient } from '@tanstack/react-query';
 import { useConversations } from '@/hooks/use-conversations';
-import { useMessages } from '@/hooks/use-messages';
+import { useInfiniteMessages } from '@/hooks/use-infinite-messages';
 import { useRealtimeConversations, useRealtimeMessages, useSyncReadReceipt, useMessageMerging } from '@/hooks/use-realtime-messaging';
-import { sendMessage as sendMessageAPI, markConversationAsRead, addReaction, removeReaction } from '@/lib/messaging/messaging-api-client';
+import { sendMessage as sendMessageAPI, markConversationAsRead, addReaction, removeReaction, deleteMessage as deleteMessageAPI } from '@/lib/messaging/messaging-api-client';
 import type { Conversation, OptimisticMessage } from '@athli/shared-types';
 import { createOptimisticMessage } from '@athli/shared-types';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -67,6 +68,7 @@ import { ClientProfileLayoutContent } from '@/app/athletes/[clientId]/layout';
 import { ClientProfileContent } from './components/client-profile-content';
 import { SectionLoader } from '@/components/ui/section-loader';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { useAttachmentUrls } from '@/hooks/use-attachment-urls';
 
 
 type Note = {
@@ -182,15 +184,89 @@ const InboxPage = () => {
     [conversations, selectedContactId]
   );
 
-  // Fetch messages for selected conversation
+  // Fetch messages for selected conversation with infinite scroll
   const {
     messages: apiMessages,
-    isLoading: isLoadingMessages,
+    isLoadingInitial: isLoadingMessages,
+    isLoadingMore: isLoadingMoreMessages,
+    hasMore: hasMoreMessages,
     refetch: refetchMessages,
-  } = useMessages(selectedConversation?.id || null);
+    removeMessage: removeApiMessage,
+    triggerRef: loadMoreTriggerRef,
+  } = useInfiniteMessages({
+    conversationId: selectedConversation?.id || null,
+    enabled: !!selectedConversation?.id,
+  });
+
+  // Ref to access latest apiMessages in polling callbacks (avoids stale closure)
+  const apiMessagesRef = React.useRef(apiMessages);
+  React.useEffect(() => {
+    apiMessagesRef.current = apiMessages;
+  }, [apiMessages]);
+
   // Realtime subscriptions
+  // When a real message arrives via realtime, immediately remove matching optimistic message
+  // to prevent visual glitch/duplication
   const { realtimeMessages } = useRealtimeMessages({
     conversationId: selectedConversation?.id || '',
+    userId: user?.id,
+    onMessageReceived: (message) => {
+      // Remove optimistic message that matches this real message
+      // BUT only remove text-only messages here - messages with attachments are
+      // handled by the polling cleanup to ensure attachments are uploaded first
+      setOptimisticMessages((prev) => {
+        const toRemove: typeof prev = [];
+        const normalizeContent = (content: string | null | undefined): string => content ?? '';
+
+        const toKeep = prev.filter((opt) => {
+          // ALWAYS keep optimistic messages that have attachments
+          // Let the polling mechanism handle cleanup for these
+          if (opt.attachments && opt.attachments.length > 0) {
+            return true;
+          }
+
+          // For text-only messages, check if this is a match
+          if (opt.sender_id !== message.sender_id) return true;
+          if (normalizeContent(opt.content) !== normalizeContent(message.content)) return true;
+
+          const optTime = opt.sent_at instanceof Date ? opt.sent_at.getTime() : new Date(opt.sent_at).getTime();
+          const msgTime = message.sent_at instanceof Date ? message.sent_at.getTime() : new Date(message.sent_at).getTime();
+          const timeDiff = Math.abs(msgTime - optTime);
+          if (timeDiff > 30000) return true;
+
+          // Match found for text-only message - safe to remove
+          toRemove.push(opt);
+          return false;
+        });
+
+        // Revoke blob URLs to prevent memory leaks (only for text-only messages being removed)
+        toRemove.forEach((opt) => {
+          if (opt.attachments) {
+            opt.attachments.forEach((att) => {
+              if (att.local_uri?.startsWith('blob:')) {
+                URL.revokeObjectURL(att.local_uri);
+              }
+            });
+          }
+        });
+
+        return toKeep;
+      });
+    },
+    onMessageUpdated: (message) => {
+      // If a message is soft-deleted (is_deleted=true), remove it optimistically
+      if (message.is_deleted) {
+        removeApiMessage(message.id);
+      }
+      // NOTE: We intentionally do NOT refetch here for regular updates (e.g., attachments added)
+      // The polling mechanism handles cleanup for messages with attachments to prevent
+      // race conditions that cause flicker. The polling ensures the real message has
+      // signed_url on attachments before removing the optimistic message.
+    },
+    onMessageDeleted: (messageId) => {
+      // Remove the deleted message from local state
+      removeApiMessage(messageId);
+    },
   });
 
   const { conversations: realtimeConversations } = useRealtimeConversations({
@@ -213,17 +289,46 @@ const InboxPage = () => {
     user?.id || null
   );
 
+  // Collect attachments that need signed URL generation
+  // Skip attachments that already have URLs (optimistic with local_uri, or API with signed_url)
+  const attachmentsNeedingUrls = React.useMemo(() => {
+    if (!mergedMessages || mergedMessages.length === 0) return [];
+    return mergedMessages
+      .flatMap((msg) => msg.attachments || [])
+      .filter((att) => {
+        // Skip optimistic attachments (have blob URL)
+        if ((att as any).local_uri) return false;
+        // Skip attachments that already have signed URL from API
+        if ((att as any).signed_url) return false;
+        // Only include if has file_path (needs URL generation from storage)
+        return !!att.file_path;
+      });
+  }, [mergedMessages]);
+
+  // Generate signed URLs only for attachments that need them
+  const attachmentUrlMap = useAttachmentUrls(attachmentsNeedingUrls);
+
   // Auto-mark conversation as read when viewing it
-  // Pass latest message ID to avoid unnecessary database queries
-  const latestMessage = mergedMessages[mergedMessages.length - 1];
+  // Pass latest REAL message ID (skip optimistic temp-xxx IDs) to avoid database errors
+  const latestRealMessage = React.useMemo(() => {
+    // Find the latest message that's not optimistic (doesn't start with "temp-")
+    for (let i = mergedMessages.length - 1; i >= 0; i--) {
+      if (!mergedMessages[i].id.startsWith('temp-')) {
+        return mergedMessages[i];
+      }
+    }
+    return undefined;
+  }, [mergedMessages]);
+
   useSyncReadReceipt({
     conversationId: selectedConversation?.id || '',
     userId: user?.id || '',
     enabled: !!selectedConversation && !!user,
-    latestMessageId: latestMessage?.id,
+    latestMessageId: latestRealMessage?.id,
   });
 
   const [isNavigating, setIsNavigating] = React.useState(false);
+  const [isMessageListReady, setIsMessageListReady] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(!!contactIdFromPath);
   const [messageInput, setMessageInput] = React.useState('');
@@ -372,6 +477,8 @@ const InboxPage = () => {
   const [dragCounter, setDragCounter] = React.useState(0);
   const isLoadingDraftRef = React.useRef(false);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const hasInitialScrolledRef = React.useRef(false);
+  const previousMessageCountRef = React.useRef(0);
 
   // Check if a contact has a draft (text, PDF, video, or images)
   const hasDraft = React.useCallback(
@@ -500,49 +607,107 @@ const InboxPage = () => {
     ? contacts.find((contact) => contact.id === selectedContactId) || null
     : null;
 
+  // Helper to get public URL for a storage file
+  const getStorageUrl = (bucketId: string, filePath: string): string => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    return `${supabaseUrl}/storage/v1/object/public/${bucketId}/${filePath}`;
+  };
+
+  // Helper to determine attachment type from MIME type
+  const getAttachmentType = (mimeType?: string): 'image' | 'video' | 'pdf' | 'audio' => {
+    if (mimeType?.startsWith('image/')) return 'image';
+    if (mimeType?.startsWith('video/')) return 'video';
+    if (mimeType?.startsWith('audio/')) return 'audio';
+    return 'pdf'; // default to pdf for documents
+  };
+
   // Convert merged UIMessages to local Message format for MessageList component
   const currentMessages = React.useMemo<Message[]>(() => {
     if (!mergedMessages || mergedMessages.length === 0) return [];
 
-    return mergedMessages.map((msg) => ({
-      id: msg.id,
-      text: msg.text || '',  // UIMessage.text (already transformed from content)
-      timestamp: format(new Date(msg.sent_at), 'HH:mm'),
-      sentAt: new Date(msg.sent_at), // Full date for date pill grouping
-      isSent: msg.isSent,    // UIMessage.isSent (already computed)
-      isRead: msg.isRead,    // UIMessage.isRead (already computed)
-      images: msg.attachments
-        ?.filter((a) => a.mime_type?.startsWith('image/'))
-        .map((a) => ({
-          name: a.filename,
-          data: '', // TODO: Get signed URL from storage
-          type: a.mime_type || 'image/jpeg',
-        })),
-      pdf: msg.attachments?.find((a) => a.mime_type === 'application/pdf')
-        ? {
-            name: msg.attachments.find((a) => a.mime_type === 'application/pdf')!.filename,
-            data: '', // TODO: Get signed URL from storage
-            type: 'application/pdf',
-          }
-        : undefined,
-      video: msg.attachments?.find((a) => a.mime_type?.startsWith('video/'))
-        ? {
-            name: msg.attachments.find((a) => a.mime_type?.startsWith('video/'))!.filename,
-            data: '', // TODO: Get signed URL from storage
-            type: msg.attachments.find((a) => a.mime_type?.startsWith('video/'))!.mime_type || 'video/mp4',
-          }
-        : undefined,
-      // UIMessage.replyTo is already transformed, use it directly
-      replyTo: msg.replyTo
-        ? {
-            id: msg.replyTo.id,
-            text: msg.replyTo.text || '',
-            isSent: msg.replyTo.isSent,
-          }
-        : undefined,
-      reaction: msg.reactions?.[0]?.reaction,
-    }));
-  }, [mergedMessages]);
+    return mergedMessages.map((msg) => {
+      // Helper to get the URL for an attachment
+      // Priority: local_uri (optimistic) > signed_url (from API) > fallback public URL
+      const getAttachmentUrl = (attachment: NonNullable<typeof msg.attachments>[number]): string => {
+        // Use local_uri for optimistic messages (blob URL)
+        if ((attachment as any).local_uri) {
+          return (attachment as any).local_uri;
+        }
+        // Use signed_url from API if available
+        if ((attachment as any).signed_url) {
+          return (attachment as any).signed_url;
+        }
+        // Fallback to URL map from hook (for realtime messages)
+        if (attachmentUrlMap[attachment.id]) {
+          return attachmentUrlMap[attachment.id];
+        }
+        // Last resort: public URL (may not work if bucket is private)
+        return getStorageUrl(attachment.bucket_id || 'message_attachments', attachment.file_path);
+      };
+
+      // Transform attachments to the format expected by MessageAttachmentGrid
+      const transformedAttachments = msg.attachments?.map((a) => ({
+        name: a.filename,
+        data: getAttachmentUrl(a),
+        type: a.mime_type || 'application/octet-stream',
+        size: a.size_bytes || 0,
+        attachmentType: getAttachmentType(a.mime_type),
+        // Include duration for audio attachments (convert from seconds to ms)
+        duration: a.duration_seconds ? a.duration_seconds * 1000 : undefined,
+      }));
+
+      return {
+        id: msg.id,
+        text: msg.text || '',  // UIMessage.text (already transformed from content)
+        timestamp: format(new Date(msg.sent_at), 'HH:mm'),
+        sentAt: new Date(msg.sent_at), // Full date for date pill grouping
+        isSent: msg.isSent,    // UIMessage.isSent (already computed)
+        isRead: msg.isRead,    // UIMessage.isRead (already computed)
+        // New unified attachments array with proper URLs
+        attachments: transformedAttachments,
+        // Legacy fields for backward compatibility
+        images: msg.attachments
+          ?.filter((a) => a.mime_type?.startsWith('image/'))
+          .map((a) => ({
+            name: a.filename,
+            data: getAttachmentUrl(a),
+            type: a.mime_type || 'image/jpeg',
+            size: a.size_bytes || 0,
+          })),
+        pdf: msg.attachments?.find((a) => a.mime_type === 'application/pdf')
+          ? (() => {
+              const pdfAttachment = msg.attachments!.find((a) => a.mime_type === 'application/pdf')!;
+              return {
+                name: pdfAttachment.filename,
+                data: getAttachmentUrl(pdfAttachment),
+                type: 'application/pdf',
+                size: pdfAttachment.size_bytes || 0,
+              };
+            })()
+          : undefined,
+        video: msg.attachments?.find((a) => a.mime_type?.startsWith('video/'))
+          ? (() => {
+              const videoAttachment = msg.attachments!.find((a) => a.mime_type?.startsWith('video/'))!;
+              return {
+                name: videoAttachment.filename,
+                data: getAttachmentUrl(videoAttachment),
+                type: videoAttachment.mime_type || 'video/mp4',
+                size: videoAttachment.size_bytes || 0,
+              };
+            })()
+          : undefined,
+        // UIMessage.replyTo is already transformed, use it directly
+        replyTo: msg.replyTo
+          ? {
+              id: msg.replyTo.id,
+              text: msg.replyTo.text || '',
+              isSent: msg.replyTo.isSent,
+            }
+          : undefined,
+        reaction: msg.reactions?.[0]?.reaction,
+      };
+    });
+  }, [mergedMessages, attachmentUrlMap]);
 
   const filteredContacts = React.useMemo(() => {
     if (!searchQuery.trim()) return contacts;
@@ -563,11 +728,55 @@ const InboxPage = () => {
     );
   }, [searchQuery, athletes]);
 
+  // Scroll to bottom: instant on initial load, smooth when new messages arrive
   React.useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    const messageCount = currentMessages.length;
+    const previousCount = previousMessageCountRef.current;
+
+    const scrollToBottom = (instant: boolean) => {
+      const scrollViewport = messagesEndRef.current?.closest('[data-slot="scroll-area-viewport"]');
+      if (scrollViewport) {
+        if (instant) {
+          scrollViewport.scrollTop = scrollViewport.scrollHeight;
+        } else {
+          scrollViewport.scrollTo({
+            top: scrollViewport.scrollHeight,
+            behavior: 'smooth',
+          });
+        }
+      }
+    };
+
+    // Initial scroll: when we have messages AND not loading AND haven't scrolled yet
+    if (!hasInitialScrolledRef.current && !isLoadingMessages && messageCount > 0) {
+      hasInitialScrolledRef.current = true;
+      // Use setTimeout to ensure Radix ScrollArea has fully rendered
+      setTimeout(() => {
+        scrollToBottom(true);
+        // Retry scroll and reveal overlay
+        setTimeout(() => {
+          scrollToBottom(true);
+          setIsMessageListReady(true);
+        }, 100);
+      }, 50);
+    } else if (!hasInitialScrolledRef.current && !isLoadingMessages && messageCount === 0) {
+      // No messages - just show the empty state
+      hasInitialScrolledRef.current = true;
+      setIsMessageListReady(true);
+    } else if (hasInitialScrolledRef.current && messageCount > previousCount) {
+      // New message added - smooth scroll
+      requestAnimationFrame(() => scrollToBottom(false));
     }
-  }, [currentMessages]);
+
+    previousMessageCountRef.current = messageCount;
+  }, [currentMessages, isLoadingMessages]);
+
+  // Reset when conversation changes
+  React.useEffect(() => {
+    hasInitialScrolledRef.current = false;
+    previousMessageCountRef.current = 0;
+    setIsMessageListReady(false);
+  }, [selectedContactId]);
 
   // Handler for contact click in sidebar - shows loading immediately
   const handleContactClick = React.useCallback((contactId: string) => {
@@ -993,16 +1202,9 @@ const InboxPage = () => {
   const handleSendMessageFromContext = React.useCallback(async (params: {
     text: string;
     attachments?: Array<{
-      name: string;
-      data: string;
-      type: string;
-      size: number;
+      file: File;
       attachmentType: import('@/components/app/types').AttachmentType;
     }>;
-    // Legacy support (will be removed after migration)
-    images?: Array<{ name: string; data: string; type: string; size: number }>;
-    pdf?: { name: string; data: string; type: string; size: number };
-    video?: { name: string; data: string; type: string; size: number };
     replyTo?: Message['replyTo'];
   }) => {
     if (!selectedContactId || !selectedConversation || !user?.id) {
@@ -1024,17 +1226,31 @@ const InboxPage = () => {
       }
     }
 
-    // Create optimistic message for instant UI feedback
+    // Create local preview URLs for attachments IMMEDIATELY (synchronous)
+    // These are blob URLs that can be displayed before upload completes
+    const optimisticAttachments = params.attachments?.map((att) => ({
+      local_uri: URL.createObjectURL(att.file),
+      mime_type: att.file.type,
+      filename: att.file.name,
+    }));
+
+    // Create optimistic message IMMEDIATELY for instant UI feedback
+    // This happens BEFORE any async operations (file conversion, API calls)
     const optimisticMsg = createOptimisticMessage(
       selectedConversation.id,
       user.id,
       params.text || '',
       messageType,
-      params.replyTo?.id
+      params.replyTo?.id,
+      optimisticAttachments
     );
 
     // Add to optimistic messages state for immediate display
-    setOptimisticMessages((prev) => [...prev, optimisticMsg]);
+    // Use flushSync to ensure this renders IMMEDIATELY before any async work
+    // This prevents the message from appearing without attachments first
+    flushSync(() => {
+      setOptimisticMessages((prev) => [...prev, optimisticMsg]);
+    });
 
     try {
       // 1. Create message via API (this returns the message ID)
@@ -1045,29 +1261,130 @@ const InboxPage = () => {
         parentMessageId: params.replyTo?.id,
       });
 
-      // 2. Upload attachments if present
+      // 2. Upload attachments if present (convert to base64 here, AFTER optimistic message shown)
       if (params.attachments && params.attachments.length > 0) {
         const { uploadAttachments } = await import('@/lib/messaging/upload-attachments');
+
+        // Convert File objects to base64 format expected by uploadAttachments
+        const convertToBase64 = (file: File): Promise<string> => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        };
+
+        const attachmentsWithData = await Promise.all(
+          params.attachments.map(async (att) => ({
+            name: att.file.name,
+            data: await convertToBase64(att.file),
+            type: att.file.type,
+            size: att.file.size,
+            attachmentType: att.attachmentType,
+          }))
+        );
 
         await uploadAttachments({
           conversationId: selectedConversation.id,
           messageId: message.id,
-          attachments: params.attachments,
+          attachments: attachmentsWithData,
         });
       }
 
-      // Remove optimistic message and refetch to get the real one from database
-      // This ensures message appears even if realtime isn't working
-      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
-      await refetchMessages();
-
       // Invalidate conversations to update last_message_preview and last_message_at
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
+
+      // Handle cleanup differently for messages with/without attachments
+      const attachmentCount = params.attachments?.length ?? 0;
+
+      if (attachmentCount > 0) {
+        // Poll for attachments to appear in database with valid signed URLs
+        // Only remove optimistic message when the real message has attachments WITH usable URLs
+        // This prevents flicker where attachments disappear briefly before signed URLs are ready
+        const maxAttempts = 10;
+        const pollInterval = 1000;
+        let attempts = 0;
+
+        // Helper to check if an attachment has a usable URL (signed_url from API)
+        const attachmentHasUsableUrl = (att: any): boolean => {
+          // API-fetched attachments should have signed_url
+          return Boolean(att.signed_url);
+        };
+
+        const pollForAttachments = async () => {
+          attempts++;
+          // Get fresh messages directly from refetch (avoids stale ref timing issues)
+          const freshMessages = await refetchMessages();
+
+          // Check if real message now has attachments using fresh data
+          const optimisticTime = optimisticMsg.sent_at instanceof Date
+            ? optimisticMsg.sent_at.getTime()
+            : new Date(optimisticMsg.sent_at).getTime();
+
+          const matchingRealMessage = freshMessages.find((msg) => {
+            if (msg.sender_id !== optimisticMsg.sender_id) return false;
+            const msgTime = msg.sent_at instanceof Date
+              ? msg.sent_at.getTime()
+              : new Date(msg.sent_at).getTime();
+            const timeDiff = Math.abs(msgTime - optimisticTime);
+            return timeDiff <= 30000;
+          });
+
+          const realAttachments = matchingRealMessage?.attachments ?? [];
+          const realAttachmentCount = realAttachments.length;
+          
+          // Check that ALL attachments have usable URLs (signed_url)
+          // This prevents removing optimistic before signed URLs are generated
+          const allAttachmentsHaveUrls = realAttachmentCount >= attachmentCount &&
+            realAttachments.every(attachmentHasUsableUrl);
+
+          if (allAttachmentsHaveUrls) {
+            // Real message has all attachments WITH valid signed URLs - safe to remove optimistic
+            setOptimisticMessages((current) => {
+              const msgToRemove = current.find((m) => m.id === optimisticMsg.id);
+              if (msgToRemove?.attachments) {
+                msgToRemove.attachments.forEach((att) => {
+                  if (att.local_uri?.startsWith('blob:')) {
+                    URL.revokeObjectURL(att.local_uri);
+                  }
+                });
+              }
+              return current.filter((m) => m.id !== optimisticMsg.id);
+            });
+          } else if (attempts < maxAttempts) {
+            // Real message doesn't have attachments with valid URLs yet, keep polling
+            setTimeout(pollForAttachments, pollInterval);
+          }
+          // After max attempts without valid attachments, keep optimistic visible
+          // (better to show blob preview than nothing)
+        };
+
+        // Start polling after a short delay to let DB writes complete
+        setTimeout(pollForAttachments, 500);
+      } else {
+        // No attachments - simpler logic with single refetch
+        setTimeout(async () => {
+          await refetchMessages();
+          setOptimisticMessages((current) => current.filter((m) => m.id !== optimisticMsg.id));
+        }, 1000);
+      }
     } catch (error) {
       console.error('Failed to send message:', error);
 
       // Remove optimistic message on failure (error toast will show)
-      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      setOptimisticMessages((prev) => {
+        // Revoke blob URLs to prevent memory leaks
+        const msgToRemove = prev.find((m) => m.id === optimisticMsg.id);
+        if (msgToRemove?.attachments) {
+          msgToRemove.attachments.forEach((att) => {
+            if (att.local_uri?.startsWith('blob:')) {
+              URL.revokeObjectURL(att.local_uri);
+            }
+          });
+        }
+        return prev.filter((m) => m.id !== optimisticMsg.id);
+      });
 
       throw error; // Let MessageInputProvider handle the toast
     }
@@ -1548,24 +1865,22 @@ const InboxPage = () => {
     });
   };
 
-  const handleDeleteMessage = (messageId: string) => {
-    setMessages((prev) => {
-      const updated = { ...prev };
-      if (updated[selectedContactId!]) {
-        updated[selectedContactId!] = updated[selectedContactId!].filter(
-          (msg) => msg.id !== messageId
-        );
-      }
-      return updated;
-    });
-    // Clear draft if this was the last message or if we're deleting a draft
-    if (selectedContactId) {
-      const currentMessages = messages[selectedContactId] || [];
-      if (currentMessages.length === 1) {
-        // If this is the only message, clear the draft
-        messageDraftStorage.removeDraft(selectedContactId);
-        updateDraftsState();
-      }
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!messageId) return;
+
+    // Optimistically remove the message from local state immediately (no flicker)
+    removeApiMessage(messageId);
+
+    try {
+      // Call the real delete API (soft delete)
+      await deleteMessageAPI(messageId);
+
+      // Invalidate conversations to update the list (last_message_preview may change)
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    } catch (error) {
+      console.error('Failed to delete message:', error);
+      // On error, refetch to restore the message
+      refetchMessages();
     }
   };
 
@@ -1643,7 +1958,7 @@ const InboxPage = () => {
                     >
                       {/* Drag and Drop Overlay */}
                       {isDraggingOver && selectedContactId && (
-                        <div className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-sm border-2 border-dashed border-primary rounded-lg flex items-center justify-center">
+                        <div className="absolute inset-0 z-50 bg-background border-2 border-dashed border-primary rounded-lg flex items-center justify-center">
                           <div className="text-center px-8">
                             <div className="flex flex-col items-center gap-4">
                               <div className="flex items-center gap-2 text-primary">
@@ -1660,6 +1975,12 @@ const InboxPage = () => {
                               </div>
                             </div>
                           </div>
+                        </div>
+                      )}
+                      {/* Loading overlay - shows until messages are loaded and scrolled to bottom */}
+                      {!isMessageListReady && (
+                        <div className="absolute inset-0 z-40 bg-background flex items-center justify-center">
+                          <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                         </div>
                       )}
                       <div className="h-full overflow-y-auto flex flex-col">
@@ -1693,6 +2014,10 @@ const InboxPage = () => {
                             onDeleteAllImages={handleDeleteAllImages}
                             onReaction={handleReaction}
                             messagesEndRef={messagesEndRef}
+                            loadMoreTriggerRef={loadMoreTriggerRef}
+                            isLoadingMore={isLoadingMoreMessages}
+                            hasMoreMessages={hasMoreMessages}
+                            isClientPanelOpen={isPowerViewOpen}
                           />
 
                           <MessageInputWrapper contextRef={messageInputContextRef} selectedContact={selectedContact} />

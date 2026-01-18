@@ -7,10 +7,12 @@ import { apiFetch } from '@/api/api-client';
 import type {
   Conversation,
   Message,
+  MessageAttachment,
   MessageReaction,
   MessageType,
   ReactionEmoji,
 } from '@athli/shared-types';
+import { getSignedAttachmentUrl } from './attachment-url';
 
 // ================================================
 // CONVERSATION ENDPOINTS
@@ -68,29 +70,48 @@ export const getMessages = async ({
     }
   );
 
-  // Convert string dates to Date objects
-  const messages = response.data.messages.map((msg: any) => ({
-    ...msg,
-    sent_at: new Date(msg.sent_at),
-    read_at: msg.read_at ? new Date(msg.read_at) : null,
-    edited_at: msg.edited_at ? new Date(msg.edited_at) : null,
-    deleted_at: msg.deleted_at ? new Date(msg.deleted_at) : null,
-    created_at: new Date(msg.created_at),
-    attachments: msg.attachments?.map((att: any) => ({
-      ...att,
-      created_at: new Date(att.created_at),
-    })),
-    reactions: msg.reactions?.map((react: any) => ({
-      ...react,
-      created_at: new Date(react.created_at),
-    })),
-    parent_message: msg.parent_message
-      ? {
-          ...msg.parent_message,
-          sent_at: new Date(msg.parent_message.sent_at),
-        }
-      : null,
-  }));
+  // Convert string dates to Date objects and generate signed URLs for attachments
+  const messages = await Promise.all(
+    response.data.messages.map(async (msg: any) => {
+      // Generate signed URLs for attachments upfront to prevent flicker
+      const attachmentsWithUrls = msg.attachments
+        ? await Promise.all(
+            msg.attachments.map(async (att: any) => {
+              let signedUrl: string | null = null;
+              if (att.file_path && att.bucket_id) {
+                signedUrl = await getSignedAttachmentUrl(att.bucket_id, att.file_path);
+              }
+              return {
+                ...att,
+                created_at: new Date(att.created_at),
+                // Add signed URL directly to attachment for immediate use
+                signed_url: signedUrl,
+              };
+            })
+          )
+        : undefined;
+
+      return {
+        ...msg,
+        sent_at: new Date(msg.sent_at),
+        read_at: msg.read_at ? new Date(msg.read_at) : null,
+        edited_at: msg.edited_at ? new Date(msg.edited_at) : null,
+        deleted_at: msg.deleted_at ? new Date(msg.deleted_at) : null,
+        created_at: new Date(msg.created_at),
+        attachments: attachmentsWithUrls,
+        reactions: msg.reactions?.map((react: any) => ({
+          ...react,
+          created_at: new Date(react.created_at),
+        })),
+        parent_message: msg.parent_message
+          ? {
+              ...msg.parent_message,
+              sent_at: new Date(msg.parent_message.sent_at),
+            }
+          : null,
+      };
+    })
+  );
 
   return messages;
 };

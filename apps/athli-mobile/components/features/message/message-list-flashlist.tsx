@@ -37,23 +37,53 @@ import { MessageVideoPreview } from '@/components/features/message/message-video
 import { MessageAudioPreview } from '@/components/features/message/message-audio-preview';
 import { useColorScheme, useThemePreference } from '@/stores';
 
-// Helper functions to extract attachments by type
-const getImageAttachments = (msg: UIMessage): MessageAttachment[] =>
-  msg.attachments?.filter(a => a.mime_type?.startsWith('image/')) ?? [];
+// Type for attachment with optional local_uri for optimistic messages
+type AttachmentWithLocalUri = MessageAttachment & { local_uri?: string };
 
-const getVideoAttachment = (msg: UIMessage): MessageAttachment | undefined =>
-  msg.attachments?.find(a => a.mime_type?.startsWith('video/'));
+// Supabase storage URL base
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 
-const getAudioAttachment = (msg: UIMessage): MessageAttachment | undefined =>
-  msg.attachments?.find(a => a.mime_type?.startsWith('audio/'));
+// Get the display URI for an attachment (local_uri for optimistic, or construct from file_path)
+const getAttachmentUri = (attachment: AttachmentWithLocalUri): string => {
+  // For optimistic messages, use local_uri
+  if (attachment.local_uri) return attachment.local_uri;
+  // For real messages, construct public URL from storage
+  if (attachment.file_path) {
+    const bucketId = attachment.bucket_id || 'message_attachments';
+    return `${SUPABASE_URL}/storage/v1/object/public/${bucketId}/${attachment.file_path}`;
+  }
+  return '';
+};
 
-const getDocumentAttachment = (msg: UIMessage): MessageAttachment | undefined =>
-  msg.attachments?.find(a =>
+// Helper functions to extract attachments by type with proper URI
+const getImageAttachments = (msg: UIMessage): Array<AttachmentWithLocalUri & { uri: string }> =>
+  (msg.attachments?.filter(a => a.mime_type?.startsWith('image/')) ?? []).map(a => ({
+    ...a,
+    uri: getAttachmentUri(a as AttachmentWithLocalUri),
+  }));
+
+const getVideoAttachment = (msg: UIMessage): (AttachmentWithLocalUri & { uri: string }) | undefined => {
+  const attachment = msg.attachments?.find(a => a.mime_type?.startsWith('video/'));
+  if (!attachment) return undefined;
+  return { ...attachment, uri: getAttachmentUri(attachment as AttachmentWithLocalUri) };
+};
+
+const getAudioAttachment = (msg: UIMessage): (AttachmentWithLocalUri & { uri: string }) | undefined => {
+  const attachment = msg.attachments?.find(a => a.mime_type?.startsWith('audio/'));
+  if (!attachment) return undefined;
+  return { ...attachment, uri: getAttachmentUri(attachment as AttachmentWithLocalUri) };
+};
+
+const getDocumentAttachment = (msg: UIMessage): (AttachmentWithLocalUri & { uri: string }) | undefined => {
+  const attachment = msg.attachments?.find(a =>
     a.mime_type &&
     !a.mime_type.startsWith('image/') &&
     !a.mime_type.startsWith('video/') &&
     !a.mime_type.startsWith('audio/')
   );
+  if (!attachment) return undefined;
+  return { ...attachment, uri: getAttachmentUri(attachment as AttachmentWithLocalUri) };
+};
 
 // Helper to get user's reaction from reactions array
 const getUserReaction = (msg: UIMessage, isSender: boolean, currentUserId?: string): string | undefined => {
@@ -84,6 +114,9 @@ interface MessageListProps {
   onDocumentPress?: (document: any) => void;
   onImagePress?: (images: any[], senderName: string, isSent: boolean, messageTimestamp?: Date | string) => void;
   onVideoPress?: (video: any, senderName: string, isSent: boolean, messageTimestamp?: Date | string) => void;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
+  hasMoreMessages?: boolean;
 }
 
 const ZWSP = '\u200B';
@@ -148,8 +181,8 @@ const BubbleMeta = React.memo(function BubbleMeta({
   onVideoPress?: (video: any, senderName: string, isSent: boolean, messageTimestamp?: Date | string) => void;
   flashOpacity?: Animated.Value;
 }) {
-  const [metaWidth, setMetaWidth] = useState(0);
-  const [spaceWidth, setSpaceWidth] = useState(0);
+  const [metaWidth, setMetaWidth] = useState(44);  // Typical meta width - prevents flicker
+  const [spaceWidth, setSpaceWidth] = useState(4); // Typical NBSP width - prevents flicker
 
   // Find the original message if this is a reply
   const originalMessage = item.replyTo ? findOriginalMessage(item.replyTo) : null;
@@ -550,6 +583,9 @@ export const MessageList = React.memo(function MessageList({
   onDocumentPress,
   onImagePress,
   onVideoPress,
+  onLoadMore,
+  isLoadingMore = false,
+  hasMoreMessages = true,
 }: MessageListProps) {
   const { t } = useTranslations();
   const listRef = useRef<any>(null);
@@ -817,6 +853,22 @@ export const MessageList = React.memo(function MessageList({
     return diffInHours <= 1;
   };
 
+  // Check if a message can be deleted:
+  // - Must be sent by the current user (isSent)
+  // - Must NOT be read yet (!isRead)
+  // - Must be within 5 minutes of being sent
+  const canDeleteMessage = (message: UIMessage): boolean => {
+    if (!message.isSent) return false;
+    if (message.isRead) return false;
+
+    const now = new Date();
+    const messageTime = typeof message.sent_at === 'string' ? new Date(message.sent_at) : message.sent_at;
+    const diffInMs = now.getTime() - messageTime.getTime();
+    const fiveMinutesMs = 5 * 60 * 1000;
+
+    return diffInMs <= fiveMinutesMs;
+  };
+
   const handleReply = (message: UIMessage) => {
     if (onReply) {
       onReply(message);
@@ -892,12 +944,15 @@ export const MessageList = React.memo(function MessageList({
           onPress: () => handleEdit(message),
         });
       }
-      options.push({
-        label: t('general.delete'),
-        icon: { sf: 'trash', IconComponent: Trash2 },
-        onPress: () => handleDelete(message),
-        destructive: true,
-      });
+      // Only show delete if message is within 5 minutes and not read
+      if (canDeleteMessage(message)) {
+        options.push({
+          label: t('general.delete'),
+          icon: { sf: 'trash', IconComponent: Trash2 },
+          onPress: () => handleDelete(message),
+          destructive: true,
+        });
+      }
     }
 
     return options;
@@ -1160,7 +1215,21 @@ export const MessageList = React.memo(function MessageList({
             // Pinned to bottom when scrolled near the end
             const distanceFromBottom = contentHeight - layoutHeight - y;
             pinnedToBottomRef.current = distanceFromBottom <= 40;
+
+            // Trigger load more when scrolled near the top (200px threshold)
+            if (y < 200 && hasMoreMessages && !isLoadingMore && onLoadMore) {
+              onLoadMore();
+            }
           }}
+          ListHeaderComponent={
+            isLoadingMore ? (
+              <View style={styles.loadingMoreContainer}>
+                <Text style={[styles.loadingMoreText, { color: themeColors.mutedText }]}>
+                  {t('general.loadingMore') || 'Loading...'}
+                </Text>
+              </View>
+            ) : null
+          }
           scrollEventThrottle={16}
           onScrollBeginDrag={() => showSticky()}
           onScrollEndDrag={() => hideStickySoon()}
@@ -1359,5 +1428,14 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingMoreContainer: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingMoreText: {
+    ...typography.p4,
+    fontWeight: '500',
   },
 });
