@@ -8,7 +8,6 @@ import {
   TextInput,
   View,
   Text,
-  unstable_batchedUpdates,
 } from 'react-native';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
 import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
@@ -64,9 +63,9 @@ import { stopAllWaveformPlayers } from '@/components/features/message/message-au
 import {
   getChats,
   getArchivedChats,
-  getChatMessages,
   sendMessage,
   markConversationAsRead,
+  deleteMessage,
   type Chat,
   type ChatMessage,
   type Message,
@@ -79,6 +78,7 @@ import {
   useMessageMerging,
 } from '@/hooks/use-realtime-messaging';
 import { useSendMessageWithAttachment } from '@/hooks/use-file-upload';
+import { useInfiniteMessages } from '@/hooks/use-infinite-messages';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 
 const BAR_INTERVAL_MS = 100; // ✅ 10 bars/sec
@@ -516,32 +516,28 @@ export default function ChatDetailScreen() {
     return null;
   });
 
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    if (messagesParam) {
-      try {
-        const parsed = JSON.parse(messagesParam) as ChatMessage[];
-        return parsed.map((msg) => ({
-          ...msg,
-          // Convert all date fields from strings (JSON) to Date objects
-          sent_at: new Date(msg.sent_at),
-          read_at: msg.read_at ? new Date(msg.read_at) : null,
-          edited_at: msg.edited_at ? new Date(msg.edited_at) : null,
-          deleted_at: msg.deleted_at ? new Date(msg.deleted_at) : null,
-          created_at: msg.created_at ? new Date(msg.created_at) : new Date(),
-          timestamp: new Date(msg.sent_at),
-        }));
-      } catch {
-        return [];
-      }
-    }
-    return [];
+  // Use infinite scroll for messages
+  const {
+    messages: savedMessages,
+    isLoadingInitial,
+    isLoadingMore,
+    hasMore: hasMoreMessages,
+    loadMore: loadMoreMessages,
+    removeMessage: removeSavedMessage,
+    updateMessage: updateSavedMessage,
+    refetch: refetchMessages,
+  } = useInfiniteMessages({
+    conversationId: id,
+    enabled: !!id,
   });
+
   const [optimisticMessages, setOptimisticMessages] = useState<OptimisticMessage[]>([]);
 
   // Get current user ID synchronously from auth store (already available)
   const currentUserId = useAuthSessionStore((state) => state.userId);
 
-  const [isLoading, setIsLoading] = useState(!chatParam || !messagesParam);
+  // Use isLoadingInitial from infinite messages hook
+  const isLoading = isLoadingInitial && !chatParam;
   const [reactionsSheetVisible, setReactionsSheetVisible] = useState(false);
   const [selectedMessageForReactions, setSelectedMessageForReactions] = useState<ChatMessage | null>(null);
   const [replyingToMessage, setReplyingToMessage] = useState<ChatMessage | null>(null);
@@ -617,12 +613,51 @@ export default function ChatDetailScreen() {
   const recordingStartedAtMsRef = useRef<number | null>(null);
 
   // Realtime messages subscription (uses broadcast events for scalability)
+  // When a real message arrives via realtime, immediately remove matching optimistic message
+  // to prevent visual glitch/duplication
   const { realtimeMessages } = useRealtimeMessages({
     conversationId: id,
+    userId: currentUserId || undefined,
+    onMessageReceived: (message) => {
+      // Remove optimistic message that matches this real message
+      setOptimisticMessages((prev) => prev.filter((opt) => {
+        // ALWAYS keep optimistic messages that have attachments
+        // Let the send handler's cleanup handle these after upload confirms
+        if (opt.attachments && opt.attachments.length > 0) {
+          return true;
+        }
+
+        // For text-only messages, check if this is a match
+        // Keep if different sender
+        if (opt.sender_id !== message.sender_id) return true;
+        // Keep if different content
+        if (opt.content !== message.content) return true;
+        // Keep if outside 30 second window
+        const optTime = opt.sent_at instanceof Date ? opt.sent_at.getTime() : new Date(opt.sent_at).getTime();
+        const msgTime = message.sent_at instanceof Date ? message.sent_at.getTime() : new Date(message.sent_at).getTime();
+        const timeDiff = Math.abs(msgTime - optTime);
+        if (timeDiff > 30000) return true;
+        // Match found for text-only - safe to remove
+        return false;
+      }));
+    },
+    onMessageUpdated: (message) => {
+      // If a message is soft-deleted (is_deleted=true), remove it from local state
+      if (message.is_deleted) {
+        removeSavedMessage(message.id);
+      } else {
+        // Otherwise, update the message in local state
+        updateSavedMessage(message.id, message);
+      }
+    },
+    onMessageDeleted: (messageId) => {
+      // Remove the deleted message from local state
+      removeSavedMessage(messageId);
+    },
   });
 
   // Merge saved, realtime, and optimistic messages - transforms to UIMessage[]
-  const allMessages = useMessageMerging(messages, realtimeMessages, optimisticMessages, currentUserId);
+  const allMessages = useMessageMerging(savedMessages, realtimeMessages, optimisticMessages, currentUserId);
 
   useEffect(() => {
     const handleKeyboardHide = () => {
@@ -753,28 +788,47 @@ export default function ChatDetailScreen() {
   useEffect(() => {
     if (documentSent === 'true' && sentDocument && currentUserId && id) {
       const uploadDocument = async () => {
-        try {
-          const documentData = JSON.parse(sentDocument);
+        const documentData = JSON.parse(sentDocument);
+        const mimeType = documentData.mimeType || 'application/pdf';
 
-          // Upload document and create message in one atomic operation
+        // Create optimistic message for instant display
+        const optimisticMsg = createOptimisticMessage(
+          id,
+          currentUserId,
+          documentData.caption || '',
+          'file',
+          undefined,
+          [{ local_uri: documentData.uri, mime_type: mimeType, filename: documentData.name || 'document.pdf' }]
+        );
+
+        setOptimisticMessages((prev) => [...prev, optimisticMsg]);
+
+        // Clear UI immediately
+        setSearchQuery('');
+        setShowAttachmentPicker(false);
+
+        try {
           await sendWithAttachment(
-            id, // conversationId
-            currentUserId, // senderId
-            documentData.uri, // fileUri
-            documentData.mimeType || 'application/pdf', // mimeType
-            documentData.caption || undefined, // caption
+            id,
+            currentUserId,
+            documentData.uri,
+            mimeType,
+            documentData.caption || undefined,
           );
 
-          // Clear draft text in input bar
-          setSearchQuery('');
+          // Remove optimistic message - realtime will add real one
+          setOptimisticMessages((prev) =>
+            prev.filter((m) => m.id !== optimisticMsg.id)
+          );
 
-          // Close attachment picker
-          setShowAttachmentPicker(false);
+          useChatsStore.getState().loadChats();
         } catch (error) {
           console.error('[ChatDetail] Error uploading document:', error);
+          setOptimisticMessages((prev) =>
+            prev.filter((m) => m.id !== optimisticMsg.id)
+          );
           Alert.alert('Upload Failed', 'Could not upload document. Please try again.');
         } finally {
-          // Clear the params
           router.setParams({
             documentSent: '',
             sentDocument: '',
@@ -790,28 +844,69 @@ export default function ChatDetailScreen() {
   useEffect(() => {
     if (imagesSent === 'true' && sentImages && currentUserId && id) {
       const uploadImages = async () => {
-        try {
-          const imageAttachments = JSON.parse(sentImages);
+        const imageAttachments = JSON.parse(sentImages);
+        const optimisticIds: string[] = [];
 
-          // Upload each image separately (multiple messages, one per image)
-          // This matches WhatsApp behavior where each image is a separate message
-          for (const image of imageAttachments) {
-            await sendWithAttachment(
-              id, // conversationId
-              currentUserId, // senderId
-              image.uri, // fileUri
-              'image/jpeg', // mimeType
-              sentImagesCaption || undefined, // caption (only first image gets caption)
+        try {
+          // Create optimistic messages FIRST for instant UI feedback
+          for (let i = 0; i < imageAttachments.length; i++) {
+            const image = imageAttachments[i];
+            const isFirstImage = i === 0;
+
+            // Create optimistic message with local image for instant display
+            const optimisticMsg = createOptimisticMessage(
+              id,
+              currentUserId,
+              isFirstImage ? (sentImagesCaption || '') : '',
+              'image',
+              undefined, // no parent message
+              [{ local_uri: image.uri, mime_type: 'image/jpeg', filename: 'photo.jpg' }]
             );
+
+            optimisticIds.push(optimisticMsg.id);
+            setOptimisticMessages((prev) => [...prev, optimisticMsg]);
           }
 
-          // Clear draft text in input bar
+          // Clear draft text and close picker immediately
           setSearchQuery('');
-
-          // Close attachment picker
           setShowAttachmentPicker(false);
+
+          // Upload each image in background (messages already shown optimistically)
+          for (let i = 0; i < imageAttachments.length; i++) {
+            const image = imageAttachments[i];
+            const isFirstImage = i === 0;
+
+            try {
+              await sendWithAttachment(
+                id,
+                currentUserId,
+                image.uri,
+                'image/jpeg',
+                isFirstImage ? (sentImagesCaption || undefined) : undefined,
+              );
+
+              // Remove optimistic message after successful upload
+              // Realtime will add the real message
+              setOptimisticMessages((prev) =>
+                prev.filter((m) => m.id !== optimisticIds[i])
+              );
+            } catch (uploadError) {
+              console.error('[ChatDetail] Error uploading image:', uploadError);
+              // Remove failed optimistic message
+              setOptimisticMessages((prev) =>
+                prev.filter((m) => m.id !== optimisticIds[i])
+              );
+            }
+          }
+
+          // Refresh chats list
+          useChatsStore.getState().loadChats();
         } catch (error) {
           console.error('[ChatDetail] Error uploading images:', error);
+          // Remove all optimistic messages on error
+          setOptimisticMessages((prev) =>
+            prev.filter((m) => !optimisticIds.includes(m.id))
+          );
           Alert.alert('Upload Failed', 'Could not upload images. Please try again.');
         } finally {
           // Clear the params
@@ -831,28 +926,46 @@ export default function ChatDetailScreen() {
   useEffect(() => {
     if (videoSent === 'true' && sentVideo && currentUserId && id) {
       const uploadVideo = async () => {
-        try {
-          const videoData = JSON.parse(sentVideo);
+        const videoData = JSON.parse(sentVideo);
 
-          // Upload video and create message in one atomic operation
+        // Create optimistic message for instant display
+        const optimisticMsg = createOptimisticMessage(
+          id,
+          currentUserId,
+          videoData.caption || '',
+          'video',
+          undefined,
+          [{ local_uri: videoData.uri, mime_type: 'video/mp4', filename: 'video.mp4' }]
+        );
+
+        setOptimisticMessages((prev) => [...prev, optimisticMsg]);
+
+        // Clear UI immediately
+        setSearchQuery('');
+        setShowAttachmentPicker(false);
+
+        try {
           await sendWithAttachment(
-            id, // conversationId
-            currentUserId, // senderId
-            videoData.uri, // fileUri
-            'video/mp4', // mimeType
-            videoData.caption || undefined, // caption
+            id,
+            currentUserId,
+            videoData.uri,
+            'video/mp4',
+            videoData.caption || undefined,
           );
 
-          // Clear draft text in input bar
-          setSearchQuery('');
+          // Remove optimistic message - realtime will add real one
+          setOptimisticMessages((prev) =>
+            prev.filter((m) => m.id !== optimisticMsg.id)
+          );
 
-          // Close attachment picker
-          setShowAttachmentPicker(false);
+          useChatsStore.getState().loadChats();
         } catch (error) {
           console.error('[ChatDetail] Error uploading video:', error);
+          setOptimisticMessages((prev) =>
+            prev.filter((m) => m.id !== optimisticMsg.id)
+          );
           Alert.alert('Upload Failed', 'Could not upload video. Please try again.');
         } finally {
-          // Clear the params
           router.setParams({
             videoSent: '',
             sentVideo: '',
@@ -866,14 +979,13 @@ export default function ChatDetailScreen() {
 
   const hasText = searchQuery.trim().length > 0;
 
+  // Load chat metadata if not provided via params
   useEffect(() => {
-    // Only load if not provided via params
-    if (chatParam && messagesParam) return;
+    if (chatParam) return;
 
     let mounted = true;
 
     const loadChat = async () => {
-      setIsLoading(true);
       try {
         const chats = await getChats();
         let foundChat = chats.find((c) => c.id === id);
@@ -883,17 +995,11 @@ export default function ChatDetailScreen() {
           foundChat = archivedChats.find((c) => c.id === id);
         }
 
-        if (!foundChat) return;
-
-        const chatMessages = await getChatMessages(foundChat.id);
-        if (!mounted) return;
+        if (!foundChat || !mounted) return;
 
         setChat(foundChat);
-        setMessages(chatMessages);
       } catch (error) {
         console.error('Failed to load chat:', error);
-      } finally {
-        if (mounted) setIsLoading(false);
       }
     };
 
@@ -902,7 +1008,7 @@ export default function ChatDetailScreen() {
     return () => {
       mounted = false;
     };
-  }, [id, chatParam, messagesParam]);
+  }, [id, chatParam]);
 
   // Mark conversation as read when opening/viewing
   useEffect(() => {
@@ -984,26 +1090,45 @@ export default function ChatDetailScreen() {
     const pathToSend = pathOverride ?? previewPath;
     if (!isMicrophoneMode || !pathToSend || !currentUserId || !id) return;
 
+    // Stop preview player and close microphone mode immediately
+    previewWaveRef.current?.stopPlayer?.();
+    setIsMicrophoneMode(false);
+
+    const audioUri = pathToSend.startsWith('file://') ? pathToSend : `file://${pathToSend}`;
+
+    // Create optimistic message for instant display
+    const optimisticMsg = createOptimisticMessage(
+      id,
+      currentUserId,
+      '',
+      'audio',
+      undefined,
+      [{ local_uri: audioUri, mime_type: 'audio/mp4', filename: 'voicenote.m4a' }]
+    );
+
+    setOptimisticMessages((prev) => [...prev, optimisticMsg]);
+
     try {
-      // Stop preview player and close microphone mode
-      previewWaveRef.current?.stopPlayer?.();
-      setIsMicrophoneMode(false);
-
-      // Use captured duration (recorderState can be 0 depending on platform)
-      const audioUri = pathToSend.startsWith('file://') ? pathToSend : `file://${pathToSend}`;
-
-      // Upload audio and create message in one atomic operation
       await sendWithAttachment(
-        id, // conversationId
-        currentUserId, // senderId
-        audioUri, // fileUri
-        'audio/mp4', // mimeType
-        undefined, // no caption for audio
+        id,
+        currentUserId,
+        audioUri,
+        'audio/mp4',
+        undefined,
       );
+
+      // Remove optimistic message - realtime will add real one
+      setOptimisticMessages((prev) =>
+        prev.filter((m) => m.id !== optimisticMsg.id)
+      );
+
+      useChatsStore.getState().loadChats();
     } catch (e) {
       console.error('[ChatDetail] Failed to send voice note:', e);
+      setOptimisticMessages((prev) =>
+        prev.filter((m) => m.id !== optimisticMsg.id)
+      );
       Alert.alert('Upload Failed', 'Could not upload voice note. Please try again.');
-      setIsMicrophoneMode(false);
     }
   };
 
@@ -1123,16 +1248,9 @@ export default function ChatDetailScreen() {
         parentMessageId,
       });
 
-      // Fetch first while optimistic is still visible
-      const updatedMessages = await getChatMessages(id);
-      // Batch both state updates to prevent flicker
-      unstable_batchedUpdates(() => {
-        setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
-        setMessages(updatedMessages);
-      });
-
-      // Update the messages cache with fresh data
-      useChatsStore.getState().setCachedMessages(id, updatedMessages);
+      // Remove optimistic message after successful send
+      // The realtime subscription will add the actual message
+      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
 
       // Refresh chats list to update last_message_preview and last_message_at
       useChatsStore.getState().loadChats();
@@ -1153,7 +1271,17 @@ export default function ChatDetailScreen() {
   };
 
   const handleMessageDelete = async (message: UIMessage) => {
-    setMessages((prev) => prev.filter((m) => m.id !== message.id));
+    // Optimistically remove from local state first for instant UI feedback
+    removeSavedMessage(message.id);
+
+    try {
+      // Call the real delete API (soft delete)
+      await deleteMessage(message.id);
+    } catch (error) {
+      console.error('[ChatDetail] Error deleting message:', error);
+      // Optionally: restore the message on error, or show a toast
+      // For now, the realtime subscription will sync the correct state
+    }
   };
 
   const handleReactionPress = (message: UIMessage) => {
@@ -1217,16 +1345,12 @@ export default function ChatDetailScreen() {
   };
 
   const handleReactionRemoved = (messageId: string, isSender: boolean) => {
-    setMessages((prev) =>
-      prev.map((msg) => {
-        if (msg.id === messageId) {
-          return {
-            ...msg,
-            ...(isSender ? { senderReaction: undefined } : { recipientReaction: undefined }),
-          };
-        }
-        return msg;
-      })
+    // Update the message to remove the reaction
+    // Note: This uses the deprecated senderReaction/recipientReaction fields
+    // The actual reactions are stored in the reactions array and handled by realtime
+    updateSavedMessage(
+      messageId,
+      (isSender ? { senderReaction: undefined } : { recipientReaction: undefined }) as unknown as Partial<Message>
     );
   };
 
@@ -1289,6 +1413,9 @@ export default function ChatDetailScreen() {
               onVideoPress={handleVideoPress}
               headerHeight={insets.top + 60}
               bottomOffset={toolbarHeight + 8 + insets.bottom}
+              onLoadMore={loadMoreMessages}
+              isLoadingMore={isLoadingMore}
+              hasMoreMessages={hasMoreMessages}
             />
           </View>
 

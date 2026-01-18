@@ -282,10 +282,11 @@ export const getMessages = async ({
         *,
         attachments:message_attachments(*),
         reactions:message_reactions(*),
-        parent_message:messages!parent_message_id(id, content, message_type, sender_id)
+        parent_message:messages!parent_message_id(id, content, message_type, sender_id, is_deleted)
       `,
       )
       .eq('conversation_id', conversationId)
+      .or('is_deleted.is.null,is_deleted.eq.false')  // Filter out soft-deleted messages
       .order('sent_at', { ascending: false })
       .range(offset, offset + limit - 1);
 

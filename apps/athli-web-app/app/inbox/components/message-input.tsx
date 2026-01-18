@@ -16,12 +16,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/general/utils';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useMessageInput } from './message-input-context';
 import { VoiceNoteRecorder } from '@/components/audio/voice-note-recorder';
@@ -55,6 +49,9 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
         videoInputRef,
     } = useMessageInput();
 
+    // Combined file input ref for images, videos, and PDFs
+    const combinedInputRef = React.useRef<HTMLInputElement>(null);
+
     // Track maximum height reached to prevent flickering (WhatsApp-like behavior)
     const [maxHeightReached, setMaxHeightReached] = React.useState(36);
 
@@ -81,7 +78,15 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
     const handleImageInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (files && files.length > 0) {
-            const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+            // Excluded image types
+            const excludedImageTypes = ['image/heic', 'image/heif', 'image/svg+xml'];
+            const excludedExtensions = ['.heic', '.heif', '.svg'];
+
+            const imageFiles = Array.from(files).filter(f => {
+                const isExcluded = excludedImageTypes.includes(f.type) ||
+                    excludedExtensions.some(ext => f.name.toLowerCase().endsWith(ext));
+                return f.type.startsWith('image/') && !isExcluded;
+            });
             addAttachments(imageFiles, 'image');
         }
         if (imageInputRef.current) imageInputRef.current.value = '';
@@ -102,6 +107,37 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
         }
         if (videoInputRef.current) videoInputRef.current.value = '';
     }, [addAttachment, videoInputRef]);
+
+    // Combined file input handler for images, videos, and PDFs
+    const handleCombinedInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        const imageFiles: File[] = [];
+        // Excluded image types
+        const excludedImageTypes = ['image/heic', 'image/heif', 'image/svg+xml'];
+        const excludedExtensions = ['.heic', '.heif', '.svg'];
+
+        Array.from(files).forEach((file) => {
+            const isExcludedImage = excludedImageTypes.includes(file.type) ||
+                excludedExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+
+            if (file.type.startsWith('image/') && !isExcludedImage) {
+                imageFiles.push(file);
+            } else if (file.type.startsWith('video/') || file.name.endsWith('.mp4')) {
+                addAttachment(file, 'video');
+            } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+                addAttachment(file, 'pdf');
+            }
+        });
+
+        // Add all images at once
+        if (imageFiles.length > 0) {
+            addAttachments(imageFiles, 'image');
+        }
+
+        if (combinedInputRef.current) combinedInputRef.current.value = '';
+    }, [addAttachment, addAttachments]);
 
     // Handle textarea auto-resize (WhatsApp-like: grows but doesn't shrink, resets when empty)
     const handleTextareaInput = React.useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
@@ -181,7 +217,7 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
             <input
                 ref={imageInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/gif,image/webp,image/jpg"
                 multiple
                 onChange={handleImageInputChange}
                 className="hidden"
@@ -198,6 +234,15 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
                 type="file"
                 accept="video/mp4"
                 onChange={handleVideoInputChange}
+                className="hidden"
+            />
+            {/* Combined file input for all attachment types */}
+            <input
+                ref={combinedInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp,image/jpg,video/*,application/pdf"
+                multiple
+                onChange={handleCombinedInputChange}
                 className="hidden"
             />
 
@@ -342,46 +387,20 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
                     {/* Attachment buttons for collapsed mode */}
                     {!showExpandedInput && (
                         <div className="flex items-center gap-0.5 mr-1">
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <DropdownMenu>
-                                        <TooltipTrigger asChild>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    disabled={!canAddMoreAttachments}
-                                                    className={cn(
-                                                        'h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10',
-                                                        !canAddMoreAttachments && 'opacity-50 cursor-not-allowed'
-                                                    )}
-                                                    aria-label={t('messages.attachFile')}
-                                                >
-                                                    <Plus className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                        </TooltipTrigger>
-                                        <DropdownMenuContent align="start">
-                                            <DropdownMenuItem onClick={() => imageInputRef.current?.click()}>
-                                                <ImageIcon className="mr-2 size-4" />
-                                                {t('messages.images')}
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => pdfInputRef.current?.click()}>
-                                                <FileText className="mr-2 size-4" />
-                                                {t('messages.pdfs')}
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => videoInputRef.current?.click()}>
-                                                <Video className="mr-2 size-4" />
-                                                {t('messages.videos')}
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                    <TooltipContent>
-                                        <p>{canAddMoreAttachments ? t('messages.attachFiles') : 'Maximum 4 files per message'}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                disabled={!canAddMoreAttachments}
+                                onClick={() => combinedInputRef.current?.click()}
+                                className={cn(
+                                    'h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10',
+                                    !canAddMoreAttachments && 'opacity-50 cursor-not-allowed'
+                                )}
+                                aria-label={t('messages.attachFile')}
+                            >
+                                <Plus className="h-4 w-4" />
+                            </Button>
 
                             <TooltipProvider>
                                 <Tooltip>
@@ -431,46 +450,20 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
                     {/* Expanded mode buttons */}
                     {showExpandedInput && (
                         <div className="flex items-center justify-between gap-2 mt-1">
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <DropdownMenu>
-                                        <TooltipTrigger asChild>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    disabled={!canAddMoreAttachments}
-                                                    className={cn(
-                                                        'h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10',
-                                                        !canAddMoreAttachments && 'opacity-50 cursor-not-allowed'
-                                                    )}
-                                                    aria-label={t('messages.attachFile')}
-                                                >
-                                                    <Plus className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                        </TooltipTrigger>
-                                        <DropdownMenuContent align="start">
-                                            <DropdownMenuItem onClick={() => imageInputRef.current?.click()}>
-                                                <ImageIcon className="mr-2 size-4" />
-                                                {t('messages.images')}
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => pdfInputRef.current?.click()}>
-                                                <FileText className="mr-2 size-4" />
-                                                {t('messages.pdfs')}
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => videoInputRef.current?.click()}>
-                                                <Video className="mr-2 size-4" />
-                                                {t('messages.videos')}
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                    <TooltipContent>
-                                        <p>{canAddMoreAttachments ? t('messages.attachFiles') : 'Maximum 4 files per message'}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                disabled={!canAddMoreAttachments}
+                                onClick={() => combinedInputRef.current?.click()}
+                                className={cn(
+                                    'h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10',
+                                    !canAddMoreAttachments && 'opacity-50 cursor-not-allowed'
+                                )}
+                                aria-label={t('messages.attachFile')}
+                            >
+                                <Plus className="h-4 w-4" />
+                            </Button>
 
                             <TooltipProvider>
                                 <Tooltip>
