@@ -1,155 +1,156 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { Trash2, ArrowUp, Play, Pause, Loader2 } from "lucide-react";
+import { Trash2, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
-import { computeWaveformPeaksFromBlob } from "@/lib/audio/compute-peaks";
 
 interface VoiceNoteRecorderProps {
   onSend: (blob: Blob, url: string, durationMs: number) => void;
   onCancel: () => void;
 }
 
-// Constants for conveyor-belt waveform
-const BAR_INTERVAL_MS = 100;
-const MAX_BARS = 60;
+type RecorderState = "idle" | "recording" | "stopped";
+
 const MAX_DURATION_MS = 120000; // 2 minutes
+const UPDATE_INTERVAL_MS = 50; // Update every 50ms for smooth progress
+
+function pickMimeType() {
+  const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
+  for (const t of candidates) {
+    if (typeof window !== "undefined" && window.MediaRecorder?.isTypeSupported?.(t)) return t;
+  }
+  return "";
+}
 
 export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, onCancel }) => {
-  const { state, durationMs, start, stop, cancel, mediaRecorder, stream } = useVoiceRecorder();
-  const [peaks, setPeaks] = useState<number[]>([]);
-  const [recordedBlob, setRecordedBlob] = useState<{ blob: Blob; url: string; durationMs: number } | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
-  const [playbackProgress, setPlaybackProgress] = useState(0); // 0..1
-  const [isLoadingWaveform, setIsLoadingWaveform] = useState(false);
+  const [state, setState] = useState<RecorderState>("idle");
+  const [durationMs, setDurationMs] = useState(0);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
-  // Conveyor-belt waveform state
-  const [waveformBars, setWaveformBars] = useState<number[]>([]);
-  const smoothedRef = useRef(0);
-  const bucketMaxRef = useRef(0);
-  const lastBarTimeRef = useRef(0);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyzerRef = useRef<AnalyserNode | null>(null);
-  const animationRef = useRef<number | null>(null);
-
-  // Store cancel in a ref for cleanup to avoid stale closures
-  const cancelRef = useRef(cancel);
-  cancelRef.current = cancel;
-
-  // Start recording when component mounts
-  useEffect(() => {
-    start().catch((error) => {
-      console.error('Failed to start recording:', error);
-      onCancel();
-    });
-
-    // Cleanup on unmount - ensures microphone is released
-    return () => {
-      cancelRef.current();
-    };
-  }, []);
-
-  // Conveyor-belt waveform audio analysis
-  useEffect(() => {
-    if (!stream || state !== "recording") {
-      // Reset waveform state when not recording
-      setWaveformBars([]);
-      smoothedRef.current = 0;
-      bucketMaxRef.current = 0;
-      lastBarTimeRef.current = 0;
-      return;
-    }
-
-    const audioContext = new AudioContext();
-    const analyzer = audioContext.createAnalyser();
-    analyzer.fftSize = 256;
-
-    const source = audioContext.createMediaStreamSource(stream);
-    source.connect(analyzer);
-
-    audioContextRef.current = audioContext;
-    analyzerRef.current = analyzer;
-
-    const dataArray = new Uint8Array(analyzer.fftSize);
-
-    const analyze = () => {
-      if (!analyzerRef.current) return;
-
-      // Use time domain data for amplitude (not frequency spectrum)
-      analyzerRef.current.getByteTimeDomainData(dataArray);
-
-      // Calculate RMS (root mean square) amplitude
-      let sum = 0;
-      for (let i = 0; i < dataArray.length; i++) {
-        const normalized = (dataArray[i] - 128) / 128; // Center around 0, normalize to -1..1
-        sum += normalized * normalized;
-      }
-      const rms = Math.sqrt(sum / dataArray.length);
-
-      // Apply smoothing (fast attack, slow decay)
-      const alpha = rms > smoothedRef.current ? 0.45 : 0.12;
-      smoothedRef.current += (rms - smoothedRef.current) * alpha;
-      bucketMaxRef.current = Math.max(bucketMaxRef.current, smoothedRef.current);
-
-      // Emit a bar every BAR_INTERVAL_MS
-      const now = Date.now();
-      if (now - lastBarTimeRef.current >= BAR_INTERVAL_MS) {
-        setWaveformBars(prev => {
-          const next = [...prev, bucketMaxRef.current];
-          if (next.length > MAX_BARS) {
-            next.splice(0, next.length - MAX_BARS);
-          }
-          return next;
-        });
-        bucketMaxRef.current = 0;
-        lastBarTimeRef.current = now;
-      }
-
-      animationRef.current = requestAnimationFrame(analyze);
-    };
-
-    analyze();
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-        animationRef.current = null;
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-        audioContextRef.current = null;
-      }
-    };
-  }, [stream, state]);
+  // Refs
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const recordingResultRef = useRef<{ blob: Blob; url: string; durationMs: number } | null>(null);
 
   // Format duration as M:SS
   const formatDuration = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
-  // Handle stop recording
-  const handleStop = async () => {
-    const result = await stop();
-    if (result) {
-      setRecordedBlob(result);
-      setIsLoadingWaveform(true);
-      // Generate waveform peaks - use simple fallback if decode fails
+  // Cancel function
+  const cancel = useCallback(() => {
+    // Clear timer
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    // Stop media recorder
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       try {
-        const waveformPeaks = await computeWaveformPeaksFromBlob(result.blob, 64);
-        setPeaks(waveformPeaks);
-      } catch (error) {
-        console.error('Failed to generate waveform:', error);
-        // Create a simple fallback waveform
-        const fallbackPeaks = Array.from({ length: 64 }, () => Math.random() * 0.8 + 0.2);
-        setPeaks(fallbackPeaks);
-      } finally {
-        setIsLoadingWaveform(false);
+        mediaRecorderRef.current.stop();
+      } catch (e) {
+        // Ignore
       }
+    }
+    mediaRecorderRef.current = null;
+
+    // Stop all tracks (releases microphone)
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+
+    chunksRef.current = [];
+    recordingResultRef.current = null;
+    setAudioUrl(null);
+    setState("idle");
+    setDurationMs(0);
+  }, []);
+
+  const cancelRef = useRef(cancel);
+  cancelRef.current = cancel;
+
+  // Start recording on mount
+  useEffect(() => {
+    const startRecording = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+        streamRef.current = stream;
+
+        const mimeType = pickMimeType();
+        const options = mimeType ? { mimeType, audioBitsPerSecond: 128000 } : { audioBitsPerSecond: 128000 };
+        const mr = new MediaRecorder(stream, options);
+        mediaRecorderRef.current = mr;
+
+        chunksRef.current = [];
+        mr.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+        };
+
+        mr.onstop = () => {
+          const finalDuration = Date.now() - startTimeRef.current;
+          const blob = new Blob(chunksRef.current, { type: mr.mimeType || "audio/webm" });
+          const url = URL.createObjectURL(blob);
+          recordingResultRef.current = { blob, url, durationMs: finalDuration };
+          setDurationMs(finalDuration);
+          setAudioUrl(url);
+
+          // Stop all tracks
+          streamRef.current?.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
+
+          setState("stopped");
+        };
+
+        startTimeRef.current = Date.now();
+        mr.start(250);
+        setState("recording");
+
+        // Duration timer - update frequently for smooth progress
+        timerRef.current = setInterval(() => {
+          const elapsed = Date.now() - startTimeRef.current;
+          setDurationMs(elapsed);
+
+          if (elapsed >= MAX_DURATION_MS) {
+            mr.stop();
+            if (timerRef.current) {
+              clearInterval(timerRef.current);
+              timerRef.current = null;
+            }
+          }
+        }, UPDATE_INTERVAL_MS);
+      } catch (error) {
+        console.error("Failed to start recording:", error);
+        onCancel();
+      }
+    };
+
+    startRecording();
+
+    return () => {
+      cancelRef.current();
+    };
+  }, [onCancel]);
+
+  // Handle stop recording
+  const handleStop = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
     }
   };
 
@@ -157,150 +158,70 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
   const handleSend = () => {
     if (state === "recording") {
       // Stop and send immediately
-      stop().then((result) => {
-        if (result) {
-          onSend(result.blob, result.url, result.durationMs);
-        }
-      });
-    } else if (recordedBlob) {
-      // Send the recorded blob
-      onSend(recordedBlob.blob, recordedBlob.url, recordedBlob.durationMs);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        const mr = mediaRecorderRef.current;
+        mr.onstop = () => {
+          const finalDuration = Date.now() - startTimeRef.current;
+          const blob = new Blob(chunksRef.current, { type: mr.mimeType || "audio/webm" });
+          const url = URL.createObjectURL(blob);
+          onSend(blob, url, finalDuration);
+        };
+        mr.stop();
+      }
+    } else if (recordingResultRef.current) {
+      const { blob, url, durationMs } = recordingResultRef.current;
+      onSend(blob, url, durationMs);
     }
   };
 
   // Handle cancel/trash
   const handleCancel = () => {
-    if (audioElement) {
-      audioElement.pause();
-      audioElement.src = '';
-    }
     cancel();
     onCancel();
   };
 
-  // Handle playback toggle
-  const handlePlaybackToggle = () => {
-    if (!recordedBlob) return;
-
-    if (!audioElement) {
-      const audio = new Audio(recordedBlob.url);
-      audio.onended = () => {
-        setIsPlaying(false);
-        setPlaybackProgress(0);
-      };
-
-      // Track playback progress
-      audio.ontimeupdate = () => {
-        if (audio.duration) {
-          setPlaybackProgress(audio.currentTime / audio.duration);
-        }
-      };
-
-      setAudioElement(audio);
-      audio.play();
-      setIsPlaying(true);
-    } else {
-      if (isPlaying) {
-        audioElement.pause();
-        setIsPlaying(false);
-      } else {
-        audioElement.play();
-        setIsPlaying(true);
-      }
-    }
-  };
+  const progressPercentage = Math.min(100, (durationMs / MAX_DURATION_MS) * 100);
 
   return (
     <div className="px-4 py-2 flex-shrink-0 border-t border-border">
       <div className="bg-sidebar rounded-lg border border-input p-2">
-        {/* Top row: Time pill and Waveform */}
-        <div className="flex items-center h-[32px] gap-2">
-          {/* Time pill - always visible */}
-          <div className="flex-shrink-0 px-2 py-1 rounded-full flex items-center bg-muted/50">
-            <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">
-              {formatDuration(recordedBlob?.durationMs ?? durationMs)}/{formatDuration(MAX_DURATION_MS)}
-            </span>
-          </div>
+        {/* Top row: Timer and Progress (recording) or Native Audio Controls (stopped) */}
+        <div className={`${state === "stopped" ? "" : "flex items-center gap-3 h-[32px]"}`}>
+          {state === "recording" ? (
+            <>
+              {/* Time display */}
+              <span className="text-xs font-mono text-muted-foreground whitespace-nowrap flex-shrink-0">
+                {formatDuration(durationMs)} / {formatDuration(MAX_DURATION_MS)}
+              </span>
 
-          {/* Waveform container - takes remaining space */}
-          <div className="flex-1 h-full overflow-hidden">
-            {state === "recording" && stream ? (
-              // Real-time conveyor-belt waveform - bars flow from right to left
-              <div className="h-full flex flex-row-reverse items-center gap-[2px]">
-                {[...waveformBars].reverse().map((amp, idx) => {
-                  const isSilent = amp < 0.03;
-                  if (isSilent) {
-                    return (
-                      <div
-                        key={idx}
-                        className="w-[3px] h-[3px] rounded-full bg-primary flex-shrink-0"
-                      />
-                    );
-                  }
-                  // Scale amplitude: min height 6px, max height 28px
-                  const height = 6 + Math.round(amp * 22);
-                  return (
+              {/* Progress bar */}
+              <div className="flex-1 h-full overflow-hidden relative">
+                <div className="flex items-center h-full">
+                  <div className="flex-1 h-1.5 bg-muted-foreground/20 rounded-full">
                     <div
-                      key={idx}
-                      className="w-[3px] rounded-sm bg-primary flex-shrink-0"
-                      style={{ height: `${height}px` }}
+                      className="h-full bg-primary rounded-full transition-all duration-75"
+                      style={{ width: `${progressPercentage}%` }}
                     />
-                  );
-                })}
-              </div>
-            ) : isLoadingWaveform ? (
-              // Loading spinner
-              <div className="flex items-center justify-center w-full h-full">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              </div>
-            ) : peaks.length > 0 ? (
-              // Show waveform after recording with playback progress
-              <div className="w-full h-full flex items-center relative">
-                {/* Base waveform (visible gray) */}
-                <div className="flex items-center gap-0.5 w-full h-full">
-                  {peaks.map((peak, i) => {
-                    const height = Math.max(3, peak * 20);
-                    return (
-                      <div
-                        key={i}
-                        className="flex-1 bg-muted-foreground/30 rounded-full"
-                        style={{
-                          height: `${height}px`,
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-
-                {/* Progress overlay (primary color, fills left to right) */}
-                {playbackProgress > 0 && (
-                  <div
-                    className="absolute inset-0 overflow-hidden flex items-center"
-                    style={{ width: `${playbackProgress * 100}%` }}
-                  >
-                    <div className="flex items-center gap-0.5 w-full h-full">
-                      {peaks.map((peak, i) => {
-                        const height = Math.max(3, peak * 20);
-                        return (
-                          <div
-                            key={i}
-                            className="flex-1 bg-primary rounded-full"
-                            style={{
-                              height: `${height}px`,
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
                   </div>
-                )}
+                </div>
               </div>
-            ) : null}
-          </div>
+            </>
+          ) : audioUrl ? (
+            <audio
+              controls
+              src={audioUrl}
+              className="w-full h-10"
+              style={{ colorScheme: "dark" }}
+            />
+          ) : null}
         </div>
 
         {/* Bottom row: Controls */}
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 h-9 mt-1">
           {/* Trash/Delete button */}
           <Button
             type="button"
@@ -313,27 +234,16 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
             <Trash2 className="h-4 w-4" />
           </Button>
 
-          {/* Middle: Stop/Play button */}
+          {/* Middle: Stop button (only during recording) */}
           <div className="flex-1 flex items-center justify-center">
-            {state === "recording" ? (
+            {state === "recording" && (
               <button
                 type="button"
                 onClick={handleStop}
                 className="h-5 w-5 bg-destructive hover:bg-destructive/90 rounded flex-shrink-0"
                 aria-label="Stop recording"
               />
-            ) : recordedBlob && !isLoadingWaveform ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={handlePlaybackToggle}
-                className="h-9 w-9 rounded-full flex-shrink-0"
-                aria-label={isPlaying ? "Pause" : "Play"}
-              >
-                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              </Button>
-            ) : null}
+            )}
           </div>
 
           {/* Send button */}
