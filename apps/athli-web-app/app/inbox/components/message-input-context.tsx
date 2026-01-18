@@ -369,12 +369,14 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
 
   // Send voice note
   const sendVoiceNote = React.useCallback(async (blob: Blob, url: string, durationMs: number) => {
+    console.log('[sendVoiceNote] Received durationMs:', durationMs, 'which is', durationMs / 1000, 'seconds');
     if (!selectedContactId) return;
 
     try {
-      // Convert Blob to File for consistent handling
-      const voiceNoteFile = new File([blob], `voice-note-${Date.now()}.webm`, {
-        type: blob.type,
+      // Determine file extension from blob type
+      const ext = blob.type.includes('wav') ? 'wav' : blob.type.includes('mp4') ? 'm4a' : 'webm';
+      const voiceNoteFile = new File([blob], `voice-note-${Date.now()}.${ext}`, {
+        type: blob.type || 'audio/wav',
       });
 
       const replyToData = replyingToMessage
@@ -392,13 +394,14 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
       setIsRecordingVoiceNote(false);
       setReplyingToMessage(null);
 
-      // Send voice note as audio attachment
+      // Send voice note as audio attachment with duration
       await onSendMessage({
         text: '',
         attachments: [
           {
             file: voiceNoteFile,
             attachmentType: 'audio',
+            durationMs,
           },
         ],
         replyTo: replyToData,

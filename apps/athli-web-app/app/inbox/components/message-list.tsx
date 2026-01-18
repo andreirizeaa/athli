@@ -304,7 +304,7 @@ export const MessageList = React.memo(function MessageList({
                                                     e.preventDefault();
                                                 }}
                                             >
-                                                <DropdownMenuItem onClick={() => onReply(message)}>
+                                                <DropdownMenuItem onSelect={() => onReply(message)}>
                                                     <Reply className="mr-2 h-4 w-4" />
                                                     {t('messages.reply')}
                                                 </DropdownMenuItem>
@@ -347,58 +347,68 @@ export const MessageList = React.memo(function MessageList({
 
                                                 {message.text && (
                                                     <DropdownMenuItem
-                                                        onClick={() => handleCopyText(message.text)}
+                                                        onSelect={() => handleCopyText(message.text)}
                                                     >
                                                         <Copy className="mr-2 h-4 w-4" />
                                                         {t('general.copy')}
                                                     </DropdownMenuItem>
                                                 )}
 
-                                                {/* Download option for attachments - only show if there's a video, image, or file */}
-                                                {((message as any).attachments?.length > 0 || message.pdf || message.video || (message.images && message.images.length > 0)) && (
-                                                    <DropdownMenuItem
-                                                        onClick={() => {
-                                                            // Download all attachments with a small delay between each to avoid browser blocking
-                                                            const downloadWithDelay = (items: Array<{ data: string; name: string; type: string }>) => {
-                                                                items.forEach((item, index) => {
-                                                                    setTimeout(() => {
-                                                                        handleDownload(item.data, item.name, item.type);
-                                                                    }, index * 200);
-                                                                });
-                                                            };
+                                                {/* Download option for attachments - only show if there's a video, image, or file (not audio-only) */}
+                                                {(() => {
+                                                    // Filter out audio attachments for download
+                                                    const downloadableAttachments = (message as any).attachments?.filter(
+                                                        (a: any) => a.attachmentType !== 'audio' && !a.type?.startsWith('audio/')
+                                                    ) || [];
+                                                    const hasDownloadable = downloadableAttachments.length > 0 || message.pdf || message.video || (message.images && message.images.length > 0);
+                                                    
+                                                    if (!hasDownloadable) return null;
+                                                    
+                                                    return (
+                                                        <DropdownMenuItem
+                                                            onSelect={() => {
+                                                                // Download all attachments with a small delay between each to avoid browser blocking
+                                                                const downloadWithDelay = (items: Array<{ data: string; name: string; type: string }>) => {
+                                                                    items.forEach((item, index) => {
+                                                                        setTimeout(() => {
+                                                                            handleDownload(item.data, item.name, item.type);
+                                                                        }, index * 200);
+                                                                    });
+                                                                };
 
-                                                            // New format - attachments array
-                                                            if ((message as any).attachments?.length > 0) {
-                                                                downloadWithDelay((message as any).attachments);
-                                                            } else {
-                                                                // Legacy format - collect all attachments
-                                                                const allAttachments: Array<{ data: string; name: string; type: string }> = [];
-                                                                
-                                                                if (message.images && message.images.length > 0) {
-                                                                    allAttachments.push(...message.images);
+                                                                // New format - attachments array (excluding audio)
+                                                                if (downloadableAttachments.length > 0) {
+                                                                    downloadWithDelay(downloadableAttachments);
+                                                                } else {
+                                                                    // Legacy format - collect all attachments
+                                                                    const allAttachments: Array<{ data: string; name: string; type: string }> = [];
+                                                                    
+                                                                    if (message.images && message.images.length > 0) {
+                                                                        allAttachments.push(...message.images);
+                                                                    }
+                                                                    if (message.pdf) {
+                                                                        allAttachments.push(message.pdf);
+                                                                    }
+                                                                    if (message.video) {
+                                                                        allAttachments.push(message.video);
+                                                                    }
+                                                                    
+                                                                    if (allAttachments.length > 0) {
+                                                                        downloadWithDelay(allAttachments);
+                                                                    }
                                                                 }
-                                                                if (message.pdf) {
-                                                                    allAttachments.push(message.pdf);
-                                                                }
-                                                                if (message.video) {
-                                                                    allAttachments.push(message.video);
-                                                                }
-                                                                
-                                                                if (allAttachments.length > 0) {
-                                                                    downloadWithDelay(allAttachments);
-                                                                }
-                                                            }
-                                                        }}
-                                                    >
-                                                        <Download className="mr-2 h-4 w-4" />
-                                                        {t('general.download')}
-                                                    </DropdownMenuItem>
-                                                )}
+                                                            }}
+                                                        >
+                                                            <Download className="mr-2 h-4 w-4" />
+                                                            {t('general.download')}
+                                                        </DropdownMenuItem>
+                                                    );
+                                                })()}
 
                                                 {canDeleteMessage(message) && (
                                                     <>
                                                         <DropdownMenuSeparator />
-                                                        <DropdownMenuItem onClick={() => onDeleteMessage(message.id)}>
+                                                        <DropdownMenuItem onSelect={() => onDeleteMessage(message.id)}>
                                                             <Trash2 className="mr-2 h-4 w-4" />
                                                             {t('general.delete')}
                                                         </DropdownMenuItem>

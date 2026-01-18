@@ -299,7 +299,8 @@ const InboxPage = () => {
     },
     onMessageUpdated: (message) => {
       // If a message is soft-deleted (is_deleted=true), remove it optimistically
-      if (message.is_deleted) {
+      // Use explicit true check to handle any type coercion issues
+      if (message.is_deleted === true || (message as any).is_deleted === true) {
         removeApiMessage(message.id);
       }
       // NOTE: We intentionally do NOT refetch here for regular updates (e.g., attachments added)
@@ -1304,6 +1305,7 @@ const InboxPage = () => {
     attachments?: Array<{
       file: File;
       attachmentType: import('@/components/app/types').AttachmentType;
+      durationMs?: number;
     }>;
     replyTo?: Message['replyTo'];
   }) => {
@@ -1438,13 +1440,18 @@ const InboxPage = () => {
         };
 
         const attachmentsWithData = await Promise.all(
-          params.attachments.map(async (att) => ({
-            name: att.file.name,
-            data: await convertToBase64(att.file),
-            type: att.file.type,
-            size: att.file.size,
-            attachmentType: att.attachmentType,
-          }))
+          params.attachments.map(async (att) => {
+            const durationSeconds = att.durationMs ? Math.round(att.durationMs / 1000) : undefined;
+            console.log('[handleSendMessage] Converting durationMs:', att.durationMs, 'to durationSeconds:', durationSeconds);
+            return {
+              name: att.file.name,
+              data: await convertToBase64(att.file),
+              type: att.file.type,
+              size: att.file.size,
+              attachmentType: att.attachmentType,
+              durationSeconds,
+            };
+          })
         );
 
         await uploadAttachments({
@@ -2105,8 +2112,10 @@ const InboxPage = () => {
   const handleDeleteMessage = async (messageId: string) => {
     if (!messageId) return;
 
-    // Optimistically remove the message from local state immediately (no flicker)
+    // Optimistically remove the message from ALL local states immediately (no flicker)
+    // This includes apiMessages, optimisticMessages (for audio/attachment messages that stay longer)
     removeApiMessage(messageId);
+    setOptimisticMessages((prev) => prev.filter((m) => m.id !== messageId && m.realMessageId !== messageId));
 
     try {
       // Call the real delete API (soft delete)

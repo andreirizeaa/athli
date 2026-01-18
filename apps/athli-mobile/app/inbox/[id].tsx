@@ -228,8 +228,15 @@ export default function InboxDetailScreen() {
       // Message now includes attachments from enhanced broadcast trigger - no refetch needed
     },
     onMessageUpdated: (message) => {
-      console.log('[Inbox Detail] onMessageUpdated:', message.message_type, message.id, 'attachments:', message.attachments?.length || 0);
-      // Message now includes attachments from enhanced broadcast trigger - no refetch needed
+      console.log('[Inbox Detail] onMessageUpdated:', message.message_type, message.id, 'attachments:', message.attachments?.length || 0, 'is_deleted:', message.is_deleted);
+      // If message is soft-deleted, remove from local state
+      if (message.is_deleted === true) {
+        setMessages((prev) => prev.filter((m) => m.id !== message.id));
+      }
+    },
+    onMessageDeleted: (messageId) => {
+      // Remove the deleted message from local state
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
     },
   });
 
@@ -703,12 +710,10 @@ export default function InboxDetailScreen() {
     }
   };
 
-  const handleMessageEdit = (message: any) => {
-    setSearchQuery(message.text);
-  };
-
   const handleMessageDelete = async (message: any) => {
+    // Remove from ALL local states (messages and optimisticMessages)
     setMessages((prev) => prev.filter((m) => m.id !== message.id));
+    setOptimisticMessages((prev) => prev.filter((m) => m.id !== message.id && m.realMessageId !== message.id));
   };
 
   const handleReactionPress = (message: any) => {
@@ -817,7 +822,6 @@ export default function InboxDetailScreen() {
           themeColors={themeColors}
           clientName={coach.other_user_name || 'Coach'}
           onReply={handleMessageReply}
-          onEdit={handleMessageEdit}
           onDelete={handleMessageDelete}
           onReactionPress={handleReactionPress}
           onDocumentPress={handleDocumentPress}
