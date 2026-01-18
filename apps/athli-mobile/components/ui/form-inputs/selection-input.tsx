@@ -6,12 +6,13 @@ import { PressableOpacity } from 'pressto';
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 
-type SelectionInputProps = {
+export type SelectionInputProps = {
     label: string;
     value: string | null;
     onPress: () => void;
     placeholder?: string;
     required?: boolean;
+    disabled?: boolean;
 };
 
 export const SelectionInput = ({
@@ -20,11 +21,12 @@ export const SelectionInput = ({
     onPress,
     placeholder = 'Select...',
     required,
+    disabled = false,
 }: SelectionInputProps) => {
     const { colors: themeColors } = useThemePreference();
 
     return (
-        <PressableOpacity onPress={onPress}>
+        <PressableOpacity onPress={onPress} enabled={!disabled}>
             <View style={[styles.inputBox, { backgroundColor: themeColors.surfacePrimary }]}>
                 {label.length > 0 && (
                     <View style={styles.labelRow}>

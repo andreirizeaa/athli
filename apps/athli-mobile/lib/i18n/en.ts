@@ -14,6 +14,7 @@ export const en = {
     error: 'Error',
     errorLoading: 'Failed to load data',
     errorSaving: 'Failed to save changes',
+    errorDeleting: 'Failed to delete',
     success: 'Success',
     warning: 'Warning',
     description: 'Description',
@@ -37,6 +38,8 @@ export const en = {
     searchPlaceholder: 'Search',
     permissionRequired: 'Permission Required',
     you: 'You',
+    daily: 'Daily',
+    weekly: 'Weekly',
   },
   camera: {
     title: 'Camera',
@@ -891,6 +894,13 @@ export const en = {
     notes: {
       emptyTitle: 'No notes yet',
       emptyDescription: 'Notes and updates for this client will appear here',
+      deleteConfirmation: 'Are you sure you want to delete this note?',
+    },
+    goals: {
+      deleteConfirmation: 'Are you sure you want to delete this goal?',
+    },
+    injuries: {
+      deleteConfirmation: 'Are you sure you want to delete this injury?',
     },
     metrics: {
       emptyTitle: 'No metrics assigned',
@@ -916,6 +926,39 @@ export const en = {
       emptyTitle: 'No files uploaded yet',
       emptyDescription: 'Shared files and documents will appear here',
     },
+    selectHabit: {
+      title: 'Select Habit',
+    },
+    selectMetric: {
+      title: 'Select Metric',
+    },
+    habitDetail: {
+      title: 'Habit Details',
+      notFound: 'Habit not found',
+      recentLogs: 'Recent Logs',
+      noLogs: 'No logs yet',
+      completed: 'Completed',
+      skipped: 'Skipped',
+      partial: 'Partial',
+      average: 'Average',
+      change: 'Change',
+      completionRate: 'Completion',
+      currentStreak: 'Streak',
+    },
+    metricDetail: {
+      title: 'Metric Details',
+      notFound: 'Metric not found',
+      recentLogs: 'Recent Logs',
+      noLogs: 'No logs yet',
+      average: 'Average',
+      improvement: 'Improvement',
+    },
+    timeRanges: {
+      ninetyDays: '90 days',
+      sixMonths: '6 months',
+      oneYear: '1 year',
+      allTime: 'All time',
+    },
     training: {
       noWorkouts: 'No workouts planned',
       noWorkoutsDescription: 'There are no workouts scheduled for this day',
@@ -933,6 +976,9 @@ export const en = {
       noteTitlePlaceholder: 'Enter note title...',
       noteBody: 'Body',
       noteBodyPlaceholder: 'Enter note details...',
+    },
+    editNoteModal: {
+      title: 'Edit Note',
     },
     editBioModal: {
       title: 'Edit Bio',
