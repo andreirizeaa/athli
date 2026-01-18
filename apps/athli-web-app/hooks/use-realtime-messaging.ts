@@ -13,6 +13,7 @@ import type {
 } from '@supabase/supabase-js';
 
 import { createClient } from '@/supabase/client';
+import { prefetchAttachmentUrls } from '@/lib/messaging/attachment-url';
 import type {
   Message,
   MessageReaction,
@@ -66,15 +67,35 @@ export const useMessageMerging = (
 type RealtimeMessagesOptions = {
   conversationId: string;
   userId?: string;
+  /**
+   * Called when a new message INSERT is received.
+   * Return `true` to skip adding this message to realtimeMessages state.
+   * This is useful for optimistic updates where we want to keep showing
+   * the optimistic message instead of the real one until it has attachments.
+   */
+  shouldSkipInsert?: (message: Message) => boolean;
   onMessageReceived?: (message: Message) => void;
   onMessageUpdated?: (message: Message) => void;
   onMessageDeleted?: (messageId: string) => void;
 };
 
 /**
- * Helper to convert broadcast payload timestamps to Date objects
+ * Helper to convert broadcast payload to Message with proper types
+ * Now includes attachments and reactions arrays from the enhanced trigger
  */
-function convertBroadcastTimestamps(payload: Record<string, unknown>): Message {
+function convertBroadcastToMessage(payload: Record<string, unknown>): Message {
+  // Convert attachments array (now included in broadcast payload)
+  const attachments = (payload.attachments as any[] | null)?.map((att) => ({
+    ...att,
+    created_at: att.created_at ? new Date(att.created_at) : new Date(),
+  })) || [];
+
+  // Convert reactions array (now included in broadcast payload)
+  const reactions = (payload.reactions as any[] | null)?.map((r) => ({
+    ...r,
+    created_at: r.created_at ? new Date(r.created_at) : new Date(),
+  })) || [];
+
   return {
     ...payload,
     sent_at: payload.sent_at ? new Date(payload.sent_at as string) : new Date(),
@@ -86,7 +107,19 @@ function convertBroadcastTimestamps(payload: Record<string, unknown>): Message {
     created_at: payload.created_at
       ? new Date(payload.created_at as string)
       : new Date(),
+    attachment_count: (payload.attachment_count as number) || 0,
+    attachments,
+    reactions,
   } as Message;
+}
+
+/**
+ * Check if message has all expected attachments
+ */
+function hasAllAttachments(message: Message): boolean {
+  const expectedCount = (message as any).attachment_count || 0;
+  const actualCount = message.attachments?.length || 0;
+  return actualCount >= expectedCount;
 }
 
 /**
@@ -99,6 +132,7 @@ function convertBroadcastTimestamps(payload: Record<string, unknown>): Message {
 export const useRealtimeMessages = ({
   conversationId,
   userId,
+  shouldSkipInsert,
   onMessageReceived,
   onMessageUpdated,
   onMessageDeleted,
@@ -108,16 +142,18 @@ export const useRealtimeMessages = ({
   const [isSubscribed, setIsSubscribed] = useState(false);
 
   // Use refs to store callbacks to avoid re-subscribing on every render
+  const shouldSkipInsertRef = useRef(shouldSkipInsert);
   const onMessageReceivedRef = useRef(onMessageReceived);
   const onMessageUpdatedRef = useRef(onMessageUpdated);
   const onMessageDeletedRef = useRef(onMessageDeleted);
 
   // Update refs when callbacks change
   useEffect(() => {
+    shouldSkipInsertRef.current = shouldSkipInsert;
     onMessageReceivedRef.current = onMessageReceived;
     onMessageUpdatedRef.current = onMessageUpdated;
     onMessageDeletedRef.current = onMessageDeleted;
-  }, [onMessageReceived, onMessageUpdated, onMessageDeleted]);
+  }, [shouldSkipInsert, onMessageReceived, onMessageUpdated, onMessageDeleted]);
 
   useEffect(() => {
     if (!conversationId) return;
@@ -151,15 +187,51 @@ export const useRealtimeMessages = ({
           const eventType = data.type as string;
 
           if (eventType === 'INSERT') {
-            const message = convertBroadcastTimestamps(data);
-            setRealtimeMessages((prev) => [...prev, message]);
+            const message = convertBroadcastToMessage(data);
+            const hasAttachments = message.attachments && message.attachments.length > 0;
+
+            // Check if we should skip adding this message to state
+            // (e.g., when we have an optimistic message with attachments that should take priority)
+            const shouldSkip = shouldSkipInsertRef.current?.(message) ?? false;
+
+            // Add message immediately - UI will show loading placeholders for missing attachments
+            if (!shouldSkip) {
+              if (hasAttachments && message.attachments) {
+                // Prefetch URLs for any existing attachments
+                prefetchAttachmentUrls(message.attachments).then(() => {
+                  setRealtimeMessages((prev) => [...prev, message]);
+                });
+              } else {
+                setRealtimeMessages((prev) => [...prev, message]);
+              }
+            }
+
+            // Always call the callback (for other cleanup like removing text-only optimistic messages)
             onMessageReceivedRef.current?.(message);
           } else if (eventType === 'UPDATE') {
-            const message = convertBroadcastTimestamps(data);
-            setRealtimeMessages((prev) =>
-              prev.map((m) => (m.id === message.id ? message : m)),
-            );
-            onMessageUpdatedRef.current?.(message);
+            const message = convertBroadcastToMessage(data);
+            const hasAttachments = message.attachments && message.attachments.length > 0;
+
+            // Update message with new attachments - UI will update loading placeholders
+            const addOrUpdateMessage = () => {
+              setRealtimeMessages((prev) => {
+                const exists = prev.some((m) => m.id === message.id);
+                if (exists) {
+                  return prev.map((m) => (m.id === message.id ? message : m));
+                } else {
+                  // Message wasn't added on INSERT - add it now
+                  return [...prev, message];
+                }
+              });
+              onMessageUpdatedRef.current?.(message);
+            };
+
+            if (hasAttachments && message.attachments) {
+              // Prefetch URLs first, then update state
+              prefetchAttachmentUrls(message.attachments).then(addOrUpdateMessage);
+            } else {
+              addOrUpdateMessage();
+            }
           } else if (eventType === 'DELETE') {
             const deletedId = data.id as string;
             setRealtimeMessages((prev) =>

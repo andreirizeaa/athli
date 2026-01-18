@@ -125,6 +125,7 @@ type SendMessageOptions = {
   content?: string;
   messageType?: MessageType;
   parentMessageId?: string;
+  attachmentCount?: number;
 };
 
 export const sendMessage = async ({
@@ -132,7 +133,9 @@ export const sendMessage = async ({
   content,
   messageType = 'text',
   parentMessageId,
+  attachmentCount,
 }: SendMessageOptions): Promise<Message> => {
+  console.log('[sendMessage API] attachmentCount:', attachmentCount);
   const response = await apiFetch<{ data: { message: any } }>(
     '/coach/messaging/messages',
     {
@@ -142,6 +145,7 @@ export const sendMessage = async ({
         content,
         messageType,
         parentMessageId,
+        attachmentCount,
       },
     }
   );

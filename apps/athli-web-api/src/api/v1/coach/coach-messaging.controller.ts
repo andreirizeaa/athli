@@ -225,7 +225,9 @@ export const coachMessagingController = {
             return;
         }
 
-        const { conversationId, content, messageType = 'text', parentMessageId } = req.body;
+        const { conversationId, content, messageType = 'text', parentMessageId, attachmentCount } = req.body;
+
+        console.log('[sendMessage] attachmentCount from body:', attachmentCount);
 
         if (!conversationId) {
             badRequest(res, { message: 'Conversation ID is required' });
@@ -258,6 +260,7 @@ export const coachMessagingController = {
                     message_type: messageType,
                     parent_message_id: parentMessageId,
                     status: 'sent',
+                    attachment_count: attachmentCount || 0,
                 })
                 .select(`
                     *,

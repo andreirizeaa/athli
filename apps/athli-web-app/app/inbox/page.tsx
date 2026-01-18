@@ -204,12 +204,49 @@ const InboxPage = () => {
     apiMessagesRef.current = apiMessages;
   }, [apiMessages]);
 
+  // Optimistic messages state for instant UI feedback when sending
+  // IMPORTANT: Declared BEFORE useRealtimeMessages so the ref can access it
+  const [optimisticMessages, setOptimisticMessages] = React.useState<OptimisticMessage[]>([]);
+
+  // Ref to access latest optimistic messages in realtime callbacks (avoids stale closure)
+  const optimisticMessagesRef = React.useRef(optimisticMessages);
+  React.useEffect(() => {
+    optimisticMessagesRef.current = optimisticMessages;
+  }, [optimisticMessages]);
+
   // Realtime subscriptions
-  // When a real message arrives via realtime, immediately remove matching optimistic message
-  // to prevent visual glitch/duplication
   const { realtimeMessages } = useRealtimeMessages({
     conversationId: selectedConversation?.id || '',
     userId: user?.id,
+    // CRITICAL: Skip realtime messages that match an optimistic message
+    // This prevents flicker by never adding these to realtimeMessages state
+    shouldSkipInsert: React.useCallback((message: { id?: string; sender_id: string; sent_at: Date | string; message_type?: string }) => {
+      const currentOptimistic = optimisticMessagesRef.current;
+      if (currentOptimistic.length === 0) return false;
+
+      // Check if this message matches any optimistic message
+      return currentOptimistic.some((opt) => {
+        // PRIORITY 1: Exact ID match (most reliable)
+        if (opt.realMessageId && opt.realMessageId === message.id) {
+          return true;
+        }
+
+        // PRIORITY 2: Fallback to narrow time-based matching
+        // Only for the brief moment before realMessageId is set
+        if (opt.sender_id !== message.sender_id) return false;
+
+        const optTime = opt.sent_at instanceof Date 
+          ? opt.sent_at.getTime() 
+          : new Date(opt.sent_at).getTime();
+        const msgTime = message.sent_at instanceof Date 
+          ? message.sent_at.getTime() 
+          : new Date(message.sent_at).getTime();
+
+        // Narrow 10-second window to minimize false matches
+        const timeDiff = Math.abs(msgTime - optTime);
+        return timeDiff <= 10000;
+      });
+    }, []),
     onMessageReceived: (message) => {
       // Remove optimistic message that matches this real message
       // BUT only remove text-only messages here - messages with attachments are
@@ -225,14 +262,21 @@ const InboxPage = () => {
             return true;
           }
 
-          // For text-only messages, check if this is a match
+          // PRIORITY 1: Exact ID match via realMessageId
+          if (opt.realMessageId && opt.realMessageId === message.id) {
+            toRemove.push(opt);
+            return false;
+          }
+
+          // PRIORITY 2: Fallback to content + sender matching for text-only
           if (opt.sender_id !== message.sender_id) return true;
           if (normalizeContent(opt.content) !== normalizeContent(message.content)) return true;
 
           const optTime = opt.sent_at instanceof Date ? opt.sent_at.getTime() : new Date(opt.sent_at).getTime();
           const msgTime = message.sent_at instanceof Date ? message.sent_at.getTime() : new Date(message.sent_at).getTime();
           const timeDiff = Math.abs(msgTime - optTime);
-          if (timeDiff > 30000) return true;
+          // Narrow 10-second window now that we have realMessageId for precision
+          if (timeDiff > 10000) return true;
 
           // Match found for text-only message - safe to remove
           toRemove.push(opt);
@@ -272,9 +316,6 @@ const InboxPage = () => {
   const { conversations: realtimeConversations } = useRealtimeConversations({
     userId: user?.id || '',
   });
-
-  // Optimistic messages state for instant UI feedback when sending
-  const [optimisticMessages, setOptimisticMessages] = React.useState<OptimisticMessage[]>([]);
 
   // Optimistic reactions state for instant UI feedback when reacting
   // Maps messageId -> { senderReaction, recipientReaction }
@@ -1363,12 +1404,24 @@ const InboxPage = () => {
 
     try {
       // 1. Create message via API (this returns the message ID)
+      console.log('[handleSendMessage] params.attachments?.length:', params.attachments?.length);
       const message = await sendMessageAPI({
         conversationId: selectedConversation.id,
         content: params.text || undefined,
         messageType,
         parentMessageId: params.replyTo?.id,
+        attachmentCount: params.attachments?.length || 0,
       });
+
+      // CRITICAL: Store the real message ID on the optimistic message for precise deduplication
+      // This ensures we only hide THIS specific real message, not other recent messages
+      setOptimisticMessages((prev) =>
+        prev.map((opt) =>
+          opt.id === optimisticMsg.id
+            ? { ...opt, realMessageId: message.id }
+            : opt
+        )
+      );
 
       // 2. Upload attachments if present (convert to base64 here, AFTER optimistic message shown)
       if (params.attachments && params.attachments.length > 0) {
@@ -1431,13 +1484,23 @@ const InboxPage = () => {
             ? optimisticMsg.sent_at.getTime()
             : new Date(optimisticMsg.sent_at).getTime();
 
+          // Get the latest optimistic state to check for realMessageId
+          const currentOpt = optimisticMessagesRef.current.find((o) => o.id === optimisticMsg.id);
+          const realMessageId = currentOpt?.realMessageId;
+
           const matchingRealMessage = freshMessages.find((msg) => {
+            // PRIORITY 1: Exact ID match via realMessageId (most reliable)
+            if (realMessageId && msg.id === realMessageId) {
+              return true;
+            }
+            // PRIORITY 2: Fallback to sender + time matching
             if (msg.sender_id !== optimisticMsg.sender_id) return false;
             const msgTime = msg.sent_at instanceof Date
               ? msg.sent_at.getTime()
               : new Date(msg.sent_at).getTime();
             const timeDiff = Math.abs(msgTime - optimisticTime);
-            return timeDiff <= 30000;
+            // Narrow 10-second window
+            return timeDiff <= 10000;
           });
 
           const realAttachments = matchingRealMessage?.attachments ?? [];

@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, ScrollView, Image as RNImage } from 'react-native';
 import { PressableOpacity } from 'pressto';
-import { Send, Plus, Trash2 } from 'lucide-react-native';
+import { Send, Plus, Trash2, Play } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import Animated, { useAnimatedStyle, type SharedValue, interpolate, Extrapolation } from 'react-native-reanimated';
@@ -12,9 +12,11 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { MessageInputBar } from '@/components/features/message/message-input-bar';
 import { useDarkModeTheme } from '@/components/ui/dark-mode-wrapper';
 
-type ImageItem = {
+type MediaItem = {
   uri: string;
   id: string;
+  isVideo?: boolean;
+  thumbnailUri?: string;
 };
 
 type AttachmentPreviewToolbarProps = {
@@ -23,7 +25,7 @@ type AttachmentPreviewToolbarProps = {
   onSend: () => void;
   keyboardHeight?: SharedValue<number>;
   // Gallery props
-  images?: ImageItem[];
+  images?: MediaItem[];
   selectedImageId?: string | null;
   onImageSelect?: (imageId: string) => void;
   onDeleteImage?: (imageId: string, event: any) => void;
@@ -101,11 +103,16 @@ export const AttachmentPreviewToolbar = ({
               contentContainerStyle={styles.galleryScrollContent}
               style={styles.galleryScroll}
             >
-              {images.map((image) => {
-                const isSelected = selectedImageId === image.id;
+              {images.map((media) => {
+                const isSelected = selectedImageId === media.id;
+                // For videos, use thumbnailUri if available, otherwise show placeholder
+                const thumbnailSource = media.isVideo && media.thumbnailUri
+                  ? { uri: media.thumbnailUri }
+                  : { uri: media.uri };
+
                 return (
                   <PressableOpacity
-                    key={image.id}
+                    key={media.id}
                     style={[
                       styles.thumbnailContainer,
                       {
@@ -113,14 +120,25 @@ export const AttachmentPreviewToolbar = ({
                         borderWidth: 2,
                       },
                     ]}
-                    onPress={() => onImageSelect?.(image.id)}
+                    onPress={() => onImageSelect?.(media.id)}
                   >
-                    <RNImage source={{ uri: image.uri }} style={styles.thumbnail} resizeMode="cover" />
+                    <RNImage source={thumbnailSource} style={styles.thumbnail} resizeMode="cover" />
+                    {/* Video play icon overlay */}
+                    {media.isVideo && !isSelected && (
+                      <View style={styles.videoIconOverlay}>
+                        <PlatformIcon
+                          sf="play.fill"
+                          IconComponent={Play}
+                          size={14}
+                          color="#FFFFFF"
+                        />
+                      </View>
+                    )}
                     {isSelected && (
                       <View style={styles.trashOverlay}>
                         <PressableOpacity
                           style={styles.trashButton}
-                          onPress={(e) => onDeleteImage?.(image.id, e)}
+                          onPress={(e) => onDeleteImage?.(media.id, e)}
                         >
                           <PlatformIcon
                             sf="trash"
@@ -281,6 +299,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  videoIconOverlay: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

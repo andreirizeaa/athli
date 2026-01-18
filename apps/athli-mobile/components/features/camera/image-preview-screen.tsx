@@ -3,30 +3,78 @@ import { StyleSheet, Pressable, View, Text, ScrollView, Image as RNImage, Alert,
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { X, Download, Trash2, MoreHorizontal, CheckCircle2, Check } from 'lucide-react-native';
-import * as FileSystem from 'expo-file-system/legacy';
+import { X, Download, Trash2, MoreHorizontal, CheckCircle2, Check, Play } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Sharing from 'expo-sharing';
 import Share from 'react-native-share';
+import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
 import { useSharedValue } from 'react-native-reanimated';
 import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { useEvent } from 'expo';
 
 import { iconSizes, typography } from '@/constants/typography';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { type ImageAttachment } from '@/components/features/message/message-image-preview';
 import { AttachmentPreviewToolbar } from '@/components/features/camera/attachment-preview-toolbar';
-import { sendImageMessage } from '@/services/chats-service';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { useDarkModeTheme } from '@/components/ui/dark-mode-wrapper';
 import { StatusBar } from 'expo-status-bar';
 import { haptics } from '@/utils/haptics';
 
+// Extended attachment type that includes media type
+type MediaAttachment = ImageAttachment & {
+  isVideo?: boolean;
+  thumbnailUri?: string;
+};
+
+// Video page component for pager
+const VideoPage = ({ uri, isKeyboardVisible }: { uri: string; isKeyboardVisible: boolean }) => {
+  const player = useVideoPlayer(uri, (p) => {
+    p.pause();
+  });
+  const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
+
+  const handlePress = () => {
+    // If keyboard is visible, dismiss it instead of playing/pausing
+    if (isKeyboardVisible) {
+      Keyboard.dismiss();
+      return;
+    }
+
+    if (isPlaying) {
+      player.pause();
+    } else {
+      player.play();
+    }
+  };
+
+  return (
+    <View style={styles.pagerPage}>
+      <VideoView
+        player={player}
+        style={StyleSheet.absoluteFill}
+        contentFit="contain"
+        allowsPictureInPicture={false}
+      />
+      {!isPlaying && (
+        <Pressable style={styles.videoPlayOverlay} onPress={handlePress}>
+          <View style={styles.videoPlayButton}>
+            <PlatformIcon sf="play.fill" IconComponent={Play} size={32} color="#FFFFFF" />
+          </View>
+        </Pressable>
+      )}
+      <Pressable style={StyleSheet.absoluteFill} onPress={handlePress} />
+    </View>
+  );
+};
+
 const ImagePreviewScreen = () => {
   const router = useRouter();
   const params = useLocalSearchParams<{
-    images?: string; // JSON string of ImageAttachment[]
+    images?: string; // JSON string of MediaAttachment[]
     senderName?: string;
     isSent?: string;
     chatId?: string;
@@ -42,7 +90,7 @@ const ImagePreviewScreen = () => {
   const mutedSurfaceColor = themeColors.backgroundTertiary;
   const iconColor = themeColors.text;
 
-  const initialImages: ImageAttachment[] = params.images ? JSON.parse(params.images) : [];
+  const initialImages: MediaAttachment[] = params.images ? JSON.parse(params.images) : [];
   const senderName = params.senderName || 'Unknown';
   const isSent = params.isSent === 'true';
   const displayName = isSent ? 'You' : senderName;
@@ -56,10 +104,11 @@ const ImagePreviewScreen = () => {
       setCaption(params.caption);
     }
   }, [params.caption]);
-  const [images, setImages] = useState<ImageAttachment[]>(initialImages);
+  const [images, setImages] = useState<MediaAttachment[]>(initialImages);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(initialImages[0]?.id || null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const pagerRef = useRef<PagerView>(null);
   const isProgrammaticChange = useRef(false);
 
@@ -79,6 +128,16 @@ const ImagePreviewScreen = () => {
     },
     []
   );
+
+  // Track keyboard visibility for blocking video player gestures
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardVisible(true));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setIsKeyboardVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const selectedImage = images.find((img) => img.id === selectedImageId) || images[0];
 
@@ -343,27 +402,45 @@ const ImagePreviewScreen = () => {
         const asset = result.assets[0];
         if (!asset.uri) return;
 
-        // New image - add it to the list
-        const newImage: ImageAttachment = {
+        const isVideo = asset.type === 'video';
+
+        // Generate thumbnail for videos
+        let thumbnailUri: string | undefined;
+        if (isVideo) {
+          try {
+            const thumbnail = await VideoThumbnails.getThumbnailAsync(asset.uri, {
+              time: 500,
+              quality: 0.8,
+            });
+            thumbnailUri = thumbnail.uri;
+          } catch (thumbnailError) {
+            console.warn('Failed to generate video thumbnail:', thumbnailError);
+          }
+        }
+
+        // New media item - add it to the list
+        const newMedia: MediaAttachment = {
           uri: asset.uri,
-          id: `photo-${Date.now()}-${Math.random()}`,
+          id: `${isVideo ? 'video' : 'photo'}-${Date.now()}-${Math.random()}`,
+          isVideo,
+          thumbnailUri,
         };
 
-        const updatedImages = [...images, newImage];
+        const updatedImages = [...images, newMedia];
         setImages(updatedImages);
-        setSelectedImageId(newImage.id);
-        // Scroll pager to the new image (at the end of the array)
+        setSelectedImageId(newMedia.id);
+        // Scroll pager to the new item (at the end of the array)
         setTimeout(() => {
           pagerRef.current?.setPage(updatedImages.length - 1);
         }, 100);
       }
     } catch (error) {
       console.error('Error adding more from camera:', error);
-      Alert.alert('Error', 'Failed to capture image');
+      Alert.alert('Error', 'Failed to capture media');
     }
   };
 
-  const handleSend = async () => {
+  const handleSend = () => {
     if (!params.chatId) {
       console.error('No chatId provided');
       return;
@@ -374,53 +451,20 @@ const ImagePreviewScreen = () => {
       return;
     }
 
-    try {
-      // Read all images as bytes
-      const imageBytesArray = await Promise.all(
-        images.map(async (image) => {
-          const base64 = await FileSystem.readAsStringAsync(image.uri, {
-            encoding: 'base64' as any,
-          });
+    // Navigate back IMMEDIATELY for instant feedback
+    router.back();
 
-          // Convert base64 to Uint8Array
-          const binaryString = atob(base64);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-
-          return bytes;
-        })
-      );
-
-      // Send image message
-      await sendImageMessage(
-        params.chatId,
-        imageBytesArray as any,
-        caption.trim() || undefined
-      );
-
-      // Navigate back to chat screen - use back() to maintain slide animation
-      if (fromPicker && params.chatId) {
-        router.back();
-      } else {
-        router.back();
+    // Set params after a minimal delay to trigger upload in chat screen
+    // The chat screen will handle optimistic updates and actual upload
+    setTimeout(() => {
+      if (params.chatId) {
+        router.setParams({
+          imagesSent: 'true',
+          sentImages: JSON.stringify(images),
+          sentImagesCaption: caption.trim() || '',
+        } as any);
       }
-
-      // Set params to add image message to list and close attachment picker
-      setTimeout(() => {
-        if (params.chatId) {
-          router.setParams({
-            imagesSent: 'true',
-            sentImages: JSON.stringify(images),
-            sentImagesCaption: caption.trim() || '',
-          } as any);
-        }
-      }, 200);
-    } catch (error) {
-      console.error('Error sending images:', error);
-      Alert.alert('Error', 'Failed to send images');
-    }
+    }, 50);
   };
 
   // Viewing mode (not from picker) - show scrollable list
@@ -635,10 +679,14 @@ const ImagePreviewScreen = () => {
             initialPage={getIndexFromId(selectedImageId)}
             onPageSelected={handlePageSelected}
           >
-            {images.map((image) => (
-              <View key={image.id} style={styles.pagerPage}>
-                <RNImage source={{ uri: image.uri }} style={styles.previewImage} resizeMode="contain" />
-              </View>
+            {images.map((media) => (
+              media.isVideo ? (
+                <VideoPage key={media.id} uri={media.uri} isKeyboardVisible={isKeyboardVisible} />
+              ) : (
+                <View key={media.id} style={styles.pagerPage}>
+                  <RNImage source={{ uri: media.uri }} style={styles.previewImage} resizeMode="contain" />
+                </View>
+              )
             ))}
           </PagerView>
         </View>
@@ -875,6 +923,20 @@ const styles = StyleSheet.create({
   },
   pagerPage: {
     flex: 1,
+  },
+  videoPlayOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 5,
+  },
+  videoPlayButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

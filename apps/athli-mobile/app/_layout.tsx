@@ -165,6 +165,12 @@ function RootLayoutNav() {
             useChatsStore.getState().loadChats(),
           ]);
           console.log('[RootLayout] Coach company and chats data loaded');
+
+          // STEP 4b: Prefetch messages for top chats in background (don't block app ready)
+          // This enables instant navigation to recent conversations
+          useChatsStore.getState().prefetchTopMessages(10).catch((error) => {
+            console.warn('[RootLayout] Message prefetch failed:', error);
+          });
         }
 
         // Small delay to ensure first frame is rendered
@@ -208,6 +214,10 @@ function RootLayoutNav() {
                 useCoachCompanyStore.getState().loadCompany(),
                 useChatsStore.getState().loadChats(),
               ]);
+              // Prefetch messages for top chats in background for faster navigation
+              useChatsStore.getState().prefetchTopMessages(10).catch((error) => {
+                console.warn('[RootLayout] Message prefetch failed:', error);
+              });
             } else if (authResult.profileType === 'client') {
               setClientProfile(authResult.profile as ClientProfile);
             }
@@ -578,6 +588,21 @@ function RootLayoutNav() {
               headerShown: false,
               ...(Platform.OS === 'ios' && {
                 sheetAllowedDetents: [0.50],
+                sheetGrabberVisible: true,
+              }),
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/message/reactions-modal"
+            options={{
+              presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'ios' && {
+                sheetAllowedDetents: [0.35],
                 sheetGrabberVisible: true,
               }),
               ...(Platform.OS === 'android' && {

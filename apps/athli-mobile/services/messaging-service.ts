@@ -5,6 +5,7 @@
  */
 
 import { supabase } from '@/lib/supabase';
+import { prefetchAttachmentUrls } from '@/lib/attachment-url';
 import type {
   Conversation,
   Message,
@@ -301,7 +302,7 @@ export const getMessages = async ({
     if (!messages) return [];
 
     // Transform messages with correct Date types
-    return messages.map((msg) => ({
+    const transformedMessages = messages.map((msg) => ({
       ...msg,
       sent_at: new Date(msg.sent_at),
       read_at: msg.read_at ? new Date(msg.read_at) : null,
@@ -323,6 +324,16 @@ export const getMessages = async ({
           }
         : null,
     })) as Message[];
+
+    // Pre-fetch attachment URLs before returning so they're cached for rendering
+    const allAttachments = transformedMessages.flatMap((msg) => msg.attachments || []);
+    if (allAttachments.length > 0) {
+      console.log('[MessagingService] Pre-fetching URLs for', allAttachments.length, 'attachments');
+      await prefetchAttachmentUrls(allAttachments);
+      console.log('[MessagingService] URL pre-fetch complete');
+    }
+
+    return transformedMessages;
   } catch (error) {
     console.error('[ChatsService] Error getting messages:', error);
     throw error;
@@ -422,6 +433,8 @@ export const addReaction = async (
   userId: string,
   reaction: ReactionEmoji,
 ): Promise<MessageReaction> => {
+  console.log('[MessagingService] addReaction called:', { messageId, conversationId, userId, reaction });
+
   try {
     const { data, error } = await supabase
       .from('message_reactions')
@@ -439,14 +452,18 @@ export const addReaction = async (
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[MessagingService] Supabase error:', error.message, error.code, error.details);
+      throw error;
+    }
 
+    console.log('[MessagingService] Reaction added successfully:', data);
     return {
       ...data,
       created_at: new Date(data.created_at),
     } as MessageReaction;
-  } catch (error) {
-    console.error('[ChatsService] Error adding reaction:', error);
+  } catch (error: any) {
+    console.error('[MessagingService] Error adding reaction:', error?.message || error);
     throw error;
   }
 };

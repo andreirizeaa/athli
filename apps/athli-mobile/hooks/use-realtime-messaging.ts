@@ -14,6 +14,7 @@ import type {
 } from '@supabase/supabase-js';
 
 import { supabase } from '@/lib/supabase';
+import { prefetchAttachmentUrls } from '@/lib/attachment-url';
 import type {
   Message,
   MessageReaction,
@@ -73,9 +74,22 @@ type RealtimeMessagesOptions = {
 };
 
 /**
- * Helper to convert broadcast payload timestamps to Date objects
+ * Helper to convert broadcast payload to Message with proper types
+ * Now includes attachments and reactions arrays from the enhanced trigger
  */
-function convertBroadcastTimestamps(payload: Record<string, unknown>): Message {
+function convertBroadcastToMessage(payload: Record<string, unknown>): Message {
+  // Convert attachments array (now included in broadcast payload)
+  const attachments = (payload.attachments as any[] | null)?.map((att) => ({
+    ...att,
+    created_at: att.created_at ? new Date(att.created_at) : new Date(),
+  })) || [];
+
+  // Convert reactions array (now included in broadcast payload)
+  const reactions = (payload.reactions as any[] | null)?.map((r) => ({
+    ...r,
+    created_at: r.created_at ? new Date(r.created_at) : new Date(),
+  })) || [];
+
   return {
     ...payload,
     sent_at: payload.sent_at ? new Date(payload.sent_at as string) : new Date(),
@@ -87,7 +101,19 @@ function convertBroadcastTimestamps(payload: Record<string, unknown>): Message {
     created_at: payload.created_at
       ? new Date(payload.created_at as string)
       : new Date(),
+    attachment_count: (payload.attachment_count as number) || 0,
+    attachments,
+    reactions,
   } as Message;
+}
+
+/**
+ * Check if message has all expected attachments
+ */
+function hasAllAttachments(message: Message): boolean {
+  const expectedCount = (message as any).attachment_count || 0;
+  const actualCount = message.attachments?.length || 0;
+  return actualCount >= expectedCount;
 }
 
 /**
@@ -120,6 +146,11 @@ export const useRealtimeMessages = ({
     onMessageDeletedRef.current = onMessageDeleted;
   }, [onMessageReceived, onMessageUpdated, onMessageDeleted]);
 
+  // Remove a message from realtime state (used when refetch will provide complete data)
+  const removeRealtimeMessage = (messageId: string) => {
+    setRealtimeMessages((prev) => prev.filter((m) => m.id !== messageId));
+  };
+
   useEffect(() => {
     if (!conversationId) return;
 
@@ -151,15 +182,67 @@ export const useRealtimeMessages = ({
           const eventType = data.type as string;
 
           if (eventType === 'INSERT') {
-            const message = convertBroadcastTimestamps(data);
+            const message = convertBroadcastToMessage(data);
+            const hasAttachments = message.attachments && message.attachments.length > 0;
+
+            // Add message IMMEDIATELY - UI will show loading skeletons based on attachment_count
             setRealtimeMessages((prev) => [...prev, message]);
             onMessageReceivedRef.current?.(message);
+
+            // Then prefetch URLs in background - UI will update when URLs are in cache
+            if (hasAttachments && message.attachments) {
+              prefetchAttachmentUrls(message.attachments).then(() => {
+                // Force re-render after prefetch completes
+                setRealtimeMessages((prev) =>
+                  prev.map((m) => (m.id === message.id ? { ...message } : m))
+                );
+              });
+            }
           } else if (eventType === 'UPDATE') {
-            const message = convertBroadcastTimestamps(data);
-            setRealtimeMessages((prev) =>
-              prev.map((m) => (m.id === message.id ? message : m)),
-            );
-            onMessageUpdatedRef.current?.(message);
+            const message = convertBroadcastToMessage(data);
+            const hasAttachments = message.attachments && message.attachments.length > 0;
+
+            // Check if message already exists in state
+            setRealtimeMessages((prev) => {
+              const existingIndex = prev.findIndex((m) => m.id === message.id);
+
+              if (existingIndex === -1) {
+                // Message doesn't exist - this is first broadcast (INSERT was missed)
+                // Add message immediately - UI will show loading skeletons based on attachment_count vs actual attachments
+
+                // Start prefetching in background for existing attachments
+                if (hasAttachments && message.attachments) {
+                  prefetchAttachmentUrls(message.attachments).then(() => {
+                    // Force re-render after prefetch completes (URLs now in cache)
+                    setRealtimeMessages((currentPrev) =>
+                      currentPrev.map((m) =>
+                        m.id === message.id ? { ...message } : m
+                      )
+                    );
+                    onMessageUpdatedRef.current?.(message);
+                  });
+                }
+
+                onMessageReceivedRef.current?.(message);
+                return [...prev, message];
+              } else {
+                // Message exists - update it with new attachment data
+                if (hasAttachments && message.attachments) {
+                  // Prefetch URLs then update
+                  prefetchAttachmentUrls(message.attachments).then(() => {
+                    setRealtimeMessages((currentPrev) =>
+                      currentPrev.map((m) =>
+                        m.id === message.id ? { ...message } : m
+                      )
+                    );
+                    onMessageUpdatedRef.current?.(message);
+                  });
+                }
+                // Update message immediately to show any new attachments
+                onMessageUpdatedRef.current?.(message);
+                return prev.map((m) => (m.id === message.id ? message : m));
+              }
+            });
           } else if (eventType === 'DELETE') {
             const deletedId = data.id as string;
             setRealtimeMessages((prev) =>
@@ -186,7 +269,7 @@ export const useRealtimeMessages = ({
     };
   }, [conversationId, userId]); // Re-subscribe when conversationId or userId changes
 
-  return { realtimeMessages, isSubscribed, channel };
+  return { realtimeMessages, isSubscribed, channel, removeRealtimeMessage };
 };
 
 // ================================================

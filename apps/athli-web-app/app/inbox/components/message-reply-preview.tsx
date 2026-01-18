@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Reply, FileText, Video, Mic } from 'lucide-react';
+import { Reply, FileText, Video, Mic, Play } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import type { AttachmentType } from '@/components/app/types';
 
@@ -56,21 +56,38 @@ export function MessageReplyPreview({
     voiceNoteLabel,
     onScrollToMessage,
 }: MessageReplyPreviewProps) {
-    // Get all images from both legacy and new format
-    const images = replyTo.attachments?.filter(a => a.attachmentType === 'image') || replyTo.images || [];
+    // Build unified list of all visual attachments for thumbnail row
+    // Use new attachments format if available, otherwise fall back to legacy fields
+    const thumbnailItems: Array<{ type: 'image' | 'video' | 'pdf'; data?: string }> = [];
+    const hasNewFormat = replyTo.attachments && replyTo.attachments.length > 0;
+    let hasAudio = false;
 
-    // Get audio attachments
-    const audioAttachments = replyTo.attachments?.filter(a => a.attachmentType === 'audio') || [];
-    const hasAudio = audioAttachments.length > 0;
+    if (hasNewFormat) {
+        // New format: use attachments array
+        replyTo.attachments!.forEach(att => {
+            if (att.attachmentType === 'image') {
+                thumbnailItems.push({ type: 'image', data: att.data });
+            } else if (att.attachmentType === 'video') {
+                thumbnailItems.push({ type: 'video' });
+            } else if (att.attachmentType === 'pdf') {
+                thumbnailItems.push({ type: 'pdf' });
+            } else if (att.attachmentType === 'audio') {
+                hasAudio = true;
+            }
+        });
+    } else {
+        // Legacy format: use individual fields
+        replyTo.images?.forEach(img => thumbnailItems.push({ type: 'image', data: img.data }));
+        if (replyTo.video) thumbnailItems.push({ type: 'video' });
+        if (replyTo.pdf) thumbnailItems.push({ type: 'pdf' });
+    }
 
-    // Get PDF from both formats
-    const pdf = replyTo.attachments?.find(a => a.attachmentType === 'pdf') || replyTo.pdf;
+    // Check if we have any attachments to show
+    const hasVisualAttachments = thumbnailItems.length > 0;
+    const hasAttachments = hasVisualAttachments || hasAudio;
 
-    // Get video from both formats
-    const video = replyTo.attachments?.find(a => a.attachmentType === 'video') || replyTo.video;
-
-    // Check if we have any attachments to show in the thumbnails row
-    const hasAttachments = images.length > 0 || hasAudio || pdf || video;
+    // Show up to 4 thumbnails
+    const displayedThumbnails = thumbnailItems.slice(0, 4);
 
     return (
         <div
@@ -114,98 +131,78 @@ export function MessageReplyPreview({
                 </p>
             ) : (
                 <>
-                    {/* Attachments row (thumbnails/icons) */}
-                    {hasAttachments && (
-                        <div className="flex items-center gap-1 mb-1 flex-wrap">
-                            {/* Image thumbnails - 24x24 */}
-                            {images.length > 0 && (
-                                <>
-                                    {images.slice(0, 3).map((image, idx) => (
-                                        <div key={idx} className="flex-shrink-0">
-                                            <div className="w-6 h-6 flex items-center justify-center overflow-hidden rounded bg-muted">
-                                                <img
-                                                    src={image.data}
-                                                    alt={image.name}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {images.length > 3 && (
-                                        <div className="w-6 h-6 flex items-center justify-center rounded bg-muted text-[8px] text-muted-foreground">
-                                            +{images.length - 3}
+                    {/* Thumbnails row - square thumbnails for images, videos, PDFs */}
+                    {hasVisualAttachments && (
+                        <div className="flex items-center gap-1 mb-1">
+                            {displayedThumbnails.map((item, idx) => (
+                                <div
+                                    key={idx}
+                                    className={cn(
+                                        'w-7 h-7 flex-shrink-0 rounded overflow-hidden flex items-center justify-center',
+                                        isSent ? 'bg-primary-foreground/20' : 'bg-muted'
+                                    )}
+                                >
+                                    {item.type === 'image' && item.data && (
+                                        <img
+                                            src={item.data}
+                                            alt={item.name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    )}
+                                    {item.type === 'image' && !item.data && (
+                                        <div className={cn(
+                                            'w-full h-full flex items-center justify-center',
+                                            isSent ? 'bg-primary-foreground/30' : 'bg-muted'
+                                        )}>
+                                            <span className="text-[8px] opacity-50">IMG</span>
                                         </div>
                                     )}
-                                </>
-                            )}
-
-                            {/* Voice note indicator */}
-                            {hasAudio && (
-                                <div className="flex items-center gap-1">
-                                    <Mic
-                                        className={cn(
-                                            'h-3 w-3 flex-shrink-0',
-                                            isSent ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                                        )}
-                                    />
-                                    <span
-                                        className={cn(
-                                            'text-xs',
-                                            isSent ? 'text-primary-foreground/80' : 'text-foreground/80'
-                                        )}
-                                    >
-                                        {voiceNoteLabel}
-                                    </span>
+                                    {item.type === 'video' && (
+                                        <div className={cn(
+                                            'w-full h-full flex items-center justify-center relative',
+                                            isSent ? 'bg-slate-400/50' : 'bg-slate-300 dark:bg-slate-600'
+                                        )}>
+                                            {/* Subtle play overlay */}
+                                            <div className="w-4 h-4 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-sm">
+                                                <Play className="h-2 w-2 ml-0.5 text-white fill-white" />
+                                            </div>
+                                        </div>
+                                    )}
+                                    {item.type === 'pdf' && (
+                                        <div className="w-full h-full flex items-center justify-center bg-orange-100 dark:bg-orange-900/30">
+                                            <FileText className="h-3 w-3 text-orange-600 dark:text-orange-400" />
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-
-                            {/* PDF indicator */}
-                            {pdf && (
-                                <div className="flex items-center gap-1">
-                                    <FileText
-                                        className={cn(
-                                            'h-3 w-3 flex-shrink-0',
-                                            'text-orange-600 dark:text-orange-400'
-                                        )}
-                                    />
-                                    <span
-                                        className={cn(
-                                            'text-xs truncate max-w-[100px]',
-                                            isSent ? 'text-primary-foreground/80' : 'text-foreground/80'
-                                        )}
-                                    >
-                                        {pdf.name}
-                                    </span>
-                                </div>
-                            )}
-
-                            {/* Video indicator */}
-                            {video && (
-                                <div className="flex items-center gap-1">
-                                    <Video
-                                        className={cn(
-                                            'h-3 w-3 flex-shrink-0',
-                                            'text-orange-600 dark:text-orange-400'
-                                        )}
-                                    />
-                                    <span
-                                        className={cn(
-                                            'text-xs truncate max-w-[100px]',
-                                            isSent ? 'text-primary-foreground/80' : 'text-foreground/80'
-                                        )}
-                                    >
-                                        {video.name}
-                                    </span>
-                                </div>
-                            )}
+                            ))}
                         </div>
                     )}
 
-                    {/* Text row */}
+                    {/* Voice note indicator (separate row since it's audio) */}
+                    {hasAudio && (
+                        <div className="flex items-center gap-1 mb-1">
+                            <Mic
+                                className={cn(
+                                    'h-3 w-3 flex-shrink-0',
+                                    isSent ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                                )}
+                            />
+                            <span
+                                className={cn(
+                                    'text-xs',
+                                    isSent ? 'text-primary-foreground/80' : 'text-foreground/80'
+                                )}
+                            >
+                                {voiceNoteLabel}
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Text row - single line with ellipsis */}
                     {replyTo.text && (
                         <p
                             className={cn(
-                                'text-xs line-clamp-2',
+                                'text-xs line-clamp-1',
                                 isSent ? 'text-primary-foreground/80' : 'text-foreground/80'
                             )}
                         >
