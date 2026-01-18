@@ -191,7 +191,7 @@ export const QuestionnairesTab = () => {
               onPress={() => handleQuestionnairePress(item)}
             >
               <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
-                <View style={styles.iconContainer}>
+                <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
                   <PlatformIcon
                     sf="list.bullet.rectangle.portrait.fill"
                     IconComponent={ClipboardList}
@@ -268,7 +268,6 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 8,
-    backgroundColor: 'rgba(128, 128, 128, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,

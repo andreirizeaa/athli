@@ -29,7 +29,7 @@ import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useModalCallbacks, type HabitOptionsData } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { InputBox, TextAreaInput, SelectInput, ButtonTabGroup } from '@/components/ui/form-inputs';
+import { InputBox, TextAreaInput, SelectInput } from '@/components/ui/form-inputs';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
@@ -160,7 +160,7 @@ export default function AddHabitModal() {
         }))
         , []);
 
-    // Period options for ButtonTabGroup
+    // Period options for SelectInput
     const periodOptions = useMemo(() => [
         { value: 'daily' as const, label: t('library.addHabit.daily') },
         { value: 'weekly' as const, label: t('library.addHabit.weekly') },
@@ -457,7 +457,7 @@ export default function AddHabitModal() {
                                         <Text style={[styles.categoryLabel, { color: themeColors.mutedText }]}>
                                             {section.label}
                                         </Text>
-                                        <Card style={{ backgroundColor: themeColors.backgroundTertiary }}>
+                                        <Card style={{ backgroundColor: themeColors.surfacePrimary }}>
                                             {section.habits.map((habit, index) => (
                                                 <React.Fragment key={habit.name}>
                                                     {index > 0 && <Separator />}
@@ -529,15 +529,17 @@ export default function AddHabitModal() {
                                 </View>
                             </View>
 
-                            <ButtonTabGroup
+                            <SelectInput
+                                label={t('library.addHabit.period')}
                                 options={periodOptions}
                                 value={period}
                                 onChange={setPeriod}
+                                required
                             />
 
                             {/* Duration and Notification - Optional */}
                             <PressableOpacity
-                                style={[styles.optionsContainer, { backgroundColor: themeColors.backgroundTertiary }]}
+                                style={[styles.optionsContainer, { backgroundColor: themeColors.surfacePrimary }]}
                                 onPress={handleOpenOptionsModal}
                             >
                                 <View style={styles.optionsContent}>
@@ -569,7 +571,7 @@ export default function AddHabitModal() {
                                                         hitSlop={8}
                                                     >
                                                         <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                                                            <X {...({ size: 12, color: themeColors.backgroundTertiary, strokeWidth: 3 } as any)} />
+                                                            <X {...({ size: 12, color: themeColors.surfacePrimary, strokeWidth: 3 } as any)} />
                                                         </View>
                                                     </PressableOpacity>
                                                 </View>
@@ -593,7 +595,7 @@ export default function AddHabitModal() {
                                                         hitSlop={8}
                                                     >
                                                         <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                                                            <X {...({ size: 12, color: themeColors.backgroundTertiary, strokeWidth: 3 } as any)} />
+                                                            <X {...({ size: 12, color: themeColors.surfacePrimary, strokeWidth: 3 } as any)} />
                                                         </View>
                                                     </PressableOpacity>
                                                 </View>

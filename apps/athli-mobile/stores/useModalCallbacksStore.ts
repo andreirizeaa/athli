@@ -4,6 +4,8 @@ import type { DefaultMetric } from '@/constants/metrics';
 import type { DefaultHabit } from '@/constants/habits';
 import type { Exercise } from '@/app/modals/workout/add-exercise-to-builder-modal';
 import type { BuilderSection, BuilderItem } from '@/components/features/workout/workout-schema';
+import type { ClientHabit } from '@/services/client/client-habit-service';
+import type { ClientMetric } from '@/services/client/client-metric-service';
 
 type RepeatData = {
   type: 'weekly' | 'monthly';
@@ -40,6 +42,8 @@ type ModalCallbacksStore = {
   scheduleCallback: ((data: ScheduleData) => void) | null;
   metricSelectCallback: ((metric: DefaultMetric) => void) | null;
   habitSelectCallback: ((habit: DefaultHabit) => void) | null;
+  clientHabitSelectCallback: ((habit: ClientHabit) => void) | null;
+  clientMetricSelectCallback: ((metric: ClientMetric) => void) | null;
   dateSelectCallback: ((date: Date) => void) | null;
   exerciseSelectCallback: ((exercise: Exercise) => void) | null;
   exercisesSelectCallback: ((exercises: Exercise[]) => void) | null;
@@ -62,6 +66,8 @@ type ModalCallbacksStore = {
   setScheduleCallback: (callback: (data: ScheduleData) => void) => void;
   setMetricSelectCallback: (callback: (metric: DefaultMetric) => void) => void;
   setHabitSelectCallback: (callback: (habit: DefaultHabit) => void) => void;
+  setClientHabitSelectCallback: (callback: (habit: ClientHabit) => void) => void;
+  setClientMetricSelectCallback: (callback: (metric: ClientMetric) => void) => void;
   setDateSelectCallback: (callback: (date: Date) => void) => void;
   setExerciseSelectCallback: (callback: (exercise: Exercise) => void) => void;
   setExercisesSelectCallback: (callback: (exercises: Exercise[]) => void) => void;
@@ -78,6 +84,8 @@ type ModalCallbacksStore = {
   triggerScheduleSelect: (data: ScheduleData) => void;
   triggerMetricSelect: (metric: DefaultMetric) => void;
   triggerHabitSelect: (habit: DefaultHabit) => void;
+  triggerClientHabitSelect: (habit: ClientHabit) => void;
+  triggerClientMetricSelect: (metric: ClientMetric) => void;
   triggerDateSelect: (date: Date) => void;
   triggerExerciseSelect: (exercise: Exercise) => void;
   triggerExercisesSelect: (exercises: Exercise[]) => void;
@@ -106,6 +114,8 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
   scheduleCallback: null,
   metricSelectCallback: null,
   habitSelectCallback: null,
+  clientHabitSelectCallback: null,
+  clientMetricSelectCallback: null,
   dateSelectCallback: null,
   exerciseSelectCallback: null,
   exercisesSelectCallback: null,
@@ -127,6 +137,8 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
   setScheduleCallback: (callback) => set({ scheduleCallback: callback }),
   setMetricSelectCallback: (callback) => set({ metricSelectCallback: callback }),
   setHabitSelectCallback: (callback) => set({ habitSelectCallback: callback }),
+  setClientHabitSelectCallback: (callback) => set({ clientHabitSelectCallback: callback }),
+  setClientMetricSelectCallback: (callback) => set({ clientMetricSelectCallback: callback }),
   setDateSelectCallback: (callback) => set({ dateSelectCallback: callback }),
   setExerciseSelectCallback: (callback) => set({ exerciseSelectCallback: callback }),
   setExercisesSelectCallback: (callback) => set({ exercisesSelectCallback: callback }),
@@ -186,6 +198,18 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
     const { habitSelectCallback } = get();
     if (habitSelectCallback) {
       habitSelectCallback(habit);
+    }
+  },
+  triggerClientHabitSelect: (habit) => {
+    const { clientHabitSelectCallback } = get();
+    if (clientHabitSelectCallback) {
+      clientHabitSelectCallback(habit);
+    }
+  },
+  triggerClientMetricSelect: (metric) => {
+    const { clientMetricSelectCallback } = get();
+    if (clientMetricSelectCallback) {
+      clientMetricSelectCallback(metric);
     }
   },
   triggerDateSelect: (date) => {

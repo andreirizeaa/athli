@@ -316,7 +316,7 @@ export const ExercisesTab = () => {
                       </View>
                     </View>
                   ) : (
-                    <View style={[styles.iconContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
+                    <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
                       <PlatformIcon
                         sf="figure.strengthtraining.traditional"
                         IconComponent={Dumbbell}
