@@ -74,6 +74,24 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
         }
     }, [replyingToMessage, attachments.length, messageInput, textareaRef, setTextareaHeight]);
 
+    // Auto-focus textarea when replying to a message
+    // Track previous replyingToMessage to detect when it changes to non-null
+    const prevReplyingToMessageRef = React.useRef<typeof replyingToMessage>(null);
+    React.useEffect(() => {
+        const wasNull = prevReplyingToMessageRef.current === null;
+        prevReplyingToMessageRef.current = replyingToMessage;
+
+        // Only focus when transitioning from null to a message (not on every render)
+        if (wasNull && replyingToMessage && textareaRef.current) {
+            // Focus after a short delay to ensure DOM is ready
+            const timer = setTimeout(() => {
+                textareaRef.current?.focus();
+            }, 50);
+
+            return () => clearTimeout(timer);
+        }
+    }, [replyingToMessage, textareaRef]);
+
     // Handle file inputs
     const handleImageInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
@@ -313,76 +331,102 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
                     )}
 
                     {/* Reply Preview */}
-                    {replyingToMessage && (
-                        <div
-                            className="mb-2 px-3 py-2 bg-background/50"
-                            style={{ borderRadius: '18px' }}
-                        >
-                            <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <Reply className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                        <span className="text-xs font-semibold text-foreground">
-                                            {replyingToMessage.isSent
-                                                ? t('messages.yourself')
-                                                : selectedContact?.name || 'user'}
-                                        </span>
-                                    </div>
-                                    {replyingToMessage.images && replyingToMessage.images.length > 0 && (
-                                        <div className="flex gap-1.5 mb-1.5 overflow-x-auto">
-                                            {replyingToMessage.images.slice(0, 3).map((image, index) => (
-                                                <div key={index} className="flex-shrink-0">
-                                                    <div className="w-12 h-12 flex items-center justify-center overflow-hidden rounded-md bg-muted">
-                                                        <img
-                                                            src={image.data}
-                                                            alt={image.name}
-                                                            className="w-full h-full object-cover"
-                                                        />
+                    {replyingToMessage && (() => {
+                        // Check if this is a voice note (audio attachment)
+                        const isVoiceNote = (replyingToMessage as any).attachments?.some(
+                            (att: any) => att.attachmentType === 'audio' || att.type?.startsWith('audio/')
+                        );
+
+                        return (
+                            <div
+                                className={cn(
+                                    "mb-2 px-3 py-2 rounded-lg",
+                                    replyingToMessage.isSent
+                                        ? "bg-primary/20"
+                                        : "bg-sidebar"
+                                )}
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <Reply className={cn(
+                                                "h-3 w-3 flex-shrink-0",
+                                                replyingToMessage.isSent ? "text-primary" : "text-muted-foreground"
+                                            )} />
+                                            <span className={cn(
+                                                "text-xs font-semibold",
+                                                replyingToMessage.isSent ? "text-primary" : "text-foreground"
+                                            )}>
+                                                {replyingToMessage.isSent
+                                                    ? t('messages.yourself')
+                                                    : selectedContact?.name || 'user'}
+                                            </span>
+                                        </div>
+                                        {/* Voice note indicator */}
+                                        {isVoiceNote && (
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                <Mic className="h-3 w-3 text-primary flex-shrink-0" />
+                                                <span className="text-xs text-foreground">
+                                                    {t('messages.voiceNote')}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {replyingToMessage.images && replyingToMessage.images.length > 0 && (
+                                            <div className="flex gap-1.5 mb-1.5 overflow-x-auto">
+                                                {replyingToMessage.images.slice(0, 3).map((image, index) => (
+                                                    <div key={index} className="flex-shrink-0">
+                                                        <div className="w-12 h-12 flex items-center justify-center overflow-hidden rounded-md bg-muted">
+                                                            <img
+                                                                src={image.data}
+                                                                alt={image.name}
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
-                                            {replyingToMessage.images.length > 3 && (
-                                                <div className="w-12 h-12 flex items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
-                                                    +{replyingToMessage.images.length - 3}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                    {replyingToMessage.pdf && (
-                                        <div className="flex items-center gap-2 mb-1.5">
-                                            <FileText className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-                                            <span className="text-xs text-foreground truncate">
-                                                {replyingToMessage.pdf.name}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {replyingToMessage.video && (
-                                        <div className="flex items-center gap-2 mb-1.5">
-                                            <Video className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-                                            <span className="text-xs text-foreground truncate">
-                                                {replyingToMessage.video.name}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {replyingToMessage.text && (
-                                        <p className="text-sm text-foreground line-clamp-2 truncate">
-                                            {replyingToMessage.text}
-                                        </p>
-                                    )}
+                                                ))}
+                                                {replyingToMessage.images.length > 3 && (
+                                                    <div className="w-12 h-12 flex items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
+                                                        +{replyingToMessage.images.length - 3}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        {replyingToMessage.pdf && (
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                <FileText className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+                                                <span className="text-xs text-foreground truncate">
+                                                    {replyingToMessage.pdf.name}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {replyingToMessage.video && (
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                <Video className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+                                                <span className="text-xs text-foreground truncate">
+                                                    {replyingToMessage.video.name}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {replyingToMessage.text && (
+                                            <p className="text-sm text-foreground line-clamp-2 truncate">
+                                                {replyingToMessage.text}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 flex-shrink-0"
+                                        onClick={() => setReplyingToMessage(null)}
+                                        aria-label={t('messages.cancelReply')}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
                                 </div>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 flex-shrink-0"
-                                    onClick={() => setReplyingToMessage(null)}
-                                    aria-label={t('messages.cancelReply')}
-                                >
-                                    <X className="h-4 w-4" />
-                                </Button>
                             </div>
-                        </div>
-                    )}
+                        );
+                    })()}
 
                     {/* Attachment buttons for collapsed mode */}
                     {!showExpandedInput && (

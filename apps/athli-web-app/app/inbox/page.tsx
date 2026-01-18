@@ -291,18 +291,33 @@ const InboxPage = () => {
 
   // Collect attachments that need signed URL generation
   // Skip attachments that already have URLs (optimistic with local_uri, or API with signed_url)
+  // Includes both main message attachments AND parent message attachments (for reply previews)
   const attachmentsNeedingUrls = React.useMemo(() => {
     if (!mergedMessages || mergedMessages.length === 0) return [];
-    return mergedMessages
-      .flatMap((msg) => msg.attachments || [])
-      .filter((att) => {
-        // Skip optimistic attachments (have blob URL)
-        if ((att as any).local_uri) return false;
-        // Skip attachments that already have signed URL from API
-        if ((att as any).signed_url) return false;
-        // Only include if has file_path (needs URL generation from storage)
-        return !!att.file_path;
-      });
+
+    const allAttachments: typeof mergedMessages[0]['attachments'] = [];
+
+    mergedMessages.forEach((msg) => {
+      // Add main message attachments
+      if (msg.attachments) {
+        allAttachments.push(...msg.attachments);
+      }
+      // Add parent message attachments (for reply previews)
+      const parentMsg = (msg as any).parent_message;
+      if (parentMsg && parentMsg.attachments) {
+        allAttachments.push(...parentMsg.attachments);
+      }
+    });
+
+    return allAttachments.filter((att) => {
+      if (!att) return false;
+      // Skip optimistic attachments (have blob URL)
+      if ((att as any).local_uri) return false;
+      // Skip attachments that already have signed URL from API
+      if ((att as any).signed_url) return false;
+      // Only include if has file_path (needs URL generation from storage)
+      return !!att.file_path;
+    });
   }, [mergedMessages]);
 
   // Generate signed URLs only for attachments that need them
@@ -702,6 +717,18 @@ const InboxPage = () => {
               id: msg.replyTo.id,
               text: msg.replyTo.text || '',
               isSent: msg.replyTo.isSent,
+              is_deleted: msg.replyTo.is_deleted,
+              attachments: msg.replyTo.attachments?.map((a) => {
+                // Priority: signed_url from API > URL from map > fallback public URL
+                const url = (a as any).signed_url || attachmentUrlMap[a.id] || getStorageUrl(a.bucket_id || 'message_attachments', a.file_path);
+                return {
+                  name: a.filename,
+                  data: url,
+                  type: a.mime_type || 'application/octet-stream',
+                  size: a.size_bytes || 0,
+                  attachmentType: getAttachmentType(a.mime_type),
+                };
+              }),
             }
           : undefined,
         reaction: msg.reactions?.[0]?.reaction,
@@ -1236,6 +1263,53 @@ const InboxPage = () => {
       filename: att.file.name,
     }));
 
+    // Build parent message data for optimistic reply preview
+    // This allows the optimistic message to display the reply preview immediately
+    const parentMessageData = params.replyTo ? (() => {
+      // Determine sender_id from isSent flag
+      const parentSenderId = params.replyTo.isSent ? user.id : selectedContactId;
+
+      // Determine message type from attachments
+      let parentMessageType: 'text' | 'image' | 'video' | 'audio' | 'file' = 'text';
+      if (params.replyTo.attachments && params.replyTo.attachments.length > 0) {
+        const firstAtt = params.replyTo.attachments[0];
+        if (firstAtt.attachmentType === 'image') parentMessageType = 'image';
+        else if (firstAtt.attachmentType === 'video') parentMessageType = 'video';
+        else if (firstAtt.attachmentType === 'audio') parentMessageType = 'audio';
+        else if (firstAtt.attachmentType === 'pdf') parentMessageType = 'file';
+      } else if (params.replyTo.images && params.replyTo.images.length > 0) {
+        parentMessageType = 'image';
+      } else if (params.replyTo.video) {
+        parentMessageType = 'video';
+      } else if (params.replyTo.pdf) {
+        parentMessageType = 'file';
+      }
+
+      return {
+        id: params.replyTo.id,
+        content: params.replyTo.text || null,
+        message_type: parentMessageType,
+        sender_id: parentSenderId,
+        sent_at: new Date(), // Approximate - not critical for display
+        is_deleted: (params.replyTo as any).is_deleted || false,
+        // Convert attachments to the format expected by parent message
+        attachments: params.replyTo.attachments?.map((att) => ({
+          id: `parent-att-${Date.now()}-${Math.random()}`,
+          message_id: params.replyTo!.id,
+          conversation_id: selectedConversation.id,
+          bucket_id: 'message_attachments',
+          file_path: '',
+          filename: att.name,
+          mime_type: att.type,
+          size_bytes: att.size,
+          upload_status: 'completed' as const,
+          created_at: new Date(),
+          // Use the data URL for display
+          signed_url: att.data,
+        })),
+      };
+    })() : undefined;
+
     // Create optimistic message IMMEDIATELY for instant UI feedback
     // This happens BEFORE any async operations (file conversion, API calls)
     const optimisticMsg = createOptimisticMessage(
@@ -1244,7 +1318,8 @@ const InboxPage = () => {
       params.text || '',
       messageType,
       params.replyTo?.id,
-      optimisticAttachments
+      optimisticAttachments,
+      parentMessageData
     );
 
     // Add to optimistic messages state for immediate display
@@ -1981,8 +2056,9 @@ const InboxPage = () => {
                       )}
                       {/* Loading overlay - shows until messages are loaded and scrolled to bottom */}
                       {!isMessageListReady && (
-                        <div className="absolute inset-0 z-40 bg-background flex items-center justify-center">
+                        <div className="absolute inset-0 z-40 bg-background flex flex-col items-center justify-center gap-3">
                           <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                          <p className="text-sm text-muted-foreground">{t('messages.loadingMessages')}</p>
                         </div>
                       )}
                       <div className="h-full overflow-y-auto flex flex-col">
@@ -2005,9 +2081,6 @@ const InboxPage = () => {
                             selectedContact={selectedContact!}
                             onReply={(message) => {
                               messageInputContextRef.current?.setReplyingToMessage(message);
-                              setTimeout(() => {
-                                messageInputContextRef.current?.textareaRef.current?.focus();
-                              }, 100);
                             }}
                             onDeleteMessage={handleDeleteMessage}
                             onDeleteMessageImage={handleDeleteMessageImage}

@@ -98,6 +98,8 @@ export function transformToUIMessage(
 
 /**
  * Transform an array of messages to UIMessages
+ * Also enriches messages that have parent_message_id but no parent_message
+ * by looking up the parent from the message list.
  *
  * @param messages - Array of messages from database/realtime/optimistic
  * @param currentUserId - ID of current user
@@ -107,7 +109,39 @@ export function transformMessages(
   messages: Array<Message | OptimisticMessage>,
   currentUserId: string,
 ): UIMessage[] {
-  return messages.map((m) => transformToUIMessage(m, currentUserId));
+  // Create a map for quick parent message lookup
+  const messageMap = new Map<string, Message | OptimisticMessage>();
+  messages.forEach((m) => messageMap.set(m.id, m));
+
+  // Transform messages, enriching with parent data when needed
+  return messages.map((m) => {
+    // Check if message has parent_message_id but no valid parent_message
+    const parentMsg = (m as Message).parent_message;
+    const hasValidParent =
+      parentMsg &&
+      !Array.isArray(parentMsg) &&
+      typeof parentMsg === 'object' &&
+      'id' in parentMsg;
+
+    // If no valid parent but has parent_message_id, try to look it up
+    if (!hasValidParent && m.parent_message_id) {
+      const parentFromMap = messageMap.get(m.parent_message_id);
+      if (parentFromMap) {
+        // Enrich the message with parent data for transformation
+        (m as any).parent_message = {
+          id: parentFromMap.id,
+          content: parentFromMap.content,
+          message_type: parentFromMap.message_type,
+          sender_id: parentFromMap.sender_id,
+          sent_at: parentFromMap.sent_at,
+          is_deleted: parentFromMap.is_deleted,
+          attachments: (parentFromMap as Message).attachments,
+        };
+      }
+    }
+
+    return transformToUIMessage(m, currentUserId);
+  });
 }
 
 // ================================================
@@ -130,6 +164,20 @@ export function createOptimisticMessageId(): string {
 }
 
 /**
+ * Parent message data for optimistic replies
+ * Contains only the fields needed for reply preview UI
+ */
+export interface OptimisticParentMessage {
+  id: string;
+  content: string | null;
+  message_type: MessageType;
+  sender_id: string;
+  sent_at: Date | string;
+  is_deleted: boolean;
+  attachments?: MessageAttachment[];
+}
+
+/**
  * Create an optimistic message for immediate UI updates
  *
  * @param conversationId - UUID of conversation
@@ -138,6 +186,7 @@ export function createOptimisticMessageId(): string {
  * @param messageType - Type of message (default: 'text')
  * @param parentMessageId - Optional parent message ID for threading
  * @param attachments - Optional array of attachments with local_uri for optimistic display
+ * @param parentMessage - Optional parent message object for reply preview
  * @returns Optimistic message object
  *
  * @example
@@ -155,8 +204,9 @@ export function createOptimisticMessage(
   messageType: MessageType = 'text',
   parentMessageId?: string,
   attachments?: Array<{ local_uri: string; mime_type: string; filename?: string }>,
+  parentMessage?: OptimisticParentMessage,
 ): OptimisticMessage {
-  return {
+  const optimisticMessage: OptimisticMessage = {
     id: createOptimisticMessageId(),
     conversation_id: conversationId,
     sender_id: senderId,
@@ -180,6 +230,21 @@ export function createOptimisticMessage(
       local_uri: att.local_uri,
     })),
   };
+
+  // Add parent_message if provided (for reply preview in optimistic messages)
+  if (parentMessage && parentMessageId) {
+    (optimisticMessage as any).parent_message = {
+      id: parentMessage.id,
+      content: parentMessage.content,
+      message_type: parentMessage.message_type,
+      sender_id: parentMessage.sender_id,
+      sent_at: parentMessage.sent_at,
+      is_deleted: parentMessage.is_deleted,
+      attachments: parentMessage.attachments,
+    };
+  }
+
+  return optimisticMessage;
 }
 
 /**

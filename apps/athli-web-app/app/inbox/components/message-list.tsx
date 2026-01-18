@@ -6,7 +6,6 @@ import {
     Reply,
     Trash2,
     FileText,
-    Video,
     ChevronDown,
     Smile,
     Send,
@@ -37,6 +36,7 @@ import { MessageImageGrid } from './message-image-grid';
 import { MessageVideoPreview } from './message-video-preview';
 import { MessageAudioPreview } from './message-audio-preview';
 import { MessageAttachmentGrid } from './message-attachment-grid';
+import { MessageReplyPreview } from './message-reply-preview';
 import type { AttachmentType } from './message-input-context';
 import { REACTION_EMOJIS } from '@athli/shared-types';
 
@@ -158,6 +158,16 @@ export const MessageList = React.memo(function MessageList({
         navigator.clipboard.writeText(text);
     };
 
+    const scrollToMessage = (messageId: string) => {
+        const element = document.getElementById(`message-${messageId}`);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Flash animation
+            element.classList.add('animate-message-flash');
+            setTimeout(() => element.classList.remove('animate-message-flash'), 500);
+        }
+    };
+
     // Check if a message has only audio attachments (no text, no other attachment types)
     const isAudioOnlyMessage = (message: Message): boolean => {
         const attachments = (message as any).attachments;
@@ -215,6 +225,7 @@ export const MessageList = React.memo(function MessageList({
                                 </div>
                             )}
                             <div
+                                id={`message-${message.id}`}
                                 className={cn(
                                     'flex flex-col relative',
                                     message.isSent ? 'items-end' : 'items-start',
@@ -255,6 +266,11 @@ export const MessageList = React.memo(function MessageList({
                                             <DropdownMenuContent
                                                 align={message.isSent ? 'end' : 'start'}
                                                 className="w-48"
+                                                onCloseAutoFocus={(e) => {
+                                                    // Prevent dropdown from restoring focus to trigger
+                                                    // This allows MessageInput to maintain focus after reply
+                                                    e.preventDefault();
+                                                }}
                                             >
                                                 <DropdownMenuItem onClick={() => onReply(message)}>
                                                     <Reply className="mr-2 h-4 w-4" />
@@ -345,127 +361,15 @@ export const MessageList = React.memo(function MessageList({
                                     >
                                     {/* Reply preview */}
                                     {message.replyTo && (
-                                        <div
-                                            className={cn(
-                                                'mb-2 px-1.5 py-1.5 rounded-[10px] border-l-4',
-                                                message.isSent
-                                                    ? message.replyTo.isSent
-                                                        ? 'bg-primary-foreground/10 border-primary-foreground/50'
-                                                        : 'bg-primary-foreground/10 border-muted'
-                                                    : 'bg-background/50 border-muted'
-                                            )}
-                                        >
-                                            <div className="flex items-center gap-1.5 mb-1">
-                                                <Reply
-                                                    className={cn(
-                                                        'h-3 w-3 flex-shrink-0',
-                                                        message.isSent
-                                                            ? 'text-primary-foreground/70'
-                                                            : 'text-muted-foreground'
-                                                    )}
-                                                />
-                                                <span
-                                                    className={cn(
-                                                        'text-xs font-semibold',
-                                                        message.isSent
-                                                            ? 'text-primary-foreground'
-                                                            : 'text-foreground'
-                                                    )}
-                                                >
-                                                    {message.replyTo.isSent
-                                                        ? t('messages.yourself')
-                                                        : selectedContact?.name || 'user'}
-                                                </span>
-                                            </div>
-                                            {/* Show "Deleted message" if the replied-to message was deleted */}
-                                            {(message.replyTo as any).is_deleted ? (
-                                                <p
-                                                    className={cn(
-                                                        'text-xs italic opacity-70',
-                                                        message.isSent
-                                                            ? 'text-primary-foreground/80'
-                                                            : 'text-foreground/80'
-                                                    )}
-                                                >
-                                                    {t('messages.deletedMessage')}
-                                                </p>
-                                            ) : (
-                                                <>
-                                                    {message.replyTo.images && message.replyTo.images.length > 0 && (
-                                                        <div className="flex gap-1 mb-1 overflow-x-auto">
-                                                            {message.replyTo.images.slice(0, 3).map((image, idx) => (
-                                                                <div key={idx} className="flex-shrink-0">
-                                                                    <div className="w-10 h-10 flex items-center justify-center overflow-hidden rounded-md bg-muted">
-                                                                        <img
-                                                                            src={image.data}
-                                                                            alt={image.name}
-                                                                            className="w-full h-full object-cover"
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                            {message.replyTo.images.length > 3 && (
-                                                                <div className="w-10 h-10 flex items-center justify-center rounded-md bg-muted text-[10px] text-muted-foreground">
-                                                                    +{message.replyTo.images.length - 3}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                    {message.replyTo.pdf && (
-                                                        <div className="flex items-center gap-1.5 mb-1">
-                                                            <FileText
-                                                                className={cn(
-                                                                    'h-3 w-3 flex-shrink-0',
-                                                                    'text-orange-600 dark:text-orange-400'
-                                                                )}
-                                                            />
-                                                            <span
-                                                                className={cn(
-                                                                    'text-xs truncate',
-                                                                    message.isSent
-                                                                        ? 'text-primary-foreground/80'
-                                                                        : 'text-foreground/80'
-                                                                )}
-                                                            >
-                                                                {message.replyTo.pdf.name}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {message.replyTo.video && (
-                                                        <div className="flex items-center gap-1.5 mb-1">
-                                                            <Video
-                                                                className={cn(
-                                                                    'h-3 w-3 flex-shrink-0',
-                                                                    'text-orange-600 dark:text-orange-400'
-                                                                )}
-                                                            />
-                                                            <span
-                                                                className={cn(
-                                                                    'text-xs truncate',
-                                                                    message.isSent
-                                                                        ? 'text-primary-foreground/80'
-                                                                        : 'text-foreground/80'
-                                                                )}
-                                                            >
-                                                                {message.replyTo.video.name}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {message.replyTo.text && (
-                                                        <p
-                                                            className={cn(
-                                                                'text-xs line-clamp-2',
-                                                                message.isSent
-                                                                    ? 'text-primary-foreground/80'
-                                                                    : 'text-foreground/80'
-                                                            )}
-                                                        >
-                                                            {message.replyTo.text}
-                                                        </p>
-                                                    )}
-                                                </>
-                                            )}
-                                        </div>
+                                        <MessageReplyPreview
+                                            replyTo={message.replyTo as any}
+                                            isSent={message.isSent}
+                                            contactName={selectedContact?.name || 'user'}
+                                            yourselfLabel={t('messages.yourself')}
+                                            deletedMessageLabel={t('messages.deletedMessage')}
+                                            voiceNoteLabel={t('messages.voiceNote')}
+                                            onScrollToMessage={scrollToMessage}
+                                        />
                                     )}
 
                                     {/* Unified Attachments Grid */}

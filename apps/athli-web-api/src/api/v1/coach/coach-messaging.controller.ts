@@ -189,7 +189,7 @@ export const coachMessagingController = {
                     *,
                     attachments:message_attachments(*),
                     reactions:message_reactions(*),
-                    parent_message:messages!parent_message_id(id, content, message_type, sender_id, sent_at, is_deleted)
+                    parent_message:messages!parent_message_id(id, content, message_type, sender_id, sent_at, is_deleted, attachments:message_attachments(*))
                 `,
                 )
                 .eq('conversation_id', conversationId)
@@ -259,7 +259,12 @@ export const coachMessagingController = {
                     parent_message_id: parentMessageId,
                     status: 'sent',
                 })
-                .select()
+                .select(`
+                    *,
+                    attachments:message_attachments(*),
+                    reactions:message_reactions(*),
+                    parent_message:messages!parent_message_id(id, content, message_type, sender_id, sent_at, is_deleted, attachments:message_attachments(*))
+                `)
                 .single();
 
             if (error) throw error;
