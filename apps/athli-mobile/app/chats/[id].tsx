@@ -43,7 +43,7 @@ import {
 import * as FileSystem from 'expo-file-system/legacy';
 import { type IWaveformRef, PlayerState, FinishMode } from '@/components/features/audio';
 
-import { useThemePreference, useColorScheme, useChatsStore, useAuthSessionStore } from '@/stores';
+import { useThemePreference, useColorScheme, useChatsStore, useAuthSessionStore, useCoachProfileStore } from '@/stores';
 import { hexToRgba } from '@/utils/colorUtils';
 import { useTranslations } from '@/stores';
 import { haptics } from '@/utils/haptics';
@@ -52,7 +52,6 @@ import { SlidingPanel, SlidingPanelRef } from '@/components/ui/sliding-panel';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { Separator } from '@/components/ui/separator';
 import { MessageList } from '@/components/features/message/message-list-flashlist';
-import { MessageReactionsSheet } from '@/components/features/message/message-reactions-sheet';
 import { ReplyPreviewRow } from '@/components/features/chats/reply-preview-row';
 import { AttachmentPickerRow } from '@/components/features/chats/attachment-picker-row';
 import { VoiceNoteRecordingContainer } from '@/components/features/chats/voice-note-recording-container';
@@ -516,6 +515,18 @@ export default function ChatDetailScreen() {
     return null;
   });
 
+  // Parse initial messages from navigation params (prefetched by list screen)
+  const initialMessages = useMemo(() => {
+    if (messagesParam) {
+      try {
+        return JSON.parse(messagesParam) as Message[];
+      } catch {
+        return undefined;
+      }
+    }
+    return undefined;
+  }, [messagesParam]);
+
   // Use infinite scroll for messages
   const {
     messages: savedMessages,
@@ -529,6 +540,7 @@ export default function ChatDetailScreen() {
   } = useInfiniteMessages({
     conversationId: id,
     enabled: !!id,
+    initialMessages,
   });
 
   const [optimisticMessages, setOptimisticMessages] = useState<OptimisticMessage[]>([]);
@@ -536,10 +548,11 @@ export default function ChatDetailScreen() {
   // Get current user ID synchronously from auth store (already available)
   const currentUserId = useAuthSessionStore((state) => state.userId);
 
+  // Get coach profile for reactions display
+  const coachProfile = useCoachProfileStore((state) => state.profile);
+
   // Use isLoadingInitial from infinite messages hook
   const isLoading = isLoadingInitial && !chatParam;
-  const [reactionsSheetVisible, setReactionsSheetVisible] = useState(false);
-  const [selectedMessageForReactions, setSelectedMessageForReactions] = useState<ChatMessage | null>(null);
   const [replyingToMessage, setReplyingToMessage] = useState<ChatMessage | null>(null);
   const [showAttachmentPicker, setShowAttachmentPicker] = useState(false);
   const [isMicrophoneMode, setIsMicrophoneMode] = useState(false);
@@ -594,7 +607,7 @@ export default function ChatDetailScreen() {
   const recorderState = useAudioRecorderState(audioRecorder, 50);
 
   // File upload hook for sending messages with attachments
-  const { sendWithAttachment, isUploading: isUploadingAttachment } = useSendMessageWithAttachment();
+  const { sendWithAttachment, sendWithMultipleAttachments, isUploading: isUploadingAttachment } = useSendMessageWithAttachment();
 
   const [waveform, setWaveform] = useState<number[]>([]);
   const waveformRef = useRef<number[]>([]);
@@ -619,6 +632,9 @@ export default function ChatDetailScreen() {
     conversationId: id,
     userId: currentUserId || undefined,
     onMessageReceived: (message) => {
+      console.log('[Chat Detail] onMessageReceived:', message.message_type, message.id, 'attachments:', message.attachments?.length || 0);
+      // Message now includes attachments from enhanced broadcast trigger - no refetch needed
+
       // Remove optimistic message that matches this real message
       setOptimisticMessages((prev) => prev.filter((opt) => {
         // ALWAYS keep optimistic messages that have attachments
@@ -642,8 +658,12 @@ export default function ChatDetailScreen() {
       }));
     },
     onMessageUpdated: (message) => {
+      console.log('[Chat Detail] onMessageUpdated:', message.message_type, message.id, 'attachments:', message.attachments?.length || 0, 'is_deleted:', message.is_deleted);
+      // Message now includes attachments from enhanced broadcast trigger - no refetch needed
+
       // If a message is soft-deleted (is_deleted=true), remove it from local state
-      if (message.is_deleted) {
+      // Use explicit true check to handle any type coercion issues
+      if (message.is_deleted === true) {
         removeSavedMessage(message.id);
       } else {
         // Otherwise, update the message in local state
@@ -744,6 +764,11 @@ export default function ChatDetailScreen() {
     const durationMs = fromRecorder > 0 ? fromRecorder : fromWallClock;
     lastVoiceNoteDurationMsRef.current = durationMs;
 
+    // Debug logging - only log occasionally to avoid spam
+    if (durationMs > 0 && durationMs % 1000 < 100) {
+      console.log('[ChatDetail] Duration update - fromRecorder:', fromRecorder, 'fromWallClock:', fromWallClock, 'using:', durationMs);
+    }
+
     if (!isStopped) {
       setDurationLabel(formatMmSs(durationMs));
     }
@@ -801,6 +826,7 @@ export default function ChatDetailScreen() {
           [{ local_uri: documentData.uri, mime_type: mimeType, filename: documentData.name || 'document.pdf' }]
         );
 
+        const optMsgSentAt = optimisticMsg.sent_at.getTime();
         setOptimisticMessages((prev) => [...prev, optimisticMsg]);
 
         // Clear UI immediately
@@ -816,11 +842,31 @@ export default function ChatDetailScreen() {
             documentData.caption || undefined,
           );
 
-          // Remove optimistic message - realtime will add real one
-          setOptimisticMessages((prev) =>
-            prev.filter((m) => m.id !== optimisticMsg.id)
-          );
+          // Poll for signed URLs before removing optimistic message
+          const pollForSignedUrl = async (attempts = 0) => {
+            if (attempts >= 10) return;
 
+            const freshMessages = await refetchMessages();
+            const realMsg = freshMessages.find((m) => {
+              if (m.sender_id !== currentUserId) return false;
+              const mTime = m.sent_at instanceof Date ? m.sent_at.getTime() : new Date(m.sent_at).getTime();
+              return Math.abs(mTime - optMsgSentAt) <= 30000;
+            });
+
+            const hasSignedUrls = realMsg?.attachments?.every(
+              (a: any) => Boolean(a.signed_url)
+            );
+
+            if (hasSignedUrls) {
+              setOptimisticMessages((prev) =>
+                prev.filter((m) => m.id !== optimisticMsg.id)
+              );
+            } else {
+              setTimeout(() => pollForSignedUrl(attempts + 1), 1000);
+            }
+          };
+
+          setTimeout(() => pollForSignedUrl(0), 500);
           useChatsStore.getState().loadChats();
         } catch (error) {
           console.error('[ChatDetail] Error uploading document:', error);
@@ -838,95 +884,113 @@ export default function ChatDetailScreen() {
 
       uploadDocument();
     }
-  }, [documentSent, sentDocument, currentUserId, id, sendWithAttachment, router]);
+  }, [documentSent, sentDocument, currentUserId, id, sendWithAttachment, router, refetchMessages]);
 
-  // Handle images sent - upload to Supabase and send message
+  // Handle images sent - upload to Supabase and send as ONE message with all attachments
   useEffect(() => {
     if (imagesSent === 'true' && sentImages && currentUserId && id) {
       const uploadImages = async () => {
         const imageAttachments = JSON.parse(sentImages);
-        const optimisticIds: string[] = [];
+
+        // Create ONE optimistic message with ALL attachments for instant UI feedback
+        const optimisticMsg = createOptimisticMessage(
+          id,
+          currentUserId,
+          sentImagesCaption || '',
+          'image',
+          undefined,
+          imageAttachments.map((img: { uri: string; id: string; isVideo?: boolean }) => ({
+            local_uri: img.uri,
+            mime_type: img.isVideo ? 'video/mp4' : 'image/jpeg',
+            filename: img.isVideo ? 'video.mp4' : 'photo.jpg',
+          }))
+        );
+
+        const optMsgSentAt = optimisticMsg.sent_at.getTime();
+        setOptimisticMessages((prev) => [...prev, optimisticMsg]);
+
+        // Clear draft text and close picker immediately
+        setSearchQuery('');
+        setShowAttachmentPicker(false);
+
+        // Clear params immediately to prevent re-triggering
+        router.setParams({
+          imagesSent: '',
+          sentImages: '',
+          sentImagesCaption: '',
+        });
 
         try {
-          // Create optimistic messages FIRST for instant UI feedback
-          for (let i = 0; i < imageAttachments.length; i++) {
-            const image = imageAttachments[i];
-            const isFirstImage = i === 0;
+          // Upload ALL images as ONE message with multiple attachments
+          await sendWithMultipleAttachments(
+            id,
+            currentUserId,
+            imageAttachments.map((img: { uri: string; isVideo?: boolean }) => ({
+              uri: img.uri,
+              mimeType: img.isVideo ? 'video/mp4' : 'image/jpeg',
+            })),
+            sentImagesCaption || undefined,
+          );
 
-            // Create optimistic message with local image for instant display
-            const optimisticMsg = createOptimisticMessage(
-              id,
-              currentUserId,
-              isFirstImage ? (sentImagesCaption || '') : '',
-              'image',
-              undefined, // no parent message
-              [{ local_uri: image.uri, mime_type: 'image/jpeg', filename: 'photo.jpg' }]
-            );
-
-            optimisticIds.push(optimisticMsg.id);
-            setOptimisticMessages((prev) => [...prev, optimisticMsg]);
-          }
-
-          // Clear draft text and close picker immediately
-          setSearchQuery('');
-          setShowAttachmentPicker(false);
-
-          // Upload each image in background (messages already shown optimistically)
-          for (let i = 0; i < imageAttachments.length; i++) {
-            const image = imageAttachments[i];
-            const isFirstImage = i === 0;
-
-            try {
-              await sendWithAttachment(
-                id,
-                currentUserId,
-                image.uri,
-                'image/jpeg',
-                isFirstImage ? (sentImagesCaption || undefined) : undefined,
-              );
-
-              // Remove optimistic message after successful upload
-              // Realtime will add the real message
+          // Poll for signed URLs before removing optimistic message
+          const pollForSignedUrl = async (attempts = 0) => {
+            if (attempts >= 10) {
+              // Fallback: remove optimistic message after max attempts
               setOptimisticMessages((prev) =>
-                prev.filter((m) => m.id !== optimisticIds[i])
+                prev.filter((m) => m.id !== optimisticMsg.id)
               );
-            } catch (uploadError) {
-              console.error('[ChatDetail] Error uploading image:', uploadError);
-              // Remove failed optimistic message
-              setOptimisticMessages((prev) =>
-                prev.filter((m) => m.id !== optimisticIds[i])
-              );
+              return;
             }
-          }
+
+            const freshMessages = await refetchMessages();
+            const realMsg = freshMessages.find((m) => {
+              if (m.sender_id !== currentUserId) return false;
+              const mTime = m.sent_at instanceof Date ? m.sent_at.getTime() : new Date(m.sent_at).getTime();
+              return Math.abs(mTime - optMsgSentAt) <= 30000;
+            });
+
+            // Check if all attachments have signed URLs
+            const hasAllSignedUrls = realMsg?.attachments?.length === imageAttachments.length &&
+              realMsg?.attachments?.every((a: any) => Boolean(a.signed_url));
+
+            if (hasAllSignedUrls) {
+              setOptimisticMessages((prev) =>
+                prev.filter((m) => m.id !== optimisticMsg.id)
+              );
+            } else {
+              setTimeout(() => pollForSignedUrl(attempts + 1), 1000);
+            }
+          };
+
+          setTimeout(() => pollForSignedUrl(0), 500);
 
           // Refresh chats list
           useChatsStore.getState().loadChats();
         } catch (error) {
           console.error('[ChatDetail] Error uploading images:', error);
-          // Remove all optimistic messages on error
+          // Remove optimistic message on error
           setOptimisticMessages((prev) =>
-            prev.filter((m) => !optimisticIds.includes(m.id))
+            prev.filter((m) => m.id !== optimisticMsg.id)
           );
           Alert.alert('Upload Failed', 'Could not upload images. Please try again.');
-        } finally {
-          // Clear the params
-          router.setParams({
-            imagesSent: '',
-            sentImages: '',
-            sentImagesCaption: '',
-          });
         }
       };
 
       uploadImages();
     }
-  }, [imagesSent, sentImages, sentImagesCaption, currentUserId, id, sendWithAttachment, router]);
+  }, [imagesSent, sentImages, sentImagesCaption, currentUserId, id, sendWithMultipleAttachments, router, refetchMessages]);
 
   // Handle video sent - upload to Supabase and send message
   useEffect(() => {
     if (videoSent === 'true' && sentVideo && currentUserId && id) {
       const uploadVideo = async () => {
         const videoData = JSON.parse(sentVideo);
+
+        // Clear params IMMEDIATELY to prevent re-triggering and navigation race condition
+        router.setParams({
+          videoSent: '',
+          sentVideo: '',
+        });
 
         // Create optimistic message for instant display
         const optimisticMsg = createOptimisticMessage(
@@ -938,6 +1002,7 @@ export default function ChatDetailScreen() {
           [{ local_uri: videoData.uri, mime_type: 'video/mp4', filename: 'video.mp4' }]
         );
 
+        const optMsgSentAt = optimisticMsg.sent_at.getTime();
         setOptimisticMessages((prev) => [...prev, optimisticMsg]);
 
         // Clear UI immediately
@@ -953,11 +1018,31 @@ export default function ChatDetailScreen() {
             videoData.caption || undefined,
           );
 
-          // Remove optimistic message - realtime will add real one
-          setOptimisticMessages((prev) =>
-            prev.filter((m) => m.id !== optimisticMsg.id)
-          );
+          // Poll for signed URLs before removing optimistic message
+          const pollForSignedUrl = async (attempts = 0) => {
+            if (attempts >= 10) return;
 
+            const freshMessages = await refetchMessages();
+            const realMsg = freshMessages.find((m) => {
+              if (m.sender_id !== currentUserId) return false;
+              const mTime = m.sent_at instanceof Date ? m.sent_at.getTime() : new Date(m.sent_at).getTime();
+              return Math.abs(mTime - optMsgSentAt) <= 30000;
+            });
+
+            const hasSignedUrls = realMsg?.attachments?.every(
+              (a: any) => Boolean(a.signed_url)
+            );
+
+            if (hasSignedUrls) {
+              setOptimisticMessages((prev) =>
+                prev.filter((m) => m.id !== optimisticMsg.id)
+              );
+            } else {
+              setTimeout(() => pollForSignedUrl(attempts + 1), 1000);
+            }
+          };
+
+          setTimeout(() => pollForSignedUrl(0), 500);
           useChatsStore.getState().loadChats();
         } catch (error) {
           console.error('[ChatDetail] Error uploading video:', error);
@@ -965,17 +1050,12 @@ export default function ChatDetailScreen() {
             prev.filter((m) => m.id !== optimisticMsg.id)
           );
           Alert.alert('Upload Failed', 'Could not upload video. Please try again.');
-        } finally {
-          router.setParams({
-            videoSent: '',
-            sentVideo: '',
-          });
         }
       };
 
       uploadVideo();
     }
-  }, [videoSent, sentVideo, currentUserId, id, sendWithAttachment, router]);
+  }, [videoSent, sentVideo, currentUserId, id, sendWithAttachment, router, refetchMessages]);
 
   const hasText = searchQuery.trim().length > 0;
 
@@ -1103,25 +1183,52 @@ export default function ChatDetailScreen() {
       '',
       'audio',
       undefined,
-      [{ local_uri: audioUri, mime_type: 'audio/mp4', filename: 'voicenote.m4a' }]
+      [{ local_uri: audioUri, mime_type: 'audio/mp4', filename: 'voicenote.m4a', duration: lastVoiceNoteDurationMsRef.current }]
     );
 
+    const optMsgSentAt = optimisticMsg.sent_at.getTime();
     setOptimisticMessages((prev) => [...prev, optimisticMsg]);
 
     try {
+      // Convert duration from ms to seconds for database storage
+      const durationMs = lastVoiceNoteDurationMsRef.current;
+      const durationSeconds = Math.round(durationMs / 1000);
+      console.log('[ChatDetail] Sending voice note - durationMs:', durationMs, 'durationSeconds:', durationSeconds);
+
       await sendWithAttachment(
         id,
         currentUserId,
         audioUri,
         'audio/mp4',
-        undefined,
+        undefined, // caption
+        durationSeconds, // duration in seconds for DB
       );
 
-      // Remove optimistic message - realtime will add real one
-      setOptimisticMessages((prev) =>
-        prev.filter((m) => m.id !== optimisticMsg.id)
-      );
+      // Poll for signed URLs before removing optimistic message
+      const pollForSignedUrl = async (attempts = 0) => {
+        if (attempts >= 10) return;
 
+        const freshMessages = await refetchMessages();
+        const realMsg = freshMessages.find((m) => {
+          if (m.sender_id !== currentUserId) return false;
+          const mTime = m.sent_at instanceof Date ? m.sent_at.getTime() : new Date(m.sent_at).getTime();
+          return Math.abs(mTime - optMsgSentAt) <= 30000;
+        });
+
+        const hasSignedUrls = realMsg?.attachments?.every(
+          (a: any) => Boolean(a.signed_url)
+        );
+
+        if (hasSignedUrls) {
+          setOptimisticMessages((prev) =>
+            prev.filter((m) => m.id !== optimisticMsg.id)
+          );
+        } else {
+          setTimeout(() => pollForSignedUrl(attempts + 1), 1000);
+        }
+      };
+
+      setTimeout(() => pollForSignedUrl(0), 500);
       useChatsStore.getState().loadChats();
     } catch (e) {
       console.error('[ChatDetail] Failed to send voice note:', e);
@@ -1144,7 +1251,9 @@ export default function ChatDetailScreen() {
         const fromWallClock = recordingStartedAtMsRef.current
           ? Date.now() - recordingStartedAtMsRef.current
           : 0;
-        lastVoiceNoteDurationMsRef.current = fromRecorder > 0 ? fromRecorder : fromWallClock;
+        const finalDuration = fromRecorder > 0 ? fromRecorder : fromWallClock;
+        console.log('[ChatDetail] Stop recording - fromRecorder:', fromRecorder, 'fromWallClock:', fromWallClock, 'using:', finalDuration);
+        lastVoiceNoteDurationMsRef.current = finalDuration;
       }
 
       setIsStopped(true);
@@ -1264,15 +1373,11 @@ export default function ChatDetailScreen() {
     }
   };
 
-  const handleMessageEdit = (message: UIMessage) => {
-    // TODO: Implement edit functionality
-    // This could set the message to edit mode and populate the input with the message text
-    setSearchQuery(message.text || '');
-  };
-
   const handleMessageDelete = async (message: UIMessage) => {
-    // Optimistically remove from local state first for instant UI feedback
+    // Optimistically remove from ALL local states for instant UI feedback
+    // This includes savedMessages and optimisticMessages (for audio/attachment messages that stay longer)
     removeSavedMessage(message.id);
+    setOptimisticMessages((prev) => prev.filter((m) => m.id !== message.id && m.realMessageId !== message.id));
 
     try {
       // Call the real delete API (soft delete)
@@ -1285,8 +1390,21 @@ export default function ChatDetailScreen() {
   };
 
   const handleReactionPress = (message: UIMessage) => {
-    setSelectedMessageForReactions(message as unknown as ChatMessage);
-    setReactionsSheetVisible(true);
+    if (!message.reactions || message.reactions.length === 0) return;
+
+    haptics.light();
+    router.push({
+      pathname: '/modals/message/reactions-modal',
+      params: {
+        messageId: message.id,
+        reactions: JSON.stringify(message.reactions),
+        currentUserId: currentUserId || '',
+        otherUserName: chat?.other_user_name || 'Client',
+        otherUserAvatarUrl: chat?.other_user_avatar || '',
+        currentUserName: coachProfile?.name || t('general.you'),
+        currentUserAvatarUrl: coachProfile?.profile_picture_url || '',
+      },
+    });
   };
 
   const handleDocumentPress = (document: any) => {
@@ -1344,16 +1462,6 @@ export default function ChatDetailScreen() {
     });
   };
 
-  const handleReactionRemoved = (messageId: string, isSender: boolean) => {
-    // Update the message to remove the reaction
-    // Note: This uses the deprecated senderReaction/recipientReaction fields
-    // The actual reactions are stored in the reactions array and handled by realtime
-    updateSavedMessage(
-      messageId,
-      (isSender ? { senderReaction: undefined } : { recipientReaction: undefined }) as unknown as Partial<Message>
-    );
-  };
-
   if (isLoading) {
     return <ChatLoadingState />;
   }
@@ -1405,7 +1513,6 @@ export default function ChatDetailScreen() {
               themeColors={themeColors}
               clientName={chat.other_user_name || 'Client'}
               onReply={handleMessageReply}
-              onEdit={handleMessageEdit}
               onDelete={handleMessageDelete}
               onReactionPress={handleReactionPress}
               onDocumentPress={handleDocumentPress}
@@ -1471,15 +1578,6 @@ export default function ChatDetailScreen() {
           />
         </View>
 
-        <MessageReactionsSheet
-          visible={reactionsSheetVisible}
-          onClose={() => {
-            setReactionsSheetVisible(false);
-            setSelectedMessageForReactions(null);
-          }}
-          message={selectedMessageForReactions}
-          onReactionRemoved={handleReactionRemoved}
-        />
       </View>
     </SlidingPanel>
   );

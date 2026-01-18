@@ -14,6 +14,7 @@ import { type Coach } from '@/services/inbox-service';
 type CoachListItemProps = {
   coach: Coach;
   onPress: (coachId: string) => void | Promise<void>;
+  onPressIn?: (coachId: string) => void;
   isEditMode?: boolean;
   isSelected?: boolean;
   onArchive?: (coachId: string) => void;
@@ -56,6 +57,7 @@ const formatMessageTime = (date: Date | null | undefined): string => {
 export const CoachListItem = ({
   coach,
   onPress,
+  onPressIn,
   isEditMode = false,
   isSelected = false,
   onArchive,
@@ -71,6 +73,10 @@ export const CoachListItem = ({
 
   const handlePress = () => {
     onPress(coach.id);
+  };
+
+  const handlePressIn = () => {
+    onPressIn?.(coach.id);
   };
 
   const checkboxBorderColor =
@@ -114,6 +120,7 @@ export const CoachListItem = ({
   const content = (
     <PressableScale
       onPress={handlePress}
+      onPressIn={handlePressIn}
       style={styles.rowWrapper}
     >
       <View

@@ -1,12 +1,15 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
-import { Camera, Video, FileText } from 'lucide-react-native';
-import { useColorScheme } from '@/stores';
+import { Reply, Play, FileText, Mic } from 'lucide-react-native';
+import { useColorScheme, useTranslations } from '@/stores';
 import { type ThemeColors } from '@/constants/theme';
 import { tintHex, shadeHex, isLightColor } from '@/utils/colorUtils';
-import { typography, iconSizes } from '@/constants/typography';
+import { typography } from '@/constants/typography';
 import { PlatformIcon } from '@/components/ui/platform-icon';
+import type { MessageAttachment } from '@athli/shared-types';
+
+type AttachmentWithLocalUri = MessageAttachment & { local_uri?: string };
 
 type MessageReplyPreviewProps = {
   replyTo: any;
@@ -18,27 +21,8 @@ type MessageReplyPreviewProps = {
   onLongPress?: () => void;
   onPressIn?: () => void;
   onPressOut?: () => void;
-};
-
-const formatAudioReplyStamp = (date: Date) => {
-  const d = new Date(date);
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfThatDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const diffDays = Math.round((startOfToday.getTime() - startOfThatDay.getTime()) / 86400000);
-
-  if (diffDays === 0) {
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mm = String(d.getMinutes()).padStart(2, '0');
-    return `${hh}:${mm}`;
-  }
-
-  if (diffDays === 1) return 'Yesterday';
-
-  const weekday = new Intl.DateTimeFormat('en-GB', { weekday: 'short' }).format(d);
-  const day = new Intl.DateTimeFormat('en-GB', { day: '2-digit' }).format(d);
-  const month = new Intl.DateTimeFormat('en-GB', { month: 'short' }).format(d);
-  return `${weekday} ${day} ${month}`;
+  /** URL map for signed attachment URLs */
+  attachmentUrlMap?: { [attachmentId: string]: string };
 };
 
 export const MessageReplyPreview = ({
@@ -49,114 +33,78 @@ export const MessageReplyPreview = ({
   isParentSent,
   onPress,
   onLongPress,
-  onPressIn,
-  onPressOut,
+  attachmentUrlMap = {},
 }: MessageReplyPreviewProps) => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { t } = useTranslations();
 
-  const senderName = replyTo.isSent ? 'You' : clientName;
-  // Use primary color for sender, and a distinct purple/violet for recipient
+  const yourselfLabel = t?.('messages.yourself') ?? 'You';
+  const deletedMessageLabel = t?.('messages.deletedMessage') ?? 'Deleted message';
+  const voiceNoteLabel = t?.('messages.voiceNote') ?? 'Voice note';
+
+  const senderName = replyTo.isSent ? yourselfLabel : clientName;
+
+  // Strip color based on who sent the original message
   const stripColor = replyTo.isSent
-    ? themeColors.primary
+    ? isParentSent
+      ? isDark
+        ? shadeHex(themeColors.primary, 0.3)
+        : tintHex(themeColors.primary, 0.4)
+      : themeColors.primary
     : isDark
       ? '#A78BFA'
       : '#8B5CF6';
 
-  // Make the background lighter or darker than the parent bubble
-  // If parent is light, make it darker; if parent is dark, make it lighter
+  // Background color - lighter/darker than parent
   const adjustedBackground = isLightColor(parentBackgroundColor)
-    ? shadeHex(parentBackgroundColor, 0.1) // Darken light colors
-    : tintHex(parentBackgroundColor, 0.15); // Lighten dark colors
+    ? shadeHex(parentBackgroundColor, 0.1)
+    : tintHex(parentBackgroundColor, 0.15);
 
-  // Use the same text color as the parent message
-  const messageTextColor = isParentSent
+  // Text color based on parent
+  const textColor = isParentSent
     ? themeColors.primaryForeground
     : themeColors.text;
 
-  // Determine preview content based on message type
-  const renderPreviewContent = () => {
-    // Check if the replied-to message was deleted
-    if (replyTo.is_deleted) {
-      return (
-        <Text
-          style={[
-            styles.messagePreview,
-            { color: messageTextColor, fontStyle: 'italic', opacity: 0.7 },
-          ]}
-          numberOfLines={1}
-        >
-          Deleted message
-        </Text>
-      );
-    }
+  // Build unified thumbnail list
+  // Use new attachments format if available, otherwise fall back to legacy fields
+  type ThumbnailItem = { type: 'image' | 'video' | 'pdf'; uri?: string; id?: string };
+  const thumbnailItems: ThumbnailItem[] = [];
+  const attachments = replyTo.attachments as AttachmentWithLocalUri[] | undefined;
+  const hasNewFormat = attachments && attachments.length > 0;
+  let hasAudio = false;
 
-    // Check for images
-    if (replyTo.images && replyTo.images.length > 0) {
-      const imageCount = replyTo.images.length;
-      return (
-        <View style={styles.attachmentPreview}>
-          <PlatformIcon
-            sf="camera.fill"
-            IconComponent={Camera}
-            size={iconSizes.tabBarIcons - 8}
-            color={messageTextColor}
-          />
-          <Text style={[styles.attachmentText, { color: messageTextColor }]} numberOfLines={1}>
-            {imageCount} photo{imageCount > 1 ? 's' : ''}
-          </Text>
-        </View>
-      );
-    }
+  if (hasNewFormat) {
+    // New format: use attachments array
+    attachments.forEach(att => {
+      if (att.mime_type?.startsWith('image/')) {
+        const uri = att.local_uri || attachmentUrlMap[att.id] || undefined;
+        thumbnailItems.push({ type: 'image', uri, id: att.id });
+      } else if (att.mime_type?.startsWith('video/')) {
+        thumbnailItems.push({ type: 'video', id: att.id });
+      } else if (att.mime_type === 'application/pdf') {
+        thumbnailItems.push({ type: 'pdf', id: att.id });
+      } else if (att.mime_type?.startsWith('audio/')) {
+        hasAudio = true;
+      }
+    });
+  } else {
+    // Legacy format: use individual fields
+    replyTo.images?.forEach((img: any) => {
+      thumbnailItems.push({ type: 'image', uri: img.data });
+    });
+    if (replyTo.video) thumbnailItems.push({ type: 'video' });
+    if (replyTo.pdf || replyTo.document) thumbnailItems.push({ type: 'pdf' });
+    if (replyTo.audio) hasAudio = true;
+  }
 
-    // Check for video
-    if (replyTo.video) {
-      return (
-        <Text style={[styles.messagePreview, { color: messageTextColor }]} numberOfLines={1}>
-          1 video
-        </Text>
-      );
-    }
+  const hasVisualAttachments = thumbnailItems.length > 0;
+  const displayedThumbnails = thumbnailItems.slice(0, 4);
 
-    // Check for document
-    if (replyTo.document) {
-      return (
-        <View style={styles.attachmentPreview}>
-          <PlatformIcon
-            sf="doc.text.fill"
-            IconComponent={FileText}
-            size={iconSizes.tabBarIcons - 8}
-            color={messageTextColor}
-          />
-          <Text style={[styles.attachmentText, { color: messageTextColor }]} numberOfLines={1}>
-            {replyTo.document.name}
-          </Text>
-        </View>
-      );
-    }
-
-    // Check for audio
-    if (replyTo.audio) {
-      return (
-        <Text style={[styles.messagePreview, { color: messageTextColor }]} numberOfLines={1}>
-          {`Audio message • ${formatAudioReplyStamp(replyTo.sent_at)}`}
-        </Text>
-      );
-    }
-
-    // Default: show text preview
-    return (
-      <Text
-        style={[
-          styles.messagePreview,
-          { color: messageTextColor },
-        ]}
-        numberOfLines={2}
-      >
-        {replyTo.text}
-      </Text>
-    );
-  };
+  // Thumbnail background color
+  const thumbnailBg = isParentSent
+    ? 'rgba(255,255,255,0.2)'
+    : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
 
   return (
     <PressableOpacity
@@ -166,10 +114,99 @@ export const MessageReplyPreview = ({
     >
       <View style={[styles.colorStrip, { backgroundColor: stripColor }]} />
       <View style={styles.content}>
-        <Text style={[styles.senderName, { color: stripColor }]} numberOfLines={1}>
-          {senderName}
-        </Text>
-        {renderPreviewContent()}
+        {/* Header with reply icon and sender name */}
+        <View style={styles.header}>
+          <PlatformIcon
+            sf="arrowshape.turn.up.left.fill"
+            IconComponent={Reply}
+            size={12}
+            color={textColor}
+            style={{ opacity: 0.7 }}
+          />
+          <Text style={[styles.senderName, { color: stripColor }]} numberOfLines={1}>
+            {senderName}
+          </Text>
+        </View>
+
+        {/* Content */}
+        {replyTo.is_deleted ? (
+          <Text
+            style={[styles.messagePreview, { color: textColor, fontStyle: 'italic', opacity: 0.7 }]}
+            numberOfLines={1}
+          >
+            {deletedMessageLabel}
+          </Text>
+        ) : (
+          <>
+            {/* Thumbnails row - square thumbnails for images, videos, PDFs */}
+            {hasVisualAttachments && (
+              <View style={styles.thumbnailsRow}>
+                {displayedThumbnails.map((item, idx) => (
+                  <View key={idx} style={[styles.thumbnail, { backgroundColor: thumbnailBg }]}>
+                    {item.type === 'image' && item.uri && (
+                      <Image
+                        source={{ uri: item.uri }}
+                        style={styles.thumbnailImage}
+                        resizeMode="cover"
+                      />
+                    )}
+                    {item.type === 'image' && !item.uri && (
+                      <Text style={[styles.thumbnailPlaceholder, { color: textColor }]}>IMG</Text>
+                    )}
+                    {item.type === 'video' && (
+                      <View style={styles.videoOverlay}>
+                        <View style={styles.playCircle}>
+                          <PlatformIcon
+                            sf="play.fill"
+                            IconComponent={Play}
+                            size={8}
+                            color="#FFFFFF"
+                          />
+                        </View>
+                      </View>
+                    )}
+                    {item.type === 'pdf' && (
+                      <View style={styles.pdfThumbnail}>
+                        <PlatformIcon
+                          sf="doc.text.fill"
+                          IconComponent={FileText}
+                          size={12}
+                          color={isDark ? '#FB923C' : '#EA580C'}
+                        />
+                      </View>
+                    )}
+                  </View>
+                  ))}
+                </View>
+              )}
+
+            {/* Voice note indicator */}
+            {hasAudio && (
+              <View style={styles.audioRow}>
+                <PlatformIcon
+                  sf="mic.fill"
+                  IconComponent={Mic}
+                  size={12}
+                  color={textColor}
+                  style={{ opacity: 0.7 }}
+                />
+                <Text style={[styles.audioLabel, { color: textColor, opacity: 0.8 }]}>
+                  {voiceNoteLabel}
+                </Text>
+              </View>
+            )}
+
+            {/* Text row - single line with ellipsis */}
+            {replyTo.text && (
+              <Text
+                style={[styles.messagePreview, { color: textColor, opacity: 0.8 }]}
+                numberOfLines={1}
+              >
+                {replyTo.text}
+              </Text>
+            )}
+          </>
+        )}
       </View>
     </PressableOpacity>
   );
@@ -178,40 +215,89 @@ export const MessageReplyPreview = ({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+    minWidth: 140,
     flexDirection: 'row',
     marginBottom: 6,
-    borderRadius: 8,
+    borderRadius: 10,
     overflow: 'hidden',
   },
   colorStrip: {
-    width: 3,
+    width: 4,
   },
   content: {
     flex: 1,
-    paddingLeft: 8,
-    paddingRight: 8,
-    paddingTop: 4,
-    paddingBottom: 4,
-    gap: 2,
+    paddingLeft: 6,
+    paddingRight: 6,
+    paddingTop: 6,
+    paddingBottom: 6,
+    gap: 4,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   senderName: {
     fontSize: 12,
     fontWeight: '600',
   },
-  messagePreview: {
-    ...typography.p3,
-    fontSize: 16,
-    lineHeight: 20,
-  },
-  attachmentPreview: {
+  thumbnailsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
+    marginTop: 4,
   },
-  attachmentText: {
-    ...typography.p3,
-    fontSize: 16,
-    lineHeight: 20,
-    flex: 1,
+  thumbnail: {
+    width: 28,
+    height: 28,
+    borderRadius: 4,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+  },
+  thumbnailPlaceholder: {
+    fontSize: 8,
+    opacity: 0.5,
+  },
+  pdfThumbnail: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(251, 146, 60, 0.2)',
+  },
+  videoOverlay: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(148, 163, 184, 0.6)',
+  },
+  playCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingLeft: 1,
+  },
+  audioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  audioLabel: {
+    fontSize: 12,
+  },
+  messagePreview: {
+    ...typography.p4,
+    fontSize: 13,
+    lineHeight: 18,
   },
 });

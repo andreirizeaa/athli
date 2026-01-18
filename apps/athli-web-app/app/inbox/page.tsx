@@ -204,12 +204,49 @@ const InboxPage = () => {
     apiMessagesRef.current = apiMessages;
   }, [apiMessages]);
 
+  // Optimistic messages state for instant UI feedback when sending
+  // IMPORTANT: Declared BEFORE useRealtimeMessages so the ref can access it
+  const [optimisticMessages, setOptimisticMessages] = React.useState<OptimisticMessage[]>([]);
+
+  // Ref to access latest optimistic messages in realtime callbacks (avoids stale closure)
+  const optimisticMessagesRef = React.useRef(optimisticMessages);
+  React.useEffect(() => {
+    optimisticMessagesRef.current = optimisticMessages;
+  }, [optimisticMessages]);
+
   // Realtime subscriptions
-  // When a real message arrives via realtime, immediately remove matching optimistic message
-  // to prevent visual glitch/duplication
   const { realtimeMessages } = useRealtimeMessages({
     conversationId: selectedConversation?.id || '',
     userId: user?.id,
+    // CRITICAL: Skip realtime messages that match an optimistic message
+    // This prevents flicker by never adding these to realtimeMessages state
+    shouldSkipInsert: React.useCallback((message: { id?: string; sender_id: string; sent_at: Date | string; message_type?: string }) => {
+      const currentOptimistic = optimisticMessagesRef.current;
+      if (currentOptimistic.length === 0) return false;
+
+      // Check if this message matches any optimistic message
+      return currentOptimistic.some((opt) => {
+        // PRIORITY 1: Exact ID match (most reliable)
+        if (opt.realMessageId && opt.realMessageId === message.id) {
+          return true;
+        }
+
+        // PRIORITY 2: Fallback to narrow time-based matching
+        // Only for the brief moment before realMessageId is set
+        if (opt.sender_id !== message.sender_id) return false;
+
+        const optTime = opt.sent_at instanceof Date 
+          ? opt.sent_at.getTime() 
+          : new Date(opt.sent_at).getTime();
+        const msgTime = message.sent_at instanceof Date 
+          ? message.sent_at.getTime() 
+          : new Date(message.sent_at).getTime();
+
+        // Narrow 10-second window to minimize false matches
+        const timeDiff = Math.abs(msgTime - optTime);
+        return timeDiff <= 10000;
+      });
+    }, []),
     onMessageReceived: (message) => {
       // Remove optimistic message that matches this real message
       // BUT only remove text-only messages here - messages with attachments are
@@ -225,14 +262,21 @@ const InboxPage = () => {
             return true;
           }
 
-          // For text-only messages, check if this is a match
+          // PRIORITY 1: Exact ID match via realMessageId
+          if (opt.realMessageId && opt.realMessageId === message.id) {
+            toRemove.push(opt);
+            return false;
+          }
+
+          // PRIORITY 2: Fallback to content + sender matching for text-only
           if (opt.sender_id !== message.sender_id) return true;
           if (normalizeContent(opt.content) !== normalizeContent(message.content)) return true;
 
           const optTime = opt.sent_at instanceof Date ? opt.sent_at.getTime() : new Date(opt.sent_at).getTime();
           const msgTime = message.sent_at instanceof Date ? message.sent_at.getTime() : new Date(message.sent_at).getTime();
           const timeDiff = Math.abs(msgTime - optTime);
-          if (timeDiff > 30000) return true;
+          // Narrow 10-second window now that we have realMessageId for precision
+          if (timeDiff > 10000) return true;
 
           // Match found for text-only message - safe to remove
           toRemove.push(opt);
@@ -255,7 +299,8 @@ const InboxPage = () => {
     },
     onMessageUpdated: (message) => {
       // If a message is soft-deleted (is_deleted=true), remove it optimistically
-      if (message.is_deleted) {
+      // Use explicit true check to handle any type coercion issues
+      if (message.is_deleted === true || (message as any).is_deleted === true) {
         removeApiMessage(message.id);
       }
       // NOTE: We intentionally do NOT refetch here for regular updates (e.g., attachments added)
@@ -273,12 +318,16 @@ const InboxPage = () => {
     userId: user?.id || '',
   });
 
-  // Optimistic messages state for instant UI feedback when sending
-  const [optimisticMessages, setOptimisticMessages] = React.useState<OptimisticMessage[]>([]);
+  // Optimistic reactions state for instant UI feedback when reacting
+  // Maps messageId -> { senderReaction, recipientReaction }
+  const [optimisticReactions, setOptimisticReactions] = React.useState<
+    Record<string, { senderReaction?: string; recipientReaction?: string }>
+  >({});
 
-  // Clear optimistic messages when switching conversations
+  // Clear optimistic messages and reactions when switching conversations
   React.useEffect(() => {
     setOptimisticMessages([]);
+    setOptimisticReactions({});
   }, [selectedConversation?.id]);
 
   // Merge all 3 message sources: API + realtime + optimistic - transforms to UIMessage[]
@@ -291,18 +340,33 @@ const InboxPage = () => {
 
   // Collect attachments that need signed URL generation
   // Skip attachments that already have URLs (optimistic with local_uri, or API with signed_url)
+  // Includes both main message attachments AND parent message attachments (for reply previews)
   const attachmentsNeedingUrls = React.useMemo(() => {
     if (!mergedMessages || mergedMessages.length === 0) return [];
-    return mergedMessages
-      .flatMap((msg) => msg.attachments || [])
-      .filter((att) => {
-        // Skip optimistic attachments (have blob URL)
-        if ((att as any).local_uri) return false;
-        // Skip attachments that already have signed URL from API
-        if ((att as any).signed_url) return false;
-        // Only include if has file_path (needs URL generation from storage)
-        return !!att.file_path;
-      });
+
+    const allAttachments: typeof mergedMessages[0]['attachments'] = [];
+
+    mergedMessages.forEach((msg) => {
+      // Add main message attachments
+      if (msg.attachments) {
+        allAttachments.push(...msg.attachments);
+      }
+      // Add parent message attachments (for reply previews)
+      const parentMsg = (msg as any).parent_message;
+      if (parentMsg && parentMsg.attachments) {
+        allAttachments.push(...parentMsg.attachments);
+      }
+    });
+
+    return allAttachments.filter((att) => {
+      if (!att) return false;
+      // Skip optimistic attachments (have blob URL)
+      if ((att as any).local_uri) return false;
+      // Skip attachments that already have signed URL from API
+      if ((att as any).signed_url) return false;
+      // Only include if has file_path (needs URL generation from storage)
+      return !!att.file_path;
+    });
   }, [mergedMessages]);
 
   // Generate signed URLs only for attachments that need them
@@ -331,6 +395,7 @@ const InboxPage = () => {
   const [isMessageListReady, setIsMessageListReady] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(!!contactIdFromPath);
+  const [userManuallyOpenedSidebar, setUserManuallyOpenedSidebar] = React.useState(false);
   const [messageInput, setMessageInput] = React.useState('');
   const [isNewMessageOpen, setIsNewMessageOpen] = React.useState(false);
   const [isCreateNoteOpen, setIsCreateNoteOpen] = React.useState(false);
@@ -702,12 +767,35 @@ const InboxPage = () => {
               id: msg.replyTo.id,
               text: msg.replyTo.text || '',
               isSent: msg.replyTo.isSent,
+              is_deleted: msg.replyTo.is_deleted,
+              attachments: msg.replyTo.attachments?.map((a) => {
+                // Priority: signed_url from API > URL from map > fallback public URL
+                const url = (a as any).signed_url || attachmentUrlMap[a.id] || getStorageUrl(a.bucket_id || 'message_attachments', a.file_path);
+                return {
+                  name: a.filename,
+                  data: url,
+                  type: a.mime_type || 'application/octet-stream',
+                  size: a.size_bytes || 0,
+                  attachmentType: getAttachmentType(a.mime_type),
+                };
+              }),
             }
           : undefined,
         reaction: msg.reactions?.[0]?.reaction,
+        // Extract sender and recipient reactions from reactions array
+        // senderReaction = reaction from the person who sent this message
+        // recipientReaction = reaction from the person who received this message
+        // Apply optimistic reactions if present (for instant UI feedback)
+        // Note: empty string '' means "no reaction" (deletion), so we use it directly
+        senderReaction: optimisticReactions[msg.id]?.senderReaction !== undefined
+          ? (optimisticReactions[msg.id].senderReaction === '' ? undefined : optimisticReactions[msg.id].senderReaction)
+          : msg.reactions?.find(r => r.user_id === msg.sender_id)?.reaction,
+        recipientReaction: optimisticReactions[msg.id]?.recipientReaction !== undefined
+          ? (optimisticReactions[msg.id].recipientReaction === '' ? undefined : optimisticReactions[msg.id].recipientReaction)
+          : msg.reactions?.find(r => r.user_id !== msg.sender_id)?.reaction,
       };
     });
-  }, [mergedMessages, attachmentUrlMap]);
+  }, [mergedMessages, attachmentUrlMap, optimisticReactions]);
 
   const filteredContacts = React.useMemo(() => {
     if (!searchQuery.trim()) return contacts;
@@ -778,12 +866,22 @@ const InboxPage = () => {
     setIsMessageListReady(false);
   }, [selectedContactId]);
 
+  // Handler for manual sidebar toggle - tracks user preference
+  const handleManualSidebarToggle = React.useCallback((collapsed: boolean) => {
+    setIsSidebarCollapsed(collapsed);
+    // Track if user manually opened the sidebar (not collapsed means opened)
+    setUserManuallyOpenedSidebar(!collapsed);
+  }, []);
+
   // Handler for contact click in sidebar - shows loading immediately
   const handleContactClick = React.useCallback((contactId: string) => {
     setIsNavigating(true);
-    setIsSidebarCollapsed(true);
+    // Only auto-collapse if user hasn't manually opened the sidebar
+    if (!userManuallyOpenedSidebar) {
+      setIsSidebarCollapsed(true);
+    }
     router.push(`/inbox/${contactId}/overview`);
-  }, [router]);
+  }, [router, userManuallyOpenedSidebar]);
 
   // Read contact ID from URL path params on mount and when path changes
   React.useEffect(() => {
@@ -791,7 +889,10 @@ const InboxPage = () => {
       const contact = contacts.find(c => c.id === contactIdFromPath);
       if (contact) {
         setSelectedContactId(contactIdFromPath);
-        setIsSidebarCollapsed(true);
+        // Only auto-collapse if user hasn't manually opened the sidebar
+        if (!userManuallyOpenedSidebar) {
+          setIsSidebarCollapsed(true);
+        }
         // Reset to overview tab when selecting a new contact
         setActiveClientTab('overview');
         // Clear navigating state once contact is selected
@@ -805,7 +906,7 @@ const InboxPage = () => {
       setSelectedContactId(undefined);
       setIsNavigating(false);
     }
-  }, [contactIdFromPath, contacts, isLoadingClients, router]);
+  }, [contactIdFromPath, contacts, isLoadingClients, router, userManuallyOpenedSidebar]);
 
   // Load drafts on mount
   React.useEffect(() => {
@@ -1204,6 +1305,7 @@ const InboxPage = () => {
     attachments?: Array<{
       file: File;
       attachmentType: import('@/components/app/types').AttachmentType;
+      durationMs?: number;
     }>;
     replyTo?: Message['replyTo'];
   }) => {
@@ -1221,6 +1323,8 @@ const InboxPage = () => {
         messageType = 'image';
       } else if (firstAttachment.attachmentType === 'video') {
         messageType = 'video';
+      } else if (firstAttachment.attachmentType === 'audio') {
+        messageType = 'audio';
       } else if (firstAttachment.attachmentType === 'pdf') {
         messageType = 'file';
       }
@@ -1234,6 +1338,53 @@ const InboxPage = () => {
       filename: att.file.name,
     }));
 
+    // Build parent message data for optimistic reply preview
+    // This allows the optimistic message to display the reply preview immediately
+    const parentMessageData = params.replyTo ? (() => {
+      // Determine sender_id from isSent flag
+      const parentSenderId = params.replyTo.isSent ? user.id : selectedContactId;
+
+      // Determine message type from attachments
+      let parentMessageType: 'text' | 'image' | 'video' | 'audio' | 'file' = 'text';
+      if (params.replyTo.attachments && params.replyTo.attachments.length > 0) {
+        const firstAtt = params.replyTo.attachments[0];
+        if (firstAtt.attachmentType === 'image') parentMessageType = 'image';
+        else if (firstAtt.attachmentType === 'video') parentMessageType = 'video';
+        else if (firstAtt.attachmentType === 'audio') parentMessageType = 'audio';
+        else if (firstAtt.attachmentType === 'pdf') parentMessageType = 'file';
+      } else if (params.replyTo.images && params.replyTo.images.length > 0) {
+        parentMessageType = 'image';
+      } else if (params.replyTo.video) {
+        parentMessageType = 'video';
+      } else if (params.replyTo.pdf) {
+        parentMessageType = 'file';
+      }
+
+      return {
+        id: params.replyTo.id,
+        content: params.replyTo.text || null,
+        message_type: parentMessageType,
+        sender_id: parentSenderId,
+        sent_at: new Date(), // Approximate - not critical for display
+        is_deleted: (params.replyTo as any).is_deleted || false,
+        // Convert attachments to the format expected by parent message
+        attachments: params.replyTo.attachments?.map((att) => ({
+          id: `parent-att-${Date.now()}-${Math.random()}`,
+          message_id: params.replyTo!.id,
+          conversation_id: selectedConversation.id,
+          bucket_id: 'message_attachments',
+          file_path: '',
+          filename: att.name,
+          mime_type: att.type,
+          size_bytes: att.size,
+          upload_status: 'completed' as const,
+          created_at: new Date(),
+          // Use the data URL for display
+          signed_url: att.data,
+        })),
+      };
+    })() : undefined;
+
     // Create optimistic message IMMEDIATELY for instant UI feedback
     // This happens BEFORE any async operations (file conversion, API calls)
     const optimisticMsg = createOptimisticMessage(
@@ -1242,7 +1393,8 @@ const InboxPage = () => {
       params.text || '',
       messageType,
       params.replyTo?.id,
-      optimisticAttachments
+      optimisticAttachments,
+      parentMessageData
     );
 
     // Add to optimistic messages state for immediate display
@@ -1254,12 +1406,24 @@ const InboxPage = () => {
 
     try {
       // 1. Create message via API (this returns the message ID)
+      console.log('[handleSendMessage] params.attachments?.length:', params.attachments?.length);
       const message = await sendMessageAPI({
         conversationId: selectedConversation.id,
         content: params.text || undefined,
         messageType,
         parentMessageId: params.replyTo?.id,
+        attachmentCount: params.attachments?.length || 0,
       });
+
+      // CRITICAL: Store the real message ID on the optimistic message for precise deduplication
+      // This ensures we only hide THIS specific real message, not other recent messages
+      setOptimisticMessages((prev) =>
+        prev.map((opt) =>
+          opt.id === optimisticMsg.id
+            ? { ...opt, realMessageId: message.id }
+            : opt
+        )
+      );
 
       // 2. Upload attachments if present (convert to base64 here, AFTER optimistic message shown)
       if (params.attachments && params.attachments.length > 0) {
@@ -1276,13 +1440,18 @@ const InboxPage = () => {
         };
 
         const attachmentsWithData = await Promise.all(
-          params.attachments.map(async (att) => ({
-            name: att.file.name,
-            data: await convertToBase64(att.file),
-            type: att.file.type,
-            size: att.file.size,
-            attachmentType: att.attachmentType,
-          }))
+          params.attachments.map(async (att) => {
+            const durationSeconds = att.durationMs ? Math.round(att.durationMs / 1000) : undefined;
+            console.log('[handleSendMessage] Converting durationMs:', att.durationMs, 'to durationSeconds:', durationSeconds);
+            return {
+              name: att.file.name,
+              data: await convertToBase64(att.file),
+              type: att.file.type,
+              size: att.file.size,
+              attachmentType: att.attachmentType,
+              durationSeconds,
+            };
+          })
         );
 
         await uploadAttachments({
@@ -1322,13 +1491,23 @@ const InboxPage = () => {
             ? optimisticMsg.sent_at.getTime()
             : new Date(optimisticMsg.sent_at).getTime();
 
+          // Get the latest optimistic state to check for realMessageId
+          const currentOpt = optimisticMessagesRef.current.find((o) => o.id === optimisticMsg.id);
+          const realMessageId = currentOpt?.realMessageId;
+
           const matchingRealMessage = freshMessages.find((msg) => {
+            // PRIORITY 1: Exact ID match via realMessageId (most reliable)
+            if (realMessageId && msg.id === realMessageId) {
+              return true;
+            }
+            // PRIORITY 2: Fallback to sender + time matching
             if (msg.sender_id !== optimisticMsg.sender_id) return false;
             const msgTime = msg.sent_at instanceof Date
               ? msg.sent_at.getTime()
               : new Date(msg.sent_at).getTime();
             const timeDiff = Math.abs(msgTime - optimisticTime);
-            return timeDiff <= 30000;
+            // Narrow 10-second window
+            return timeDiff <= 10000;
           });
 
           const realAttachments = matchingRealMessage?.attachments ?? [];
@@ -1390,12 +1569,59 @@ const InboxPage = () => {
     }
   }, [selectedContactId, selectedConversation, user?.id, refetchMessages, queryClient]);
 
-  // Handle message reactions
+  // Handle message reactions with optimistic updates
   const handleReaction = React.useCallback(async (messageId: string, emoji: string) => {
-    if (!selectedConversation) {
-      console.error('No conversation selected');
+    if (!selectedConversation || !user?.id) {
+      console.error('No conversation or user selected');
       return;
     }
+
+    // Find the current message to determine sender/recipient
+    const currentMsg = mergedMessages.find(m => m.id === messageId);
+    if (!currentMsg) {
+      console.error('Message not found');
+      return;
+    }
+
+    // Determine if coach is sender or recipient of this message
+    const isCoachSender = currentMsg.isSent;
+
+    // Get current reactions (from optimistic state or API)
+    const currentSenderReaction = optimisticReactions[messageId]?.senderReaction !== undefined
+      ? optimisticReactions[messageId].senderReaction
+      : currentMsg.reactions?.find(r => r.user_id === currentMsg.sender_id)?.reaction;
+    const currentRecipientReaction = optimisticReactions[messageId]?.recipientReaction !== undefined
+      ? optimisticReactions[messageId].recipientReaction
+      : currentMsg.reactions?.find(r => r.user_id !== currentMsg.sender_id)?.reaction;
+
+    // Calculate new reaction state
+    let newSenderReaction = currentSenderReaction;
+    let newRecipientReaction = currentRecipientReaction;
+
+    if (emoji) {
+      // Adding a reaction - coach's reaction changes
+      if (isCoachSender) {
+        newSenderReaction = emoji;
+      } else {
+        newRecipientReaction = emoji;
+      }
+    } else {
+      // Removing a reaction - coach's reaction is cleared
+      if (isCoachSender) {
+        newSenderReaction = '';
+      } else {
+        newRecipientReaction = '';
+      }
+    }
+
+    // Apply optimistic update immediately
+    setOptimisticReactions(prev => ({
+      ...prev,
+      [messageId]: {
+        senderReaction: newSenderReaction,
+        recipientReaction: newRecipientReaction,
+      },
+    }));
 
     try {
       if (emoji) {
@@ -1410,12 +1636,30 @@ const InboxPage = () => {
         await removeReaction(messageId);
       }
 
-      // Reaction will update automatically via realtime subscription
+      // Refetch messages to get the updated reactions from the server
+      // This ensures we get the correct state even if realtime is delayed
+      await refetchMessages();
+
+      // Keep optimistic state for a bit longer after refetch to prevent
+      // stale realtime updates from causing flicker. The optimistic state
+      // will override any stale data during this window.
+      setTimeout(() => {
+        setOptimisticReactions(prev => {
+          const updated = { ...prev };
+          delete updated[messageId];
+          return updated;
+        });
+      }, 2000);
     } catch (error) {
       console.error('Failed to update reaction:', error);
-      // Optionally show toast error to user
+      // Revert optimistic update on error
+      setOptimisticReactions(prev => {
+        const updated = { ...prev };
+        delete updated[messageId];
+        return updated;
+      });
     }
-  }, [selectedConversation]);
+  }, [selectedConversation, user?.id, mergedMessages, optimisticReactions, refetchMessages]);
 
   const handleFileButtonClick = () => {
     fileInputRef.current?.click();
@@ -1868,8 +2112,10 @@ const InboxPage = () => {
   const handleDeleteMessage = async (messageId: string) => {
     if (!messageId) return;
 
-    // Optimistically remove the message from local state immediately (no flicker)
+    // Optimistically remove the message from ALL local states immediately (no flicker)
+    // This includes apiMessages, optimisticMessages (for audio/attachment messages that stay longer)
     removeApiMessage(messageId);
+    setOptimisticMessages((prev) => prev.filter((m) => m.id !== messageId && m.realMessageId !== messageId));
 
     try {
       // Call the real delete API (soft delete)
@@ -1923,7 +2169,7 @@ const InboxPage = () => {
           <div className="flex-shrink-0 h-full z-10">
             <InboxSidebar
               isSidebarCollapsed={isSidebarCollapsed}
-              setIsSidebarCollapsed={setIsSidebarCollapsed}
+              setIsSidebarCollapsed={handleManualSidebarToggle}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               filteredContacts={filteredContacts}
@@ -1979,8 +2225,9 @@ const InboxPage = () => {
                       )}
                       {/* Loading overlay - shows until messages are loaded and scrolled to bottom */}
                       {!isMessageListReady && (
-                        <div className="absolute inset-0 z-40 bg-background flex items-center justify-center">
+                        <div className="absolute inset-0 z-40 bg-background flex flex-col items-center justify-center gap-3">
                           <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                          <p className="text-sm text-muted-foreground">{t('messages.loadingMessages')}</p>
                         </div>
                       )}
                       <div className="h-full overflow-y-auto flex flex-col">
@@ -1990,7 +2237,10 @@ const InboxPage = () => {
                           onTogglePowerView={() => {
                             const newState = !isPowerViewOpen;
                             setIsPowerViewOpen(newState);
-                            setIsSidebarCollapsed(newState);
+                            // Only auto-collapse sidebar if user hasn't manually opened it
+                            if (!userManuallyOpenedSidebar || !newState) {
+                              setIsSidebarCollapsed(newState);
+                            }
                           }}
                         />
 
@@ -2003,9 +2253,6 @@ const InboxPage = () => {
                             selectedContact={selectedContact!}
                             onReply={(message) => {
                               messageInputContextRef.current?.setReplyingToMessage(message);
-                              setTimeout(() => {
-                                messageInputContextRef.current?.textareaRef.current?.focus();
-                              }, 100);
                             }}
                             onDeleteMessage={handleDeleteMessage}
                             onDeleteMessageImage={handleDeleteMessageImage}

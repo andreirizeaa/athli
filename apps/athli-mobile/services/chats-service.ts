@@ -273,16 +273,28 @@ export async function reactTo(
   emoji: string,
   isSender?: boolean, // Legacy parameter, not used
 ) {
-  // If emoji is empty, it means removing reaction
+  const userId = await getCurrentUserId();
+
+  // If emoji is empty, remove reaction
   if (!emoji) {
-    // TODO: Implement removing reaction by messageId
-    console.log('[reactTo] Remove reaction from message:', messageId);
-    return;
+    return MessagingService.removeReaction(messageId, userId);
   }
 
-  // For adding reaction, we need conversationId which we don't have here
-  // TODO: Need to fetch message to get conversationId, or refactor UI to pass it
-  console.log('[reactTo] Add reaction to message:', messageId, emoji);
-  // Placeholder - this needs proper implementation
-  return Promise.resolve();
+  // Fetch message to get conversationId
+  const { data: message, error } = await supabase
+    .from('messages')
+    .select('conversation_id')
+    .eq('id', messageId)
+    .single();
+
+  if (error || !message) {
+    throw new Error(`Failed to fetch message: ${error?.message || 'Message not found'}`);
+  }
+
+  return MessagingService.addReaction(
+    messageId,
+    message.conversation_id,
+    userId,
+    emoji as MessagingService.ReactionEmoji
+  );
 }

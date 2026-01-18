@@ -5,7 +5,7 @@ export interface MessageFile {
   size: number;
 }
 
-export type AttachmentType = 'image' | 'video' | 'pdf';
+export type AttachmentType = 'image' | 'video' | 'pdf' | 'audio';
 
 export interface MessageAttachment {
   name: string;

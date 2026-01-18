@@ -39,9 +39,17 @@ export const MessageImagePreview = ({
   onPressIn,
   onPressOut,
 }: MessageImagePreviewProps) => {
-  const imageCount = images.length;
+  // Filter out any images with empty URIs as a safety guard
+  const validImages = images.filter(img => img.uri && img.uri.trim() !== '');
+
+  // Don't render if no valid images
+  if (validImages.length === 0) {
+    return null;
+  }
+
+  const imageCount = validImages.length;
   const hasMoreThanFour = imageCount > 4;
-  const displayImages = hasMoreThanFour ? images.slice(0, 4) : images;
+  const displayImages = hasMoreThanFour ? validImages.slice(0, 4) : validImages;
   const remainingCount = hasMoreThanFour ? imageCount - 4 : 0;
 
   // Gap between images - use parent bubble background color
@@ -62,7 +70,7 @@ export const MessageImagePreview = ({
           onPressIn={onPressIn}
           onPressOut={onPressOut}
         >
-          <RNImage source={{ uri: images[0].uri }} style={styles.singleImage} resizeMode="cover" />
+          <RNImage source={{ uri: validImages[0].uri }} style={styles.singleImage} resizeMode="cover" />
         </Pressable>
       );
     }
@@ -82,10 +90,10 @@ export const MessageImagePreview = ({
           onPressOut={onPressOut}
         >
           <View style={[styles.twoImageRow, { height: (IMAGE_SIZE - GAP_SIZE) / 2, marginBottom: GAP_SIZE }]}>
-            <RNImage source={{ uri: images[0].uri }} style={styles.gridImage} resizeMode="cover" />
+            <RNImage source={{ uri: validImages[0].uri }} style={styles.gridImage} resizeMode="cover" />
           </View>
           <View style={[styles.twoImageRow, { height: (IMAGE_SIZE - GAP_SIZE) / 2 }]}>
-            <RNImage source={{ uri: images[1].uri }} style={styles.gridImage} resizeMode="cover" />
+            <RNImage source={{ uri: validImages[1].uri }} style={styles.gridImage} resizeMode="cover" />
           </View>
         </Pressable>
       );
@@ -106,14 +114,14 @@ export const MessageImagePreview = ({
           onPressOut={onPressOut}
         >
           <View style={[styles.threeImageFirstRow, { height: (IMAGE_SIZE - GAP_SIZE) / 2, marginBottom: GAP_SIZE }]}>
-            <RNImage source={{ uri: images[0].uri }} style={styles.gridImage} resizeMode="cover" />
+            <RNImage source={{ uri: validImages[0].uri }} style={styles.gridImage} resizeMode="cover" />
           </View>
           <View style={styles.threeImageSecondRow}>
             <View style={[styles.threeImageSecondRowItem, { height: (IMAGE_SIZE - GAP_SIZE) / 2, marginRight: GAP_SIZE }]}>
-              <RNImage source={{ uri: images[1].uri }} style={styles.gridImage} resizeMode="cover" />
+              <RNImage source={{ uri: validImages[1].uri }} style={styles.gridImage} resizeMode="cover" />
             </View>
             <View style={[styles.threeImageSecondRowItem, { height: (IMAGE_SIZE - GAP_SIZE) / 2 }]}>
-              <RNImage source={{ uri: images[2].uri }} style={styles.gridImage} resizeMode="cover" />
+              <RNImage source={{ uri: validImages[2].uri }} style={styles.gridImage} resizeMode="cover" />
             </View>
           </View>
         </Pressable>
@@ -242,4 +250,3 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
 });
-

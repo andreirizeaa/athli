@@ -222,7 +222,7 @@ export const getMessages = async ({
         *,
         attachments:message_attachments(*),
         reactions:message_reactions(*),
-        parent_message:messages!parent_message_id(id, content, message_type, sender_id)
+        parent_message:messages!fk_msg_parent(id, content, message_type, sender_id, is_deleted, sent_at, attachments:message_attachments(*))
       `,
       )
       .eq('conversation_id', conversationId)
@@ -255,7 +255,7 @@ export const getMessages = async ({
         ...react,
         created_at: new Date(react.created_at),
       })),
-      parent_message: msg.parent_message
+      parent_message: msg.parent_message && !Array.isArray(msg.parent_message) && msg.parent_message.id
         ? {
             ...msg.parent_message,
             sent_at: new Date(msg.parent_message.sent_at),

@@ -23,10 +23,10 @@ import {
 import * as FileSystem from 'expo-file-system/legacy';
 import { type IWaveformRef, PlayerState, FinishMode } from '@/components/features/audio';
 
-import { useThemePreference, useColorScheme, useAuthSessionStore } from '@/stores';
+import { useThemePreference, useColorScheme, useAuthSessionStore, useClientProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
+import { haptics } from '@/utils/haptics';
 import { MessageList } from '@/components/features/message/message-list-flashlist';
-import { MessageReactionsSheet } from '@/components/features/message/message-reactions-sheet';
 import { ChatHeader } from '@/components/features/chats/chat-header';
 import { ChatToolbar } from '@/components/features/chats/chat-toolbar';
 import { ChatLoadingState } from '@/components/features/chats/chat-loading-state';
@@ -160,9 +160,10 @@ export default function InboxDetailScreen() {
   // Get current user ID synchronously from auth store (already available)
   const currentUserId = useAuthSessionStore((state) => state.userId);
 
+  // Get client profile for reactions display
+  const clientProfile = useClientProfileStore((state) => state.profile);
+
   const [isLoading, setIsLoading] = useState(!coachParam || !messagesParam);
-  const [reactionsSheetVisible, setReactionsSheetVisible] = useState(false);
-  const [selectedMessageForReactions, setSelectedMessageForReactions] = useState<InboxMessage | null>(null);
   const [replyingToMessage, setReplyingToMessage] = useState<InboxMessage | null>(null);
   const [showAttachmentPicker, setShowAttachmentPicker] = useState(false);
   const [isMicrophoneMode, setIsMicrophoneMode] = useState(false);
@@ -206,9 +207,37 @@ export default function InboxDetailScreen() {
   const lastVoiceNoteDurationMsRef = useRef(0);
   const recordingStartedAtMsRef = useRef<number | null>(null);
 
+  // Refetch messages helper for inbox
+  const refetchInboxMessages = async () => {
+    try {
+      const inboxMessages = await getInboxMessages(id);
+      setMessages(inboxMessages.map((msg) => ({
+        ...msg,
+        timestamp: new Date(msg.sent_at),
+      })));
+    } catch (error) {
+      console.error('[Inbox] Failed to refetch messages:', error);
+    }
+  };
+
   // Realtime messages subscription (uses broadcast events for scalability)
   const { realtimeMessages } = useRealtimeMessages({
     conversationId: id,
+    onMessageReceived: (message) => {
+      console.log('[Inbox Detail] onMessageReceived:', message.message_type, message.id, 'attachments:', message.attachments?.length || 0);
+      // Message now includes attachments from enhanced broadcast trigger - no refetch needed
+    },
+    onMessageUpdated: (message) => {
+      console.log('[Inbox Detail] onMessageUpdated:', message.message_type, message.id, 'attachments:', message.attachments?.length || 0, 'is_deleted:', message.is_deleted);
+      // If message is soft-deleted, remove from local state
+      if (message.is_deleted === true) {
+        setMessages((prev) => prev.filter((m) => m.id !== message.id));
+      }
+    },
+    onMessageDeleted: (messageId) => {
+      // Remove the deleted message from local state
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    },
   });
 
   // Merge saved, realtime, and optimistic messages - transforms to UIMessage[]
@@ -371,6 +400,13 @@ export default function InboxDetailScreen() {
 
   useEffect(() => {
     if (imagesSent === 'true' && sentImages) {
+      // Clear params IMMEDIATELY to prevent re-triggering
+      router.setParams({
+        imagesSent: '',
+        sentImages: '',
+        sentImagesCaption: '',
+      });
+
       try {
         const imageAttachments = JSON.parse(sentImages);
 
@@ -386,25 +422,21 @@ export default function InboxDetailScreen() {
         setMessages((prev) => [...prev, newMessage]);
         setSearchQuery('');
         setShowAttachmentPicker(false);
-        router.setParams({
-          imagesSent: '',
-          sentImages: '',
-          sentImagesCaption: '',
-        });
       } catch (error) {
         console.error('Error parsing sent images:', error);
         setShowAttachmentPicker(false);
-        router.setParams({
-          imagesSent: '',
-          sentImages: '',
-          sentImagesCaption: '',
-        });
       }
     }
   }, [imagesSent, sentImages, sentImagesCaption, router]);
 
   useEffect(() => {
     if (videoSent === 'true' && sentVideo) {
+      // Clear params IMMEDIATELY to prevent re-triggering and navigation race condition
+      router.setParams({
+        videoSent: '',
+        sentVideo: '',
+      });
+
       try {
         const videoData = JSON.parse(sentVideo);
 
@@ -424,17 +456,9 @@ export default function InboxDetailScreen() {
         setMessages((prev) => [...prev, newMessage]);
         setSearchQuery('');
         setShowAttachmentPicker(false);
-        router.setParams({
-          videoSent: '',
-          sentVideo: '',
-        });
       } catch (error) {
         console.error('Error parsing sent video:', error);
         setShowAttachmentPicker(false);
-        router.setParams({
-          videoSent: '',
-          sentVideo: '',
-        });
       }
     }
   }, [videoSent, sentVideo, router]);
@@ -686,17 +710,28 @@ export default function InboxDetailScreen() {
     }
   };
 
-  const handleMessageEdit = (message: any) => {
-    setSearchQuery(message.text);
-  };
-
   const handleMessageDelete = async (message: any) => {
+    // Remove from ALL local states (messages and optimisticMessages)
     setMessages((prev) => prev.filter((m) => m.id !== message.id));
+    setOptimisticMessages((prev) => prev.filter((m) => m.id !== message.id && m.realMessageId !== message.id));
   };
 
   const handleReactionPress = (message: any) => {
-    setSelectedMessageForReactions(message);
-    setReactionsSheetVisible(true);
+    if (!message.reactions || message.reactions.length === 0) return;
+
+    haptics.light();
+    router.push({
+      pathname: '/modals/message/reactions-modal',
+      params: {
+        messageId: message.id,
+        reactions: JSON.stringify(message.reactions),
+        currentUserId: currentUserId || '',
+        otherUserName: coach?.other_user_name || 'Coach',
+        otherUserAvatarUrl: coach?.other_user_avatar || '',
+        currentUserName: clientProfile?.name || t('general.you'),
+        currentUserAvatarUrl: clientProfile?.profile_picture_url || '',
+      },
+    });
   };
 
   const handleDocumentPress = (document: any) => {
@@ -752,20 +787,6 @@ export default function InboxDetailScreen() {
     } as any);
   };
 
-  const handleReactionRemoved = (messageId: string, isSender: boolean) => {
-    setMessages((prev) =>
-      prev.map((msg) => {
-        if (msg.id === messageId) {
-          return {
-            ...msg,
-            ...(isSender ? { senderReaction: undefined } : { recipientReaction: undefined }),
-          };
-        }
-        return msg;
-      })
-    );
-  };
-
   const handleToolbarHeightChange = (height: number) => {
     setToolbarHeight(height);
     toolbarHeightAnimated.value = withTiming(height, { duration: 150 });
@@ -801,7 +822,6 @@ export default function InboxDetailScreen() {
           themeColors={themeColors}
           clientName={coach.other_user_name || 'Coach'}
           onReply={handleMessageReply}
-          onEdit={handleMessageEdit}
           onDelete={handleMessageDelete}
           onReactionPress={handleReactionPress}
           onDocumentPress={handleDocumentPress}
@@ -842,15 +862,6 @@ export default function InboxDetailScreen() {
         onHeightChange={handleToolbarHeightChange}
       />
 
-      <MessageReactionsSheet
-        visible={reactionsSheetVisible}
-        onClose={() => {
-          setReactionsSheetVisible(false);
-          setSelectedMessageForReactions(null);
-        }}
-        message={selectedMessageForReactions}
-        onReactionRemoved={handleReactionRemoved}
-      />
     </View>
   );
 }

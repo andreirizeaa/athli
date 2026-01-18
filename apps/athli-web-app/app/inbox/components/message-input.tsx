@@ -74,6 +74,24 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
         }
     }, [replyingToMessage, attachments.length, messageInput, textareaRef, setTextareaHeight]);
 
+    // Auto-focus textarea when replying to a message
+    // Track previous replyingToMessage to detect when it changes to non-null
+    const prevReplyingToMessageRef = React.useRef<typeof replyingToMessage>(null);
+    React.useEffect(() => {
+        const wasNull = prevReplyingToMessageRef.current === null;
+        prevReplyingToMessageRef.current = replyingToMessage;
+
+        // Only focus when transitioning from null to a message (not on every render)
+        if (wasNull && replyingToMessage && textareaRef.current) {
+            // Focus after a short delay to ensure DOM is ready
+            const timer = setTimeout(() => {
+                textareaRef.current?.focus();
+            }, 50);
+
+            return () => clearTimeout(timer);
+        }
+    }, [replyingToMessage, textareaRef]);
+
     // Handle file inputs
     const handleImageInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
@@ -313,76 +331,133 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
                     )}
 
                     {/* Reply Preview */}
-                    {replyingToMessage && (
-                        <div
-                            className="mb-2 px-3 py-2 bg-background/50"
-                            style={{ borderRadius: '18px' }}
-                        >
-                            <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <Reply className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                        <span className="text-xs font-semibold text-foreground">
-                                            {replyingToMessage.isSent
-                                                ? t('messages.yourself')
-                                                : selectedContact?.name || 'user'}
-                                        </span>
-                                    </div>
-                                    {replyingToMessage.images && replyingToMessage.images.length > 0 && (
-                                        <div className="flex gap-1.5 mb-1.5 overflow-x-auto">
-                                            {replyingToMessage.images.slice(0, 3).map((image, index) => (
-                                                <div key={index} className="flex-shrink-0">
-                                                    <div className="w-12 h-12 flex items-center justify-center overflow-hidden rounded-md bg-muted">
-                                                        <img
-                                                            src={image.data}
-                                                            alt={image.name}
-                                                            className="w-full h-full object-cover"
-                                                        />
+                    {replyingToMessage && (() => {
+                        // Build unified thumbnail list for all visual attachments
+                        // Use new attachments format if available, otherwise fall back to legacy fields
+                        const thumbnailItems: Array<{ type: 'image' | 'video' | 'pdf'; data?: string }> = [];
+                        const attachmentsArray = (replyingToMessage as any).attachments;
+                        const hasNewFormat = attachmentsArray && attachmentsArray.length > 0;
+
+                        if (hasNewFormat) {
+                            // New format: use attachments array
+                            attachmentsArray.forEach((att: any) => {
+                                if (att.attachmentType === 'image') {
+                                    thumbnailItems.push({ type: 'image', data: att.data });
+                                } else if (att.attachmentType === 'video') {
+                                    thumbnailItems.push({ type: 'video' });
+                                } else if (att.attachmentType === 'pdf') {
+                                    thumbnailItems.push({ type: 'pdf' });
+                                }
+                            });
+                        } else {
+                            // Legacy format: use individual fields
+                            replyingToMessage.images?.forEach((img: any) => thumbnailItems.push({ type: 'image', data: img.data }));
+                            if (replyingToMessage.video) thumbnailItems.push({ type: 'video' });
+                            if (replyingToMessage.pdf) thumbnailItems.push({ type: 'pdf' });
+                        }
+
+                        // Check for audio (voice note)
+                        const isVoiceNote = hasNewFormat
+                            ? attachmentsArray.some((att: any) => att.attachmentType === 'audio')
+                            : false;
+
+                        const displayedThumbnails = thumbnailItems.slice(0, 4);
+                        const hasVisualAttachments = thumbnailItems.length > 0;
+
+                        return (
+                            <div
+                                className={cn(
+                                    "mb-2 px-3 py-2 rounded-lg",
+                                    replyingToMessage.isSent
+                                        ? "bg-primary/20"
+                                        : "bg-sidebar"
+                                )}
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                        {/* Header with reply icon and sender name */}
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <Reply className={cn(
+                                                "h-3 w-3 flex-shrink-0",
+                                                replyingToMessage.isSent ? "text-primary" : "text-muted-foreground"
+                                            )} />
+                                            <span className={cn(
+                                                "text-xs font-semibold",
+                                                replyingToMessage.isSent ? "text-primary" : "text-foreground"
+                                            )}>
+                                                {replyingToMessage.isSent
+                                                    ? t('messages.yourself')
+                                                    : selectedContact?.name || 'user'}
+                                            </span>
+                                        </div>
+
+                                        {/* Square thumbnails row - images, videos, PDFs all same size */}
+                                        {hasVisualAttachments && (
+                                            <div className="flex gap-1 mb-1">
+                                                {displayedThumbnails.map((item, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        className="w-7 h-7 flex-shrink-0 rounded overflow-hidden flex items-center justify-center bg-muted"
+                                                    >
+                                                        {item.type === 'image' && item.data && (
+                                                            <img
+                                                                src={item.data}
+                                                                alt=""
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        )}
+                                                        {item.type === 'image' && !item.data && (
+                                                            <span className="text-[8px] opacity-50">IMG</span>
+                                                        )}
+                                                        {item.type === 'video' && (
+                                                            <div className="w-full h-full flex items-center justify-center bg-slate-300 dark:bg-slate-600 relative">
+                                                                {/* Subtle play overlay */}
+                                                                <div className="w-4 h-4 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-sm">
+                                                                    <Play className="h-2 w-2 ml-0.5 text-white fill-white" />
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        {item.type === 'pdf' && (
+                                                            <div className="w-full h-full flex items-center justify-center bg-orange-100 dark:bg-orange-900/30">
+                                                                <FileText className="h-3 w-3 text-orange-600 dark:text-orange-400" />
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                </div>
-                                            ))}
-                                            {replyingToMessage.images.length > 3 && (
-                                                <div className="w-12 h-12 flex items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
-                                                    +{replyingToMessage.images.length - 3}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                    {replyingToMessage.pdf && (
-                                        <div className="flex items-center gap-2 mb-1.5">
-                                            <FileText className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-                                            <span className="text-xs text-foreground truncate">
-                                                {replyingToMessage.pdf.name}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {replyingToMessage.video && (
-                                        <div className="flex items-center gap-2 mb-1.5">
-                                            <Video className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-                                            <span className="text-xs text-foreground truncate">
-                                                {replyingToMessage.video.name}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {replyingToMessage.text && (
-                                        <p className="text-sm text-foreground line-clamp-2 truncate">
-                                            {replyingToMessage.text}
-                                        </p>
-                                    )}
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Voice note indicator */}
+                                        {isVoiceNote && (
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <Mic className="h-3 w-3 text-primary flex-shrink-0" />
+                                                <span className="text-xs text-foreground">
+                                                    {t('messages.voiceNote')}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {/* Text row - single line with ellipsis */}
+                                        {replyingToMessage.text && (
+                                            <p className="text-sm text-foreground line-clamp-1">
+                                                {replyingToMessage.text}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 flex-shrink-0"
+                                        onClick={() => setReplyingToMessage(null)}
+                                        aria-label={t('messages.cancelReply')}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
                                 </div>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 flex-shrink-0"
-                                    onClick={() => setReplyingToMessage(null)}
-                                    aria-label={t('messages.cancelReply')}
-                                >
-                                    <X className="h-4 w-4" />
-                                </Button>
                             </div>
-                        </div>
-                    )}
+                        );
+                    })()}
 
                     {/* Attachment buttons for collapsed mode */}
                     {!showExpandedInput && (

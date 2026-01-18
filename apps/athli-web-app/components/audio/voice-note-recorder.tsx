@@ -1,361 +1,367 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { Trash2, Send, Play, Pause, Loader2 } from "lucide-react";
+import { Trash2, ArrowUp, RotateCcw, Loader2, CircleStop } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
-import { computeWaveformPeaksFromBlob } from "@/lib/audio/compute-peaks";
 
 interface VoiceNoteRecorderProps {
   onSend: (blob: Blob, url: string, durationMs: number) => void;
   onCancel: () => void;
 }
 
-// Custom live audio visualizer component using Web Audio API
-const LiveWaveform = React.memo(({ 
-  stream,
-  barColor = "hsl(var(--primary))",
-  height = 32,
-}: { 
-  stream: MediaStream | null;
-  barColor?: string;
-  height?: number;
-}) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyzerRef = useRef<AnalyserNode | null>(null);
-  const animationRef = useRef<number | null>(null);
-  const [width, setWidth] = useState(300);
+type RecorderState = "idle" | "starting" | "recording" | "converting" | "stopped";
 
-  useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setWidth(containerRef.current.offsetWidth);
+const MAX_DURATION_MS = 120000;
+const UPDATE_INTERVAL_MS = 50;
+
+/**
+ * Convert WebM blob to WAV using Web Audio API
+ * WAV is universally supported including iOS
+ * Returns both the WAV blob and the actual audio duration in milliseconds
+ */
+async function convertToWav(webmBlob: Blob): Promise<{ blob: Blob; durationMs: number }> {
+  const audioContext = new AudioContext();
+
+  try {
+    const arrayBuffer = await webmBlob.arrayBuffer();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+    // Get actual audio duration from the decoded buffer (in seconds)
+    const actualDurationMs = Math.round(audioBuffer.duration * 1000);
+
+    // Create WAV file
+    const numChannels = 1;
+    const sampleRate = audioBuffer.sampleRate;
+    const format = 1; // PCM
+    const bitsPerSample = 16;
+
+    // Get mono audio data
+    let samples: Float32Array;
+    if (audioBuffer.numberOfChannels === 1) {
+      samples = audioBuffer.getChannelData(0);
+    } else {
+      // Mix to mono
+      const left = audioBuffer.getChannelData(0);
+      const right = audioBuffer.getChannelData(1);
+      samples = new Float32Array(left.length);
+      for (let i = 0; i < left.length; i++) {
+        samples[i] = (left[i] + right[i]) / 2;
+      }
+    }
+
+    const dataLength = samples.length * (bitsPerSample / 8);
+    const buffer = new ArrayBuffer(44 + dataLength);
+    const view = new DataView(buffer);
+
+    // WAV header
+    const writeString = (offset: number, str: string) => {
+      for (let i = 0; i < str.length; i++) {
+        view.setUint8(offset + i, str.charCodeAt(i));
       }
     };
-    updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
-  }, []);
 
-  useEffect(() => {
-    if (!stream) return;
+    writeString(0, "RIFF");
+    view.setUint32(4, 36 + dataLength, true);
+    writeString(8, "WAVE");
+    writeString(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, format, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numChannels * (bitsPerSample / 8), true);
+    view.setUint16(32, numChannels * (bitsPerSample / 8), true);
+    view.setUint16(34, bitsPerSample, true);
+    writeString(36, "data");
+    view.setUint32(40, dataLength, true);
 
-    const audioContext = new AudioContext();
-    const analyzer = audioContext.createAnalyser();
-    analyzer.fftSize = 256;
-    analyzer.smoothingTimeConstant = 0.4;
+    // Write samples
+    let offset = 44;
+    for (let i = 0; i < samples.length; i++) {
+      const s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      offset += 2;
+    }
 
-    const source = audioContext.createMediaStreamSource(stream);
-    source.connect(analyzer);
-
-    audioContextRef.current = audioContext;
-    analyzerRef.current = analyzer;
-
-    const dataArray = new Uint8Array(analyzer.frequencyBinCount);
-
-    const draw = () => {
-      const canvas = canvasRef.current;
-      if (!canvas || !analyzerRef.current) return;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      analyzerRef.current.getByteFrequencyData(dataArray);
-
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      ctx.scale(dpr, dpr);
-      ctx.clearRect(0, 0, width, height);
-
-      const barWidth = 3;
-      const gap = 2;
-      const totalBarWidth = barWidth + gap;
-      const numBars = Math.floor(width / totalBarWidth);
-
-      ctx.fillStyle = barColor;
-
-      for (let i = 0; i < numBars; i++) {
-        // Map bar index to frequency data
-        const dataIndex = Math.floor((i / numBars) * dataArray.length);
-        const value = dataArray[dataIndex] / 255; // Normalize to 0-1
-        const barHeight = Math.max(3, value * (height - 4));
-        const x = i * totalBarWidth;
-        const y = (height - barHeight) / 2;
-
-        ctx.beginPath();
-        ctx.roundRect(x, y, barWidth, barHeight, 1.5);
-        ctx.fill();
-      }
-
-      animationRef.current = requestAnimationFrame(draw);
+    return {
+      blob: new Blob([buffer], { type: "audio/wav" }),
+      durationMs: actualDurationMs,
     };
-
-    draw();
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
-    };
-  }, [stream, barColor, width, height]);
-
-  return (
-    <div ref={containerRef} className="w-full h-full flex items-center justify-center">
-      <canvas 
-        ref={canvasRef} 
-        style={{ width: '100%', height: `${height}px` }}
-      />
-    </div>
-  );
-});
-
-LiveWaveform.displayName = 'LiveWaveform';
+  } finally {
+    await audioContext.close();
+  }
+}
 
 export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, onCancel }) => {
-  const { state, durationMs, start, stop, cancel, mediaRecorder, stream } = useVoiceRecorder();
-  const [peaks, setPeaks] = useState<number[]>([]);
-  const [recordedBlob, setRecordedBlob] = useState<{ blob: Blob; url: string; durationMs: number } | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
-  const [playbackProgress, setPlaybackProgress] = useState(0); // 0..1
-  const [isLoadingWaveform, setIsLoadingWaveform] = useState(false);
+  const [state, setState] = useState<RecorderState>("idle");
+  const [durationMs, setDurationMs] = useState(0);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
 
-  // Store cancel in a ref for cleanup to avoid stale closures
-  const cancelRef = useRef(cancel);
-  cancelRef.current = cancel;
+  const streamRef = useRef<MediaStream | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const finalDurationRef = useRef<number>(0);
 
-  // Start recording when component mounts
-  useEffect(() => {
-    start().catch((error) => {
-      console.error('Failed to start recording:', error);
-      onCancel();
-    });
-
-    // Cleanup on unmount - ensures microphone is released
-    return () => {
-      cancelRef.current();
-    };
-  }, []);
-
-  // Format duration as M:SS
   const formatDuration = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
-  // Handle stop recording
-  const handleStop = async () => {
-    const result = await stop();
-    if (result) {
-      setRecordedBlob(result);
-      setIsLoadingWaveform(true);
-      // Generate waveform peaks - use simple fallback if decode fails
-      try {
-        const waveformPeaks = await computeWaveformPeaksFromBlob(result.blob, 64);
-        setPeaks(waveformPeaks);
-      } catch (error) {
-        console.error('Failed to generate waveform:', error);
-        // Create a simple fallback waveform
-        const fallbackPeaks = Array.from({ length: 64 }, () => Math.random() * 0.8 + 0.2);
-        setPeaks(fallbackPeaks);
-      } finally {
-        setIsLoadingWaveform(false);
+  const cleanup = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+  }, []);
+
+  const cancel = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    cleanup();
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    setAudioUrl(null);
+    setAudioBlob(null);
+    setState("idle");
+    setDurationMs(0);
+  }, [audioUrl, cleanup]);
+
+  const cancelRef = useRef(cancel);
+  cancelRef.current = cancel;
+
+  const startRecording = useCallback(async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    streamRef.current = stream;
+
+    const mediaRecorder = new MediaRecorder(stream);
+    mediaRecorderRef.current = mediaRecorder;
+
+    return new Promise<void>((resolve) => {
+      mediaRecorder.onstart = () => resolve();
+      mediaRecorder.start();
+    });
+  }, []);
+
+  const stopRecording = useCallback((): Promise<{ blob: Blob; durationMs: number }> => {
+    return new Promise((resolve, reject) => {
+      const mediaRecorder = mediaRecorderRef.current;
+      if (!mediaRecorder) {
+        reject(new Error("No recorder"));
+        return;
       }
-    }
-  };
 
-  // Handle send
-  const handleSend = () => {
-    if (state === "recording") {
-      // Stop and send immediately
-      stop().then((result) => {
-        if (result) {
-          onSend(result.blob, result.url, result.durationMs);
+      mediaRecorder.ondataavailable = async (e) => {
+        cleanup();
+
+        // Convert WebM to WAV for iOS compatibility
+        setState("converting");
+        try {
+          const result = await convertToWav(e.data);
+          console.log('[VoiceNoteRecorder] Converted WAV, actual duration (ms):', result.durationMs);
+          resolve(result);
+        } catch (err) {
+          console.error("WAV conversion failed, using original:", err);
+          // Fallback - use wall clock time as estimate
+          resolve({ blob: e.data, durationMs: finalDurationRef.current });
         }
-      });
-    } else if (recordedBlob) {
-      // Send the recorded blob
-      onSend(recordedBlob.blob, recordedBlob.url, recordedBlob.durationMs);
+      };
+
+      mediaRecorder.stop();
+    });
+  }, [cleanup]);
+
+  useEffect(() => {
+    const start = async () => {
+      setState("starting");
+      try {
+        await startRecording();
+        startTimeRef.current = Date.now();
+        setState("recording");
+
+        timerRef.current = setInterval(async () => {
+          const elapsed = Date.now() - startTimeRef.current;
+          setDurationMs(elapsed);
+
+          if (elapsed >= MAX_DURATION_MS) {
+            clearInterval(timerRef.current!);
+            timerRef.current = null;
+            const result = await stopRecording();
+            setAudioBlob(result.blob);
+            setAudioUrl(URL.createObjectURL(result.blob));
+            finalDurationRef.current = result.durationMs; // Use actual audio duration
+            setDurationMs(result.durationMs);
+            setState("stopped");
+          }
+        }, UPDATE_INTERVAL_MS);
+      } catch (error) {
+        console.error("Failed to start recording:", error);
+        onCancel();
+      }
+    };
+
+    start();
+    return () => cancelRef.current();
+  }, [startRecording, stopRecording, onCancel]);
+
+  const handleStop = async () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    const result = await stopRecording();
+    setAudioBlob(result.blob);
+    setAudioUrl(URL.createObjectURL(result.blob));
+    finalDurationRef.current = result.durationMs; // Use actual audio duration
+    setDurationMs(result.durationMs);
+    setState("stopped");
+  };
+
+  const handleSend = async () => {
+    if (state === "recording") {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      const result = await stopRecording();
+      const url = URL.createObjectURL(result.blob);
+      console.log('[VoiceNoteRecorder] Sending with actual duration (ms):', result.durationMs, 'which is', result.durationMs / 1000, 'seconds');
+      onSend(result.blob, url, result.durationMs);
+    } else if (audioBlob && audioUrl) {
+      console.log('[VoiceNoteRecorder] Sending stopped recording with finalDuration (ms):', finalDurationRef.current, 'which is', finalDurationRef.current / 1000, 'seconds');
+      onSend(audioBlob, audioUrl, finalDurationRef.current);
     }
   };
 
-  // Handle cancel/trash
   const handleCancel = () => {
-    if (audioElement) {
-      audioElement.pause();
-      audioElement.src = '';
-    }
     cancel();
     onCancel();
   };
 
-  // Handle playback toggle
-  const handlePlaybackToggle = () => {
-    if (!recordedBlob) return;
+  const handleRedo = async () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    cleanup();
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    setAudioUrl(null);
+    setAudioBlob(null);
+    setDurationMs(0);
+    setState("starting");
 
-    if (!audioElement) {
-      const audio = new Audio(recordedBlob.url);
-      audio.onended = () => {
-        setIsPlaying(false);
-        setPlaybackProgress(0);
-      };
+    try {
+      await startRecording();
+      startTimeRef.current = Date.now();
+      setState("recording");
 
-      // Track playback progress
-      audio.ontimeupdate = () => {
-        if (audio.duration) {
-          setPlaybackProgress(audio.currentTime / audio.duration);
+      timerRef.current = setInterval(async () => {
+        const elapsed = Date.now() - startTimeRef.current;
+        setDurationMs(elapsed);
+
+        if (elapsed >= MAX_DURATION_MS) {
+          clearInterval(timerRef.current!);
+          timerRef.current = null;
+          const result = await stopRecording();
+          setAudioBlob(result.blob);
+          setAudioUrl(URL.createObjectURL(result.blob));
+          finalDurationRef.current = result.durationMs; // Use actual audio duration
+          setDurationMs(result.durationMs);
+          setState("stopped");
         }
-      };
-
-      setAudioElement(audio);
-      audio.play();
-      setIsPlaying(true);
-    } else {
-      if (isPlaying) {
-        audioElement.pause();
-        setIsPlaying(false);
-      } else {
-        audioElement.play();
-        setIsPlaying(true);
-      }
+      }, UPDATE_INTERVAL_MS);
+    } catch (error) {
+      console.error("Failed to restart recording:", error);
     }
   };
+
+  const progressPercentage = Math.min(100, (durationMs / MAX_DURATION_MS) * 100);
 
   return (
     <div className="px-4 py-2 flex-shrink-0 border-t border-border">
       <div className="bg-sidebar rounded-lg border border-input p-2">
-        {/* Top row: Time pill and Waveform */}
-        <div className="relative mb-2 h-[32px] overflow-hidden">
-          {/* Waveform - scrolls behind timer */}
-          <div className="absolute inset-0 flex items-center">
-            {state === "recording" && stream ? (
-              // Real-time waveform using custom LiveWaveform
-              <div className="flex items-center justify-center w-full h-full overflow-hidden">
-                <LiveWaveform
-                  stream={stream}
-                  barColor="hsl(var(--primary))"
-                  height={32}
-                />
-              </div>
-            ) : isLoadingWaveform ? (
-              // Loading spinner
-              <div className="flex items-center justify-center w-full h-full">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              </div>
-            ) : peaks.length > 0 ? (
-              // Show waveform after recording with playback progress
-              <div className="w-full h-full flex items-center relative">
-                {/* Base waveform (visible gray) */}
-                <div className="flex items-center gap-0.5 w-full h-full">
-                  {peaks.map((peak, i) => {
-                    const height = Math.max(3, peak * 20);
-                    return (
-                      <div
-                        key={i}
-                        className="flex-1 bg-muted-foreground/30 rounded-full"
-                        style={{
-                          height: `${height}px`,
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-
-                {/* Progress overlay (primary color, fills left to right) */}
-                {playbackProgress > 0 && (
-                  <div
-                    className="absolute inset-0 overflow-hidden flex items-center"
-                    style={{ width: `${playbackProgress * 100}%` }}
-                  >
-                    <div className="flex items-center gap-0.5 w-full h-full">
-                      {peaks.map((peak, i) => {
-                        const height = Math.max(3, peak * 20);
-                        return (
-                          <div
-                            key={i}
-                            className="flex-1 bg-primary rounded-full"
-                            style={{
-                              height: `${height}px`,
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : null}
-          </div>
-
-          {/* Time pill - sits on top with gradient fade on left */}
-          <div className="absolute left-0 top-0 bottom-0 flex items-center z-10">
-            <div
-              className="px-3 py-1 rounded-full flex items-center"
-              style={{
-                background: 'linear-gradient(to right, hsl(var(--sidebar)) 70%, transparent)',
-                minWidth: '80px',
-              }}
-            >
-              <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">
-                {formatDuration(recordedBlob?.durationMs ?? durationMs)}
-              </span>
+        <div className={`${state === "stopped" ? "" : "flex items-center gap-3 h-[32px]"}`}>
+          {state === "starting" || state === "converting" ? (
+            <div className="flex items-center justify-center w-full gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              {state === "converting" && (
+                <span className="text-xs text-muted-foreground">Converting...</span>
+              )}
             </div>
-          </div>
+          ) : state === "recording" ? (
+            <>
+              <span className="text-xs font-mono text-muted-foreground whitespace-nowrap flex-shrink-0">
+                {formatDuration(durationMs)} / {formatDuration(MAX_DURATION_MS)}
+              </span>
+              <div className="flex-1 h-full overflow-hidden relative">
+                <div className="flex items-center h-full">
+                  <div className="flex-1 h-1.5 bg-muted-foreground/20 rounded-full">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all duration-75"
+                      style={{ width: `${progressPercentage}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : audioUrl ? (
+            <audio controls src={audioUrl} className="w-full h-10" style={{ colorScheme: "dark" }} />
+          ) : null}
         </div>
 
-        {/* Bottom row: Controls */}
-        <div className="flex items-center justify-between gap-2">
-          {/* Trash/Delete button */}
+        <div className="flex items-center justify-between gap-2 h-9 mt-1">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             onClick={handleCancel}
+            disabled={state === "starting" || state === "converting"}
             className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
             aria-label="Cancel recording"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
 
-          {/* Middle: Stop/Play button */}
           <div className="flex-1 flex items-center justify-center">
             {state === "recording" ? (
-              <button
-                type="button"
-                onClick={handleStop}
-                className="h-5 w-5 bg-destructive hover:bg-destructive/90 rounded flex-shrink-0"
-                aria-label="Stop recording"
-              />
-            ) : recordedBlob && !isLoadingWaveform ? (
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                onClick={handlePlaybackToggle}
-                className="h-9 w-9 rounded-full flex-shrink-0"
-                aria-label={isPlaying ? "Pause" : "Play"}
+                onClick={handleStop}
+                className="h-8 w-8 rounded-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                aria-label="Stop recording"
               >
-                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                <CircleStop className="h-7 w-7" />
+              </Button>
+            ) : state === "stopped" ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleRedo}
+                className="h-8 w-8 rounded-full"
+                aria-label="Re-record"
+              >
+                <RotateCcw className="h-4 w-4" />
               </Button>
             ) : null}
           </div>
 
-          {/* Send button */}
           <Button
             type="button"
             onClick={handleSend}
+            disabled={state === "starting" || state === "converting"}
             className="h-7 w-7 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground p-0 flex-shrink-0"
             aria-label="Send voice note"
           >
-            <Send className="h-3.5 w-3.5" />
+            <ArrowUp className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>

@@ -189,7 +189,7 @@ export const coachMessagingController = {
                     *,
                     attachments:message_attachments(*),
                     reactions:message_reactions(*),
-                    parent_message:messages!parent_message_id(id, content, message_type, sender_id, sent_at, is_deleted)
+                    parent_message:messages!parent_message_id(id, content, message_type, sender_id, sent_at, is_deleted, attachments:message_attachments(*))
                 `,
                 )
                 .eq('conversation_id', conversationId)
@@ -225,7 +225,9 @@ export const coachMessagingController = {
             return;
         }
 
-        const { conversationId, content, messageType = 'text', parentMessageId } = req.body;
+        const { conversationId, content, messageType = 'text', parentMessageId, attachmentCount } = req.body;
+
+        console.log('[sendMessage] attachmentCount from body:', attachmentCount);
 
         if (!conversationId) {
             badRequest(res, { message: 'Conversation ID is required' });
@@ -258,8 +260,14 @@ export const coachMessagingController = {
                     message_type: messageType,
                     parent_message_id: parentMessageId,
                     status: 'sent',
+                    attachment_count: attachmentCount || 0,
                 })
-                .select()
+                .select(`
+                    *,
+                    attachments:message_attachments(*),
+                    reactions:message_reactions(*),
+                    parent_message:messages!parent_message_id(id, content, message_type, sender_id, sent_at, is_deleted, attachments:message_attachments(*))
+                `)
                 .single();
 
             if (error) throw error;
