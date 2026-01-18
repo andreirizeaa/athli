@@ -21,13 +21,10 @@ import {
     DropdownMenuItem,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
+    DropdownMenuSub,
+    DropdownMenuSubTrigger,
+    DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { cn } from '@/lib/general/utils';
 import { type Message, type Contact } from '@/components/app/app-shell';
 import { MessageReactionsDisplay } from './message-reactions-display';
@@ -76,7 +73,6 @@ export const MessageList = React.memo(function MessageList({
     isClientPanelOpen = false,
 }: MessageListProps) {
     const t = useTranslations();
-    const [emojiPickerMessageId, setEmojiPickerMessageId] = React.useState<string | null>(null);
 
     const formatTime = (timestamp: string) => {
         // Extract just the time portion (HH:MM)
@@ -277,11 +273,41 @@ export const MessageList = React.memo(function MessageList({
                                                     {t('messages.reply')}
                                                 </DropdownMenuItem>
 
-                                                {/* React menu item - opens dialog on click */}
-                                                <DropdownMenuItem onClick={() => setEmojiPickerMessageId(message.id)}>
-                                                    <Smile className="mr-2 h-4 w-4" />
-                                                    React
-                                                </DropdownMenuItem>
+                                                {/* React submenu */}
+                                                <DropdownMenuSub>
+                                                    <DropdownMenuSubTrigger>
+                                                        <Smile className="mr-2 h-4 w-4" />
+                                                        React
+                                                    </DropdownMenuSubTrigger>
+                                                    <DropdownMenuSubContent className="p-2">
+                                                        <div className="flex gap-1">
+                                                            {REACTION_EMOJIS.map((emoji) => {
+                                                                // Coach's reaction - if coach sent, they're sender; else recipient
+                                                                const coachReaction = message.isSent
+                                                                    ? message.senderReaction
+                                                                    : message.recipientReaction;
+                                                                // If clicking active emoji, remove it (pass empty); otherwise add/change
+                                                                const emojiToSend = coachReaction === emoji ? '' : emoji;
+                                                                return (
+                                                                    <DropdownMenuItem
+                                                                        key={emoji}
+                                                                        onSelect={() => handleReactionSelect(message.id, emojiToSend)}
+                                                                        className={cn(
+                                                                            'flex items-center justify-center p-0',
+                                                                            'h-10 w-10 rounded-lg',
+                                                                            'hover:bg-muted transition-colors',
+                                                                            'active:scale-95 transition-transform',
+                                                                            'text-2xl leading-none cursor-pointer',
+                                                                            coachReaction === emoji && 'bg-muted ring-2 ring-primary'
+                                                                        )}
+                                                                    >
+                                                                        {emoji}
+                                                                    </DropdownMenuItem>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </DropdownMenuSubContent>
+                                                </DropdownMenuSub>
 
                                                 {message.text && (
                                                     <DropdownMenuItem
@@ -344,6 +370,7 @@ export const MessageList = React.memo(function MessageList({
                                                 )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
+
                                     </div>
 
                                     {/* Main Message Bubble */}
@@ -521,7 +548,7 @@ export const MessageList = React.memo(function MessageList({
                                                 className={cn(
                                                     'h-7 w-7 rounded-full',
                                                     'bg-background border border-border shadow-sm',
-                                                    'hover:bg-muted'
+                                                    'hover:border-primary'
                                                 )}
                                             >
                                                 <Smile className="h-3.5 w-3.5" />
@@ -530,26 +557,29 @@ export const MessageList = React.memo(function MessageList({
                                         onSelectReaction={(emoji) =>
                                             handleReactionSelect(message.id, emoji)
                                         }
-                                        currentReaction={message.reaction}
+                                        currentReaction={
+                                            // Show coach's reaction - if coach sent, they're sender; else recipient
+                                            message.isSent
+                                                ? message.senderReaction
+                                                : message.recipientReaction
+                                        }
                                         align={message.isSent ? 'end' : 'start'}
                                         side="top"
                                     />
                                 </div>
                             </div>
 
-                            {/* Reactions display */}
-                            {message.reaction && (
+                            {/* Reactions display - shows both sender and recipient reactions */}
+                            {(message.senderReaction || message.recipientReaction) && (
                                 <MessageReactionsDisplay
                                     reaction={{
-                                        senderReaction: message.isSent ? message.reaction : undefined,
-                                        recipientReaction: !message.isSent
-                                            ? message.reaction
-                                            : undefined,
+                                        senderReaction: message.senderReaction,
+                                        recipientReaction: message.recipientReaction,
                                     }}
                                     isSent={message.isSent}
-                                    onPress={() => {
-                                        // Open reaction details or remove reaction
-                                        handleReactionSelect(message.id, '');
+                                    onReactionClick={(action, emoji) => {
+                                        // If removing, pass empty string; if adding, pass the emoji
+                                        handleReactionSelect(message.id, action === 'remove' ? '' : emoji);
                                     }}
                                 />
                             )}
@@ -560,30 +590,6 @@ export const MessageList = React.memo(function MessageList({
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Emoji Picker Dialog */}
-            <Dialog open={emojiPickerMessageId !== null} onOpenChange={(open) => !open && setEmojiPickerMessageId(null)}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Choose a Reaction</DialogTitle>
-                    </DialogHeader>
-                    <div className="flex gap-2 justify-center flex-wrap py-4">
-                        {REACTION_EMOJIS.map((emoji) => (
-                            <button
-                                key={emoji}
-                                onClick={() => {
-                                    if (emojiPickerMessageId) {
-                                        handleReactionSelect(emojiPickerMessageId, emoji);
-                                        setEmojiPickerMessageId(null);
-                                    }
-                                }}
-                                className="flex items-center justify-center h-12 w-12 rounded-lg hover:bg-muted transition-colors active:scale-95 transition-transform text-3xl"
-                            >
-                                {emoji}
-                            </button>
-                        ))}
-                    </div>
-                </DialogContent>
-            </Dialog>
         </ScrollArea>
     );
 });

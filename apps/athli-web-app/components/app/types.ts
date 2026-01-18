@@ -20,7 +20,10 @@ export type Message = {
   sentAt?: Date; // Full date for grouping messages by day
   isSent: boolean;
   isRead?: boolean;
-  reaction?: string;
+  reaction?: string; // Legacy - kept for backward compatibility
+  // Reactions - only 2 possible: coach reaction and client reaction
+  senderReaction?: string;
+  recipientReaction?: string;
   replyTo?: {
     id: string;
     text: string;

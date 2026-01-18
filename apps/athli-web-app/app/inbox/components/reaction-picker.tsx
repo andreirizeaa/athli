@@ -21,7 +21,13 @@ export function ReactionPicker({
   const [open, setOpen] = React.useState(false);
 
   const handleReactionSelect = (emoji: string) => {
-    onSelectReaction(emoji);
+    // If clicking the currently active emoji, remove it (pass empty string)
+    // Otherwise, add/change to the selected emoji
+    if (currentReaction === emoji) {
+      onSelectReaction('');
+    } else {
+      onSelectReaction(emoji);
+    }
     setOpen(false);
   };
 

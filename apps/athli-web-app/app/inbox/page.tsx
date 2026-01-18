@@ -276,9 +276,16 @@ const InboxPage = () => {
   // Optimistic messages state for instant UI feedback when sending
   const [optimisticMessages, setOptimisticMessages] = React.useState<OptimisticMessage[]>([]);
 
-  // Clear optimistic messages when switching conversations
+  // Optimistic reactions state for instant UI feedback when reacting
+  // Maps messageId -> { senderReaction, recipientReaction }
+  const [optimisticReactions, setOptimisticReactions] = React.useState<
+    Record<string, { senderReaction?: string; recipientReaction?: string }>
+  >({});
+
+  // Clear optimistic messages and reactions when switching conversations
   React.useEffect(() => {
     setOptimisticMessages([]);
+    setOptimisticReactions({});
   }, [selectedConversation?.id]);
 
   // Merge all 3 message sources: API + realtime + optimistic - transforms to UIMessage[]
@@ -732,9 +739,20 @@ const InboxPage = () => {
             }
           : undefined,
         reaction: msg.reactions?.[0]?.reaction,
+        // Extract sender and recipient reactions from reactions array
+        // senderReaction = reaction from the person who sent this message
+        // recipientReaction = reaction from the person who received this message
+        // Apply optimistic reactions if present (for instant UI feedback)
+        // Note: empty string '' means "no reaction" (deletion), so we use it directly
+        senderReaction: optimisticReactions[msg.id]?.senderReaction !== undefined
+          ? (optimisticReactions[msg.id].senderReaction === '' ? undefined : optimisticReactions[msg.id].senderReaction)
+          : msg.reactions?.find(r => r.user_id === msg.sender_id)?.reaction,
+        recipientReaction: optimisticReactions[msg.id]?.recipientReaction !== undefined
+          ? (optimisticReactions[msg.id].recipientReaction === '' ? undefined : optimisticReactions[msg.id].recipientReaction)
+          : msg.reactions?.find(r => r.user_id !== msg.sender_id)?.reaction,
       };
     });
-  }, [mergedMessages, attachmentUrlMap]);
+  }, [mergedMessages, attachmentUrlMap, optimisticReactions]);
 
   const filteredContacts = React.useMemo(() => {
     if (!searchQuery.trim()) return contacts;
@@ -1467,12 +1485,59 @@ const InboxPage = () => {
     }
   }, [selectedContactId, selectedConversation, user?.id, refetchMessages, queryClient]);
 
-  // Handle message reactions
+  // Handle message reactions with optimistic updates
   const handleReaction = React.useCallback(async (messageId: string, emoji: string) => {
-    if (!selectedConversation) {
-      console.error('No conversation selected');
+    if (!selectedConversation || !user?.id) {
+      console.error('No conversation or user selected');
       return;
     }
+
+    // Find the current message to determine sender/recipient
+    const currentMsg = mergedMessages.find(m => m.id === messageId);
+    if (!currentMsg) {
+      console.error('Message not found');
+      return;
+    }
+
+    // Determine if coach is sender or recipient of this message
+    const isCoachSender = currentMsg.isSent;
+
+    // Get current reactions (from optimistic state or API)
+    const currentSenderReaction = optimisticReactions[messageId]?.senderReaction !== undefined
+      ? optimisticReactions[messageId].senderReaction
+      : currentMsg.reactions?.find(r => r.user_id === currentMsg.sender_id)?.reaction;
+    const currentRecipientReaction = optimisticReactions[messageId]?.recipientReaction !== undefined
+      ? optimisticReactions[messageId].recipientReaction
+      : currentMsg.reactions?.find(r => r.user_id !== currentMsg.sender_id)?.reaction;
+
+    // Calculate new reaction state
+    let newSenderReaction = currentSenderReaction;
+    let newRecipientReaction = currentRecipientReaction;
+
+    if (emoji) {
+      // Adding a reaction - coach's reaction changes
+      if (isCoachSender) {
+        newSenderReaction = emoji;
+      } else {
+        newRecipientReaction = emoji;
+      }
+    } else {
+      // Removing a reaction - coach's reaction is cleared
+      if (isCoachSender) {
+        newSenderReaction = '';
+      } else {
+        newRecipientReaction = '';
+      }
+    }
+
+    // Apply optimistic update immediately
+    setOptimisticReactions(prev => ({
+      ...prev,
+      [messageId]: {
+        senderReaction: newSenderReaction,
+        recipientReaction: newRecipientReaction,
+      },
+    }));
 
     try {
       if (emoji) {
@@ -1487,12 +1552,30 @@ const InboxPage = () => {
         await removeReaction(messageId);
       }
 
-      // Reaction will update automatically via realtime subscription
+      // Refetch messages to get the updated reactions from the server
+      // This ensures we get the correct state even if realtime is delayed
+      await refetchMessages();
+
+      // Keep optimistic state for a bit longer after refetch to prevent
+      // stale realtime updates from causing flicker. The optimistic state
+      // will override any stale data during this window.
+      setTimeout(() => {
+        setOptimisticReactions(prev => {
+          const updated = { ...prev };
+          delete updated[messageId];
+          return updated;
+        });
+      }, 2000);
     } catch (error) {
       console.error('Failed to update reaction:', error);
-      // Optionally show toast error to user
+      // Revert optimistic update on error
+      setOptimisticReactions(prev => {
+        const updated = { ...prev };
+        delete updated[messageId];
+        return updated;
+      });
     }
-  }, [selectedConversation]);
+  }, [selectedConversation, user?.id, mergedMessages, optimisticReactions, refetchMessages]);
 
   const handleFileButtonClick = () => {
     fileInputRef.current?.click();
