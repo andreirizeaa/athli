@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { Trash2, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -15,25 +15,30 @@ const MAX_DURATION_MS = 120000; // 2 minutes
 const UPDATE_INTERVAL_MS = 50; // Update every 50ms for smooth progress
 
 function pickMimeType() {
-  const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
-  for (const t of candidates) {
-    if (typeof window !== "undefined" && window.MediaRecorder?.isTypeSupported?.(t)) return t;
-  }
-  return "";
+  if (typeof window === "undefined" || typeof MediaRecorder === "undefined") return "";
+  const candidates = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/mp4",
+  ];
+  return candidates.find((t) => MediaRecorder.isTypeSupported(t)) ?? "";
 }
 
 export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, onCancel }) => {
   const [state, setState] = useState<RecorderState>("idle");
   const [durationMs, setDurationMs] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
 
   // Refs
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
-  const recordingResultRef = useRef<{ blob: Blob; url: string; durationMs: number } | null>(null);
+  const finalDurationRef = useRef<number>(0);
+
+  const mimeType = useMemo(() => pickMimeType(), []);
 
   // Format duration as M:SS
   const formatDuration = (ms: number) => {
@@ -51,26 +56,31 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
       timerRef.current = null;
     }
 
-    // Stop media recorder
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+    // Stop recorder
+    if (recorderRef.current && recorderRef.current.state !== "inactive") {
       try {
-        mediaRecorderRef.current.stop();
+        recorderRef.current.stop();
       } catch (e) {
         // Ignore
       }
     }
-    mediaRecorderRef.current = null;
+    recorderRef.current = null;
 
     // Stop all tracks (releases microphone)
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
 
+    // Revoke URL
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+
     chunksRef.current = [];
-    recordingResultRef.current = null;
     setAudioUrl(null);
+    setAudioBlob(null);
     setState("idle");
     setDurationMs(0);
-  }, []);
+  }, [audioUrl]);
 
   const cancelRef = useRef(cancel);
   cancelRef.current = cancel;
@@ -87,43 +97,48 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
           },
         });
         streamRef.current = stream;
-
-        const mimeType = pickMimeType();
-        const options = mimeType ? { mimeType, audioBitsPerSecond: 128000 } : { audioBitsPerSecond: 128000 };
-        const mr = new MediaRecorder(stream, options);
-        mediaRecorderRef.current = mr;
-
         chunksRef.current = [];
-        mr.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+
+        const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+        recorderRef.current = recorder;
+
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            chunksRef.current.push(e.data);
+          }
         };
 
-        mr.onstop = () => {
-          const finalDuration = Date.now() - startTimeRef.current;
-          const blob = new Blob(chunksRef.current, { type: mr.mimeType || "audio/webm" });
-          const url = URL.createObjectURL(blob);
-          recordingResultRef.current = { blob, url, durationMs: finalDuration };
-          setDurationMs(finalDuration);
-          setAudioUrl(url);
+        recorder.onstop = () => {
+          const blob = new Blob(chunksRef.current, {
+            type: recorder.mimeType || mimeType || "audio/webm"
+          });
+          setAudioBlob(blob);
 
-          // Stop all tracks
+          const url = URL.createObjectURL(blob);
+          setAudioUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return url;
+          });
+
+          // Stop mic
           streamRef.current?.getTracks().forEach((t) => t.stop());
           streamRef.current = null;
 
           setState("stopped");
         };
 
+        recorder.start();
         startTimeRef.current = Date.now();
-        mr.start(250);
         setState("recording");
 
-        // Duration timer - update frequently for smooth progress
+        // Duration timer
         timerRef.current = setInterval(() => {
           const elapsed = Date.now() - startTimeRef.current;
           setDurationMs(elapsed);
+          finalDurationRef.current = elapsed;
 
           if (elapsed >= MAX_DURATION_MS) {
-            mr.stop();
+            recorder.stop();
             if (timerRef.current) {
               clearInterval(timerRef.current);
               timerRef.current = null;
@@ -141,7 +156,7 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
     return () => {
       cancelRef.current();
     };
-  }, [onCancel]);
+  }, [mimeType, onCancel]);
 
   // Handle stop recording
   const handleStop = () => {
@@ -149,8 +164,11 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
+    finalDurationRef.current = Date.now() - startTimeRef.current;
+    setDurationMs(finalDurationRef.current);
+
+    if (recorderRef.current && recorderRef.current.state !== "inactive") {
+      recorderRef.current.stop();
     }
   };
 
@@ -162,19 +180,29 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        const mr = mediaRecorderRef.current;
-        mr.onstop = () => {
-          const finalDuration = Date.now() - startTimeRef.current;
-          const blob = new Blob(chunksRef.current, { type: mr.mimeType || "audio/webm" });
+      const duration = Date.now() - startTimeRef.current;
+
+      if (recorderRef.current && recorderRef.current.state !== "inactive") {
+        const recorder = recorderRef.current;
+
+        // Override onstop to send immediately
+        recorder.onstop = () => {
+          const blob = new Blob(chunksRef.current, {
+            type: recorder.mimeType || mimeType || "audio/webm"
+          });
           const url = URL.createObjectURL(blob);
-          onSend(blob, url, finalDuration);
+
+          // Stop mic
+          streamRef.current?.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
+
+          onSend(blob, url, duration);
         };
-        mr.stop();
+
+        recorder.stop();
       }
-    } else if (recordingResultRef.current) {
-      const { blob, url, durationMs } = recordingResultRef.current;
-      onSend(blob, url, durationMs);
+    } else if (audioBlob && audioUrl) {
+      onSend(audioBlob, audioUrl, finalDurationRef.current);
     }
   };
 
