@@ -48,6 +48,17 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
+  // Helper to fully release the microphone stream
+  const releaseStream = useCallback(() => {
+    if (streamRef.current) {
+      // Stop all tracks to release the microphone
+      streamRef.current.getTracks().forEach((track) => {
+        track.stop();
+      });
+      streamRef.current = null;
+    }
+  }, []);
+
   // Cancel function
   const cancel = useCallback(() => {
     // Clear timer
@@ -66,9 +77,8 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
     }
     recorderRef.current = null;
 
-    // Stop all tracks (releases microphone)
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
+    // Release microphone stream
+    releaseStream();
 
     // Revoke URL
     if (audioUrl) {
@@ -80,7 +90,7 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
     setAudioBlob(null);
     setState("idle");
     setDurationMs(0);
-  }, [audioUrl]);
+  }, [audioUrl, releaseStream]);
 
   const cancelRef = useRef(cancel);
   cancelRef.current = cancel;
@@ -120,9 +130,15 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
             return url;
           });
 
-          // Stop mic
-          streamRef.current?.getTracks().forEach((t) => t.stop());
-          streamRef.current = null;
+          // Fully release the microphone - stop all tracks
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => {
+              track.stop();
+            });
+            streamRef.current = null;
+          }
+          // Also clear recorder reference
+          recorderRef.current = null;
 
           setState("stopped");
         };
@@ -192,9 +208,15 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
           });
           const url = URL.createObjectURL(blob);
 
-          // Stop mic
-          streamRef.current?.getTracks().forEach((t) => t.stop());
-          streamRef.current = null;
+          // Fully release the microphone - stop all tracks
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => {
+              track.stop();
+            });
+            streamRef.current = null;
+          }
+          // Also clear recorder reference
+          recorderRef.current = null;
 
           onSend(blob, url, duration);
         };

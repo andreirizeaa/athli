@@ -158,6 +158,18 @@ export const MessageList = React.memo(function MessageList({
         navigator.clipboard.writeText(text);
     };
 
+    // Check if a message has only audio attachments (no text, no other attachment types)
+    const isAudioOnlyMessage = (message: Message): boolean => {
+        const attachments = (message as any).attachments;
+        if (!attachments || attachments.length === 0) return false;
+        if (message.text?.trim()) return false;
+        return attachments.every((a: any) =>
+            a.attachmentType === 'audio' ||
+            a.type?.startsWith('audio/') ||
+            a.mime_type?.startsWith('audio/')
+        );
+    };
+
     return (
         <ScrollArea className="flex-1 min-h-0">
             <div className="flex flex-col px-4 pt-2 pb-4">
@@ -190,6 +202,8 @@ export const MessageList = React.memo(function MessageList({
                         !isSameDay(previousMessage.sentAt, message.sentAt)
                     );
 
+                    const audioOnly = isAudioOnlyMessage(message);
+
                     return (
                         <React.Fragment key={message.id}>
                             {/* Date Divider Pill */}
@@ -208,7 +222,13 @@ export const MessageList = React.memo(function MessageList({
                                 )}
                             >
                             <div className={cn('flex items-center gap-2 group w-full', message.isSent && 'flex-row-reverse')}>
-                                <div className={cn('relative w-fit', isClientPanelOpen ? 'max-w-[60%]' : 'max-w-[50%]')}>
+                                <div className={cn(
+                                    'relative',
+                                    // Audio-only messages use full width, others use w-fit
+                                    audioOnly
+                                        ? (isClientPanelOpen ? 'w-[60%]' : 'w-[50%]')
+                                        : cn('w-fit', isClientPanelOpen ? 'max-w-[60%]' : 'max-w-[50%]')
+                                )}>
                                     {/* WhatsApp-style dropdown button - positioned outside bubble to avoid overflow clipping */}
                                     <div
                                         className={cn(
@@ -313,7 +333,9 @@ export const MessageList = React.memo(function MessageList({
                                     {/* Main Message Bubble */}
                                     <div
                                         className={cn(
-                                            'rounded-[11px] px-3 py-1.5 relative w-fit max-w-full',
+                                            'rounded-[11px] px-3 py-1.5 relative max-w-full',
+                                            // Audio-only messages use full width, others use w-fit
+                                            audioOnly ? 'w-full' : 'w-fit',
                                             message.isSent
                                                 ? 'bg-primary text-primary-foreground'
                                                 : 'bg-sidebar text-foreground',
@@ -526,7 +548,7 @@ export const MessageList = React.memo(function MessageList({
                                         </p>
                                     )}
 
-                                    {/* Timestamp and read receipt (always shown) */}
+                                    {/* Timestamp and read receipt (always shown inside bubble) */}
                                     <div className="flex items-center justify-end gap-0.5 mt-0.5">
                                         <span
                                             className={cn(
