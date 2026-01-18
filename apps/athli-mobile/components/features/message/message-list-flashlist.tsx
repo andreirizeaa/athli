@@ -31,58 +31,32 @@ import { type DropdownMenuOption, ContextMenuWrapper } from '@/components/ui/dro
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { MessageReplyPreview } from '@/components/features/message/message-reply-preview';
-import { MessageDocumentPreview } from '@/components/features/message/message-document-preview';
-import { MessageImagePreview } from '@/components/features/message/message-image-preview';
-import { MessageVideoPreview } from '@/components/features/message/message-video-preview';
+import { MessageAttachmentGrid } from '@/components/features/message/message-attachment-grid';
 import { MessageAudioPreview } from '@/components/features/message/message-audio-preview';
 import { useColorScheme, useThemePreference } from '@/stores';
+import { useAttachmentUrls, getAttachmentDisplayUrl } from '@/hooks/use-attachment-urls';
 
 // Type for attachment with optional local_uri for optimistic messages
 type AttachmentWithLocalUri = MessageAttachment & { local_uri?: string };
 
-// Supabase storage URL base
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+// Type for URL map from useAttachmentUrls hook
+type AttachmentUrlMap = { [attachmentId: string]: string };
 
-// Get the display URI for an attachment (local_uri for optimistic, or construct from file_path)
-const getAttachmentUri = (attachment: AttachmentWithLocalUri): string => {
+// Get the display URI for an attachment using the URL map
+const getAttachmentUri = (attachment: AttachmentWithLocalUri, urlMap: AttachmentUrlMap): string => {
   // For optimistic messages, use local_uri
   if (attachment.local_uri) return attachment.local_uri;
-  // For real messages, construct public URL from storage
-  if (attachment.file_path) {
-    const bucketId = attachment.bucket_id || 'message_attachments';
-    return `${SUPABASE_URL}/storage/v1/object/public/${bucketId}/${attachment.file_path}`;
-  }
-  return '';
+  // For real messages, use signed URL from map
+  return getAttachmentDisplayUrl(attachment, urlMap);
 };
 
-// Helper functions to extract attachments by type with proper URI
-const getImageAttachments = (msg: UIMessage): Array<AttachmentWithLocalUri & { uri: string }> =>
-  (msg.attachments?.filter(a => a.mime_type?.startsWith('image/')) ?? []).map(a => ({
-    ...a,
-    uri: getAttachmentUri(a as AttachmentWithLocalUri),
-  }));
-
-const getVideoAttachment = (msg: UIMessage): (AttachmentWithLocalUri & { uri: string }) | undefined => {
-  const attachment = msg.attachments?.find(a => a.mime_type?.startsWith('video/'));
-  if (!attachment) return undefined;
-  return { ...attachment, uri: getAttachmentUri(attachment as AttachmentWithLocalUri) };
-};
-
-const getAudioAttachment = (msg: UIMessage): (AttachmentWithLocalUri & { uri: string }) | undefined => {
+// Helper to extract audio attachment (rendered separately, full-width)
+const getAudioAttachment = (msg: UIMessage, urlMap: AttachmentUrlMap): (AttachmentWithLocalUri & { uri: string }) | undefined => {
   const attachment = msg.attachments?.find(a => a.mime_type?.startsWith('audio/'));
   if (!attachment) return undefined;
-  return { ...attachment, uri: getAttachmentUri(attachment as AttachmentWithLocalUri) };
-};
-
-const getDocumentAttachment = (msg: UIMessage): (AttachmentWithLocalUri & { uri: string }) | undefined => {
-  const attachment = msg.attachments?.find(a =>
-    a.mime_type &&
-    !a.mime_type.startsWith('image/') &&
-    !a.mime_type.startsWith('video/') &&
-    !a.mime_type.startsWith('audio/')
-  );
-  if (!attachment) return undefined;
-  return { ...attachment, uri: getAttachmentUri(attachment as AttachmentWithLocalUri) };
+  const uri = getAttachmentUri(attachment as AttachmentWithLocalUri, urlMap);
+  if (!uri) return undefined; // Don't return if URI not yet available
+  return { ...attachment, uri };
 };
 
 // Helper to get user's reaction from reactions array
@@ -92,6 +66,21 @@ const getUserReaction = (msg: UIMessage, isSender: boolean, currentUserId?: stri
     isSender ? r.user_id === msg.sender_id : r.user_id !== msg.sender_id
   );
   return userReaction?.reaction;
+};
+
+// Helper to calculate pending attachments count (expected - actual loaded)
+const getPendingAttachmentsCount = (msg: UIMessage, urlMap: AttachmentUrlMap): number => {
+  const expectedCount = msg.attachment_count || 0;
+  if (expectedCount === 0) return 0;
+
+  // Count attachments that have a valid displayable URI
+  const readyCount = msg.attachments?.filter((a) => {
+    const hasLocalUri = (a as AttachmentWithLocalUri).local_uri;
+    const hasSignedUrl = urlMap[a.id];
+    return hasLocalUri || hasSignedUrl;
+  }).length || 0;
+
+  return Math.max(0, expectedCount - readyCount);
 };
 
 /**
@@ -166,6 +155,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
   onImagePress,
   onVideoPress,
   flashOpacity,
+  attachmentUrlMap,
 }: {
   item: UIMessage;
   themeColors: ThemeColors;
@@ -180,6 +170,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
   onImagePress?: (images: any[], senderName: string, isSent: boolean, messageTimestamp?: Date | string) => void;
   onVideoPress?: (video: any, senderName: string, isSent: boolean, messageTimestamp?: Date | string) => void;
   flashOpacity?: Animated.Value;
+  attachmentUrlMap: AttachmentUrlMap;
 }) {
   const [metaWidth, setMetaWidth] = useState(44);  // Typical meta width - prevents flicker
   const [spaceWidth, setSpaceWidth] = useState(4); // Typical NBSP width - prevents flicker
@@ -212,11 +203,22 @@ const BubbleMeta = React.memo(function BubbleMeta({
     return NBSP + NBSP.repeat(Math.max(4, count));
   }, [metaWidth, spaceWidth]);
 
-  // Extract attachments using helper functions
-  const images = getImageAttachments(item);
-  const video = getVideoAttachment(item);
-  const audio = getAudioAttachment(item);
-  const document = getDocumentAttachment(item);
+  // Extract audio attachments separately (rendered full-width)
+  const audio = getAudioAttachment(item, attachmentUrlMap);
+
+  // Extract all non-audio attachments for the unified grid
+  const gridAttachments = (item.attachments || [])
+    .filter(a => !a.mime_type?.startsWith('audio/'))
+    .map(a => ({
+      id: a.id,
+      uri: getAttachmentUri(a as AttachmentWithLocalUri, attachmentUrlMap),
+      mime_type: a.mime_type,
+      filename: a.filename,
+    }))
+    .filter(a => a.uri); // Only include attachments with valid URIs
+
+  // Calculate pending attachments (expected but not yet loaded)
+  const pendingAttachmentsCount = getPendingAttachmentsCount(item, attachmentUrlMap);
 
   const bubbleStyle = [
     styles.messageBubble,
@@ -225,8 +227,10 @@ const BubbleMeta = React.memo(function BubbleMeta({
       : { backgroundColor: recipientBackgroundColor },
     isLastInSenderRun && item.isSent && styles.messageBubbleTailRight,
     isLastInSenderRun && !item.isSent && styles.messageBubbleTailLeft,
-    // Make bubble full width when it contains a document or is a reply
-    ...(document || item.replyTo || audio ? [styles.messageBubbleFullWidth] : []),
+    // Make bubble full width when it contains audio
+    ...(audio ? [styles.messageBubbleFullWidth] : []),
+    // Ensure reply bubbles have min width to fit reply preview
+    ...(originalMessage ? [styles.messageBubbleWithReply] : []),
   ];
 
   const baseTextColor = item.isSent ? themeColors.primaryForeground : themeColors.text;
@@ -265,55 +269,33 @@ const BubbleMeta = React.memo(function BubbleMeta({
           onPress={() => {
             onReplyPreviewPress?.(originalMessage.id);
           }}
+          attachmentUrlMap={attachmentUrlMap}
         />
       )}
 
-      {/* Image preview if this message has images */}
-      {images.length > 0 && onImagePress && (
-        <MessageImagePreview
-          images={images as any}
+      {/* Unified attachment grid (images, videos, documents, loading skeletons) */}
+      {(gridAttachments.length > 0 || pendingAttachmentsCount > 0) && (
+        <MessageAttachmentGrid
+          attachments={gridAttachments}
+          pendingCount={pendingAttachmentsCount}
           themeColors={themeColors}
           parentBackgroundColor={
             item.isSent ? themeColors.primary : recipientBackgroundColor
           }
           isParentSent={item.isSent}
-          onPress={() => {
-            onImagePress(images, clientName, item.isSent, item.sent_at);
+          onImagePress={(images, index) => {
+            onImagePress?.(images, clientName, item.isSent, item.sent_at);
+          }}
+          onVideoPress={(video) => {
+            onVideoPress?.(video, clientName, item.isSent, item.sent_at);
+          }}
+          onDocumentPress={(doc) => {
+            onDocumentPress?.(doc);
           }}
         />
       )}
 
-      {/* Video preview if this message has a video */}
-      {video && onVideoPress && (
-        <MessageVideoPreview
-          video={video as any}
-          themeColors={themeColors}
-          parentBackgroundColor={
-            item.isSent ? themeColors.primary : recipientBackgroundColor
-          }
-          isParentSent={item.isSent}
-          onPress={() => {
-            onVideoPress(video, clientName, item.isSent, item.sent_at);
-          }}
-        />
-      )}
-
-      {/* Document preview if this message has a document */}
-      {document && onDocumentPress && (
-        <MessageDocumentPreview
-          document={document as any}
-          themeColors={themeColors}
-          parentBackgroundColor={
-            item.isSent ? themeColors.primary : recipientBackgroundColor
-          }
-          isParentSent={item.isSent}
-          onPress={() => {
-            onDocumentPress(document);
-          }}
-        />
-      )}
-
-      {/* Audio preview if this message has audio */}
+      {/* Audio preview if this message has audio (rendered separately, full-width) */}
       {audio && (
         <MessageAudioPreview
           audio={audio as any}
@@ -338,6 +320,9 @@ const BubbleMeta = React.memo(function BubbleMeta({
           <Text style={styles.metaSpacer}>{metaSpacer}</Text>
         </Animated.Text>
       )}
+
+      {/* Fallback spacer for non-text messages (reply-only, media-only) */}
+      {!item.text && <Text style={styles.metaSpacer}>{metaSpacer}</Text>}
 
       {/* Actual meta pinned bottom-right */}
       <View
@@ -439,8 +424,8 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
   };
 
   const panGesture = Gesture.Pan()
-    .activeOffsetX(alignRight ? [10, 999] : [-999, -10])
-    .failOffsetY([-15, 15])
+    .activeOffsetX(alignRight ? 20 : -20)
+    .failOffsetY([-10, 10])
     .onStart(() => {
       'worklet';
       hapticFiredRef.current = false;
@@ -608,6 +593,36 @@ export const MessageList = React.memo(function MessageList({
   const messageRefs = useRef<Record<string, View>>({});
   const containerRef = useRef<View>(null);
   const flashAnimations = useRef<Record<string, Animated.Value>>({});
+
+  // Collect all attachments that need signed URLs (skip optimistic with local_uri)
+  const attachmentsNeedingUrls = useMemo(() => {
+    const allAttachments: AttachmentWithLocalUri[] = [];
+    for (const msg of localMessages) {
+      if (msg.attachments) {
+        for (const att of msg.attachments) {
+          // Skip optimistic attachments (have local_uri)
+          if ((att as AttachmentWithLocalUri).local_uri) continue;
+          // Only include if has file_path (needs URL generation)
+          if (att.file_path) {
+            allAttachments.push(att as AttachmentWithLocalUri);
+          }
+        }
+      }
+      // Also check reply-to attachments for reply previews
+      if (msg.replyTo?.attachments) {
+        for (const att of msg.replyTo.attachments) {
+          if ((att as AttachmentWithLocalUri).local_uri) continue;
+          if (att.file_path) {
+            allAttachments.push(att as AttachmentWithLocalUri);
+          }
+        }
+      }
+    }
+    return allAttachments;
+  }, [localMessages]);
+
+  // Generate signed URLs for attachments
+  const attachmentUrlMap = useAttachmentUrls(attachmentsNeedingUrls);
 
   // Update local messages when prop changes
   useEffect(() => {
@@ -961,10 +976,10 @@ export const MessageList = React.memo(function MessageList({
   const scrollToBottom = (animated = false) => {
     if (data.length === 0) return;
 
-    // Small delay to ensure FlashList has rendered
+    // Delay to ensure FlashList has rendered
     setTimeout(() => {
       listRef.current?.scrollToEnd({ animated });
-    }, 50);
+    }, 100);
   };
 
   // Single init gate to prevent multiple scroll calls on mount
@@ -1125,6 +1140,7 @@ export const MessageList = React.memo(function MessageList({
               onImagePress={onImagePress}
               onVideoPress={onVideoPress}
               flashOpacity={flashAnimations.current[item.id]}
+              attachmentUrlMap={attachmentUrlMap}
             />
           </SwipeToReplyBubble>
 
@@ -1193,6 +1209,8 @@ export const MessageList = React.memo(function MessageList({
         <FlashList
           ref={listRef}
           data={data}
+          extraData={attachmentUrlMap}
+          initialScrollIndex={data.length > 0 ? data.length - 1 : undefined}
           keyExtractor={(m) => m.id}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
@@ -1284,6 +1302,9 @@ const styles = StyleSheet.create({
   },
   messageBubbleFullWidth: {
     maxWidth: '100%',
+  },
+  messageBubbleWithReply: {
+    minWidth: '65%',
   },
   messageBubbleTailRight: { borderBottomRightRadius: 2 },
   messageBubbleTailLeft: { borderBottomLeftRadius: 2 },

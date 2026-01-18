@@ -37,6 +37,42 @@ import { MessageReplyPreview } from './message-reply-preview';
 import type { AttachmentType } from './message-input-context';
 import { REACTION_EMOJIS } from '@athli/shared-types';
 
+// Loading skeleton for pending attachments
+const AttachmentLoadingSkeleton: React.FC<{
+    count: number;
+    isSent: boolean;
+}> = ({ count, isSent }) => {
+    if (count <= 0) return null;
+
+    return (
+        <div className="flex flex-wrap gap-2 mb-2">
+            {Array.from({ length: count }).map((_, index) => (
+                <div
+                    key={`skeleton-${index}`}
+                    className={cn(
+                        "w-[200px] h-[150px] rounded-lg animate-pulse flex items-center justify-center",
+                        isSent ? "bg-white/20" : "bg-muted"
+                    )}
+                >
+                    <span className={cn(
+                        "text-xs",
+                        isSent ? "text-white/50" : "text-muted-foreground"
+                    )}>
+                        Loading...
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+// Helper to calculate pending attachments count
+const getPendingAttachmentsCount = (message: Message): number => {
+    const expectedCount = (message as any).attachment_count || 0;
+    const actualCount = (message as any).attachments?.length || 0;
+    return Math.max(0, expectedCount - actualCount);
+};
+
 interface MessageListProps {
     messages: Message[];
     selectedContact: Contact | null;
@@ -438,6 +474,12 @@ export const MessageList = React.memo(function MessageList({
                                             }}
                                         />
                                     )}
+
+                                    {/* Loading skeletons for pending attachments */}
+                                    <AttachmentLoadingSkeleton
+                                        count={getPendingAttachmentsCount(message)}
+                                        isSent={message.isSent}
+                                    />
 
                                     {/* PDF Document (legacy - for backward compatibility) */}
                                     {message.pdf && !(message as any).attachments && (

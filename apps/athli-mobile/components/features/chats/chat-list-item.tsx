@@ -15,6 +15,7 @@ import { type Chat } from '@/services/chats-service';
 type ChatListItemProps = {
   chat: Chat;
   onPress: (chatId: string) => void | Promise<void>;
+  onPressIn?: (chatId: string) => void;
   isEditMode?: boolean;
   isSelected?: boolean;
   onViewProfile?: (clientId: string) => void;
@@ -60,6 +61,7 @@ const formatMessageTime = (date: Date | null | undefined): string => {
 export const ChatListItem = ({
   chat,
   onPress,
+  onPressIn,
   isEditMode = false,
   isSelected = false,
   onViewProfile,
@@ -78,6 +80,10 @@ export const ChatListItem = ({
 
   const handlePress = () => {
     onPress(chat.id);
+  };
+
+  const handlePressIn = () => {
+    onPressIn?.(chat.id);
   };
 
 
@@ -162,6 +168,7 @@ export const ChatListItem = ({
         <ContextMenuWrapper options={dropdownOptions}>
           <PressableScale
             onPress={handlePress}
+            onPressIn={handlePressIn}
             style={[
               styles.rowWrapper,
               { backgroundColor: themeColors.backgroundPrimary }

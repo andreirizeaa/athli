@@ -1,206 +1,207 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import {
-  Animated,
-  Dimensions,
   Modal,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X } from 'lucide-react-native';
+import { Image } from 'expo-image';
 
-import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/stores';
-import { PlatformIcon } from '@/components/ui/platform-icon';
-import { IconButton } from '@/components/ui/icon-button';
+import { typography } from '@/constants/typography';
+import { useThemePreference, useTranslations } from '@/stores';
 import { removeReaction } from '@/services/chats-service';
+import type { UIMessage, MessageReaction } from '@athli/shared-types';
+
+interface ReactionUser {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  reaction: string;
+  isCurrentUser: boolean;
+}
 
 interface MessageReactionsSheetProps {
   visible: boolean;
   onClose: () => void;
-  message: any | null;
-  onReactionRemoved?: (messageId: string, isSender: boolean) => void;
+  message: UIMessage | null;
+  currentUserId?: string;
+  /** Name of the other user (client for coach view, coach for client view) */
+  otherUserName?: string;
+  /** Avatar URL of the other user */
+  otherUserAvatarUrl?: string;
+  /** Current user's name */
+  currentUserName?: string;
+  /** Current user's avatar URL */
+  currentUserAvatarUrl?: string;
+  onReactionRemoved?: (messageId: string) => void;
 }
 
 export const MessageReactionsSheet = ({
   visible,
   onClose,
   message,
+  currentUserId,
+  otherUserName = 'User',
+  otherUserAvatarUrl,
+  currentUserName = 'You',
+  currentUserAvatarUrl,
   onReactionRemoved,
 }: MessageReactionsSheetProps) => {
   const { colors: themeColors } = useThemePreference();
+  const { t } = useTranslations();
   const insets = useSafeAreaInsets();
-  const screenHeight = Dimensions.get('window').height;
-  const modalHeight = screenHeight * 0.4;
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const sheetTranslateY = useRef(new Animated.Value(modalHeight)).current;
 
-  useEffect(() => {
-    if (visible) {
-      // Reset sheet position
-      sheetTranslateY.setValue(modalHeight);
-      // Animate overlay fade in and sheet slide up
-      Animated.parallel([
-        Animated.timing(overlayOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(sheetTranslateY, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      // Animate overlay fade out and sheet slide down
-      Animated.parallel([
-        Animated.timing(overlayOpacity, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(sheetTranslateY, {
-          toValue: modalHeight,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible, overlayOpacity, sheetTranslateY, modalHeight]);
-
-  if (!message) {
+  if (!message || !visible) {
     return null;
   }
 
-  const reactions = [];
-  if (message.senderReaction) {
-    reactions.push({
-      emoji: message.senderReaction,
-      isSender: true,
-      userName: message.isSent ? 'You' : 'Sender',
-    });
-  }
-  if (message.recipientReaction) {
-    reactions.push({
-      emoji: message.recipientReaction,
-      isSender: false,
-      userName: !message.isSent ? 'You' : 'Recipient',
+  // Extract reactions from the reactions array
+  const reactions: ReactionUser[] = [];
+
+  if (message.reactions && message.reactions.length > 0) {
+    message.reactions.forEach((reaction: MessageReaction) => {
+      const isCurrentUser = currentUserId ? reaction.user_id === currentUserId : false;
+      const isSender = reaction.user_id === message.sender_id;
+
+      // Determine name and avatar based on whether this is current user or other user
+      let name: string;
+      let avatarUrl: string | undefined;
+
+      if (isCurrentUser) {
+        name = currentUserName;
+        avatarUrl = currentUserAvatarUrl;
+      } else {
+        name = otherUserName;
+        avatarUrl = otherUserAvatarUrl;
+      }
+
+      reactions.push({
+        id: reaction.user_id,
+        name,
+        avatarUrl,
+        reaction: reaction.reaction,
+        isCurrentUser,
+      });
     });
   }
 
   const reactionCount = reactions.length;
-  const title = reactionCount === 1 ? '1 Reaction' : `${reactionCount} Reactions`;
+  const title = reactionCount === 1
+    ? `1 ${t('messages.reaction') || 'Reaction'}`
+    : `${reactionCount} ${t('messages.reactions') || 'Reactions'}`;
 
-  const iconColor = themeColors.text;
-  const dividerColor = themeColors.border;
+  const handleRemoveReaction = async (reactionUser: ReactionUser) => {
+    if (!message || !reactionUser.isCurrentUser) return;
 
-  const handleRemoveReaction = async (isSender: boolean) => {
-    if (!message) return;
+    try {
+      await removeReaction(message.id);
+      onReactionRemoved?.(message.id);
+      onClose();
+    } catch (error) {
+      console.error('[MessageReactionsSheet] Failed to remove reaction:', error);
+    }
+  };
 
-    await removeReaction(message.id);
-    onReactionRemoved?.(message.id, isSender);
-
-    // Close sheet after removal
-    onClose();
+  const getInitials = (name: string): string => {
+    return name.charAt(0).toUpperCase();
   };
 
   return (
     <Modal
       visible={visible}
-      animationType="none"
+      animationType="slide"
       transparent
+      presentationStyle="formSheet"
       onRequestClose={onClose}
     >
       <View style={styles.overlayContainer}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
-          <Animated.View
-            style={[
-              styles.overlay,
-              {
-                opacity: overlayOpacity,
-              },
-            ]}
-          />
-        </Pressable>
-        <Animated.View
+        {/* Tap outside to close */}
+        <Pressable style={styles.overlay} onPress={onClose} />
+
+        {/* Sheet content */}
+        <View
           style={[
             styles.sheetContainer,
             {
-              height: modalHeight,
               backgroundColor: themeColors.backgroundSecondary,
-              transform: [{ translateY: sheetTranslateY }],
+              paddingBottom: insets.bottom + 24,
             },
           ]}
         >
           {/* Header */}
-          <View
-            style={[
-              styles.header,
-              {
-                paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20,
-                backgroundColor: themeColors.backgroundSecondary,
-              },
-            ]}
-          >
-            <IconButton
-              icon={{ sf: 'xmark', IconComponent: X }}
-              onPress={onClose}
-              size="md"
-              color={iconColor}
-            />
-            <Text style={[styles.title, { color: themeColors.text }]}>{title}</Text>
-            <View style={styles.closeButton} />
+          <View style={styles.header}>
+            <View style={styles.handleBar} />
+            <Text style={[styles.title, { color: themeColors.text }]}>
+              {title}
+            </Text>
           </View>
 
           {/* Reactions list */}
-          <ScrollView style={styles.reactionsList} showsVerticalScrollIndicator={false}>
-            {reactions.map((reaction, index) => (
-              <View key={index}>
+          <View style={styles.reactionsList}>
+            {reactions.map((reactionUser, index) => (
+              <View key={`${reactionUser.id}-${index}`}>
                 <PressableOpacity
                   style={styles.reactionRow}
-                  onPress={() => handleRemoveReaction(reaction.isSender)}
+                  onPress={() => handleRemoveReaction(reactionUser)}
+                  disabled={!reactionUser.isCurrentUser}
                 >
-                  {/* Profile picture placeholder */}
+                  {/* Profile picture */}
                   <View
                     style={[
                       styles.avatar,
                       { backgroundColor: themeColors.backgroundTertiary },
                     ]}
                   >
-                    <Text style={[styles.avatarText, { color: themeColors.text }]}>
-                      {reaction.userName.charAt(0).toUpperCase()}
-                    </Text>
+                    {reactionUser.avatarUrl ? (
+                      <Image
+                        source={{ uri: reactionUser.avatarUrl }}
+                        style={styles.avatarImage}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <Text style={[styles.avatarText, { color: themeColors.text }]}>
+                        {getInitials(reactionUser.name)}
+                      </Text>
+                    )}
                   </View>
 
                   {/* Name and tap to remove */}
                   <View style={styles.reactionInfo}>
                     <Text style={[styles.userName, { color: themeColors.text }]}>
-                      {reaction.userName}
+                      {reactionUser.isCurrentUser ? (t('general.you') || 'You') : reactionUser.name}
                     </Text>
-                    <Text style={[styles.tapToRemove, { color: themeColors.mutedText }]}>
-                      Tap to remove
-                    </Text>
+                    {reactionUser.isCurrentUser && (
+                      <Text style={[styles.tapToRemove, { color: themeColors.mutedText }]}>
+                        {t('messages.tapToRemove') || 'Tap to remove'}
+                      </Text>
+                    )}
                   </View>
 
                   {/* Emoji */}
                   <View style={styles.emojiContainer}>
-                    <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
+                    <Text style={styles.reactionEmoji}>{reactionUser.reaction}</Text>
                   </View>
                 </PressableOpacity>
 
                 {index < reactions.length - 1 && (
-                  <View style={[styles.modalDivider, { backgroundColor: dividerColor }]} />
+                  <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
                 )}
               </View>
             ))}
-          </ScrollView>
-        </Animated.View>
+
+            {/* Empty state */}
+            {reactions.length === 0 && (
+              <View style={styles.emptyState}>
+                <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
+                  {t('messages.noReactions') || 'No reactions yet'}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
       </View>
     </Modal>
   );
@@ -213,77 +214,86 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   sheetContainer: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    overflow: 'hidden',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    minHeight: 200,
+    maxHeight: '50%',
   },
   header: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingTop: 12,
+    paddingBottom: 16,
     paddingHorizontal: 16,
-    paddingBottom: 12,
+  },
+  handleBar: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(128, 128, 128, 0.4)',
+    marginBottom: 16,
   },
   title: {
     ...typography.h6,
-    flex: 1,
+    fontWeight: '600',
     textAlign: 'center',
   },
-  closeButton: {
+  reactionsList: {
+    paddingHorizontal: 16,
+  },
+  reactionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  avatar: {
     width: 44,
     height: 44,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  reactionsList: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
-  reactionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
+  avatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   avatarText: {
-    ...typography.p5,
+    ...typography.p3,
     fontWeight: '600',
   },
   reactionInfo: {
     flex: 1,
+    marginLeft: 12,
   },
   userName: {
     ...typography.p2,
-    marginTop: 1,
+    fontWeight: '500',
   },
   tapToRemove: {
-    ...typography.p6,
+    ...typography.p5,
     marginTop: 2,
   },
   emojiContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 12,
   },
   reactionEmoji: {
-    fontSize: 24,
+    fontSize: 28,
   },
-  modalDivider: {
+  divider: {
     height: 1,
+    marginLeft: 56, // Align with content after avatar
+  },
+  emptyState: {
+    paddingVertical: 32,
+    alignItems: 'center',
+  },
+  emptyText: {
+    ...typography.p3,
   },
 });

@@ -85,9 +85,9 @@ export default function ChatsScreen() {
       return bTime - aTime;
     });
 
-    const topChats = sortedChats.slice(0, 5);
+    const topChats = sortedChats.slice(0, 10);
 
-    // Pre-fetch in background (don't await)
+    // Pre-fetch in background (don't await) for faster navigation
     topChats.forEach((chat) => {
       prefetchMessages(chat.id);
     });
@@ -138,6 +138,15 @@ export default function ChatsScreen() {
     });
   };
 
+  // Start prefetching when finger touches down (before press completes)
+  // This gives us ~100-300ms head start on loading messages
+  const handleChatPressIn = useCallback((chatId: string) => {
+    // Don't prefetch in edit mode or if row is open
+    if (isEditMode || isRowOpen) return;
+    // Start prefetching immediately - by the time press completes, messages may be cached
+    prefetchMessages(chatId);
+  }, [isEditMode, isRowOpen, prefetchMessages]);
+
   const handleChatPress = async (chatId: string) => {
     // If a row is open, just close it and prevent navigation/action
     if (isRowOpen) {
@@ -157,7 +166,7 @@ export default function ChatsScreen() {
       // Find the chat object
       const chat = chats.find((c) => c.id === chatId);
       if (chat) {
-        // Try to get cached messages first for instant navigation
+        // Try to get cached messages first (may have been prefetched on press-in)
         const cachedMessages = getCachedMessages(chatId);
         if (cachedMessages) {
           // Navigate immediately with cached messages
@@ -260,6 +269,7 @@ export default function ChatsScreen() {
     <ChatListItem
       chat={item}
       onPress={handleChatPress}
+      onPressIn={handleChatPressIn}
       isEditMode={isEditMode}
       isSelected={selectedChatIds.has(item.id)}
       onViewProfile={handleViewProfile}
@@ -267,7 +277,7 @@ export default function ChatsScreen() {
       onMarkAsRead={handleChatMarkAsRead}
       onOpen={registerOpenRow}
     />
-  ), [isEditMode, selectedChatIds, handleChatPress, handleViewProfile, handleChatArchive, handleChatMarkAsRead, registerOpenRow]);
+  ), [isEditMode, selectedChatIds, handleChatPress, handleChatPressIn, handleViewProfile, handleChatArchive, handleChatMarkAsRead, registerOpenRow]);
 
   const renderListHeader = useCallback(() => {
     if (!searchQuery.trim()) {

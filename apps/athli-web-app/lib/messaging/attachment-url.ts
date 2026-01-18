@@ -78,3 +78,39 @@ export const cleanupSignedUrlCache = (): void => {
 export const clearSignedUrlCache = (): void => {
   signedUrlCache.clear();
 };
+
+/**
+ * Synchronously get a cached signed URL (no async call)
+ * Returns null if not cached or expired
+ *
+ * @param bucketId - The storage bucket ID
+ * @param filePath - The file path within the bucket
+ * @returns The cached URL, or null if not in cache
+ */
+export const getCachedSignedUrl = (
+  bucketId: string,
+  filePath: string,
+): string | null => {
+  const cacheKey = `${bucketId}:${filePath}`;
+  const cached = signedUrlCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.url;
+  }
+  return null;
+};
+
+/**
+ * Pre-fetch signed URLs for multiple attachments
+ * Populates the cache so subsequent renders can access URLs synchronously
+ *
+ * @param attachments - Array of attachments with bucket_id and file_path
+ */
+export const prefetchAttachmentUrls = async (
+  attachments: Array<{ bucket_id?: string; file_path?: string }>,
+): Promise<void> => {
+  await Promise.all(
+    attachments
+      .filter((a) => a.file_path)
+      .map((a) => getSignedAttachmentUrl(a.bucket_id || STORAGE_BUCKET_NAME, a.file_path!)),
+  );
+};

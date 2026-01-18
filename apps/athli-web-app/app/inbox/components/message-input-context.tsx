@@ -195,9 +195,11 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
 
   // Stable actions using useCallback
   const addAttachment = React.useCallback((file: File, type: AttachmentType) => {
+    let showMaxFilesError = false;
+
     setAttachments((prev) => {
       if (prev.length >= 4) {
-        toast.error('Maximum 4 files per message');
+        showMaxFilesError = true;
         return prev;
       }
 
@@ -210,20 +212,27 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
       setTextareaHeight((h) => (h <= 36 ? 60 : h));
       return [...prev, attachment];
     });
+
+    // Show toast outside setAttachments callback to avoid double-firing in StrictMode
+    if (showMaxFilesError) {
+      toast.error('Maximum 4 files per message');
+    }
   }, []);
 
   const addAttachments = React.useCallback((files: File[], type: AttachmentType) => {
+    let toastMessage: string | null = null;
+
     setAttachments((prev) => {
       const remainingSlots = 4 - prev.length;
       if (remainingSlots === 0) {
-        toast.error('Maximum 4 files per message');
+        toastMessage = 'Maximum 4 files per message';
         return prev;
       }
 
       // Auto-take first N files based on remaining slots
       const filesToAdd = files.slice(0, remainingSlots);
       if (files.length > remainingSlots) {
-        toast.error(`Maximum 4 files per message. Only ${remainingSlots} file(s) added.`);
+        toastMessage = `Maximum 4 files per message. Only ${remainingSlots} file(s) added.`;
       }
 
       const newAttachments: Attachment[] = filesToAdd.map((file) => ({
@@ -235,6 +244,11 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
       setTextareaHeight((h) => (h <= 36 ? 60 : h));
       return [...prev, ...newAttachments];
     });
+
+    // Show toast outside setAttachments callback to avoid double-firing in StrictMode
+    if (toastMessage) {
+      toast.error(toastMessage);
+    }
   }, []);
 
   const removeAttachment = React.useCallback((index: number) => {

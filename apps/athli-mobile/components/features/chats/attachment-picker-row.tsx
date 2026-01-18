@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as VideoThumbnails from 'expo-video-thumbnails';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
@@ -125,28 +126,57 @@ export const AttachmentPickerRow = ({
         return;
       }
 
-      // Open image picker for videos
+      // Open image picker for videos with multi-select enabled
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['videos'],
-        allowsMultipleSelection: false,
+        allowsMultipleSelection: true,
+        selectionLimit: MAX_MEDIA_FILES,
         quality: 1,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        if (asset.uri) {
-          // Navigate to video preview screen
-          router.push({
-            pathname: '/chats/video-preview',
-            params: {
+        // Enforce max limit
+        const selectedAssets = result.assets.slice(0, MAX_MEDIA_FILES);
+
+        // Convert selected videos to MediaAttachment format with thumbnails
+        const videoAttachments = await Promise.all(
+          selectedAssets.map(async (asset, index) => {
+            if (!asset.uri) return null;
+
+            // Generate thumbnail for the video
+            let thumbnailUri: string | undefined;
+            try {
+              const thumbnail = await VideoThumbnails.getThumbnailAsync(asset.uri, {
+                time: 500,
+                quality: 0.8,
+              });
+              thumbnailUri = thumbnail.uri;
+            } catch (thumbnailError) {
+              console.warn('Failed to generate video thumbnail:', thumbnailError);
+            }
+
+            return {
               uri: asset.uri,
-              duration: (asset.duration || 0).toString(),
-              orientation: asset.width && asset.height && asset.width > asset.height ? 'landscape' : 'portrait',
+              id: `video-${Date.now()}-${index}-${Math.random()}`,
+              isVideo: true,
+              thumbnailUri,
+            };
+          })
+        );
+
+        const validAttachments = videoAttachments.filter((v) => v !== null);
+
+        if (validAttachments.length > 0) {
+          // Navigate to message-image-preview screen (unified preview)
+          router.push({
+            pathname: '/chats/message-image-preview',
+            params: {
+              images: JSON.stringify(validAttachments),
               chatId: chatId || '',
               clientId: clientId || '',
               clientName: clientName || '',
+              fromPicker: 'true',
               caption: caption || '',
-              fromCamera: 'false',
             },
           });
         }
@@ -206,19 +236,35 @@ export const AttachmentPickerRow = ({
       const isVideo = asset.type === 'video';
 
       // Wait for JS bridge to fully restore after returning from native camera
-      InteractionManager.runAfterInteractions(() => {
+      InteractionManager.runAfterInteractions(async () => {
         if (isVideo) {
+          // Generate thumbnail for the video
+          let thumbnailUri: string | undefined;
+          try {
+            const thumbnail = await VideoThumbnails.getThumbnailAsync(asset.uri, {
+              time: 500,
+              quality: 0.8,
+            });
+            thumbnailUri = thumbnail.uri;
+          } catch (thumbnailError) {
+            console.warn('Failed to generate video thumbnail:', thumbnailError);
+          }
+
+          const videoAttachment = {
+            uri: asset.uri,
+            id: `video-${Date.now()}-${Math.random()}`,
+            isVideo: true,
+            thumbnailUri,
+          };
           router.push({
-            pathname: '/chats/video-preview',
+            pathname: '/chats/message-image-preview',
             params: {
-              uri: asset.uri,
-              duration: (asset.duration || 0).toString(),
-              orientation: asset.width && asset.height && asset.width > asset.height ? 'landscape' : 'portrait',
+              images: JSON.stringify([videoAttachment]),
               chatId: chatId || '',
               clientId: clientId || '',
               clientName: clientName || '',
+              fromPicker: 'true',
               caption: caption || '',
-              fromCamera: 'true',
             },
           });
         } else {
