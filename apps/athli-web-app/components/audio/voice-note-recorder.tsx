@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { Trash2, Send, Play, Pause, Loader2 } from "lucide-react";
+import { Trash2, ArrowUp, Play, Pause, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 import { computeWaveformPeaksFromBlob } from "@/lib/audio/compute-peaks";
@@ -11,111 +11,10 @@ interface VoiceNoteRecorderProps {
   onCancel: () => void;
 }
 
-// Custom live audio visualizer component using Web Audio API
-const LiveWaveform = React.memo(({ 
-  stream,
-  barColor = "hsl(var(--primary))",
-  height = 32,
-}: { 
-  stream: MediaStream | null;
-  barColor?: string;
-  height?: number;
-}) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyzerRef = useRef<AnalyserNode | null>(null);
-  const animationRef = useRef<number | null>(null);
-  const [width, setWidth] = useState(300);
-
-  useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setWidth(containerRef.current.offsetWidth);
-      }
-    };
-    updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
-  }, []);
-
-  useEffect(() => {
-    if (!stream) return;
-
-    const audioContext = new AudioContext();
-    const analyzer = audioContext.createAnalyser();
-    analyzer.fftSize = 256;
-    analyzer.smoothingTimeConstant = 0.4;
-
-    const source = audioContext.createMediaStreamSource(stream);
-    source.connect(analyzer);
-
-    audioContextRef.current = audioContext;
-    analyzerRef.current = analyzer;
-
-    const dataArray = new Uint8Array(analyzer.frequencyBinCount);
-
-    const draw = () => {
-      const canvas = canvasRef.current;
-      if (!canvas || !analyzerRef.current) return;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      analyzerRef.current.getByteFrequencyData(dataArray);
-
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      ctx.scale(dpr, dpr);
-      ctx.clearRect(0, 0, width, height);
-
-      const barWidth = 3;
-      const gap = 2;
-      const totalBarWidth = barWidth + gap;
-      const numBars = Math.floor(width / totalBarWidth);
-
-      ctx.fillStyle = barColor;
-
-      for (let i = 0; i < numBars; i++) {
-        // Map bar index to frequency data
-        const dataIndex = Math.floor((i / numBars) * dataArray.length);
-        const value = dataArray[dataIndex] / 255; // Normalize to 0-1
-        const barHeight = Math.max(3, value * (height - 4));
-        const x = i * totalBarWidth;
-        const y = (height - barHeight) / 2;
-
-        ctx.beginPath();
-        ctx.roundRect(x, y, barWidth, barHeight, 1.5);
-        ctx.fill();
-      }
-
-      animationRef.current = requestAnimationFrame(draw);
-    };
-
-    draw();
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
-    };
-  }, [stream, barColor, width, height]);
-
-  return (
-    <div ref={containerRef} className="w-full h-full flex items-center justify-center">
-      <canvas 
-        ref={canvasRef} 
-        style={{ width: '100%', height: `${height}px` }}
-      />
-    </div>
-  );
-});
-
-LiveWaveform.displayName = 'LiveWaveform';
+// Constants for conveyor-belt waveform
+const BAR_INTERVAL_MS = 100;
+const MAX_BARS = 60;
+const MAX_DURATION_MS = 120000; // 2 minutes
 
 export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, onCancel }) => {
   const { state, durationMs, start, stop, cancel, mediaRecorder, stream } = useVoiceRecorder();
@@ -125,6 +24,15 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [playbackProgress, setPlaybackProgress] = useState(0); // 0..1
   const [isLoadingWaveform, setIsLoadingWaveform] = useState(false);
+
+  // Conveyor-belt waveform state
+  const [waveformBars, setWaveformBars] = useState<number[]>([]);
+  const smoothedRef = useRef(0);
+  const bucketMaxRef = useRef(0);
+  const lastBarTimeRef = useRef(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyzerRef = useRef<AnalyserNode | null>(null);
+  const animationRef = useRef<number | null>(null);
 
   // Store cancel in a ref for cleanup to avoid stale closures
   const cancelRef = useRef(cancel);
@@ -142,6 +50,79 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
       cancelRef.current();
     };
   }, []);
+
+  // Conveyor-belt waveform audio analysis
+  useEffect(() => {
+    if (!stream || state !== "recording") {
+      // Reset waveform state when not recording
+      setWaveformBars([]);
+      smoothedRef.current = 0;
+      bucketMaxRef.current = 0;
+      lastBarTimeRef.current = 0;
+      return;
+    }
+
+    const audioContext = new AudioContext();
+    const analyzer = audioContext.createAnalyser();
+    analyzer.fftSize = 256;
+
+    const source = audioContext.createMediaStreamSource(stream);
+    source.connect(analyzer);
+
+    audioContextRef.current = audioContext;
+    analyzerRef.current = analyzer;
+
+    const dataArray = new Uint8Array(analyzer.fftSize);
+
+    const analyze = () => {
+      if (!analyzerRef.current) return;
+
+      // Use time domain data for amplitude (not frequency spectrum)
+      analyzerRef.current.getByteTimeDomainData(dataArray);
+
+      // Calculate RMS (root mean square) amplitude
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        const normalized = (dataArray[i] - 128) / 128; // Center around 0, normalize to -1..1
+        sum += normalized * normalized;
+      }
+      const rms = Math.sqrt(sum / dataArray.length);
+
+      // Apply smoothing (fast attack, slow decay)
+      const alpha = rms > smoothedRef.current ? 0.45 : 0.12;
+      smoothedRef.current += (rms - smoothedRef.current) * alpha;
+      bucketMaxRef.current = Math.max(bucketMaxRef.current, smoothedRef.current);
+
+      // Emit a bar every BAR_INTERVAL_MS
+      const now = Date.now();
+      if (now - lastBarTimeRef.current >= BAR_INTERVAL_MS) {
+        setWaveformBars(prev => {
+          const next = [...prev, bucketMaxRef.current];
+          if (next.length > MAX_BARS) {
+            next.splice(0, next.length - MAX_BARS);
+          }
+          return next;
+        });
+        bucketMaxRef.current = 0;
+        lastBarTimeRef.current = now;
+      }
+
+      animationRef.current = requestAnimationFrame(analyze);
+    };
+
+    analyze();
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+    };
+  }, [stream, state]);
 
   // Format duration as M:SS
   const formatDuration = (ms: number) => {
@@ -233,17 +214,39 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
     <div className="px-4 py-2 flex-shrink-0 border-t border-border">
       <div className="bg-sidebar rounded-lg border border-input p-2">
         {/* Top row: Time pill and Waveform */}
-        <div className="relative mb-2 h-[32px] overflow-hidden">
-          {/* Waveform - scrolls behind timer */}
-          <div className="absolute inset-0 flex items-center">
+        <div className="flex items-center h-[32px] gap-2">
+          {/* Time pill - always visible */}
+          <div className="flex-shrink-0 px-2 py-1 rounded-full flex items-center bg-muted/50">
+            <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">
+              {formatDuration(recordedBlob?.durationMs ?? durationMs)}/{formatDuration(MAX_DURATION_MS)}
+            </span>
+          </div>
+
+          {/* Waveform container - takes remaining space */}
+          <div className="flex-1 h-full overflow-hidden">
             {state === "recording" && stream ? (
-              // Real-time waveform using custom LiveWaveform
-              <div className="flex items-center justify-center w-full h-full overflow-hidden">
-                <LiveWaveform
-                  stream={stream}
-                  barColor="hsl(var(--primary))"
-                  height={32}
-                />
+              // Real-time conveyor-belt waveform - bars flow from right to left
+              <div className="h-full flex flex-row-reverse items-center gap-[2px]">
+                {[...waveformBars].reverse().map((amp, idx) => {
+                  const isSilent = amp < 0.03;
+                  if (isSilent) {
+                    return (
+                      <div
+                        key={idx}
+                        className="w-[3px] h-[3px] rounded-full bg-primary flex-shrink-0"
+                      />
+                    );
+                  }
+                  // Scale amplitude: min height 6px, max height 28px
+                  const height = 6 + Math.round(amp * 22);
+                  return (
+                    <div
+                      key={idx}
+                      className="w-[3px] rounded-sm bg-primary flex-shrink-0"
+                      style={{ height: `${height}px` }}
+                    />
+                  );
+                })}
               </div>
             ) : isLoadingWaveform ? (
               // Loading spinner
@@ -294,21 +297,6 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
               </div>
             ) : null}
           </div>
-
-          {/* Time pill - sits on top with gradient fade on left */}
-          <div className="absolute left-0 top-0 bottom-0 flex items-center z-10">
-            <div
-              className="px-3 py-1 rounded-full flex items-center"
-              style={{
-                background: 'linear-gradient(to right, hsl(var(--sidebar)) 70%, transparent)',
-                minWidth: '80px',
-              }}
-            >
-              <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">
-                {formatDuration(recordedBlob?.durationMs ?? durationMs)}
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* Bottom row: Controls */}
@@ -355,7 +343,7 @@ export const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ onSend, on
             className="h-7 w-7 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground p-0 flex-shrink-0"
             aria-label="Send voice note"
           >
-            <Send className="h-3.5 w-3.5" />
+            <ArrowUp className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
