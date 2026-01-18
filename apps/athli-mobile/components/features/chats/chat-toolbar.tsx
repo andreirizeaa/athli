@@ -1,5 +1,6 @@
-import React, { RefObject, useCallback } from 'react';
-import { StyleSheet, TextInput, View, Alert, InteractionManager } from 'react-native';
+import React, { RefObject, useCallback, useEffect } from 'react';
+import { StyleSheet, TextInput, View, Alert, InteractionManager, ViewStyle } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { PressableOpacity } from 'pressto';
 import { BlurView } from 'expo-blur';
 import { Camera, Mic, Plus, Send, X } from 'lucide-react-native';
@@ -17,7 +18,6 @@ import { AttachmentPickerRow } from '@/components/features/chats/attachment-pick
 import { VoiceNoteRecordingContainer } from '@/components/features/chats/voice-note-recording-container';
 import { type Chat, type ChatMessage } from '@/services/chats-service';
 import { type InboxMessage } from '@/services/inbox-service';
-import Animated, { useAnimatedStyle, type SharedValue, interpolate, Extrapolation } from 'react-native-reanimated';
 
 // Generic participant type that works for both Chat and Coach
 type ParticipantInfo = {
@@ -42,10 +42,10 @@ type ChatToolbarProps = {
   durationLabel: string;
   waveform: number[];
   previewPath: string | null;
-  previewPlayerState: import('@/components/audio').PlayerState;
-  onPlayerStateChange: (state: import('@/components/audio').PlayerState) => void;
+  previewPlayerState: import('@/components/features/audio').PlayerState;
+  onPlayerStateChange: (state: import('@/components/features/audio').PlayerState) => void;
   onTogglePreviewPlay: () => void;
-  previewWaveRef: React.RefObject<import('@/components/audio').IWaveformRef | null>;
+  previewWaveRef: React.RefObject<import('@/components/features/audio').IWaveformRef | null>;
   onPlusPress: () => void;
   onMicrophonePress: () => void;
   onSendMessage: () => void;
@@ -54,7 +54,8 @@ type ChatToolbarProps = {
   onSendPress: (pathOverride?: string | null) => void;
   onCancelReply: () => void;
   bottomInset?: number;
-  keyboardHeight?: SharedValue<number>;
+  animatedBottomStyle?: any;
+  keyboardHeight?: any;
   onHeightChange?: (height: number) => void;
 };
 
@@ -84,8 +85,7 @@ export const ChatToolbar = ({
   onSendPress,
   onCancelReply,
   bottomInset = 0,
-  keyboardHeight,
-  onHeightChange,
+  animatedBottomStyle,
 }: ChatToolbarProps) => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
@@ -97,18 +97,34 @@ export const ChatToolbar = ({
   const iconColor = themeColors.text;
   const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.95);
 
+  // Animated height for attachment picker row (0 when closed, 110 when open)
+  const attachmentPickerHeight = useSharedValue(showAttachmentPicker ? 110 : 0);
+
+  useEffect(() => {
+    attachmentPickerHeight.value = withTiming(showAttachmentPicker ? 110 : 0, {
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [showAttachmentPicker]);
+
+  const attachmentPickerAnimatedStyle = useAnimatedStyle(() => ({
+    height: attachmentPickerHeight.value,
+    opacity: attachmentPickerHeight.value / 110,
+    overflow: 'hidden',
+  }));
+
   // Determine participant info from either chat or coach
   const participantInfo: ParticipantInfo = chat
     ? {
       chatId: chat.id,
-      participantId: chat.clientId,
-      participantName: chat.clientName,
+      participantId: chat.client_id,
+      participantName: chat.other_user_name || '',
     }
     : coach
       ? {
         chatId: 'inbox',
         participantId: coach.id,
-        participantName: coach.name,
+        participantName: coach.name || '',
       }
       : {
         chatId: '',
@@ -116,23 +132,6 @@ export const ChatToolbar = ({
         participantName: '',
       };
 
-  // Move toolbar up by keyboard height
-  const toolbarAnimatedStyle = useAnimatedStyle(() => {
-    const h = keyboardHeight?.value ?? 0;
-    return {
-      transform: [{ translateY: -h }],
-    };
-  });
-
-  // Safe-area padding only when keyboard is closed
-  const safePaddingStyle = useAnimatedStyle(() => {
-    const h = keyboardHeight?.value ?? 0;
-    // Small padding when keyboard opens to prevent bumpiness
-    const pb = interpolate(h, [0, 40], [bottomInset, 0], Extrapolation.CLAMP);
-    return {
-      paddingBottom: pb,
-    };
-  });
 
   const handleCameraPress = useCallback(async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -189,16 +188,15 @@ export const ChatToolbar = ({
   }, [participantInfo, router, searchQuery, t]);
 
   return (
-    <Animated.View style={[styles.absoluteContainer, toolbarAnimatedStyle]} pointerEvents="box-none">
+    <Animated.View style={[styles.absoluteContainer, animatedBottomStyle]} pointerEvents="box-none">
       {/* Background extension below toolbar */}
       <View style={[styles.backgroundExtension, { backgroundColor: translucentHeaderBg }]} />
       <BlurView
         intensity={30}
         tint={isDark ? 'dark' : 'light'}
         style={[styles.toolbarBlur, { backgroundColor: translucentHeaderBg }]}
-        onLayout={(e) => onHeightChange?.(e.nativeEvent.layout.height)}
       >
-        <Animated.View style={safePaddingStyle}>
+        <View>
           {replyingToMessage && (
             <ReplyPreviewRow
               message={replyingToMessage}
@@ -275,16 +273,18 @@ export const ChatToolbar = ({
             )}
           </View>
 
-          {showAttachmentPicker && (
-            <AttachmentPickerRow
-              backgroundColor={translucentHeaderBg}
-              chatId={participantInfo.chatId}
-              clientId={participantInfo.participantId}
-              clientName={participantInfo.participantName}
-              caption={searchQuery}
-            />
-          )}
-        </Animated.View>
+          <Animated.View style={attachmentPickerAnimatedStyle}>
+            {showAttachmentPicker && (
+              <AttachmentPickerRow
+                backgroundColor={translucentHeaderBg}
+                chatId={participantInfo.chatId}
+                clientId={participantInfo.participantId}
+                clientName={participantInfo.participantName}
+                caption={searchQuery}
+              />
+            )}
+          </Animated.View>
+        </View>
       </BlurView>
     </Animated.View>
   );

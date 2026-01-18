@@ -23,6 +23,8 @@ export interface VideoDraft {
 
 export interface MessageDraftData {
   text: string;
+  // Note: We no longer persist file attachments in localStorage due to quota limits
+  // These fields are kept for backward compatibility but won't be saved
   pdf?: PdfDraft;
   images?: ImageDraft[];
   video?: VideoDraft;
@@ -30,6 +32,12 @@ export interface MessageDraftData {
 
 export interface MessageDraft {
   contactId: string;
+  text: string;
+  timestamp: number;
+}
+
+// Simple text-only draft storage to avoid localStorage quota issues
+interface TextOnlyDraft {
   text: string;
   timestamp: number;
 }
@@ -46,7 +54,16 @@ export const messageDraftStorage = {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (!stored) return {};
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      // Convert text-only drafts to MessageDraftData format
+      const result: Record<string, MessageDraftData> = {};
+      for (const [key, value] of Object.entries(parsed)) {
+        if (typeof value === 'object' && value !== null) {
+          const draft = value as TextOnlyDraft | MessageDraftData;
+          result[key] = { text: draft.text || '' };
+        }
+      }
+      return result;
     } catch {
       return {};
     }
@@ -78,260 +95,58 @@ export const messageDraftStorage = {
 
   /**
    * Save a draft for a specific contact
+   * Note: Only text is persisted. File attachments are not saved due to localStorage quota limits.
    */
   saveDraft(
     contactId: string,
     text: string,
-    pdf?: File | null,
-    images?: File[],
-    video?: File | null,
-    onPdfSaved?: () => void,
-    onImagesSaved?: () => void,
-    onVideoSaved?: () => void
+    _pdf?: File | null,
+    _images?: File[],
+    _video?: File | null,
+    _onPdfSaved?: () => void,
+    _onImagesSaved?: () => void,
+    _onVideoSaved?: () => void
   ): void {
     if (typeof window === 'undefined') {
       return;
     }
 
     try {
-      const drafts = this.getAllDrafts();
-      // Only save if text has more than 1 character, or PDF/video/images are added
-      const hasText = text.trim().length > 1;
-      const hasPdf = pdf !== null && pdf !== undefined && pdf instanceof File;
-      const hasVideo = video !== null && video !== undefined && video instanceof File;
-      const hasImages = images !== undefined && images !== null && images.length > 0;
+      // Only save text - files are too large for localStorage
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const drafts: Record<string, TextOnlyDraft> = stored ? JSON.parse(stored) : {};
 
-      // Check if there's an existing PDF, video, or images in the draft
-      const existingDraft = drafts[contactId];
-      const hasExistingPdf = existingDraft?.pdf !== undefined && existingDraft?.pdf !== null;
-      const hasExistingVideo = existingDraft?.video !== undefined && existingDraft?.video !== null;
-      const hasExistingImages =
-        existingDraft?.images !== undefined &&
-        existingDraft?.images !== null &&
-        existingDraft.images.length > 0;
-
-      // Only create/update draft if:
-      // 1. Text has more than 1 character, OR
-      // 2. PDF is being added, OR
-      // 3. Video is being added, OR
-      // 4. Images are being added, OR
-      // 5. Existing PDF/video/images exist (to preserve them)
-      if (
-        hasText ||
-        hasPdf ||
-        hasVideo ||
-        hasImages ||
-        hasExistingPdf ||
-        hasExistingVideo ||
-        hasExistingImages
-      ) {
-        const draftData: MessageDraftData = { text: text || '' };
-
-        if (hasPdf && pdf) {
-          // Save text first (in case PDF reading fails or takes time)
-          drafts[contactId] = draftData;
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
-
-          // Convert file to base64 and update with PDF
-          const reader = new FileReader();
-          reader.onload = () => {
-            try {
-              const base64 = reader.result as string;
-              const updatedDraft: MessageDraftData = {
-                text: text || '',
-                pdf: {
-                  name: pdf.name,
-                  data: base64,
-                  type: pdf.type,
-                  size: pdf.size,
-                },
-              };
-              drafts[contactId] = updatedDraft;
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
-              // Call callback to update state
-              if (onPdfSaved) {
-                onPdfSaved();
-              }
-            } catch {
-              // If saving PDF fails, text is already saved
-            }
-          };
-          reader.onerror = () => {
-            // If reading fails, text is already saved
-          };
-          reader.readAsDataURL(pdf);
-          return;
-        }
-
-        // If PDF is explicitly null, remove it from draft
-        // Only remove if we're explicitly clearing (pdf === null) and not just loading
-        if (
-          pdf === null &&
-          drafts[contactId]?.pdf &&
-          text.trim().length <= 1 &&
-          (!images || images.length === 0)
-        ) {
-          delete drafts[contactId].pdf;
-        }
-
-        // Preserve existing PDF if not explicitly removed
-        if (hasExistingPdf && !hasPdf && pdf !== null) {
-          draftData.pdf = existingDraft.pdf;
-        }
-
-        // Handle video
-        if (hasVideo && video) {
-          // Save text and existing PDF first (in case video reading fails or takes time)
-          drafts[contactId] = draftData;
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
-
-          // Convert file to base64 and update with video
-          const reader = new FileReader();
-          reader.onload = () => {
-            try {
-              const base64 = reader.result as string;
-              const updatedDraft: MessageDraftData = {
-                text: text || '',
-                ...(draftData.pdf && { pdf: draftData.pdf }),
-                video: {
-                  name: video.name,
-                  data: base64,
-                  type: video.type,
-                  size: video.size,
-                },
-              };
-              drafts[contactId] = updatedDraft;
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
-              // Call callback to update state
-              if (onVideoSaved) {
-                onVideoSaved();
-              }
-            } catch {
-              // If saving video fails, text is already saved
-            }
-          };
-          reader.onerror = () => {
-            // If reading fails, text is already saved
-          };
-          reader.readAsDataURL(video);
-          return;
-        }
-
-        // If video is explicitly null, remove it from draft
-        // Only remove if we're explicitly clearing (video === null) and not just loading
-        if (
-          video === null &&
-          drafts[contactId]?.video &&
-          text.trim().length <= 1 &&
-          (!images || images.length === 0) &&
-          !hasPdf
-        ) {
-          delete drafts[contactId].video;
-        }
-
-        // Preserve existing video if not explicitly removed
-        if (hasExistingVideo && !hasVideo && video !== null) {
-          draftData.video = existingDraft.video;
-        }
-
-        // Preserve existing images if not explicitly removed
-        if (hasExistingImages && (!images || images.length === 0) && images !== undefined) {
-          draftData.images = existingDraft.images;
-        }
-
-        // Handle images
-        if (hasImages && images && images.length > 0) {
-          // Save text and existing PDF first
-          drafts[contactId] = draftData;
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
-
-          // Convert images to base64
-          const convertImage = (file: File, index: number): Promise<ImageDraft> => {
-            return new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onload = () => {
-                const base64 = reader.result as string;
-                resolve({
-                  name: file.name,
-                  data: base64,
-                  type: file.type,
-                  size: file.size,
-                });
-              };
-              reader.onerror = () => {
-                resolve({
-                  name: file.name,
-                  data: '',
-                  type: file.type,
-                  size: file.size,
-                });
-              };
-              reader.readAsDataURL(file);
-            });
-          };
-
-          Promise.all(images.map(convertImage)).then((imageData) => {
-            const updatedDraft: MessageDraftData = {
-              text: text || '',
-              ...(draftData.pdf && { pdf: draftData.pdf }),
-              ...(draftData.video && { video: draftData.video }),
-              images: imageData,
-            };
-            drafts[contactId] = updatedDraft;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
-            // Call callback to update state
-            if (onImagesSaved) {
-              onImagesSaved();
-            }
-          });
-          return;
-        }
-
-        // If images is explicitly empty array, remove them from draft
-        // Only remove if we're explicitly clearing (images.length === 0) and not just loading
-        if (
-          images !== undefined &&
-          images.length === 0 &&
-          existingDraft?.images &&
-          text.trim().length <= 1 &&
-          !hasPdf &&
-          !hasVideo
-        ) {
-          delete draftData.images;
-        }
-
-        // Preserve existing images if not explicitly removed
-        if (hasExistingImages && (!images || images.length === 0) && images !== undefined) {
-          draftData.images = existingDraft.images;
-        }
-
-        // Only save if there's actual content:
-        // - Text has more than 1 character, OR
-        // - PDF is being added, OR
-        // - Video is being added, OR
-        // - Images are being added, OR
-        // - Existing PDF/video/images exist (to preserve them when updating text)
-        const hasActualContent =
-          hasText ||
-          hasPdf ||
-          hasVideo ||
-          hasImages ||
-          hasExistingPdf ||
-          hasExistingVideo ||
-          hasExistingImages;
-
-        if (hasActualContent) {
-          drafts[contactId] = draftData;
-        } else {
-          // If no actual content, delete the draft
-          delete drafts[contactId];
-        }
+      // Only save if text has more than 1 character
+      if (text.trim().length > 1) {
+        drafts[contactId] = {
+          text: text,
+          timestamp: Date.now(),
+        };
       } else {
+        // Remove draft if text is too short
         delete drafts[contactId];
       }
+
       localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
-    } catch {
-      // Ignore storage errors
+    } catch (error) {
+      // Handle quota exceeded error gracefully
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        // Try to clear old drafts and save again
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+          const newDrafts: Record<string, TextOnlyDraft> = {};
+          if (text.trim().length > 1) {
+            newDrafts[contactId] = {
+              text: text,
+              timestamp: Date.now(),
+            };
+          }
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(newDrafts));
+        } catch {
+          // If still failing, silently ignore
+        }
+      }
+      // Silently ignore other storage errors
     }
   },
 
@@ -344,7 +159,9 @@ export const messageDraftStorage = {
     }
 
     try {
-      const drafts = this.getAllDrafts();
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) return;
+      const drafts = JSON.parse(stored);
       delete drafts[contactId];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
     } catch {
@@ -369,6 +186,7 @@ export const messageDraftStorage = {
 
   /**
    * Convert base64 PDF data back to File object
+   * @deprecated File attachments are no longer persisted
    */
   pdfDataToFile(pdfData: PdfDraft): File {
     const byteString = atob(pdfData.data.split(',')[1]);
@@ -383,6 +201,7 @@ export const messageDraftStorage = {
 
   /**
    * Convert base64 image data back to File object
+   * @deprecated File attachments are no longer persisted
    */
   imageDataToFile(imageData: ImageDraft): File {
     const byteString = atob(imageData.data.split(',')[1]);
@@ -397,6 +216,7 @@ export const messageDraftStorage = {
 
   /**
    * Convert base64 video data back to File object
+   * @deprecated File attachments are no longer persisted
    */
   videoDataToFile(videoData: VideoDraft): File {
     const byteString = atob(videoData.data.split(',')[1]);

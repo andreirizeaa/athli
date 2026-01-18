@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Archive, MailCheck } from 'lucide-react-native';
+import { Archive, MailCheck, Send, CheckCircle } from 'lucide-react-native';
 
-import { typography } from '@/constants/typography';
-import { useColorScheme, useThemePreference } from '@/stores';
+import { typography, iconSizes } from '@/constants/typography';
+import { useColorScheme, useThemePreference, useAuthSessionStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
+import { PlatformIcon } from '@/components/ui/platform-icon';
 import { PressableScale } from 'pressto';
 import { type Coach } from '@/services/inbox-service';
 
@@ -63,6 +64,10 @@ export const CoachListItem = ({
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const colorScheme = useColorScheme();
+  const userId = useAuthSessionStore((state) => state.userId);
+
+  // Check if we sent the last message
+  const weSentLastMessage = coach.last_message_sender_id === userId;
 
   const handlePress = () => {
     onPress(coach.id);
@@ -76,7 +81,7 @@ export const CoachListItem = ({
         : themeColors.mutedText;
 
   const dropdownOptions: DropdownMenuOption[] = [
-    ...(onMarkAsRead && (coach.unreadCount ?? 0) > 0
+    ...(onMarkAsRead && (coach.unread_count ?? 0) > 0
       ? [
         {
           label: t('chats.markAsRead'),
@@ -144,8 +149,8 @@ export const CoachListItem = ({
             </View>
           )}
           <View style={styles.avatarContainer}>
-            {coach.avatar ? (
-              <Image source={{ uri: coach.avatar }} style={styles.avatar} />
+            {coach.other_user_avatar ? (
+              <Image source={{ uri: coach.other_user_avatar }} style={styles.avatar} />
             ) : (
               <View
                 style={[
@@ -162,15 +167,15 @@ export const CoachListItem = ({
                 style={[styles.coachName, { color: themeColors.text }]}
                 numberOfLines={1}
               >
-                {coach.name}
+                {coach.other_user_name}
               </Text>
               {coach.last_message_at && (
-                <View style={styles.sent_atContainer}>
+                <View style={styles.timestampContainer}>
                   <Text
                     style={[
-                      styles.sent_at,
+                      styles.timestamp,
                       {
-                        color: (coach.unreadCount ?? 0) > 0 ? themeColors.primary : themeColors.mutedText,
+                        color: (coach.unread_count ?? 0) > 0 ? themeColors.primary : themeColors.mutedText,
                       },
                     ]}
                   >
@@ -181,6 +186,20 @@ export const CoachListItem = ({
             </View>
             <View style={styles.messageFooter}>
               <View style={styles.lastMessageContainer}>
+                {weSentLastMessage && coach.last_message_preview && (
+                  <View style={styles.readReceiptContainer}>
+                    <PlatformIcon
+                      sf={coach.last_message_is_read ? "checkmark.circle" : "paperplane"}
+                      IconComponent={coach.last_message_is_read ? CheckCircle : Send}
+                      size={iconSizes.extraSmallIcons}
+                      color={
+                        coach.last_message_is_read
+                          ? themeColors.primary
+                          : themeColors.mutedText
+                      }
+                    />
+                  </View>
+                )}
                 <Text
                   style={[
                     styles.lastMessage,
@@ -196,7 +215,7 @@ export const CoachListItem = ({
                 </Text>
               </View>
               <View style={styles.rightColumn}>
-                {coach.unreadCount != null && coach.unreadCount > 0 ? (
+                {coach.unread_count != null && coach.unread_count > 0 ? (
                   <View
                     style={[
                       styles.unreadBadge,
@@ -209,7 +228,7 @@ export const CoachListItem = ({
                         { color: themeColors.primaryForeground },
                       ]}
                     >
-                      {coach.unreadCount > 99 ? '99+' : coach.unreadCount}
+                      {coach.unread_count > 99 ? '99+' : coach.unread_count}
                     </Text>
                   </View>
                 ) : null}
@@ -326,6 +345,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginRight: 8,
+  },
+  readReceiptContainer: {
+    marginRight: 4,
+    marginTop: 2,
   },
   lastMessage: {
     ...typography.p3,

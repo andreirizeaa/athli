@@ -2,4 +2,4 @@
  * Document feature components
  */
 
-export { DocumentPreviewScreen } from './document-preview-screen';
+export { default as DocumentPreviewScreen } from './document-preview-screen';

@@ -457,20 +457,15 @@ export const markConversationAsRead = async (
 
     const latestMessage = messages[0];
 
-    // Update read receipt
+    // Update read receipt (Supabase auto-detects unique constraint)
     const { error: receiptError } = await supabase
       .from('message_read_receipts')
-      .upsert(
-        {
-          conversation_id: conversationId,
-          user_id: userId,
-          last_read_message_id: latestMessage.id,
-          last_read_at: new Date().toISOString(),
-        },
-        {
-          onConflict: 'conversation_id,user_id',
-        },
-      );
+      .upsert({
+        conversation_id: conversationId,
+        user_id: userId,
+        last_read_message_id: latestMessage.id,
+        last_read_at: new Date().toISOString(),
+      });
 
     if (receiptError) throw receiptError;
   } catch (error) {

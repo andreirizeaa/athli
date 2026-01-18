@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import type { Message } from '@/components/app/app-shell';
 import { messageDraftStorage } from '@/lib/general/message-draft-storage';
 
-export type AttachmentType = 'image' | 'video' | 'pdf';
+export type AttachmentType = 'image' | 'video' | 'pdf' | 'audio';
 
 export interface Attachment {
   file: File;
@@ -61,10 +61,7 @@ interface MessageInputProviderProps {
   onSendMessage: (params: {
     text: string;
     attachments?: Array<{
-      name: string;
-      data: string;
-      type: string;
-      size: number;
+      file: File;
       attachmentType: AttachmentType;
     }>;
     replyTo?: Message['replyTo'];
@@ -292,101 +289,79 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
     const hasContent = messageInput.trim() || attachments.length > 0;
     if (!hasContent || !selectedContactId) return;
 
+    // Capture current values before clearing
+    const currentMessageInput = messageInput;
+    const currentAttachments = [...attachments];
+    const currentReplyingToMessage = replyingToMessage;
+
+    // Build reply data from captured values (synchronous)
+    const replyToData = currentReplyingToMessage
+      ? {
+          id: currentReplyingToMessage.id,
+          text: currentReplyingToMessage.text,
+          isSent: currentReplyingToMessage.isSent,
+          pdf: currentReplyingToMessage.pdf,
+          images: currentReplyingToMessage.images,
+          video: currentReplyingToMessage.video,
+        }
+      : undefined;
+
+    // Pass File objects directly - parent will handle conversion
+    // This allows parent to create optimistic message IMMEDIATELY
+    const attachmentData = currentAttachments.map((att) => ({
+      file: att.file,
+      attachmentType: att.type,
+    }));
+
+    // Clear input state AFTER we've captured everything we need
+    // Use a simple clear without revoking blob URLs yet - let parent create optimistic first
+    setMessageInput('');
+    setReplyingToMessage(null);
+    setTextareaHeight(36);
+    // Clear draft from localStorage
+    if (selectedContactId) {
+      messageDraftStorage.removeDraft(selectedContactId);
+    }
+    // Note: We DON'T revoke preview URLs here because parent needs the Files
+    // The Files themselves remain valid even after we clear the state
+    setAttachments([]);
+
     try {
-      // Get draft data (already has base64 conversions for faster sending)
-      const draft = messageDraftStorage.getDraft(selectedContactId);
-
-      // Convert files to base64
-      const convertToBase64 = (file: File): Promise<string> => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      };
-
-      const replyToData = replyingToMessage
-        ? {
-            id: replyingToMessage.id,
-            text: replyingToMessage.text,
-            isSent: replyingToMessage.isSent,
-            pdf: replyingToMessage.pdf,
-            images: replyingToMessage.images,
-            video: replyingToMessage.video,
-          }
-        : undefined;
-
-      // Convert all attachments to API format
-      const attachmentData = await Promise.all(
-        attachments.map(async (att, index) => {
-          // Try to use draft data if available for faster sending
-          let data: string;
-
-          if (att.type === 'image') {
-            const draftImage = draft.images?.find(
-              (img) => img.name === att.file.name && img.size === att.file.size
-            );
-            data = draftImage?.data || (await convertToBase64(att.file));
-          } else if (att.type === 'pdf') {
-            const draftPdf = draft.pdf;
-            data =
-              draftPdf?.name === att.file.name && draftPdf?.size === att.file.size && draftPdf?.data
-                ? draftPdf.data
-                : await convertToBase64(att.file);
-          } else if (att.type === 'video') {
-            const draftVideo = draft.video;
-            data =
-              draftVideo?.name === att.file.name &&
-              draftVideo?.size === att.file.size &&
-              draftVideo?.data
-                ? draftVideo.data
-                : await convertToBase64(att.file);
-          } else {
-            data = await convertToBase64(att.file);
-          }
-
-          return {
-            name: att.file.name,
-            data,
-            type: att.file.type,
-            size: att.file.size,
-            attachmentType: att.type,
-          };
-        })
-      );
-
-      // Send single message with text and all attachments
+      // Call onSendMessage immediately with File objects
+      // Parent creates optimistic message first, then handles async conversion
       await onSendMessage({
-        text: messageInput.trim(),
+        text: currentMessageInput.trim(),
         attachments: attachmentData.length > 0 ? attachmentData : undefined,
         replyTo: replyToData,
       });
-
-      // Clear all after sending
-      clearAll();
+      
+      // Only revoke preview URLs after successful send (optimistic message is now showing)
+      currentAttachments.forEach((att) => {
+        if (att.preview) {
+          URL.revokeObjectURL(att.preview);
+        }
+      });
     } catch (error) {
       console.error('Failed to send message:', error);
       toast.error('Failed to send message');
+      // On error, don't revoke - but also don't restore (message is lost)
+      currentAttachments.forEach((att) => {
+        if (att.preview) {
+          URL.revokeObjectURL(att.preview);
+        }
+      });
     }
-  }, [messageInput, attachments, replyingToMessage, selectedContactId, onSendMessage, clearAll]);
+  }, [messageInput, attachments, replyingToMessage, selectedContactId, onSendMessage]);
 
   // Send voice note
   const sendVoiceNote = React.useCallback(async (blob: Blob, url: string, durationMs: number) => {
     if (!selectedContactId) return;
 
     try {
-      // Convert blob to base64
-      const convertToBase64 = (blob: Blob): Promise<string> => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-      };
-
-      const data = await convertToBase64(blob);
+      // Convert Blob to File for consistent handling
+      const voiceNoteFile = new File([blob], `voice-note-${Date.now()}.webm`, {
+        type: blob.type,
+      });
 
       const replyToData = replyingToMessage
         ? {
@@ -404,10 +379,7 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
         text: '',
         attachments: [
           {
-            name: `voice-note-${Date.now()}.webm`,
-            data,
-            type: blob.type,
-            size: blob.size,
+            file: voiceNoteFile,
             attachmentType: 'video',
           },
         ],

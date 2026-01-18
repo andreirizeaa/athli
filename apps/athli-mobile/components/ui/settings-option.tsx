@@ -1,6 +1,5 @@
 import React from 'react';
 import type { JSX } from 'react';
-import type { GestureResponderEvent } from 'react-native';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { PressableScale } from 'pressto';
 import { SymbolView } from 'expo-symbols';
@@ -30,7 +29,7 @@ export interface SettingsOptionProps {
   title: string;
   subtitle?: string;
   subtitleRight?: boolean;
-  onPress?: (event: GestureResponderEvent) => void;
+  onPress?: () => void;
   showChevron?: boolean;
   style?: object;
   chevronSize?: number;
@@ -44,13 +43,13 @@ export interface SettingsOptionProps {
 export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, showChevron, style, chevronSize, chevronIcon, rightElement }: SettingsOptionProps) {
   const { colors: themeColors } = useThemePreference();
 
-  const handleOptionPress = (event: GestureResponderEvent) => {
+  const handleOptionPress = () => {
     if (!onPress) {
       return;
     }
 
     haptics.medium();
-    onPress(event);
+    onPress();
   };
 
   const defaultChevronIcon = {

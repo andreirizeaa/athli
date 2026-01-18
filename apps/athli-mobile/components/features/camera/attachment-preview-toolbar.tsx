@@ -20,7 +20,6 @@ type ImageItem = {
 type AttachmentPreviewToolbarProps = {
   value: string;
   onChangeText: (text: string) => void;
-  clientName?: string;
   onSend: () => void;
   keyboardHeight?: SharedValue<number>;
   // Gallery props
@@ -37,7 +36,6 @@ const MAX_MEDIA_FILES = 4;
 export const AttachmentPreviewToolbar = ({
   value,
   onChangeText,
-  clientName,
   onSend,
   keyboardHeight,
   images,
@@ -150,17 +148,6 @@ export const AttachmentPreviewToolbar = ({
           </View>
         )}
 
-        {/* Client name row */}
-        {clientName && (
-          <View style={styles.clientNameRow}>
-            <View style={[styles.clientNameContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
-              <Text style={[styles.clientNameText, { color: themeColors.text }]} numberOfLines={1}>
-                {clientName}
-              </Text>
-            </View>
-          </View>
-        )}
-
         {/* Input row with send button on the right */}
         <View style={styles.inputRow}>
           <View style={styles.inputWrapper}>
@@ -217,19 +204,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingHorizontal: 16,
   },
-  clientNameRow: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  clientNameContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  clientNameText: {
-    ...typography.p2,
-    fontWeight: '500',
-  },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -240,7 +214,7 @@ const styles = StyleSheet.create({
   },
   messageInputBar: {
     minHeight: 44,
-    height: 44,
+    maxHeight: 120,
   },
   sendButton: {
     width: 40,

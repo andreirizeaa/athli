@@ -4,8 +4,6 @@ import {
   LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  PanResponder,
-  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,14 +12,21 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { Reply, Copy, Pencil, Trash2, Send, CheckCircle } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
-
-import Reanimated, { useAnimatedStyle, SharedValue } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Reanimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  runOnJS,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { type ThemeColors } from '@/constants/theme';
-import { type ChatMessage, reactTo } from '@/services/chats-service';
-import { type UIMessage } from '@athli/shared-types';
+import { reactTo } from '@/services/chats-service';
+import { type UIMessage, type MessageAttachment } from '@athli/shared-types';
 import { type DropdownMenuOption, ContextMenuWrapper } from '@/components/ui/dropdown-menu';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
@@ -32,28 +37,86 @@ import { MessageVideoPreview } from '@/components/features/message/message-video
 import { MessageAudioPreview } from '@/components/features/message/message-audio-preview';
 import { useColorScheme, useThemePreference } from '@/stores';
 
+// Type for attachment with optional local_uri for optimistic messages
+type AttachmentWithLocalUri = MessageAttachment & { local_uri?: string };
+
+// Supabase storage URL base
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+
+// Get the display URI for an attachment (local_uri for optimistic, or construct from file_path)
+const getAttachmentUri = (attachment: AttachmentWithLocalUri): string => {
+  // For optimistic messages, use local_uri
+  if (attachment.local_uri) return attachment.local_uri;
+  // For real messages, construct public URL from storage
+  if (attachment.file_path) {
+    const bucketId = attachment.bucket_id || 'message_attachments';
+    return `${SUPABASE_URL}/storage/v1/object/public/${bucketId}/${attachment.file_path}`;
+  }
+  return '';
+};
+
+// Helper functions to extract attachments by type with proper URI
+const getImageAttachments = (msg: UIMessage): Array<AttachmentWithLocalUri & { uri: string }> =>
+  (msg.attachments?.filter(a => a.mime_type?.startsWith('image/')) ?? []).map(a => ({
+    ...a,
+    uri: getAttachmentUri(a as AttachmentWithLocalUri),
+  }));
+
+const getVideoAttachment = (msg: UIMessage): (AttachmentWithLocalUri & { uri: string }) | undefined => {
+  const attachment = msg.attachments?.find(a => a.mime_type?.startsWith('video/'));
+  if (!attachment) return undefined;
+  return { ...attachment, uri: getAttachmentUri(attachment as AttachmentWithLocalUri) };
+};
+
+const getAudioAttachment = (msg: UIMessage): (AttachmentWithLocalUri & { uri: string }) | undefined => {
+  const attachment = msg.attachments?.find(a => a.mime_type?.startsWith('audio/'));
+  if (!attachment) return undefined;
+  return { ...attachment, uri: getAttachmentUri(attachment as AttachmentWithLocalUri) };
+};
+
+const getDocumentAttachment = (msg: UIMessage): (AttachmentWithLocalUri & { uri: string }) | undefined => {
+  const attachment = msg.attachments?.find(a =>
+    a.mime_type &&
+    !a.mime_type.startsWith('image/') &&
+    !a.mime_type.startsWith('video/') &&
+    !a.mime_type.startsWith('audio/')
+  );
+  if (!attachment) return undefined;
+  return { ...attachment, uri: getAttachmentUri(attachment as AttachmentWithLocalUri) };
+};
+
+// Helper to get user's reaction from reactions array
+const getUserReaction = (msg: UIMessage, isSender: boolean, currentUserId?: string): string | undefined => {
+  if (!msg.reactions || !currentUserId) return undefined;
+  const userReaction = msg.reactions.find(r =>
+    isSender ? r.user_id === msg.sender_id : r.user_id !== msg.sender_id
+  );
+  return userReaction?.reaction;
+};
+
 /**
- * Message type used by MessageList - accepts both ChatMessage and UIMessage
- * UIMessage comes from the realtime hook transformer (has text, isSent, isRead computed)
- * ChatMessage is the legacy type from chats-service
+ * Message type used by MessageList - uses UIMessage from shared-types
+ * UIMessage has computed fields: text, isSent, isRead, replyTo
  */
-type MessageListMessage = ChatMessage | UIMessage;
+type MessageListMessage = UIMessage;
 
 interface MessageListProps {
-  messages: MessageListMessage[];
+  messages: UIMessage[];
   backgroundColor: string;
   themeColors: ThemeColors;
   clientName: string;
   headerHeight?: number;
   bottomOffset?: number;
-  keyboardHeight?: SharedValue<number>;
-  onReply?: (message: MessageListMessage) => void;
-  onEdit?: (message: MessageListMessage) => void;
-  onDelete?: (message: MessageListMessage) => void;
-  onReactionPress?: (message: MessageListMessage) => void;
-  onDocumentPress?: (document: import('@/services/chats-service').DocumentAttachment) => void;
-  onImagePress?: (images: import('@/services/chats-service').ImageAttachment[], senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
-  onVideoPress?: (video: import('@/services/chats-service').VideoAttachment, senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
+  onReply?: (message: UIMessage) => void;
+  onEdit?: (message: UIMessage) => void;
+  onDelete?: (message: UIMessage) => void;
+  onReactionPress?: (message: UIMessage) => void;
+  onDocumentPress?: (document: any) => void;
+  onImagePress?: (images: any[], senderName: string, isSent: boolean, messageTimestamp?: Date | string) => void;
+  onVideoPress?: (video: any, senderName: string, isSent: boolean, messageTimestamp?: Date | string) => void;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
+  hasMoreMessages?: boolean;
 }
 
 const ZWSP = '\u200B';
@@ -81,7 +144,7 @@ const softWrapText = (text: string) => {
 };
 
 // Helper function to find the original message in a reply chain
-const findOriginalMessage = (message: ChatMessage): ChatMessage => {
+const findOriginalMessage = (message: UIMessage): UIMessage => {
   if (!message.replyTo) {
     return message;
   }
@@ -103,25 +166,23 @@ const BubbleMeta = React.memo(function BubbleMeta({
   onImagePress,
   onVideoPress,
   flashOpacity,
-  dropdownOptions,
 }: {
-  item: ChatMessage;
+  item: UIMessage;
   themeColors: ThemeColors;
   recipientBackgroundColor: string;
-  formatTime: (d: Date) => string;
+  formatTime: (d: Date | string) => string;
   softWrapText: (t: string) => string;
   registerRef: (ref: View | null) => void;
   isLastInSenderRun: boolean;
   clientName: string;
   onReplyPreviewPress?: (messageId: string) => void;
-  onDocumentPress?: (document: import('@/services/chats-service').DocumentAttachment) => void;
-  onImagePress?: (images: import('@/services/chats-service').ImageAttachment[], senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
-  onVideoPress?: (video: import('@/services/chats-service').VideoAttachment, senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
+  onDocumentPress?: (document: any) => void;
+  onImagePress?: (images: any[], senderName: string, isSent: boolean, messageTimestamp?: Date | string) => void;
+  onVideoPress?: (video: any, senderName: string, isSent: boolean, messageTimestamp?: Date | string) => void;
   flashOpacity?: Animated.Value;
-  dropdownOptions: DropdownMenuOption[];
 }) {
-  const [metaWidth, setMetaWidth] = useState(0);
-  const [spaceWidth, setSpaceWidth] = useState(0);
+  const [metaWidth, setMetaWidth] = useState(44);  // Typical meta width - prevents flicker
+  const [spaceWidth, setSpaceWidth] = useState(4); // Typical NBSP width - prevents flicker
 
   // Find the original message if this is a reply
   const originalMessage = item.replyTo ? findOriginalMessage(item.replyTo) : null;
@@ -151,6 +212,12 @@ const BubbleMeta = React.memo(function BubbleMeta({
     return NBSP + NBSP.repeat(Math.max(4, count));
   }, [metaWidth, spaceWidth]);
 
+  // Extract attachments using helper functions
+  const images = getImageAttachments(item);
+  const video = getVideoAttachment(item);
+  const audio = getAudioAttachment(item);
+  const document = getDocumentAttachment(item);
+
   const bubbleStyle = [
     styles.messageBubble,
     item.isSent
@@ -159,7 +226,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
     isLastInSenderRun && item.isSent && styles.messageBubbleTailRight,
     isLastInSenderRun && !item.isSent && styles.messageBubbleTailLeft,
     // Make bubble full width when it contains a document or is a reply
-    ...(item.document || item.replyTo || item.audio ? [styles.messageBubbleFullWidth] : []),
+    ...(document || item.replyTo || audio ? [styles.messageBubbleFullWidth] : []),
   ];
 
   const baseTextColor = item.isSent ? themeColors.primaryForeground : themeColors.text;
@@ -188,7 +255,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
       {/* Reply preview if this message is a reply - show original message, not nested reply */}
       {originalMessage && (
         <MessageReplyPreview
-          replyTo={originalMessage}
+          replyTo={originalMessage as any}
           clientName={clientName}
           themeColors={themeColors}
           parentBackgroundColor={
@@ -202,60 +269,54 @@ const BubbleMeta = React.memo(function BubbleMeta({
       )}
 
       {/* Image preview if this message has images */}
-      {item.images && item.images.length > 0 && onImagePress && (
+      {images.length > 0 && onImagePress && (
         <MessageImagePreview
-          images={item.images}
+          images={images as any}
           themeColors={themeColors}
           parentBackgroundColor={
             item.isSent ? themeColors.primary : recipientBackgroundColor
           }
           isParentSent={item.isSent}
           onPress={() => {
-            if (item.images) {
-              onImagePress(item.images, clientName, item.isSent, item.sent_at);
-            }
+            onImagePress(images, clientName, item.isSent, item.sent_at);
           }}
         />
       )}
 
       {/* Video preview if this message has a video */}
-      {item.video && onVideoPress && (
+      {video && onVideoPress && (
         <MessageVideoPreview
-          video={item.video}
+          video={video as any}
           themeColors={themeColors}
           parentBackgroundColor={
             item.isSent ? themeColors.primary : recipientBackgroundColor
           }
           isParentSent={item.isSent}
           onPress={() => {
-            if (item.video) {
-              onVideoPress(item.video, clientName, item.isSent, item.sent_at);
-            }
+            onVideoPress(video, clientName, item.isSent, item.sent_at);
           }}
         />
       )}
 
       {/* Document preview if this message has a document */}
-      {item.document && onDocumentPress && (
+      {document && onDocumentPress && (
         <MessageDocumentPreview
-          document={item.document}
+          document={document as any}
           themeColors={themeColors}
           parentBackgroundColor={
             item.isSent ? themeColors.primary : recipientBackgroundColor
           }
           isParentSent={item.isSent}
           onPress={() => {
-            if (item.document) {
-              onDocumentPress(item.document);
-            }
+            onDocumentPress(document);
           }}
         />
       )}
 
       {/* Audio preview if this message has audio */}
-      {item.audio && (
+      {audio && (
         <MessageAudioPreview
-          audio={item.audio}
+          audio={audio as any}
           themeColors={themeColors}
           parentBackgroundColor={
             item.isSent ? themeColors.primary : recipientBackgroundColor
@@ -324,11 +385,9 @@ const BubbleMeta = React.memo(function BubbleMeta({
   );
 
   return (
-    <ContextMenuWrapper options={dropdownOptions}>
-      <View ref={registerRef} style={bubbleStyle}>
-        {bubbleContent}
-      </View>
-    </ContextMenuWrapper>
+    <View ref={registerRef} style={bubbleStyle}>
+      {bubbleContent}
+    </View>
   );
 });
 
@@ -341,172 +400,168 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
   message,
   onHorizontalDragStart,
   onHorizontalDragEnd,
+  dropdownOptions,
 }: {
   children: React.ReactNode;
   themeColors: ThemeColors;
   onCancelLongPress: () => void;
   alignRight: boolean;
-  onReply?: (message: ChatMessage) => void;
-  message: ChatMessage;
+  onReply?: (message: UIMessage) => void;
+  message: UIMessage;
   onHorizontalDragStart?: () => void;
   onHorizontalDragEnd?: () => void;
+  dropdownOptions: DropdownMenuOption[];
 }) {
-  const MAX = 100;
-  const THRESHOLD = 60; // pixels to trigger reply
-  const translateX = useRef(new Animated.Value(0)).current;
-  const didCancelRef = useRef(false);
-  const currentDistanceRef = useRef(0);
-  const isDraggingRef = useRef(false);
+  const MAX = 80;
+  const THRESHOLD = 50;
+  const translateX = useSharedValue(0);
   const hapticFiredRef = useRef(false);
 
-  const iconOpacity = useMemo(
-    () =>
-      translateX.interpolate({
-        inputRange: [0, 15, MAX],
-        outputRange: [0, 0.7, 1],
-        extrapolate: 'clamp',
-      }),
-    [translateX]
-  );
+  // Trigger haptic feedback - called from worklet via runOnJS
+  const triggerHaptic = () => {
+    haptics.medium();
+  };
 
-  const iconScale = useMemo(
-    () =>
-      translateX.interpolate({
-        inputRange: [0, THRESHOLD, MAX],
-        outputRange: [0.8, 1.1, 1.15],
-        extrapolate: 'clamp',
-      }),
-    [translateX]
-  );
+  // Trigger reply callback - called from worklet via runOnJS
+  const triggerReply = () => {
+    onReply?.(message);
+  };
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => false,
-        onMoveShouldSetPanResponder: (_evt, g) => {
-          const { dx, dy } = g;
-          // Require minimum horizontal movement
-          if (Math.abs(dx) < 5) return false;
-          // Must be primarily horizontal - horizontal movement must be at least 2x vertical
-          if (Math.abs(dx) < Math.abs(dy) * 2) return false;
-          // Only trigger on right swipe
-          if (dx <= 0) return false;
-          return true;
-        },
-        onPanResponderGrant: () => {
-          translateX.stopAnimation();
-          didCancelRef.current = false;
-          currentDistanceRef.current = 0;
-          hapticFiredRef.current = false;
-          if (!isDraggingRef.current) {
-            isDraggingRef.current = true;
-            onHorizontalDragStart?.();
-          }
-        },
-        onShouldBlockNativeResponder: () => true,
-        onPanResponderMove: (_evt, g) => {
-          if (!didCancelRef.current) {
-            onCancelLongPress();
-            didCancelRef.current = true;
-          }
+  // Notify drag start - called from worklet via runOnJS
+  const notifyDragStart = () => {
+    onCancelLongPress();
+    onHorizontalDragStart?.();
+  };
 
-          // Allow swipe based on message alignment
-          const rawDx = g.dx;
-          const clamped = Math.min(MAX, Math.max(0, Math.abs(rawDx)));
+  // Notify drag end - called from worklet via runOnJS
+  const notifyDragEnd = () => {
+    onHorizontalDragEnd?.();
+  };
 
-          currentDistanceRef.current = clamped;
-          translateX.setValue(clamped);
+  const panGesture = Gesture.Pan()
+    .activeOffsetX(alignRight ? [10, 999] : [-999, -10])
+    .failOffsetY([-15, 15])
+    .onStart(() => {
+      'worklet';
+      hapticFiredRef.current = false;
+      runOnJS(notifyDragStart)();
+    })
+    .onUpdate((event) => {
+      'worklet';
+      const rawDx = Math.abs(event.translationX);
+      const clamped = Math.min(MAX, Math.max(0, rawDx));
+      translateX.value = clamped;
 
-          // Haptic feedback when crossing threshold
-          if (clamped >= THRESHOLD && !hapticFiredRef.current) {
-            hapticFiredRef.current = true;
-            haptics.medium();
-          } else if (clamped < THRESHOLD && hapticFiredRef.current) {
-            hapticFiredRef.current = false;
-          }
-        },
-        onPanResponderRelease: () => {
-          const distance = currentDistanceRef.current;
-          const shouldReply = distance >= THRESHOLD && onReply;
+      // Haptic feedback when crossing threshold
+      if (clamped >= THRESHOLD && !hapticFiredRef.current) {
+        hapticFiredRef.current = true;
+        runOnJS(triggerHaptic)();
+      } else if (clamped < THRESHOLD && hapticFiredRef.current) {
+        hapticFiredRef.current = false;
+      }
+    })
+    .onEnd((event) => {
+      'worklet';
+      const distance = Math.min(MAX, Math.abs(event.translationX));
+      const shouldReply = distance >= THRESHOLD && onReply;
 
-          if (shouldReply) {
-            onReply(message);
-          }
+      if (shouldReply) {
+        runOnJS(triggerReply)();
+      }
 
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 200,
-            friction: 35,
-            velocity: 0,
-          }).start();
+      // Return with velocity preservation for smooth feel
+      translateX.value = withSpring(0, {
+        damping: 15,
+        stiffness: 150,
+        mass: 1,
+        overshootClamping: true,
+        velocity: event.velocityX / 1000,
+      });
 
-          currentDistanceRef.current = 0;
-          hapticFiredRef.current = false;
-          if (isDraggingRef.current) {
-            isDraggingRef.current = false;
-            onHorizontalDragEnd?.();
-          }
-        },
-        onPanResponderTerminate: () => {
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 200,
-            friction: 35,
-            velocity: 0,
-          }).start();
-          currentDistanceRef.current = 0;
-          hapticFiredRef.current = false;
-          if (isDraggingRef.current) {
-            isDraggingRef.current = false;
-            onHorizontalDragEnd?.();
-          }
-        },
-        onPanResponderTerminationRequest: () => {
-          // Prevent termination if we're actively dragging
-          return !isDraggingRef.current;
-        },
-      }),
-    [onCancelLongPress, translateX, onReply, message, onHorizontalDragStart, onHorizontalDragEnd]
-  );
+      hapticFiredRef.current = false;
+      runOnJS(notifyDragEnd)();
+    })
+    .onFinalize(() => {
+      'worklet';
+      // Ensure we return to 0 if gesture is cancelled
+      if (translateX.value !== 0) {
+        translateX.value = withSpring(0, {
+          damping: 15,
+          stiffness: 150,
+          overshootClamping: true,
+        });
+      }
+      runOnJS(notifyDragEnd)();
+    });
+
+  // Animated styles using Reanimated
+  const iconAnimatedStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      translateX.value,
+      [0, 15, MAX],
+      [0, 0.7, 1],
+      Extrapolation.CLAMP
+    );
+    const scale = interpolate(
+      translateX.value,
+      [0, THRESHOLD, MAX],
+      [0.8, 1.1, 1.15],
+      Extrapolation.CLAMP
+    );
+    return {
+      opacity,
+      transform: [{ scale }],
+    };
+  });
+
+  const bubbleAnimatedStyle = useAnimatedStyle(() => {
+    const tx = interpolate(
+      translateX.value,
+      [0, MAX],
+      alignRight ? [0, MAX] : [0, -MAX],
+      Extrapolation.CLAMP
+    );
+    return {
+      transform: [{ translateX: tx }],
+    };
+  });
 
   return (
-    <View
-      style={[
-        styles.swipeContainer,
-        alignRight ? styles.swipeContainerRight : styles.swipeContainerLeft,
-      ]}
-    >
-      {/* Underlay (revealed as bubble moves right) */}
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.replyUnderlay,
-          {
-            opacity: iconOpacity,
-            transform: [{ scale: iconScale }],
-          },
-        ]}
-      >
-        <View style={[styles.replyIconContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
-          <PlatformIcon
-            sf="arrowshape.turn.up.left.fill"
-            IconComponent={Reply}
-            size={16}
-            color={themeColors.primary}
-          />
-        </View>
-      </Animated.View>
+    <ContextMenuWrapper options={dropdownOptions}>
+      <GestureDetector gesture={panGesture}>
+        <Reanimated.View style={styles.swipeContainer}>
+          {/* Icon - positioned based on alignRight */}
+          <Reanimated.View
+            pointerEvents="none"
+            style={[
+              styles.replyUnderlay,
+              alignRight ? styles.underlayLeft : styles.underlayRight,
+              iconAnimatedStyle,
+            ]}
+          >
+            <View style={[styles.replyIconContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
+              <PlatformIcon
+                sf="arrowshape.turn.up.left.fill"
+                IconComponent={Reply}
+                size={16}
+                color={themeColors.primary}
+              />
+            </View>
+          </Reanimated.View>
 
-      {/* Bubble */}
-      <Animated.View
-        style={[styles.swipeBubbleHost, { transform: [{ translateX }] }]}
-        {...panResponder.panHandlers}
-      >
-        {children}
-      </Animated.View>
-    </View>
+          {/* Bubble - aligned based on alignRight */}
+          <Reanimated.View
+            style={[
+              styles.swipeBubbleHost,
+              alignRight ? styles.bubbleAlignRight : styles.bubbleAlignLeft,
+              bubbleAnimatedStyle,
+            ]}
+          >
+            {children}
+          </Reanimated.View>
+        </Reanimated.View>
+      </GestureDetector>
+    </ContextMenuWrapper>
   );
 });
 
@@ -521,7 +576,6 @@ export const MessageList = React.memo(function MessageList({
   clientName,
   headerHeight = 0,
   bottomOffset = 0,
-  keyboardHeight,
   onReply,
   onEdit,
   onDelete,
@@ -529,6 +583,9 @@ export const MessageList = React.memo(function MessageList({
   onDocumentPress,
   onImagePress,
   onVideoPress,
+  onLoadMore,
+  isLoadingMore = false,
+  hasMoreMessages = true,
 }: MessageListProps) {
   const { t } = useTranslations();
   const listRef = useRef<any>(null);
@@ -536,11 +593,14 @@ export const MessageList = React.memo(function MessageList({
   const contentHeightRef = useRef(0);
   const layoutHeightRef = useRef(0);
   const prevMessagesLengthRef = useRef(messages.length);
-  const didInitialScroll = useRef(false);
-  const initialScrollAttemptsRef = useRef(0);
   const pinnedToBottomRef = useRef(true);
+
+  // Init gating refs to prevent multiple scroll calls on mount
+  const didInitScrollRef = useRef(false);
+  const layoutReadyRef = useRef(false);
+  const contentReadyRef = useRef(false);
   const prevBottomOffsetRef = useRef<number | null>(null);
-  const [localMessages, setLocalMessages] = useState<ChatMessage[]>(messages);
+  const [localMessages, setLocalMessages] = useState<UIMessage[]>(messages);
   const [isHorizontalDragActive, setIsHorizontalDragActive] = useState(false);
   const colorScheme = useColorScheme();
   const isLightMode = colorScheme === 'light';
@@ -554,17 +614,17 @@ export const MessageList = React.memo(function MessageList({
     setLocalMessages(messages);
   }, [messages]);
 
-  const handleReactionPress = (message: ChatMessage) => {
+  const handleReactionPress = (message: UIMessage) => {
     onReactionPress?.(message);
   };
 
-  const handleQuickReaction = async (message: ChatMessage, emoji: string) => {
+  const handleQuickReaction = async (message: UIMessage, emoji: string) => {
     const isSender = message.isSent;
 
-    // Get current user's reaction
-    const currentReaction = isSender
-      ? message.senderReaction
-      : message.recipientReaction;
+    // Get current user's reaction from reactions array
+    const currentReaction = message.reactions?.find(r =>
+      isSender ? r.user_id === message.sender_id : r.user_id !== message.sender_id
+    )?.reaction;
 
     // If clicking the same emoji, remove reaction
     const isRemoving = emoji === currentReaction;
@@ -574,10 +634,27 @@ export const MessageList = React.memo(function MessageList({
     setLocalMessages((prev) =>
       prev.map((msg) => {
         if (msg.id === message.id) {
-          return {
-            ...msg,
-            ...(isSender ? { senderReaction: isRemoving ? undefined : emoji } : { recipientReaction: isRemoving ? undefined : emoji }),
-          };
+          const updatedReactions = [...(msg.reactions || [])];
+          const existingIndex = updatedReactions.findIndex(r =>
+            isSender ? r.user_id === msg.sender_id : r.user_id !== msg.sender_id
+          );
+          if (isRemoving && existingIndex >= 0) {
+            updatedReactions.splice(existingIndex, 1);
+          } else if (!isRemoving) {
+            if (existingIndex >= 0) {
+              updatedReactions[existingIndex] = { ...updatedReactions[existingIndex], reaction: emoji as any };
+            } else {
+              updatedReactions.push({
+                id: `temp-${Date.now()}`,
+                message_id: msg.id,
+                conversation_id: msg.conversation_id,
+                user_id: msg.sender_id, // This is a simplification - should use actual user ID
+                reaction: emoji as any,
+                created_at: new Date(),
+              });
+            }
+          }
+          return { ...msg, reactions: updatedReactions };
         }
         return msg;
       })
@@ -588,14 +665,11 @@ export const MessageList = React.memo(function MessageList({
       await reactTo(message.id, newEmoji, isSender);
     } catch (error) {
       console.error('Failed to react to message:', error);
-      // Revert on error
+      // Revert on error by restoring original message
       setLocalMessages((prev) =>
         prev.map((msg) => {
           if (msg.id === message.id) {
-            return {
-              ...msg,
-              ...(isSender ? { senderReaction: currentReaction } : { recipientReaction: currentReaction }),
-            };
+            return message; // Restore original message
           }
           return msg;
         })
@@ -673,42 +747,54 @@ export const MessageList = React.memo(function MessageList({
     }, 600);
   };
 
+  // Helper to convert sent_at to Date
+  const toDate = (d: Date | string): Date => typeof d === 'string' ? new Date(d) : d;
+
   // Normal list (NOT inverted): chronological order (oldest first)
   // Index 0 (oldest) = TOP, last index (newest) = BOTTOM (above toolbar)
   const data = useMemo(() => {
-    const sorted = [...localMessages].sort((a, b) => a.sent_at.getTime() - b.sent_at.getTime());
+    const sorted = [...localMessages].sort((a, b) => toDate(a.sent_at).getTime() - toDate(b.sent_at).getTime());
     return sorted;
   }, [localMessages]);
 
-  const BASE_GAP = 6;
-  const GROUPED_GAP = 2; // Tight gap for messages within 2 minutes from same sender
-  const EXTRA_ON_SENDER_CHANGE = 10;
+  // Gap sizes matching web app: mb-1 (4px) within sequence, mb-4 (16px) after last in sequence
+  const GAP_WITHIN_SEQUENCE = 4;
+  const GAP_AFTER_SEQUENCE = 16;
 
-  const isSameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
+  const isSameDay = (a: Date | string, b: Date | string) => {
+    const da = toDate(a);
+    const db = toDate(b);
+    return da.getFullYear() === db.getFullYear() &&
+      da.getMonth() === db.getMonth() &&
+      da.getDate() === db.getDate();
+  };
 
-  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const startOfDay = (d: Date | string) => {
+    const date = toDate(d);
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  };
 
-  const dayKey = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const dayKey = (d: Date | string) => {
+    const date = toDate(d);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
 
-  const getDatePillLabel = (d: Date) => {
+  const getDatePillLabel = (d: Date | string) => {
+    const date = toDate(d);
     const now = new Date();
     const diffDays = Math.round(
-      (startOfDay(now).getTime() - startOfDay(d).getTime()) / (1000 * 60 * 60 * 24)
+      (startOfDay(now).getTime() - startOfDay(date).getTime()) / (1000 * 60 * 60 * 24)
     );
 
     if (diffDays === 0) return t?.('general.today') ?? 'Today';
     if (diffDays === 1) return t?.('general.yesterday') ?? 'Yesterday';
 
-    return d
+    return date
       .toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })
       .replace(',', '');
   };
 
-  const [stickyTimestamp, setStickyTimestamp] = useState<Date>(() => data[0]?.sent_at ?? new Date());
+  const [stickyTimestamp, setStickyTimestamp] = useState<Date | string>(() => data[0]?.sent_at ?? new Date());
   const [stickyDayKey, setStickyDayKey] = useState(() => {
     const first = data[0];
     return first ? dayKey(first.sent_at) : dayKey(new Date());
@@ -718,10 +804,10 @@ export const MessageList = React.memo(function MessageList({
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 5 }).current;
 
   const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: Array<{ item: ChatMessage; index: number | null }> }) => {
+    ({ viewableItems }: { viewableItems: Array<{ item: UIMessage; index: number | null }> }) => {
       if (!viewableItems?.length) return;
 
-      let topMost = null as { item: ChatMessage; index: number | null } | null;
+      let topMost = null as { item: UIMessage; index: number | null } | null;
 
       for (const v of viewableItems) {
         if (!v?.item?.sent_at) continue;
@@ -752,43 +838,60 @@ export const MessageList = React.memo(function MessageList({
 
   const stickyDateForLabel = stickyTimestamp;
 
-  const formatTime = (date: Date): string => {
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
+  const formatTime = (date: Date | string): string => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    const hours = d.getHours().toString().padStart(2, '0');
+    const minutes = d.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
   };
 
-  const isMessageWithinOneHour = (message: ChatMessage): boolean => {
+  const isMessageWithinOneHour = (message: UIMessage): boolean => {
     const now = new Date();
-    const messageTime = message.sent_at;
+    const messageTime = typeof message.sent_at === 'string' ? new Date(message.sent_at) : message.sent_at;
     const diffInMs = now.getTime() - messageTime.getTime();
     const diffInHours = diffInMs / (1000 * 60 * 60);
     return diffInHours <= 1;
   };
 
-  const handleReply = (message: ChatMessage) => {
+  // Check if a message can be deleted:
+  // - Must be sent by the current user (isSent)
+  // - Must NOT be read yet (!isRead)
+  // - Must be within 5 minutes of being sent
+  const canDeleteMessage = (message: UIMessage): boolean => {
+    if (!message.isSent) return false;
+    if (message.isRead) return false;
+
+    const now = new Date();
+    const messageTime = typeof message.sent_at === 'string' ? new Date(message.sent_at) : message.sent_at;
+    const diffInMs = now.getTime() - messageTime.getTime();
+    const fiveMinutesMs = 5 * 60 * 1000;
+
+    return diffInMs <= fiveMinutesMs;
+  };
+
+  const handleReply = (message: UIMessage) => {
     if (onReply) {
       onReply(message);
     }
   };
 
-  const handleCopy = async (message: ChatMessage) => {
-    await Clipboard.setStringAsync(message.text);
+  const handleCopy = async (message: UIMessage) => {
+    await Clipboard.setStringAsync(message.text || '');
   };
 
-  const handleEdit = (message: ChatMessage) => {
+  const handleEdit = (message: UIMessage) => {
     if (onEdit) {
       onEdit(message);
     }
   };
 
-  const handleDelete = (message: ChatMessage) => {
+  const handleDelete = (message: UIMessage) => {
     if (onDelete) {
       onDelete(message);
     }
   };
 
-  const getDropdownOptions = (message: ChatMessage): DropdownMenuOption[] => {
+  const getDropdownOptions = (message: UIMessage): DropdownMenuOption[] => {
     const options: DropdownMenuOption[] = [
       {
         label: t('general.reply'),
@@ -841,12 +944,15 @@ export const MessageList = React.memo(function MessageList({
           onPress: () => handleEdit(message),
         });
       }
-      options.push({
-        label: t('general.delete'),
-        icon: { sf: 'trash', IconComponent: Trash2 },
-        onPress: () => handleDelete(message),
-        destructive: true,
-      });
+      // Only show delete if message is within 5 minutes and not read
+      if (canDeleteMessage(message)) {
+        options.push({
+          label: t('general.delete'),
+          icon: { sf: 'trash', IconComponent: Trash2 },
+          onPress: () => handleDelete(message),
+          destructive: true,
+        });
+      }
     }
 
     return options;
@@ -861,17 +967,36 @@ export const MessageList = React.memo(function MessageList({
     }, 50);
   };
 
+  // Single init gate to prevent multiple scroll calls on mount
+  const maybeInitScroll = () => {
+    if (didInitScrollRef.current) return;
+    if (!layoutReadyRef.current || !contentReadyRef.current) return;
+    if (data.length === 0) return;
+
+    didInitScrollRef.current = true;
+    pinnedToBottomRef.current = true;
+
+    listRef.current?.scrollToEnd({ animated: false });
+  };
+
   const handleContentSizeChange = (_width: number, height: number) => {
     contentHeightRef.current = height;
 
-    // Auto-scroll on content size change if pinned to bottom
-    if (pinnedToBottomRef.current) {
-      scrollToBottom(false);
+    if (!contentReadyRef.current && height > 0) {
+      contentReadyRef.current = true;
+      maybeInitScroll();
+      return; // Don't auto-scroll during init
+    }
+
+    if (didInitScrollRef.current && pinnedToBottomRef.current) {
+      listRef.current?.scrollToEnd({ animated: false });
     }
   };
 
   const handleLayout = (event: LayoutChangeEvent) => {
     layoutHeightRef.current = event.nativeEvent.layout.height;
+    layoutReadyRef.current = true;
+    maybeInitScroll();
   };
 
   useEffect(() => {
@@ -879,15 +1004,6 @@ export const MessageList = React.memo(function MessageList({
       const newTimestamp = data[0].sent_at;
       setStickyTimestamp(newTimestamp);
       setStickyDayKey(dayKey(newTimestamp));
-    }
-  }, [data.length]);
-
-  // Initial scroll to bottom on mount
-  useEffect(() => {
-    if (data.length > 0 && !didInitialScroll.current) {
-      didInitialScroll.current = true;
-      pinnedToBottomRef.current = true;
-      scrollToBottom(false);
     }
   }, [data.length]);
 
@@ -922,41 +1038,38 @@ export const MessageList = React.memo(function MessageList({
     }
   }, [bottomOffset]);
 
-  const renderItem = ({ item, index }: { item: ChatMessage; index: number }) => {
+  const renderItem = ({ item, index }: { item: UIMessage; index: number }) => {
     // Normal list (NOT inverted): chronological order
     // Index 0 (oldest) = TOP of screen, last index (newest) = BOTTOM of screen
     const older = index > 0 ? data[index - 1] : null; // Previous index = older in time
     const newer = index + 1 < data.length ? data[index + 1] : null; // Next index = newer in time
 
-    const sameSenderAsNewer = !!newer && newer.isSent === item.isSent;
-
-    // Check if messages are within 2 minutes (for grouping)
-    const isGroupedWithNewer = sameSenderAsNewer && newer &&
-      Math.abs(item.sent_at.getTime() - newer.sent_at.getTime()) < 2 * 60 * 1000;
+    // Match web app logic: isLastInSequence when last message, or next is different sender, or next is different day
+    const isLastInSequence =
+      index === data.length - 1 ||
+      (newer !== null && newer.isSent !== item.isSent) ||
+      (newer !== null && !isSameDay(item.sent_at, newer.sent_at));
 
     // Gap ABOVE this message (marginTop creates space above in normal list)
-    // Gap is between this message and the OLDER message above it
+    // Check if the PREVIOUS message was the last in its sequence
     let gap = 0;
     if (older) {
-      const sameSenderAsOlder = !!older && older.isSent === item.isSent;
-      const isGroupedWithOlder = sameSenderAsOlder && Math.abs(item.sent_at.getTime() - older.sent_at.getTime()) < 2 * 60 * 1000;
+      const wasOlderLastInSequence =
+        older.isSent !== item.isSent ||
+        !isSameDay(older.sent_at, item.sent_at);
 
-      if (sameSenderAsOlder) {
-        // Same sender: use grouped gap if within 2 mins, otherwise base gap
-        gap = isGroupedWithOlder ? GROUPED_GAP : BASE_GAP;
-      } else {
-        // Different sender: base gap + extra
-        gap = BASE_GAP + EXTRA_ON_SENDER_CHANGE;
-      }
+      gap = wasOlderLastInSequence ? GAP_AFTER_SEQUENCE : GAP_WITHIN_SEQUENCE;
     }
 
-    // Determine if this is LAST in sender run (show tail corner, no bottom border radius)
-    // Last = the one that is NOT grouped with the NEWER (next) message
-    const isLastInSenderRun = !isGroupedWithNewer;
+    // Show tail (reduced border radius) only on last message in sequence
+    const isLastInSenderRun = isLastInSequence;
 
     const showDatePill = !older || !isSameDay(older.sent_at, item.sent_at);
-    const itemDayKey = dayKey(item.sent_at);
-    const hideInlinePill = stickyActive && itemDayKey === stickyDayKey;
+
+    // Extract reactions from reactions array
+    const senderReaction = item.reactions?.find(r => r.user_id === item.sender_id)?.reaction;
+    const recipientReaction = item.reactions?.find(r => r.user_id !== item.sender_id)?.reaction;
+    const hasReactions = senderReaction || recipientReaction;
 
     return (
       <View>
@@ -966,14 +1079,12 @@ export const MessageList = React.memo(function MessageList({
               style={[
                 styles.datePill,
                 { backgroundColor: themeColors.backgroundTertiary },
-                hideInlinePill && styles.datePillHidden,
               ]}
             >
               <Text
                 style={[
                   styles.datePillText,
                   { color: themeColors.text },
-                  hideInlinePill && styles.datePillHidden,
                 ]}
               >
                 {getDatePillLabel(item.sent_at)}
@@ -996,6 +1107,7 @@ export const MessageList = React.memo(function MessageList({
             message={item}
             onHorizontalDragStart={() => setIsHorizontalDragActive(true)}
             onHorizontalDragEnd={() => setIsHorizontalDragActive(false)}
+            dropdownOptions={getDropdownOptions(item)}
           >
             <BubbleMeta
               item={item}
@@ -1013,12 +1125,11 @@ export const MessageList = React.memo(function MessageList({
               onImagePress={onImagePress}
               onVideoPress={onVideoPress}
               flashOpacity={flashAnimations.current[item.id]}
-              dropdownOptions={getDropdownOptions(item)}
             />
           </SwipeToReplyBubble>
 
           {/* Reactions container */}
-          {(item.senderReaction || item.recipientReaction) && (
+          {hasReactions && (
             <TouchableOpacity
               style={[
                 styles.reactionsContainer,
@@ -1037,21 +1148,21 @@ export const MessageList = React.memo(function MessageList({
                   },
                 ]}
               >
-                {item.senderReaction && item.recipientReaction && item.senderReaction === item.recipientReaction ? (
+                {senderReaction && recipientReaction && senderReaction === recipientReaction ? (
                   <>
-                    <Text style={styles.reactionEmoji}>{item.senderReaction}</Text>
+                    <Text style={styles.reactionEmoji}>{senderReaction}</Text>
                     <Text style={[styles.reactionCount, { color: themeColors.mutedText }]}>2</Text>
                   </>
                 ) : (
                   <>
-                    {item.senderReaction && (
+                    {senderReaction && (
                       <View style={styles.reactionItem}>
-                        <Text style={styles.reactionEmoji}>{item.senderReaction}</Text>
+                        <Text style={styles.reactionEmoji}>{senderReaction}</Text>
                       </View>
                     )}
-                    {item.recipientReaction && (
+                    {recipientReaction && (
                       <View style={styles.reactionItem}>
-                        <Text style={styles.reactionEmoji}>{item.recipientReaction}</Text>
+                        <Text style={styles.reactionEmoji}>{recipientReaction}</Text>
                       </View>
                     )}
                   </>
@@ -1072,23 +1183,11 @@ export const MessageList = React.memo(function MessageList({
     };
   }, []);
 
-  // Animated style for keyboard
-  const animatedContainerStyle = useAnimatedStyle(() => {
-    if (!keyboardHeight) return {};
-    return {
-      transform: [{ translateY: -keyboardHeight.value }],
-    };
-  }, [keyboardHeight]);
-
   return (
     <>
       <Reanimated.View
         ref={containerRef}
-        style={[
-          styles.fill,
-          { backgroundColor },
-          keyboardHeight ? animatedContainerStyle : undefined,
-        ]}
+        style={[styles.fill, { backgroundColor }]}
         onLayout={handleLayout}
       >
         <FlashList
@@ -1101,7 +1200,7 @@ export const MessageList = React.memo(function MessageList({
           scrollEnabled={!isHorizontalDragActive}
           contentContainerStyle={{
             paddingHorizontal: 16,
-            // Normal list: paddingTop = space at top (header), paddingBottom = space at bottom (toolbar)
+            // Normal list: paddingTop = space at top (header), paddingBottom = space at bottom (toolbar + 8px gap)
             paddingTop: headerHeight + 16 + STICKY_EXTRA,
             paddingBottom: bottomOffset,
             flexGrow: 1,
@@ -1116,7 +1215,21 @@ export const MessageList = React.memo(function MessageList({
             // Pinned to bottom when scrolled near the end
             const distanceFromBottom = contentHeight - layoutHeight - y;
             pinnedToBottomRef.current = distanceFromBottom <= 40;
+
+            // Trigger load more when scrolled near the top (200px threshold)
+            if (y < 200 && hasMoreMessages && !isLoadingMore && onLoadMore) {
+              onLoadMore();
+            }
           }}
+          ListHeaderComponent={
+            isLoadingMore ? (
+              <View style={styles.loadingMoreContainer}>
+                <Text style={[styles.loadingMoreText, { color: themeColors.mutedText }]}>
+                  {t('general.loadingMore') || 'Loading...'}
+                </Text>
+              </View>
+            ) : null
+          }
           scrollEventThrottle={16}
           onScrollBeginDrag={() => showSticky()}
           onScrollEndDrag={() => hideStickySoon()}
@@ -1156,12 +1269,12 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   messageWrapper: {
-    maxWidth: '100%',
+    width: '100%',
     overflow: 'visible',
     position: 'relative',
   },
-  messageWrapperLeft: { alignSelf: 'flex-start' },
-  messageWrapperRight: { alignSelf: 'flex-end' },
+  messageWrapperLeft: {},
+  messageWrapperRight: {},
   messageBubble: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -1229,9 +1342,6 @@ const styles = StyleSheet.create({
     ...typography.p3,
     fontWeight: '600',
   },
-  datePillHidden: {
-    opacity: 0,
-  },
   stickyHeaderRow: {
     position: 'absolute',
     top: 0,
@@ -1283,28 +1393,33 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   swipeContainer: {
+    width: '100%',
     position: 'relative',
-    flexShrink: 1,
     overflow: 'visible',
-  },
-  swipeContainerLeft: {
-    alignSelf: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  swipeContainerRight: {
-    alignSelf: 'flex-end',
-    alignItems: 'flex-end',
   },
   swipeBubbleHost: {
     maxWidth: '80%',
   },
+  bubbleAlignLeft: {
+    alignSelf: 'flex-start',
+  },
+  bubbleAlignRight: {
+    alignSelf: 'flex-end',
+  },
   replyUnderlay: {
     position: 'absolute',
-    left: 16,
     top: 0,
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  underlayLeft: {
+    left: 0,
+    paddingLeft: 16,
+  },
+  underlayRight: {
+    right: 0,
+    paddingRight: 16,
   },
   replyIconContainer: {
     width: 32,
@@ -1313,5 +1428,14 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingMoreContainer: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingMoreText: {
+    ...typography.p4,
+    fontWeight: '500',
   },
 });

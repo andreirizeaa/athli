@@ -46,8 +46,8 @@ export const ChatHeader = ({
 
   // Determine avatar and name from either chat or coach
   // Note: Conversation type uses other_user_name and other_user_avatar
-  const avatar = chat?.other_user_avatar || coach?.avatar;
-  const name = chat?.other_user_name || coach?.name || '';
+  const avatar = chat?.other_user_avatar || coach?.other_user_avatar;
+  const name = chat?.other_user_name || coach?.other_user_name || '';
   const showBackButton = !!onBackPress;
   const showActionButtons = !!onUserProfilePress || !!onPanelOpen || (dropdownOptions?.length ?? 0) > 0;
 

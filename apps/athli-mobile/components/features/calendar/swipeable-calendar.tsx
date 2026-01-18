@@ -321,9 +321,6 @@ export const SwipeableCalendar = ({
           // @ts-ignore
           layout.offset = ITEM_WIDTH * index;
         }}
-        // @ts-ignore - estimatedItemSize and estimatedListSize are valid FlashList props but types may be outdated
-        estimatedItemSize={ITEM_WIDTH}
-        estimatedListSize={{ width: SCREEN_WIDTH, height: WEEK_HEIGHT }}
         keyExtractor={(_, i) => `week-${i}`}
         renderItem={renderItem}
         removeClippedSubviews

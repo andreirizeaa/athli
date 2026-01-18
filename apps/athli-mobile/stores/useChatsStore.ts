@@ -7,8 +7,20 @@ import {
   deleteChat,
   markChatAsRead,
   readAllChats,
+  getChatMessages,
   type Chat,
+  type ChatMessage,
 } from '@/services/chats-service';
+
+type MessagesCache = {
+  [chatId: string]: {
+    messages: ChatMessage[];
+    fetchedAt: number;
+  };
+};
+
+// Cache messages for 5 minutes
+const MESSAGES_CACHE_TTL_MS = 5 * 60 * 1000;
 
 type ChatsStore = {
   // State
@@ -16,6 +28,7 @@ type ChatsStore = {
   archivedChats: Chat[];
   isLoading: boolean;
   error: string | null;
+  messagesCache: MessagesCache;
 
   // Actions
   setChats: (chats: Chat[]) => void;
@@ -29,6 +42,11 @@ type ChatsStore = {
   updateChat: (chat: Chat) => void;
   addChat: (chat: Chat) => void;
   clearChats: () => void;
+  // Messages cache actions
+  getCachedMessages: (chatId: string) => ChatMessage[] | null;
+  prefetchMessages: (chatId: string) => Promise<ChatMessage[]>;
+  setCachedMessages: (chatId: string, messages: ChatMessage[]) => void;
+  invalidateMessagesCache: (chatId: string) => void;
 };
 
 export const useChatsStore = create<ChatsStore>((set, get) => ({
@@ -37,6 +55,7 @@ export const useChatsStore = create<ChatsStore>((set, get) => ({
   archivedChats: [],
   isLoading: false,
   error: null,
+  messagesCache: {},
 
   // Set chats directly
   setChats: (chats) => {
@@ -184,6 +203,61 @@ export const useChatsStore = create<ChatsStore>((set, get) => ({
 
   // Clear chats (on logout)
   clearChats: () => {
-    set({ chats: [], archivedChats: [], error: null, isLoading: false });
+    set({ chats: [], archivedChats: [], error: null, isLoading: false, messagesCache: {} });
+  },
+
+  // Get cached messages if still valid
+  getCachedMessages: (chatId) => {
+    const { messagesCache } = get();
+    const cached = messagesCache[chatId];
+    if (!cached) return null;
+
+    // Check if cache is still valid
+    const now = Date.now();
+    if (now - cached.fetchedAt > MESSAGES_CACHE_TTL_MS) {
+      // Cache expired, remove it
+      const { [chatId]: _, ...rest } = messagesCache;
+      set({ messagesCache: rest });
+      return null;
+    }
+
+    return cached.messages;
+  },
+
+  // Prefetch messages for a chat (returns cached if available, fetches if not)
+  prefetchMessages: async (chatId) => {
+    const cached = get().getCachedMessages(chatId);
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const messages = await getChatMessages(chatId);
+      get().setCachedMessages(chatId, messages);
+      return messages;
+    } catch (error) {
+      console.error('[ChatsStore] Error prefetching messages:', error);
+      return [];
+    }
+  },
+
+  // Set cached messages
+  setCachedMessages: (chatId, messages) => {
+    set({
+      messagesCache: {
+        ...get().messagesCache,
+        [chatId]: {
+          messages,
+          fetchedAt: Date.now(),
+        },
+      },
+    });
+  },
+
+  // Invalidate messages cache for a chat (call after sending a message)
+  invalidateMessagesCache: (chatId) => {
+    const { messagesCache } = get();
+    const { [chatId]: _, ...rest } = messagesCache;
+    set({ messagesCache: rest });
   },
 }));

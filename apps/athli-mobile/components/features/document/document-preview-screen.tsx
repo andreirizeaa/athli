@@ -367,7 +367,7 @@ const DocumentPreviewScreen = () => {
               </Text>
             </View>
 
-            {/* Download button (only when opened from message) or spacer */}
+            {/* Download button (only when opened from message) or recipient tag */}
             {fromMessage ? (
               <PressableOpacity
                 style={[styles.downloadButton, { backgroundColor: mutedSurfaceColor }]}
@@ -380,6 +380,12 @@ const DocumentPreviewScreen = () => {
                   color={iconColor}
                 />
               </PressableOpacity>
+            ) : clientName ? (
+              <View style={[styles.recipientTag, { backgroundColor: themeColors.backgroundTertiary }]}>
+                <Text style={[styles.recipientTagText, { color: themeColors.text }]} numberOfLines={1}>
+                  {clientName}
+                </Text>
+              </View>
             ) : (
               <View style={styles.spacer} />
             )}
@@ -392,7 +398,6 @@ const DocumentPreviewScreen = () => {
             <AttachmentPreviewToolbar
               value={caption}
               onChangeText={setCaption}
-              clientName={clientName}
               onSend={handleSend}
             />
           </View>
@@ -440,6 +445,16 @@ const styles = StyleSheet.create({
   },
   spacer: {
     width: 44,
+  },
+  recipientTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    maxWidth: 120,
+  },
+  recipientTagText: {
+    ...typography.p2,
+    fontWeight: '500',
   },
   downloadButton: {
     width: 44,

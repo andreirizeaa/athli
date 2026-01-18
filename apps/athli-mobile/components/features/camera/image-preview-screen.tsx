@@ -15,7 +15,7 @@ import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager
 import { iconSizes, typography } from '@/constants/typography';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
-import { type ImageAttachment } from '@/components/features/chats/message-image-preview';
+import { type ImageAttachment } from '@/components/features/message/message-image-preview';
 import { AttachmentPreviewToolbar } from '@/components/features/camera/attachment-preview-toolbar';
 import { sendImageMessage } from '@/services/chats-service';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
@@ -41,13 +41,13 @@ const ImagePreviewScreen = () => {
   const insets = useSafeAreaInsets();
   const mutedSurfaceColor = themeColors.backgroundTertiary;
   const iconColor = themeColors.text;
-  const showToolbar = fromPicker;
 
   const initialImages: ImageAttachment[] = params.images ? JSON.parse(params.images) : [];
   const senderName = params.senderName || 'Unknown';
   const isSent = params.isSent === 'true';
   const displayName = isSent ? 'You' : senderName;
   const fromPicker = params.fromPicker === 'true';
+  const showToolbar = fromPicker;
   const [caption, setCaption] = useState(params.caption || '');
 
   // Update caption when params change (for hydration)
@@ -396,7 +396,7 @@ const ImagePreviewScreen = () => {
       // Send image message
       await sendImageMessage(
         params.chatId,
-        imageBytesArray,
+        imageBytesArray as any,
         caption.trim() || undefined
       );
 
@@ -653,7 +653,7 @@ const ImagePreviewScreen = () => {
             },
           ]}
         >
-          {/* Top header - only X button */}
+          {/* Top header - X button on left, recipient name on right */}
           <View style={styles.topHeader}>
             <IconButton
               icon={{ sf: 'xmark', IconComponent: X }}
@@ -661,6 +661,16 @@ const ImagePreviewScreen = () => {
               size="md"
               scheme="light"
             />
+            {/* Spacer to push recipient to the right */}
+            <View style={styles.headerSpacer} />
+            {/* Recipient name tag */}
+            {params.clientName && (
+              <View style={[styles.recipientTag, { backgroundColor: themeColors.backgroundTertiary }]}>
+                <Text style={[styles.recipientTagText, { color: themeColors.text }]} numberOfLines={1}>
+                  {params.clientName}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -668,7 +678,6 @@ const ImagePreviewScreen = () => {
         <AttachmentPreviewToolbar
           value={caption}
           onChangeText={setCaption}
-          clientName={params.clientName}
           onSend={handleSend}
           keyboardHeight={keyboardHeight}
           images={images}
@@ -705,6 +714,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
+  },
+  headerSpacer: {
+    flex: 1,
+  },
+  recipientTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    maxWidth: 200,
+  },
+  recipientTagText: {
+    ...typography.p2,
+    fontWeight: '500',
   },
   closeButton: {
     width: 44,

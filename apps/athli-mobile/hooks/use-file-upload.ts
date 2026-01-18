@@ -4,8 +4,10 @@
  */
 
 import { useState, useCallback } from 'react';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { decode } from 'base64-arraybuffer';
+import * as Crypto from 'expo-crypto';
 import { supabase } from '@/lib/supabase';
 import type { MessageAttachment, UploadStatus } from '@/types/chat';
 import {
@@ -25,7 +27,13 @@ type UploadProgress = {
 };
 
 type UploadResult = {
-  attachment: MessageAttachment;
+  filePath: string;
+  filename: string;
+  mimeType: string;
+  fileSize: number;
+  thumbnailPath?: string;
+  width?: number;
+  height?: number;
   publicUrl: string;
 };
 
@@ -87,9 +95,6 @@ export const useFileUpload = () => {
           encoding: FileSystem.EncodingType.Base64,
         });
 
-        // 5. Convert to blob
-        const blob = base64ToBlob(base64, mimeType);
-
         // Update progress
         const progress: UploadProgress = {
           bytesUploaded: 0,
@@ -99,10 +104,11 @@ export const useFileUpload = () => {
         setUploadProgress(progress);
         onProgress?.(progress);
 
-        // 6. Upload to Supabase Storage
+        // 5. Upload to Supabase Storage using base64 decode
+        // React Native doesn't support Blob from ArrayBuffer, so we use base64 upload
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from(STORAGE_BUCKET_NAME)
-          .upload(filePath, blob, {
+          .upload(filePath, decode(base64), {
             contentType: mimeType,
             upsert: false,
           });
@@ -118,12 +124,12 @@ export const useFileUpload = () => {
         setUploadProgress(finalProgress);
         onProgress?.(finalProgress);
 
-        // 7. Get public URL
+        // 6. Get public URL
         const { data: urlData } = supabase.storage
           .from(STORAGE_BUCKET_NAME)
           .getPublicUrl(filePath);
 
-        // 8. Generate thumbnail for images/videos (optional)
+        // 7. Generate thumbnail for images/videos (optional)
         let thumbnailPath: string | undefined;
         let width: number | undefined;
         let height: number | undefined;
@@ -139,34 +145,18 @@ export const useFileUpload = () => {
           height = thumbnailResult?.height;
         }
 
-        // 9. Create attachment record in database
-        const { data: attachment, error: attachmentError } = await supabase
-          .from(STORAGE_BUCKET_NAME)
-          .insert({
-            message_id: messageId,
-            conversation_id: conversationId,
-            bucket_id: STORAGE_BUCKET_NAME,
-            file_path: filePath,
-            filename: finalFilename,
-            mime_type: mimeType,
-            size_bytes: fileSize,
-            thumbnail_path: thumbnailPath,
-            width,
-            height,
-            upload_status: 'completed',
-          })
-          .select()
-          .single();
-
-        if (attachmentError) throw attachmentError;
-
         setUploadStatus('completed');
 
+        // Return storage info without creating DB record yet
+        // DB record will be created after message is created with real message_id
         return {
-          attachment: {
-            ...attachment,
-            created_at: new Date(attachment.created_at),
-          } as MessageAttachment,
+          filePath,
+          filename: finalFilename,
+          mimeType,
+          fileSize,
+          thumbnailPath,
+          width,
+          height,
           publicUrl: urlData.publicUrl,
         };
       } catch (err) {
@@ -224,6 +214,7 @@ export const useFileUpload = () => {
 
   /**
    * Upload an audio file
+   * Note: Duration should be stored when creating the attachment record after message creation
    */
   const uploadAudio = useCallback(
     async (
@@ -232,7 +223,7 @@ export const useFileUpload = () => {
       audioUri: string,
       durationSeconds?: number,
       onProgress?: (progress: UploadProgress) => void,
-    ): Promise<UploadResult> => {
+    ): Promise<UploadResult & { durationSeconds?: number }> => {
       const result = await uploadFile({
         conversationId,
         messageId,
@@ -241,15 +232,11 @@ export const useFileUpload = () => {
         onProgress,
       });
 
-      // Update attachment with duration if provided
-      if (durationSeconds && result.attachment.id) {
-        await supabase
-          .from(STORAGE_BUCKET_NAME)
-          .update({ duration_seconds: durationSeconds })
-          .eq('id', result.attachment.id);
-      }
-
-      return result;
+      // Return duration with the result - caller should store it in attachment record
+      return {
+        ...result,
+        durationSeconds,
+      };
     },
     [uploadFile],
   );
@@ -307,19 +294,6 @@ export const useFileUpload = () => {
 // ================================================
 
 /**
- * Convert base64 string to Blob
- */
-const base64ToBlob = (base64: string, mimeType: string): Blob => {
-  const byteCharacters = atob(base64);
-  const byteNumbers = new Array(byteCharacters.length);
-  for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.charCodeAt(i);
-  }
-  const byteArray = new Uint8Array(byteNumbers);
-  return new Blob([byteArray], { type: mimeType });
-};
-
-/**
  * Generate a thumbnail for an image
  * Resizes to max 200x200 while maintaining aspect ratio
  */
@@ -344,11 +318,9 @@ const generateImageThumbnail = async (
       encoding: FileSystem.EncodingType.Base64,
     });
 
-    const blob = base64ToBlob(base64, 'image/jpeg');
-
     const { error: uploadError } = await supabase.storage
       .from('message_attachments')
-      .upload(thumbnailPath, blob, {
+      .upload(thumbnailPath, decode(base64), {
         contentType: 'image/jpeg',
         upsert: false,
       });
@@ -389,6 +361,10 @@ export const useSendMessageWithAttachment = () => {
       caption?: string,
       onProgress?: (progress: UploadProgress) => void,
     ) => {
+      // Generate a UUID for the storage path to satisfy file_path format constraint
+      // Using expo-crypto for proper UUID format in React Native
+      const tempId = Crypto.randomUUID();
+
       try {
         // 1. Determine message type from mime type
         let messageType: 'image' | 'video' | 'audio' | 'file' = 'file';
@@ -396,7 +372,16 @@ export const useSendMessageWithAttachment = () => {
         else if (mimeType.startsWith('video/')) messageType = 'video';
         else if (mimeType.startsWith('audio/')) messageType = 'audio';
 
-        // 2. Create message record first
+        // 2. Upload file to storage FIRST - if this fails, no message is created
+        const uploadResult = await uploadFile({
+          conversationId,
+          messageId: tempId, // Just used for storage path organization
+          fileUri,
+          mimeType,
+          onProgress,
+        });
+
+        // 3. Create message record AFTER successful upload
         const { data: message, error: messageError } = await supabase
           .from('messages')
           .insert({
@@ -409,25 +394,48 @@ export const useSendMessageWithAttachment = () => {
           .select()
           .single();
 
-        if (messageError) throw messageError;
+        if (messageError) {
+          console.error('[SendWithAttachment] Message creation failed after upload:', messageError);
+          throw messageError;
+        }
 
-        // 3. Upload file
-        const uploadResult = await uploadFile({
-          conversationId,
-          messageId: message.id,
-          fileUri,
-          mimeType,
-          onProgress,
-        });
+        // 4. Create attachment record with real message_id
+        const { data: attachment, error: attachmentError } = await supabase
+          .from('message_attachments')
+          .insert({
+            message_id: message.id,
+            conversation_id: conversationId,
+            bucket_id: STORAGE_BUCKET_NAME,
+            file_path: uploadResult.filePath,
+            filename: uploadResult.filename,
+            mime_type: uploadResult.mimeType,
+            size_bytes: uploadResult.fileSize,
+            thumbnail_path: uploadResult.thumbnailPath,
+            width: uploadResult.width,
+            height: uploadResult.height,
+            upload_status: 'completed',
+          })
+          .select()
+          .single();
 
-        // 4. Return message with attachment
+        if (attachmentError) {
+          console.error('[SendWithAttachment] Attachment record creation failed:', attachmentError);
+          // Message was created but attachment record failed - delete the message
+          await supabase.from('messages').delete().eq('id', message.id);
+          throw attachmentError;
+        }
+
+        // 5. Return message with attachment
         return {
           message: {
             ...message,
             sent_at: new Date(message.sent_at),
-            attachments: [uploadResult.attachment],
+            attachments: [attachment],
           },
-          attachment: uploadResult.attachment,
+          attachment: {
+            ...attachment,
+            created_at: new Date(attachment.created_at),
+          } as MessageAttachment,
           publicUrl: uploadResult.publicUrl,
         };
       } catch (err) {

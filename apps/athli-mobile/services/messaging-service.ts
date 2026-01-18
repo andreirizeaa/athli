@@ -71,13 +71,22 @@ export const getConversations = async ({
 
     if (participantsError) throw participantsError;
 
-    // Get read receipts for unread count
+    // Get read receipts for unread count (current user)
     const { data: readReceipts, error: receiptsError } = await supabase
       .from('message_read_receipts')
       .select('*')
       .eq('user_id', coachId);
 
     if (receiptsError) throw receiptsError;
+
+    // Get all read receipts for these conversations (to compute last_message_is_read)
+    const conversationIds = conversations.map((c) => c.id);
+    const { data: allReadReceipts, error: allReceiptsError } = await supabase
+      .from('message_read_receipts')
+      .select('*')
+      .in('conversation_id', conversationIds);
+
+    if (allReceiptsError) throw allReceiptsError;
 
     // Get other user IDs (client if user is coach, coach if user is client)
     const otherUserIds = conversations.map((conv) =>
@@ -148,6 +157,18 @@ export const getConversations = async ({
         const receipt = readReceipts?.find((r) => r.conversation_id === conv.id);
         const unreadCount = await getUnreadCount(conv.id, coachId, receipt);
 
+        // Compute last_message_is_read: true if we sent the last message and other user has read it
+        let lastMessageIsRead = false;
+        if (conv.last_message_sender_id === coachId && conv.last_message_at) {
+          const otherReceipt = allReadReceipts?.find(
+            (r) => r.conversation_id === conv.id && r.user_id === otherUserId,
+          );
+          if (otherReceipt?.last_read_at) {
+            lastMessageIsRead =
+              new Date(otherReceipt.last_read_at) >= new Date(conv.last_message_at);
+          }
+        }
+
         return {
           ...conv,
           last_message_at: conv.last_message_at
@@ -159,6 +180,7 @@ export const getConversations = async ({
           other_user_name: otherProfile?.name || `Unknown User (${otherUserId.slice(0, 8)}...)`,
           other_user_avatar: otherProfile?.profile_picture_url,
           unread_count: unreadCount,
+          last_message_is_read: lastMessageIsRead,
         } as Conversation;
       }),
     );
@@ -260,10 +282,11 @@ export const getMessages = async ({
         *,
         attachments:message_attachments(*),
         reactions:message_reactions(*),
-        parent_message:messages!parent_message_id(id, content, message_type, sender_id)
+        parent_message:messages!parent_message_id(id, content, message_type, sender_id, is_deleted)
       `,
       )
       .eq('conversation_id', conversationId)
+      .or('is_deleted.is.null,is_deleted.eq.false')  // Filter out soft-deleted messages
       .order('sent_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
