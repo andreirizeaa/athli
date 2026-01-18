@@ -103,7 +103,7 @@ export const getMessages = async ({
           ...react,
           created_at: new Date(react.created_at),
         })),
-        parent_message: msg.parent_message
+        parent_message: msg.parent_message && !Array.isArray(msg.parent_message) && msg.parent_message.id
           ? {
               ...msg.parent_message,
               sent_at: new Date(msg.parent_message.sent_at),
