@@ -353,6 +353,7 @@ const InboxPage = () => {
   const [isMessageListReady, setIsMessageListReady] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(!!contactIdFromPath);
+  const [userManuallyOpenedSidebar, setUserManuallyOpenedSidebar] = React.useState(false);
   const [messageInput, setMessageInput] = React.useState('');
   const [isNewMessageOpen, setIsNewMessageOpen] = React.useState(false);
   const [isCreateNoteOpen, setIsCreateNoteOpen] = React.useState(false);
@@ -823,12 +824,22 @@ const InboxPage = () => {
     setIsMessageListReady(false);
   }, [selectedContactId]);
 
+  // Handler for manual sidebar toggle - tracks user preference
+  const handleManualSidebarToggle = React.useCallback((collapsed: boolean) => {
+    setIsSidebarCollapsed(collapsed);
+    // Track if user manually opened the sidebar (not collapsed means opened)
+    setUserManuallyOpenedSidebar(!collapsed);
+  }, []);
+
   // Handler for contact click in sidebar - shows loading immediately
   const handleContactClick = React.useCallback((contactId: string) => {
     setIsNavigating(true);
-    setIsSidebarCollapsed(true);
+    // Only auto-collapse if user hasn't manually opened the sidebar
+    if (!userManuallyOpenedSidebar) {
+      setIsSidebarCollapsed(true);
+    }
     router.push(`/inbox/${contactId}/overview`);
-  }, [router]);
+  }, [router, userManuallyOpenedSidebar]);
 
   // Read contact ID from URL path params on mount and when path changes
   React.useEffect(() => {
@@ -836,7 +847,10 @@ const InboxPage = () => {
       const contact = contacts.find(c => c.id === contactIdFromPath);
       if (contact) {
         setSelectedContactId(contactIdFromPath);
-        setIsSidebarCollapsed(true);
+        // Only auto-collapse if user hasn't manually opened the sidebar
+        if (!userManuallyOpenedSidebar) {
+          setIsSidebarCollapsed(true);
+        }
         // Reset to overview tab when selecting a new contact
         setActiveClientTab('overview');
         // Clear navigating state once contact is selected
@@ -850,7 +864,7 @@ const InboxPage = () => {
       setSelectedContactId(undefined);
       setIsNavigating(false);
     }
-  }, [contactIdFromPath, contacts, isLoadingClients, router]);
+  }, [contactIdFromPath, contacts, isLoadingClients, router, userManuallyOpenedSidebar]);
 
   // Load drafts on mount
   React.useEffect(() => {
@@ -2083,7 +2097,7 @@ const InboxPage = () => {
           <div className="flex-shrink-0 h-full z-10">
             <InboxSidebar
               isSidebarCollapsed={isSidebarCollapsed}
-              setIsSidebarCollapsed={setIsSidebarCollapsed}
+              setIsSidebarCollapsed={handleManualSidebarToggle}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               filteredContacts={filteredContacts}
@@ -2151,7 +2165,10 @@ const InboxPage = () => {
                           onTogglePowerView={() => {
                             const newState = !isPowerViewOpen;
                             setIsPowerViewOpen(newState);
-                            setIsSidebarCollapsed(newState);
+                            // Only auto-collapse sidebar if user hasn't manually opened it
+                            if (!userManuallyOpenedSidebar || !newState) {
+                              setIsSidebarCollapsed(newState);
+                            }
                           }}
                         />
 
