@@ -658,11 +658,12 @@ export default function ChatDetailScreen() {
       }));
     },
     onMessageUpdated: (message) => {
-      console.log('[Chat Detail] onMessageUpdated:', message.message_type, message.id, 'attachments:', message.attachments?.length || 0);
+      console.log('[Chat Detail] onMessageUpdated:', message.message_type, message.id, 'attachments:', message.attachments?.length || 0, 'is_deleted:', message.is_deleted);
       // Message now includes attachments from enhanced broadcast trigger - no refetch needed
 
       // If a message is soft-deleted (is_deleted=true), remove it from local state
-      if (message.is_deleted) {
+      // Use explicit true check to handle any type coercion issues
+      if (message.is_deleted === true) {
         removeSavedMessage(message.id);
       } else {
         // Otherwise, update the message in local state
@@ -762,6 +763,11 @@ export default function ChatDetailScreen() {
 
     const durationMs = fromRecorder > 0 ? fromRecorder : fromWallClock;
     lastVoiceNoteDurationMsRef.current = durationMs;
+
+    // Debug logging - only log occasionally to avoid spam
+    if (durationMs > 0 && durationMs % 1000 < 100) {
+      console.log('[ChatDetail] Duration update - fromRecorder:', fromRecorder, 'fromWallClock:', fromWallClock, 'using:', durationMs);
+    }
 
     if (!isStopped) {
       setDurationLabel(formatMmSs(durationMs));
@@ -1177,19 +1183,25 @@ export default function ChatDetailScreen() {
       '',
       'audio',
       undefined,
-      [{ local_uri: audioUri, mime_type: 'audio/mp4', filename: 'voicenote.m4a' }]
+      [{ local_uri: audioUri, mime_type: 'audio/mp4', filename: 'voicenote.m4a', duration: lastVoiceNoteDurationMsRef.current }]
     );
 
     const optMsgSentAt = optimisticMsg.sent_at.getTime();
     setOptimisticMessages((prev) => [...prev, optimisticMsg]);
 
     try {
+      // Convert duration from ms to seconds for database storage
+      const durationMs = lastVoiceNoteDurationMsRef.current;
+      const durationSeconds = Math.round(durationMs / 1000);
+      console.log('[ChatDetail] Sending voice note - durationMs:', durationMs, 'durationSeconds:', durationSeconds);
+
       await sendWithAttachment(
         id,
         currentUserId,
         audioUri,
         'audio/mp4',
-        undefined,
+        undefined, // caption
+        durationSeconds, // duration in seconds for DB
       );
 
       // Poll for signed URLs before removing optimistic message
@@ -1239,7 +1251,9 @@ export default function ChatDetailScreen() {
         const fromWallClock = recordingStartedAtMsRef.current
           ? Date.now() - recordingStartedAtMsRef.current
           : 0;
-        lastVoiceNoteDurationMsRef.current = fromRecorder > 0 ? fromRecorder : fromWallClock;
+        const finalDuration = fromRecorder > 0 ? fromRecorder : fromWallClock;
+        console.log('[ChatDetail] Stop recording - fromRecorder:', fromRecorder, 'fromWallClock:', fromWallClock, 'using:', finalDuration);
+        lastVoiceNoteDurationMsRef.current = finalDuration;
       }
 
       setIsStopped(true);
@@ -1359,15 +1373,11 @@ export default function ChatDetailScreen() {
     }
   };
 
-  const handleMessageEdit = (message: UIMessage) => {
-    // TODO: Implement edit functionality
-    // This could set the message to edit mode and populate the input with the message text
-    setSearchQuery(message.text || '');
-  };
-
   const handleMessageDelete = async (message: UIMessage) => {
-    // Optimistically remove from local state first for instant UI feedback
+    // Optimistically remove from ALL local states for instant UI feedback
+    // This includes savedMessages and optimisticMessages (for audio/attachment messages that stay longer)
     removeSavedMessage(message.id);
+    setOptimisticMessages((prev) => prev.filter((m) => m.id !== message.id && m.realMessageId !== message.id));
 
     try {
       // Call the real delete API (soft delete)
@@ -1503,7 +1513,6 @@ export default function ChatDetailScreen() {
               themeColors={themeColors}
               clientName={chat.other_user_name || 'Client'}
               onReply={handleMessageReply}
-              onEdit={handleMessageEdit}
               onDelete={handleMessageDelete}
               onReactionPress={handleReactionPress}
               onDocumentPress={handleDocumentPress}

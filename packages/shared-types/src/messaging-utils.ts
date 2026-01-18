@@ -205,7 +205,7 @@ export function createOptimisticMessage(
   content: string,
   messageType: MessageType = 'text',
   parentMessageId?: string,
-  attachments?: Array<{ local_uri: string; mime_type: string; filename?: string }>,
+  attachments?: Array<{ local_uri: string; mime_type: string; filename?: string; duration?: number }>,
   parentMessage?: OptimisticParentMessage,
 ): OptimisticMessage {
   const optimisticMessage: OptimisticMessage = {
@@ -230,6 +230,7 @@ export function createOptimisticMessage(
       upload_status: 'uploading' as const,
       created_at: new Date(),
       local_uri: att.local_uri,
+      duration: att.duration,
     })),
   };
 

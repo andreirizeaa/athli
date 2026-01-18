@@ -11,7 +11,8 @@ type AttachmentToUpload = {
   data: string; // base64 data URL
   type: string; // MIME type
   size: number;
-  attachmentType: 'image' | 'video' | 'pdf';
+  attachmentType: 'image' | 'video' | 'pdf' | 'audio';
+  durationSeconds?: number; // For audio attachments
 };
 
 type UploadAttachmentsOptions = {
@@ -167,28 +168,45 @@ export const uploadAttachments = async ({
       }
 
       // 5. Create attachment record in database
+      const insertData = {
+        message_id: messageId,
+        conversation_id: conversationId,
+        bucket_id: STORAGE_BUCKET_NAME,
+        file_path: filePath,
+        filename: attachment.name,
+        mime_type: attachment.type,
+        size_bytes: attachment.size,
+        thumbnail_path: thumbnailPath,
+        width,
+        height,
+        upload_status: 'completed',
+        duration_seconds: attachment.durationSeconds,
+      };
+      console.log('[UploadAttachments] Inserting attachment record:', insertData);
+
       const { error: attachmentError } = await supabase
         .from('message_attachments')
-        .insert({
-          message_id: messageId,
-          conversation_id: conversationId,
-          bucket_id: STORAGE_BUCKET_NAME,
-          file_path: filePath,
-          filename: attachment.name,
-          mime_type: attachment.type,
-          size_bytes: attachment.size,
-          thumbnail_path: thumbnailPath,
-          width,
-          height,
-          upload_status: 'completed',
-        });
+        .insert(insertData);
 
       if (attachmentError) {
-        console.error('[UploadAttachments] Failed to create attachment record:', attachmentError);
+        console.error('[UploadAttachments] Failed to create attachment record:', {
+          message: attachmentError.message,
+          code: attachmentError.code,
+          details: attachmentError.details,
+          hint: attachmentError.hint,
+          raw: JSON.stringify(attachmentError),
+        });
         throw attachmentError;
       }
     } catch (error) {
-      console.error('[UploadAttachments] Failed to upload attachment:', attachment.name, error);
+      const err = error as any;
+      console.error('[UploadAttachments] Failed to upload attachment:', attachment.name, {
+        message: err?.message,
+        code: err?.code,
+        details: err?.details,
+        hint: err?.hint,
+        raw: JSON.stringify(error),
+      });
       // Continue with other attachments even if one fails
       // TODO: Implement retry logic or better error handling
     }

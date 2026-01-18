@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import { Reply, Copy, Pencil, Trash2, Send, CheckCircle } from 'lucide-react-native';
+import { Reply, Copy, Trash2, Send, CheckCircle } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Reanimated, {
@@ -51,12 +51,13 @@ const getAttachmentUri = (attachment: AttachmentWithLocalUri, urlMap: Attachment
 };
 
 // Helper to extract audio attachment (rendered separately, full-width)
+// Returns attachment even without URI so the audio preview can show its loading state
 const getAudioAttachment = (msg: UIMessage, urlMap: AttachmentUrlMap): (AttachmentWithLocalUri & { uri: string }) | undefined => {
   const attachment = msg.attachments?.find(a => a.mime_type?.startsWith('audio/'));
   if (!attachment) return undefined;
   const uri = getAttachmentUri(attachment as AttachmentWithLocalUri, urlMap);
-  if (!uri) return undefined; // Don't return if URI not yet available
-  return { ...attachment, uri };
+  // Return attachment with URI (or empty string) - audio preview handles loading state
+  return { ...attachment, uri: uri || '' };
 };
 
 // Helper to get user's reaction from reactions array
@@ -69,18 +70,27 @@ const getUserReaction = (msg: UIMessage, isSender: boolean, currentUserId?: stri
 };
 
 // Helper to calculate pending attachments count (expected - actual loaded)
+// Excludes audio attachments since they're handled separately with their own loading state
 const getPendingAttachmentsCount = (msg: UIMessage, urlMap: AttachmentUrlMap): number => {
   const expectedCount = msg.attachment_count || 0;
   if (expectedCount === 0) return 0;
 
-  // Count attachments that have a valid displayable URI
-  const readyCount = msg.attachments?.filter((a) => {
+  // Filter out audio attachments - they're rendered separately, not in the grid
+  const nonAudioAttachments = msg.attachments?.filter(a => !a.mime_type?.startsWith('audio/')) || [];
+  const audioCount = (msg.attachments?.length || 0) - nonAudioAttachments.length;
+
+  // Adjust expected count to exclude audio
+  const expectedNonAudioCount = Math.max(0, expectedCount - audioCount);
+  if (expectedNonAudioCount === 0) return 0;
+
+  // Count non-audio attachments that have a valid displayable URI
+  const readyCount = nonAudioAttachments.filter((a) => {
     const hasLocalUri = (a as AttachmentWithLocalUri).local_uri;
     const hasSignedUrl = urlMap[a.id];
     return hasLocalUri || hasSignedUrl;
-  }).length || 0;
+  }).length;
 
-  return Math.max(0, expectedCount - readyCount);
+  return Math.max(0, expectedNonAudioCount - readyCount);
 };
 
 /**
@@ -97,7 +107,6 @@ interface MessageListProps {
   headerHeight?: number;
   bottomOffset?: number;
   onReply?: (message: UIMessage) => void;
-  onEdit?: (message: UIMessage) => void;
   onDelete?: (message: UIMessage) => void;
   onReactionPress?: (message: UIMessage) => void;
   onDocumentPress?: (document: any) => void;
@@ -207,6 +216,9 @@ const BubbleMeta = React.memo(function BubbleMeta({
   const audio = getAudioAttachment(item, attachmentUrlMap);
 
   // Extract all non-audio attachments for the unified grid
+  // Keep all attachments (including those without URIs yet) to maintain stable cell positions
+  // We only show the grid once we have actual attachment objects (not based on attachment_count)
+  // because we can't determine audio vs non-audio until attachments arrive
   const gridAttachments = (item.attachments || [])
     .filter(a => !a.mime_type?.startsWith('audio/'))
     .map(a => ({
@@ -214,11 +226,10 @@ const BubbleMeta = React.memo(function BubbleMeta({
       uri: getAttachmentUri(a as AttachmentWithLocalUri, attachmentUrlMap),
       mime_type: a.mime_type,
       filename: a.filename,
-    }))
-    .filter(a => a.uri); // Only include attachments with valid URIs
-
-  // Calculate pending attachments (expected but not yet loaded)
-  const pendingAttachmentsCount = getPendingAttachmentsCount(item, attachmentUrlMap);
+    }));
+  // Skeletons shown for attachments without URIs yet (handled in MessageAttachmentGrid)
+  // Note: We don't show pending skeletons based on attachment_count alone because
+  // we can't determine if expected attachments are audio (excluded from grid) or not
 
   const bubbleStyle = [
     styles.messageBubble,
@@ -274,10 +285,10 @@ const BubbleMeta = React.memo(function BubbleMeta({
       )}
 
       {/* Unified attachment grid (images, videos, documents, loading skeletons) */}
-      {(gridAttachments.length > 0 || pendingAttachmentsCount > 0) && (
+      {gridAttachments.length > 0 && (
         <MessageAttachmentGrid
           attachments={gridAttachments}
-          pendingCount={pendingAttachmentsCount}
+          pendingCount={0}
           themeColors={themeColors}
           parentBackgroundColor={
             item.isSent ? themeColors.primary : recipientBackgroundColor
@@ -386,6 +397,7 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
   onHorizontalDragStart,
   onHorizontalDragEnd,
   dropdownOptions,
+  hasAudio,
 }: {
   children: React.ReactNode;
   themeColors: ThemeColors;
@@ -396,6 +408,7 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
   onHorizontalDragStart?: () => void;
   onHorizontalDragEnd?: () => void;
   dropdownOptions: DropdownMenuOption[];
+  hasAudio?: boolean;
 }) {
   const MAX = 80;
   const THRESHOLD = 50;
@@ -539,6 +552,7 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
             style={[
               styles.swipeBubbleHost,
               alignRight ? styles.bubbleAlignRight : styles.bubbleAlignLeft,
+              hasAudio && styles.swipeBubbleHostFullWidth,
               bubbleAnimatedStyle,
             ]}
           >
@@ -562,7 +576,6 @@ export const MessageList = React.memo(function MessageList({
   headerHeight = 0,
   bottomOffset = 0,
   onReply,
-  onEdit,
   onDelete,
   onReactionPress,
   onDocumentPress,
@@ -860,13 +873,6 @@ export const MessageList = React.memo(function MessageList({
     return `${hours}:${minutes}`;
   };
 
-  const isMessageWithinOneHour = (message: UIMessage): boolean => {
-    const now = new Date();
-    const messageTime = typeof message.sent_at === 'string' ? new Date(message.sent_at) : message.sent_at;
-    const diffInMs = now.getTime() - messageTime.getTime();
-    const diffInHours = diffInMs / (1000 * 60 * 60);
-    return diffInHours <= 1;
-  };
 
   // Check if a message can be deleted:
   // - Must be sent by the current user (isSent)
@@ -894,11 +900,6 @@ export const MessageList = React.memo(function MessageList({
     await Clipboard.setStringAsync(message.text || '');
   };
 
-  const handleEdit = (message: UIMessage) => {
-    if (onEdit) {
-      onEdit(message);
-    }
-  };
 
   const handleDelete = (message: UIMessage) => {
     if (onDelete) {
@@ -906,68 +907,74 @@ export const MessageList = React.memo(function MessageList({
     }
   };
 
+  // Check if a message has only audio attachments (no text, no other attachment types)
+  const isAudioOnlyMessage = (message: UIMessage): boolean => {
+    const attachments = message.attachments;
+    if (!attachments || attachments.length === 0) return false;
+    if (message.text?.trim()) return false;
+    return attachments.every((a) => a.mime_type?.startsWith('audio/'));
+  };
+
   const getDropdownOptions = (message: UIMessage): DropdownMenuOption[] => {
+    const isAudioOnly = isAudioOnlyMessage(message);
+
     const options: DropdownMenuOption[] = [
       {
         label: t('general.reply'),
         icon: { sf: 'arrowshape.turn.up.left', IconComponent: Reply },
         onPress: () => handleReply(message),
       },
-      {
+    ];
+
+    // Only show copy option if message has text (not audio-only)
+    if (!isAudioOnly && message.text) {
+      options.push({
         label: t('general.copy'),
         icon: { sf: 'doc.on.doc', IconComponent: Copy },
         onPress: () => handleCopy(message),
-      },
-      // React submenu with common emojis
-      {
-        label: 'React',
-        icon: { sf: 'face.smiling', IconComponent: Reply },
-        subActions: [
-          {
-            label: '👍',
-            onPress: () => handleQuickReaction(message, '👍'),
-          },
-          {
-            label: '❤️',
-            onPress: () => handleQuickReaction(message, '❤️'),
-          },
-          {
-            label: '😂',
-            onPress: () => handleQuickReaction(message, '😂'),
-          },
-          {
-            label: '😮',
-            onPress: () => handleQuickReaction(message, '😮'),
-          },
-          {
-            label: '😢',
-            onPress: () => handleQuickReaction(message, '😢'),
-          },
-          {
-            label: '🙏',
-            onPress: () => handleQuickReaction(message, '🙏'),
-          },
-        ],
-      },
-    ];
+      });
+    }
 
-    if (message.isSent) {
-      if (isMessageWithinOneHour(message)) {
-        options.push({
-          label: t('general.edit'),
-          icon: { sf: 'pencil', IconComponent: Pencil },
-          onPress: () => handleEdit(message),
-        });
-      }
-      // Only show delete if message is within 5 minutes and not read
-      if (canDeleteMessage(message)) {
-        options.push({
-          label: t('general.delete'),
-          icon: { sf: 'trash', IconComponent: Trash2 },
-          onPress: () => handleDelete(message),
-          destructive: true,
-        });
-      }
+    // React submenu with common emojis
+    options.push({
+      label: 'React',
+      icon: { sf: 'face.smiling', IconComponent: Reply },
+      subActions: [
+        {
+          label: '👍',
+          onPress: () => handleQuickReaction(message, '👍'),
+        },
+        {
+          label: '❤️',
+          onPress: () => handleQuickReaction(message, '❤️'),
+        },
+        {
+          label: '😂',
+          onPress: () => handleQuickReaction(message, '😂'),
+        },
+        {
+          label: '😮',
+          onPress: () => handleQuickReaction(message, '😮'),
+        },
+        {
+          label: '😢',
+          onPress: () => handleQuickReaction(message, '😢'),
+        },
+        {
+          label: '🙏',
+          onPress: () => handleQuickReaction(message, '🙏'),
+        },
+      ],
+    });
+
+    // Only show delete if message is sent, within 5 minutes, and not read
+    if (message.isSent && canDeleteMessage(message)) {
+      options.push({
+        label: t('general.delete'),
+        icon: { sf: 'trash', IconComponent: Trash2 },
+        onPress: () => handleDelete(message),
+        destructive: true,
+      });
     }
 
     return options;
@@ -1086,6 +1093,9 @@ export const MessageList = React.memo(function MessageList({
     const recipientReaction = item.reactions?.find(r => r.user_id !== item.sender_id)?.reaction;
     const hasReactions = senderReaction || recipientReaction;
 
+    // Check if message has audio attachment
+    const hasAudio = item.attachments?.some(a => a.mime_type?.startsWith('audio/')) ?? false;
+
     return (
       <View>
         {showDatePill && (
@@ -1123,6 +1133,7 @@ export const MessageList = React.memo(function MessageList({
             onHorizontalDragStart={() => setIsHorizontalDragActive(true)}
             onHorizontalDragEnd={() => setIsHorizontalDragActive(false)}
             dropdownOptions={getDropdownOptions(item)}
+            hasAudio={hasAudio}
           >
             <BubbleMeta
               item={item}
@@ -1213,6 +1224,7 @@ export const MessageList = React.memo(function MessageList({
           initialScrollIndex={data.length > 0 ? data.length - 1 : undefined}
           keyExtractor={(m) => m.id}
           renderItem={renderItem}
+          estimatedItemSize={80}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           scrollEnabled={!isHorizontalDragActive}
@@ -1301,7 +1313,7 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   messageBubbleFullWidth: {
-    maxWidth: '100%',
+    width: '100%',
   },
   messageBubbleWithReply: {
     minWidth: '65%',
@@ -1419,6 +1431,10 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
   swipeBubbleHost: {
+    maxWidth: '80%',
+  },
+  swipeBubbleHostFullWidth: {
+    width: '80%',
     maxWidth: '80%',
   },
   bubbleAlignLeft: {

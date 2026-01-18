@@ -359,6 +359,7 @@ export const useSendMessageWithAttachment = () => {
       fileUri: string,
       mimeType: string,
       caption?: string,
+      durationSeconds?: number, // For audio attachments
       onProgress?: (progress: UploadProgress) => void,
     ) => {
       // Generate a UUID for the storage path to satisfy file_path format constraint
@@ -415,6 +416,7 @@ export const useSendMessageWithAttachment = () => {
             width: uploadResult.width,
             height: uploadResult.height,
             upload_status: 'completed',
+            duration_seconds: durationSeconds, // For audio attachments
           })
           .select()
           .single();

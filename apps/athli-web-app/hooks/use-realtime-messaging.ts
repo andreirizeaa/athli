@@ -210,6 +210,18 @@ export const useRealtimeMessages = ({
             onMessageReceivedRef.current?.(message);
           } else if (eventType === 'UPDATE') {
             const message = convertBroadcastToMessage(data);
+
+            // If message is soft-deleted, remove it from realtime state (same as DELETE)
+            // Check both the converted message and raw payload for is_deleted
+            const isDeleted = message.is_deleted === true || data.is_deleted === true;
+            if (isDeleted) {
+              setRealtimeMessages((prev) =>
+                prev.filter((m) => m.id !== message.id),
+              );
+              onMessageUpdatedRef.current?.(message);
+              return;
+            }
+
             const hasAttachments = message.attachments && message.attachments.length > 0;
 
             // Update message with new attachments - UI will update loading placeholders

@@ -19,7 +19,6 @@ interface MessageAttachmentGridProps {
     onImageClick?: (images: AttachmentItem[], index: number) => void;
     onVideoClick?: (video: AttachmentItem) => void;
     onPdfClick?: (pdf: AttachmentItem) => void;
-    onAudioClick?: (audio: AttachmentItem) => void;
 }
 
 // Hook to generate video thumbnail from video URL
@@ -151,7 +150,6 @@ export const MessageAttachmentGrid: React.FC<MessageAttachmentGridProps> = ({
     onImageClick,
     onVideoClick,
     onPdfClick,
-    onAudioClick,
 }) => {
     const count = attachments.length;
     
@@ -183,7 +181,6 @@ export const MessageAttachmentGrid: React.FC<MessageAttachmentGridProps> = ({
                     onImageClick={onImageClick}
                     onVideoClick={onVideoClick}
                     onPdfClick={onPdfClick}
-                    onAudioClick={onAudioClick}
                 />
             </div>
         );
