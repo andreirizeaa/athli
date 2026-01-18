@@ -374,24 +374,23 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
           }
         : undefined;
 
-      // Send voice note as video attachment (since we don't have a separate voice note type)
+      // Clear state BEFORE sending so preview closes immediately with message appearing
+      setIsRecordingVoiceNote(false);
+      setReplyingToMessage(null);
+
+      // Send voice note as audio attachment
       await onSendMessage({
         text: '',
         attachments: [
           {
             file: voiceNoteFile,
-            attachmentType: 'video',
+            attachmentType: 'audio',
           },
         ],
         replyTo: replyToData,
       });
-
-      // Clear state
-      setIsRecordingVoiceNote(false);
-      setReplyingToMessage(null);
     } catch (error) {
       console.error('Failed to send voice note:', error);
-      setIsRecordingVoiceNote(false);
     }
   }, [selectedContactId, replyingToMessage, onSendMessage]);
 

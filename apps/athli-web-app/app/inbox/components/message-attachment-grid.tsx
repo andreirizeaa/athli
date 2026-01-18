@@ -103,8 +103,7 @@ const VideoAttachmentThumbnail: React.FC<{
 // Helper component for audio attachments
 const AudioAttachment: React.FC<{
     attachment: AttachmentItem;
-    isSent: boolean;
-}> = ({ attachment, isSent }) => {
+}> = ({ attachment }) => {
     return (
         <div className="mb-2 w-full">
             <MessageAudioPreview
@@ -115,7 +114,6 @@ const AudioAttachment: React.FC<{
                     size: attachment.size,
                     duration: attachment.duration,
                 }}
-                isSent={isSent}
             />
         </div>
     );
@@ -166,18 +164,18 @@ export const MessageAttachmentGrid: React.FC<MessageAttachmentGridProps> = ({
         return (
             <div className="w-full space-y-2">
                 {audioAttachments.map((attachment, index) => (
-                    <AudioAttachment key={index} attachment={attachment} isSent={isSent} />
+                    <AudioAttachment key={index} attachment={attachment} />
                 ))}
             </div>
         );
     }
-    
+
     // If there are audio attachments mixed with others, render audio first
     if (audioAttachments.length > 0) {
         return (
             <div className="w-full">
                 {audioAttachments.map((attachment, index) => (
-                    <AudioAttachment key={`audio-${index}`} attachment={attachment} isSent={isSent} />
+                    <AudioAttachment key={`audio-${index}`} attachment={attachment} />
                 ))}
                 <MessageAttachmentGrid
                     attachments={otherAttachments}

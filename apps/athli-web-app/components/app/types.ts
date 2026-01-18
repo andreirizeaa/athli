@@ -11,7 +11,7 @@ export type Contact = {
   lastMessageIsRead?: boolean;
 };
 
-export type AttachmentType = 'image' | 'video' | 'pdf';
+export type AttachmentType = 'image' | 'video' | 'pdf' | 'audio';
 
 export type Message = {
   id: string;

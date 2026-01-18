@@ -1221,6 +1221,8 @@ const InboxPage = () => {
         messageType = 'image';
       } else if (firstAttachment.attachmentType === 'video') {
         messageType = 'video';
+      } else if (firstAttachment.attachmentType === 'audio') {
+        messageType = 'audio';
       } else if (firstAttachment.attachmentType === 'pdf') {
         messageType = 'file';
       }
