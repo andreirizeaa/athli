@@ -47,6 +47,7 @@ type ChatsStore = {
   prefetchMessages: (chatId: string) => Promise<ChatMessage[]>;
   setCachedMessages: (chatId: string, messages: ChatMessage[]) => void;
   invalidateMessagesCache: (chatId: string) => void;
+  prefetchTopMessages: (count?: number) => Promise<void>;
 };
 
 export const useChatsStore = create<ChatsStore>((set, get) => ({
@@ -259,5 +260,25 @@ export const useChatsStore = create<ChatsStore>((set, get) => ({
     const { messagesCache } = get();
     const { [chatId]: _, ...rest } = messagesCache;
     set({ messagesCache: rest });
+  },
+
+  // Prefetch messages for top N chats (call during app init for faster navigation)
+  prefetchTopMessages: async (count = 10) => {
+    const { chats, prefetchMessages } = get();
+    if (chats.length === 0) return;
+
+    // Sort by last message time and get top N
+    const sortedChats = [...chats].sort((a, b) => {
+      const aTime = a.last_message_at?.getTime() || 0;
+      const bTime = b.last_message_at?.getTime() || 0;
+      return bTime - aTime;
+    });
+
+    const topChats = sortedChats.slice(0, count);
+    console.log(`[ChatsStore] Prefetching messages for top ${topChats.length} chats`);
+
+    // Prefetch in parallel (don't block)
+    await Promise.all(topChats.map((chat) => prefetchMessages(chat.id)));
+    console.log('[ChatsStore] Message prefetching complete');
   },
 }));

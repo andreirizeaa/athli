@@ -195,9 +195,11 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
 
   // Stable actions using useCallback
   const addAttachment = React.useCallback((file: File, type: AttachmentType) => {
+    let showMaxFilesError = false;
+
     setAttachments((prev) => {
       if (prev.length >= 4) {
-        toast.error('Maximum 4 files per message');
+        showMaxFilesError = true;
         return prev;
       }
 
@@ -210,20 +212,27 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
       setTextareaHeight((h) => (h <= 36 ? 60 : h));
       return [...prev, attachment];
     });
+
+    // Show toast outside setAttachments callback to avoid double-firing in StrictMode
+    if (showMaxFilesError) {
+      toast.error('Maximum 4 files per message');
+    }
   }, []);
 
   const addAttachments = React.useCallback((files: File[], type: AttachmentType) => {
+    let toastMessage: string | null = null;
+
     setAttachments((prev) => {
       const remainingSlots = 4 - prev.length;
       if (remainingSlots === 0) {
-        toast.error('Maximum 4 files per message');
+        toastMessage = 'Maximum 4 files per message';
         return prev;
       }
 
       // Auto-take first N files based on remaining slots
       const filesToAdd = files.slice(0, remainingSlots);
       if (files.length > remainingSlots) {
-        toast.error(`Maximum 4 files per message. Only ${remainingSlots} file(s) added.`);
+        toastMessage = `Maximum 4 files per message. Only ${remainingSlots} file(s) added.`;
       }
 
       const newAttachments: Attachment[] = filesToAdd.map((file) => ({
@@ -235,6 +244,11 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
       setTextareaHeight((h) => (h <= 36 ? 60 : h));
       return [...prev, ...newAttachments];
     });
+
+    // Show toast outside setAttachments callback to avoid double-firing in StrictMode
+    if (toastMessage) {
+      toast.error(toastMessage);
+    }
   }, []);
 
   const removeAttachment = React.useCallback((index: number) => {
@@ -355,12 +369,14 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
 
   // Send voice note
   const sendVoiceNote = React.useCallback(async (blob: Blob, url: string, durationMs: number) => {
+    console.log('[sendVoiceNote] Received durationMs:', durationMs, 'which is', durationMs / 1000, 'seconds');
     if (!selectedContactId) return;
 
     try {
-      // Convert Blob to File for consistent handling
-      const voiceNoteFile = new File([blob], `voice-note-${Date.now()}.webm`, {
-        type: blob.type,
+      // Determine file extension from blob type
+      const ext = blob.type.includes('wav') ? 'wav' : blob.type.includes('mp4') ? 'm4a' : 'webm';
+      const voiceNoteFile = new File([blob], `voice-note-${Date.now()}.${ext}`, {
+        type: blob.type || 'audio/wav',
       });
 
       const replyToData = replyingToMessage
@@ -374,24 +390,24 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
           }
         : undefined;
 
-      // Send voice note as video attachment (since we don't have a separate voice note type)
+      // Clear state BEFORE sending so preview closes immediately with message appearing
+      setIsRecordingVoiceNote(false);
+      setReplyingToMessage(null);
+
+      // Send voice note as audio attachment with duration
       await onSendMessage({
         text: '',
         attachments: [
           {
             file: voiceNoteFile,
-            attachmentType: 'video',
+            attachmentType: 'audio',
+            durationMs,
           },
         ],
         replyTo: replyToData,
       });
-
-      // Clear state
-      setIsRecordingVoiceNote(false);
-      setReplyingToMessage(null);
     } catch (error) {
       console.error('Failed to send voice note:', error);
-      setIsRecordingVoiceNote(false);
     }
   }, [selectedContactId, replyingToMessage, onSendMessage]);
 

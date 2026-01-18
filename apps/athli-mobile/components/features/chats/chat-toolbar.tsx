@@ -6,6 +6,7 @@ import { BlurView } from 'expo-blur';
 import { Camera, Mic, Plus, Send, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useColorScheme, useTranslations } from '@/stores';
 
 import { iconSizes } from '@/constants/typography';
@@ -151,19 +152,35 @@ export const ChatToolbar = ({
       const isVideo = asset.type === 'video';
 
       // Wait for JS bridge to fully restore after returning from native camera
-      InteractionManager.runAfterInteractions(() => {
+      InteractionManager.runAfterInteractions(async () => {
         if (isVideo) {
+          // Generate thumbnail for the video
+          let thumbnailUri: string | undefined;
+          try {
+            const thumbnail = await VideoThumbnails.getThumbnailAsync(asset.uri, {
+              time: 500,
+              quality: 0.8,
+            });
+            thumbnailUri = thumbnail.uri;
+          } catch (thumbnailError) {
+            console.warn('Failed to generate video thumbnail:', thumbnailError);
+          }
+
+          const videoAttachment = {
+            uri: asset.uri,
+            id: `video-${Date.now()}-${Math.random()}`,
+            isVideo: true,
+            thumbnailUri,
+          };
           router.push({
-            pathname: '/chats/video-preview',
+            pathname: '/chats/message-image-preview',
             params: {
-              uri: asset.uri,
-              duration: (asset.duration || 0).toString(),
-              orientation: asset.width && asset.height && asset.width > asset.height ? 'landscape' : 'portrait',
+              images: JSON.stringify([videoAttachment]),
               chatId: participantInfo.chatId,
               clientId: participantInfo.participantId,
               clientName: participantInfo.participantName,
+              fromPicker: 'true',
               caption: searchQuery,
-              fromCamera: 'true',
             },
           });
         } else {

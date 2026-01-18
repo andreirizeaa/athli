@@ -127,6 +127,18 @@
     }
   }
 
+  @keyframes message-flash {
+    0%, 100% {
+      background-color: transparent;
+    }
+    50% {
+      background-color: var(--primary);
+      opacity: 0.15;
+    }
+  }
+
+  --animate-message-flash: message-flash 0.5s ease-out;
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

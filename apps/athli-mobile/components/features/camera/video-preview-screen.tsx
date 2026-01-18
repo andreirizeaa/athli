@@ -14,7 +14,6 @@ import { useThemePreference } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { AttachmentPreviewToolbar } from '@/components/features/camera/attachment-preview-toolbar';
-import { sendVideoMessage } from '@/services/chats-service';
 import { useDarkModeTheme } from '@/components/ui/dark-mode-wrapper';
 
 type VideoData = {
@@ -136,43 +135,34 @@ export const VideoPreviewScreen = () => {
     }
   };
 
-  const handleSend = async () => {
+  const handleSend = () => {
     if (!video || !params.chatId) return;
 
-    try {
-      await sendVideoMessage(params.chatId, video.uri, caption.trim() || undefined);
-
-      // Navigate back after sending
-      if (!params.chatId) {
-        // No chat context, just close preview
-        router.back();
-      } else if (fromCamera) {
-        // From in-app camera: close preview and camera, return to chat
-        router.back();
-        router.back();
-      } else {
-        // From attachment picker: just close preview and return to chat
-        router.back();
-      }
-
-      // Set params after a delay to ensure navigation completes
-      setTimeout(() => {
-        if (params.chatId) {
-          router.setParams({
-            videoSent: 'true',
-            sentVideo: JSON.stringify({
-              uri: video.uri,
-              duration: video.duration,
-              orientation: video.orientation,
-              caption: caption.trim() || '',
-            }),
-          } as any);
-        }
-      }, 200);
-    } catch (error) {
-      console.error('Error sending video:', error);
-      Alert.alert('Error', 'Failed to send video');
+    // Navigate back IMMEDIATELY for instant feedback
+    if (fromCamera) {
+      // From in-app camera: close preview and camera, return to chat
+      router.back();
+      router.back();
+    } else {
+      // From attachment picker: just close preview and return to chat
+      router.back();
     }
+
+    // Set params after a minimal delay to trigger upload in chat screen
+    // The chat screen will handle optimistic updates and actual upload
+    setTimeout(() => {
+      if (params.chatId) {
+        router.setParams({
+          videoSent: 'true',
+          sentVideo: JSON.stringify({
+            uri: video.uri,
+            duration: video.duration,
+            orientation: video.orientation,
+            caption: caption.trim() || '',
+          }),
+        } as any);
+      }
+    }, 50);
   };
 
   const videoMarginTop = 0;

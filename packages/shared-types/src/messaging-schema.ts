@@ -57,6 +57,9 @@ export interface Message {
   // Relations (populated via joins)
   attachments?: MessageAttachment[];
   reactions?: MessageReaction[];
+
+  // Attachment count from broadcast (for loading placeholders)
+  attachment_count?: number;
 }
 
 /**
@@ -185,6 +188,13 @@ export interface OptimisticMessage extends Partial<Message> {
 
   // For optimistic attachments
   attachments?: Array<MessageAttachment & { local_uri: string }>;
+
+  /**
+   * The real message ID returned by the API after successful creation.
+   * Used for precise deduplication - only hide the real message with this exact ID.
+   * Set after sendMessage API call succeeds.
+   */
+  realMessageId?: string;
 }
 
 // ================================================

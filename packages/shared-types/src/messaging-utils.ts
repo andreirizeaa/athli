@@ -43,6 +43,7 @@ export interface UIMessage {
   created_at: Date | string;
   attachments?: MessageAttachment[];
   reactions?: MessageReaction[];
+  attachment_count?: number;
 
   // UI-specific computed fields
   text: string | null;
@@ -85,6 +86,7 @@ export function transformToUIMessage(
     created_at: (msg as Message).created_at ?? msg.sent_at,
     attachments: (msg as Message).attachments,
     reactions: (msg as Message).reactions,
+    attachment_count: (msg as Message).attachment_count,
 
     // Computed fields
     text: msg.content,
@@ -98,6 +100,8 @@ export function transformToUIMessage(
 
 /**
  * Transform an array of messages to UIMessages
+ * Also enriches messages that have parent_message_id but no parent_message
+ * by looking up the parent from the message list.
  *
  * @param messages - Array of messages from database/realtime/optimistic
  * @param currentUserId - ID of current user
@@ -107,7 +111,39 @@ export function transformMessages(
   messages: Array<Message | OptimisticMessage>,
   currentUserId: string,
 ): UIMessage[] {
-  return messages.map((m) => transformToUIMessage(m, currentUserId));
+  // Create a map for quick parent message lookup
+  const messageMap = new Map<string, Message | OptimisticMessage>();
+  messages.forEach((m) => messageMap.set(m.id, m));
+
+  // Transform messages, enriching with parent data when needed
+  return messages.map((m) => {
+    // Check if message has parent_message_id but no valid parent_message
+    const parentMsg = (m as Message).parent_message;
+    const hasValidParent =
+      parentMsg &&
+      !Array.isArray(parentMsg) &&
+      typeof parentMsg === 'object' &&
+      'id' in parentMsg;
+
+    // If no valid parent but has parent_message_id, try to look it up
+    if (!hasValidParent && m.parent_message_id) {
+      const parentFromMap = messageMap.get(m.parent_message_id);
+      if (parentFromMap) {
+        // Enrich the message with parent data for transformation
+        (m as any).parent_message = {
+          id: parentFromMap.id,
+          content: parentFromMap.content,
+          message_type: parentFromMap.message_type,
+          sender_id: parentFromMap.sender_id,
+          sent_at: parentFromMap.sent_at,
+          is_deleted: parentFromMap.is_deleted,
+          attachments: (parentFromMap as Message).attachments,
+        };
+      }
+    }
+
+    return transformToUIMessage(m, currentUserId);
+  });
 }
 
 // ================================================
@@ -130,6 +166,20 @@ export function createOptimisticMessageId(): string {
 }
 
 /**
+ * Parent message data for optimistic replies
+ * Contains only the fields needed for reply preview UI
+ */
+export interface OptimisticParentMessage {
+  id: string;
+  content: string | null;
+  message_type: MessageType;
+  sender_id: string;
+  sent_at: Date | string;
+  is_deleted: boolean;
+  attachments?: MessageAttachment[];
+}
+
+/**
  * Create an optimistic message for immediate UI updates
  *
  * @param conversationId - UUID of conversation
@@ -138,6 +188,7 @@ export function createOptimisticMessageId(): string {
  * @param messageType - Type of message (default: 'text')
  * @param parentMessageId - Optional parent message ID for threading
  * @param attachments - Optional array of attachments with local_uri for optimistic display
+ * @param parentMessage - Optional parent message object for reply preview
  * @returns Optimistic message object
  *
  * @example
@@ -154,9 +205,10 @@ export function createOptimisticMessage(
   content: string,
   messageType: MessageType = 'text',
   parentMessageId?: string,
-  attachments?: Array<{ local_uri: string; mime_type: string; filename?: string }>,
+  attachments?: Array<{ local_uri: string; mime_type: string; filename?: string; duration?: number }>,
+  parentMessage?: OptimisticParentMessage,
 ): OptimisticMessage {
-  return {
+  const optimisticMessage: OptimisticMessage = {
     id: createOptimisticMessageId(),
     conversation_id: conversationId,
     sender_id: senderId,
@@ -178,8 +230,24 @@ export function createOptimisticMessage(
       upload_status: 'uploading' as const,
       created_at: new Date(),
       local_uri: att.local_uri,
+      duration: att.duration,
     })),
   };
+
+  // Add parent_message if provided (for reply preview in optimistic messages)
+  if (parentMessage && parentMessageId) {
+    (optimisticMessage as any).parent_message = {
+      id: parentMessage.id,
+      content: parentMessage.content,
+      message_type: parentMessage.message_type,
+      sender_id: parentMessage.sender_id,
+      sent_at: parentMessage.sent_at,
+      is_deleted: parentMessage.is_deleted,
+      attachments: parentMessage.attachments,
+    };
+  }
+
+  return optimisticMessage;
 }
 
 /**
@@ -215,210 +283,103 @@ function getTimestamp(sentAt: Date | string): number {
 }
 
 /**
- * Helper to check if an attachment has a usable URL for display
- * - Optimistic attachments have local_uri (blob URL)
- * - API attachments have signed_url (pre-signed storage URL)
- * - Returns false for realtime broadcast attachments that only have file_path
- */
-function attachmentHasUsableUrl(attachment: MessageAttachment): boolean {
-  // Optimistic message attachment with blob URL
-  if ((attachment as any).local_uri) {
-    return true;
-  }
-  // API response attachment with signed URL
-  if ((attachment as any).signed_url) {
-    return true;
-  }
-  return false;
-}
-
-/**
- * Helper to check if a message has attachments with usable URLs
- * This prevents realtime broadcast messages (without signed_url) from
- * replacing optimistic messages (with blob URLs) before the API has
- * provided proper signed URLs.
- */
-function messageHasUsableAttachments(msg: Message | OptimisticMessage): boolean {
-  const attachments = (msg as Message).attachments;
-  if (!attachments || attachments.length === 0) {
-    return false;
-  }
-  // All attachments must have usable URLs for the message to be considered complete
-  return attachments.every(attachmentHasUsableUrl);
-}
-
-/**
- * Merge and deduplicate messages from multiple sources
+ * Merge and deduplicate messages from multiple sources.
  *
- * Priority (highest to lowest):
- * 1. Realtime messages (most up-to-date from server)
- * 2. Saved messages (from database)
- * 3. Optimistic messages (local only, not yet confirmed)
+ * CORE PRINCIPLE: Optimistic messages ALWAYS win over their corresponding real messages.
+ * 
+ * MATCHING STRATEGY (prioritized):
+ * 1. **Exact ID match**: If optimistic has `realMessageId`, hide ONLY that specific real message
+ * 2. **Fallback time-based**: For optimistic without realMessageId yet, use sender + time matching
  *
- * @param savedMessages - Messages from database
+ * This ensures:
+ * - Optimistic messages never flicker or disappear unexpectedly  
+ * - ONLY the specific real duplicate is hidden, not other recent messages
+ * - The polling mechanism is the ONLY way optimistic messages get removed
+ *
+ * @param savedMessages - Messages from database (API)
  * @param realtimeMessages - Messages from realtime subscription
  * @param optimisticMessages - Local optimistic messages
  * @returns Deduplicated and sorted messages
- *
- * @example
- * const allMessages = deduplicateMessages(
- *   dbMessages,
- *   realtimeMessages,
- *   optimisticMessages
- * );
  */
 export function deduplicateMessages(
   savedMessages: Message[],
   realtimeMessages: Message[],
   optimisticMessages: OptimisticMessage[],
 ): Array<Message | OptimisticMessage> {
-  const messageMap = new Map<string, Message | OptimisticMessage>();
+  const resultMap = new Map<string, Message | OptimisticMessage>();
+  const hiddenRealMessageIds = new Set<string>();
 
-  // Step 1: Add saved messages (from API - these have complete data including attachments)
-  savedMessages.forEach((msg) => messageMap.set(msg.id, msg));
-
-  // Step 2: Merge realtime messages with saved messages
-  // IMPORTANT: Only let realtime override saved if it has MORE or EQUAL data
-  // This prevents stale realtime broadcasts (without attachments) from overriding
-  // fresh API data (with attachments)
-  realtimeMessages.forEach((msg) => {
-    const existing = messageMap.get(msg.id);
-    if (!existing) {
-      // No existing message - add realtime message
-      messageMap.set(msg.id, msg);
-    } else {
-      // Compare attachment counts - prefer the message with more attachments
-      const existingAttachmentCount = (existing as Message).attachments?.length ?? 0;
-      const realtimeAttachmentCount = msg.attachments?.length ?? 0;
-
-      // Only use realtime if it has more attachments AND they have usable URLs
-      // This prevents realtime broadcasts (without signed_url) from overriding
-      // API data (with signed_url)
-      if (realtimeAttachmentCount > existingAttachmentCount) {
-        // Realtime has more attachments - but only use if they have usable URLs
-        if (messageHasUsableAttachments(msg) || realtimeAttachmentCount === 0) {
-          messageMap.set(msg.id, msg);
-        }
-        // Otherwise keep existing (API) message which has proper signed URLs
-      } else if (realtimeAttachmentCount === existingAttachmentCount) {
-        // Same count - prefer realtime only if it has usable URLs or no attachments
-        if (messageHasUsableAttachments(msg) || realtimeAttachmentCount === 0) {
-          messageMap.set(msg.id, msg);
-        }
-      }
-      // Otherwise keep the existing (API) message which has more complete data
-    }
-  });
-
-  // Step 3: Add optimistic messages ONLY if no matching real message exists
-  // Match by sender + content + timestamp window (not just ID)
-  const allRealMessages = [...savedMessages, ...realtimeMessages];
-
-  // Helper to normalize content for comparison (treat null, undefined, '' as equivalent)
-  const normalizeContent = (content: string | null | undefined): string => {
-    return content ?? '';
-  };
-
-  optimisticMessages.forEach((optMsg) => {
-    const hasAttachments = (optMsg.attachments?.length ?? 0) > 0;
-
-    if (hasAttachments) {
-      // For optimistic messages with attachments:
-      // Find matching real message (by sender + time window)
-      const matchingReal = allRealMessages.find((realMsg) => {
-        if (realMsg.sender_id !== optMsg.sender_id) return false;
-        const timeDiff = Math.abs(
-          getTimestamp(realMsg.sent_at) - getTimestamp(optMsg.sent_at)
-        );
-        return timeDiff <= 30000;
-      });
-
-      if (matchingReal) {
-        // CRITICAL: Check the message IN THE MAP, not the found object
-        // The map might have a newer version (from API) with attachments
-        // while allRealMessages might have a stale realtime message without attachments
-        const messageInMap = messageMap.get(matchingReal.id) as Message | undefined;
-        
-        // Check if real message has attachments WITH usable URLs
-        // This prevents realtime broadcasts (which have attachments but no signed_url)
-        // from replacing optimistic messages (which have local blob URLs)
-        const realHasUsableAttachments = messageInMap 
-          ? messageHasUsableAttachments(messageInMap)
-          : false;
-
-        if (realHasUsableAttachments) {
-          // Real message has attachments with proper URLs - don't add optimistic, keep real
-          return;
-        }
-
-        // Real doesn't have usable attachment URLs yet - show optimistic, hide real
-        messageMap.set(optMsg.id, optMsg);
-        messageMap.delete(matchingReal.id);
-      } else {
-        // No matching real message found - just add optimistic
-        messageMap.set(optMsg.id, optMsg);
-      }
+  // Step 1: Identify real messages that should be hidden
+  optimisticMessages.forEach((opt) => {
+    // PRIORITY 1: Use realMessageId if available (exact match - no false positives)
+    if (opt.realMessageId) {
+      hiddenRealMessageIds.add(opt.realMessageId);
       return;
     }
 
-    // For text-only messages: use existing logic
-    // Find matching real message by sender + content + timestamp
-    const matchingRealMessage = allRealMessages.find((realMsg) => {
-      if (realMsg.sender_id !== optMsg.sender_id) return false;
-      const timeDiff = Math.abs(
-        getTimestamp(realMsg.sent_at) - getTimestamp(optMsg.sent_at)
-      );
-      if (timeDiff > 30000) return false;
-      if (normalizeContent(realMsg.content) !== normalizeContent(optMsg.content)) return false;
-      return true;
-    });
+    // PRIORITY 2: Fallback to time-based matching for optimistic without realMessageId yet
+    // This only applies briefly before the API call returns
+    // Use a NARROW 10-second window to minimize false matches
+    const optTime = getTimestamp(opt.sent_at);
 
-    // If no matching real message, keep optimistic
-    if (!matchingRealMessage) {
-      if (!messageMap.has(optMsg.id)) {
-        messageMap.set(optMsg.id, optMsg);
+    [...savedMessages, ...realtimeMessages].forEach((real) => {
+      if (hiddenRealMessageIds.has(real.id)) return;
+      if (real.sender_id !== opt.sender_id) return;
+
+      const realTime = getTimestamp(real.sent_at);
+      const timeDiff = Math.abs(realTime - optTime);
+
+      // Narrow 10-second window - only for the brief period before realMessageId is set
+      if (timeDiff <= 10000) {
+        hiddenRealMessageIds.add(real.id);
       }
-    }
-    // If matching real message exists, optimistic is dropped (real is already in map)
+    });
   });
 
-  // Step 4: Final cleanup - remove any real messages that duplicate optimistic messages
-  // This is a safety net to prevent duplicates from appearing in the UI
-  // An optimistic message "duplicates" a real message if they have the same sender
-  // and were sent within 30 seconds of each other
-  const optimisticInMap = Array.from(messageMap.values()).filter(
-    (msg) => msg.id.startsWith('temp-')
-  );
+  // Step 2: Add saved messages that aren't hidden
+  savedMessages.forEach((msg) => {
+    if (!hiddenRealMessageIds.has(msg.id)) {
+      resultMap.set(msg.id, msg);
+    }
+  });
 
-  if (optimisticInMap.length > 0) {
-    const idsToRemove: string[] = [];
-    
-    messageMap.forEach((msg, msgId) => {
-      // Skip optimistic messages
-      if (msgId.startsWith('temp-')) return;
-      
-      // Check if this real message duplicates any optimistic message
-      const isDuplicate = optimisticInMap.some((optMsg) => {
-        if (msg.sender_id !== optMsg.sender_id) return false;
-        const msgTime = getTimestamp(msg.sent_at);
-        const optTime = getTimestamp(optMsg.sent_at);
-        // Handle NaN timestamps - treat as no match
-        if (isNaN(msgTime) || isNaN(optTime)) return false;
-        const timeDiff = Math.abs(msgTime - optTime);
-        return timeDiff <= 30000;
-      });
-      
-      if (isDuplicate) {
-        idsToRemove.push(msgId);
-      }
-    });
-    
-    // Remove duplicate real messages
-    idsToRemove.forEach((id) => messageMap.delete(id));
-  }
+  // Step 3: Add or MERGE realtime messages
+  // IMPORTANT: Realtime messages may have more up-to-date data (reactions, attachments, read status)
+  // because they come from database triggers that fire on updates.
+  // When a message exists in both saved and realtime, merge the realtime data into the saved message.
+  realtimeMessages.forEach((realtimeMsg) => {
+    if (hiddenRealMessageIds.has(realtimeMsg.id)) return;
 
-  return Array.from(messageMap.values()).sort(
-    (a, b) => getTimestamp(a.sent_at) - getTimestamp(b.sent_at),
+    const existingMsg = resultMap.get(realtimeMsg.id);
+    if (existingMsg && !isOptimisticMessage(existingMsg)) {
+      // Message exists in saved - merge realtime updates into it
+      // Realtime has fresher data for: reactions, read_at, attachments
+      const mergedMsg: Message = {
+        ...(existingMsg as Message),
+        // Use realtime reactions (most up-to-date from broadcast trigger)
+        reactions: realtimeMsg.reactions,
+        // Use realtime attachments if they have more data
+        attachments: realtimeMsg.attachments?.length
+          ? realtimeMsg.attachments
+          : (existingMsg as Message).attachments,
+        // Use realtime read_at if set (message was read)
+        read_at: realtimeMsg.read_at || (existingMsg as Message).read_at,
+      };
+      resultMap.set(realtimeMsg.id, mergedMsg);
+    } else if (!existingMsg) {
+      // Message doesn't exist in saved - add from realtime
+      resultMap.set(realtimeMsg.id, realtimeMsg);
+    }
+  });
+
+  // Step 4: Add ALL optimistic messages - they ALWAYS appear
+  optimisticMessages.forEach((msg) => {
+    resultMap.set(msg.id, msg);
+  });
+
+  // Sort by timestamp and return
+  return Array.from(resultMap.values()).sort(
+    (a, b) => getTimestamp(a.sent_at) - getTimestamp(b.sent_at)
   );
 }
 

@@ -359,6 +359,7 @@ export const useSendMessageWithAttachment = () => {
       fileUri: string,
       mimeType: string,
       caption?: string,
+      durationSeconds?: number, // For audio attachments
       onProgress?: (progress: UploadProgress) => void,
     ) => {
       // Generate a UUID for the storage path to satisfy file_path format constraint
@@ -390,6 +391,7 @@ export const useSendMessageWithAttachment = () => {
             content: caption || null,
             message_type: messageType,
             status: 'sent',
+            attachment_count: 1, // This message has 1 attachment
           })
           .select()
           .single();
@@ -414,6 +416,7 @@ export const useSendMessageWithAttachment = () => {
             width: uploadResult.width,
             height: uploadResult.height,
             upload_status: 'completed',
+            duration_seconds: durationSeconds, // For audio attachments
           })
           .select()
           .single();
@@ -446,8 +449,120 @@ export const useSendMessageWithAttachment = () => {
     [uploadFile],
   );
 
+  /**
+   * Send a message with multiple attachments (e.g., multiple images)
+   * All attachments belong to a single message
+   */
+  const sendWithMultipleAttachments = useCallback(
+    async (
+      conversationId: string,
+      senderId: string,
+      files: Array<{ uri: string; mimeType: string }>,
+      caption?: string,
+      onProgress?: (progress: { current: number; total: number }) => void,
+    ) => {
+      if (files.length === 0) {
+        throw new Error('No files provided');
+      }
+
+      // Generate temp IDs for storage paths
+      const tempIds = files.map(() => Crypto.randomUUID());
+
+      try {
+        // 1. Determine message type from first file's mime type
+        const firstMimeType = files[0].mimeType;
+        let messageType: 'image' | 'video' | 'audio' | 'file' = 'file';
+        if (firstMimeType.startsWith('image/')) messageType = 'image';
+        else if (firstMimeType.startsWith('video/')) messageType = 'video';
+        else if (firstMimeType.startsWith('audio/')) messageType = 'audio';
+
+        // 2. Upload ALL files in parallel for speed
+        const uploadPromises = files.map((file, index) =>
+          uploadFile({
+            conversationId,
+            messageId: tempIds[index],
+            fileUri: file.uri,
+            mimeType: file.mimeType,
+            onProgress: (p) => {
+              onProgress?.({ current: index + 1, total: files.length });
+            },
+          })
+        );
+
+        const uploadResults = await Promise.all(uploadPromises);
+
+        // 3. Create ONE message record with attachment_count
+        const { data: message, error: messageError } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            sender_id: senderId,
+            content: caption || null,
+            message_type: messageType,
+            status: 'sent',
+            attachment_count: files.length,
+          })
+          .select()
+          .single();
+
+        if (messageError) {
+          console.error('[SendWithMultipleAttachments] Message creation failed:', messageError);
+          throw messageError;
+        }
+
+        // 4. Create attachment records for ALL files
+        const attachmentInserts = uploadResults.map((result) => ({
+          message_id: message.id,
+          conversation_id: conversationId,
+          bucket_id: STORAGE_BUCKET_NAME,
+          file_path: result.filePath,
+          filename: result.filename,
+          mime_type: result.mimeType,
+          size_bytes: result.fileSize,
+          thumbnail_path: result.thumbnailPath,
+          width: result.width,
+          height: result.height,
+          upload_status: 'completed',
+        }));
+
+        const { data: attachments, error: attachmentsError } = await supabase
+          .from('message_attachments')
+          .insert(attachmentInserts)
+          .select();
+
+        if (attachmentsError) {
+          console.error('[SendWithMultipleAttachments] Attachments creation failed:', attachmentsError);
+          // Cleanup: delete the message if attachments fail
+          await supabase.from('messages').delete().eq('id', message.id);
+          throw attachmentsError;
+        }
+
+        // 5. Return message with all attachments
+        return {
+          message: {
+            ...message,
+            sent_at: new Date(message.sent_at),
+            attachments: attachments?.map((a: any) => ({
+              ...a,
+              created_at: new Date(a.created_at),
+            })),
+          },
+          attachments: attachments?.map((a: any) => ({
+            ...a,
+            created_at: new Date(a.created_at),
+          })) as MessageAttachment[],
+        };
+      } catch (err) {
+        console.error('[SendWithMultipleAttachments] Error:', err);
+        throw err;
+      }
+    },
+    [uploadFile],
+  );
+
   return {
     sendWithAttachment,
+    sendWithMultipleAttachments,
     uploadStatus,
     uploadProgress,
     error,

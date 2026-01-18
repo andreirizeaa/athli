@@ -192,9 +192,9 @@ export default function InboxScreen() {
       return timeB - timeA;
     });
 
-    const topCoaches = sortedCoaches.slice(0, 5);
+    const topCoaches = sortedCoaches.slice(0, 10);
 
-    // Pre-fetch in background (don't await)
+    // Pre-fetch in background (don't await) for faster navigation
     topCoaches.forEach((coach) => {
       prefetchMessages(coach.id);
     });
@@ -225,6 +225,15 @@ export default function InboxScreen() {
     return coaches.reduce((sum, coach) => sum + (coach.unread_count ?? 0), 0);
   }, [coaches]);
 
+  // Start prefetching when finger touches down (before press completes)
+  // This gives us ~100-300ms head start on loading messages
+  const handleCoachPressIn = useCallback((coachId: string) => {
+    // Don't prefetch in edit mode or if row is open
+    if (isEditMode || isRowOpen) return;
+    // Start prefetching immediately - by the time press completes, messages may be cached
+    prefetchMessages(coachId);
+  }, [isEditMode, isRowOpen, prefetchMessages]);
+
   const handleCoachPress = async (coachId: string) => {
     // If a row is open, just close it and prevent navigation/action
     if (isRowOpen) {
@@ -244,7 +253,7 @@ export default function InboxScreen() {
       // Find the coach object
       const coach = coaches.find((c) => c.id === coachId);
       if (coach) {
-        // Try to get cached messages first for instant navigation
+        // Try to get cached messages first (may have been prefetched on press-in)
         const cachedMessages = getCachedMessages(coachId);
         if (cachedMessages) {
           // Navigate immediately with cached messages
@@ -378,12 +387,13 @@ export default function InboxScreen() {
     <CoachListItem
       coach={item}
       onPress={handleCoachPress}
+      onPressIn={handleCoachPressIn}
       isEditMode={isEditMode}
       isSelected={selectedCoachIds.has(item.id)}
       onArchive={handleCoachArchive}
       onMarkAsRead={handleCoachMarkAsRead}
     />
-  ), [isEditMode, selectedCoachIds, handleCoachPress, handleCoachArchive, handleCoachMarkAsRead]);
+  ), [isEditMode, selectedCoachIds, handleCoachPress, handleCoachPressIn, handleCoachArchive, handleCoachMarkAsRead]);
 
   const renderEmptyComponent = useCallback(() => (
     <View style={styles.emptyContainer}>

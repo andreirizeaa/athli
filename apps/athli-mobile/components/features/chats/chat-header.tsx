@@ -53,6 +53,8 @@ export const ChatHeader = ({
 
   return (
     <View style={[styles.headerSafeArea, { paddingTop: 0 }]} pointerEvents="box-none">
+      {/* Background extension behind header for more opaque appearance */}
+      <View style={[styles.backgroundExtension, { backgroundColor: translucentHeaderBg }]} />
       <BlurView
         intensity={30}
         tint={isDark ? 'dark' : 'light'}
@@ -139,6 +141,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
+  },
+  backgroundExtension: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
   },
   headerBlur: {
     width: '100%',

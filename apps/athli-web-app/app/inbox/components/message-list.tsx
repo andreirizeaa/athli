@@ -6,7 +6,6 @@ import {
     Reply,
     Trash2,
     FileText,
-    Video,
     ChevronDown,
     Smile,
     Send,
@@ -22,13 +21,10 @@ import {
     DropdownMenuItem,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
+    DropdownMenuSub,
+    DropdownMenuSubTrigger,
+    DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { cn } from '@/lib/general/utils';
 import { type Message, type Contact } from '@/components/app/app-shell';
 import { MessageReactionsDisplay } from './message-reactions-display';
@@ -37,8 +33,45 @@ import { MessageImageGrid } from './message-image-grid';
 import { MessageVideoPreview } from './message-video-preview';
 import { MessageAudioPreview } from './message-audio-preview';
 import { MessageAttachmentGrid } from './message-attachment-grid';
+import { MessageReplyPreview } from './message-reply-preview';
 import type { AttachmentType } from './message-input-context';
 import { REACTION_EMOJIS } from '@athli/shared-types';
+
+// Loading skeleton for pending attachments
+const AttachmentLoadingSkeleton: React.FC<{
+    count: number;
+    isSent: boolean;
+}> = ({ count, isSent }) => {
+    if (count <= 0) return null;
+
+    return (
+        <div className="flex flex-wrap gap-2 mb-2">
+            {Array.from({ length: count }).map((_, index) => (
+                <div
+                    key={`skeleton-${index}`}
+                    className={cn(
+                        "w-[200px] h-[150px] rounded-lg animate-pulse flex items-center justify-center",
+                        isSent ? "bg-white/20" : "bg-muted"
+                    )}
+                >
+                    <span className={cn(
+                        "text-xs",
+                        isSent ? "text-white/50" : "text-muted-foreground"
+                    )}>
+                        Loading...
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+// Helper to calculate pending attachments count
+const getPendingAttachmentsCount = (message: Message): number => {
+    const expectedCount = (message as any).attachment_count || 0;
+    const actualCount = (message as any).attachments?.length || 0;
+    return Math.max(0, expectedCount - actualCount);
+};
 
 interface MessageListProps {
     messages: Message[];
@@ -76,7 +109,6 @@ export const MessageList = React.memo(function MessageList({
     isClientPanelOpen = false,
 }: MessageListProps) {
     const t = useTranslations();
-    const [emojiPickerMessageId, setEmojiPickerMessageId] = React.useState<string | null>(null);
 
     const formatTime = (timestamp: string) => {
         // Extract just the time portion (HH:MM)
@@ -158,6 +190,28 @@ export const MessageList = React.memo(function MessageList({
         navigator.clipboard.writeText(text);
     };
 
+    const scrollToMessage = (messageId: string) => {
+        const element = document.getElementById(`message-${messageId}`);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Flash animation
+            element.classList.add('animate-message-flash');
+            setTimeout(() => element.classList.remove('animate-message-flash'), 500);
+        }
+    };
+
+    // Check if a message has only audio attachments (no text, no other attachment types)
+    const isAudioOnlyMessage = (message: Message): boolean => {
+        const attachments = (message as any).attachments;
+        if (!attachments || attachments.length === 0) return false;
+        if (message.text?.trim()) return false;
+        return attachments.every((a: any) =>
+            a.attachmentType === 'audio' ||
+            a.type?.startsWith('audio/') ||
+            a.mime_type?.startsWith('audio/')
+        );
+    };
+
     return (
         <ScrollArea className="flex-1 min-h-0">
             <div className="flex flex-col px-4 pt-2 pb-4">
@@ -190,6 +244,8 @@ export const MessageList = React.memo(function MessageList({
                         !isSameDay(previousMessage.sentAt, message.sentAt)
                     );
 
+                    const audioOnly = isAudioOnlyMessage(message);
+
                     return (
                         <React.Fragment key={message.id}>
                             {/* Date Divider Pill */}
@@ -201,6 +257,7 @@ export const MessageList = React.memo(function MessageList({
                                 </div>
                             )}
                             <div
+                                id={`message-${message.id}`}
                                 className={cn(
                                     'flex flex-col relative',
                                     message.isSent ? 'items-end' : 'items-start',
@@ -208,7 +265,13 @@ export const MessageList = React.memo(function MessageList({
                                 )}
                             >
                             <div className={cn('flex items-center gap-2 group w-full', message.isSent && 'flex-row-reverse')}>
-                                <div className={cn('relative w-fit', isClientPanelOpen ? 'max-w-[60%]' : 'max-w-[50%]')}>
+                                <div className={cn(
+                                    'relative',
+                                    // Audio-only messages use full width, others use w-fit
+                                    audioOnly
+                                        ? (isClientPanelOpen ? 'w-[60%]' : 'w-[50%]')
+                                        : cn('w-fit', isClientPanelOpen ? 'max-w-[60%]' : 'max-w-[50%]')
+                                )}>
                                     {/* WhatsApp-style dropdown button - positioned outside bubble to avoid overflow clipping */}
                                     <div
                                         className={cn(
@@ -235,72 +298,117 @@ export const MessageList = React.memo(function MessageList({
                                             <DropdownMenuContent
                                                 align={message.isSent ? 'end' : 'start'}
                                                 className="w-48"
+                                                onCloseAutoFocus={(e) => {
+                                                    // Prevent dropdown from restoring focus to trigger
+                                                    // This allows MessageInput to maintain focus after reply
+                                                    e.preventDefault();
+                                                }}
                                             >
-                                                <DropdownMenuItem onClick={() => onReply(message)}>
+                                                <DropdownMenuItem onSelect={() => onReply(message)}>
                                                     <Reply className="mr-2 h-4 w-4" />
                                                     {t('messages.reply')}
                                                 </DropdownMenuItem>
 
-                                                {/* React menu item - opens dialog on click */}
-                                                <DropdownMenuItem onClick={() => setEmojiPickerMessageId(message.id)}>
-                                                    <Smile className="mr-2 h-4 w-4" />
-                                                    React
-                                                </DropdownMenuItem>
+                                                {/* React submenu */}
+                                                <DropdownMenuSub>
+                                                    <DropdownMenuSubTrigger>
+                                                        <Smile className="mr-2 h-4 w-4" />
+                                                        React
+                                                    </DropdownMenuSubTrigger>
+                                                    <DropdownMenuSubContent className="p-2">
+                                                        <div className="flex gap-1">
+                                                            {REACTION_EMOJIS.map((emoji) => {
+                                                                // Coach's reaction - if coach sent, they're sender; else recipient
+                                                                const coachReaction = message.isSent
+                                                                    ? message.senderReaction
+                                                                    : message.recipientReaction;
+                                                                // If clicking active emoji, remove it (pass empty); otherwise add/change
+                                                                const emojiToSend = coachReaction === emoji ? '' : emoji;
+                                                                return (
+                                                                    <DropdownMenuItem
+                                                                        key={emoji}
+                                                                        onSelect={() => handleReactionSelect(message.id, emojiToSend)}
+                                                                        className={cn(
+                                                                            'flex items-center justify-center p-0',
+                                                                            'h-10 w-10 rounded-lg',
+                                                                            'hover:bg-muted transition-colors',
+                                                                            'active:scale-95 transition-transform',
+                                                                            'text-2xl leading-none cursor-pointer',
+                                                                            coachReaction === emoji && 'bg-muted ring-2 ring-primary'
+                                                                        )}
+                                                                    >
+                                                                        {emoji}
+                                                                    </DropdownMenuItem>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </DropdownMenuSubContent>
+                                                </DropdownMenuSub>
 
                                                 {message.text && (
                                                     <DropdownMenuItem
-                                                        onClick={() => handleCopyText(message.text)}
+                                                        onSelect={() => handleCopyText(message.text)}
                                                     >
                                                         <Copy className="mr-2 h-4 w-4" />
                                                         {t('general.copy')}
                                                     </DropdownMenuItem>
                                                 )}
 
-                                                {/* Download option for attachments - only show if there's a video, image, or file */}
-                                                {((message as any).attachments?.length > 0 || message.pdf || message.video || (message.images && message.images.length > 0)) && (
-                                                    <DropdownMenuItem
-                                                        onClick={() => {
-                                                            // Download all attachments with a small delay between each to avoid browser blocking
-                                                            const downloadWithDelay = (items: Array<{ data: string; name: string; type: string }>) => {
-                                                                items.forEach((item, index) => {
-                                                                    setTimeout(() => {
-                                                                        handleDownload(item.data, item.name, item.type);
-                                                                    }, index * 200);
-                                                                });
-                                                            };
+                                                {/* Download option for attachments - only show if there's a video, image, or file (not audio-only) */}
+                                                {(() => {
+                                                    // Filter out audio attachments for download
+                                                    const downloadableAttachments = (message as any).attachments?.filter(
+                                                        (a: any) => a.attachmentType !== 'audio' && !a.type?.startsWith('audio/')
+                                                    ) || [];
+                                                    const hasDownloadable = downloadableAttachments.length > 0 || message.pdf || message.video || (message.images && message.images.length > 0);
+                                                    
+                                                    if (!hasDownloadable) return null;
+                                                    
+                                                    return (
+                                                        <DropdownMenuItem
+                                                            onSelect={() => {
+                                                                // Download all attachments with a small delay between each to avoid browser blocking
+                                                                const downloadWithDelay = (items: Array<{ data: string; name: string; type: string }>) => {
+                                                                    items.forEach((item, index) => {
+                                                                        setTimeout(() => {
+                                                                            handleDownload(item.data, item.name, item.type);
+                                                                        }, index * 200);
+                                                                    });
+                                                                };
 
-                                                            // New format - attachments array
-                                                            if ((message as any).attachments?.length > 0) {
-                                                                downloadWithDelay((message as any).attachments);
-                                                            } else {
-                                                                // Legacy format - collect all attachments
-                                                                const allAttachments: Array<{ data: string; name: string; type: string }> = [];
-                                                                
-                                                                if (message.images && message.images.length > 0) {
-                                                                    allAttachments.push(...message.images);
+                                                                // New format - attachments array (excluding audio)
+                                                                if (downloadableAttachments.length > 0) {
+                                                                    downloadWithDelay(downloadableAttachments);
+                                                                } else {
+                                                                    // Legacy format - collect all attachments
+                                                                    const allAttachments: Array<{ data: string; name: string; type: string }> = [];
+                                                                    
+                                                                    if (message.images && message.images.length > 0) {
+                                                                        allAttachments.push(...message.images);
+                                                                    }
+                                                                    if (message.pdf) {
+                                                                        allAttachments.push(message.pdf);
+                                                                    }
+                                                                    if (message.video) {
+                                                                        allAttachments.push(message.video);
+                                                                    }
+                                                                    
+                                                                    if (allAttachments.length > 0) {
+                                                                        downloadWithDelay(allAttachments);
+                                                                    }
                                                                 }
-                                                                if (message.pdf) {
-                                                                    allAttachments.push(message.pdf);
-                                                                }
-                                                                if (message.video) {
-                                                                    allAttachments.push(message.video);
-                                                                }
-                                                                
-                                                                if (allAttachments.length > 0) {
-                                                                    downloadWithDelay(allAttachments);
-                                                                }
-                                                            }
-                                                        }}
-                                                    >
-                                                        <Download className="mr-2 h-4 w-4" />
-                                                        {t('general.download')}
-                                                    </DropdownMenuItem>
-                                                )}
+                                                            }}
+                                                        >
+                                                            <Download className="mr-2 h-4 w-4" />
+                                                            {t('general.download')}
+                                                        </DropdownMenuItem>
+                                                    );
+                                                })()}
 
                                                 {canDeleteMessage(message) && (
                                                     <>
                                                         <DropdownMenuSeparator />
-                                                        <DropdownMenuItem onClick={() => onDeleteMessage(message.id)}>
+                                                        <DropdownMenuItem onSelect={() => onDeleteMessage(message.id)}>
                                                             <Trash2 className="mr-2 h-4 w-4" />
                                                             {t('general.delete')}
                                                         </DropdownMenuItem>
@@ -308,12 +416,15 @@ export const MessageList = React.memo(function MessageList({
                                                 )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
+
                                     </div>
 
                                     {/* Main Message Bubble */}
                                     <div
                                         className={cn(
-                                            'rounded-[11px] px-3 py-1.5 relative w-fit max-w-full',
+                                            'rounded-[11px] px-3 py-1.5 relative max-w-full',
+                                            // Audio-only messages use full width, others use w-fit
+                                            audioOnly ? 'w-full' : 'w-fit',
                                             message.isSent
                                                 ? 'bg-primary text-primary-foreground'
                                                 : 'bg-sidebar text-foreground',
@@ -323,127 +434,15 @@ export const MessageList = React.memo(function MessageList({
                                     >
                                     {/* Reply preview */}
                                     {message.replyTo && (
-                                        <div
-                                            className={cn(
-                                                'mb-2 px-1.5 py-1.5 rounded-[10px] border-l-4',
-                                                message.isSent
-                                                    ? message.replyTo.isSent
-                                                        ? 'bg-primary-foreground/10 border-primary-foreground/50'
-                                                        : 'bg-primary-foreground/10 border-muted'
-                                                    : 'bg-background/50 border-muted'
-                                            )}
-                                        >
-                                            <div className="flex items-center gap-1.5 mb-1">
-                                                <Reply
-                                                    className={cn(
-                                                        'h-3 w-3 flex-shrink-0',
-                                                        message.isSent
-                                                            ? 'text-primary-foreground/70'
-                                                            : 'text-muted-foreground'
-                                                    )}
-                                                />
-                                                <span
-                                                    className={cn(
-                                                        'text-xs font-semibold',
-                                                        message.isSent
-                                                            ? 'text-primary-foreground'
-                                                            : 'text-foreground'
-                                                    )}
-                                                >
-                                                    {message.replyTo.isSent
-                                                        ? t('messages.yourself')
-                                                        : selectedContact?.name || 'user'}
-                                                </span>
-                                            </div>
-                                            {/* Show "Deleted message" if the replied-to message was deleted */}
-                                            {(message.replyTo as any).is_deleted ? (
-                                                <p
-                                                    className={cn(
-                                                        'text-xs italic opacity-70',
-                                                        message.isSent
-                                                            ? 'text-primary-foreground/80'
-                                                            : 'text-foreground/80'
-                                                    )}
-                                                >
-                                                    {t('messages.deletedMessage')}
-                                                </p>
-                                            ) : (
-                                                <>
-                                                    {message.replyTo.images && message.replyTo.images.length > 0 && (
-                                                        <div className="flex gap-1 mb-1 overflow-x-auto">
-                                                            {message.replyTo.images.slice(0, 3).map((image, idx) => (
-                                                                <div key={idx} className="flex-shrink-0">
-                                                                    <div className="w-10 h-10 flex items-center justify-center overflow-hidden rounded-md bg-muted">
-                                                                        <img
-                                                                            src={image.data}
-                                                                            alt={image.name}
-                                                                            className="w-full h-full object-cover"
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                            {message.replyTo.images.length > 3 && (
-                                                                <div className="w-10 h-10 flex items-center justify-center rounded-md bg-muted text-[10px] text-muted-foreground">
-                                                                    +{message.replyTo.images.length - 3}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                    {message.replyTo.pdf && (
-                                                        <div className="flex items-center gap-1.5 mb-1">
-                                                            <FileText
-                                                                className={cn(
-                                                                    'h-3 w-3 flex-shrink-0',
-                                                                    'text-orange-600 dark:text-orange-400'
-                                                                )}
-                                                            />
-                                                            <span
-                                                                className={cn(
-                                                                    'text-xs truncate',
-                                                                    message.isSent
-                                                                        ? 'text-primary-foreground/80'
-                                                                        : 'text-foreground/80'
-                                                                )}
-                                                            >
-                                                                {message.replyTo.pdf.name}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {message.replyTo.video && (
-                                                        <div className="flex items-center gap-1.5 mb-1">
-                                                            <Video
-                                                                className={cn(
-                                                                    'h-3 w-3 flex-shrink-0',
-                                                                    'text-orange-600 dark:text-orange-400'
-                                                                )}
-                                                            />
-                                                            <span
-                                                                className={cn(
-                                                                    'text-xs truncate',
-                                                                    message.isSent
-                                                                        ? 'text-primary-foreground/80'
-                                                                        : 'text-foreground/80'
-                                                                )}
-                                                            >
-                                                                {message.replyTo.video.name}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {message.replyTo.text && (
-                                                        <p
-                                                            className={cn(
-                                                                'text-xs line-clamp-2',
-                                                                message.isSent
-                                                                    ? 'text-primary-foreground/80'
-                                                                    : 'text-foreground/80'
-                                                            )}
-                                                        >
-                                                            {message.replyTo.text}
-                                                        </p>
-                                                    )}
-                                                </>
-                                            )}
-                                        </div>
+                                        <MessageReplyPreview
+                                            replyTo={message.replyTo as any}
+                                            isSent={message.isSent}
+                                            contactName={selectedContact?.name || 'user'}
+                                            yourselfLabel={t('messages.yourself')}
+                                            deletedMessageLabel={t('messages.deletedMessage')}
+                                            voiceNoteLabel={t('messages.voiceNote')}
+                                            onScrollToMessage={scrollToMessage}
+                                        />
                                     )}
 
                                     {/* Unified Attachments Grid */}
@@ -486,6 +485,12 @@ export const MessageList = React.memo(function MessageList({
                                         />
                                     )}
 
+                                    {/* Loading skeletons for pending attachments */}
+                                    <AttachmentLoadingSkeleton
+                                        count={getPendingAttachmentsCount(message)}
+                                        isSent={message.isSent}
+                                    />
+
                                     {/* PDF Document (legacy - for backward compatibility) */}
                                     {message.pdf && !(message as any).attachments && (
                                         <div
@@ -526,7 +531,7 @@ export const MessageList = React.memo(function MessageList({
                                         </p>
                                     )}
 
-                                    {/* Timestamp and read receipt (always shown) */}
+                                    {/* Timestamp and read receipt (always shown inside bubble) */}
                                     <div className="flex items-center justify-end gap-0.5 mt-0.5">
                                         <span
                                             className={cn(
@@ -595,7 +600,7 @@ export const MessageList = React.memo(function MessageList({
                                                 className={cn(
                                                     'h-7 w-7 rounded-full',
                                                     'bg-background border border-border shadow-sm',
-                                                    'hover:bg-muted'
+                                                    'hover:border-primary'
                                                 )}
                                             >
                                                 <Smile className="h-3.5 w-3.5" />
@@ -604,26 +609,29 @@ export const MessageList = React.memo(function MessageList({
                                         onSelectReaction={(emoji) =>
                                             handleReactionSelect(message.id, emoji)
                                         }
-                                        currentReaction={message.reaction}
+                                        currentReaction={
+                                            // Show coach's reaction - if coach sent, they're sender; else recipient
+                                            message.isSent
+                                                ? message.senderReaction
+                                                : message.recipientReaction
+                                        }
                                         align={message.isSent ? 'end' : 'start'}
                                         side="top"
                                     />
                                 </div>
                             </div>
 
-                            {/* Reactions display */}
-                            {message.reaction && (
+                            {/* Reactions display - shows both sender and recipient reactions */}
+                            {(message.senderReaction || message.recipientReaction) && (
                                 <MessageReactionsDisplay
                                     reaction={{
-                                        senderReaction: message.isSent ? message.reaction : undefined,
-                                        recipientReaction: !message.isSent
-                                            ? message.reaction
-                                            : undefined,
+                                        senderReaction: message.senderReaction,
+                                        recipientReaction: message.recipientReaction,
                                     }}
                                     isSent={message.isSent}
-                                    onPress={() => {
-                                        // Open reaction details or remove reaction
-                                        handleReactionSelect(message.id, '');
+                                    onReactionClick={(action, emoji) => {
+                                        // If removing, pass empty string; if adding, pass the emoji
+                                        handleReactionSelect(message.id, action === 'remove' ? '' : emoji);
                                     }}
                                 />
                             )}
@@ -634,30 +642,6 @@ export const MessageList = React.memo(function MessageList({
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Emoji Picker Dialog */}
-            <Dialog open={emojiPickerMessageId !== null} onOpenChange={(open) => !open && setEmojiPickerMessageId(null)}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Choose a Reaction</DialogTitle>
-                    </DialogHeader>
-                    <div className="flex gap-2 justify-center flex-wrap py-4">
-                        {REACTION_EMOJIS.map((emoji) => (
-                            <button
-                                key={emoji}
-                                onClick={() => {
-                                    if (emojiPickerMessageId) {
-                                        handleReactionSelect(emojiPickerMessageId, emoji);
-                                        setEmojiPickerMessageId(null);
-                                    }
-                                }}
-                                className="flex items-center justify-center h-12 w-12 rounded-lg hover:bg-muted transition-colors active:scale-95 transition-transform text-3xl"
-                            >
-                                {emoji}
-                            </button>
-                        ))}
-                    </div>
-                </DialogContent>
-            </Dialog>
         </ScrollArea>
     );
 });

@@ -27,6 +27,8 @@ export const MessageInputBar = forwardRef<TextInput, MessageInputBarProps>(
           styles.inputContainer,
           {
             backgroundColor: themeColors.surfacePrimary,
+            borderWidth: 1,
+            borderColor: themeColors.border,
           },
           style,
         ]}
@@ -38,7 +40,6 @@ export const MessageInputBar = forwardRef<TextInput, MessageInputBarProps>(
           placeholderTextColor={themeColors.mutedText}
           value={value}
           onChangeText={onChangeText}
-          textAlignVertical="center"
           multiline={true}
           blurOnSubmit={false}
           scrollEnabled={false}
@@ -77,21 +78,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 18,
     paddingHorizontal: 12,
-    paddingVertical: 4,
     minHeight: 36,
     maxHeight: 120,
   },
   input: {
     flex: 1,
     ...typography.p2,
-    paddingTop: 0,
-    paddingBottom: 0,
+    paddingTop: 6,
+    paddingBottom: 6,
     includeFontPadding: false,
   },
   clearIcon: {
     marginLeft: 8,
     padding: 4,
-    alignSelf: 'flex-end',
   },
   rightIcon: {
     marginLeft: 8,
