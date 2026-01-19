@@ -542,6 +542,7 @@ export default function ReorderScreen() {
                     ]}
                     showsVerticalScrollIndicator={false}
                     scrollEnabled={isScrollEnabled}
+                    keyboardDismissMode="on-drag"
                 >
                     {/* Header */}
                     <View style={styles.header}>

@@ -50,6 +50,7 @@ export const ScreenWrapper = ({
             ]}
             showsVerticalScrollIndicator={showsVerticalScrollIndicator}
             scrollEnabled={scrollEnabled}
+            keyboardDismissMode="on-drag"
           >
             <View style={{ height: insets.top }} />
             {children}

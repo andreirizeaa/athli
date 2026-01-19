@@ -109,6 +109,7 @@ export default function MetricsScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
         >
           {metrics.map((metric, index) => {
             const isLastItem = index === metrics.length - 1;

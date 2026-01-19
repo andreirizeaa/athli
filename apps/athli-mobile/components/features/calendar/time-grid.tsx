@@ -88,6 +88,7 @@ export const TimeGrid = ({ selectedDate }: TimeGridProps) => {
       style={styles.timeGridScrollView}
       contentContainerStyle={styles.timeGridContent}
       showsVerticalScrollIndicator={false}
+      keyboardDismissMode="on-drag"
     >
       <View style={styles.timeGridContainer}>
         {hourlyTimes.map((time, index) => (

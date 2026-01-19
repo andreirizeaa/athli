@@ -91,6 +91,7 @@ export default function ClientNotesScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
         >
           {notes.map((note) => (
             <View key={note.id}>

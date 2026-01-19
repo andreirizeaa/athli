@@ -21,6 +21,7 @@ import {
     filterLogsByTimeRange,
     type TimeRange,
 } from '@/components/ui/segmented-control';
+import { ValueLineChart } from '@/components/ui/value-line-chart';
 
 // Animated counter hook
 const useAnimatedCounter = (targetValue: number, decimals: number = 1) => {
@@ -108,6 +109,14 @@ export default function MetricDetailScreen() {
             percentage: Math.abs(percentage),
             isUp: diff > 0,
         };
+    }, [sortedLogs]);
+
+    // Chart data
+    const chartData = useMemo(() => {
+        return sortedLogs.map((log) => ({
+            value: log.value,
+            date: log.date,
+        }));
     }, [sortedLogs]);
 
     // Animated values
@@ -222,6 +231,9 @@ export default function MetricDetailScreen() {
                     </Text>
                 </View>
             </View>
+
+            {/* Value Chart */}
+            <ValueLineChart data={chartData} />
         </ScreenWrapper>
     );
 }
@@ -257,7 +269,7 @@ const styles = StyleSheet.create({
     },
     statCard: {
         flex: 1,
-        borderRadius: 12,
+        borderRadius: 24,
         paddingVertical: 32,
         paddingHorizontal: 16,
         alignItems: 'center',
