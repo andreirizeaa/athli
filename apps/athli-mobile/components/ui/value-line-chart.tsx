@@ -1,7 +1,10 @@
-import React, { useMemo } from 'react';
-import { View, StyleSheet, Text, Dimensions } from 'react-native';
-import { CartesianChart, Line, Area } from 'victory-native';
-import { LinearGradient, vec } from '@shopify/react-native-skia';
+import * as React from 'react';
+import { useMemo } from 'react';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { CartesianChart, Line, Area, useChartPressState } from 'victory-native';
+import { Circle, useFont, LinearGradient, vec } from '@shopify/react-native-skia';
+import type { SharedValue } from 'react-native-reanimated';
+import { hexToRgba } from '@/utils/colorUtils';
 
 import { useThemePreference, useTranslations } from '@/stores';
 import { typography } from '@/constants/typography';
@@ -21,20 +24,27 @@ type ChartDataPoint = {
     x: number;
     y: number;
     date: string;
-    label: string;
 };
 
-const formatShortDate = (dateStr: string): string => {
+const ToolTip = ({ x, y, color }: { x: SharedValue<number>; y: SharedValue<number>; color: string }) => {
+    return <Circle cx={x} cy={y} r={8} color={color} />;
+};
+
+const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
     const day = date.getDate();
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const month = months[date.getMonth()];
-    return `${day} ${month}`;
+    const year = String(date.getFullYear()).slice(-2);
+    return `${day} ${month}, ${year}`;
 };
 
 export const ValueLineChart = ({ data }: ValueLineChartProps) => {
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
+    const font = useFont(require('../../assets/fonts/SpaceMono-Regular.ttf'), 12);
+    const { state, isActive } = useChartPressState({ x: 0, y: { y: 0 } });
+
     const screenWidth = Dimensions.get('window').width;
     const chartWidth = screenWidth - 64;
     const chartHeight = 180;
@@ -42,15 +52,10 @@ export const ValueLineChart = ({ data }: ValueLineChartProps) => {
     const chartData = useMemo((): ChartDataPoint[] => {
         if (data.length === 0) return [];
 
-        const labelInterval = Math.max(1, Math.ceil(data.length / 4));
-
         return data.map((item, index) => ({
             x: index,
             y: item.value,
             date: item.date,
-            label: index % labelInterval === 0 || index === data.length - 1
-                ? formatShortDate(item.date)
-                : '',
         }));
     }, [data]);
 
@@ -65,6 +70,11 @@ export const ValueLineChart = ({ data }: ValueLineChartProps) => {
             maxValue: max + padding,
         };
     }, [chartData]);
+
+    const startDate = chartData.length > 0 ? formatDate(chartData[0].date) : '';
+    const middleIndex = Math.floor((chartData.length - 1) / 2);
+    const middleDate = chartData.length > 2 ? formatDate(chartData[middleIndex].date) : '';
+    const endDate = chartData.length > 0 ? formatDate(chartData[chartData.length - 1].date) : '';
 
     if (chartData.length < 2) {
         return (
@@ -85,47 +95,66 @@ export const ValueLineChart = ({ data }: ValueLineChartProps) => {
                     data={chartData}
                     xKey="x"
                     yKeys={['y']}
-                    domain={{ y: [minValue, maxValue] }}
                     axisOptions={{
-                        tickCount: { x: 4, y: 4 },
+                        font,
+                        tickCount: { x: 0, y: 4 },
                         labelColor: themeColors.mutedText,
                         lineColor: 'transparent',
-                        formatXLabel: (value) => {
-                            const index = Math.round(value);
-                            if (index >= 0 && index < chartData.length) {
-                                return chartData[index].label || '';
-                            }
-                            return '';
-                        },
+                        axisSide: { x: 'bottom', y: 'left' },
                     }}
+                    domain={{
+                        x: [0, chartData.length - 1],
+                        y: [minValue, maxValue],
+                    }}
+                    chartPressState={state}
                 >
                     {({ points, chartBounds }) => (
                         <>
                             <Area
                                 points={points.y}
                                 y0={chartBounds.bottom}
-                                curveType="natural"
+                                curveType="monotoneX"
                                 animate={{ type: 'timing', duration: 300 }}
                             >
                                 <LinearGradient
                                     start={vec(0, chartBounds.top)}
                                     end={vec(0, chartBounds.bottom)}
                                     colors={[
-                                        themeColors.primary + '4D',
-                                        themeColors.primary + '00',
+                                        hexToRgba(themeColors.primary, 0.4),
+                                        hexToRgba(themeColors.primary, 0),
                                     ]}
                                 />
                             </Area>
                             <Line
                                 points={points.y}
                                 color={themeColors.primary}
-                                strokeWidth={2.5}
-                                curveType="natural"
+                                strokeWidth={3}
+                                curveType="monotoneX"
                                 animate={{ type: 'timing', duration: 300 }}
                             />
+                            {isActive && (
+                                <ToolTip
+                                    x={state.x.position}
+                                    y={state.y.y.position}
+                                    color={themeColors.primary}
+                                />
+                            )}
                         </>
                     )}
                 </CartesianChart>
+            </View>
+            <View style={[styles.dateLabels, { width: chartWidth }]}>
+                <Text style={[styles.dateLabel, { color: themeColors.mutedText }]}>
+                    {startDate}
+                </Text>
+                {middleDate && (
+                    <Text style={[styles.dateLabel, { color: themeColors.mutedText }]}>
+                        {middleDate}
+                    </Text>
+                )}
+                <Text style={[styles.dateLabel, { color: themeColors.mutedText }]}>
+                    {endDate}
+                </Text>
             </View>
         </View>
     );
@@ -135,11 +164,21 @@ const styles = StyleSheet.create({
     container: {
         marginHorizontal: 16,
         marginTop: 12,
-        borderRadius: 12,
-        paddingVertical: 16,
-        paddingHorizontal: 8,
+        borderRadius: 24,
+        paddingVertical: 24,
+        paddingHorizontal: 16,
+        alignItems: 'center',
     },
     chartWrapper: {},
+    dateLabels: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: -12,
+    },
+    dateLabel: {
+        fontFamily: 'SpaceMono',
+        fontSize: 12,
+    },
     emptyState: {
         height: 180,
         alignItems: 'center',

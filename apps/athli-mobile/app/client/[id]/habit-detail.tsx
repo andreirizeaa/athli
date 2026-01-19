@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { View, StyleSheet, Text } from 'react-native';
-import { ChevronLeft, Plus, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { ChevronLeft, Plus, TrendingUp, TrendingDown, Calculator, Activity, Target, Flame } from 'lucide-react-native';
 import {
     useSharedValue,
     useAnimatedReaction,
@@ -23,6 +23,9 @@ import {
 } from '@/components/ui/segmented-control';
 import { ValueLineChart } from '@/components/ui/value-line-chart';
 import { TargetLineChart } from '@/components/ui/target-line-chart';
+import { LogsList } from '@/components/ui/logs-list';
+import { FlipCard } from '@/components/ui/flip-card';
+import { hexToRgba } from '@/utils/colorUtils';
 import { getHabitStreaks, type HabitStreaks } from '@/services/client/client-habit-service';
 
 // Animated counter hook
@@ -235,71 +238,140 @@ export default function HabitDetailScreen() {
                 onChange={setTimeRange}
             />
 
-            {/* Stats Row 1: Average & Change */}
+            {/* Stats Row 1: Average & Delta */}
             <View style={styles.statsRow}>
-                {/* Average Card */}
-                <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
-                    <Text style={[styles.statValue, { color: themeColors.text }]}>
-                        {averageValue !== null
-                            ? animatedAverage
-                            : `${animatedCompletionRate}%`}
-                    </Text>
-                    <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
-                        {averageValue !== null
-                            ? t('clientDetail.habitDetail.average')
-                            : t('clientDetail.habitDetail.completionRate')}
-                    </Text>
-                </View>
+                {/* Average/Completion Rate Card */}
+                <FlipCard
+                    frontContent={
+                        <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
+                            <View style={[styles.statIconContainer, { backgroundColor: hexToRgba(themeColors.primary, 0.15) }]}>
+                                {averageValue !== null ? (
+                                    <Calculator {...({ size: 18, color: themeColors.primary } as any)} />
+                                ) : (
+                                    <Target {...({ size: 18, color: themeColors.primary } as any)} />
+                                )}
+                            </View>
+                            <Text style={[styles.statValue, { color: themeColors.text }]}>
+                                {averageValue !== null
+                                    ? animatedAverage
+                                    : `${animatedCompletionRate}%`}
+                            </Text>
+                            <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
+                                {averageValue !== null
+                                    ? t('clientDetail.habitDetail.average')
+                                    : t('clientDetail.habitDetail.completionRate')}
+                            </Text>
+                        </View>
+                    }
+                    backContent={
+                        <View style={[styles.statCard, styles.statCardBack, { backgroundColor: themeColors.surfacePrimary }]}>
+                            <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
+                                {averageValue !== null
+                                    ? t('clientDetail.habitDetail.descriptions.average')
+                                    : t('clientDetail.habitDetail.descriptions.completionRate')}
+                            </Text>
+                        </View>
+                    }
+                />
 
-                {/* Change Card */}
-                <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
-                    <View style={styles.changeContent}>
-                        {change !== null && change.value !== 0 && (
-                            change.isUp ? (
-                                <TrendingUp {...({ size: 24, color: '#22c55e', style: styles.trendIcon } as any)} />
-                            ) : (
-                                <TrendingDown {...({ size: 24, color: '#ef4444', style: styles.trendIcon } as any)} />
-                            )
-                        )}
-                        <Text style={[
-                            styles.statValue,
-                            { color: change === null || change.value === 0
-                                ? themeColors.text
-                                : change.isUp
-                                    ? '#22c55e'
-                                    : '#ef4444'
-                            }
-                        ]}>
-                            {animatedChange}%
-                        </Text>
-                    </View>
-                    <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
-                        {t('clientDetail.habitDetail.change')}
-                    </Text>
-                </View>
+                {/* Delta Card */}
+                <FlipCard
+                    frontContent={
+                        <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
+                            <View style={[
+                                styles.statIconContainer,
+                                { backgroundColor: change === null || change.value === 0
+                                    ? hexToRgba(themeColors.primary, 0.15)
+                                    : change.isUp
+                                        ? 'rgba(34, 197, 94, 0.15)'
+                                        : 'rgba(239, 68, 68, 0.15)'
+                                }
+                            ]}>
+                                {change !== null && change.value !== 0 ? (
+                                    change.isUp ? (
+                                        <TrendingUp {...({ size: 18, color: '#22c55e' } as any)} />
+                                    ) : (
+                                        <TrendingDown {...({ size: 18, color: '#ef4444' } as any)} />
+                                    )
+                                ) : (
+                                    <Activity {...({ size: 18, color: themeColors.primary } as any)} />
+                                )}
+                            </View>
+                            <Text style={[
+                                styles.statValue,
+                                { color: change === null || change.value === 0
+                                    ? themeColors.text
+                                    : change.isUp
+                                        ? '#22c55e'
+                                        : '#ef4444'
+                                }
+                            ]}>
+                                {animatedChange}%
+                            </Text>
+                            <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
+                                {t('clientDetail.habitDetail.delta')}
+                            </Text>
+                        </View>
+                    }
+                    backContent={
+                        <View style={[styles.statCard, styles.statCardBack, { backgroundColor: themeColors.surfacePrimary }]}>
+                            <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
+                                {t('clientDetail.habitDetail.descriptions.delta')}
+                            </Text>
+                        </View>
+                    }
+                />
             </View>
 
             {/* Stats Row 2: Completion Rate & Current Streak */}
             <View style={styles.statsRow}>
-                {/* Completion Rate Card (only show if we have averageValue, otherwise it's in row 1) */}
-                <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
-                    <Text style={[styles.statValue, { color: themeColors.text }]}>
-                        {animatedCompletionRate}%
-                    </Text>
-                    <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
-                        {t('clientDetail.habitDetail.completionRate')}
-                    </Text>
-                </View>
+                {/* Completion Rate Card */}
+                <FlipCard
+                    frontContent={
+                        <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
+                            <View style={[styles.statIconContainer, { backgroundColor: hexToRgba(themeColors.primary, 0.15) }]}>
+                                <Target {...({ size: 18, color: themeColors.primary } as any)} />
+                            </View>
+                            <Text style={[styles.statValue, { color: themeColors.text }]}>
+                                {animatedCompletionRate}%
+                            </Text>
+                            <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
+                                {t('clientDetail.habitDetail.completionRate')}
+                            </Text>
+                        </View>
+                    }
+                    backContent={
+                        <View style={[styles.statCard, styles.statCardBack, { backgroundColor: themeColors.surfacePrimary }]}>
+                            <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
+                                {t('clientDetail.habitDetail.descriptions.completionRate')}
+                            </Text>
+                        </View>
+                    }
+                />
 
                 {/* Current Streak Card */}
-                <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
-                    <Text style={[styles.statValue, { color: themeColors.text }]}>
-                        {animatedStreak}
-                    </Text>
-                    <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
-                        {t('clientDetail.habitDetail.currentStreak')}
-                    </Text>
-                </View>
+                <FlipCard
+                    frontContent={
+                        <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
+                            <View style={[styles.statIconContainer, { backgroundColor: 'rgba(249, 115, 22, 0.15)' }]}>
+                                <Flame {...({ size: 18, color: '#f97316' } as any)} />
+                            </View>
+                            <Text style={[styles.statValue, { color: themeColors.text }]}>
+                                {animatedStreak}
+                            </Text>
+                            <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
+                                {t('clientDetail.habitDetail.currentStreak')}
+                            </Text>
+                        </View>
+                    }
+                    backContent={
+                        <View style={[styles.statCard, styles.statCardBack, { backgroundColor: themeColors.surfacePrimary }]}>
+                            <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
+                                {t('clientDetail.habitDetail.descriptions.currentStreak')}
+                            </Text>
+                        </View>
+                    }
+                />
             </View>
 
             {/* Value Chart - use TargetLineChart if habit has a target amount and values */}
@@ -312,6 +384,15 @@ export default function HabitDetailScreen() {
             ) : (
                 <ValueLineChart data={chartData} />
             )}
+
+            {/* Logs List */}
+            <LogsList
+                data={sortedLogs}
+                unit={habit.unit}
+                isHabit
+                clientId={clientId}
+                assignmentId={habit.assignment_id}
+            />
         </ScreenWrapper>
     );
 }
@@ -348,26 +429,33 @@ const styles = StyleSheet.create({
     statCard: {
         flex: 1,
         borderRadius: 24,
-        paddingVertical: 32,
+        paddingVertical: 20,
         paddingHorizontal: 16,
+        alignItems: 'flex-start',
+        justifyContent: 'flex-start',
+    },
+    statCardBack: {
         alignItems: 'center',
         justifyContent: 'center',
     },
-    statValue: {
-        ...typography.h1,
+    descriptionText: {
+        ...typography.p3,
         textAlign: 'center',
+        paddingHorizontal: 8,
+    },
+    statIconContainer: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+    },
+    statValue: {
+        ...typography.h2,
     },
     statLabel: {
         ...typography.p3,
         marginTop: 4,
-        textAlign: 'center',
-    },
-    changeContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    trendIcon: {
-        marginRight: 4,
     },
 });

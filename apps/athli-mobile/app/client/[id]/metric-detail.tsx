@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { View, StyleSheet, Text } from 'react-native';
-import { ChevronLeft, Plus, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { ChevronLeft, Plus, TrendingUp, TrendingDown, Calculator, Activity } from 'lucide-react-native';
 import {
     useSharedValue,
     useAnimatedReaction,
@@ -22,6 +22,9 @@ import {
     type TimeRange,
 } from '@/components/ui/segmented-control';
 import { ValueLineChart } from '@/components/ui/value-line-chart';
+import { LogsList } from '@/components/ui/logs-list';
+import { FlipCard } from '@/components/ui/flip-card';
+import { hexToRgba } from '@/utils/colorUtils';
 
 // Animated counter hook
 const useAnimatedCounter = (targetValue: number, decimals: number = 1) => {
@@ -195,45 +198,88 @@ export default function MetricDetailScreen() {
             {/* Stats Row */}
             <View style={styles.statsRow}>
                 {/* Average Card */}
-                <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
-                    <Text style={[styles.statValue, { color: themeColors.text }]}>
-                        {animatedAverage}
-                    </Text>
-                    <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
-                        {t('clientDetail.metricDetail.average')}
-                    </Text>
-                </View>
+                <FlipCard
+                    frontContent={
+                        <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
+                            <View style={[styles.statIconContainer, { backgroundColor: hexToRgba(themeColors.primary, 0.15) }]}>
+                                <Calculator {...({ size: 18, color: themeColors.primary } as any)} />
+                            </View>
+                            <Text style={[styles.statValue, { color: themeColors.text }]}>
+                                {animatedAverage}
+                            </Text>
+                            <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
+                                {t('clientDetail.metricDetail.average')}
+                            </Text>
+                        </View>
+                    }
+                    backContent={
+                        <View style={[styles.statCard, styles.statCardBack, { backgroundColor: themeColors.surfacePrimary }]}>
+                            <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
+                                {t('clientDetail.metricDetail.descriptions.average')}
+                            </Text>
+                        </View>
+                    }
+                />
 
-                {/* Improvement Card */}
-                <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
-                    <View style={styles.improvementContent}>
-                        {movement !== null && movement.percentage !== 0 && (
-                            movement.isUp ? (
-                                <TrendingUp size={24} color="#22c55e" style={styles.trendIcon} />
-                            ) : (
-                                <TrendingDown size={24} color="#ef4444" style={styles.trendIcon} />
-                            )
-                        )}
-                        <Text style={[
-                            styles.statValue,
-                            { color: movement === null || movement.percentage === 0
-                                ? themeColors.text
-                                : movement.isUp
-                                    ? '#22c55e'
-                                    : '#ef4444'
-                            }
-                        ]}>
-                            {animatedMovement}%
-                        </Text>
-                    </View>
-                    <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
-                        {t('clientDetail.metricDetail.improvement')}
-                    </Text>
-                </View>
+                {/* Delta Card */}
+                <FlipCard
+                    frontContent={
+                        <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
+                            <View style={[
+                                styles.statIconContainer,
+                                { backgroundColor: movement === null || movement.percentage === 0
+                                    ? hexToRgba(themeColors.primary, 0.15)
+                                    : movement.isUp
+                                        ? 'rgba(34, 197, 94, 0.15)'
+                                        : 'rgba(239, 68, 68, 0.15)'
+                                }
+                            ]}>
+                                {movement !== null && movement.percentage !== 0 ? (
+                                    movement.isUp ? (
+                                        <TrendingUp {...({ size: 18, color: '#22c55e' } as any)} />
+                                    ) : (
+                                        <TrendingDown {...({ size: 18, color: '#ef4444' } as any)} />
+                                    )
+                                ) : (
+                                    <Activity {...({ size: 18, color: themeColors.primary } as any)} />
+                                )}
+                            </View>
+                            <Text style={[
+                                styles.statValue,
+                                { color: movement === null || movement.percentage === 0
+                                    ? themeColors.text
+                                    : movement.isUp
+                                        ? '#22c55e'
+                                        : '#ef4444'
+                                }
+                            ]}>
+                                {animatedMovement}%
+                            </Text>
+                            <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
+                                {t('clientDetail.metricDetail.delta')}
+                            </Text>
+                        </View>
+                    }
+                    backContent={
+                        <View style={[styles.statCard, styles.statCardBack, { backgroundColor: themeColors.surfacePrimary }]}>
+                            <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
+                                {t('clientDetail.metricDetail.descriptions.delta')}
+                            </Text>
+                        </View>
+                    }
+                />
             </View>
 
             {/* Value Chart */}
             <ValueLineChart data={chartData} />
+
+            {/* Logs List */}
+            <LogsList
+                data={sortedLogs}
+                unit={metric.unit}
+                clientId={clientId}
+                assignmentId={metric.assignment_id}
+            />
         </ScreenWrapper>
     );
 }
@@ -270,26 +316,33 @@ const styles = StyleSheet.create({
     statCard: {
         flex: 1,
         borderRadius: 24,
-        paddingVertical: 32,
+        paddingVertical: 20,
         paddingHorizontal: 16,
+        alignItems: 'flex-start',
+        justifyContent: 'flex-start',
+    },
+    statCardBack: {
         alignItems: 'center',
         justifyContent: 'center',
     },
-    statValue: {
-        ...typography.h1,
+    descriptionText: {
+        ...typography.p3,
         textAlign: 'center',
+        paddingHorizontal: 8,
+    },
+    statIconContainer: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+    },
+    statValue: {
+        ...typography.h2,
     },
     statLabel: {
         ...typography.p3,
         marginTop: 4,
-        textAlign: 'center',
-    },
-    improvementContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    trendIcon: {
-        marginRight: 4,
     },
 });
