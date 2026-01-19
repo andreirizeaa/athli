@@ -941,9 +941,15 @@ export const en = {
       skipped: 'Skipped',
       partial: 'Partial',
       average: 'Average',
-      change: 'Change',
+      delta: 'Delta',
       completionRate: 'Completion',
       currentStreak: 'Streak',
+      descriptions: {
+        average: 'The mean of all logged values for habits with numerical targets',
+        completionRate: 'Percentage of days the habit was marked as completed',
+        delta: 'Change in completion rate comparing first half vs second half of logs',
+        currentStreak: 'Consecutive days of completing this habit up to today',
+      },
     },
     metricDetail: {
       title: 'Metric Details',
@@ -951,7 +957,11 @@ export const en = {
       recentLogs: 'Recent Logs',
       noLogs: 'No logs yet',
       average: 'Average',
-      improvement: 'Improvement',
+      delta: 'Delta',
+      descriptions: {
+        average: 'The mean of all logged values in the selected time period',
+        delta: 'Percentage change comparing first and last value in the current time frame',
+      },
     },
     timeRanges: {
       ninetyDays: '90 days',
@@ -964,6 +974,21 @@ export const en = {
       target: 'Target:',
       aboveTarget: 'Above target',
       belowTarget: 'Below target',
+    },
+    logsSection: {
+      title: 'Logs',
+      byWeek: 'By week',
+      allEntries: 'All entries',
+    },
+    editLog: {
+      invalidValue: 'Please enter a valid number',
+      deleteTitle: 'Delete Log',
+      deleteMessage: 'Are you sure you want to delete this log entry?',
+      deleteLog: 'Delete Log',
+    },
+    logWarning: {
+      metricExists: 'A log already exists for this date. Adding a new one will override the existing value.',
+      habitExists: 'A log already exists for this date. Adding a new one will override the existing value.',
     },
     training: {
       noWorkouts: 'No workouts planned',

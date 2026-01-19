@@ -3,7 +3,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { View, StyleSheet, Text, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check } from 'lucide-react-native';
+import { X, Check, AlertTriangle } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { useThemePreference } from '@/stores';
@@ -113,6 +113,16 @@ export default function LogMetricForClientModal() {
         return !!selectedMetric && !!value.trim() && !isSaving;
     }, [selectedMetric, value, isSaving]);
 
+    // Check if a log already exists for the selected date
+    const existingLogForDate = useMemo(() => {
+        if (!selectedMetric?.logs || !date) return false;
+        const selectedDateStr = date.toISOString().split('T')[0];
+        return selectedMetric.logs.some((log) => {
+            const logDateStr = new Date(log.date).toISOString().split('T')[0];
+            return logDateStr === selectedDateStr;
+        });
+    }, [selectedMetric, date]);
+
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
 
@@ -192,6 +202,15 @@ export default function LogMetricForClientModal() {
                         onPress={handleSelectDatePress}
                         required
                     />
+
+                    {existingLogForDate && (
+                        <View style={[styles.warningContainer, { backgroundColor: hexToRgba('#F59E0B', 0.15) }]}>
+                            <AlertTriangle {...({ size: 18, color: '#F59E0B' } as any)} />
+                            <Text style={[styles.warningText, { color: '#F59E0B' }]}>
+                                {t('clientDetail.logWarning.metricExists')}
+                            </Text>
+                        </View>
+                    )}
                 </View>
             </KeyboardAwareScrollView>
         </View>
@@ -236,5 +255,16 @@ const styles = StyleSheet.create({
     },
     form: {
         gap: 16,
+    },
+    warningContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 10,
+        padding: 12,
+        borderRadius: 12,
+    },
+    warningText: {
+        ...typography.p3,
+        flex: 1,
     },
 });

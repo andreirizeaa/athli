@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     },
     container: {
         flexDirection: 'row',
-        borderRadius: 20,
+        borderRadius: 16,
         padding: 4,
         position: 'relative',
     },
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 4,
         bottom: 4,
-        borderRadius: 16,
+        borderRadius: 14,
     },
     segment: {
         flex: 1,
