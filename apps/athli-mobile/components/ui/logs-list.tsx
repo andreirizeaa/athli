@@ -20,6 +20,7 @@ type LogsListProps = {
     data: LogEntry[];
     unit?: string;
     isHabit?: boolean;
+    targetAmount?: number;
     clientId?: string;
     assignmentId?: string;
 };
@@ -84,6 +85,7 @@ const WeekCard = ({
     weekGroup,
     unit,
     isHabit,
+    targetAmount,
     themeColors,
     clientId,
     assignmentId,
@@ -92,6 +94,7 @@ const WeekCard = ({
     weekGroup: WeekGroup;
     unit?: string;
     isHabit?: boolean;
+    targetAmount?: number;
     themeColors: any;
     clientId?: string;
     assignmentId?: string;
@@ -107,6 +110,16 @@ const WeekCard = ({
         if (value === undefined) return '-';
         const formatted = Number.isInteger(value) ? value.toString() : value.toFixed(1);
         return unit ? `${formatted} ${unit}` : formatted;
+    };
+
+    const formatHabitValue = (value: number | undefined) => {
+        if (value === undefined) return '-';
+        const formatted = Number.isInteger(value) ? value.toString() : value.toFixed(1);
+        const valueStr = unit ? `${formatted} ${unit}` : formatted;
+        if (targetAmount !== undefined && value >= targetAmount) {
+            return `Completed (${valueStr})`;
+        }
+        return `Partial (${valueStr})`;
     };
 
     // Sort logs within week by date (newest first)
@@ -147,9 +160,7 @@ const WeekCard = ({
                                 </View>
                                 <View style={styles.dayValueRow}>
                                     <Text style={[styles.dayValue, { color: themeColors.text }]}>
-                                        {isHabit && log.status
-                                            ? log.status.charAt(0).toUpperCase() + log.status.slice(1)
-                                            : formatValue(log.value)}
+                                        {isHabit ? formatHabitValue(log.value) : formatValue(log.value)}
                                     </Text>
                                     {canEdit && (
                                         <Pencil {...({ size: 14, color: themeColors.mutedText } as any)} />
@@ -202,6 +213,7 @@ const EntryCard = ({
     log,
     unit,
     isHabit,
+    targetAmount,
     themeColors,
     clientId,
     onLogPress,
@@ -209,6 +221,7 @@ const EntryCard = ({
     log: LogEntry;
     unit?: string;
     isHabit?: boolean;
+    targetAmount?: number;
     themeColors: any;
     clientId?: string;
     onLogPress: (log: LogEntry) => void;
@@ -222,6 +235,16 @@ const EntryCard = ({
         return unit ? `${formatted} ${unit}` : formatted;
     };
 
+    const formatHabitValue = (value: number | undefined) => {
+        if (value === undefined) return '-';
+        const formatted = Number.isInteger(value) ? value.toString() : value.toFixed(1);
+        const valueStr = unit ? `${formatted} ${unit}` : formatted;
+        if (targetAmount !== undefined && value >= targetAmount) {
+            return `Completed (${valueStr})`;
+        }
+        return `Partial (${valueStr})`;
+    };
+
     const content = (
         <>
             <Text style={[styles.entryDate, { color: themeColors.mutedText }]}>
@@ -229,9 +252,7 @@ const EntryCard = ({
             </Text>
             <View style={styles.entryValueRow}>
                 <Text style={[styles.entryValue, { color: themeColors.text }]}>
-                    {isHabit && log.status
-                        ? log.status.charAt(0).toUpperCase() + log.status.slice(1)
-                        : formatValue(log.value)}
+                    {isHabit ? formatHabitValue(log.value) : formatValue(log.value)}
                 </Text>
                 {canEdit && (
                     <Pencil {...({ size: 14, color: themeColors.mutedText } as any)} />
@@ -258,7 +279,7 @@ const EntryCard = ({
     );
 };
 
-export const LogsList = ({ data, unit, isHabit = false, clientId, assignmentId }: LogsListProps) => {
+export const LogsList = ({ data, unit, isHabit = false, targetAmount, clientId, assignmentId }: LogsListProps) => {
     const router = useRouter();
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
@@ -309,12 +330,12 @@ export const LogsList = ({ data, unit, isHabit = false, clientId, assignmentId }
 
         // Calculate averages
         groups.forEach((group) => {
-            if (isHabit) {
-                // For habits, calculate completion rate
-                const completed = group.logs.filter((l) => l.status === 'completed').length;
+            if (isHabit && targetAmount !== undefined) {
+                // For habits, calculate completion rate based on value >= target
+                const completed = group.logs.filter((l) => (l.value ?? 0) >= targetAmount).length;
                 group.averageValue = (completed / group.logs.length) * 100;
             } else {
-                // For metrics, calculate average value
+                // For metrics (or habits without target), calculate average value
                 const sum = group.logs.reduce((acc, log) => acc + (log.value ?? 0), 0);
                 group.averageValue = sum / group.logs.length;
             }
@@ -327,7 +348,7 @@ export const LogsList = ({ data, unit, isHabit = false, clientId, assignmentId }
         });
 
         return sortedGroups;
-    }, [data, isHabit, sortAscending]);
+    }, [data, isHabit, targetAmount, sortAscending]);
 
     // All entries sorted by date
     const sortedEntries = useMemo(() => {
@@ -395,6 +416,7 @@ export const LogsList = ({ data, unit, isHabit = false, clientId, assignmentId }
                               weekGroup={weekGroup}
                               unit={unit}
                               isHabit={isHabit}
+                              targetAmount={targetAmount}
                               themeColors={themeColors}
                               clientId={clientId}
                               assignmentId={assignmentId}
@@ -407,6 +429,7 @@ export const LogsList = ({ data, unit, isHabit = false, clientId, assignmentId }
                               log={log}
                               unit={unit}
                               isHabit={isHabit}
+                              targetAmount={targetAmount}
                               themeColors={themeColors}
                               clientId={clientId}
                               onLogPress={handleLogPress}

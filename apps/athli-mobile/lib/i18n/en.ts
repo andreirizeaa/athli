@@ -944,11 +944,13 @@ export const en = {
       delta: 'Delta',
       completionRate: 'Completion',
       currentStreak: 'Streak',
+      editHabit: 'Edit Habit',
+      addLog: 'Add a Log',
       descriptions: {
-        average: 'The mean of all logged values for habits with numerical targets',
-        completionRate: 'Percentage of days the habit was marked as completed',
-        delta: 'Change in completion rate comparing first half vs second half of logs',
-        currentStreak: 'Consecutive days of completing this habit up to today',
+        average: 'The mean of all logged values in the selected time period',
+        completionRate: 'Percentage of days where the logged value met or exceeded the target',
+        delta: 'Percentage change comparing the first and last logged value',
+        currentStreak: 'Consecutive days of meeting the target up to today',
       },
     },
     metricDetail: {
@@ -958,6 +960,8 @@ export const en = {
       noLogs: 'No logs yet',
       average: 'Average',
       delta: 'Delta',
+      editMetric: 'Edit Metric',
+      addLog: 'Add a Log',
       descriptions: {
         average: 'The mean of all logged values in the selected time period',
         delta: 'Percentage change comparing first and last value in the current time frame',

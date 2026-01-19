@@ -1,7 +1,7 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { View, StyleSheet, Text } from 'react-native';
-import { ChevronLeft, Plus, TrendingUp, TrendingDown, Calculator, Activity } from 'lucide-react-native';
+import { ChevronLeft, MoreHorizontal, TrendingUp, TrendingDown, Calculator, Activity, Pencil, Plus } from 'lucide-react-native';
 import {
     useSharedValue,
     useAnimatedReaction,
@@ -25,6 +25,7 @@ import { ValueLineChart } from '@/components/ui/value-line-chart';
 import { LogsList } from '@/components/ui/logs-list';
 import { FlipCard } from '@/components/ui/flip-card';
 import { hexToRgba } from '@/utils/colorUtils';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 
 // Animated counter hook
 const useAnimatedCounter = (targetValue: number, decimals: number = 1) => {
@@ -130,7 +131,7 @@ export default function MetricDetailScreen() {
         router.back();
     };
 
-    const handleLogMetric = () => {
+    const handleLogMetric = useCallback(() => {
         router.push({
             pathname: '/modals/client/log-metric-for-client-modal',
             params: {
@@ -139,7 +140,42 @@ export default function MetricDetailScreen() {
                 disabled: 'true',
             },
         });
-    };
+    }, [router, clientId, metric?.assignment_id]);
+
+    // Get coachId from store for client assignment updates
+    const coachId = useClientDetailStore((state) => state.coachId);
+
+    const handleEditMetric = useCallback(() => {
+        if (!metric) return;
+        router.push({
+            pathname: '/modals/library/add-metric-modal',
+            params: {
+                editingId: metric.id,
+                name: metric.name,
+                unit: metric.unit || '',
+                description: metric.description || '',
+                schedule_config: metric.schedule_config ? JSON.stringify(metric.schedule_config) : '',
+                // Client assignment context
+                isClientAssignment: 'true',
+                assignmentId: metric.assignment_id,
+                clientId,
+                coachId: coachId || '',
+            },
+        });
+    }, [router, metric, clientId, coachId]);
+
+    const dropdownOptions: DropdownMenuOption[] = useMemo(() => [
+        {
+            label: t('clientDetail.metricDetail.editMetric'),
+            icon: { sf: 'pencil', IconComponent: Pencil },
+            onPress: handleEditMetric,
+        },
+        {
+            label: t('clientDetail.metricDetail.addLog'),
+            icon: { sf: 'plus', IconComponent: Plus },
+            onPress: handleLogMetric,
+        },
+    ], [t, handleEditMetric, handleLogMetric]);
 
     if (!metric) {
         return (
@@ -180,12 +216,14 @@ export default function MetricDetailScreen() {
                 <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
                     {metric.name}
                 </Text>
-                <IconButton
-                    icon={{ sf: 'plus', IconComponent: Plus }}
-                    onPress={handleLogMetric}
-                    size="md"
-                    color={themeColors.text}
-                />
+                <DropdownMenuWrapper options={dropdownOptions}>
+                    <IconButton
+                        icon={{ sf: 'ellipsis', IconComponent: MoreHorizontal }}
+                        onPress={() => {}}
+                        size="md"
+                        color={themeColors.text}
+                    />
+                </DropdownMenuWrapper>
             </View>
 
             {/* Time Range Filter */}
@@ -205,7 +243,7 @@ export default function MetricDetailScreen() {
                                 <Calculator {...({ size: 18, color: themeColors.primary } as any)} />
                             </View>
                             <Text style={[styles.statValue, { color: themeColors.text }]}>
-                                {animatedAverage}
+                                {animatedAverage}{metric.unit ? ` ${metric.unit}` : ''}
                             </Text>
                             <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
                                 {t('clientDetail.metricDetail.average')}
