@@ -1,7 +1,7 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { View, StyleSheet, Text } from 'react-native';
-import { ChevronLeft, Plus, TrendingUp, TrendingDown, Calculator, Activity, Target, Flame } from 'lucide-react-native';
+import { ChevronLeft, MoreHorizontal, TrendingUp, TrendingDown, Calculator, Activity, Target, Flame, Pencil, Plus } from 'lucide-react-native';
 import {
     useSharedValue,
     useAnimatedReaction,
@@ -26,6 +26,7 @@ import { TargetLineChart } from '@/components/ui/target-line-chart';
 import { LogsList } from '@/components/ui/logs-list';
 import { FlipCard } from '@/components/ui/flip-card';
 import { hexToRgba } from '@/utils/colorUtils';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { getHabitStreaks, type HabitStreaks } from '@/services/client/client-habit-service';
 
 // Animated counter hook
@@ -108,12 +109,12 @@ export default function HabitDetailScreen() {
         return filterLogsByTimeRange(sorted, timeRange);
     }, [habit?.logs, timeRange]);
 
-    // Calculate completion rate
+    // Calculate completion rate (logs where value >= target amount)
     const completionRate = useMemo(() => {
-        if (sortedLogs.length === 0) return null;
-        const completed = sortedLogs.filter((log) => log.status === 'completed').length;
+        if (sortedLogs.length === 0 || !habit?.amount) return null;
+        const completed = sortedLogs.filter((log) => (log.value ?? 0) >= (habit.amount ?? 0)).length;
         return (completed / sortedLogs.length) * 100;
-    }, [sortedLogs]);
+    }, [sortedLogs, habit?.amount]);
 
     // Calculate average value (if habit tracks values)
     const averageValue = useMemo(() => {
@@ -123,22 +124,21 @@ export default function HabitDetailScreen() {
         return sum / logsWithValues.length;
     }, [sortedLogs]);
 
-    // Calculate change (recent completion rate vs older)
-    const change = useMemo(() => {
-        if (sortedLogs.length < 4) return null;
-        const midpoint = Math.floor(sortedLogs.length / 2);
-        const olderLogs = sortedLogs.slice(0, midpoint);
-        const recentLogs = sortedLogs.slice(midpoint);
+    // Calculate delta (percentage change from first to last value)
+    const delta = useMemo(() => {
+        const logsWithValues = sortedLogs.filter((log) => log.value !== undefined && log.value !== null);
+        if (logsWithValues.length < 2) return null;
 
-        const olderCompleted = olderLogs.filter((log) => log.status === 'completed').length;
-        const recentCompleted = recentLogs.filter((log) => log.status === 'completed').length;
+        const firstValue = logsWithValues[0].value ?? 0;
+        const lastValue = logsWithValues[logsWithValues.length - 1].value ?? 0;
 
-        const olderRate = (olderCompleted / olderLogs.length) * 100;
-        const recentRate = (recentCompleted / recentLogs.length) * 100;
+        if (firstValue === 0) return null;
 
-        const diff = recentRate - olderRate;
+        const diff = lastValue - firstValue;
+        const percentage = (diff / firstValue) * 100;
+
         return {
-            value: Math.abs(diff),
+            value: Math.abs(percentage),
             isUp: diff > 0,
         };
     }, [sortedLogs]);
@@ -146,34 +146,36 @@ export default function HabitDetailScreen() {
     // Animated values
     const animatedAverage = useAnimatedCounter(averageValue ?? 0, 1);
     const animatedCompletionRate = useAnimatedCounter(completionRate ?? 0, 0);
-    const animatedChange = useAnimatedCounter(change?.value ?? 0, 0);
+    const animatedDelta = useAnimatedCounter(delta?.value ?? 0, 1);
     const animatedStreak = useAnimatedCounter(streaks?.current_streak ?? 0, 0);
 
-    // Chart data - if habit tracks values, show those; otherwise show completion rate over time
+    // Get color based on completion rate: green >= 80%, amber 50-79%, red < 50%
+    const getCompletionRateColor = (rate: number | null) => {
+        if (rate === null) return { bg: 'rgba(34, 197, 94, 0.15)', text: '#22c55e' };
+        if (rate >= 80) return { bg: 'rgba(34, 197, 94, 0.15)', text: '#22c55e' };
+        if (rate >= 50) return { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b' };
+        return { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444' };
+    };
+
+    const completionRateColors = getCompletionRateColor(completionRate);
+
+    // Chart data - show logged values
     const chartData = useMemo(() => {
         if (sortedLogs.length === 0) return [];
 
-        const logsWithValues = sortedLogs.filter((log) => log.value !== undefined && log.value !== null);
-
-        if (logsWithValues.length > 0) {
-            return logsWithValues.map((log) => ({
+        return sortedLogs
+            .filter((log) => log.value !== undefined && log.value !== null)
+            .map((log) => ({
                 value: log.value ?? 0,
                 date: log.date,
             }));
-        }
-
-        // If no values, show rolling completion rate (completed = 1, not completed = 0)
-        return sortedLogs.map((log) => ({
-            value: log.status === 'completed' ? 1 : 0,
-            date: log.date,
-        }));
     }, [sortedLogs]);
 
     const handleBackPress = () => {
         router.back();
     };
 
-    const handleLogHabit = () => {
+    const handleLogHabit = useCallback(() => {
         router.push({
             pathname: '/modals/client/log-habit-for-client-modal',
             params: {
@@ -182,7 +184,40 @@ export default function HabitDetailScreen() {
                 disabled: 'true',
             },
         });
-    };
+    }, [router, clientId, habit?.assignment_id]);
+
+    const handleEditHabit = useCallback(() => {
+        if (!habit) return;
+        router.push({
+            pathname: '/modals/library/add-habit-modal',
+            params: {
+                editingId: habit.id,
+                name: habit.name,
+                amount: habit.amount?.toString() || '',
+                unit: habit.unit || '',
+                period: habit.period || 'daily',
+                description: habit.description || '',
+                // Client assignment context
+                isClientAssignment: 'true',
+                assignmentId: habit.assignment_id,
+                clientId,
+                coachId: coachId || '',
+            },
+        });
+    }, [router, habit, clientId, coachId]);
+
+    const dropdownOptions: DropdownMenuOption[] = useMemo(() => [
+        {
+            label: t('clientDetail.habitDetail.editHabit'),
+            icon: { sf: 'pencil', IconComponent: Pencil },
+            onPress: handleEditHabit,
+        },
+        {
+            label: t('clientDetail.habitDetail.addLog'),
+            icon: { sf: 'plus', IconComponent: Plus },
+            onPress: handleLogHabit,
+        },
+    ], [t, handleEditHabit, handleLogHabit]);
 
     if (!habit) {
         return (
@@ -223,12 +258,14 @@ export default function HabitDetailScreen() {
                 <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
                     {habit.name}
                 </Text>
-                <IconButton
-                    icon={{ sf: 'plus', IconComponent: Plus }}
-                    onPress={handleLogHabit}
-                    size="md"
-                    color={themeColors.text}
-                />
+                <DropdownMenuWrapper options={dropdownOptions}>
+                    <IconButton
+                        icon={{ sf: 'ellipsis', IconComponent: MoreHorizontal }}
+                        onPress={() => {}}
+                        size="md"
+                        color={themeColors.text}
+                    />
+                </DropdownMenuWrapper>
             </View>
 
             {/* Time Range Filter */}
@@ -244,16 +281,25 @@ export default function HabitDetailScreen() {
                 <FlipCard
                     frontContent={
                         <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
-                            <View style={[styles.statIconContainer, { backgroundColor: hexToRgba(themeColors.primary, 0.15) }]}>
+                            <View style={[
+                                styles.statIconContainer,
+                                { backgroundColor: averageValue !== null
+                                    ? hexToRgba(themeColors.primary, 0.15)
+                                    : completionRateColors.bg
+                                }
+                            ]}>
                                 {averageValue !== null ? (
                                     <Calculator {...({ size: 18, color: themeColors.primary } as any)} />
                                 ) : (
-                                    <Target {...({ size: 18, color: themeColors.primary } as any)} />
+                                    <Target {...({ size: 18, color: completionRateColors.text } as any)} />
                                 )}
                             </View>
-                            <Text style={[styles.statValue, { color: themeColors.text }]}>
+                            <Text style={[
+                                styles.statValue,
+                                { color: averageValue !== null ? themeColors.text : completionRateColors.text }
+                            ]}>
                                 {averageValue !== null
-                                    ? animatedAverage
+                                    ? `${animatedAverage}${habit.unit ? ` ${habit.unit}` : ''}`
                                     : `${animatedCompletionRate}%`}
                             </Text>
                             <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
@@ -280,15 +326,15 @@ export default function HabitDetailScreen() {
                         <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
                             <View style={[
                                 styles.statIconContainer,
-                                { backgroundColor: change === null || change.value === 0
+                                { backgroundColor: delta === null || delta.value === 0
                                     ? hexToRgba(themeColors.primary, 0.15)
-                                    : change.isUp
+                                    : delta.isUp
                                         ? 'rgba(34, 197, 94, 0.15)'
                                         : 'rgba(239, 68, 68, 0.15)'
                                 }
                             ]}>
-                                {change !== null && change.value !== 0 ? (
-                                    change.isUp ? (
+                                {delta !== null && delta.value !== 0 ? (
+                                    delta.isUp ? (
                                         <TrendingUp {...({ size: 18, color: '#22c55e' } as any)} />
                                     ) : (
                                         <TrendingDown {...({ size: 18, color: '#ef4444' } as any)} />
@@ -299,14 +345,14 @@ export default function HabitDetailScreen() {
                             </View>
                             <Text style={[
                                 styles.statValue,
-                                { color: change === null || change.value === 0
+                                { color: delta === null || delta.value === 0
                                     ? themeColors.text
-                                    : change.isUp
+                                    : delta.isUp
                                         ? '#22c55e'
                                         : '#ef4444'
                                 }
                             ]}>
-                                {animatedChange}%
+                                {animatedDelta}%
                             </Text>
                             <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
                                 {t('clientDetail.habitDetail.delta')}
@@ -329,10 +375,10 @@ export default function HabitDetailScreen() {
                 <FlipCard
                     frontContent={
                         <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
-                            <View style={[styles.statIconContainer, { backgroundColor: hexToRgba(themeColors.primary, 0.15) }]}>
-                                <Target {...({ size: 18, color: themeColors.primary } as any)} />
+                            <View style={[styles.statIconContainer, { backgroundColor: completionRateColors.bg }]}>
+                                <Target {...({ size: 18, color: completionRateColors.text } as any)} />
                             </View>
-                            <Text style={[styles.statValue, { color: themeColors.text }]}>
+                            <Text style={[styles.statValue, { color: completionRateColors.text }]}>
                                 {animatedCompletionRate}%
                             </Text>
                             <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
@@ -390,6 +436,7 @@ export default function HabitDetailScreen() {
                 data={sortedLogs}
                 unit={habit.unit}
                 isHabit
+                targetAmount={habit.amount}
                 clientId={clientId}
                 assignmentId={habit.assignment_id}
             />

@@ -35,6 +35,8 @@ import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
 import { addHabit, editHabit } from '@/services/coach/coach-habit-service';
+import { updateHabit as updateClientHabit } from '@/services/client/client-habit-service';
+import { useClientDetailStore } from '@/stores';
 
 
 // Helper to format time string "HH:MM" for display (12-hour format)
@@ -77,8 +79,16 @@ export default function AddHabitModal() {
         amount?: string;
         unit?: string;
         period?: HabitPeriod;
+        description?: string;
+        // Client assignment context (when editing from client detail)
+        isClientAssignment?: string;
+        assignmentId?: string;
+        clientId?: string;
+        coachId?: string;
     }>();
     const isEditing = !!params.editingId;
+    const isClientAssignment = params.isClientAssignment === 'true';
+    const refreshClientHabits = useClientDetailStore((state) => state.refreshSection);
 
     const [selectedTab, setSelectedTab] = useState<TabKey>(isEditing ? 'new' : 'templates');
     const underlinePosition = useSharedValue(0);
@@ -90,7 +100,7 @@ export default function AddHabitModal() {
 
     // Form state
     const [name, setName] = useState(params.name || '');
-    const [description, setDescription] = useState('');
+    const [description, setDescription] = useState(params.description || '');
     const [amount, setAmount] = useState(params.amount || '');
     const [unit, setUnit] = useState<HabitUnit | null>((params.unit as HabitUnit) || null);
     const [period, setPeriod] = useState<HabitPeriod>((params.period as HabitPeriod) || 'daily');
@@ -99,10 +109,32 @@ export default function AddHabitModal() {
     const queryClient = useQueryClient();
 
     const saveMutation = useMutation({
-        mutationFn: isEditing ? editHabit : addHabit,
+        mutationFn: async (data: any) => {
+            if (isEditing) {
+                // Client assignment edit - use client service
+                if (isClientAssignment && params.assignmentId && params.clientId && params.coachId) {
+                    await updateClientHabit({
+                        assignmentId: params.assignmentId,
+                        name: data.name,
+                        description: data.description,
+                        period: data.period,
+                        clientId: params.clientId,
+                        coachId: params.coachId,
+                    });
+                    return;
+                }
+                // Library habit edit - use coach service
+                return editHabit(data);
+            }
+            return addHabit(data);
+        },
         onSuccess: async () => {
             // Refetch to update the cache and trigger Zustand store update
-            await queryClient.refetchQueries({ queryKey: ['habits'] });
+            if (isClientAssignment) {
+                await refreshClientHabits('habits');
+            } else {
+                await queryClient.refetchQueries({ queryKey: ['habits'] });
+            }
             haptics.success();
             handleClose();
         },
@@ -386,58 +418,61 @@ export default function AddHabitModal() {
                 <KeyboardAwareScrollView
                     style={styles.scrollView}
                     contentContainerStyle={[
-                        selectedTab === 'templates' ? styles.templatesContent : styles.formContent,
-                        { paddingTop: headerHeight }
+                        isEditing || selectedTab === 'new' ? styles.formContent : styles.templatesContent,
+                        { paddingTop: isEditing ? headerHeight + 16 : headerHeight }
                     ]}
                     showsVerticalScrollIndicator={false}
+                    scrollEnabled={!isEditing}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
                     bottomOffset={40}
                 >
-                    {/* Tab Bar - rendered once */}
-                    <View style={[styles.tabsWrapper, { borderBottomColor: themeColors.border }]}>
-                        <View style={styles.tabsContainer}>
-                            {tabs.map((tab) => {
-                                const isSelected = selectedTab === tab.key;
-                                return (
-                                    <View
-                                        key={tab.key}
-                                        style={styles.tabContainer}
-                                        onLayout={(event) => handleTabLayout(tab.key, event)}
-                                    >
-                                        <PressableOpacity
-                                            style={styles.tab}
-                                            onPress={() => handleTabPress(tab.key)}
+                    {/* Tab Bar - only show when not editing */}
+                    {!isEditing && (
+                        <View style={[styles.tabsWrapper, { borderBottomColor: themeColors.border }]}>
+                            <View style={styles.tabsContainer}>
+                                {tabs.map((tab) => {
+                                    const isSelected = selectedTab === tab.key;
+                                    return (
+                                        <View
+                                            key={tab.key}
+                                            style={styles.tabContainer}
+                                            onLayout={(event) => handleTabLayout(tab.key, event)}
                                         >
-                                            <Text
-                                                style={[
-                                                    styles.tabText,
-                                                    {
-                                                        color: isSelected ? themeColors.text : themeColors.mutedText,
-                                                        fontWeight: isSelected ? '700' : '600',
-                                                    },
-                                                ]}
+                                            <PressableOpacity
+                                                style={styles.tab}
+                                                onPress={() => handleTabPress(tab.key)}
                                             >
-                                                {tab.label}
-                                            </Text>
-                                        </PressableOpacity>
-                                    </View>
-                                );
-                            })}
+                                                <Text
+                                                    style={[
+                                                        styles.tabText,
+                                                        {
+                                                            color: isSelected ? themeColors.text : themeColors.mutedText,
+                                                            fontWeight: isSelected ? '700' : '600',
+                                                        },
+                                                    ]}
+                                                >
+                                                    {tab.label}
+                                                </Text>
+                                            </PressableOpacity>
+                                        </View>
+                                    );
+                                })}
 
-                            {/* Animated underline */}
-                            <Animated.View
-                                style={[
-                                    styles.animatedUnderline,
-                                    { backgroundColor: primaryColor },
-                                    animatedUnderlineStyle,
-                                ]}
-                            />
+                                {/* Animated underline */}
+                                <Animated.View
+                                    style={[
+                                        styles.animatedUnderline,
+                                        { backgroundColor: primaryColor },
+                                        animatedUnderlineStyle,
+                                    ]}
+                                />
+                            </View>
                         </View>
-                    </View>
+                    )}
 
                     {/* Conditional Content */}
-                    {selectedTab === 'templates' ? (
+                    {!isEditing && selectedTab === 'templates' ? (
                         <>
                             {/* Search Bar */}
                             <SearchBar

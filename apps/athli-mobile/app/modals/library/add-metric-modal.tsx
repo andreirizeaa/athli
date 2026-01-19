@@ -28,6 +28,8 @@ import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
 import { createMetric, updateMetric } from '@/services/coach/coach-metric-service';
+import { updateMetric as updateClientMetric, convertMetricScheduleToCron } from '@/services/client/client-metric-service';
+import { useClientDetailStore } from '@/stores';
 
 
 type TabKey = 'new' | 'templates';
@@ -46,8 +48,15 @@ export default function AddMetricModal() {
         unit?: string;
         description?: string;
         schedule_config?: string; // JSON stringified schedule
+        // Client assignment context (when editing from client detail)
+        isClientAssignment?: string;
+        assignmentId?: string;
+        clientId?: string;
+        coachId?: string;
     }>();
     const isEditing = !!params.editingId;
+    const isClientAssignment = params.isClientAssignment === 'true';
+    const refreshClientMetrics = useClientDetailStore((state) => state.refreshSection);
 
     const [selectedTab, setSelectedTab] = useState<TabKey>(isEditing ? 'new' : 'templates');
     const underlinePosition = useSharedValue(0);
@@ -90,14 +99,35 @@ export default function AddMetricModal() {
 
     const saveMutation = useMutation({
         mutationFn: async (data: any) => {
-            if (isEditing && params.editingId) {
-                return updateMetric(params.editingId, data);
+            if (isEditing) {
+                // Client assignment edit - use client service
+                if (isClientAssignment && params.assignmentId && params.clientId && params.coachId) {
+                    await updateClientMetric({
+                        assignmentId: params.assignmentId,
+                        name: data.name,
+                        unit: data.unit,
+                        description: data.description,
+                        schedule_config: data.schedule_config,
+                        cron_expression: data.schedule_config ? convertMetricScheduleToCron(data.schedule_config) : undefined,
+                        clientId: params.clientId,
+                        coachId: params.coachId,
+                    });
+                    return;
+                }
+                // Library metric edit - use coach service
+                if (params.editingId) {
+                    return updateMetric(params.editingId, data);
+                }
             }
             return createMetric(data);
         },
         onSuccess: async () => {
             // Refetch to update the cache and trigger Zustand store update
-            await queryClient.refetchQueries({ queryKey: ['metrics'] });
+            if (isClientAssignment) {
+                await refreshClientMetrics('metrics');
+            } else {
+                await queryClient.refetchQueries({ queryKey: ['metrics'] });
+            }
             haptics.success();
             handleClose();
         },
@@ -399,58 +429,61 @@ export default function AddMetricModal() {
                 <KeyboardAwareScrollView
                     style={styles.scrollView}
                     contentContainerStyle={[
-                        selectedTab === 'templates' ? styles.templatesContent : styles.formContent,
-                        { paddingTop: headerHeight }
+                        isEditing || selectedTab === 'new' ? styles.formContent : styles.templatesContent,
+                        { paddingTop: isEditing ? headerHeight + 16 : headerHeight }
                     ]}
                     showsVerticalScrollIndicator={false}
+                    scrollEnabled={!isEditing}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
                     bottomOffset={40}
                 >
-                    {/* Tab Bar - rendered once */}
-                    <View style={[styles.tabsWrapper, { borderBottomColor: themeColors.border }]}>
-                        <View style={styles.tabsContainer}>
-                            {tabs.map((tab) => {
-                                const isSelected = selectedTab === tab.key;
-                                return (
-                                    <View
-                                        key={tab.key}
-                                        style={styles.tabContainer}
-                                        onLayout={(event) => handleTabLayout(tab.key, event)}
-                                    >
-                                        <PressableOpacity
-                                            style={styles.tab}
-                                            onPress={() => handleTabPress(tab.key)}
+                    {/* Tab Bar - only show when not editing */}
+                    {!isEditing && (
+                        <View style={[styles.tabsWrapper, { borderBottomColor: themeColors.border }]}>
+                            <View style={styles.tabsContainer}>
+                                {tabs.map((tab) => {
+                                    const isSelected = selectedTab === tab.key;
+                                    return (
+                                        <View
+                                            key={tab.key}
+                                            style={styles.tabContainer}
+                                            onLayout={(event) => handleTabLayout(tab.key, event)}
                                         >
-                                            <Text
-                                                style={[
-                                                    styles.tabText,
-                                                    {
-                                                        color: isSelected ? themeColors.text : themeColors.mutedText,
-                                                        fontWeight: isSelected ? '700' : '600',
-                                                    },
-                                                ]}
+                                            <PressableOpacity
+                                                style={styles.tab}
+                                                onPress={() => handleTabPress(tab.key)}
                                             >
-                                                {tab.label}
-                                            </Text>
-                                        </PressableOpacity>
-                                    </View>
-                                );
-                            })}
+                                                <Text
+                                                    style={[
+                                                        styles.tabText,
+                                                        {
+                                                            color: isSelected ? themeColors.text : themeColors.mutedText,
+                                                            fontWeight: isSelected ? '700' : '600',
+                                                        },
+                                                    ]}
+                                                >
+                                                    {tab.label}
+                                                </Text>
+                                            </PressableOpacity>
+                                        </View>
+                                    );
+                                })}
 
-                            {/* Animated underline */}
-                            <Animated.View
-                                style={[
-                                    styles.animatedUnderline,
-                                    { backgroundColor: primaryColor },
-                                    animatedUnderlineStyle,
-                                ]}
-                            />
+                                {/* Animated underline */}
+                                <Animated.View
+                                    style={[
+                                        styles.animatedUnderline,
+                                        { backgroundColor: primaryColor },
+                                        animatedUnderlineStyle,
+                                    ]}
+                                />
+                            </View>
                         </View>
-                    </View>
+                    )}
 
                     {/* Conditional Content */}
-                    {selectedTab === 'templates' ? (
+                    {!isEditing && selectedTab === 'templates' ? (
                         <>
                             {/* Search Bar */}
                             <SearchBar
