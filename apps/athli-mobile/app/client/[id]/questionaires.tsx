@@ -126,6 +126,7 @@ export default function ClientQuestionairesScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
         >
           {questionnaires.map((questionnaire) => (
             <View key={questionnaire.id}>

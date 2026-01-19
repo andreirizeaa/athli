@@ -83,6 +83,7 @@ export default function ReactionsModal() {
       style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
+      keyboardDismissMode="on-drag"
     >
       {/* Header */}
       <View style={styles.header}>

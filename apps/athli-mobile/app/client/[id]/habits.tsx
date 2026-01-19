@@ -104,6 +104,7 @@ export default function ClientHabitsScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
         >
           {habits.map((habit, index) => {
             const isLastItem = index === habits.length - 1;

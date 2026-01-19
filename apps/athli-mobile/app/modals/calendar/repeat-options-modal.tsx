@@ -177,7 +177,7 @@ export default function RepeatOptionsModal() {
       </View>
 
       {/* Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
         {/* Button Group */}
         <View style={[styles.buttonGroup, { backgroundColor: themeColors.backgroundTertiary }]}>
           <PressableOpacity

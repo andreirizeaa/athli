@@ -21,6 +21,8 @@ import {
     filterLogsByTimeRange,
     type TimeRange,
 } from '@/components/ui/segmented-control';
+import { ValueLineChart } from '@/components/ui/value-line-chart';
+import { TargetLineChart } from '@/components/ui/target-line-chart';
 import { getHabitStreaks, type HabitStreaks } from '@/services/client/client-habit-service';
 
 // Animated counter hook
@@ -143,6 +145,26 @@ export default function HabitDetailScreen() {
     const animatedCompletionRate = useAnimatedCounter(completionRate ?? 0, 0);
     const animatedChange = useAnimatedCounter(change?.value ?? 0, 0);
     const animatedStreak = useAnimatedCounter(streaks?.current_streak ?? 0, 0);
+
+    // Chart data - if habit tracks values, show those; otherwise show completion rate over time
+    const chartData = useMemo(() => {
+        if (sortedLogs.length === 0) return [];
+
+        const logsWithValues = sortedLogs.filter((log) => log.value !== undefined && log.value !== null);
+
+        if (logsWithValues.length > 0) {
+            return logsWithValues.map((log) => ({
+                value: log.value ?? 0,
+                date: log.date,
+            }));
+        }
+
+        // If no values, show rolling completion rate (completed = 1, not completed = 0)
+        return sortedLogs.map((log) => ({
+            value: log.status === 'completed' ? 1 : 0,
+            date: log.date,
+        }));
+    }, [sortedLogs]);
 
     const handleBackPress = () => {
         router.back();
@@ -279,6 +301,17 @@ export default function HabitDetailScreen() {
                     </Text>
                 </View>
             </View>
+
+            {/* Value Chart - use TargetLineChart if habit has a target amount and values */}
+            {habit.amount && averageValue !== null ? (
+                <TargetLineChart
+                    data={chartData}
+                    targetValue={habit.amount}
+                    unit={habit.unit}
+                />
+            ) : (
+                <ValueLineChart data={chartData} />
+            )}
         </ScreenWrapper>
     );
 }
@@ -314,7 +347,7 @@ const styles = StyleSheet.create({
     },
     statCard: {
         flex: 1,
-        borderRadius: 12,
+        borderRadius: 24,
         paddingVertical: 32,
         paddingHorizontal: 16,
         alignItems: 'center',

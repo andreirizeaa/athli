@@ -102,6 +102,7 @@ export const AttachmentPreviewToolbar = ({
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.galleryScrollContent}
               style={styles.galleryScroll}
+              keyboardDismissMode="on-drag"
             >
               {images.map((media) => {
                 const isSelected = selectedImageId === media.id;

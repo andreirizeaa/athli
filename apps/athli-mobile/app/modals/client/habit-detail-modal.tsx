@@ -165,6 +165,7 @@ export default function HabitDetailModal() {
                 style={styles.scrollView}
                 contentContainerStyle={[styles.content, { paddingTop: headerHeight + 16 }]}
                 showsVerticalScrollIndicator={false}
+                keyboardDismissMode="on-drag"
             >
                 {/* Info Card */}
                 <View style={[styles.infoCard, { backgroundColor: themeColors.backgroundTertiary }]}>

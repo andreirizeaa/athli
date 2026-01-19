@@ -39,7 +39,7 @@ export default function AthliAssistantHelpModal() {
             </View>
 
             {/* Content */}
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
                 {/* Help content can go here */}
             </ScrollView>
         </View>

@@ -107,6 +107,7 @@ export default function PersonalDetailsScreen() {
           contentContainerStyle={{ paddingBottom: 60 }}
           showsVerticalScrollIndicator={false}
           contentInsetAdjustmentBehavior="never"
+          keyboardDismissMode="on-drag"
         >
           <View style={styles.content}>
             <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>

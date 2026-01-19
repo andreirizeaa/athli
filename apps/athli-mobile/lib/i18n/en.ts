@@ -959,6 +959,12 @@ export const en = {
       oneYear: '1 year',
       allTime: 'All time',
     },
+    chart: {
+      notEnoughData: 'Not enough data to display chart',
+      target: 'Target:',
+      aboveTarget: 'Above target',
+      belowTarget: 'Below target',
+    },
     training: {
       noWorkouts: 'No workouts planned',
       noWorkoutsDescription: 'There are no workouts scheduled for this day',

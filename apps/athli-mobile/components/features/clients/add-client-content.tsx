@@ -95,6 +95,7 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
         showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
       >
         <InputBox
           label={t('clients.addClientModal.name')}
