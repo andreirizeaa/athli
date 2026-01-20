@@ -29,7 +29,7 @@ export const WorkoutsTab = () => {
   const isAuthenticated = !!coachProfile;
 
   // Fetch workouts directly with TanStack Query
-  const { data: workouts = [], isRefetching, refetch } = useQuery({
+  const { data: workouts = [], refetch } = useQuery({
     queryKey: ['workouts'],
     queryFn: async () => {
       console.log('[WorkoutsTab] Fetching workouts...');
@@ -45,7 +45,6 @@ export const WorkoutsTab = () => {
 
   const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
     searchPlaceholderKey: 'library.searchPlaceholders.workouts',
-    isRefetching,
     refetch,
   });
 

@@ -30,7 +30,7 @@ export const HabitsTab = () => {
   const isAuthenticated = !!coachProfile;
 
   // Fetch habits directly with TanStack Query
-  const { data: habits = [], isRefetching, refetch } = useQuery({
+  const { data: habits = [], refetch } = useQuery({
     queryKey: ['habits'],
     queryFn: async () => {
       console.log('[HabitsTab] Fetching habits...');
@@ -46,7 +46,6 @@ export const HabitsTab = () => {
 
   const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
     searchPlaceholderKey: 'library.searchPlaceholders.habits',
-    isRefetching,
     refetch,
   });
 
@@ -140,6 +139,10 @@ export const HabitsTab = () => {
         amount: item.amount,
         unit: item.unit,
         period: item.period,
+        description: item.description || '',
+        reminderTime: item.reminderTime || '',
+        reminderMessage: item.reminderMessage || '',
+        duration: item.duration?.toString() || '',
       },
     });
   };

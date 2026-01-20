@@ -35,7 +35,7 @@ import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
 import { addHabit, editHabit } from '@/services/coach/coach-habit-service';
-import { updateHabit as updateClientHabit } from '@/services/client/client-habit-service';
+import { updateHabit as updateClientHabit, addHabit as addClientHabit } from '@/services/client/client-habit-service';
 import { useClientDetailStore } from '@/stores';
 
 
@@ -80,6 +80,9 @@ export default function AddHabitModal() {
         unit?: string;
         period?: HabitPeriod;
         description?: string;
+        reminderTime?: string;
+        reminderMessage?: string;
+        duration?: string;
         // Client assignment context (when editing from client detail)
         isClientAssignment?: string;
         assignmentId?: string;
@@ -108,11 +111,18 @@ export default function AddHabitModal() {
     // TanStack Query
     const queryClient = useQueryClient();
 
+    // Check if we're creating a private habit directly for a client (not editing)
+    const isClientPrivateHabit = !isEditing && params.clientId && params.coachId;
+
     const saveMutation = useMutation({
         mutationFn: async (data: any) => {
+            console.log('[AddHabitModal] 📤 Saving habit data:', JSON.stringify(data, null, 2));
+            console.log('[AddHabitModal] 📋 Context:', { isEditing, isClientAssignment, isClientPrivateHabit, params });
+
             if (isEditing) {
                 // Client assignment edit - use client service
                 if (isClientAssignment && params.assignmentId && params.clientId && params.coachId) {
+                    console.log('[AddHabitModal] ✏️ Updating client assignment');
                     await updateClientHabit({
                         assignmentId: params.assignmentId,
                         name: data.name,
@@ -124,15 +134,39 @@ export default function AddHabitModal() {
                     return;
                 }
                 // Library habit edit - use coach service
+                console.log('[AddHabitModal] ✏️ Editing library habit');
                 return editHabit(data);
             }
-            return addHabit(data);
+            // Creating new habit - check if for client or coach library
+            if (isClientPrivateHabit) {
+                // Create private habit directly on client
+                console.log('[AddHabitModal] ➕ Creating private habit for client');
+                const result = await addClientHabit({
+                    name: data.name,
+                    description: data.description,
+                    amount: data.amount,
+                    unit: data.unit,
+                    period: data.period,
+                    clientId: params.clientId!,
+                    coachId: params.coachId!,
+                });
+                console.log('[AddHabitModal] ✅ Client habit created:', result);
+                return result;
+            }
+            // Add to coach library
+            console.log('[AddHabitModal] ➕ Adding to coach library');
+            const result = await addHabit(data);
+            console.log('[AddHabitModal] ✅ Library habit created:', result);
+            return result;
         },
-        onSuccess: async () => {
+        onSuccess: async (result) => {
+            console.log('[AddHabitModal] 🎉 Save successful, result:', result);
             // Refetch to update the cache and trigger Zustand store update
-            if (isClientAssignment) {
+            if (isClientAssignment || isClientPrivateHabit) {
+                console.log('[AddHabitModal] 🔄 Refreshing client habits');
                 await refreshClientHabits('habits');
             } else {
+                console.log('[AddHabitModal] 🔄 Refetching library habits query');
                 await queryClient.refetchQueries({ queryKey: ['habits'] });
             }
             haptics.success();
@@ -157,6 +191,23 @@ export default function AddHabitModal() {
             setHabitOptionsData(null);
         };
     }, [setHabitOptionsData]);
+
+    // Initialize habitOptionsData from params when editing
+    useEffect(() => {
+        if (isEditing) {
+            const optionsData: HabitOptionsData = {};
+            if (params.duration) {
+                optionsData.duration = parseInt(params.duration, 10);
+            }
+            if (params.reminderTime) {
+                optionsData.reminderTime = params.reminderTime;
+                optionsData.reminderMessage = params.reminderMessage || '';
+            }
+            if (Object.keys(optionsData).length > 0) {
+                setHabitOptionsData(optionsData);
+            }
+        }
+    }, [isEditing, params.duration, params.reminderTime, params.reminderMessage, setHabitOptionsData]);
 
     // Tabs - Templates first, New second
     const tabs: { key: TabKey; label: string }[] = [
@@ -208,12 +259,22 @@ export default function AddHabitModal() {
         // Check if any field has been modified
         let changes = false;
         if (isEditing) {
+            // Compare against original params values
+            const originalDuration = params.duration ? parseInt(params.duration, 10) : undefined;
+            const originalReminderTime = params.reminderTime || undefined;
+            const originalReminderMessage = params.reminderMessage || undefined;
+
+            const optionsChanged =
+                habitOptionsData?.duration !== originalDuration ||
+                habitOptionsData?.reminderTime !== originalReminderTime ||
+                habitOptionsData?.reminderMessage !== originalReminderMessage;
+
             changes = name !== (params.name || '') ||
                 amount !== (params.amount || '') ||
                 unit !== ((params.unit as HabitUnit) || null) ||
                 period !== ((params.period as HabitPeriod) || 'daily') ||
-                description.trim().length > 0 || // Description likely starts empty
-                !!habitOptionsData;
+                description !== (params.description || '') ||
+                optionsChanged;
         } else {
             changes = trimmedName.length > 0 ||
                 amount.trim().length > 0 ||

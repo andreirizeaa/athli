@@ -35,7 +35,7 @@ export const coachMetricsController = {
      */
     createMetric: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { name, unit, description, value_kind, min_value, max_value } = req.body;
+        const { name, unit, description, value_kind, min_value, max_value, schedule_config, cron_expression } = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -56,7 +56,9 @@ export const coachMetricsController = {
                 description,
                 value_kind: value_kind || 'number',
                 min_value,
-                max_value
+                max_value,
+                schedule_config,
+                cron_expression,
             })
             .select()
             .single();
@@ -184,6 +186,8 @@ export const coachMetricsController = {
                 value_kind: original.value_kind,
                 min_value: original.min_value,
                 max_value: original.max_value,
+                schedule_config: original.schedule_config,
+                cron_expression: original.cron_expression,
             })
             .select()
             .single();

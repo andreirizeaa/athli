@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { View, StyleSheet, Text } from 'react-native';
-import { ChevronLeft, MoreHorizontal, TrendingUp, TrendingDown, Calculator, Activity, Target, Flame, Pencil, Plus } from 'lucide-react-native';
+import { View, StyleSheet, Text, Alert } from 'react-native';
+import { ChevronLeft, MoreHorizontal, TrendingUp, TrendingDown, Calculator, Activity, Target, Flame, Pencil, Plus, Trash2 } from 'lucide-react-native';
 import {
     useSharedValue,
     useAnimatedReaction,
@@ -27,7 +27,8 @@ import { LogsList } from '@/components/ui/logs-list';
 import { FlipCard } from '@/components/ui/flip-card';
 import { hexToRgba } from '@/utils/colorUtils';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
-import { getHabitStreaks, type HabitStreaks } from '@/services/client/client-habit-service';
+import { getHabitStreaks, deleteClientHabits, type HabitStreaks } from '@/services/client/client-habit-service';
+import { haptics } from '@/utils/haptics';
 
 // Animated counter hook
 const useAnimatedCounter = (targetValue: number, decimals: number = 0) => {
@@ -82,6 +83,7 @@ export default function HabitDetailScreen() {
     // Get the habit from store
     const habits = useClientDetailStore((state) => state.habits);
     const coachId = useClientDetailStore((state) => state.coachId);
+    const refreshSection = useClientDetailStore((state) => state.refreshSection);
     const habit = useMemo(() => {
         return habits.find(
             (h) => h.assignment_id === habitId || h.id === habitId
@@ -197,7 +199,9 @@ export default function HabitDetailScreen() {
                 unit: habit.unit || '',
                 period: habit.period || 'daily',
                 description: habit.description || '',
-                // Client assignment context
+                reminderTime: habit.times_of_day?.[0]?.substring(0, 5) || '',
+                reminderMessage: habit.schedule_config?.reminder_message || '',
+                duration: habit.schedule_config?.duration?.toString() || '',
                 isClientAssignment: 'true',
                 assignmentId: habit.assignment_id,
                 clientId,
@@ -205,6 +209,31 @@ export default function HabitDetailScreen() {
             },
         });
     }, [router, habit, clientId, coachId]);
+
+    const handleDeleteHabit = useCallback(() => {
+        if (!habit || !coachId) return;
+        Alert.alert(
+            t('clientDetail.habitDetail.deleteHabit'),
+            `${t('general.delete')} ${habit.name}?`,
+            [
+                { text: t('general.cancel'), style: 'cancel' },
+                {
+                    text: t('general.delete'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        await deleteClientHabits({
+                            habitIds: [habit.assignment_id],
+                            clientId,
+                            coachId,
+                        });
+                        haptics.success();
+                        refreshSection('habits');
+                        router.back();
+                    },
+                },
+            ]
+        );
+    }, [habit, coachId, clientId, t, refreshSection, router]);
 
     const dropdownOptions: DropdownMenuOption[] = useMemo(() => [
         {
@@ -217,7 +246,13 @@ export default function HabitDetailScreen() {
             icon: { sf: 'plus', IconComponent: Plus },
             onPress: handleLogHabit,
         },
-    ], [t, handleEditHabit, handleLogHabit]);
+        {
+            label: t('clientDetail.habitDetail.deleteHabit'),
+            icon: { sf: 'trash', IconComponent: Trash2 },
+            destructive: true,
+            onPress: handleDeleteHabit,
+        },
+    ], [t, handleEditHabit, handleLogHabit, handleDeleteHabit]);
 
     if (!habit) {
         return (

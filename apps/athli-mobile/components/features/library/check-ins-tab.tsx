@@ -29,7 +29,7 @@ export const CheckInsTab = () => {
   const isAuthenticated = !!coachProfile;
 
   // Fetch check-ins directly with TanStack Query
-  const { data: checkIns = [], isRefetching, refetch } = useQuery({
+  const { data: checkIns = [], refetch } = useQuery({
     queryKey: ['checkIns'],
     queryFn: async () => {
       console.log('[CheckInsTab] Fetching check-ins...');
@@ -45,7 +45,6 @@ export const CheckInsTab = () => {
 
   const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
     searchPlaceholderKey: 'library.searchPlaceholders.checkIns',
-    isRefetching,
     refetch,
   });
 

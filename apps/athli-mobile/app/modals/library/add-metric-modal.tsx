@@ -28,7 +28,7 @@ import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
 import { createMetric, updateMetric } from '@/services/coach/coach-metric-service';
-import { updateMetric as updateClientMetric, convertMetricScheduleToCron } from '@/services/client/client-metric-service';
+import { updateMetric as updateClientMetric, addMetric as addClientMetric, convertMetricScheduleToCron } from '@/services/client/client-metric-service';
 import { useClientDetailStore } from '@/stores';
 
 
@@ -76,16 +76,19 @@ export default function AddMetricModal() {
 
     // Initialize schedule data when editing
     useEffect(() => {
+        console.log('[AddMetricModal] 📋 Init useEffect - isEditing:', isEditing, 'schedule_config param:', params.schedule_config);
         if (isEditing && params.schedule_config) {
             try {
                 const parsedSchedule = JSON.parse(params.schedule_config);
+                console.log('[AddMetricModal] ✅ Parsed schedule:', JSON.stringify(parsedSchedule, null, 2));
                 originalScheduleRef.current = parsedSchedule;
                 setScheduleData(parsedSchedule);
             } catch (e) {
-                console.error('Failed to parse schedule_config:', e);
+                console.error('[AddMetricModal] ❌ Failed to parse schedule_config:', e);
                 originalScheduleRef.current = null;
             }
         } else {
+            console.log('[AddMetricModal] 🔄 No schedule_config or not editing');
             originalScheduleRef.current = null;
             // Clear schedule data when opening for new metric
             if (!isEditing) {
@@ -97,11 +100,18 @@ export default function AddMetricModal() {
     // TanStack Query
     const queryClient = useQueryClient();
 
+    // Check if we're creating a private metric directly for a client (not editing)
+    const isClientPrivateMetric = !isEditing && params.clientId && params.coachId;
+
     const saveMutation = useMutation({
         mutationFn: async (data: any) => {
+            console.log('[AddMetricModal] 📤 Saving metric data:', JSON.stringify(data, null, 2));
+            console.log('[AddMetricModal] 📋 Context:', { isEditing, isClientAssignment, isClientPrivateMetric, params });
+
             if (isEditing) {
                 // Client assignment edit - use client service
                 if (isClientAssignment && params.assignmentId && params.clientId && params.coachId) {
+                    console.log('[AddMetricModal] ✏️ Updating client assignment');
                     await updateClientMetric({
                         assignmentId: params.assignmentId,
                         name: data.name,
@@ -116,14 +126,33 @@ export default function AddMetricModal() {
                 }
                 // Library metric edit - use coach service
                 if (params.editingId) {
+                    console.log('[AddMetricModal] ✏️ Editing library metric');
                     return updateMetric(params.editingId, data);
                 }
             }
+            // Creating new metric - check if for client or coach library
+            if (isClientPrivateMetric) {
+                // Create private metric directly on client
+                console.log('[AddMetricModal] ➕ Creating private metric for client');
+                return addClientMetric({
+                    name: data.name,
+                    unit: data.unit,
+                    description: data.description,
+                    value_kind: data.value_kind,
+                    schedule_config: data.schedule_config,
+                    cron_expression: data.schedule_config ? convertMetricScheduleToCron(data.schedule_config) : undefined,
+                    clientId: params.clientId!,
+                    coachId: params.coachId!,
+                });
+            }
+            // Add to coach library
+            console.log('[AddMetricModal] ➕ Adding to coach library');
             return createMetric(data);
         },
         onSuccess: async () => {
+            console.log('[AddMetricModal] 🎉 Save successful');
             // Refetch to update the cache and trigger Zustand store update
-            if (isClientAssignment) {
+            if (isClientAssignment || isClientPrivateMetric) {
                 await refreshClientMetrics('metrics');
             } else {
                 await queryClient.refetchQueries({ queryKey: ['metrics'] });

@@ -30,7 +30,7 @@ export const SectionsTab = () => {
   const isAuthenticated = !!coachProfile;
 
   // Fetch sections directly with TanStack Query
-  const { data: sections = [], isRefetching, refetch } = useQuery({
+  const { data: sections = [], refetch } = useQuery({
     queryKey: ['sections'],
     queryFn: async () => {
       console.log('[SectionsTab] Fetching sections...');
@@ -46,7 +46,6 @@ export const SectionsTab = () => {
 
   const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
     searchPlaceholderKey: 'library.searchPlaceholders.sections',
-    isRefetching,
     refetch,
   });
 
