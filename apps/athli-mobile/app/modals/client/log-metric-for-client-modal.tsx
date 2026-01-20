@@ -1,43 +1,76 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { View, StyleSheet, Text, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check } from 'lucide-react-native';
+import { X, Check, AlertTriangle } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
-import { useThemePreference, useColorScheme } from '@/stores';
+import { useThemePreference } from '@/stores';
 import { typography } from '@/constants/typography';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { SelectionInput, InputBox } from '@/components/ui/form-inputs';
-import { useModalCallbacks } from '@/stores';
-import { type DefaultMetric } from '@/constants/metrics';
+import { useModalCallbacks, useClientDetailStore } from '@/stores';
+import { type ClientMetric, logMetric } from '@/services/client/client-metric-service';
 import { hexToRgba } from '@/utils/colorUtils';
+import { haptics } from '@/utils/haptics';
 
 export default function LogMetricForClientModal() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { colors: themeColors } = useThemePreference();
-    const colorScheme = useColorScheme();
     const { t } = useTranslations();
-    const { setMetricSelectCallback, setDateSelectCallback } = useModalCallbacks();
+    const { setClientMetricSelectCallback, setDateSelectCallback } = useModalCallbacks();
+
+    const params = useLocalSearchParams<{
+        clientId: string;
+        preselectedMetricId?: string;
+        disabled?: string;
+    }>();
+
+    const clientId = params.clientId;
+    const preselectedMetricId = params.preselectedMetricId;
+    const isMetricSelectionDisabled = params.disabled === 'true';
+
+    // Get metrics and coachId from store
+    const metrics = useClientDetailStore((state) => state.metrics);
+    const coachId = useClientDetailStore((state) => state.coachId);
+    const refreshSection = useClientDetailStore((state) => state.refreshSection);
 
     // Form state
-    const [selectedMetric, setSelectedMetric] = useState<DefaultMetric | null>(null);
+    const [selectedMetric, setSelectedMetric] = useState<ClientMetric | null>(null);
     const [value, setValue] = useState('');
     const [date, setDate] = useState<Date>(new Date());
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Pre-select metric if provided
+    useEffect(() => {
+        if (preselectedMetricId && metrics.length > 0) {
+            const metric = metrics.find(
+                (m) => m.assignment_id === preselectedMetricId || m.id === preselectedMetricId
+            );
+            if (metric) {
+                setSelectedMetric(metric);
+            }
+        }
+    }, [preselectedMetricId, metrics]);
 
     const handleBackPress = () => {
         router.back();
     };
 
     const handleSelectMetricPress = useCallback(() => {
-        setMetricSelectCallback((metric: DefaultMetric) => {
+        if (isMetricSelectionDisabled) return;
+
+        setClientMetricSelectCallback((metric: ClientMetric) => {
             setSelectedMetric(metric);
         });
-        router.push('/modals/client/metrics-modal');
-    }, [router, setMetricSelectCallback]);
+        router.push({
+            pathname: '/modals/client/select-client-metric-modal',
+            params: { clientId }
+        });
+    }, [router, setClientMetricSelectCallback, clientId, isMetricSelectionDisabled]);
 
     const handleSelectDatePress = useCallback(() => {
         setDateSelectCallback((newDate: Date) => {
@@ -49,15 +82,46 @@ export default function LogMetricForClientModal() {
         });
     }, [router, setDateSelectCallback, date]);
 
-    const handleSave = () => {
-        if (!selectedMetric || !value) return;
-        // TODO: Implement save logic
-        router.back();
+    const handleSave = async () => {
+        if (!selectedMetric || !value || !clientId || !coachId) return;
+
+        setIsSaving(true);
+        try {
+            await logMetric({
+                assignmentId: selectedMetric.assignment_id,
+                value: parseFloat(value),
+                date,
+                clientId,
+                coachId,
+            });
+
+            haptics.success();
+            await refreshSection('metrics');
+            router.back();
+        } catch (error) {
+            haptics.error();
+            Alert.alert(
+                t('general.error'),
+                t('general.errorSaving')
+            );
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const isFormValid = useMemo(() => {
-        return !!selectedMetric && !!value.trim();
-    }, [selectedMetric, value]);
+        return !!selectedMetric && !!value.trim() && !isSaving;
+    }, [selectedMetric, value, isSaving]);
+
+    // Check if a log already exists for the selected date
+    const existingLogForDate = useMemo(() => {
+        if (!selectedMetric?.logs || !date) return false;
+        const selectedDateStr = date.toISOString().split('T')[0];
+        return selectedMetric.logs.some((log) => {
+            const logDateStr = new Date(log.date).toISOString().split('T')[0];
+            return logDateStr === selectedDateStr;
+        });
+    }, [selectedMetric, date]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -100,6 +164,7 @@ export default function LogMetricForClientModal() {
                         size="md"
                         variant={isFormValid ? 'primary' : 'default'}
                         disabled={!isFormValid}
+                        loading={isSaving}
                     />
                 </View>
             </View>
@@ -115,10 +180,11 @@ export default function LogMetricForClientModal() {
                         value={selectedMetric?.name || null}
                         onPress={handleSelectMetricPress}
                         required
+                        disabled={isMetricSelectionDisabled}
                     />
 
                     <InputBox
-                        label={t('general.value')}
+                        label={`${t('general.value')}${selectedMetric?.unit ? ` (${selectedMetric.unit})` : ''}`}
                         value={value}
                         onChangeText={(text) => setValue(text.replace(/[^0-9.]/g, ''))}
                         placeholder="0"
@@ -136,6 +202,15 @@ export default function LogMetricForClientModal() {
                         onPress={handleSelectDatePress}
                         required
                     />
+
+                    {existingLogForDate && (
+                        <View style={[styles.warningContainer, { backgroundColor: hexToRgba('#F59E0B', 0.15) }]}>
+                            <AlertTriangle {...({ size: 18, color: '#F59E0B' } as any)} />
+                            <Text style={[styles.warningText, { color: '#F59E0B' }]}>
+                                {t('clientDetail.logWarning.metricExists')}
+                            </Text>
+                        </View>
+                    )}
                 </View>
             </KeyboardAwareScrollView>
         </View>
@@ -180,5 +255,16 @@ const styles = StyleSheet.create({
     },
     form: {
         gap: 16,
+    },
+    warningContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 10,
+        padding: 12,
+        borderRadius: 12,
+    },
+    warningText: {
+        ...typography.p3,
+        flex: 1,
     },
 });

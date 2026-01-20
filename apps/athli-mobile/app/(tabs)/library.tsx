@@ -207,6 +207,7 @@ export default function LibraryScreen() {
             showsHorizontalScrollIndicator={false}
             style={styles.tabBarContainer}
             contentContainerStyle={styles.tabBarContent}
+            keyboardDismissMode="on-drag"
           >
             <View style={styles.tabsRow}>
               {tabs.map((tab, index) => {

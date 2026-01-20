@@ -1,7 +1,7 @@
-import React from 'react';
-import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useRef, useCallback, useState, useMemo } from 'react';
+import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, ClipboardCheck, CheckCircle, Repeat } from 'lucide-react-native';
+import { ChevronLeft, Plus, ClipboardCheck, CheckCircle, ChevronRight } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 
 import { typography } from '@/constants/typography';
@@ -10,7 +10,10 @@ import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
-import { Separator } from '@/components/ui/separator';
+import { SwipeableRow } from '@/components/ui/swipeable-row';
+import { SearchBar } from '@/components/ui/search-bar';
+import { deleteClientHabits } from '@/services/client/client-habit-service';
+import { haptics } from '@/utils/haptics';
 
 export default function ClientHabitsScreen() {
   const router = useRouter();
@@ -19,29 +22,76 @@ export default function ClientHabitsScreen() {
   const { t } = useTranslations();
   const iconColor = themeColors.text;
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Get habits from store (already loaded by parent screen)
   const habits = useClientDetailStore((state) => state.habits);
   const isLoadingHabits = useClientDetailStore((state) => state.isLoadingHabits);
+  const coachId = useClientDetailStore((state) => state.coachId);
   const refreshSection = useClientDetailStore((state) => state.refreshSection);
+
+  // Filter habits based on search query
+  const filteredHabits = useMemo(() => {
+    if (!searchQuery.trim()) return habits;
+    const query = searchQuery.toLowerCase();
+    return habits.filter((habit) =>
+      habit.name.toLowerCase().includes(query)
+    );
+  }, [habits, searchQuery]);
+
+  // Track currently open swipeable row
+  const openRowCloseRef = useRef<(() => void) | null>(null);
+
+  const closeOpenRow = useCallback(() => {
+    if (openRowCloseRef.current) {
+      openRowCloseRef.current();
+      openRowCloseRef.current = null;
+    }
+  }, []);
+
+  const handleRowOpen = useCallback((close: () => void) => {
+    // Close any previously open row
+    if (openRowCloseRef.current && openRowCloseRef.current !== close) {
+      openRowCloseRef.current();
+    }
+    openRowCloseRef.current = close;
+  }, []);
 
   const handleBackPress = () => {
     router.back();
   };
 
   const handleAssignHabit = () => {
-    router.push(`/modals/shared/assign-to-clients-modal?type=habit&clientId=${id}` as any);
+    router.push(`/modals/client/assign-habit-to-client-modal?clientId=${id}` as any);
   };
 
   const handleAddHabit = () => {
-    router.push(`/modals/library/add-habit-modal?clientId=${id}` as any);
+    router.push(`/modals/library/add-habit-modal?clientId=${id}&coachId=${coachId}` as any);
   };
 
   const handleLogHabit = () => {
     router.push(`/modals/client/log-habit-for-client-modal?clientId=${id}` as any);
   };
 
-  const handleHabitPress = (habitId: string) => {
-    router.push(`/modals/client/habit-detail-modal?clientId=${id}&habitId=${habitId}` as any);
+  const handleHabitPress = useCallback((habitId: string) => {
+    // If a row is open, just close it and prevent navigation
+    if (openRowCloseRef.current) {
+      closeOpenRow();
+      return;
+    }
+    router.push(`/client/${id}/habit-detail?habitId=${habitId}` as any);
+  }, [closeOpenRow, router, id]);
+
+  const handleDeleteHabit = async (habit: typeof habits[0]) => {
+    if (!coachId) return;
+    await deleteClientHabits({
+      habitIds: [habit.assignment_id],
+      clientId: id,
+      coachId,
+    });
+    haptics.success();
+    refreshSection('habits');
   };
 
   return (
@@ -84,65 +134,105 @@ export default function ClientHabitsScreen() {
         </DropdownMenuWrapper>
       </View>
 
-      {/* Loading state */}
-      {isLoadingHabits && habits.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={themeColors.primary} />
-        </View>
-      ) : habits.length === 0 ? (
-        /* Empty state */
-        <View style={styles.emptyContainer}>
-          <PlatformIcon sf="repeat" IconComponent={Repeat} size={48} color={themeColors.mutedText} />
-          <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
-            {t('clientDetail.habits.emptyTitle')}
-          </Text>
-          <Text style={[styles.emptyDescription, { color: themeColors.mutedText }]}>
-            {t('clientDetail.habits.emptyDescription')}
-          </Text>
-        </View>
-      ) : (
-        /* Habits list */
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {habits.map((habit) => (
-            <View key={habit.id || habit.assignment_id}>
-              <PressableScale onPress={() => handleHabitPress(habit.id || habit.assignment_id)}>
-                <View style={styles.habitItem}>
-                  <View style={[styles.habitIconContainer, { backgroundColor: `${themeColors.primary}15` }]}>
-                    <PlatformIcon
-                      sf="repeat"
-                      IconComponent={Repeat}
-                      size={24}
-                      color={themeColors.primary}
-                    />
-                  </View>
-                  <View style={styles.habitInfo}>
-                    <Text style={[styles.habitName, { color: themeColors.text }]}>
-                      {habit.name}
-                    </Text>
-                    {habit.description && (
-                      <Text
-                        style={[styles.habitDescription, { color: themeColors.mutedText }]}
-                        numberOfLines={1}
-                      >
-                        {habit.description}
-                      </Text>
-                    )}
-                    <Text style={[styles.habitPeriod, { color: themeColors.mutedText }]}>
-                      {habit.period === 'daily' ? t('general.daily') : t('general.weekly')}
-                      {habit.amount ? ` · ${habit.amount} ${habit.unit}` : ''}
-                    </Text>
-                  </View>
+      {/* Search bar */}
+      <View style={styles.searchContainer}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={t('general.searchPlaceholder')}
+        />
+      </View>
+
+      <Pressable
+        style={styles.contentContainer}
+        onPress={() => {
+          if (openRowCloseRef.current) {
+            closeOpenRow();
+          }
+        }}
+      >
+        {/* Loading state */}
+        {isLoadingHabits && habits.length === 0 ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={themeColors.primary} />
+          </View>
+        ) : filteredHabits.length === 0 ? (
+          /* Empty state */
+          <View style={styles.emptyContainer}>
+            <PlatformIcon sf="checkmark.circle.fill" IconComponent={CheckCircle} size={48} color={themeColors.mutedText} />
+            <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
+              {searchQuery.trim()
+                ? t('general.noResults')
+                : t('clientDetail.habits.emptyTitle')}
+            </Text>
+            {!searchQuery.trim() && (
+              <Text style={[styles.emptyDescription, { color: themeColors.mutedText }]}>
+                {t('clientDetail.habits.emptyDescription')}
+              </Text>
+            )}
+          </View>
+        ) : (
+          /* Habits list */
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardDismissMode="on-drag"
+          >
+            {filteredHabits.map((habit, index) => {
+              const isLastItem = index === filteredHabits.length - 1;
+              return (
+                <View key={habit.id || habit.assignment_id}>
+                  <SwipeableRow
+                    onDelete={() => handleDeleteHabit(habit)}
+                    deleteConfirmTitle={`${t('general.delete')} ${habit.name}?`}
+                    onOpen={handleRowOpen}
+                  >
+                    <PressableScale onPress={() => handleHabitPress(habit.assignment_id || habit.id)}>
+                      <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
+                        <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                          <PlatformIcon
+                            sf="checkmark.circle.fill"
+                            IconComponent={CheckCircle}
+                            size={24}
+                            color={themeColors.text}
+                          />
+                        </View>
+                        <View style={styles.textContent}>
+                          <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
+                            {habit.name}
+                          </Text>
+                          <View style={styles.metaRow}>
+                            <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                              {habit.amount} {habit.unit}
+                            </Text>
+                            <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                            <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
+                              {habit.period === 'daily' ? t('general.daily') : t('general.weekly')}
+                            </Text>
+                          </View>
+                        </View>
+                        <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                      </View>
+                    </PressableScale>
+                  </SwipeableRow>
+                  {!isLastItem && (
+                    <View style={styles.separatorContainer}>
+                      <View
+                        style={[
+                          styles.separator,
+                          { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+                        ]}
+                      />
+                    </View>
+                  )}
+                  {isLastItem && <View style={{ height: 24 }} />}
                 </View>
-              </PressableScale>
-              <Separator />
-            </View>
-          ))}
-        </ScrollView>
-      )}
+              );
+            })}
+          </ScrollView>
+        )}
+      </Pressable>
     </ScreenWrapper>
   );
 }
@@ -161,6 +251,13 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 8,
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  contentContainer: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -190,35 +287,48 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    flexGrow: 1,
     paddingBottom: 40,
   },
-  habitItem: {
+  rowContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 8,
     paddingHorizontal: 16,
-    gap: 12,
   },
-  habitIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  iconContainer: {
+    width: 58,
+    height: 58,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
-  habitInfo: {
+  textContent: {
     flex: 1,
-    gap: 2,
+    marginRight: 8,
   },
-  habitName: {
+  name: {
     ...typography.p1,
-    fontWeight: '500',
+    fontWeight: '600',
+    marginBottom: 4,
   },
-  habitDescription: {
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metaText: {
     ...typography.p3,
   },
-  habitPeriod: {
+  metaDot: {
+    marginHorizontal: 6,
     ...typography.p3,
-    fontWeight: '500',
+  },
+  separatorContainer: {
+    paddingLeft: 86,
+    paddingRight: 16,
+  },
+  separator: {
+    height: 1,
   },
 });

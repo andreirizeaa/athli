@@ -29,7 +29,7 @@ export const WorkoutsTab = () => {
   const isAuthenticated = !!coachProfile;
 
   // Fetch workouts directly with TanStack Query
-  const { data: workouts = [], isRefetching, refetch } = useQuery({
+  const { data: workouts = [], refetch } = useQuery({
     queryKey: ['workouts'],
     queryFn: async () => {
       console.log('[WorkoutsTab] Fetching workouts...');
@@ -45,7 +45,6 @@ export const WorkoutsTab = () => {
 
   const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
     searchPlaceholderKey: 'library.searchPlaceholders.workouts',
-    isRefetching,
     refetch,
   });
 
@@ -195,7 +194,7 @@ export const WorkoutsTab = () => {
                   style={styles.rowWrapper}
                 >
                   <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
-                    <View style={styles.iconContainer}>
+                    <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
                       <PlatformIcon
                         sf="dumbbell.fill"
                         IconComponent={Dumbbell}
@@ -267,7 +266,6 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 8,
-    backgroundColor: 'rgba(128, 128, 128, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,

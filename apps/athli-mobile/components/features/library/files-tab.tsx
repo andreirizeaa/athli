@@ -30,7 +30,7 @@ export const FilesTab = () => {
   const isAuthenticated = !!coachProfile;
 
   // Fetch files directly with TanStack Query
-  const { data: files = [], isRefetching, refetch } = useQuery({
+  const { data: files = [], refetch } = useQuery({
     queryKey: ['files'],
     queryFn: async () => {
       console.log('[FilesTab] Fetching files...');
@@ -46,7 +46,6 @@ export const FilesTab = () => {
 
   const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
     searchPlaceholderKey: 'library.searchPlaceholders.files',
-    isRefetching,
     refetch,
   });
 

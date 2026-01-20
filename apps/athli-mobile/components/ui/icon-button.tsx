@@ -23,6 +23,7 @@ export type IconButtonProps = {
   onPress: () => void;
   size?: IconButtonSize;
   color?: string;
+  loadingColor?: string;
   scheme?: IconButtonScheme;
   variant?: IconButtonVariant;
   disabled?: boolean;
@@ -63,6 +64,7 @@ export const IconButton = ({
   onPress,
   size = 'md',
   color,
+  loadingColor,
   scheme = 'auto',
   variant = 'default',
   disabled = false,
@@ -97,7 +99,7 @@ export const IconButton = ({
       enabled={!disabled && !loading}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={iconColor} />
+        <ActivityIndicator size="small" color={loadingColor ?? iconColor} />
       ) : (
         <PlatformIcon sf={icon.sf} IconComponent={icon.IconComponent} size={iconSize} color={iconColor} />
       )}

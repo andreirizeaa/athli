@@ -61,6 +61,9 @@ export const clientHabitsController = {
             coach_id: a.coach_id,
             name: a.name,
             description: a.description,
+            amount: a.amount,
+            unit: a.unit,
+            period: a.period,
             schedule_type: a.schedule_type,
             schedule_config: a.schedule_config,
             custom_schedule: a.custom_schedule,
@@ -125,9 +128,11 @@ export const clientHabitsController = {
                 coach_id: targetCoachId,
                 name,
                 description,
+                amount,
+                unit,
+                period,
                 schedule_type: period === 'weekly' ? 'weekly' : 'daily',
-                // Assuming basic fields or default schedule config if not provided fully
-                // The previous code didn't map schedule_config for private creates explicitly?
+                custom_schedule,
             }));
 
             const { data: habits, error } = await supabase
@@ -153,6 +158,7 @@ export const clientHabitsController = {
         const assignments: any[] = [];
         for (const cid of targetClientIds) {
             for (const h of libraryHabits) {
+                const scheduleConfig = h.schedule_config || {};
                 assignments.push({
                     client_id: cid,
                     coach_id: targetCoachId,
@@ -164,7 +170,10 @@ export const clientHabitsController = {
                     timezone: h.timezone,
                     start_date: h.start_date,
                     end_date: h.end_date,
-                    schedule_config: h.schedule_config
+                    schedule_config: h.schedule_config,
+                    amount: scheduleConfig.amount ?? null,
+                    unit: scheduleConfig.unit ?? null,
+                    period: scheduleConfig.period ?? h.schedule_type,
                 });
             }
         }
@@ -293,7 +302,12 @@ export const clientHabitsController = {
 
         const supabase = getSupabaseClient();
         const updateData: any = { name, description };
-        if (period) updateData.schedule_type = period === 'weekly' ? 'weekly' : 'daily';
+        if (amount !== undefined) updateData.amount = amount;
+        if (unit !== undefined) updateData.unit = unit;
+        if (period) {
+            updateData.period = period;
+            updateData.schedule_type = period === 'weekly' ? 'weekly' : 'daily';
+        }
         if (custom_schedule) updateData.custom_schedule = custom_schedule;
 
         const { data: habit, error } = await supabase

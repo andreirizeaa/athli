@@ -1,43 +1,76 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { useRouter } from 'expo-router';
-import { View, StyleSheet, Text, Platform } from 'react-native';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { View, StyleSheet, Text, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check } from 'lucide-react-native';
+import { X, Check, AlertTriangle } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
-import { useThemePreference, useColorScheme } from '@/stores';
+import { useThemePreference } from '@/stores';
 import { typography } from '@/constants/typography';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { SelectionInput, InputBox } from '@/components/ui/form-inputs';
-import { useModalCallbacks } from '@/stores';
-import { type DefaultHabit } from '@/constants/habits';
+import { useModalCallbacks, useClientDetailStore } from '@/stores';
+import { type ClientHabit, logHabit } from '@/services/client/client-habit-service';
 import { hexToRgba } from '@/utils/colorUtils';
+import { haptics } from '@/utils/haptics';
 
 export default function LogHabitForClientModal() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { colors: themeColors } = useThemePreference();
-    const colorScheme = useColorScheme();
     const { t } = useTranslations();
-    const { setHabitSelectCallback, setDateSelectCallback } = useModalCallbacks();
+    const { setClientHabitSelectCallback, setDateSelectCallback } = useModalCallbacks();
+
+    const params = useLocalSearchParams<{
+        clientId: string;
+        preselectedHabitId?: string;
+        disabled?: string;
+    }>();
+
+    const clientId = params.clientId;
+    const preselectedHabitId = params.preselectedHabitId;
+    const isHabitSelectionDisabled = params.disabled === 'true';
+
+    // Get habits and coachId from store
+    const habits = useClientDetailStore((state) => state.habits);
+    const coachId = useClientDetailStore((state) => state.coachId);
+    const refreshSection = useClientDetailStore((state) => state.refreshSection);
 
     // Form state
-    const [selectedHabit, setSelectedHabit] = useState<DefaultHabit | null>(null);
+    const [selectedHabit, setSelectedHabit] = useState<ClientHabit | null>(null);
     const [value, setValue] = useState('');
     const [date, setDate] = useState<Date>(new Date());
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Pre-select habit if provided
+    useEffect(() => {
+        if (preselectedHabitId && habits.length > 0) {
+            const habit = habits.find(
+                (h) => h.assignment_id === preselectedHabitId || h.id === preselectedHabitId
+            );
+            if (habit) {
+                setSelectedHabit(habit);
+            }
+        }
+    }, [preselectedHabitId, habits]);
 
     const handleBackPress = () => {
         router.back();
     };
 
     const handleSelectHabitPress = useCallback(() => {
-        setHabitSelectCallback((habit: DefaultHabit) => {
+        if (isHabitSelectionDisabled) return;
+
+        setClientHabitSelectCallback((habit: ClientHabit) => {
             setSelectedHabit(habit);
         });
-        router.push('/modals/client/habits-modal');
-    }, [router, setHabitSelectCallback]);
+        router.push({
+            pathname: '/modals/client/select-client-habit-modal',
+            params: { clientId }
+        });
+    }, [router, setClientHabitSelectCallback, clientId, isHabitSelectionDisabled]);
 
     const handleSelectDatePress = useCallback(() => {
         setDateSelectCallback((newDate: Date) => {
@@ -49,15 +82,47 @@ export default function LogHabitForClientModal() {
         });
     }, [router, setDateSelectCallback, date]);
 
-    const handleSave = () => {
-        if (!selectedHabit || !value) return;
-        // TODO: Implement save logic
-        router.back();
+    const handleSave = async () => {
+        if (!selectedHabit || !value || !clientId || !coachId) return;
+
+        setIsSaving(true);
+        try {
+            await logHabit({
+                assignmentId: selectedHabit.assignment_id,
+                status: 'completed',
+                value: parseFloat(value),
+                date,
+                clientId,
+                coachId,
+            });
+
+            haptics.success();
+            await refreshSection('habits');
+            router.back();
+        } catch (error) {
+            haptics.error();
+            Alert.alert(
+                t('general.error'),
+                t('general.errorSaving')
+            );
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const isFormValid = useMemo(() => {
-        return !!selectedHabit && !!value.trim();
-    }, [selectedHabit, value]);
+        return !!selectedHabit && !!value.trim() && !isSaving;
+    }, [selectedHabit, value, isSaving]);
+
+    // Check if a log already exists for the selected date
+    const existingLogForDate = useMemo(() => {
+        if (!selectedHabit?.logs || !date) return false;
+        const selectedDateStr = date.toISOString().split('T')[0];
+        return selectedHabit.logs.some((log) => {
+            const logDateStr = new Date(log.date).toISOString().split('T')[0];
+            return logDateStr === selectedDateStr;
+        });
+    }, [selectedHabit, date]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -100,6 +165,7 @@ export default function LogHabitForClientModal() {
                         size="md"
                         variant={isFormValid ? 'primary' : 'default'}
                         disabled={!isFormValid}
+                        loading={isSaving}
                     />
                 </View>
             </View>
@@ -115,6 +181,7 @@ export default function LogHabitForClientModal() {
                         value={selectedHabit?.name || null}
                         onPress={handleSelectHabitPress}
                         required
+                        disabled={isHabitSelectionDisabled}
                     />
 
                     <InputBox
@@ -136,6 +203,15 @@ export default function LogHabitForClientModal() {
                         onPress={handleSelectDatePress}
                         required
                     />
+
+                    {existingLogForDate && (
+                        <View style={[styles.warningContainer, { backgroundColor: hexToRgba('#F59E0B', 0.15) }]}>
+                            <AlertTriangle {...({ size: 18, color: '#F59E0B' } as any)} />
+                            <Text style={[styles.warningText, { color: '#F59E0B' }]}>
+                                {t('clientDetail.logWarning.habitExists')}
+                            </Text>
+                        </View>
+                    )}
                 </View>
             </KeyboardAwareScrollView>
         </View>
@@ -180,5 +256,16 @@ const styles = StyleSheet.create({
     },
     form: {
         gap: 16,
+    },
+    warningContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 10,
+        padding: 12,
+        borderRadius: 12,
+    },
+    warningText: {
+        ...typography.p3,
+        flex: 1,
     },
 });

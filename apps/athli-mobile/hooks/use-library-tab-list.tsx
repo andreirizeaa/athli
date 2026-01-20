@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 
 import { useThemePreference } from '@/stores';
@@ -8,13 +8,11 @@ import { SearchBar } from '@/components/ui/search-bar';
 
 type UseLibraryTabListParams = {
   searchPlaceholderKey: string;
-  isRefetching: boolean;
   refetch: () => Promise<any>;
 };
 
 export const useLibraryTabList = ({
   searchPlaceholderKey,
-  isRefetching,
   refetch,
 }: UseLibraryTabListParams) => {
   const { primaryColor } = useThemePreference();
@@ -22,6 +20,22 @@ export const useLibraryTabList = ({
   const { searchQuery, setSearchQuery, closeOpenRow, openRowCloseFn } = useLibraryTab();
 
   const isRowOpen = openRowCloseFn !== null;
+
+  // Track manual pull-to-refresh separately from programmatic refetches
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
+
+  // Use ref for refetch to keep handlePullRefresh stable
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
+
+  const handlePullRefresh = useCallback(async () => {
+    setIsPullRefreshing(true);
+    try {
+      await refetchRef.current();
+    } finally {
+      setIsPullRefreshing(false);
+    }
+  }, []);
 
   const handleSearchChange = (text: string) => {
     if (isRowOpen) {
@@ -43,12 +57,12 @@ export const useLibraryTabList = ({
 
   const refreshControl = useMemo(() => (
     <RefreshControl
-      refreshing={isRefetching}
-      onRefresh={refetch}
+      refreshing={isPullRefreshing}
+      onRefresh={handlePullRefresh}
       tintColor={primaryColor}
       colors={[primaryColor]}
     />
-  ), [isRefetching, refetch, primaryColor]);
+  ), [isPullRefreshing, handlePullRefresh, primaryColor]);
 
   return {
     ListHeaderComponent,

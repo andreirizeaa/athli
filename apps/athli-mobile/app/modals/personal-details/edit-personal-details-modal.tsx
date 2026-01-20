@@ -319,6 +319,7 @@ export default function EditPersonalDetailsModal() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
         >
           {renderContent()}
         </ScrollView>

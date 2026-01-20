@@ -37,6 +37,10 @@ import {
   getClientUpdates,
   type ClientUpdate,
 } from '@/services/client/client-updates-service';
+import {
+  getClientNotes,
+  type ClientNote,
+} from '@/services/client/client-notes-service';
 
 interface ClientDetailStore {
   // IDs
@@ -55,6 +59,7 @@ interface ClientDetailStore {
   checkIns: ClientCheckIn[];
   questionnaires: ClientQuestionnaire[];
   updates: ClientUpdate[];
+  notes: ClientNote[];
   trainingCalendar: TrainingCalendarSchema;
 
   // Loading states
@@ -66,6 +71,7 @@ interface ClientDetailStore {
   isLoadingFiles: boolean;
   isLoadingForms: boolean;
   isLoadingUpdates: boolean;
+  isLoadingNotes: boolean;
   isLoadingTraining: boolean;
 
   // Error
@@ -87,6 +93,7 @@ interface ClientDetailStore {
       | 'check-ins'
       | 'questionnaires'
       | 'updates'
+      | 'notes'
       | 'training'
   ) => Promise<void>;
   clearClientData: () => void;
@@ -126,6 +133,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
   checkIns: [],
   questionnaires: [],
   updates: [],
+  notes: [],
   trainingCalendar: {},
   isLoading: false,
   isLoadingClient: false,
@@ -135,6 +143,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
   isLoadingFiles: false,
   isLoadingForms: false,
   isLoadingUpdates: false,
+  isLoadingNotes: false,
   isLoadingTraining: false,
   error: null,
 
@@ -176,6 +185,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       checkIns: [],
       questionnaires: [],
       updates: [],
+      notes: [],
       trainingCalendar: {},
       isLoading: true,
       isLoadingClient: true,
@@ -185,6 +195,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       isLoadingFiles: true,
       isLoadingForms: true,
       isLoadingUpdates: true,
+      isLoadingNotes: true,
       isLoadingTraining: true,
       error: null,
     });
@@ -208,6 +219,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         checkInsData,
         questionnairesData,
         updatesData,
+        notesData,
         trainingData,
       ] = await Promise.all([
         getAthleteBio(clientId, coachId).catch(() => ''),
@@ -220,6 +232,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         getClientCheckIns(clientId, coachId).catch(() => []),
         getClientQuestionnaires(clientId, coachId).catch(() => []),
         getClientUpdates(clientId, coachId).catch(() => []),
+        getClientNotes(clientId, coachId).catch(() => []),
         getTrainingCalendarRange(clientId, coachId, startDate, endDate).catch(() => ({})),
       ]);
 
@@ -234,6 +247,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         checkIns: checkInsData,
         questionnaires: questionnairesData,
         updates: updatesData,
+        notes: notesData,
         trainingCalendar: trainingData,
         isLoading: false,
         isLoadingMetrics: false,
@@ -242,6 +256,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         isLoadingFiles: false,
         isLoadingForms: false,
         isLoadingUpdates: false,
+        isLoadingNotes: false,
         isLoadingTraining: false,
       });
 
@@ -258,6 +273,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         isLoadingFiles: false,
         isLoadingForms: false,
         isLoadingUpdates: false,
+        isLoadingNotes: false,
         isLoadingTraining: false,
       });
     }
@@ -345,6 +361,12 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
           set({ updates: updatesData, isLoadingUpdates: false });
           break;
 
+        case 'notes':
+          set({ isLoadingNotes: true });
+          const notesData = await getClientNotes(clientId, coachId);
+          set({ notes: notesData, isLoadingNotes: false });
+          break;
+
         case 'training':
           set({ isLoadingTraining: true });
           const trainingData = await getTrainingCalendarRange(clientId, coachId, startDate, endDate);
@@ -372,6 +394,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       checkIns: [],
       questionnaires: [],
       updates: [],
+      notes: [],
       trainingCalendar: {},
       isLoading: false,
       isLoadingClient: false,
@@ -381,6 +404,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       isLoadingFiles: false,
       isLoadingForms: false,
       isLoadingUpdates: false,
+      isLoadingNotes: false,
       isLoadingTraining: false,
       error: null,
     });

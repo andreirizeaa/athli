@@ -725,6 +725,77 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="modals/client/edit-note-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/select-client-habit-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/select-client-metric-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/assign-habit-to-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/assign-metric-to-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/edit-log-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
             name="modals/calendar/repeat-options-modal"
             options={{
               presentation: 'modal',

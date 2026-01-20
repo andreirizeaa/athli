@@ -47,7 +47,7 @@ export default function UnitsModal() {
       </View>
 
       {/* Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
         {(['metric', 'imperial'] as const).map((unitsType) => {
           const isSelected = unitsType === selectedUnits;
 

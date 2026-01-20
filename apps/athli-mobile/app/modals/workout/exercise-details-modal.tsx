@@ -68,6 +68,7 @@ export default function ExerciseDetailsModal() {
                     { paddingTop: headerHeight + 16 }
                 ]}
                 showsVerticalScrollIndicator={false}
+                keyboardDismissMode="on-drag"
             >
                 {/* Visual placeholder or future content */}
                 <View style={{ height: 1000 }} />

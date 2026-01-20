@@ -46,10 +46,12 @@ export const ScreenWrapper = ({
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={[
+              { paddingBottom: insets.bottom },
               contentContainerStyle,
             ]}
             showsVerticalScrollIndicator={showsVerticalScrollIndicator}
             scrollEnabled={scrollEnabled}
+            keyboardDismissMode="on-drag"
           >
             <View style={{ height: insets.top }} />
             {children}

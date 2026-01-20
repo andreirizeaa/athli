@@ -123,6 +123,7 @@ export default function ClientFilesScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
         >
           {files.map((file) => {
             const FileIcon = getFileIcon(file.mime_type);

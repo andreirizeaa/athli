@@ -342,7 +342,7 @@ export default function HabitOptionsModal() {
                     >
                         <View style={styles.content}>
                             {/* Duration Card */}
-                            <View style={[styles.card, { backgroundColor: themeColors.backgroundTertiary }]}>
+                            <View style={[styles.card, { backgroundColor: themeColors.surfacePrimary }]}>
                                 {/* Switch Row */}
                                 <View style={styles.switchRow}>
                                     <Text style={[styles.cardTitle, { color: themeColors.text }]}>
@@ -400,7 +400,7 @@ export default function HabitOptionsModal() {
                             </View>
 
                             {/* Notification Card */}
-                            <View style={[styles.card, { backgroundColor: themeColors.backgroundTertiary }]}>
+                            <View style={[styles.card, { backgroundColor: themeColors.surfacePrimary }]}>
                                 {/* Switch Row */}
                                 <View style={styles.switchRow}>
                                     <Text style={[styles.cardTitle, { color: themeColors.text }]}>

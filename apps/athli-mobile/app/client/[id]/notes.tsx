@@ -5,6 +5,7 @@ import { ChevronLeft, Plus, Notebook, ChevronRight } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
@@ -18,25 +19,27 @@ export default function ClientNotesScreen() {
   const { t } = useTranslations();
   const iconColor = themeColors.text;
 
-  // Get updates/notes from store (already loaded by parent screen)
-  const updates = useClientDetailStore((state) => state.updates);
-  const isLoadingUpdates = useClientDetailStore((state) => state.isLoadingUpdates);
-  const refreshSection = useClientDetailStore((state) => state.refreshSection);
+  // Get notes from store (already loaded by parent screen)
+  const notes = useClientDetailStore((state) => state.notes);
+  const isLoadingNotes = useClientDetailStore((state) => state.isLoadingNotes);
 
   const handleBackPress = () => {
+    haptics.medium();
     router.back();
   };
 
   const handleAddNote = () => {
+    haptics.medium();
     router.push(`/modals/client/add-note-to-client-modal?clientId=${id}` as any);
   };
 
-  const handleNotePress = (updateId: string) => {
-    router.push(`/modals/client/edit-note-modal?clientId=${id}&updateId=${updateId}` as any);
+  const handleNotePress = (noteId: string) => {
+    haptics.medium();
+    router.push(`/modals/client/edit-note-modal?clientId=${id}&noteId=${noteId}` as any);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
     return date.toLocaleDateString(undefined, {
       day: '2-digit',
       month: 'short',
@@ -67,11 +70,11 @@ export default function ClientNotesScreen() {
       </View>
 
       {/* Loading state */}
-      {isLoadingUpdates && updates.length === 0 ? (
+      {isLoadingNotes && notes.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={themeColors.primary} />
         </View>
-      ) : updates.length === 0 ? (
+      ) : notes.length === 0 ? (
         /* Empty state */
         <View style={styles.emptyContainer}>
           <PlatformIcon sf="note.text" IconComponent={Notebook} size={48} color={themeColors.mutedText} />
@@ -88,17 +91,23 @@ export default function ClientNotesScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
         >
-          {updates.map((update) => (
-            <View key={update.id}>
-              <PressableScale onPress={() => handleNotePress(update.id)}>
+          {notes.map((note) => (
+            <View key={note.id}>
+              <PressableScale onPress={() => handleNotePress(note.id)}>
                 <View style={styles.noteItem}>
                   <View style={styles.noteContent}>
-                    <Text style={[styles.noteText, { color: themeColors.text }]} numberOfLines={3}>
-                      {update.update}
+                    <Text style={[styles.noteTitle, { color: themeColors.text }]} numberOfLines={1}>
+                      {note.title}
                     </Text>
+                    {note.body ? (
+                      <Text style={[styles.noteText, { color: themeColors.mutedText }]} numberOfLines={2}>
+                        {note.body}
+                      </Text>
+                    ) : null}
                     <Text style={[styles.noteDate, { color: themeColors.mutedText }]}>
-                      {formatDate(update.update_timestamp || update.created_at)}
+                      {formatDate(note.createdAt)}
                     </Text>
                   </View>
                   <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
@@ -167,10 +176,14 @@ const styles = StyleSheet.create({
   },
   noteContent: {
     flex: 1,
-    gap: 6,
+    gap: 4,
+  },
+  noteTitle: {
+    ...typography.p2,
+    fontWeight: '500',
   },
   noteText: {
-    ...typography.p2,
+    ...typography.p3,
     fontWeight: '400',
   },
   noteDate: {

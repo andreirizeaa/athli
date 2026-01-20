@@ -55,14 +55,14 @@ const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewPr
           <Label>Clients</Label>
         </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="library">
-          <Icon sf="folder.fill" />
-          <Label>Library</Label>
-        </NativeTabs.Trigger>
-
         <NativeTabs.Trigger name="chats">
           <Icon sf="bubble.left.and.text.bubble.right.fill" />
           <Label>Chats</Label>
+        </NativeTabs.Trigger>
+
+        <NativeTabs.Trigger name="library">
+          <Icon sf="folder.fill" />
+          <Label>Library</Label>
         </NativeTabs.Trigger>
 
         <NativeTabs.Trigger name="settings">
@@ -417,19 +417,19 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       width: 70,
     },
     {
-      name: 'library',
-      label: t('library.title'),
-      sf: 'folder.fill',
-      mdi: 'folder',
-      IconComponent: FileText,
-      width: 60,
-    },
-    {
       name: 'chats',
       label: t('chats.title'),
       sf: 'bubble.left.and.text.bubble.right.fill',
       mdi: 'forum',
       IconComponent: MessagesSquare,
+      width: 60,
+    },
+    {
+      name: 'library',
+      label: t('library.title'),
+      sf: 'folder.fill',
+      mdi: 'folder',
+      IconComponent: FileText,
       width: 60,
     },
     {

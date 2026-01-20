@@ -97,20 +97,28 @@ const mapHabitDataToDB = (data: AddHabitData) => {
 export const addHabit = async (data: AddHabitData): Promise<Habit> => {
   const { clientId, ...rest } = data;
 
+  console.log('[CoachHabitService] 📤 addHabit input:', JSON.stringify(data, null, 2));
+  const dbPayload = mapHabitDataToDB(clientId ? rest as AddHabitData : data);
+  console.log('[CoachHabitService] 📋 DB payload:', JSON.stringify(dbPayload, null, 2));
+
   if (clientId) {
     const response = await apiFetch<{ data: { habit: DBHabit } }>(`/clients/${clientId}/habits`, {
       method: 'POST',
       body: JSON.stringify(mapHabitDataToDB(rest as AddHabitData)) as any,
     });
+    console.log('[CoachHabitService] ✅ Client habit response:', JSON.stringify(response, null, 2));
     return mapDBHabitToHabit(response.data.habit);
   }
 
   const response = await apiFetch<{ data: { habit: DBHabit } }>('/coach/habits', {
     method: 'POST',
-    body: JSON.stringify(mapHabitDataToDB(data)) as any,
+    body: JSON.stringify(dbPayload) as any,
   });
 
-  return mapDBHabitToHabit(response.data.habit);
+  console.log('[CoachHabitService] ✅ Library habit response:', JSON.stringify(response, null, 2));
+  const mapped = mapDBHabitToHabit(response.data.habit);
+  console.log('[CoachHabitService] 🔄 Mapped result:', JSON.stringify(mapped, null, 2));
+  return mapped;
 };
 
 /**
@@ -154,6 +162,10 @@ export const duplicateHabit = async (habitId: string): Promise<Habit> => {
  * This will be connected to the backend in the future
  */
 export const getAllHabits = async (): Promise<Habit[]> => {
+  console.log('[CoachHabitService] 📥 getAllHabits called');
   const response = await apiFetch<{ data: { habits: DBHabit[] } }>('/coach/habits');
-  return response.data.habits.map(mapDBHabitToHabit);
+  console.log('[CoachHabitService] 📦 Raw response:', JSON.stringify(response, null, 2));
+  const mapped = response.data.habits.map(mapDBHabitToHabit);
+  console.log('[CoachHabitService] 🔄 Mapped habits:', JSON.stringify(mapped, null, 2));
+  return mapped;
 };

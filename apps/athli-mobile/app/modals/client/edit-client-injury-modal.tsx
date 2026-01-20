@@ -1,31 +1,58 @@
-import React, { useCallback, useState } from 'react';
-import { Platform, StyleSheet, Text, View, KeyboardAvoidingView } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
+import { Platform, StyleSheet, Text, View, KeyboardAvoidingView, Alert } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check } from 'lucide-react-native';
+import { X, Check, Trash2 } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference, useColorScheme } from '@/stores';
-import { useTranslations } from '@/stores';
+import { useTranslations, useClientDetailStore, useModalCallbacks } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SelectionInput } from '@/components/ui/form-inputs';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { hexToRgba } from '@/utils/colorUtils';
-import { useModalCallbacks } from '@/stores';
+import { saveAthleteInjuries } from '@/services/client/client-service';
 
 export default function EditClientInjuryModal() {
     const router = useRouter();
+    const { id, injuryId } = useLocalSearchParams<{ id: string; injuryId: string }>();
     const { colors: themeColors } = useThemePreference();
     const colorScheme = useColorScheme();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
     const { setDateSelectCallback } = useModalCallbacks();
+
+    const coachId = useClientDetailStore((state) => state.coachId);
+    const injuries = useClientDetailStore((state) => state.injuries);
+    const refreshSection = useClientDetailStore((state) => state.refreshSection);
+
+    // Find the injury to edit
+    const existingInjury = useMemo(() => {
+        return injuries.find((i) => i.id === injuryId);
+    }, [injuries, injuryId]);
+
     const [title, setTitle] = useState('');
     const [body, setBody] = useState('');
     const [date, setDate] = useState<Date | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    // Initialize form with existing injury data
+    useEffect(() => {
+        if (existingInjury) {
+            setTitle(existingInjury.injury);
+            setDate(existingInjury.date ? new Date(existingInjury.date) : null);
+        }
+    }, [existingInjury]);
 
     const isFormValid = title.trim().length > 0;
+    const hasChanges = existingInjury && (
+        title.trim() !== existingInjury.injury ||
+        (date ? date.toISOString().split('T')[0] : null) !== existingInjury.date
+    );
+    const canSave = isFormValid && hasChanges && !isSubmitting && !isDeleting;
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -33,10 +60,82 @@ export default function EditClientInjuryModal() {
         }
     }, [router]);
 
-    const handleSave = useCallback(() => {
-        // TODO: Implement save functionality
-        handleClose();
-    }, [handleClose]);
+    const handleSave = useCallback(async () => {
+        if (!canSave || !id || !coachId || !injuryId) return;
+
+        setIsSubmitting(true);
+        try {
+            // Update the specific injury in the list
+            const updatedInjuries = injuries.map(i => {
+                if (i.id === injuryId) {
+                    return {
+                        injury: title.trim(),
+                        date: date ? date.toISOString().split('T')[0] : null,
+                    };
+                }
+                return {
+                    injury: i.injury,
+                    date: i.date,
+                };
+            });
+
+            await saveAthleteInjuries(id, coachId, updatedInjuries);
+            haptics.success();
+            await refreshSection('injuries');
+            handleClose();
+        } catch (error) {
+            haptics.error();
+            Alert.alert(
+                t('general.error'),
+                t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [canSave, id, coachId, injuryId, title, date, injuries, refreshSection, handleClose, t]);
+
+    const handleDelete = useCallback(() => {
+        Alert.alert(
+            t('general.delete'),
+            t('clientDetail.injuries.deleteConfirmation'),
+            [
+                { text: t('general.cancel'), style: 'cancel' },
+                {
+                    text: t('general.delete'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        if (!id || !coachId || !injuryId) return;
+
+                        setIsDeleting(true);
+                        try {
+                            // Remove the injury from the list
+                            const updatedInjuries = injuries
+                                .filter(i => i.id !== injuryId)
+                                .map(i => ({
+                                    injury: i.injury,
+                                    date: i.date,
+                                }));
+
+                            await saveAthleteInjuries(id, coachId, updatedInjuries);
+                            haptics.success();
+                            await refreshSection('injuries');
+                            handleClose();
+                        } catch (error) {
+                            haptics.error();
+                            Alert.alert(
+                                t('general.error'),
+                                t('general.errorDeleting'),
+                                [{ text: t('general.ok') }]
+                            );
+                        } finally {
+                            setIsDeleting(false);
+                        }
+                    },
+                },
+            ]
+        );
+    }, [id, coachId, injuryId, injuries, refreshSection, handleClose, t]);
 
     const handleSelectDatePress = useCallback(() => {
         setDateSelectCallback((newDate: Date) => {
@@ -94,8 +193,9 @@ export default function EditClientInjuryModal() {
                         onPress={handleSave}
                         size="md"
                         color={themeColors.text}
-                        disabled={!isFormValid}
-                        variant={isFormValid ? 'primary' : 'default'}
+                        disabled={!canSave}
+                        variant={canSave ? 'primary' : 'default'}
+                        loading={isSubmitting}
                     />
                 </View>
             </View>
@@ -135,6 +235,21 @@ export default function EditClientInjuryModal() {
                         numberOfLines={8}
                         minHeight={200}
                     />
+
+                    {/* Delete button */}
+                    <View style={styles.deleteSection}>
+                        <IconButton
+                            icon={{ sf: 'trash', IconComponent: Trash2 }}
+                            onPress={handleDelete}
+                            size="md"
+                            color={themeColors.error}
+                            loading={isDeleting}
+                            disabled={isSubmitting || isDeleting}
+                        />
+                        <Text style={[styles.deleteText, { color: themeColors.error }]}>
+                            {t('general.delete')}
+                        </Text>
+                    </View>
                 </View>
             </KeyboardAwareScrollView>
         </KeyboardAvoidingView>
@@ -179,5 +294,16 @@ const styles = StyleSheet.create({
     },
     formSection: {
         gap: 16,
+    },
+    deleteSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 24,
+        gap: 8,
+    },
+    deleteText: {
+        ...typography.p2,
+        fontWeight: '500',
     },
 });

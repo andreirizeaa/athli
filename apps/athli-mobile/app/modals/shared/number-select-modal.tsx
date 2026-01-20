@@ -55,7 +55,7 @@ export default function NumberSelectModal() {
       </View>
 
       {/* Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
         <Card>
           {numbers.map((num, index) => {
             const isLast = index === numbers.length - 1;

@@ -466,6 +466,7 @@ export default function ClientAssistantScreen() {
                     <ScrollView
                         style={[styles.scrollView, { backgroundColor: themeColors.backgroundPrimary }]}
                         contentContainerStyle={styles.scrollContent}
+                        keyboardDismissMode="on-drag"
                     >
                         {messages.length === 0 ? (
                             <View style={styles.emptyState}>
