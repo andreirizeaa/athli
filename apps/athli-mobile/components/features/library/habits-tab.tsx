@@ -30,7 +30,7 @@ export const HabitsTab = () => {
   const isAuthenticated = !!coachProfile;
 
   // Fetch habits directly with TanStack Query
-  const { data: habits = [], isRefetching, refetch } = useQuery({
+  const { data: habits = [], refetch } = useQuery({
     queryKey: ['habits'],
     queryFn: async () => {
       console.log('[HabitsTab] Fetching habits...');
@@ -46,7 +46,6 @@ export const HabitsTab = () => {
 
   const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
     searchPlaceholderKey: 'library.searchPlaceholders.habits',
-    isRefetching,
     refetch,
   });
 
@@ -140,6 +139,10 @@ export const HabitsTab = () => {
         amount: item.amount,
         unit: item.unit,
         period: item.period,
+        description: item.description || '',
+        reminderTime: item.reminderTime || '',
+        reminderMessage: item.reminderMessage || '',
+        duration: item.duration?.toString() || '',
       },
     });
   };
@@ -217,7 +220,7 @@ export const HabitsTab = () => {
               onPress={() => handleHabitPress(item)}
             >
               <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
-                <View style={styles.iconContainer}>
+                <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
                   <PlatformIcon
                     sf="checkmark.circle.fill"
                     IconComponent={CheckCircle}
@@ -296,7 +299,6 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 8,
-    backgroundColor: 'rgba(128, 128, 128, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,

@@ -1,21 +1,23 @@
 import React, { useCallback, useState } from 'react';
-import { Platform, StyleSheet, Text, View, KeyboardAvoidingView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Platform, StyleSheet, Text, View, KeyboardAvoidingView, Alert } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference, useColorScheme } from '@/stores';
-import { useTranslations } from '@/stores';
+import { useTranslations, useClientDetailStore, useModalCallbacks } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SelectionInput } from '@/components/ui/form-inputs';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { hexToRgba } from '@/utils/colorUtils';
-import { useModalCallbacks } from '@/stores';
+import { saveAthleteInjuries } from '@/services/client/client-service';
 
 export default function AddClientInjuryModal() {
     const router = useRouter();
+    const { id } = useLocalSearchParams<{ id: string }>();
     const { colors: themeColors } = useThemePreference();
     const colorScheme = useColorScheme();
     const { t } = useTranslations();
@@ -24,8 +26,14 @@ export default function AddClientInjuryModal() {
     const [title, setTitle] = useState('');
     const [body, setBody] = useState('');
     const [date, setDate] = useState<Date | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const coachId = useClientDetailStore((state) => state.coachId);
+    const injuries = useClientDetailStore((state) => state.injuries);
+    const refreshSection = useClientDetailStore((state) => state.refreshSection);
 
     const isFormValid = title.trim().length > 0;
+    const canSave = isFormValid && !isSubmitting;
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -33,10 +41,38 @@ export default function AddClientInjuryModal() {
         }
     }, [router]);
 
-    const handleSave = useCallback(() => {
-        // TODO: Implement save functionality
-        handleClose();
-    }, [handleClose]);
+    const handleSave = useCallback(async () => {
+        if (!canSave || !id || !coachId) return;
+
+        setIsSubmitting(true);
+        try {
+            // Create new injury and add to existing injuries
+            const newInjury = {
+                injury: title.trim(),
+                date: date ? date.toISOString().split('T')[0] : null,
+            };
+
+            // Save all injuries including the new one
+            const updatedInjuries = [...injuries.map(i => ({
+                injury: i.injury,
+                date: i.date,
+            })), newInjury];
+
+            await saveAthleteInjuries(id, coachId, updatedInjuries);
+            haptics.success();
+            await refreshSection('injuries');
+            handleClose();
+        } catch (error) {
+            haptics.error();
+            Alert.alert(
+                t('general.error'),
+                t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [canSave, id, coachId, title, date, injuries, refreshSection, handleClose, t]);
 
     const handleSelectDatePress = useCallback(() => {
         setDateSelectCallback((newDate: Date) => {
@@ -94,8 +130,9 @@ export default function AddClientInjuryModal() {
                         onPress={handleSave}
                         size="md"
                         color={themeColors.text}
-                        disabled={!isFormValid}
-                        variant={isFormValid ? 'primary' : 'default'}
+                        disabled={!canSave}
+                        variant={canSave ? 'primary' : 'default'}
+                        loading={isSubmitting}
                     />
                 </View>
             </View>

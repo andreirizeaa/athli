@@ -29,7 +29,7 @@ export const MetricsTab = () => {
   const isAuthenticated = !!coachProfile;
 
   // Fetch metrics directly with TanStack Query
-  const { data: metrics = [], isRefetching, refetch } = useQuery({
+  const { data: metrics = [], refetch } = useQuery({
     queryKey: ['metrics'],
     queryFn: async () => {
       console.log('[MetricsTab] Fetching metrics...');
@@ -45,7 +45,6 @@ export const MetricsTab = () => {
 
   const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
     searchPlaceholderKey: 'library.searchPlaceholders.metrics',
-    isRefetching,
     refetch,
   });
 
@@ -130,6 +129,9 @@ export const MetricsTab = () => {
       return;
     }
 
+    console.log('[MetricsTab] 📝 Opening metric for edit:', JSON.stringify(item, null, 2));
+    console.log('[MetricsTab] 📋 schedule_config:', item.schedule_config);
+
     closeOpenRow();
     router.push({
       pathname: '/modals/library/add-metric-modal',
@@ -194,7 +196,7 @@ export const MetricsTab = () => {
               onPress={() => handleMetricPress(item)}
             >
               <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
-                <View style={styles.iconContainer}>
+                <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
                   <PlatformIcon
                     sf="chart.bar.fill"
                     IconComponent={Activity}
@@ -284,7 +286,6 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 8,
-    backgroundColor: 'rgba(128, 128, 128, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,

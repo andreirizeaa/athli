@@ -1,31 +1,58 @@
-import React, { useCallback, useState } from 'react';
-import { Platform, StyleSheet, Text, View, KeyboardAvoidingView } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
+import { Platform, StyleSheet, Text, View, KeyboardAvoidingView, Alert } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check } from 'lucide-react-native';
+import { X, Check, Trash2 } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
 import { useThemePreference, useColorScheme } from '@/stores';
-import { useTranslations } from '@/stores';
+import { useTranslations, useClientDetailStore, useModalCallbacks } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SelectionInput } from '@/components/ui/form-inputs';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { hexToRgba } from '@/utils/colorUtils';
-import { useModalCallbacks } from '@/stores';
+import { saveAthleteGoals } from '@/services/client/client-service';
 
 export default function EditClientGoalModal() {
     const router = useRouter();
+    const { id, goalId } = useLocalSearchParams<{ id: string; goalId: string }>();
     const { colors: themeColors } = useThemePreference();
     const colorScheme = useColorScheme();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
     const { setDateSelectCallback } = useModalCallbacks();
+
+    const coachId = useClientDetailStore((state) => state.coachId);
+    const goals = useClientDetailStore((state) => state.goals);
+    const refreshSection = useClientDetailStore((state) => state.refreshSection);
+
+    // Find the goal to edit
+    const existingGoal = useMemo(() => {
+        return goals.find((g) => g.id === goalId);
+    }, [goals, goalId]);
+
     const [title, setTitle] = useState('');
     const [body, setBody] = useState('');
     const [date, setDate] = useState<Date | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    // Initialize form with existing goal data
+    useEffect(() => {
+        if (existingGoal) {
+            setTitle(existingGoal.goal);
+            setDate(existingGoal.target_date ? new Date(existingGoal.target_date) : null);
+        }
+    }, [existingGoal]);
 
     const isFormValid = title.trim().length > 0;
+    const hasChanges = existingGoal && (
+        title.trim() !== existingGoal.goal ||
+        (date ? date.toISOString().split('T')[0] : null) !== existingGoal.target_date
+    );
+    const canSave = isFormValid && hasChanges && !isSubmitting && !isDeleting;
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -33,10 +60,82 @@ export default function EditClientGoalModal() {
         }
     }, [router]);
 
-    const handleSave = useCallback(() => {
-        // TODO: Implement save functionality
-        handleClose();
-    }, [handleClose]);
+    const handleSave = useCallback(async () => {
+        if (!canSave || !id || !coachId || !goalId) return;
+
+        setIsSubmitting(true);
+        try {
+            // Update the specific goal in the list
+            const updatedGoals = goals.map(g => {
+                if (g.id === goalId) {
+                    return {
+                        goal: title.trim(),
+                        target_date: date ? date.toISOString().split('T')[0] : null,
+                    };
+                }
+                return {
+                    goal: g.goal,
+                    target_date: g.target_date,
+                };
+            });
+
+            await saveAthleteGoals(id, coachId, updatedGoals);
+            haptics.success();
+            await refreshSection('goals');
+            handleClose();
+        } catch (error) {
+            haptics.error();
+            Alert.alert(
+                t('general.error'),
+                t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [canSave, id, coachId, goalId, title, date, goals, refreshSection, handleClose, t]);
+
+    const handleDelete = useCallback(() => {
+        Alert.alert(
+            t('general.delete'),
+            t('clientDetail.goals.deleteConfirmation'),
+            [
+                { text: t('general.cancel'), style: 'cancel' },
+                {
+                    text: t('general.delete'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        if (!id || !coachId || !goalId) return;
+
+                        setIsDeleting(true);
+                        try {
+                            // Remove the goal from the list
+                            const updatedGoals = goals
+                                .filter(g => g.id !== goalId)
+                                .map(g => ({
+                                    goal: g.goal,
+                                    target_date: g.target_date,
+                                }));
+
+                            await saveAthleteGoals(id, coachId, updatedGoals);
+                            haptics.success();
+                            await refreshSection('goals');
+                            handleClose();
+                        } catch (error) {
+                            haptics.error();
+                            Alert.alert(
+                                t('general.error'),
+                                t('general.errorDeleting'),
+                                [{ text: t('general.ok') }]
+                            );
+                        } finally {
+                            setIsDeleting(false);
+                        }
+                    },
+                },
+            ]
+        );
+    }, [id, coachId, goalId, goals, refreshSection, handleClose, t]);
 
     const handleSelectDatePress = useCallback(() => {
         setDateSelectCallback((newDate: Date) => {
@@ -94,8 +193,9 @@ export default function EditClientGoalModal() {
                         onPress={handleSave}
                         size="md"
                         color={themeColors.text}
-                        disabled={!isFormValid}
-                        variant={isFormValid ? 'primary' : 'default'}
+                        disabled={!canSave}
+                        variant={canSave ? 'primary' : 'default'}
+                        loading={isSubmitting}
                     />
                 </View>
             </View>
@@ -135,6 +235,21 @@ export default function EditClientGoalModal() {
                         numberOfLines={8}
                         minHeight={200}
                     />
+
+                    {/* Delete button */}
+                    <View style={styles.deleteSection}>
+                        <IconButton
+                            icon={{ sf: 'trash', IconComponent: Trash2 }}
+                            onPress={handleDelete}
+                            size="md"
+                            color={themeColors.error}
+                            loading={isDeleting}
+                            disabled={isSubmitting || isDeleting}
+                        />
+                        <Text style={[styles.deleteText, { color: themeColors.error }]}>
+                            {t('general.delete')}
+                        </Text>
+                    </View>
                 </View>
             </KeyboardAwareScrollView>
         </KeyboardAvoidingView>
@@ -179,5 +294,16 @@ const styles = StyleSheet.create({
     },
     formSection: {
         gap: 16,
+    },
+    deleteSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 24,
+        gap: 8,
+    },
+    deleteText: {
+        ...typography.p2,
+        fontWeight: '500',
     },
 });

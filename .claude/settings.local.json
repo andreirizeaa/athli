@@ -50,7 +50,11 @@
       "Bash(npx supabase:*)",
       "WebFetch(domain:api.github.com)",
       "Bash(git diff:*)",
-      "Bash(git -C /Users/andreirizea/abc/app/athli diff apps/athli-mobile/app/chats/[id].tsx)"
+      "Bash(git -C /Users/andreirizea/abc/app/athli diff apps/athli-mobile/app/chats/[id].tsx)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:commerce.nearform.com)",
+      "WebFetch(domain:nearform.com)",
+      "Bash(npm show:*)"
     ]
   }
 }

@@ -569,6 +569,7 @@ const ImagePreviewScreen = () => {
             isSelectionMode && { paddingBottom: 100 }, // Add padding for bottom actions
           ]}
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
         >
           {images.map((image, index) => {
             const isSelected = selectedImageIds.has(image.id);

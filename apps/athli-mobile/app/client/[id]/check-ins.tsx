@@ -124,6 +124,7 @@ export default function ClientCheckInsScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
         >
           {checkIns.map((checkIn) => (
             <View key={checkIn.id}>

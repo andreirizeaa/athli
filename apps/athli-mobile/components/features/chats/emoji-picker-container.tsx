@@ -148,6 +148,7 @@ export const EmojiPickerContainer = ({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.emojiShortcutsScroll}
         style={styles.emojiShortcutsContainer}
+        keyboardDismissMode="on-drag"
       >
         {emojiShortcuts.map((emoji, index) => {
           const isCurrentReaction = emoji === currentReaction;

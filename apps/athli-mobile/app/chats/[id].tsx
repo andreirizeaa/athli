@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
   Keyboard,
@@ -43,7 +44,7 @@ import {
 import * as FileSystem from 'expo-file-system/legacy';
 import { type IWaveformRef, PlayerState, FinishMode } from '@/components/features/audio';
 
-import { useThemePreference, useColorScheme, useChatsStore, useAuthSessionStore, useCoachProfileStore } from '@/stores';
+import { useThemePreference, useColorScheme, useChatsStore, useAuthSessionStore, useCoachProfileStore, useClientDetailStore } from '@/stores';
 import { hexToRgba } from '@/utils/colorUtils';
 import { useTranslations } from '@/stores';
 import { haptics } from '@/utils/haptics';
@@ -154,55 +155,22 @@ const ClientPanelContent = ({ clientId, clientName: initialClientName, clientAva
   const { width: screenWidth } = Dimensions.get('window');
   const iconColor = themeColors.text;
 
-  // State for client data - use initial values from chat, then fetch full details
-  const [clientData, setClientData] = React.useState<{
-    name: string;
-    avatarUrl: string | null;
-    isLoading: boolean;
-  }>({
-    name: initialClientName || '',
-    avatarUrl: initialClientAvatar || null,
-    isLoading: false,
-  });
+  // Use Zustand store for client data (same pattern as client detail screen)
+  const client = useClientDetailStore((state) => state.client);
+  const isLoadingClient = useClientDetailStore((state) => state.isLoadingClient);
+  const error = useClientDetailStore((state) => state.error);
+  const loadClientData = useClientDetailStore((state) => state.loadClientData);
 
-  // Fetch client details when clientId changes (only if we don't have full data)
+  // Load client data when panel opens or clientId changes
   React.useEffect(() => {
-    const fetchClientData = async () => {
-      if (!clientId) return;
+    if (clientId) {
+      loadClientData(clientId);
+    }
+  }, [clientId, loadClientData]);
 
-      // Only fetch if we don't have a name (indicating we need fresh data)
-      if (initialClientName) {
-        setClientData({
-          name: initialClientName,
-          avatarUrl: initialClientAvatar || null,
-          isLoading: false,
-        });
-        return;
-      }
-
-      setClientData((prev) => ({ ...prev, isLoading: true }));
-
-      try {
-        // Dynamic import to avoid circular dependencies
-        const { getClientDetails } = await import('@/services/client');
-        const details = await getClientDetails(clientId);
-        setClientData({
-          name: details.name,
-          avatarUrl: details.avatarUrl || null,
-          isLoading: false,
-        });
-      } catch (error) {
-        console.error('[ClientPanel] Failed to fetch client details:', error);
-        setClientData((prev) => ({ ...prev, isLoading: false }));
-      }
-    };
-
-    fetchClientData();
-  }, [clientId, initialClientName, initialClientAvatar]);
-
-  // Use fetched data or fallback to props
-  const clientName = clientData.name || initialClientName;
-  const clientAvatar = clientData.avatarUrl || initialClientAvatar;
+  // Use store data when available, fallback to initial props for immediate display
+  const clientName = client?.name || initialClientName;
+  const clientAvatar = client?.avatarUrl || initialClientAvatar;
 
   // Calculate right padding to account for the hidden portion of the sidebar
   const hiddenWidth = screenWidth * (1 - COLLAPSED_WIDTH_RATIO);
@@ -299,6 +267,35 @@ const ClientPanelContent = ({ clientId, clientName: initialClientName, clientAva
     router.push(route as any);
   };
 
+  // Loading state - show while client data is being fetched
+  if (isLoadingClient && !client) {
+    return (
+      <View style={[panelStyles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
+        <StatusBarBlur />
+        <View style={[panelStyles.loadingContainer, { paddingTop: insets.top + 60 }]}>
+          <ActivityIndicator size="large" color={themeColors.primary} />
+          <Text style={[panelStyles.loadingText, { color: themeColors.mutedText }]}>
+            {t('general.loading')}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Error state
+  if (error && !client) {
+    return (
+      <View style={[panelStyles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
+        <StatusBarBlur />
+        <View style={[panelStyles.errorContainer, { paddingTop: insets.top + 60, paddingRight: rightPadding }]}>
+          <Text style={[panelStyles.errorText, { color: themeColors.mutedText }]}>
+            {error}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[panelStyles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
       <StatusBarBlur />
@@ -306,6 +303,7 @@ const ClientPanelContent = ({ clientId, clientName: initialClientName, clientAva
         style={panelStyles.scrollView}
         contentContainerStyle={[panelStyles.scrollContent, { paddingRight: rightPadding, paddingTop: insets.top + 8 }]}
         showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
       >
         {/* Profile Card */}
         <View style={[panelStyles.profileCard, { backgroundColor: themeColors.surfacePrimary, marginRight: 0 }]}>
@@ -380,6 +378,25 @@ const panelStyles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 40,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    ...typography.p2,
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  errorText: {
+    ...typography.p1,
+    textAlign: 'center',
   },
   profileCard: {
     borderRadius: 28,

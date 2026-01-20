@@ -1,9 +1,9 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { Platform, StyleSheet, Text, View, KeyboardAvoidingView, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check } from 'lucide-react-native';
+import { X, Check, Trash2 } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
@@ -13,24 +13,44 @@ import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { hexToRgba } from '@/utils/colorUtils';
-import { createClientNote } from '@/services/client/client-notes-service';
+import { updateClientNote, deleteClientNote } from '@/services/client/client-notes-service';
 
-export default function AddNoteToClientModal() {
+export default function EditNoteModal() {
     const router = useRouter();
-    const { clientId } = useLocalSearchParams<{ clientId: string }>();
+    const { clientId, noteId } = useLocalSearchParams<{ clientId: string; noteId: string }>();
     const { colors: themeColors } = useThemePreference();
     const colorScheme = useColorScheme();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
+
+    const coachId = useClientDetailStore((state) => state.coachId);
+    const notes = useClientDetailStore((state) => state.notes);
+    const refreshSection = useClientDetailStore((state) => state.refreshSection);
+
+    // Find the note to edit
+    const existingNote = useMemo(() => {
+        return notes.find((n) => n.id === noteId);
+    }, [notes, noteId]);
+
     const [title, setTitle] = useState('');
     const [body, setBody] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    const coachId = useClientDetailStore((state) => state.coachId);
-    const refreshSection = useClientDetailStore((state) => state.refreshSection);
+    // Initialize form with existing note data
+    useEffect(() => {
+        if (existingNote) {
+            setTitle(existingNote.title);
+            setBody(existingNote.body || '');
+        }
+    }, [existingNote]);
 
     const isFormValid = title.trim().length > 0;
-    const canSave = isFormValid && !isSubmitting;
+    const hasChanges = existingNote && (
+        title.trim() !== existingNote.title ||
+        body.trim() !== (existingNote.body || '')
+    );
+    const canSave = isFormValid && hasChanges && !isSubmitting && !isDeleting;
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -39,11 +59,12 @@ export default function AddNoteToClientModal() {
     }, [router]);
 
     const handleSave = useCallback(async () => {
-        if (!canSave || !clientId || !coachId) return;
+        if (!canSave || !clientId || !coachId || !noteId) return;
 
         setIsSubmitting(true);
         try {
-            await createClientNote({
+            await updateClientNote({
+                noteId,
                 contactId: clientId,
                 coachId,
                 title: title.trim(),
@@ -62,7 +83,45 @@ export default function AddNoteToClientModal() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [canSave, clientId, coachId, title, body, refreshSection, handleClose, t]);
+    }, [canSave, clientId, coachId, noteId, title, body, refreshSection, handleClose, t]);
+
+    const handleDelete = useCallback(() => {
+        Alert.alert(
+            t('general.delete'),
+            t('clientDetail.notes.deleteConfirmation'),
+            [
+                { text: t('general.cancel'), style: 'cancel' },
+                {
+                    text: t('general.delete'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        if (!clientId || !coachId || !noteId) return;
+
+                        setIsDeleting(true);
+                        try {
+                            await deleteClientNote({
+                                noteId,
+                                contactId: clientId,
+                                coachId,
+                            });
+                            haptics.success();
+                            await refreshSection('notes');
+                            handleClose();
+                        } catch (error) {
+                            haptics.error();
+                            Alert.alert(
+                                t('general.error'),
+                                t('general.errorDeleting'),
+                                [{ text: t('general.ok') }]
+                            );
+                        } finally {
+                            setIsDeleting(false);
+                        }
+                    },
+                },
+            ]
+        );
+    }, [clientId, coachId, noteId, refreshSection, handleClose, t]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -100,7 +159,7 @@ export default function AddNoteToClientModal() {
                         color={themeColors.text}
                     />
                     <Text style={[styles.title, { color: themeColors.text }]}>
-                        {t('clientDetail.addNoteModal.title')}
+                        {t('clientDetail.editNoteModal.title')}
                     </Text>
                     <IconButton
                         icon={{ sf: 'checkmark', IconComponent: Check }}
@@ -137,6 +196,21 @@ export default function AddNoteToClientModal() {
                     numberOfLines={10}
                     minHeight={250}
                 />
+
+                {/* Delete button */}
+                <View style={styles.deleteSection}>
+                    <IconButton
+                        icon={{ sf: 'trash', IconComponent: Trash2 }}
+                        onPress={handleDelete}
+                        size="md"
+                        color={themeColors.error}
+                        loading={isDeleting}
+                        disabled={isSubmitting || isDeleting}
+                    />
+                    <Text style={[styles.deleteText, { color: themeColors.error }]}>
+                        {t('general.delete')}
+                    </Text>
+                </View>
             </KeyboardAwareScrollView>
         </KeyboardAvoidingView>
     );
@@ -178,5 +252,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingBottom: 16,
         gap: 16,
+    },
+    deleteSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 24,
+        gap: 8,
+    },
+    deleteText: {
+        ...typography.p2,
+        fontWeight: '500',
     },
 });

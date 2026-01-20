@@ -14,6 +14,7 @@ export const en = {
     error: 'Error',
     errorLoading: 'Failed to load data',
     errorSaving: 'Failed to save changes',
+    errorDeleting: 'Failed to delete',
     success: 'Success',
     warning: 'Warning',
     description: 'Description',
@@ -35,8 +36,11 @@ export const en = {
     date: 'Date',
     value: 'Value',
     searchPlaceholder: 'Search',
+    noResults: 'No results found',
     permissionRequired: 'Permission Required',
     you: 'You',
+    daily: 'Daily',
+    weekly: 'Weekly',
   },
   camera: {
     title: 'Camera',
@@ -891,6 +895,13 @@ export const en = {
     notes: {
       emptyTitle: 'No notes yet',
       emptyDescription: 'Notes and updates for this client will appear here',
+      deleteConfirmation: 'Are you sure you want to delete this note?',
+    },
+    goals: {
+      deleteConfirmation: 'Are you sure you want to delete this goal?',
+    },
+    injuries: {
+      deleteConfirmation: 'Are you sure you want to delete this injury?',
     },
     metrics: {
       emptyTitle: 'No metrics assigned',
@@ -916,6 +927,77 @@ export const en = {
       emptyTitle: 'No files uploaded yet',
       emptyDescription: 'Shared files and documents will appear here',
     },
+    selectHabit: {
+      title: 'Select Habit',
+    },
+    selectMetric: {
+      title: 'Select Metric',
+    },
+    habitDetail: {
+      title: 'Habit Details',
+      notFound: 'Habit not found',
+      recentLogs: 'Recent Logs',
+      noLogs: 'No logs yet',
+      completed: 'Completed',
+      skipped: 'Skipped',
+      partial: 'Partial',
+      average: 'Average',
+      delta: 'Delta',
+      completionRate: 'Completion',
+      currentStreak: 'Streak',
+      editHabit: 'Edit Habit',
+      addLog: 'Add a Log',
+      deleteHabit: 'Delete Habit',
+      descriptions: {
+        average: 'The mean of all logged values in the selected time period',
+        completionRate: 'Percentage of days where the logged value met or exceeded the target',
+        delta: 'Percentage change comparing the first and last logged value',
+        currentStreak: 'Consecutive days of meeting the target up to today',
+      },
+    },
+    metricDetail: {
+      title: 'Metric Details',
+      notFound: 'Metric not found',
+      recentLogs: 'Recent Logs',
+      noLogs: 'No logs yet',
+      average: 'Average',
+      delta: 'Delta',
+      editMetric: 'Edit Metric',
+      addLog: 'Add a Log',
+      deleteMetric: 'Delete Metric',
+      descriptions: {
+        average: 'The mean of all logged values in the selected time period',
+        delta: 'Percentage change comparing first and last value in the current time frame',
+      },
+    },
+    timeRanges: {
+      ninetyDays: '90 days',
+      sixMonths: '6 months',
+      oneYear: '1 year',
+      allTime: 'All time',
+    },
+    chart: {
+      notEnoughData: 'Not enough data to display chart',
+      target: 'Target',
+      logged: 'Logged',
+      aboveTarget: 'Above target',
+      belowTarget: 'Below target',
+    },
+    logsSection: {
+      title: 'Logs',
+      byWeek: 'By week',
+      allEntries: 'All entries',
+    },
+    editLog: {
+      invalidValue: 'Please enter a valid number',
+      deleteTitle: 'Delete Log',
+      deleteMessage: 'Are you sure you want to delete this log entry?',
+      deleteLog: 'Delete Log',
+    },
+    logWarning: {
+      metricExists: 'A log already exists for this date. Adding a new one will override the existing value.',
+      habitExists: 'A log already exists for this date. Adding a new one will override the existing value.',
+    },
     training: {
       noWorkouts: 'No workouts planned',
       noWorkoutsDescription: 'There are no workouts scheduled for this day',
@@ -933,6 +1015,9 @@ export const en = {
       noteTitlePlaceholder: 'Enter note title...',
       noteBody: 'Body',
       noteBodyPlaceholder: 'Enter note details...',
+    },
+    editNoteModal: {
+      title: 'Edit Note',
     },
     editBioModal: {
       title: 'Edit Bio',

@@ -331,6 +331,7 @@ export default function ClientTrainingScreen() {
           style={styles.workoutList}
           contentContainerStyle={styles.workoutListContent}
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
         >
           {workoutsForSelectedDate.map((workout, index) => {
             const exercises = getExercisesFromWorkout(workout);
