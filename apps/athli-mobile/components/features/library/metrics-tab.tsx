@@ -29,7 +29,7 @@ export const MetricsTab = () => {
   const isAuthenticated = !!coachProfile;
 
   // Fetch metrics directly with TanStack Query
-  const { data: metrics = [], isRefetching, refetch } = useQuery({
+  const { data: metrics = [], refetch } = useQuery({
     queryKey: ['metrics'],
     queryFn: async () => {
       console.log('[MetricsTab] Fetching metrics...');
@@ -45,7 +45,6 @@ export const MetricsTab = () => {
 
   const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
     searchPlaceholderKey: 'library.searchPlaceholders.metrics',
-    isRefetching,
     refetch,
   });
 
@@ -129,6 +128,9 @@ export const MetricsTab = () => {
       closeOpenRow();
       return;
     }
+
+    console.log('[MetricsTab] 📝 Opening metric for edit:', JSON.stringify(item, null, 2));
+    console.log('[MetricsTab] 📋 schedule_config:', item.schedule_config);
 
     closeOpenRow();
     router.push({

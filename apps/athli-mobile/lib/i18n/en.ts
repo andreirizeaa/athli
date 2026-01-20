@@ -36,6 +36,7 @@ export const en = {
     date: 'Date',
     value: 'Value',
     searchPlaceholder: 'Search',
+    noResults: 'No results found',
     permissionRequired: 'Permission Required',
     you: 'You',
     daily: 'Daily',
@@ -946,6 +947,7 @@ export const en = {
       currentStreak: 'Streak',
       editHabit: 'Edit Habit',
       addLog: 'Add a Log',
+      deleteHabit: 'Delete Habit',
       descriptions: {
         average: 'The mean of all logged values in the selected time period',
         completionRate: 'Percentage of days where the logged value met or exceeded the target',
@@ -962,6 +964,7 @@ export const en = {
       delta: 'Delta',
       editMetric: 'Edit Metric',
       addLog: 'Add a Log',
+      deleteMetric: 'Delete Metric',
       descriptions: {
         average: 'The mean of all logged values in the selected time period',
         delta: 'Percentage change comparing first and last value in the current time frame',
@@ -975,7 +978,8 @@ export const en = {
     },
     chart: {
       notEnoughData: 'Not enough data to display chart',
-      target: 'Target:',
+      target: 'Target',
+      logged: 'Logged',
       aboveTarget: 'Above target',
       belowTarget: 'Below target',
     },

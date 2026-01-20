@@ -85,6 +85,10 @@ export const clientMetricsController = {
             unit: m.unit,
             description: m.description,
             value_kind: m.value_kind,
+            min_value: m.min_value,
+            max_value: m.max_value,
+            cron_expression: m.cron_expression,
+            schedule_config: m.schedule_config,
             is_private: false, // All client_metrics are copies now
             logs: (m.logs || []).map((l: any) => ({
                 id: l.id,
@@ -107,7 +111,7 @@ export const clientMetricsController = {
         const userId = (req as any).userId;
         const clientIdHeader = req.header('x-client-id');
         const coachIdHeader = req.header('x-coach-id');
-        const { metricIds, clientIds, name, unit, description, value_kind } = req.body;
+        const { metricIds, clientIds, name, unit, description, value_kind, min_value, max_value, cron_expression, schedule_config } = req.body;
 
         if (!coachIdHeader || coachIdHeader !== userId) {
             return unauthorized(res, { message: 'Only coaches can assign metrics' });
@@ -149,6 +153,10 @@ export const clientMetricsController = {
                 unit,
                 description,
                 value_kind: value_kind || 'number',
+                min_value,
+                max_value,
+                cron_expression,
+                schedule_config,
             }));
 
             const { data: metrics, error } = await supabase
@@ -190,6 +198,10 @@ export const clientMetricsController = {
                     unit: m.unit,
                     description: m.description,
                     value_kind: m.value_kind,
+                    min_value: m.min_value,
+                    max_value: m.max_value,
+                    cron_expression: m.cron_expression,
+                    schedule_config: m.schedule_config,
                 });
             }
         }
@@ -320,7 +332,7 @@ export const clientMetricsController = {
      */
     updateAssignment: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { assignmentId, name, unit, description } = req.body;
+        const { assignmentId, name, unit, description, min_value, max_value, cron_expression, schedule_config } = req.body;
         const clientIdHeader = req.header('x-client-id');
         const coachIdHeader = req.header('x-coach-id');
 
@@ -334,7 +346,7 @@ export const clientMetricsController = {
         const supabase = getSupabaseClient();
         const { data: metric, error } = await supabase
             .from('client_metrics')
-            .update({ name, unit, description })
+            .update({ name, unit, description, min_value, max_value, cron_expression, schedule_config })
             .eq('id', assignmentId)
             .eq('client_id', clientIdHeader)
             .eq('coach_id', coachIdHeader)

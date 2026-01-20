@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { View, StyleSheet, Text } from 'react-native';
-import { ChevronLeft, MoreHorizontal, TrendingUp, TrendingDown, Calculator, Activity, Pencil, Plus } from 'lucide-react-native';
+import { View, StyleSheet, Text, Alert } from 'react-native';
+import { ChevronLeft, MoreHorizontal, TrendingUp, TrendingDown, Calculator, Activity, Pencil, Plus, Trash2 } from 'lucide-react-native';
 import {
     useSharedValue,
     useAnimatedReaction,
@@ -26,6 +26,8 @@ import { LogsList } from '@/components/ui/logs-list';
 import { FlipCard } from '@/components/ui/flip-card';
 import { hexToRgba } from '@/utils/colorUtils';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
+import { removeMetric } from '@/services/client/client-metric-service';
+import { haptics } from '@/utils/haptics';
 
 // Animated counter hook
 const useAnimatedCounter = (targetValue: number, decimals: number = 1) => {
@@ -144,6 +146,7 @@ export default function MetricDetailScreen() {
 
     // Get coachId from store for client assignment updates
     const coachId = useClientDetailStore((state) => state.coachId);
+    const refreshSection = useClientDetailStore((state) => state.refreshSection);
 
     const handleEditMetric = useCallback(() => {
         if (!metric) return;
@@ -164,6 +167,31 @@ export default function MetricDetailScreen() {
         });
     }, [router, metric, clientId, coachId]);
 
+    const handleDeleteMetric = useCallback(() => {
+        if (!metric || !coachId) return;
+        Alert.alert(
+            t('clientDetail.metricDetail.deleteMetric'),
+            `${t('general.delete')} ${metric.name}?`,
+            [
+                { text: t('general.cancel'), style: 'cancel' },
+                {
+                    text: t('general.delete'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        await removeMetric({
+                            metricIds: [metric.assignment_id],
+                            clientId,
+                            coachId,
+                        });
+                        haptics.success();
+                        refreshSection('metrics');
+                        router.back();
+                    },
+                },
+            ]
+        );
+    }, [metric, coachId, clientId, t, refreshSection, router]);
+
     const dropdownOptions: DropdownMenuOption[] = useMemo(() => [
         {
             label: t('clientDetail.metricDetail.editMetric'),
@@ -175,7 +203,13 @@ export default function MetricDetailScreen() {
             icon: { sf: 'plus', IconComponent: Plus },
             onPress: handleLogMetric,
         },
-    ], [t, handleEditMetric, handleLogMetric]);
+        {
+            label: t('clientDetail.metricDetail.deleteMetric'),
+            icon: { sf: 'trash', IconComponent: Trash2 },
+            destructive: true,
+            onPress: handleDeleteMetric,
+        },
+    ], [t, handleEditMetric, handleLogMetric, handleDeleteMetric]);
 
     if (!metric) {
         return (

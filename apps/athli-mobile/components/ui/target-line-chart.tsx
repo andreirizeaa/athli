@@ -1,11 +1,10 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, Text, Dimensions } from 'react-native';
 import { CartesianChart, Line } from 'victory-native';
-import { Line as SkiaLine, vec } from '@shopify/react-native-skia';
+import { Line as SkiaLine, vec, DashPathEffect, useFont } from '@shopify/react-native-skia';
 
 import { useThemePreference, useTranslations } from '@/stores';
 import { typography } from '@/constants/typography';
-import { hexToRgba } from '@/utils/colorUtils';
 
 type DataPoint = {
     value: number;
@@ -23,7 +22,6 @@ type ChartDataPoint = {
     y: number;
     originalValue: number;
     date: string;
-    label: string;
 };
 
 const formatShortDate = (dateStr: string): string => {
@@ -37,6 +35,7 @@ const formatShortDate = (dateStr: string): string => {
 export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChartProps) => {
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
+    const font = useFont(require('../../assets/fonts/SpaceMono-Regular.ttf'), 12);
     const screenWidth = Dimensions.get('window').width;
     const chartWidth = screenWidth - 64;
     const chartHeight = 180;
@@ -45,16 +44,11 @@ export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChar
     const chartData = useMemo((): ChartDataPoint[] => {
         if (data.length === 0) return [];
 
-        const labelInterval = Math.max(1, Math.ceil(data.length / 4));
-
         return data.map((item, index) => ({
             x: index,
             y: item.value - targetValue, // Deviation from target
             originalValue: item.value,
             date: item.date,
-            label: index % labelInterval === 0 || index === data.length - 1
-                ? formatShortDate(item.date)
-                : '',
         }));
     }, [data, targetValue]);
 
@@ -70,6 +64,12 @@ export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChar
             maxValue: range,
         };
     }, [chartData]);
+
+    // Date labels for X axis
+    const startDate = chartData.length > 0 ? formatShortDate(chartData[0].date) : '';
+    const middleIndex = Math.floor((chartData.length - 1) / 2);
+    const middleDate = chartData.length > 2 ? formatShortDate(chartData[middleIndex].date) : '';
+    const endDate = chartData.length > 0 ? formatShortDate(chartData[chartData.length - 1].date) : '';
 
     if (chartData.length < 2) {
         return (
@@ -88,7 +88,7 @@ export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChar
             {/* Target info */}
             <View style={styles.targetInfo}>
                 <Text style={[styles.targetLabel, { color: themeColors.mutedText }]}>
-                    {t('clientDetail.chart.target')}
+                    {t('clientDetail.chart.target')}:
                 </Text>
                 <Text style={[styles.targetValue, { color: themeColors.text }]}>
                     {targetValue}{unit ? ` ${unit}` : ''}
@@ -100,22 +100,19 @@ export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChar
                     data={chartData}
                     xKey="x"
                     yKeys={['y']}
-                    domain={{ y: [minValue, maxValue] }}
+                    domain={{
+                        x: [0, chartData.length - 1],
+                        y: [minValue, maxValue],
+                    }}
                     axisOptions={{
-                        tickCount: { x: 4, y: 4 },
+                        font,
+                        tickCount: { x: 0, y: 4 },
                         labelColor: themeColors.mutedText,
                         lineColor: 'transparent',
-                        formatXLabel: (value) => {
-                            const index = Math.round(value);
-                            if (index >= 0 && index < chartData.length) {
-                                return chartData[index].label || '';
-                            }
-                            return '';
-                        },
+                        axisSide: { x: 'bottom', y: 'left' },
                         formatYLabel: (value) => {
-                            if (value === 0) return `${targetValue}`;
-                            if (value > 0) return `+${value.toFixed(0)}`;
-                            return value.toFixed(0);
+                            const actualValue = targetValue + value;
+                            return actualValue.toFixed(0);
                         },
                     }}
                 >
@@ -125,13 +122,15 @@ export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChar
 
                         return (
                             <>
-                                {/* Reference line at target (y=0) */}
+                                {/* Reference line at target (y=0) - dashed horizontal line */}
                                 <SkiaLine
                                     p1={vec(chartBounds.left, referenceLineY)}
                                     p2={vec(chartBounds.right, referenceLineY)}
-                                    color={hexToRgba(themeColors.primary, 0.4)}
-                                    strokeWidth={2}
-                                />
+                                    color={themeColors.mutedText}
+                                    strokeWidth={1.5}
+                                >
+                                    <DashPathEffect intervals={[6, 4]} />
+                                </SkiaLine>
                                 <Line
                                     points={points.y}
                                     color={themeColors.primary}
@@ -145,20 +144,19 @@ export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChar
                 </CartesianChart>
             </View>
 
-            {/* Legend */}
-            <View style={styles.legendContainer}>
-                <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: '#22c55e' }]} />
-                    <Text style={[styles.legendText, { color: themeColors.mutedText }]}>
-                        {t('clientDetail.chart.aboveTarget')}
+            {/* Date labels */}
+            <View style={[styles.dateLabels, { width: chartWidth }]}>
+                <Text style={[styles.dateLabel, { color: themeColors.mutedText }]}>
+                    {startDate}
+                </Text>
+                {middleDate && (
+                    <Text style={[styles.dateLabel, { color: themeColors.mutedText }]}>
+                        {middleDate}
                     </Text>
-                </View>
-                <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: '#ef4444' }]} />
-                    <Text style={[styles.legendText, { color: themeColors.mutedText }]}>
-                        {t('clientDetail.chart.belowTarget')}
-                    </Text>
-                </View>
+                )}
+                <Text style={[styles.dateLabel, { color: themeColors.mutedText }]}>
+                    {endDate}
+                </Text>
             </View>
         </View>
     );
@@ -168,24 +166,33 @@ const styles = StyleSheet.create({
     container: {
         marginHorizontal: 16,
         marginTop: 12,
-        borderRadius: 12,
-        paddingVertical: 16,
-        paddingHorizontal: 8,
+        borderRadius: 24,
+        paddingVertical: 24,
+        paddingHorizontal: 16,
+        alignItems: 'center',
     },
-    chartWrapper: {
-        marginTop: 8,
-    },
+    chartWrapper: {},
     targetInfo: {
         flexDirection: 'row',
         alignItems: 'baseline',
         gap: 8,
-        paddingHorizontal: 8,
+        alignSelf: 'flex-start',
+        marginBottom: 8,
     },
     targetLabel: {
         ...typography.p3,
     },
     targetValue: {
         ...typography.h4,
+    },
+    dateLabels: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: -12,
+    },
+    dateLabel: {
+        fontFamily: 'SpaceMono',
+        fontSize: 12,
     },
     emptyState: {
         height: 180,
@@ -194,27 +201,5 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         ...typography.p2,
-    },
-    legendContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 24,
-        marginTop: 12,
-        paddingTop: 12,
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(150, 150, 150, 0.1)',
-    },
-    legendItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    legendDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-    },
-    legendText: {
-        ...typography.p3,
     },
 });

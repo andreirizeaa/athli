@@ -71,6 +71,18 @@ export interface ClientHabit {
   unit?: string;
   period: 'daily' | 'weekly';
   custom_schedule?: any;
+  schedule_config?: {
+    amount?: number;
+    unit?: string;
+    duration?: number;
+    reminder_message?: string;
+  };
+  schedule_type?: 'daily' | 'weekly' | 'custom';
+  times_of_day?: string[];
+  days_of_week?: number[] | null;
+  timezone?: string;
+  start_date?: string | null;
+  end_date?: string | null;
   logs?: HabitLog[];
 }
 

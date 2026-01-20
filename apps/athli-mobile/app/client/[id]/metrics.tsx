@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useRef, useCallback, useState, useMemo } from 'react';
+import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus, Activity, ClipboardCheck, BarChart3, ChevronRight } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
@@ -10,6 +10,10 @@ import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
+import { SwipeableRow } from '@/components/ui/swipeable-row';
+import { SearchBar } from '@/components/ui/search-bar';
+import { removeMetric } from '@/services/client/client-metric-service';
+import { haptics } from '@/utils/haptics';
 
 export default function MetricsScreen() {
   const router = useRouter();
@@ -18,9 +22,43 @@ export default function MetricsScreen() {
   const { t } = useTranslations();
   const iconColor = themeColors.text;
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Get metrics from store (already loaded by parent screen)
   const metrics = useClientDetailStore((state) => state.metrics);
   const isLoadingMetrics = useClientDetailStore((state) => state.isLoadingMetrics);
+  const coachId = useClientDetailStore((state) => state.coachId);
+  const refreshSection = useClientDetailStore((state) => state.refreshSection);
+
+  // Filter metrics based on search query
+  const filteredMetrics = useMemo(() => {
+    if (!searchQuery.trim()) return metrics;
+    const query = searchQuery.toLowerCase();
+    return metrics.filter((metric) =>
+      metric.name.toLowerCase().includes(query) ||
+      metric.unit?.toLowerCase().includes(query) ||
+      metric.description?.toLowerCase().includes(query)
+    );
+  }, [metrics, searchQuery]);
+
+  // Track currently open swipeable row
+  const openRowCloseRef = useRef<(() => void) | null>(null);
+
+  const closeOpenRow = useCallback(() => {
+    if (openRowCloseRef.current) {
+      openRowCloseRef.current();
+      openRowCloseRef.current = null;
+    }
+  }, []);
+
+  const handleRowOpen = useCallback((close: () => void) => {
+    // Close any previously open row
+    if (openRowCloseRef.current && openRowCloseRef.current !== close) {
+      openRowCloseRef.current();
+    }
+    openRowCloseRef.current = close;
+  }, []);
 
   const handleBackPress = () => {
     router.back();
@@ -31,15 +69,31 @@ export default function MetricsScreen() {
   };
 
   const handleAddMetric = () => {
-    router.push(`/modals/library/add-metric-modal?clientId=${id}` as any);
+    router.push(`/modals/library/add-metric-modal?clientId=${id}&coachId=${coachId}` as any);
   };
 
   const handleLogMetric = () => {
     router.push(`/modals/client/log-metric-for-client-modal?clientId=${id}` as any);
   };
 
-  const handleMetricPress = (metricId: string) => {
+  const handleMetricPress = useCallback((metricId: string) => {
+    // If a row is open, just close it and prevent navigation
+    if (openRowCloseRef.current) {
+      closeOpenRow();
+      return;
+    }
     router.push(`/client/${id}/metric-detail?metricId=${metricId}` as any);
+  }, [closeOpenRow, router, id]);
+
+  const handleDeleteMetric = async (metric: typeof metrics[0]) => {
+    if (!coachId) return;
+    await removeMetric({
+      metricIds: [metric.assignment_id],
+      clientId: id,
+      coachId,
+    });
+    haptics.success();
+    refreshSection('metrics');
   };
 
   return (
@@ -82,86 +136,114 @@ export default function MetricsScreen() {
         </DropdownMenuWrapper>
       </View>
 
-      {/* Loading state */}
-      {isLoadingMetrics && metrics.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={themeColors.primary} />
-        </View>
-      ) : metrics.length === 0 ? (
-        /* Empty state */
-        <View style={styles.emptyContainer}>
-          <PlatformIcon
-            sf="chart.bar.fill"
-            IconComponent={BarChart3}
-            size={48}
-            color={themeColors.mutedText}
-          />
-          <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
-            {t('clientDetail.metrics.emptyTitle')}
-          </Text>
-          <Text style={[styles.emptyDescription, { color: themeColors.mutedText }]}>
-            {t('clientDetail.metrics.emptyDescription')}
-          </Text>
-        </View>
-      ) : (
-        /* Metrics list */
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardDismissMode="on-drag"
-        >
-          {metrics.map((metric, index) => {
-            const isLastItem = index === metrics.length - 1;
-            return (
-              <View key={metric.id || metric.assignment_id}>
-                <PressableScale onPress={() => handleMetricPress(metric.assignment_id || metric.id)}>
-                  <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
-                    <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
-                      <PlatformIcon
-                        sf="chart.bar.fill"
-                        IconComponent={Activity}
-                        size={24}
-                        color={themeColors.text}
+      {/* Search bar */}
+      <View style={styles.searchContainer}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={t('general.searchPlaceholder')}
+        />
+      </View>
+
+      <Pressable
+        style={styles.contentContainer}
+        onPress={() => {
+          if (openRowCloseRef.current) {
+            closeOpenRow();
+          }
+        }}
+      >
+        {/* Loading state */}
+        {isLoadingMetrics && metrics.length === 0 ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={themeColors.primary} />
+          </View>
+        ) : filteredMetrics.length === 0 ? (
+          /* Empty state */
+          <View style={styles.emptyContainer}>
+            <PlatformIcon
+              sf="chart.bar.fill"
+              IconComponent={BarChart3}
+              size={48}
+              color={themeColors.mutedText}
+            />
+            <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
+              {searchQuery.trim()
+                ? t('general.noResults')
+                : t('clientDetail.metrics.emptyTitle')}
+            </Text>
+            {!searchQuery.trim() && (
+              <Text style={[styles.emptyDescription, { color: themeColors.mutedText }]}>
+                {t('clientDetail.metrics.emptyDescription')}
+              </Text>
+            )}
+          </View>
+        ) : (
+          /* Metrics list */
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardDismissMode="on-drag"
+          >
+            {filteredMetrics.map((metric, index) => {
+              const isLastItem = index === filteredMetrics.length - 1;
+              return (
+                <View key={metric.id || metric.assignment_id}>
+                  <SwipeableRow
+                    onDelete={() => handleDeleteMetric(metric)}
+                    deleteConfirmTitle={`${t('general.delete')} ${metric.name}?`}
+                    onOpen={handleRowOpen}
+                  >
+                    <PressableScale onPress={() => handleMetricPress(metric.assignment_id || metric.id)}>
+                      <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
+                        <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                          <PlatformIcon
+                            sf="chart.bar.fill"
+                            IconComponent={Activity}
+                            size={24}
+                            color={themeColors.text}
+                          />
+                        </View>
+                        <View style={styles.textContent}>
+                          <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
+                            {metric.name}
+                          </Text>
+                          <View style={styles.metaRow}>
+                            <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                              {metric.unit}
+                            </Text>
+                            {metric.description && (
+                              <>
+                                <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                                <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
+                                  {metric.description}
+                                </Text>
+                              </>
+                            )}
+                          </View>
+                        </View>
+                        <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                      </View>
+                    </PressableScale>
+                  </SwipeableRow>
+                  {!isLastItem && (
+                    <View style={styles.separatorContainer}>
+                      <View
+                        style={[
+                          styles.separator,
+                          { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+                        ]}
                       />
                     </View>
-                    <View style={styles.textContent}>
-                      <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
-                        {metric.name}
-                      </Text>
-                      <View style={styles.metaRow}>
-                        <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                          {metric.unit}
-                        </Text>
-                        {metric.description && (
-                          <>
-                            <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                            <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
-                              {metric.description}
-                            </Text>
-                          </>
-                        )}
-                      </View>
-                    </View>
-                    <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-                  </View>
-                </PressableScale>
-                {!isLastItem && (
-                  <View style={styles.separatorContainer}>
-                    <View
-                      style={[
-                        styles.separator,
-                        { backgroundColor: themeColors.mutedText, opacity: 0.2 },
-                      ]}
-                    />
-                  </View>
-                )}
-                {isLastItem && <View style={{ height: 24 }} />}
-              </View>
-            );
-          })}
-        </ScrollView>
-      )}
+                  )}
+                  {isLastItem && <View style={{ height: 24 }} />}
+                </View>
+              );
+            })}
+          </ScrollView>
+        )}
+      </Pressable>
     </ScreenWrapper>
   );
 }
@@ -180,6 +262,13 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 8,
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  contentContainer: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -209,6 +298,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    flexGrow: 1,
     paddingBottom: 40,
   },
   rowContent: {

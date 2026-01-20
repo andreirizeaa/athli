@@ -46,6 +46,7 @@ export const ScreenWrapper = ({
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={[
+              { paddingBottom: insets.bottom },
               contentContainerStyle,
             ]}
             showsVerticalScrollIndicator={showsVerticalScrollIndicator}
