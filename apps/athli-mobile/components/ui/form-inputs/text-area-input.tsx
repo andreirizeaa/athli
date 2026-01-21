@@ -88,6 +88,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 4,
+    minHeight: 18,
   },
   labelLeft: {
     flexDirection: 'row',

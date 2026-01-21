@@ -351,8 +351,8 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen name="client/[id]/activity" options={{ headerShown: false }} />
+          <Stack.Screen name="client/[id]/bio" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/metrics" options={{ headerShown: false }} />
-          <Stack.Screen name="client/[id]/goals-injuries" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/notes" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/training" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/habits" options={{ headerShown: false }} />
@@ -785,6 +785,26 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="modals/client/assign-file-to-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/file-viewer-modal"
+            options={{
+              presentation: 'fullScreenModal',
+              headerShown: false,
+              animation: 'fade',
+            }}
+          />
+          <Stack.Screen
             name="modals/client/edit-log-modal"
             options={{
               presentation: 'modal',
@@ -838,6 +858,14 @@ function RootLayoutNav() {
                 animation: 'slide_from_bottom',
                 gestureDirection: 'vertical',
               }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/files/file-viewer-modal"
+            options={{
+              presentation: 'fullScreenModal',
+              headerShown: false,
+              animation: 'fade',
             }}
           />
           <Stack.Screen

@@ -25,6 +25,13 @@ export interface DeleteClientFilesData {
   coachId: string;
 }
 
+export interface UpdateClientFileData {
+  fileId: string;
+  filename: string;
+  clientId: string;
+  coachId: string;
+}
+
 export interface UploadClientFileData {
   fileUri: string;
   fileName?: string;
@@ -36,13 +43,35 @@ export interface UploadClientFileData {
 
 export interface ClientFile {
   id: string;
-  name: string;
+  // API returns different field names depending on source
+  name?: string;
+  filename?: string;
+  display_name?: string;
   mime_type: string;
   size: number;
   url?: string;
   created_at: string;
   tags?: string[];
+  file_path?: string;
+  bucket_id?: string;
+  client_id?: string;
+  coach_id?: string;
 }
+
+/**
+ * Get the display name for a client file
+ */
+export const getClientFileName = (file: ClientFile): string => {
+  return file.display_name || file.filename || file.name || 'Untitled';
+};
+
+/**
+ * Check if a file is an image or video (for thumbnail display)
+ */
+export const isMediaFile = (mimeType: string | null | undefined): boolean => {
+  if (!mimeType) return false;
+  return mimeType.startsWith('image/') || mimeType.startsWith('video/');
+};
 
 export interface FileWithUrl {
   id: string;
@@ -53,11 +82,17 @@ export interface FileWithUrl {
  * Add files to a client (from library)
  */
 export const addFilesToClient = async (data: AddFilesToClientData): Promise<void> => {
-  await apiFetch('/client/files', {
+  console.log('[addFilesToClient] Request:', {
+    fileIds: data.fileIds,
+    clientId: data.clientId,
+    coachId: data.coachId,
+  });
+  const response = await apiFetch('/client/files', {
     method: 'POST',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify({ fileIds: data.fileIds }),
   });
+  console.log('[addFilesToClient] Response:', response);
 };
 
 /**
@@ -83,9 +118,31 @@ export const deleteClientFiles = async (data: DeleteClientFilesData): Promise<vo
 };
 
 /**
+ * Update file metadata (filename)
+ */
+export const updateClientFile = async (data: UpdateClientFileData): Promise<ClientFile> => {
+  const response = await apiFetch<{ success: boolean; data: { file: ClientFile } }>(
+    `/client/files/${data.fileId}`,
+    {
+      method: 'PATCH',
+      headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+      body: JSON.stringify({ filename: data.filename }),
+    }
+  );
+  return response.data.file;
+};
+
+/**
  * Upload a file directly for a client
  */
 export const uploadClientFile = async (data: UploadClientFileData): Promise<ClientFile> => {
+  console.log('[uploadClientFile] Request:', {
+    fileName: data.fileName,
+    mimeType: data.mimeType,
+    clientId: data.clientId,
+    coachId: data.coachId,
+  });
+
   const formData = new FormData();
 
   const file = {
@@ -112,6 +169,7 @@ export const uploadClientFile = async (data: UploadClientFileData): Promise<Clie
     }
   );
 
+  console.log('[uploadClientFile] Response:', response);
   return response.data.file;
 };
 
@@ -183,13 +241,23 @@ export const shareClientFile = async (
  * Get all files assigned to a client
  */
 export const getClientFiles = async (clientId: string, coachId: string): Promise<ClientFile[]> => {
-  const response = await apiFetch<{ success: boolean; data: { files: ClientFile[] } }>(
+  console.log('[getClientFiles] Request:', { clientId, coachId });
+  const response = await apiFetch<{ success: boolean; data: { assignments: any[]; files?: any[] } }>(
     '/client/files',
     {
       headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
     }
   );
-  return response.data.files || [];
+  console.log('[getClientFiles] Response:', response);
+  // API returns 'assignments' not 'files', and uses camelCase 'fileName'
+  const assignments = response.data.assignments || response.data.files || [];
+  return assignments.map((f: any) => ({
+    ...f,
+    // Normalize field names - API uses camelCase fileName
+    name: f.display_name || f.fileName || f.filename || f.name,
+    filename: f.fileName || f.filename,
+    display_name: f.display_name || f.fileName || f.filename,
+  }));
 };
 
 /**

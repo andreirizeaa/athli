@@ -152,6 +152,7 @@ export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChar
                                     <DashPathEffect intervals={[6, 4]} />
                                 </SkiaLine>
                                 <Group clip={clipRect}>
+                                    {/* Green shadow for values above target */}
                                     <Area
                                         points={points.y}
                                         y0={referenceLineY}
@@ -161,11 +162,12 @@ export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChar
                                             start={vec(0, chartBounds.top)}
                                             end={vec(0, referenceLineY)}
                                             colors={[
-                                                hexToRgba(themeColors.primary, 0.3),
-                                                hexToRgba(themeColors.primary, 0),
+                                                hexToRgba('#22c55e', 0.35),
+                                                hexToRgba('#22c55e', 0),
                                             ]}
                                         />
                                     </Area>
+                                    {/* Red shadow for values below target */}
                                     <Area
                                         points={points.y}
                                         y0={referenceLineY}
@@ -175,17 +177,24 @@ export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChar
                                             start={vec(0, referenceLineY)}
                                             end={vec(0, chartBounds.bottom)}
                                             colors={[
-                                                hexToRgba(themeColors.primary, 0),
-                                                hexToRgba(themeColors.primary, 0.3),
+                                                hexToRgba('#ef4444', 0),
+                                                hexToRgba('#ef4444', 0.35),
                                             ]}
                                         />
                                     </Area>
                                     <Line
                                         points={points.y}
-                                        color={themeColors.primary}
+                                        color="white"
                                         strokeWidth={2.5}
                                         curveType="natural"
-                                    />
+                                    >
+                                        <LinearGradient
+                                            start={vec(0, chartBounds.top)}
+                                            end={vec(0, chartBounds.bottom)}
+                                            colors={['#22c55e', '#22c55e', '#ef4444', '#ef4444']}
+                                            positions={[0, 0.48, 0.52, 1]}
+                                        />
+                                    </Line>
                                 </Group>
                             </>
                         );

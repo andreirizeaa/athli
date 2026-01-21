@@ -42,6 +42,7 @@ export default function ClientHabitsScreen() {
 
   // Track currently open swipeable row
   const openRowCloseRef = useRef<(() => void) | null>(null);
+  const hadOpenRowRef = useRef(false);
 
   const closeOpenRow = useCallback(() => {
     if (openRowCloseRef.current) {
@@ -75,6 +76,11 @@ export default function ClientHabitsScreen() {
   };
 
   const handleHabitPress = useCallback((habitId: string) => {
+    // If a row was just closed, prevent navigation
+    if (hadOpenRowRef.current) {
+      hadOpenRowRef.current = false;
+      return;
+    }
     // If a row is open, just close it and prevent navigation
     if (openRowCloseRef.current) {
       closeOpenRow();
@@ -95,8 +101,9 @@ export default function ClientHabitsScreen() {
   };
 
   return (
-    <ScreenWrapper>
-      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+    <ScreenWrapper scrollable={false}>
+      <View style={styles.container}>
+        <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton
           icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}
@@ -145,9 +152,12 @@ export default function ClientHabitsScreen() {
 
       <Pressable
         style={styles.contentContainer}
-        onPress={() => {
+        onPressIn={() => {
           if (openRowCloseRef.current) {
+            hadOpenRowRef.current = true;
             closeOpenRow();
+          } else {
+            hadOpenRowRef.current = false;
           }
         }}
       >
@@ -178,6 +188,7 @@ export default function ClientHabitsScreen() {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="on-drag"
+            bounces={false}
           >
             {filteredHabits.map((habit, index) => {
               const isLastItem = index === filteredHabits.length - 1;
@@ -233,11 +244,15 @@ export default function ClientHabitsScreen() {
           </ScrollView>
         )}
       </Pressable>
+      </View>
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

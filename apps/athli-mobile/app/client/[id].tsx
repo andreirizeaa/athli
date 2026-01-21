@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -19,6 +19,7 @@ import {
   Heart,
   Pencil,
   Sparkles,
+  MessageCircle,
 } from 'lucide-react-native';
 
 import { PressableScale, PressableOpacity } from 'pressto';
@@ -30,6 +31,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { Separator } from '@/components/ui/separator';
+import { createNewChat } from '@/services/chats-service';
 
 type MenuItem = {
   id: string;
@@ -57,6 +59,9 @@ export default function ClientProfileScreen() {
 
   const iconColor = themeColors.text;
 
+  // Loading state for message button
+  const [isLoadingChat, setIsLoadingChat] = useState(false);
+
   // Load client data when screen mounts or id changes
   useEffect(() => {
     if (id) {
@@ -67,6 +72,32 @@ export default function ClientProfileScreen() {
   const handleBackPress = () => {
     haptics.medium();
     router.back();
+  };
+
+  const handleMessagePress = async () => {
+    if (isLoadingChat || !id) return;
+
+    haptics.medium();
+    setIsLoadingChat(true);
+
+    try {
+      const chat = await createNewChat(id, {
+        clientName: client?.name,
+        clientAvatar: client?.avatarUrl,
+      });
+
+      router.push({
+        pathname: '/chats/[id]',
+        params: {
+          id: chat.id,
+          chat: JSON.stringify(chat),
+        },
+      });
+    } catch (error) {
+      console.error('[ClientProfile] Error loading chat:', error);
+    } finally {
+      setIsLoadingChat(false);
+    }
   };
 
   const handleAssistantPress = () => {
@@ -240,12 +271,21 @@ export default function ClientProfileScreen() {
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>
           {t('clientDetail.profile')}
         </Text>
-        <IconButton
-          icon={{ sf: 'sparkles', IconComponent: Sparkles }}
-          onPress={handleAssistantPress}
-          size="md"
-          color={iconColor}
-        />
+        <View style={styles.headerRight}>
+          <IconButton
+            icon={{ sf: 'bubble.left', IconComponent: MessageCircle }}
+            onPress={handleMessagePress}
+            size="md"
+            color={iconColor}
+            loading={isLoadingChat}
+          />
+          <IconButton
+            icon={{ sf: 'sparkles', IconComponent: Sparkles }}
+            onPress={handleAssistantPress}
+            size="md"
+            color={iconColor}
+          />
+        </View>
       </View>
 
       {/* Profile Card */}
@@ -322,14 +362,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
+    gap: 8,
   },
   headerTitle: {
     ...typography.h5,
     flex: 1,
-    textAlign: 'center',
   },
   headerPlaceholder: {
     width: 44,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   loadingContainer: {
     flex: 1,

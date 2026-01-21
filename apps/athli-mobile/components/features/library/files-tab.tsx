@@ -1,10 +1,10 @@
 import React, { useCallback, useMemo, useRef } from 'react';
-import { StyleSheet, Text, View, Alert } from 'react-native';
-import { ChevronRight, FileText, Image as ImageIcon, Video as VideoIcon, Play, UserPlus, Trash2 } from 'lucide-react-native';
+import { StyleSheet, Text, View, Alert, ActivityIndicator } from 'react-native';
+import { FileText, File, Play, UserPlus, Trash2, Pencil } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { FlashList } from '@shopify/flash-list';
 
@@ -17,7 +17,7 @@ import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
 import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
-import { getAllFiles, getFileTypeFromMime, deleteFile } from '@/services/coach/coach-file-service';
+import { getAllFiles, getFileTypeFromMime, getFileUrl, deleteFile } from '@/services/coach/coach-file-service';
 import { EmptyState } from '@/components/ui/empty-state';
 
 export const FilesTab = () => {
@@ -116,48 +116,38 @@ export const FilesTab = () => {
     }
 
     closeOpenRow();
+    // Open file viewer
     router.push({
-      pathname: '/modals/files/add-file-modal',
+      pathname: '/modals/files/file-viewer-modal',
+      params: { fileId: item.id },
+    });
+  };
+
+  const handleEditFilename = (item: typeof filteredFiles[0]) => {
+    haptics.medium();
+    closeOpenRow();
+    router.push({
+      pathname: '/modals/files/edit-filename-modal',
       params: {
-        editingId: item.id,
-        name: item.filename,
-        type: getFileTypeFromMime(item.mime_type),
+        fileId: item.id,
+        currentName: item.filename,
       },
     });
   };
 
-  const handleThumbnailPress = async (item: typeof filteredFiles[0]) => {
-    // If a row is open, just close it and prevent navigation
-    if (isRowOpen) {
-      closeOpenRow();
-      return;
-    }
-
-    closeOpenRow();
-
-    // Get signed URL for preview
-    let uri = item.file_path;
-    if (thumbnailUrls[item.id]) {
-      uri = thumbnailUrls[item.id];
-    } else {
-      try {
-        const { url } = await import('@/services/coach/coach-file-service').then(m => m.getFileUrl(item.id));
-        uri = url;
-        setThumbnailUrls(prev => ({ ...prev, [item.id]: url }));
-      } catch (error) {
-        console.error('Failed to fetch file URL:', error);
-      }
-    }
-
-    router.push({
-      pathname: '/library/file-preview',
-      params: {
-        uri,
-        name: item.filename,
-        type: getFileTypeFromMime(item.mime_type),
-        mimeType: item.mime_type || '',
-      },
-    });
+  const handleDeleteWithConfirmation = (item: typeof filteredFiles[0]) => {
+    Alert.alert(
+      `${t('general.delete')} ${item.filename}?`,
+      t('library.deleteConfirmMessage'),
+      [
+        { text: t('general.cancel'), style: 'cancel' },
+        {
+          text: t('general.delete'),
+          style: 'destructive',
+          onPress: () => deleteMutation.mutateAsync(item.id),
+        },
+      ]
+    );
   };
 
   const handleAssign = (item: typeof filteredFiles[0]) => {
@@ -181,94 +171,107 @@ export const FilesTab = () => {
     });
   }, [queryClient]);
 
-  const formatSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  const formatSize = (bytes: number | null) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // Helper to get formatted file type label
-  const getFormattedFileTypeLabel = (mimeType: string | null | undefined): string => {
-    const fileType = getFileTypeFromMime(mimeType ?? null);
-    const labels: Record<string, string> = {
-      'image': 'Image',
-      'video': 'Video',
-      'pdf': 'PDF',
-      'document': 'Document',
-      'other': 'File',
-    };
-    return labels[fileType] || 'File';
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
   };
 
-  const [thumbnailUrls, setThumbnailUrls] = React.useState<Record<string, string>>({});
-  const [loadingThumbnails, setLoadingThumbnails] = React.useState<Record<string, boolean>>({});
-
-  // Fetch signed URLs for image/video thumbnails
-  React.useEffect(() => {
-    const fetchThumbnails = async () => {
-      for (const file of filteredFiles) {
-        const fileType = getFileTypeFromMime(file.mime_type);
-        if ((fileType === 'image' || fileType === 'video') && !thumbnailUrls[file.id] && !loadingThumbnails[file.id]) {
-          setLoadingThumbnails(prev => ({ ...prev, [file.id]: true }));
-          try {
-            const { url } = await import('@/services/coach/coach-file-service').then(m => m.getFileUrl(file.id));
-            setThumbnailUrls(prev => ({ ...prev, [file.id]: url }));
-          } catch (error) {
-            console.error('Failed to fetch thumbnail URL for file:', file.id, error);
-          } finally {
-            setLoadingThumbnails(prev => ({ ...prev, [file.id]: false }));
-          }
-        }
-      }
-    };
-
-    fetchThumbnails();
+  // Get files that need thumbnail URLs (images and videos only)
+  const filesNeedingThumbnails = useMemo(() => {
+    return filteredFiles.filter(file => {
+      const fileType = getFileTypeFromMime(file.mime_type);
+      return fileType === 'image' || fileType === 'video';
+    });
   }, [filteredFiles]);
+
+  // Fetch thumbnail URLs using React Query with caching (shared with assign modal)
+  const thumbnailQueries = useQueries({
+    queries: filesNeedingThumbnails.map(file => ({
+      queryKey: ['fileUrl', file.id],
+      queryFn: () => getFileUrl(file.id),
+      staleTime: 10 * 60 * 1000, // 10 minutes - signed URLs typically valid for 15-60 min
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+    })),
+  });
+
+  // Create a map of file ID to thumbnail URL
+  const thumbnailUrls = useMemo(() => {
+    const urlMap: Record<string, string> = {};
+    filesNeedingThumbnails.forEach((file, index) => {
+      const query = thumbnailQueries[index];
+      if (query?.data?.url) {
+        urlMap[file.id] = query.data.url;
+      }
+    });
+    return urlMap;
+  }, [filesNeedingThumbnails, thumbnailQueries]);
+
+  // Check if a thumbnail is loading
+  const loadingThumbnails = useMemo(() => {
+    const loadingMap: Record<string, boolean> = {};
+    filesNeedingThumbnails.forEach((file, index) => {
+      const query = thumbnailQueries[index];
+      loadingMap[file.id] = query?.isLoading || false;
+    });
+    return loadingMap;
+  }, [filesNeedingThumbnails, thumbnailQueries]);
 
   const renderThumbnail = (item: typeof filteredFiles[0]) => {
     const fileType = getFileTypeFromMime(item.mime_type);
-    if (fileType === 'image' || fileType === 'video') {
+    const isMedia = fileType === 'image' || fileType === 'video';
+    const isVideo = fileType === 'video';
+
+    if (isMedia) {
       const uri = thumbnailUrls[item.id];
       const isLoading = loadingThumbnails[item.id];
 
       if (isLoading || !uri) {
+        // Loading state - match client files
         return (
-          <View style={[styles.imageThumbnailContainer, { backgroundColor: themeColors.backgroundTertiary, justifyContent: 'center', alignItems: 'center' }]}>
-            <Text style={{ color: themeColors.mutedText, fontSize: 10 }}>...</Text>
+          <View style={[styles.thumbnailContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+            <ActivityIndicator size="small" color={themeColors.mutedText} />
           </View>
         );
       }
 
       return (
-        <View style={styles.imageThumbnailContainer}>
+        <View style={styles.thumbnailContainer}>
           <Image
             source={{ uri }}
             style={styles.thumbnailImage}
             contentFit="cover"
             transition={200}
           />
-          {fileType === 'video' && (
+          {isVideo && (
             <View style={styles.playOverlay}>
-              <Play {...({ color: "#FFFFFF", size: 12 } as any)} />
+              <Play {...({ color: "#FFFFFF", size: 16 } as any)} />
             </View>
           )}
         </View>
       );
     }
 
-    // Fallback icons for pdf and other types
-    const IconComponent = fileType === 'pdf' ? FileText : FileText;
-    const sf = fileType === 'pdf' ? 'doc.text' : 'doc.text';
-
+    // Fallback icon for pdf and other types - match client files styling
+    const isPdf = fileType === 'pdf';
     return (
-      <View style={[styles.iconThumbnailContainer, { backgroundColor: themeColors.backgroundTertiary }]}>
+      <View style={[styles.fileIconContainer, { backgroundColor: `${themeColors.primary}15` }]}>
         <PlatformIcon
-          sf={sf}
-          IconComponent={IconComponent}
-          size={20}
-          color={themeColors.text}
+          sf="doc.text"
+          IconComponent={isPdf ? FileText : File}
+          size={24}
+          color={themeColors.primary}
         />
       </View>
     );
@@ -278,67 +281,55 @@ export const FilesTab = () => {
     const isLastItem = index === filteredFiles.length - 1;
     const dropdownOptions: DropdownMenuOption[] = [
       {
+        label: t('clientDetail.files.editFilename'),
+        icon: { sf: 'pencil', IconComponent: Pencil },
+        onPress: () => handleEditFilename(item),
+      },
+      {
         label: t('general.assign'),
         icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
         onPress: () => handleAssign(item),
       },
       {
-        label: `${t('general.delete')} File`,
+        label: t('general.delete'),
         icon: { sf: 'trash', IconComponent: Trash2 },
         destructive: true,
-        onPress: () => deleteMutation.mutateAsync(item.id),
+        onPress: () => handleDeleteWithConfirmation(item),
       }
     ];
 
     return (
-      <View>
-        <SwipeableRow
-          onDelete={() => deleteMutation.mutateAsync(item.id)}
-          onOpen={registerOpenRow}
-          deleteConfirmTitle={`${t('general.delete')} ${item.filename}?`}
-        >
-          <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
-            <View style={styles.rowWrapper}>
-              <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
-
-                {/* Thumbnail - Pressable separately */}
-                <PressableScale
-                  onPress={() => handleThumbnailPress(item)}
-                  style={styles.thumbnailWrapper}
-                >
-                  {renderThumbnail(item)}
-                </PressableScale>
-
-                {/* REST of row - Pressable for Edit */}
-                <PressableScale
-                  style={styles.mainContentPressable}
-                  onPress={() => handleFilePress(item)}
-                >
-                  <View style={styles.textContent}>
-                    <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
-                      {item.filename}
-                    </Text>
-                    <View style={styles.metaRow}>
-                      <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                        {getFormattedFileTypeLabel(item.mime_type)}
+      <View key={item.id}>
+        <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
+          <SwipeableRow
+            onDelete={() => deleteMutation.mutateAsync(item.id)}
+            onOpen={registerOpenRow}
+            deleteConfirmTitle={`${t('general.delete')} ${item.filename}?`}
+          >
+            <PressableScale onPress={() => handleFilePress(item)}>
+              <View style={[styles.fileItem, { backgroundColor: themeColors.backgroundPrimary }]}>
+                {renderThumbnail(item)}
+                <View style={styles.fileInfo}>
+                  <Text style={[styles.fileName, { color: themeColors.text }]} numberOfLines={1}>
+                    {item.filename}
+                  </Text>
+                  <View style={styles.fileMeta}>
+                    {item.size && (
+                      <Text style={[styles.fileSize, { color: themeColors.mutedText }]}>
+                        {formatSize(item.size)}
                       </Text>
-                      {item.size && (
-                        <>
-                          <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                          <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                            {formatSize(item.size)}
-                          </Text>
-                        </>
-                      )}
-                    </View>
+                    )}
+                    {item.created_at && (
+                      <Text style={[styles.fileDate, { color: themeColors.mutedText }]}>
+                        {formatDate(item.created_at)}
+                      </Text>
+                    )}
                   </View>
-                  <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-                </PressableScale>
+                </View>
               </View>
-            </View>
-          </ContextMenuWrapper>
-        </SwipeableRow>
-
+            </PressableScale>
+          </SwipeableRow>
+        </ContextMenuWrapper>
         {!isLastItem && (
           <View style={styles.separatorContainer}>
             <View
@@ -349,11 +340,10 @@ export const FilesTab = () => {
             />
           </View>
         )}
-
         {isLastItem && <View style={{ height: 24 }} />}
       </View>
     );
-  }, [filteredFiles.length, themeColors, t, deleteMutation, registerOpenRow, handleThumbnailPress, handleFilePress, handleAssign, renderThumbnail, formatSize, getFormattedFileTypeLabel]);
+  }, [filteredFiles.length, themeColors, t, registerOpenRow, handleFilePress, handleAssign, handleEditFilename, handleDeleteWithConfirmation, handleLongPress, deleteMutation, renderThumbnail, formatSize, formatDate]);
 
   return (
     <FlashList
@@ -374,27 +364,28 @@ export const FilesTab = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  rowWrapper: {
-    width: '100%',
-  },
-  rowContent: {
+  fileItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 16,
     paddingHorizontal: 16,
+    gap: 12,
   },
-  thumbnailWrapper: {
-    marginRight: 12,
+  fileIconContainer: {
+    width: 58,
+    height: 58,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  imageThumbnailContainer: {
+  thumbnailContainer: {
     width: 58,
     height: 58,
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#E0E0E0',
+    alignItems: 'center',
+    justifyContent: 'center',
     position: 'relative',
   },
   thumbnailImage: {
@@ -411,36 +402,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconThumbnailContainer: {
-    width: 58,
-    height: 58,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mainContentPressable: {
+  fileInfo: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    gap: 4,
   },
-  textContent: {
-    flex: 1,
-    marginRight: 8,
-  },
-  name: {
+  fileName: {
     ...typography.p1,
-    fontWeight: '600',
-    marginBottom: 4,
+    fontWeight: '500',
   },
-  metaRow: {
+  fileMeta: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
-  metaText: {
+  fileSize: {
     ...typography.p3,
   },
-  metaDot: {
-    marginHorizontal: 6,
+  fileDate: {
     ...typography.p3,
   },
   separatorContainer: {
@@ -449,30 +427,5 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 48,
-  },
-  emptyText: {
-    ...typography.p2,
-    textAlign: 'center',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  loadingText: {
-    ...typography.p2,
-    marginTop: 12,
-  },
-  errorText: {
-    ...typography.p2,
-    textAlign: 'center',
-    paddingHorizontal: 32,
   },
 });

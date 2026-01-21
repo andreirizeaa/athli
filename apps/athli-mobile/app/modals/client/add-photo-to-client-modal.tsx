@@ -1,22 +1,75 @@
-import React, { useCallback } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
+import { Platform, StyleSheet, Text, View, Alert, Dimensions } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check } from 'lucide-react-native';
+import { X, Check, Camera, AlertTriangle } from 'lucide-react-native';
+import { PressableOpacity } from 'pressto';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference, useColorScheme } from '@/stores';
-import { useTranslations } from '@/stores';
+import { haptics } from '@/utils/haptics';
+import { useThemePreference } from '@/stores';
+import { useTranslations, useClientDetailStore, useModalCallbacks } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
+import { SelectionInput } from '@/components/ui/form-inputs';
 import { hexToRgba } from '@/utils/colorUtils';
+import { addClientPhotos, checkExistingPhotos } from '@/services/client/client-photo-service';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const THUMBNAIL_SIZE = (SCREEN_WIDTH - 32 - 16 * 2) / 3;
+
+type PhotoAngle = 'front' | 'back' | 'side';
 
 export default function AddPhotoToClientModal() {
     const router = useRouter();
+    const { clientId } = useLocalSearchParams<{ clientId: string }>();
     const { colors: themeColors } = useThemePreference();
-    const colorScheme = useColorScheme();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
+    const { setDateSelectCallback } = useModalCallbacks();
+
+    const [date, setDate] = useState<Date>(new Date());
+    const [frontUri, setFrontUri] = useState<string | null>(null);
+    const [backUri, setBackUri] = useState<string | null>(null);
+    const [sideUri, setSideUri] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [existingAngles, setExistingAngles] = useState<PhotoAngle[]>([]);
+
+    const coachId = useClientDetailStore((state) => state.coachId);
+    const refreshSection = useClientDetailStore((state) => state.refreshSection);
+
+    const hasChanges = !!(frontUri || backUri || sideUri);
+    const canSave = hasChanges && !isSaving;
+
+    // Check for existing photos on mount and when date changes
+    useEffect(() => {
+        const checkExisting = async () => {
+            if (!clientId || !coachId) return;
+            try {
+                const result = await checkExistingPhotos({
+                    clientId,
+                    coachId,
+                    date,
+                });
+                setExistingAngles(result.angles || []);
+            } catch {
+                setExistingAngles([]);
+            }
+        };
+        checkExisting();
+    }, [clientId, coachId, date]);
+
+    // Compute which selected angles have conflicts
+    const conflictingAngles = useMemo(() => {
+        const selected: PhotoAngle[] = [];
+        if (frontUri && existingAngles.includes('front')) selected.push('front');
+        if (backUri && existingAngles.includes('back')) selected.push('back');
+        if (sideUri && existingAngles.includes('side')) selected.push('side');
+        return selected;
+    }, [frontUri, backUri, sideUri, existingAngles]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -24,10 +77,212 @@ export default function AddPhotoToClientModal() {
         }
     }, [router]);
 
-    const handleSave = useCallback(() => {
-        // TODO: Implement save functionality
-        handleClose();
-    }, [handleClose]);
+    const handleCloseWithConfirmation = useCallback(() => {
+        if (hasChanges) {
+            Alert.alert(
+                t('common.discardChanges'),
+                t('common.discardChangesMessage'),
+                [
+                    {
+                        text: t('common.cancel'),
+                        style: 'cancel',
+                    },
+                    {
+                        text: t('common.discard'),
+                        style: 'destructive',
+                        onPress: handleClose,
+                    },
+                ]
+            );
+        } else {
+            handleClose();
+        }
+    }, [hasChanges, handleClose, t]);
+
+    const handleSave = useCallback(async () => {
+        if (!canSave || !clientId || !coachId) return;
+
+        setIsSaving(true);
+        try {
+            await addClientPhotos({
+                clientId,
+                coachId,
+                frontUri,
+                sideUri,
+                backUri,
+                recordedAt: date,
+            });
+            haptics.success();
+            await refreshSection('photos');
+            handleClose();
+        } catch (error) {
+            haptics.error();
+            Alert.alert(t('general.error'), t('general.errorSaving'), [{ text: t('general.ok') }]);
+        } finally {
+            setIsSaving(false);
+        }
+    }, [canSave, clientId, coachId, frontUri, sideUri, backUri, date, refreshSection, handleClose, t]);
+
+    const handleSelectDatePress = useCallback(() => {
+        setDateSelectCallback((newDate: Date) => {
+            setDate(newDate);
+        });
+        router.push({
+            pathname: '/modals/calendar/select-date-modal',
+            params: {
+                selectedDate: date.toISOString(),
+                allowFuture: 'false',
+            },
+        });
+    }, [router, setDateSelectCallback, date]);
+
+    const pickImage = useCallback(
+        async (angle: PhotoAngle, source: 'camera' | 'library') => {
+            const setUri =
+                angle === 'front' ? setFrontUri : angle === 'back' ? setBackUri : setSideUri;
+
+            if (source === 'camera') {
+                const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                if (status !== 'granted') {
+                    Alert.alert(
+                        t('general.permissionRequired'),
+                        t('general.cameraPermissionMessage'),
+                        [{ text: t('general.ok') }]
+                    );
+                    return;
+                }
+                const result = await ImagePicker.launchCameraAsync({
+                    allowsEditing: true,
+                    aspect: [1, 1],
+                    quality: 0.8,
+                });
+                if (!result.canceled && result.assets[0]) {
+                    setUri(result.assets[0].uri);
+                }
+            } else {
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                if (status !== 'granted') {
+                    Alert.alert(
+                        t('general.permissionRequired'),
+                        t('general.libraryPermissionMessage'),
+                        [{ text: t('general.ok') }]
+                    );
+                    return;
+                }
+                const result = await ImagePicker.launchImageLibraryAsync({
+                    allowsEditing: true,
+                    aspect: [1, 1],
+                    quality: 0.8,
+                });
+                if (!result.canceled && result.assets[0]) {
+                    setUri(result.assets[0].uri);
+                }
+            }
+        },
+        [t]
+    );
+
+    const handleThumbnailPress = useCallback(
+        (angle: PhotoAngle, hasImage: boolean) => {
+            if (hasImage) {
+                // Clear the image
+                if (angle === 'front') setFrontUri(null);
+                else if (angle === 'back') setBackUri(null);
+                else setSideUri(null);
+                return;
+            }
+
+            Alert.alert(t('clientDetail.addPhotoModal.selectSource'), undefined, [
+                {
+                    text: t('clientDetail.addPhotoModal.takePhoto'),
+                    onPress: () => pickImage(angle, 'camera'),
+                },
+                {
+                    text: t('clientDetail.addPhotoModal.chooseFromLibrary'),
+                    onPress: () => pickImage(angle, 'library'),
+                },
+                {
+                    text: t('general.cancel'),
+                    style: 'cancel',
+                },
+            ]);
+        },
+        [t, pickImage]
+    );
+
+    const formatDate = (d: Date) => {
+        return d.toLocaleDateString(undefined, {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+        });
+    };
+
+    const renderWarning = () => {
+        if (conflictingAngles.length === 0) return null;
+
+        const formattedDate = formatDate(date);
+        let message: string;
+
+        if (conflictingAngles.length === 1) {
+            message = t('clientDetail.addPhotoModal.photoExistsWarning', {
+                angle: t(`clientDetail.addPhotoModal.${conflictingAngles[0]}`).toLowerCase(),
+                date: formattedDate,
+            });
+        } else {
+            const angleLabels = conflictingAngles
+                .map((a) => t(`clientDetail.addPhotoModal.${a}`).toLowerCase())
+                .join(', ');
+            message = t('clientDetail.addPhotoModal.photosExistWarning', {
+                angles: angleLabels,
+                date: formattedDate,
+            });
+        }
+
+        return (
+            <View
+                style={[
+                    styles.warningContainer,
+                    { backgroundColor: hexToRgba('#F59E0B', 0.15) },
+                ]}
+            >
+                <AlertTriangle {...({ size: 18, color: '#F59E0B', style: styles.warningIcon } as any)} />
+                <Text style={[styles.warningText, { color: '#F59E0B' }]}>{message}</Text>
+            </View>
+        );
+    };
+
+    const renderThumbnail = (angle: PhotoAngle, uri: string | null, label: string) => {
+        return (
+            <View style={styles.thumbnailWrapper}>
+                <Text style={[styles.thumbnailLabel, { color: themeColors.mutedText }]}>
+                    {label}
+                </Text>
+                <PressableOpacity
+                    style={[
+                        styles.thumbnail,
+                        {
+                            backgroundColor: themeColors.surfacePrimary,
+                            borderColor: themeColors.border,
+                        },
+                        !uri && styles.thumbnailDotted,
+                    ]}
+                    onPress={() => handleThumbnailPress(angle, !!uri)}
+                >
+                    {uri ? (
+                        <Image source={{ uri }} style={styles.thumbnailImage} contentFit="cover" />
+                    ) : (
+                        <View style={styles.thumbnailPlaceholder}>
+                            <Camera {...({ size: 28, color: themeColors.mutedText } as any)} />
+                            <Text style={[styles.addLabel, { color: themeColors.mutedText }]}>
+                                {t('general.add')}
+                            </Text>
+                        </View>
+                    )}
+                </PressableOpacity>
+            </View>
+        );
+    };
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -57,7 +312,7 @@ export default function AddPhotoToClientModal() {
                 >
                     <IconButton
                         icon={{ sf: 'xmark', IconComponent: X }}
-                        onPress={handleClose}
+                        onPress={handleCloseWithConfirmation}
                         size="md"
                         color={themeColors.text}
                     />
@@ -68,17 +323,42 @@ export default function AddPhotoToClientModal() {
                         icon={{ sf: 'checkmark', IconComponent: Check }}
                         onPress={handleSave}
                         size="md"
-                        color={themeColors.text}
+                        variant={canSave ? 'primary' : 'default'}
+                        disabled={!canSave}
+                        loading={isSaving}
                     />
                 </View>
             </View>
 
             {/* Content */}
-            <View style={[styles.content, { paddingTop: headerHeight }]}>
-                <Text style={{ color: themeColors.mutedText }}>
-                    {t('clientDetail.addPhotoModal.placeholder')}
-                </Text>
-            </View>
+            <KeyboardAwareScrollView
+                style={styles.scrollView}
+                contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
+                keyboardShouldPersistTaps="handled"
+                bottomOffset={40}
+            >
+                <View style={styles.formSection}>
+                    <SelectionInput
+                        label={t('clientDetail.addPhotoModal.date')}
+                        value={formatDate(date)}
+                        onPress={handleSelectDatePress}
+                        placeholder={t('calendar.selectDate')}
+                        required
+                    />
+
+                    {renderWarning()}
+
+                    <View style={styles.thumbnailsRow}>
+                        {renderThumbnail(
+                            'front',
+                            frontUri,
+                            t('clientDetail.addPhotoModal.front')
+                        )}
+                        {renderThumbnail('back', backUri, t('clientDetail.addPhotoModal.back'))}
+                        {renderThumbnail('side', sideUri, t('clientDetail.addPhotoModal.side'))}
+                    </View>
+                </View>
+            </KeyboardAwareScrollView>
         </View>
     );
 }
@@ -112,11 +392,63 @@ const styles = StyleSheet.create({
         flex: 1,
         textAlign: 'center',
     },
-    content: {
+    scrollView: {
         flex: 1,
+    },
+    scrollContent: {
         paddingHorizontal: 16,
-        paddingTop: 16,
-        alignItems: 'center',
+        paddingBottom: 16,
+    },
+    formSection: {
+        gap: 16,
+    },
+    warningContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        padding: 12,
+        borderRadius: 8,
+    },
+    warningIcon: {
+        marginRight: 8,
+        marginTop: 2,
+    },
+    warningText: {
+        ...typography.p2,
+        flex: 1,
+    },
+    thumbnailsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 16,
+    },
+    thumbnailWrapper: {
+        alignItems: 'flex-start',
+        gap: 8,
+    },
+    thumbnailLabel: {
+        ...typography.p3,
+    },
+    thumbnail: {
+        width: THUMBNAIL_SIZE,
+        height: THUMBNAIL_SIZE,
+        borderRadius: 12,
+        borderWidth: 1,
         justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+    },
+    thumbnailDotted: {
+        borderStyle: 'dashed',
+    },
+    thumbnailPlaceholder: {
+        alignItems: 'center',
+        gap: 4,
+    },
+    addLabel: {
+        ...typography.p3,
+    },
+    thumbnailImage: {
+        width: '100%',
+        height: '100%',
     },
 });

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, Notebook, ChevronRight, ArrowUpDown } from 'lucide-react-native';
+import { ChevronLeft, Plus, Notebook, Share } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 
 import { typography } from '@/constants/typography';
@@ -110,7 +110,7 @@ export default function ClientNotesScreen() {
         </Text>
         <View style={styles.headerRight}>
           <IconButton
-            icon={{ sf: 'arrow.up.arrow.down', IconComponent: ArrowUpDown }}
+            icon={{ sf: 'square.and.arrow.up', IconComponent: Share }}
             onPress={handleToggleSort}
             size="md"
             color={iconColor}
@@ -180,11 +180,10 @@ export default function ClientNotesScreen() {
                         {note.body}
                       </Text>
                     ) : null}
-                    <Text style={[styles.noteDate, { color: themeColors.mutedText }]}>
-                      {formatDate(note.createdAt)}
-                    </Text>
                   </View>
-                  <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                  <Text style={[styles.noteDate, { color: themeColors.mutedText }]}>
+                    {formatDate(note.createdAt)}
+                  </Text>
                 </View>
               </PressableScale>
               <Separator />
@@ -208,12 +207,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...typography.h5,
     flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 8,
+    textAlign: 'left',
+    marginLeft: 8,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
   searchContainer: {
     paddingHorizontal: 16,
@@ -259,10 +259,12 @@ const styles = StyleSheet.create({
   noteContent: {
     flex: 1,
     gap: 4,
+    alignItems: 'flex-start',
   },
   noteTitle: {
     ...typography.p2,
     fontWeight: '500',
+    textAlign: 'left',
   },
   noteText: {
     ...typography.p3,

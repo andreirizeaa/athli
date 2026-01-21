@@ -71,7 +71,7 @@ export const SearchBar = ({
       {value.length > 0 && (
         <PressableOpacity
           style={styles.clearIcon}
-          onPress={handleClear}
+          onPressIn={handleClear}
         >
           <PlatformIcon
             sf="xmark.circle.fill"

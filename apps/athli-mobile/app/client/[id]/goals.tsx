@@ -1,20 +1,36 @@
-import React from 'react';
-import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
+import { StyleSheet, Text, View, ActivityIndicator, ScrollView, Alert, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus, ChevronRight, Target } from 'lucide-react-native';
 
-import { FlashList } from '@shopify/flash-list';
 import { PressableScale } from 'pressto';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
+import { useThemePreference, useTranslations, useClientDetailStore, useCoachProfileStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Separator } from '@/components/ui/separator';
 import { PlatformIcon } from '@/components/ui/platform-icon';
+import { SearchBar } from '@/components/ui/search-bar';
+import { SwipeableRow } from '@/components/ui/swipeable-row';
+import { saveAthleteGoals } from '@/services/client/client-service';
 import type { AthleteGoal } from '@/services/client/client-service';
+
+// Simple fuzzy search - checks if all characters appear in order
+const fuzzyMatch = (text: string, query: string): boolean => {
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  let queryIndex = 0;
+
+  for (let i = 0; i < lowerText.length && queryIndex < lowerQuery.length; i++) {
+    if (lowerText[i] === lowerQuery[queryIndex]) {
+      queryIndex++;
+    }
+  }
+
+  return queryIndex === lowerQuery.length;
+};
 
 export default function ClientGoalsScreen() {
   const router = useRouter();
@@ -26,6 +42,52 @@ export default function ClientGoalsScreen() {
   const goals = useClientDetailStore((state) => state.goals);
   const isLoading = useClientDetailStore((state) => state.isLoading);
   const refreshSection = useClientDetailStore((state) => state.refreshSection);
+  const coachProfile = useCoachProfileStore((state) => state.profile);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Swipe row management
+  const openRowRef = useRef<(() => void) | null>(null);
+  const hadOpenRowRef = useRef(false);
+
+  const closeOpenRow = useCallback(() => {
+    if (openRowRef.current) {
+      openRowRef.current();
+      openRowRef.current = null;
+    }
+  }, []);
+
+  const registerOpenRow = useCallback((closeRow: () => void) => {
+    if (openRowRef.current && openRowRef.current !== closeRow) {
+      openRowRef.current();
+    }
+    openRowRef.current = closeRow;
+  }, []);
+
+  // Filter goals based on search query
+  const filteredGoals = useMemo(() => {
+    if (!searchQuery.trim()) return goals;
+    return goals.filter((goal) => {
+      const matchesGoal = fuzzyMatch(goal.goal, searchQuery);
+      const matchesDate = goal.target_date ? fuzzyMatch(goal.target_date, searchQuery) : false;
+      return matchesGoal || matchesDate;
+    });
+  }, [goals, searchQuery]);
+
+  const handleDeleteGoal = async (goalId: string) => {
+    if (!coachProfile?.id || !id) return;
+
+    try {
+      const remainingGoals = goals.filter((g) => g.id !== goalId);
+      await saveAthleteGoals(id, coachProfile.id, remainingGoals);
+      haptics.success();
+      refreshSection('goals');
+    } catch (error) {
+      haptics.error();
+      Alert.alert(t('general.error'), t('general.errorDeleting'));
+    }
+  };
 
   const iconColor = themeColors.text;
 
@@ -42,13 +104,23 @@ export default function ClientGoalsScreen() {
     });
   };
 
-  const handleGoalPress = (goalId: string) => {
+  const handleGoalPress = useCallback((goalId: string) => {
+    // If a row was just closed, prevent navigation
+    if (hadOpenRowRef.current) {
+      hadOpenRowRef.current = false;
+      return;
+    }
+    // If a row is open, just close it and prevent navigation
+    if (openRowRef.current) {
+      closeOpenRow();
+      return;
+    }
     haptics.medium();
     router.push({
       pathname: '/modals/client/edit-client-goal-modal',
       params: { id, goalId },
     });
-  };
+  }, [closeOpenRow, router, id]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -59,41 +131,57 @@ export default function ClientGoalsScreen() {
     });
   };
 
-  const renderGoal = ({ item, index }: { item: AthleteGoal; index: number }) => (
+  const renderGoal = useCallback(({ item, index, isLastItem }: { item: AthleteGoal; index: number; isLastItem: boolean }) => (
     <View>
-      {index > 0 && <Separator style={styles.separator} />}
-      <PressableScale onPress={() => handleGoalPress(item.id)}>
-        <View style={styles.goalItem}>
-          <View style={[styles.goalIconContainer, { backgroundColor: item.achieved ? `${themeColors.success}15` : `${themeColors.primary}15` }]}>
-            <PlatformIcon
-              sf="target"
-              IconComponent={Target}
-              size={20}
-              color={item.achieved ? themeColors.success : themeColors.primary}
-            />
-          </View>
-          <View style={styles.goalContent}>
-            <Text
-              style={[
-                styles.goalTitle,
-                { color: themeColors.text },
-                item.achieved && styles.goalTitleAchieved,
-              ]}
-              numberOfLines={2}
-            >
-              {item.goal}
-            </Text>
-            {item.target_date && (
-              <Text style={[styles.goalDate, { color: themeColors.mutedText }]}>
-                {formatDate(item.target_date)}
+      <SwipeableRow
+        onDelete={() => handleDeleteGoal(item.id)}
+        onOpen={registerOpenRow}
+        deleteConfirmTitle={`${t('general.delete')}?`}
+      >
+        <PressableScale onPress={() => handleGoalPress(item.id)}>
+          <View style={[styles.goalItem, { backgroundColor: themeColors.backgroundPrimary }]}>
+            <View style={[styles.goalIconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+              <PlatformIcon
+                sf="target"
+                IconComponent={Target}
+                size={24}
+                color={item.achieved ? themeColors.success : themeColors.text}
+              />
+            </View>
+            <View style={styles.goalContent}>
+              <Text
+                style={[
+                  styles.goalTitle,
+                  { color: themeColors.text },
+                  item.achieved && styles.goalTitleAchieved,
+                ]}
+                numberOfLines={2}
+              >
+                {item.goal}
               </Text>
-            )}
+              {item.target_date && (
+                <Text style={[styles.goalDate, { color: themeColors.mutedText }]}>
+                  {formatDate(item.target_date)}
+                </Text>
+              )}
+            </View>
+            <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
           </View>
-          <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+        </PressableScale>
+      </SwipeableRow>
+      {!isLastItem && (
+        <View style={styles.separatorContainer}>
+          <View
+            style={[
+              styles.separator,
+              { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+            ]}
+          />
         </View>
-      </PressableScale>
+      )}
+      {isLastItem && <View style={{ height: 24 }} />}
     </View>
-  );
+  ), [themeColors, handleGoalPress, handleDeleteGoal, registerOpenRow, formatDate, t]);
 
   // Loading state
   if (isLoading && goals.length === 0) {
@@ -140,15 +228,53 @@ export default function ClientGoalsScreen() {
           />
         </View>
 
+        {/* Search bar */}
+        <View style={styles.searchContainer}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('general.searchPlaceholder')}
+          />
+        </View>
+
         {/* Goals List */}
-        <FlashList
-          data={goals}
-          renderItem={renderGoal}
-          keyExtractor={(item) => item.id}
-          ListEmptyComponent={<EmptyState message={t('clientDetail.overview.noGoals')} />}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
+        <Pressable
+          style={styles.contentContainer}
+          onPressIn={() => {
+            if (openRowRef.current) {
+              hadOpenRowRef.current = true;
+              closeOpenRow();
+            } else {
+              hadOpenRowRef.current = false;
+            }
+          }}
+        >
+          {filteredGoals.length === 0 && searchQuery.trim() ? (
+            <View style={styles.emptyContainer}>
+              <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
+                {t('general.noResults')}
+              </Text>
+            </View>
+          ) : filteredGoals.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <EmptyState message={t('clientDetail.overview.noGoals')} />
+            </View>
+          ) : (
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardDismissMode="on-drag"
+              bounces={false}
+            >
+              {filteredGoals.map((item, index) => (
+                <View key={item.id}>
+                  {renderGoal({ item, index, isLastItem: index === filteredGoals.length - 1 })}
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </Pressable>
       </View>
     </ScreenWrapper>
   );
@@ -174,29 +300,49 @@ const styles = StyleSheet.create({
   headerPlaceholder: {
     width: 44,
   },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  contentContainer: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  listContent: {
-    paddingHorizontal: 0,
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    ...typography.p2,
+    textAlign: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
     paddingBottom: 40,
   },
   goalItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     gap: 12,
   },
   goalIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 58,
+    height: 58,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
   goalContent: {
     flex: 1,
@@ -214,7 +360,11 @@ const styles = StyleSheet.create({
   goalDate: {
     ...typography.p4,
   },
+  separatorContainer: {
+    paddingLeft: 86,
+    paddingRight: 16,
+  },
   separator: {
-    marginHorizontal: 16,
+    height: 1,
   },
 });

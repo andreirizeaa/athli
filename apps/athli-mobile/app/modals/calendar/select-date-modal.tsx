@@ -6,12 +6,12 @@ import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager
 import { Storage } from '@/lib/storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useModalCallbacks } from '@/stores';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 
 const DEFAULT_STORAGE_KEY = '@select_date_modal_selected_date';
 
@@ -24,20 +24,24 @@ type MonthData = {
 };
 
 const MONTH_NAMES_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_NAMES_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-// Only generate 2 years of months (1 year back, current, 1 year forward) = 36 months
+const START_YEAR = 2010;
+const END_YEAR = 2030;
+
+// Generate months from START_YEAR to END_YEAR
 const generateMonths = (allowFuture: boolean): MonthData[] => {
   const months: MonthData[] = [];
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth();
 
-  const startYear = currentYear - 1;
-  const endYear = allowFuture ? currentYear + 1 : currentYear;
-
-  for (let year = startYear; year <= endYear; year++) {
+  for (let year = START_YEAR; year <= END_YEAR; year++) {
     for (let month = 0; month <= 11; month++) {
       if (!allowFuture && year === currentYear && month > currentMonth) {
+        break;
+      }
+      if (!allowFuture && year > currentYear) {
         break;
       }
       months.push({ year, month, id: `${year}-${month}` });
@@ -292,13 +296,72 @@ export default function SelectDateModal() {
 
   const [selectedDate, setSelectedDate] = useState<Date>(initialSelectedDate);
 
-  const currentMonthTitle = useMemo(() => {
-    const monthData = monthsData[currentPageIndex];
-    if (monthData) {
-      return `${MONTH_NAMES_SHORT[monthData.month]} ${monthData.year}`;
-    }
-    return '';
+  const currentMonthData = useMemo(() => {
+    return monthsData[currentPageIndex] || { month: 0, year: new Date().getFullYear() };
   }, [currentPageIndex, monthsData]);
+
+  // Generate month dropdown options
+  const monthOptions = useMemo((): DropdownMenuOption[] => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    return MONTH_NAMES_FULL.map((name, index) => {
+      // If not allowing future dates and we're in the current year, disable future months
+      const isDisabled = !allowFuture &&
+        currentMonthData.year === currentYear &&
+        index > currentMonth;
+
+      if (isDisabled) return null;
+
+      return {
+        label: name,
+        onPress: () => {
+          const targetIndex = monthsData.findIndex(
+            (m) => m.year === currentMonthData.year && m.month === index
+          );
+          if (targetIndex >= 0 && targetIndex !== currentPageIndex) {
+            haptics.medium();
+            pagerRef.current?.setPage(targetIndex);
+          }
+        },
+      };
+    }).filter(Boolean) as DropdownMenuOption[];
+  }, [currentMonthData, monthsData, currentPageIndex, allowFuture]);
+
+  // Generate year dropdown options
+  const yearOptions = useMemo((): DropdownMenuOption[] => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const years: DropdownMenuOption[] = [];
+
+    const endYear = allowFuture ? END_YEAR : currentYear;
+
+    for (let year = START_YEAR; year <= endYear; year++) {
+      years.push({
+        label: String(year),
+        onPress: () => {
+          // Find the target month in the new year (same month if possible)
+          let targetMonth = currentMonthData.month;
+
+          // If switching to current year and current month is in the future, use current month
+          if (!allowFuture && year === currentYear && targetMonth > now.getMonth()) {
+            targetMonth = now.getMonth();
+          }
+
+          const targetIndex = monthsData.findIndex(
+            (m) => m.year === year && m.month === targetMonth
+          );
+          if (targetIndex >= 0 && targetIndex !== currentPageIndex) {
+            haptics.medium();
+            pagerRef.current?.setPage(targetIndex);
+          }
+        },
+      });
+    }
+
+    return years;
+  }, [currentMonthData, monthsData, currentPageIndex, allowFuture]);
 
   const handlePageSelected = useCallback((event: PagerViewOnPageSelectedEvent) => {
     const index = event.nativeEvent.position;
@@ -340,12 +403,28 @@ export default function SelectDateModal() {
     <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary, paddingBottom: 200 }]}>
       <View style={styles.header}>
         <View style={styles.headerSideLeft} />
-        <Text style={[styles.title, { color: themeColors.text }]} pointerEvents="none">
-          {currentMonthTitle}
-        </Text>
+        <View style={styles.titleContainer}>
+          <DropdownMenuWrapper options={monthOptions}>
+            <View style={styles.dropdownButton}>
+              <Text style={[styles.title, { color: themeColors.text }]}>
+                {MONTH_NAMES_FULL[currentMonthData.month]}
+              </Text>
+              <View style={[styles.titleUnderline, { backgroundColor: themeColors.text }]} />
+            </View>
+          </DropdownMenuWrapper>
+          <View style={styles.titleGap} />
+          <DropdownMenuWrapper options={yearOptions}>
+            <View style={styles.dropdownButton}>
+              <Text style={[styles.title, { color: themeColors.text }]}>
+                {currentMonthData.year}
+              </Text>
+              <View style={[styles.titleUnderline, { backgroundColor: themeColors.text }]} />
+            </View>
+          </DropdownMenuWrapper>
+        </View>
         <View style={styles.headerSideRight}>
           <PressableOpacity
-            style={[styles.todayButton, { backgroundColor: themeColors.backgroundSecondary }]}
+            style={[styles.todayButton, { backgroundColor: themeColors.surfacePrimary }]}
             onPress={handleSelectToday}
           >
             <Text style={[styles.todayButtonText, { color: themeColors.text }]}>{t('calendar.today')}</Text>
@@ -425,9 +504,26 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'flex-end',
   },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dropdownButton: {
+    alignItems: 'center',
+  },
   title: {
     ...typography.h6,
     textAlign: 'center',
+  },
+  titleUnderline: {
+    height: 1.5,
+    width: '100%',
+    marginTop: 2,
+    opacity: 0.5,
+  },
+  titleGap: {
+    width: 8,
   },
   todayButton: {
     height: 44,
