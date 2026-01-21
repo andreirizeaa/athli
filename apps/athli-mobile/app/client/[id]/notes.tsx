@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, Notebook, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, Plus, Notebook, ChevronRight, ArrowUpDown } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 
 import { typography } from '@/constants/typography';
@@ -11,6 +11,22 @@ import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { Separator } from '@/components/ui/separator';
+import { SearchBar } from '@/components/ui/search-bar';
+
+// Simple fuzzy search - checks if all characters appear in order
+const fuzzyMatch = (text: string, query: string): boolean => {
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  let queryIndex = 0;
+
+  for (let i = 0; i < lowerText.length && queryIndex < lowerQuery.length; i++) {
+    if (lowerText[i] === lowerQuery[queryIndex]) {
+      queryIndex++;
+    }
+  }
+
+  return queryIndex === lowerQuery.length;
+};
 
 export default function ClientNotesScreen() {
   const router = useRouter();
@@ -22,6 +38,37 @@ export default function ClientNotesScreen() {
   // Get notes from store (already loaded by parent screen)
   const notes = useClientDetailStore((state) => state.notes);
   const isLoadingNotes = useClientDetailStore((state) => state.isLoadingNotes);
+
+  // Sort and search state
+  const [sortNewestFirst, setSortNewestFirst] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter and sort notes
+  const filteredNotes = useMemo(() => {
+    let result = [...notes];
+
+    // Apply fuzzy search filter
+    if (searchQuery.trim()) {
+      result = result.filter((note) => {
+        const matchesTitle = fuzzyMatch(note.title, searchQuery);
+        const matchesBody = note.body ? fuzzyMatch(note.body, searchQuery) : false;
+        return matchesTitle || matchesBody;
+      });
+    }
+
+    // Sort by date
+    result.sort((a, b) => {
+      const comparison = b.createdAt - a.createdAt;
+      return sortNewestFirst ? comparison : -comparison;
+    });
+
+    return result;
+  }, [notes, searchQuery, sortNewestFirst]);
+
+  const handleToggleSort = useCallback(() => {
+    haptics.medium();
+    setSortNewestFirst((prev) => !prev);
+  }, []);
 
   const handleBackPress = () => {
     haptics.medium();
@@ -61,13 +108,32 @@ export default function ClientNotesScreen() {
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>
           {t('clientDetail.sections.notes')}
         </Text>
-        <IconButton
-          icon={{ sf: 'plus', IconComponent: Plus }}
-          onPress={handleAddNote}
-          size="md"
-          color={iconColor}
-        />
+        <View style={styles.headerRight}>
+          <IconButton
+            icon={{ sf: 'arrow.up.arrow.down', IconComponent: ArrowUpDown }}
+            onPress={handleToggleSort}
+            size="md"
+            color={iconColor}
+          />
+          <IconButton
+            icon={{ sf: 'plus', IconComponent: Plus }}
+            onPress={handleAddNote}
+            size="md"
+            color={iconColor}
+          />
+        </View>
       </View>
+
+      {/* Search bar */}
+      {notes.length > 0 && (
+        <View style={styles.searchContainer}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('clientDetail.notes.searchPlaceholder')}
+          />
+        </View>
+      )}
 
       {/* Loading state */}
       {isLoadingNotes && notes.length === 0 ? (
@@ -85,6 +151,14 @@ export default function ClientNotesScreen() {
             {t('clientDetail.notes.emptyDescription')}
           </Text>
         </View>
+      ) : filteredNotes.length === 0 ? (
+        /* No results state */
+        <View style={styles.emptyContainer}>
+          <PlatformIcon sf="magnifyingglass" IconComponent={Notebook} size={48} color={themeColors.mutedText} />
+          <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
+            {t('clientDetail.notes.noResults')}
+          </Text>
+        </View>
       ) : (
         /* Notes list */
         <ScrollView
@@ -93,7 +167,7 @@ export default function ClientNotesScreen() {
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="on-drag"
         >
-          {notes.map((note) => (
+          {filteredNotes.map((note) => (
             <View key={note.id}>
               <PressableScale onPress={() => handleNotePress(note.id)}>
                 <View style={styles.noteItem}>
@@ -136,6 +210,14 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 8,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
   },
   loadingContainer: {
     flex: 1,

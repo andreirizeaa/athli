@@ -46,11 +46,12 @@ export default function EditNoteModal() {
     }, [existingNote]);
 
     const isFormValid = title.trim().length > 0;
+    const isEmpty = title.trim() === '';
     const hasChanges = existingNote && (
         title.trim() !== existingNote.title ||
         body.trim() !== (existingNote.body || '')
     );
-    const canSave = isFormValid && hasChanges && !isSubmitting && !isDeleting;
+    const canSave = (isFormValid && hasChanges && !isSubmitting && !isDeleting) || isEmpty;
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -60,6 +61,12 @@ export default function EditNoteModal() {
 
     const handleSave = useCallback(async () => {
         if (!canSave || !clientId || !coachId || !noteId) return;
+
+        // If title is empty, trigger delete instead
+        if (isEmpty) {
+            handleDelete();
+            return;
+        }
 
         setIsSubmitting(true);
         try {
@@ -83,7 +90,7 @@ export default function EditNoteModal() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [canSave, clientId, coachId, noteId, title, body, refreshSection, handleClose, t]);
+    }, [canSave, clientId, coachId, noteId, title, body, refreshSection, handleClose, t, isEmpty, handleDelete]);
 
     const handleDelete = useCallback(() => {
         Alert.alert(
@@ -165,10 +172,9 @@ export default function EditNoteModal() {
                         icon={{ sf: 'checkmark', IconComponent: Check }}
                         onPress={handleSave}
                         size="md"
-                        color={themeColors.text}
-                        disabled={!canSave}
                         variant={canSave ? 'primary' : 'default'}
-                        loading={isSubmitting}
+                        disabled={!canSave}
+                        loading={isSubmitting || (isDeleting && isEmpty)}
                     />
                 </View>
             </View>
@@ -198,18 +204,14 @@ export default function EditNoteModal() {
                 />
 
                 {/* Delete button */}
-                <View style={styles.deleteSection}>
+                <View style={styles.deleteRow}>
                     <IconButton
                         icon={{ sf: 'trash', IconComponent: Trash2 }}
                         onPress={handleDelete}
                         size="md"
-                        color={themeColors.error}
-                        loading={isDeleting}
+                        color="#EF4444"
                         disabled={isSubmitting || isDeleting}
                     />
-                    <Text style={[styles.deleteText, { color: themeColors.error }]}>
-                        {t('general.delete')}
-                    </Text>
                 </View>
             </KeyboardAwareScrollView>
         </KeyboardAvoidingView>
@@ -253,15 +255,9 @@ const styles = StyleSheet.create({
         paddingBottom: 16,
         gap: 16,
     },
-    deleteSection: {
+    deleteRow: {
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 24,
-        gap: 8,
-    },
-    deleteText: {
-        ...typography.p2,
-        fontWeight: '500',
+        justifyContent: 'flex-start',
+        marginTop: 8,
     },
 });
