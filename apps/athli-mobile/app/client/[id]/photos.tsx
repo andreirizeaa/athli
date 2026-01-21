@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View, Dimensions, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -10,11 +10,21 @@ import { useThemePreference, useTranslations, useClientDetailStore } from '@/sto
 import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { PlatformIcon } from '@/components/ui/platform-icon';
+import type { ClientPhoto } from '@/services/client/client-photo-service';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const PHOTO_GAP = 4;
-const NUM_COLUMNS = 3;
-const PHOTO_SIZE = (SCREEN_WIDTH - 32 - PHOTO_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
+const THUMBNAIL_GAP = 12;
+const THUMBNAIL_SIZE = (SCREEN_WIDTH - 32 - THUMBNAIL_GAP * 2) / 3;
+
+type PhotoAngle = 'front' | 'back' | 'side';
+
+interface DayPhotos {
+  date: string;
+  dateKey: string;
+  front: ClientPhoto | null;
+  back: ClientPhoto | null;
+  side: ClientPhoto | null;
+}
 
 export default function ClientPhotosScreen() {
   const router = useRouter();
@@ -26,7 +36,6 @@ export default function ClientPhotosScreen() {
   // Get photos from store (already loaded by parent screen)
   const photos = useClientDetailStore((state) => state.photos);
   const isLoadingPhotos = useClientDetailStore((state) => state.isLoadingPhotos);
-  const refreshSection = useClientDetailStore((state) => state.refreshSection);
 
   const handleBackPress = () => {
     router.back();
@@ -40,38 +49,87 @@ export default function ClientPhotosScreen() {
     router.push(`/modals/client/photo-detail-modal?clientId=${id}&photoId=${photoId}` as any);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatDate = (date: Date) => {
     return date.toLocaleDateString(undefined, {
-      day: '2-digit',
+      day: 'numeric',
       month: 'short',
       year: 'numeric',
     });
   };
 
-  // Group photos by date
-  const groupedPhotos = photos.reduce(
-    (groups, photo) => {
-      const recordedAt = photo.recordedAt;
-      const createdAt = photo.createdAt;
-      const dateValue = recordedAt instanceof Date
-        ? recordedAt.toISOString()
-        : recordedAt
-          ? String(recordedAt)
-          : createdAt instanceof Date
-            ? createdAt.toISOString()
-            : createdAt
-              ? String(createdAt)
-              : '';
-      const date = formatDate(dateValue);
-      if (!groups[date]) {
-        groups[date] = [];
+  const getDateKey = (date: Date) => {
+    return date.toISOString().split('T')[0];
+  };
+
+  // Group photos by date with all 3 angles
+  const groupedByDay = useMemo(() => {
+    const dayMap = new Map<string, DayPhotos>();
+
+    photos.forEach((photo) => {
+      const recordedAt = photo.recordedAt instanceof Date
+        ? photo.recordedAt
+        : new Date(photo.recordedAt || photo.createdAt);
+
+      const dateKey = getDateKey(recordedAt);
+
+      if (!dayMap.has(dateKey)) {
+        dayMap.set(dateKey, {
+          date: formatDate(recordedAt),
+          dateKey,
+          front: null,
+          back: null,
+          side: null,
+        });
       }
-      groups[date].push(photo);
-      return groups;
-    },
-    {} as Record<string, typeof photos>
-  );
+
+      const day = dayMap.get(dateKey)!;
+      if (photo.type === 'front') day.front = photo;
+      else if (photo.type === 'back') day.back = photo;
+      else if (photo.type === 'side') day.side = photo;
+    });
+
+    // Sort by date descending (most recent first)
+    return Array.from(dayMap.values()).sort((a, b) =>
+      b.dateKey.localeCompare(a.dateKey)
+    );
+  }, [photos]);
+
+  const renderThumbnail = (photo: ClientPhoto | null, angle: PhotoAngle) => {
+    const label = t(`clientDetail.addPhotoModal.${angle}`);
+
+    if (photo) {
+      return (
+        <PressableScale key={`${angle}-${photo.id}`} onPress={() => handlePhotoPress(photo.id)}>
+          <View style={styles.thumbnailWrapper}>
+            <Image
+              source={{ uri: photo.url }}
+              style={styles.thumbnailImage}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+          </View>
+        </PressableScale>
+      );
+    }
+
+    return (
+      <View
+        key={`${angle}-empty`}
+        style={[
+          styles.thumbnailWrapper,
+          styles.thumbnailEmpty,
+          {
+            backgroundColor: themeColors.surfacePrimary,
+            borderColor: themeColors.border,
+          },
+        ]}
+      >
+        <Text style={[styles.emptyLabel, { color: themeColors.mutedText }]}>
+          {label}
+        </Text>
+      </View>
+    );
+  };
 
   return (
     <ScreenWrapper scrollable>
@@ -98,7 +156,7 @@ export default function ClientPhotosScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={themeColors.primary} />
         </View>
-      ) : photos.length === 0 ? (
+      ) : groupedByDay.length === 0 ? (
         /* Empty state */
         <View style={styles.emptyContainer}>
           <PlatformIcon sf="photo" IconComponent={ImageIcon} size={48} color={themeColors.mutedText} />
@@ -110,24 +168,17 @@ export default function ClientPhotosScreen() {
           </Text>
         </View>
       ) : (
-        /* Photo grid grouped by date */
+        /* Photo rows grouped by date */
         <View style={styles.content}>
-          {Object.entries(groupedPhotos).map(([date, datePhotos]) => (
-            <View key={date} style={styles.dateGroup}>
-              <Text style={[styles.dateHeader, { color: themeColors.text }]}>{date}</Text>
-              <View style={styles.photoGrid}>
-                {datePhotos.map((photo) => (
-                  <PressableScale key={photo.id} onPress={() => handlePhotoPress(photo.id)}>
-                    <View style={styles.photoWrapper}>
-                      <Image
-                        source={{ uri: photo.url }}
-                        style={styles.photoImage}
-                        contentFit="cover"
-                        cachePolicy="memory-disk"
-                      />
-                    </View>
-                  </PressableScale>
-                ))}
+          {groupedByDay.map((day) => (
+            <View key={day.dateKey} style={styles.dayRow}>
+              <Text style={[styles.dateLabel, { color: themeColors.text }]}>
+                {day.date}
+              </Text>
+              <View style={styles.thumbnailsRow}>
+                {renderThumbnail(day.front, 'front')}
+                {renderThumbnail(day.back, 'back')}
+                {renderThumbnail(day.side, 'side')}
               </View>
             </View>
           ))}
@@ -179,28 +230,37 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingBottom: 40,
+    gap: 24,
   },
-  dateGroup: {
-    marginBottom: 24,
+  dayRow: {
+    gap: 12,
   },
-  dateHeader: {
+  dateLabel: {
     ...typography.p2,
     fontWeight: '600',
-    marginBottom: 12,
   },
-  photoGrid: {
+  thumbnailsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: PHOTO_GAP,
+    justifyContent: 'center',
+    gap: THUMBNAIL_GAP,
   },
-  photoWrapper: {
-    width: PHOTO_SIZE,
-    height: PHOTO_SIZE,
-    borderRadius: 8,
+  thumbnailWrapper: {
+    width: THUMBNAIL_SIZE,
+    height: THUMBNAIL_SIZE,
+    borderRadius: 12,
     overflow: 'hidden',
   },
-  photoImage: {
+  thumbnailEmpty: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  thumbnailImage: {
     width: '100%',
     height: '100%',
+  },
+  emptyLabel: {
+    ...typography.p3,
   },
 });

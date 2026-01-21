@@ -38,6 +38,8 @@ export const en = {
     searchPlaceholder: 'Search',
     noResults: 'No results found',
     permissionRequired: 'Permission Required',
+    cameraPermissionMessage: 'Camera access is needed to take photos.',
+    libraryPermissionMessage: 'Photo library access is needed to select photos.',
     you: 'You',
     daily: 'Daily',
     weekly: 'Weekly',
@@ -832,7 +834,6 @@ export const en = {
       data: 'Data',
       forms: 'Forms',
       settingsTitle: 'Settings',
-      goalsAndInjuries: 'Goals & Injuries',
       trainingCalendar: 'Training Calendar',
     },
     notFound: 'Client Not Found',
@@ -896,7 +897,7 @@ export const en = {
       emptyTitle: 'No notes yet',
       emptyDescription: 'Notes and updates for this client will appear here',
       deleteConfirmation: 'Are you sure you want to delete this note?',
-      searchPlaceholder: 'Search notes...',
+      searchPlaceholder: 'Search',
       noResults: 'No notes found',
     },
     goals: {
@@ -916,6 +917,10 @@ export const en = {
     photos: {
       emptyTitle: 'No photos yet',
       emptyDescription: 'Progress photos for this client will appear here',
+      viewAll: 'All',
+      viewFront: 'Front',
+      viewBack: 'Back',
+      viewSide: 'Side',
     },
     checkIns: {
       emptyTitle: 'No check-ins assigned',
@@ -928,6 +933,11 @@ export const en = {
     files: {
       emptyTitle: 'No files uploaded yet',
       emptyDescription: 'Shared files and documents will appear here',
+      editFilename: 'Edit filename',
+      editFilenameTitle: 'Edit Filename',
+      filenamePlaceholder: 'Enter filename...',
+      filenameUpdated: 'Filename updated',
+      filenameUpdateError: 'Failed to update filename',
     },
     selectHabit: {
       title: 'Select Habit',
@@ -1009,7 +1019,15 @@ export const en = {
     },
     addPhotoModal: {
       title: 'Add Photo',
-      placeholder: 'Photo upload coming soon',
+      date: 'Date',
+      front: 'Front',
+      back: 'Back',
+      side: 'Side',
+      selectSource: 'Select Photo Source',
+      takePhoto: 'Take Photo',
+      chooseFromLibrary: 'Choose from Library',
+      photoExistsWarning: 'A {{angle}} photo already exists for {{date}}. If you proceed, it will be overwritten.',
+      photosExistWarning: 'Photos for {{angles}} already exist for {{date}}. If you proceed, they will be overwritten.',
     },
     addNoteModal: {
       title: 'Add Note',
@@ -1080,6 +1098,18 @@ export const en = {
       summary: 'Summary',
       clientFor: 'Client for',
       days: 'days',
+    },
+    bio: {
+      placeholder: 'Enter client bio...',
+      saved: 'Bio saved',
+    },
+    goals: {
+      searchPlaceholder: 'Search',
+      noResults: 'No goals found',
+    },
+    injuries: {
+      searchPlaceholder: 'Search',
+      noResults: 'No injuries found',
     },
     profile: 'Profile',
     editProfile: 'Edit Profile',

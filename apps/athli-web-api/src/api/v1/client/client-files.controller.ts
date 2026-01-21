@@ -285,6 +285,54 @@ export const clientFilesController = {
     },
 
     /**
+     * Update file metadata (filename)
+     */
+    updateFile: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id } = req.params;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+        const { filename } = req.body;
+
+        if (!coachIdHeader || coachIdHeader !== userId) return unauthorized(res, { message: 'Unauthorized' });
+        if (!clientIdHeader) return forbidden(res, { message: 'x-client-id required' });
+        if (!filename || typeof filename !== 'string') return res.status(400).json({ success: false, message: 'filename is required' });
+
+        const targetCoachId = coachIdHeader as string;
+        const targetClientId = clientIdHeader as string;
+
+        const supabase = getSupabaseClient();
+
+        // Verify file exists and belongs to this coach/client
+        const { data: existingFile, error: fetchError } = await supabase
+            .from('client_files')
+            .select('id')
+            .eq('id', id)
+            .eq('client_id', targetClientId)
+            .eq('coach_id', targetCoachId)
+            .single();
+
+        if (fetchError || !existingFile) {
+            return notFound(res, { message: 'File not found' });
+        }
+
+        // Update file metadata
+        const { data: updatedFile, error: updateError } = await supabase
+            .from('client_files')
+            .update({ filename: filename.trim(), display_name: filename.trim() })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (updateError) return res.status(500).json({ success: false, message: updateError.message });
+
+        success(res, {
+            message: 'File updated successfully',
+            data: { file: updatedFile },
+        });
+    },
+
+    /**
      * Upload a file directly for a client (Private)
      */
     uploadFile: async (req: Request, res: Response) => {

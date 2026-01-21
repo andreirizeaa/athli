@@ -5,14 +5,13 @@ import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check, BarChart3 } from 'lucide-react-native';
+import { X, Check, Activity } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
+import { useThemePreference, useTranslations, useClientDetailStore, useCoachProfileStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { SearchBar } from '@/components/ui/search-bar';
-import { Separator } from '@/components/ui/separator';
 import { hexToRgba } from '@/utils/colorUtils';
 import { fuzzyMatch } from '@/utils/searchUtils';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -30,18 +29,21 @@ export default function AssignMetricToClientModal() {
     const params = useLocalSearchParams<{ clientId: string }>();
     const clientId = params.clientId;
 
-    const coachId = useClientDetailStore((state) => state.coachId);
+    const coachProfile = useCoachProfileStore((state) => state.profile);
+    const coachId = coachProfile?.id;
     const refreshSection = useClientDetailStore((state) => state.refreshSection);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedMetricIds, setSelectedMetricIds] = useState<Set<string>>(new Set());
     const [isSaving, setIsSaving] = useState(false);
 
-    // Fetch coach's metrics from library
+    // Use same queryKey as library tabs - reads from existing cache, no new API call
     const { data: metrics = [] } = useQuery({
-        queryKey: ['coachMetrics'],
+        queryKey: ['metrics'],
         queryFn: getAllMetrics,
-        staleTime: 5 * 60 * 1000,
+        staleTime: Infinity, // Never consider data stale - library tab handles refresh
+        refetchOnMount: false, // Don't refetch when modal opens
+        refetchOnWindowFocus: false,
     });
 
     // Filter metrics based on search query
@@ -153,58 +155,73 @@ export default function AssignMetricToClientModal() {
                 <FlashList
                     data={filteredMetrics}
                     keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => {
+                    renderItem={({ item, index }) => {
                         const isSelected = selectedMetricIds.has(item.id);
+                        const isLastItem = index === filteredMetrics.length - 1;
 
                         return (
-                            <PressableOpacity
-                                onPress={() => handleMetricToggle(item.id)}
-                                style={styles.metricRow}
-                            >
-                                <View style={[styles.metricIconContainer, { backgroundColor: `${themeColors.primary}15` }]}>
-                                    <PlatformIcon
-                                        sf="chart.bar"
-                                        IconComponent={BarChart3}
-                                        size={20}
-                                        color={themeColors.primary}
-                                    />
-                                </View>
-                                <View style={styles.metricInfo}>
-                                    <Text
-                                        style={[styles.metricName, { color: themeColors.text }]}
-                                        numberOfLines={1}
-                                    >
-                                        {item.name}
-                                    </Text>
-                                    {item.description && (
+                            <View>
+                                <PressableOpacity
+                                    onPress={() => handleMetricToggle(item.id)}
+                                    style={styles.rowContent}
+                                >
+                                    <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                                        <PlatformIcon
+                                            sf="chart.bar.fill"
+                                            IconComponent={Activity}
+                                            size={24}
+                                            color={themeColors.text}
+                                        />
+                                    </View>
+                                    <View style={styles.textContent}>
                                         <Text
-                                            style={[styles.metricDescription, { color: themeColors.mutedText }]}
+                                            style={[styles.name, { color: themeColors.text }]}
                                             numberOfLines={1}
                                         >
-                                            {item.description}
+                                            {item.name}
                                         </Text>
-                                    )}
-                                    <Text style={[styles.metricUnit, { color: themeColors.mutedText }]}>
-                                        {item.unit}
-                                    </Text>
-                                </View>
-                                <View
-                                    style={[
-                                        styles.checkbox,
-                                        {
-                                            backgroundColor: isSelected ? themeColors.primary : 'transparent',
-                                            borderColor: isSelected ? themeColors.primary : themeColors.border,
-                                        },
-                                    ]}
-                                >
-                                    {isSelected && (
-                                        <Check {...({ size: 16, color: themeColors.primaryForeground } as any)} />
-                                    )}
-                                </View>
-                            </PressableOpacity>
+                                        <View style={styles.metaRow}>
+                                            <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                                                {item.unit}
+                                            </Text>
+                                            {item.description && (
+                                                <>
+                                                    <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                                                    <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
+                                                        {item.description}
+                                                    </Text>
+                                                </>
+                                            )}
+                                        </View>
+                                    </View>
+                                    <View
+                                        style={[
+                                            styles.checkbox,
+                                            {
+                                                backgroundColor: isSelected ? themeColors.primary : 'transparent',
+                                                borderColor: isSelected ? themeColors.primary : themeColors.border,
+                                            },
+                                        ]}
+                                    >
+                                        {isSelected && (
+                                            <Check {...({ size: 16, color: themeColors.primaryForeground } as any)} />
+                                        )}
+                                    </View>
+                                </PressableOpacity>
+
+                                {!isLastItem && (
+                                    <View style={styles.separatorContainer}>
+                                        <View
+                                            style={[
+                                                styles.separator,
+                                                { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+                                            ]}
+                                        />
+                                    </View>
+                                )}
+                            </View>
                         );
                     }}
-                    ItemSeparatorComponent={() => <Separator style={styles.separator} />}
                     contentContainerStyle={[styles.listContent, { paddingTop: headerHeight + 16 }]}
                     ListHeaderComponent={
                         <View style={styles.searchContainer}>
@@ -264,36 +281,39 @@ const styles = StyleSheet.create({
     listContent: {
         paddingBottom: 40,
     },
-    metricRow: {
+    rowContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
+        paddingVertical: 8,
         paddingHorizontal: 16,
     },
-    metricIconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 10,
+    iconContainer: {
+        width: 58,
+        height: 58,
+        borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 12,
     },
-    metricInfo: {
+    textContent: {
         flex: 1,
-        justifyContent: 'center',
+        marginRight: 8,
     },
-    metricName: {
+    name: {
         ...typography.p1,
-        fontWeight: '500',
+        fontWeight: '600',
+        marginBottom: 4,
     },
-    metricDescription: {
-        ...typography.p3,
-        marginTop: 2,
+    metaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
-    metricUnit: {
+    metaText: {
         ...typography.p3,
-        fontWeight: '500',
-        marginTop: 2,
+    },
+    metaDot: {
+        marginHorizontal: 6,
+        ...typography.p3,
     },
     checkbox: {
         width: 24,
@@ -304,8 +324,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginLeft: 12,
     },
+    separatorContainer: {
+        paddingLeft: 86,
+        paddingRight: 16,
+    },
     separator: {
-        marginLeft: 68,
-        marginRight: 16,
+        height: 1,
     },
 });

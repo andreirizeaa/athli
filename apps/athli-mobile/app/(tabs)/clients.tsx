@@ -100,6 +100,7 @@ export default function ClientsScreen() {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSharing, setIsSharing] = useState(false);
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
 
@@ -164,12 +165,15 @@ export default function ClientsScreen() {
 
   const handleShare = useCallback(async () => {
     haptics.medium();
+    setIsSharing(true);
     try {
       await Share.share({
         message: 'YOUR INVITE LINE HERE',
       });
     } catch (error: any) {
       console.error(error.message);
+    } finally {
+      setIsSharing(false);
     }
   }, []);
 
@@ -180,10 +184,11 @@ export default function ClientsScreen() {
           <Text style={[styles.title, { color: themeColors.text }]}>{t('clients.title')}</Text>
           <View style={styles.headerButtonContainer}>
             <IconButton
-              icon={{ sf: 'paperplane', IconComponent: Send }}
+              icon={{ sf: 'square.and.arrow.up', IconComponent: Send }}
               onPress={handleShare}
               size="md"
               color={themeColors.text}
+              loading={isSharing}
             />
           </View>
         </View>
