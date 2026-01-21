@@ -106,9 +106,8 @@ export default function AddNoteToClientModal() {
                         icon={{ sf: 'checkmark', IconComponent: Check }}
                         onPress={handleSave}
                         size="md"
-                        color={themeColors.text}
-                        disabled={!canSave}
                         variant={canSave ? 'primary' : 'default'}
+                        disabled={!canSave}
                         loading={isSubmitting}
                     />
                 </View>

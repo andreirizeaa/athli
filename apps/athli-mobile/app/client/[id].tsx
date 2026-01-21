@@ -380,6 +380,9 @@ const styles = StyleSheet.create({
   avatarInitial: {
     ...typography.h3,
     fontWeight: '600',
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   profileName: {
     ...typography.h6,

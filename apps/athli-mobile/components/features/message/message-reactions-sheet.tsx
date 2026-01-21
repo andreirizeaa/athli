@@ -264,6 +264,9 @@ const styles = StyleSheet.create({
   avatarText: {
     ...typography.p3,
     fontWeight: '600',
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   reactionInfo: {
     flex: 1,

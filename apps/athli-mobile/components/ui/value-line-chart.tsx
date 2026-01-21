@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { CartesianChart, Line, Area, useChartPressState } from 'victory-native';
-import { Circle, useFont, LinearGradient, vec } from '@shopify/react-native-skia';
+import { Circle, useFont, LinearGradient, vec, Group, Skia } from '@shopify/react-native-skia';
+import { useSharedValue, withTiming, withDelay, useDerivedValue } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
 import { hexToRgba } from '@/utils/colorUtils';
 
@@ -76,6 +77,19 @@ export const ValueLineChart = ({ data }: ValueLineChartProps) => {
     const middleDate = chartData.length > 2 ? formatDate(chartData[middleIndex].date) : '';
     const endDate = chartData.length > 0 ? formatDate(chartData[chartData.length - 1].date) : '';
 
+    // Line drawing animation
+    const animationProgress = useSharedValue(0);
+
+    useEffect(() => {
+        animationProgress.value = 0;
+        animationProgress.value = withDelay(200, withTiming(1, { duration: 800 }));
+    }, [chartData]);
+
+    const clipRect = useDerivedValue(() => {
+        const width = chartWidth * animationProgress.value;
+        return Skia.XYWHRect(0, 0, width, chartHeight + 50);
+    });
+
     if (chartData.length < 2) {
         return (
             <View style={[styles.container, { backgroundColor: themeColors.surfacePrimary }]}>
@@ -110,28 +124,28 @@ export const ValueLineChart = ({ data }: ValueLineChartProps) => {
                 >
                     {({ points, chartBounds }) => (
                         <>
-                            <Area
-                                points={points.y}
-                                y0={chartBounds.bottom}
-                                curveType="monotoneX"
-                                animate={{ type: 'timing', duration: 300 }}
-                            >
-                                <LinearGradient
-                                    start={vec(0, chartBounds.top)}
-                                    end={vec(0, chartBounds.bottom)}
-                                    colors={[
-                                        hexToRgba(themeColors.primary, 0.4),
-                                        hexToRgba(themeColors.primary, 0),
-                                    ]}
+                            <Group clip={clipRect}>
+                                <Area
+                                    points={points.y}
+                                    y0={chartBounds.bottom}
+                                    curveType="monotoneX"
+                                >
+                                    <LinearGradient
+                                        start={vec(0, chartBounds.top)}
+                                        end={vec(0, chartBounds.bottom)}
+                                        colors={[
+                                            hexToRgba(themeColors.primary, 0.4),
+                                            hexToRgba(themeColors.primary, 0),
+                                        ]}
+                                    />
+                                </Area>
+                                <Line
+                                    points={points.y}
+                                    color={themeColors.primary}
+                                    strokeWidth={3}
+                                    curveType="monotoneX"
                                 />
-                            </Area>
-                            <Line
-                                points={points.y}
-                                color={themeColors.primary}
-                                strokeWidth={3}
-                                curveType="monotoneX"
-                                animate={{ type: 'timing', duration: 300 }}
-                            />
+                            </Group>
                             {isActive && (
                                 <ToolTip
                                     x={state.x.position}

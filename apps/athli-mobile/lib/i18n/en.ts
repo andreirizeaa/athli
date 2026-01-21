@@ -896,6 +896,8 @@ export const en = {
       emptyTitle: 'No notes yet',
       emptyDescription: 'Notes and updates for this client will appear here',
       deleteConfirmation: 'Are you sure you want to delete this note?',
+      searchPlaceholder: 'Search notes...',
+      noResults: 'No notes found',
     },
     goals: {
       deleteConfirmation: 'Are you sure you want to delete this goal?',
