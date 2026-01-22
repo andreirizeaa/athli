@@ -100,7 +100,7 @@ export default function EditClientGoalModal() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [canSave, id, coachId, goalId, title, date, goals, refreshSection, handleClose, t, isEmpty, handleDelete]);
+    }, [canSave, id, coachId, goalId, title, date, goals, refreshSection, handleClose, t, isEmpty]);
 
     const handleDelete = useCallback(() => {
         Alert.alert(

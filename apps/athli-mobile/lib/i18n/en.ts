@@ -902,9 +902,13 @@ export const en = {
     },
     goals: {
       deleteConfirmation: 'Are you sure you want to delete this goal?',
+      searchPlaceholder: 'Search',
+      noResults: 'No goals found',
     },
     injuries: {
       deleteConfirmation: 'Are you sure you want to delete this injury?',
+      searchPlaceholder: 'Search',
+      noResults: 'No injuries found',
     },
     metrics: {
       emptyTitle: 'No metrics assigned',
@@ -1108,14 +1112,6 @@ export const en = {
     bio: {
       placeholder: 'Enter client bio...',
       saved: 'Bio saved',
-    },
-    goals: {
-      searchPlaceholder: 'Search',
-      noResults: 'No goals found',
-    },
-    injuries: {
-      searchPlaceholder: 'Search',
-      noResults: 'No injuries found',
     },
     profile: 'Profile',
     editProfile: 'Edit Profile',
