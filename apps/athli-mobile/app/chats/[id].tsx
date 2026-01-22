@@ -427,6 +427,9 @@ const panelStyles = StyleSheet.create({
   avatarInitial: {
     ...typography.h3,
     fontWeight: '600',
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   profileName: {
     ...typography.h6,
@@ -1425,57 +1428,50 @@ export default function ChatDetailScreen() {
   };
 
   const handleDocumentPress = (document: any) => {
+    const uri = document.uri || document.url || '';
+    const mimeType = document.mimeType || document.mime_type || 'application/pdf';
+    const filename = document.name || document.filename || 'document.pdf';
+
     router.push({
-      pathname: '/chats/document-preview',
-      params: {
-        uri: document.uri || document.url || '',
-        name: document.name || document.filename || '',
-        mimeType: document.mimeType || document.mime_type || '',
-        size: (document.size || document.size_bytes || '').toString(),
-        chatId: chat?.id || '',
-        clientId: chat?.client_id || '',
-        clientName: chat?.other_user_name || '',
-        fromMessage: 'true', // Flag to show download icon
-      },
+      pathname: '/modals/files/file-viewer-modal',
+      params: { uri, mimeType, filename },
     });
   };
 
   const handleImagePress = (
     images: any[],
-    senderName: string,
-    isSent: boolean,
-    messageTimestamp?: Date | string
+    _senderName: string,
+    _isSent: boolean,
+    _messageTimestamp?: Date | string
   ) => {
-    const timestamp = messageTimestamp instanceof Date ? messageTimestamp.toISOString() : messageTimestamp || '';
+    // For simplicity, open the first image in the viewer
+    // Multi-image gallery can be added later if needed
+    const firstImage = images[0];
+    if (!firstImage) return;
+
+    const uri = firstImage.uri || firstImage.url || '';
+    const mimeType = firstImage.mimeType || firstImage.mime_type || 'image/jpeg';
+    const filename = firstImage.filename || 'image.jpg';
+
     router.push({
-      pathname: '/chats/message-image-preview',
-      params: {
-        images: JSON.stringify(images),
-        senderName: senderName,
-        isSent: isSent.toString(),
-        messageTimestamp: timestamp,
-      },
+      pathname: '/modals/files/file-viewer-modal',
+      params: { uri, mimeType, filename },
     });
   };
 
   const handleVideoPress = (
     video: any,
-    senderName: string,
-    isSent: boolean,
-    messageTimestamp?: Date | string
+    _senderName: string,
+    _isSent: boolean,
+    _messageTimestamp?: Date | string
   ) => {
-    const timestamp = messageTimestamp instanceof Date ? messageTimestamp.toISOString() : messageTimestamp || '';
+    const uri = video.uri || video.url || '';
+    const mimeType = video.mimeType || video.mime_type || 'video/mp4';
+    const filename = video.filename || 'video.mp4';
+
     router.push({
-      pathname: '/chats/video-preview',
-      params: {
-        uri: video.uri || video.url || '',
-        duration: (video.duration || 0).toString(),
-        orientation: video.orientation || 'portrait',
-        fromMessage: 'true',
-        senderName: senderName,
-        isSent: isSent.toString(),
-        messageTimestamp: timestamp,
-      },
+      pathname: '/modals/files/file-viewer-modal',
+      params: { uri, mimeType, filename },
     });
   };
 

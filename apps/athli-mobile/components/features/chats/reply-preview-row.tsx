@@ -84,13 +84,14 @@ export const ReplyPreviewRow = ({ message, clientName, onClose, backgroundColor,
         <View style={styles.textContainer}>
           {/* Header with reply icon and sender name */}
           <View style={styles.header}>
-            <PlatformIcon
-              sf="arrowshape.turn.up.left.fill"
-              IconComponent={Reply}
-              size={12}
-              color={themeColors.text}
-              style={{ opacity: 0.7 }}
-            />
+            <View style={{ opacity: 0.7 }}>
+              <PlatformIcon
+                sf="arrowshape.turn.up.left.fill"
+                IconComponent={Reply}
+                size={12}
+                color={themeColors.text}
+              />
+            </View>
             <Text style={[styles.senderName, { color: stripColor }]} numberOfLines={1}>
               {senderName}
             </Text>
@@ -151,13 +152,14 @@ export const ReplyPreviewRow = ({ message, clientName, onClose, backgroundColor,
               {/* Voice note indicator */}
               {hasAudio && (
                 <View style={styles.audioRow}>
-                  <PlatformIcon
-                    sf="mic.fill"
-                    IconComponent={Mic}
-                    size={12}
-                    color={themeColors.text}
-                    style={{ opacity: 0.7 }}
-                  />
+                  <View style={{ opacity: 0.7 }}>
+                    <PlatformIcon
+                      sf="mic.fill"
+                      IconComponent={Mic}
+                      size={12}
+                      color={themeColors.text}
+                    />
+                  </View>
                   <Text style={[styles.audioLabel, { color: themeColors.text, opacity: 0.8 }]}>
                     {voiceNoteLabel}
                   </Text>

@@ -12,23 +12,24 @@ import { useThemePreference } from '@/stores';
 import { haptics } from '@/utils/haptics';
 
 export type TimeRange = '90d' | '6m' | '1y' | 'all';
+export type PhotoView = 'all' | 'front' | 'back' | 'side';
 
-type Segment = {
+type Segment<T extends string> = {
     label: string;
-    value: TimeRange;
+    value: T;
 };
 
-type SegmentedControlProps = {
-    segments: Segment[];
-    value: TimeRange;
-    onChange: (value: TimeRange) => void;
+type SegmentedControlProps<T extends string> = {
+    segments: Segment<T>[];
+    value: T;
+    onChange: (value: T) => void;
 };
 
-export const SegmentedControl = React.memo(function SegmentedControl({
+export const SegmentedControl = React.memo(function SegmentedControl<T extends string>({
     segments,
     value,
     onChange,
-}: SegmentedControlProps) {
+}: SegmentedControlProps<T>) {
     const { colors: themeColors } = useThemePreference();
 
     const activeIndex = segments.findIndex((seg) => seg.value === value);
@@ -102,7 +103,6 @@ export const SegmentedControl = React.memo(function SegmentedControl({
 const styles = StyleSheet.create({
     wrapper: {
         paddingHorizontal: 16,
-        paddingTop: 16,
     },
     container: {
         flexDirection: 'row',

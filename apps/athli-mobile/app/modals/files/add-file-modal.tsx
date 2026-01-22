@@ -13,12 +13,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference, useColorScheme } from '@/stores';
+import { useThemePreference, useColorScheme, useCoachProfileStore, useClientDetailStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { InputBox } from '@/components/ui/form-inputs';
 import { uploadFile, updateFile } from '@/services/coach/coach-file-service';
+import { uploadClientFile, updateClientFile } from '@/services/client/client-file-service';
 import { hexToRgba } from '@/utils/colorUtils';
 
 type SelectedFile = {
@@ -81,8 +82,17 @@ export default function AddFileModal() {
         editingId?: string;
         name?: string;
         type?: string;
+        clientId?: string;
+        editNameOnly?: string;
     }>();
     const isEditing = !!params.editingId;
+    const isEditNameOnly = params.editNameOnly === 'true';
+    const isClientUpload = !!params.clientId;
+    const isClientEdit = isClientUpload && (isEditing || isEditNameOnly);
+
+    // Get coach profile for client uploads
+    const coachProfile = useCoachProfileStore((state) => state.profile);
+    const refreshSection = useClientDetailStore((state) => state.refreshSection);
 
     const initialFileType = useMemo(() => {
         if (!params.type) return undefined;
@@ -103,7 +113,7 @@ export default function AddFileModal() {
         return null;
     });
 
-    // Upload mutation
+    // Upload mutation (for coach library)
     const uploadMutation = useMutation({
         mutationFn: uploadFile,
         onSuccess: async () => {
@@ -121,11 +131,53 @@ export default function AddFileModal() {
         },
     });
 
-    // Update mutation
+    // Upload mutation (for client - direct upload)
+    const uploadClientMutation = useMutation({
+        mutationFn: uploadClientFile,
+        onSuccess: async (data) => {
+            console.log('[AddFileModal] uploadClientFile success:', data);
+            // Refresh client files section
+            await new Promise(r => setTimeout(r, 300)); // Allow backend to persist
+            console.log('[AddFileModal] Calling refreshSection...');
+            await refreshSection('files');
+            console.log('[AddFileModal] refreshSection completed');
+            haptics.success();
+            handleClose();
+        },
+        onError: (error: Error) => {
+            console.error('[AddFileModal] uploadClientFile error:', error);
+            haptics.error();
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
+
+    // Update mutation (for coach library files)
     const updateMutation = useMutation({
         mutationFn: updateFile,
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['files'] });
+            haptics.success();
+            handleClose();
+        },
+        onError: (error: Error) => {
+            haptics.error();
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
+
+    // Update mutation (for client files)
+    const updateClientMutation = useMutation({
+        mutationFn: updateClientFile,
+        onSuccess: async () => {
+            await refreshSection('files');
             haptics.success();
             handleClose();
         },
@@ -147,15 +199,15 @@ export default function AddFileModal() {
     const { hasChanges, canComplete } = useMemo(() => {
         const trimmedName = fileName.trim();
 
-        // For editing, only name is required
+        // For editing (name only or full edit), only name is required
         // For creating, both name and file are required
-        const formValid = isEditing
+        const formValid = isEditing || isEditNameOnly
             ? trimmedName.length > 0
             : trimmedName.length > 0 && selectedFile !== null;
 
         // Check if any field has been modified
         let changes = false;
-        if (isEditing) {
+        if (isEditing || isEditNameOnly) {
             changes = trimmedName !== (params.name || '').trim();
         } else {
             changes = trimmedName.length > 0 || selectedFile !== null;
@@ -163,9 +215,9 @@ export default function AddFileModal() {
 
         return {
             hasChanges: changes,
-            canComplete: formValid && changes && !uploadMutation.isPending && !updateMutation.isPending,
+            canComplete: formValid && changes && !uploadMutation.isPending && !updateMutation.isPending && !uploadClientMutation.isPending && !updateClientMutation.isPending,
         };
-    }, [fileName, selectedFile, uploadMutation.isPending, updateMutation.isPending, isEditing, params]);
+    }, [fileName, selectedFile, uploadMutation.isPending, updateMutation.isPending, uploadClientMutation.isPending, updateClientMutation.isPending, isEditing, isEditNameOnly, params]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -198,27 +250,57 @@ export default function AddFileModal() {
     const handleSave = useCallback(() => {
         if (!canComplete) return;
 
-        if (isEditing && params.editingId) {
+        if ((isEditing || isEditNameOnly) && params.editingId) {
             // Update file metadata only
-            updateMutation.mutate({
-                fileId: params.editingId,
-                fileName: fileName.trim(),
-            });
+            if (isClientEdit && params.clientId && coachProfile?.id) {
+                // Update client file
+                updateClientMutation.mutate({
+                    fileId: params.editingId,
+                    filename: fileName.trim(),
+                    clientId: params.clientId,
+                    coachId: coachProfile.id,
+                });
+            } else {
+                // Update library file
+                updateMutation.mutate({
+                    fileId: params.editingId,
+                    fileName: fileName.trim(),
+                });
+            }
         } else if (selectedFile) {
-            // Upload new file
-            // Create File object compatible with FormData
-            const file = {
-                uri: selectedFile.uri,
-                type: selectedFile.mimeType || getMimeTypeFromFileType(selectedFile.type),
-                name: selectedFile.name || `${fileName.trim()}.${getExtensionFromType(selectedFile.type)}`,
-            } as any;
+            const finalFileName = selectedFile.name || `${fileName.trim()}.${getExtensionFromType(selectedFile.type)}`;
+            const mimeType = selectedFile.mimeType || getMimeTypeFromFileType(selectedFile.type);
 
-            uploadMutation.mutate({
-                fileName: fileName.trim(),
-                file,
-            });
+            if (isClientUpload && params.clientId && coachProfile?.id) {
+                // Upload directly to client
+                console.log('[AddFileModal] Starting client upload:', {
+                    fileName: finalFileName,
+                    mimeType,
+                    clientId: params.clientId,
+                    coachId: coachProfile.id,
+                });
+                uploadClientMutation.mutate({
+                    fileUri: selectedFile.uri,
+                    fileName: finalFileName,
+                    mimeType: mimeType,
+                    clientId: params.clientId,
+                    coachId: coachProfile.id,
+                });
+            } else {
+                // Upload to coach library
+                const file = {
+                    uri: selectedFile.uri,
+                    type: mimeType,
+                    name: finalFileName,
+                } as any;
+
+                uploadMutation.mutate({
+                    fileName: fileName.trim(),
+                    file,
+                });
+            }
         }
-    }, [canComplete, isEditing, params.editingId, fileName, selectedFile, uploadMutation, updateMutation]);
+    }, [canComplete, isEditing, isEditNameOnly, isClientEdit, params.editingId, params.clientId, fileName, selectedFile, uploadMutation, updateMutation, updateClientMutation, uploadClientMutation, isClientUpload, coachProfile?.id]);
 
     const handlePhotoPress = async () => {
         try {
@@ -343,7 +425,11 @@ export default function AddFileModal() {
                                 color={themeColors.text}
                             />
                             <Text style={[styles.title, { color: themeColors.text }]}>
-                                {isEditing ? t('files.addFile.editTitle') : t('files.addFile.title')}
+                                {isEditing
+                                    ? t('files.addFile.editTitle')
+                                    : isClientUpload
+                                        ? t('clientDetail.actions.addFile')
+                                        : t('files.addFile.title')}
                             </Text>
                             <IconButton
                                 icon={{ sf: 'checkmark', IconComponent: Check }}
@@ -351,7 +437,7 @@ export default function AddFileModal() {
                                 size="md"
                                 variant={canComplete ? 'primary' : 'default'}
                                 disabled={!canComplete}
-                                loading={uploadMutation.isPending || updateMutation.isPending}
+                                loading={uploadMutation.isPending || updateMutation.isPending || uploadClientMutation.isPending || updateClientMutation.isPending}
                             />
                         </View>
                     </View>
@@ -370,9 +456,11 @@ export default function AddFileModal() {
                             onChangeText={setFileName}
                             placeholder={t('files.addFile.fileNamePlaceholder')}
                             required
+                            autoFocus={isEditNameOnly}
                         />
 
-                        {/* File Type Selection */}
+                        {/* File Type Selection - Hidden in edit name only mode */}
+                        {!isEditNameOnly && (
                         <View style={[styles.attachSection, { backgroundColor: themeColors.surfacePrimary }]}>
                             <View style={styles.attachLabelRow}>
                                 <Text style={[styles.attachLabel, { color: themeColors.mutedText }]}>
@@ -497,6 +585,7 @@ export default function AddFileModal() {
                                 </View>
                             )}
                         </View>
+                        )}
                     </KeyboardAwareScrollView>
                 </View>
             </TouchableWithoutFeedback>

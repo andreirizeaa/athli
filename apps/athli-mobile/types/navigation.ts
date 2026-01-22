@@ -13,7 +13,6 @@ export type RootStackParamList = {
   'client/[id]/assistant': { id: string };
   'client/[id]/check-ins': { id: string };
   'client/[id]/files': { id: string };
-  'client/[id]/goals-injuries': { id: string };
   'client/[id]/habits': { id: string };
   'client/[id]/metrics': { id: string };
   'client/[id]/notes': { id: string };

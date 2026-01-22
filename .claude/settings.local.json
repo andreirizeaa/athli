@@ -54,7 +54,9 @@
       "WebFetch(domain:www.npmjs.com)",
       "WebFetch(domain:commerce.nearform.com)",
       "WebFetch(domain:nearform.com)",
-      "Bash(npm show:*)"
+      "Bash(npm show:*)",
+      "WebFetch(domain:shopify.github.io)",
+      "Bash(xargs ls:*)"
     ]
   }
 }

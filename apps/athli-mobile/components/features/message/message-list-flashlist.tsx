@@ -1224,7 +1224,6 @@ export const MessageList = React.memo(function MessageList({
           initialScrollIndex={data.length > 0 ? data.length - 1 : undefined}
           keyExtractor={(m) => m.id}
           renderItem={renderItem}
-          estimatedItemSize={80}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           scrollEnabled={!isHorizontalDragActive}

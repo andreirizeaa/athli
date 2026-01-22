@@ -1,10 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { View, StyleSheet, Text, Dimensions } from 'react-native';
-import { CartesianChart, Line } from 'victory-native';
-import { Line as SkiaLine, vec, DashPathEffect, useFont } from '@shopify/react-native-skia';
+import { CartesianChart, Line, Area } from 'victory-native';
+import { Line as SkiaLine, vec, DashPathEffect, useFont, Group, Skia, LinearGradient } from '@shopify/react-native-skia';
+import { hexToRgba } from '@/utils/colorUtils';
+import { useSharedValue, withTiming, withDelay, useDerivedValue } from 'react-native-reanimated';
+import { Crosshair } from 'lucide-react-native';
 
 import { useThemePreference, useTranslations } from '@/stores';
 import { typography } from '@/constants/typography';
+import { PlatformIcon } from '@/components/ui/platform-icon';
 
 type DataPoint = {
     value: number;
@@ -71,6 +75,19 @@ export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChar
     const middleDate = chartData.length > 2 ? formatShortDate(chartData[middleIndex].date) : '';
     const endDate = chartData.length > 0 ? formatShortDate(chartData[chartData.length - 1].date) : '';
 
+    // Line drawing animation
+    const animationProgress = useSharedValue(0);
+
+    useEffect(() => {
+        animationProgress.value = 0;
+        animationProgress.value = withDelay(200, withTiming(1, { duration: 800 }));
+    }, [chartData]);
+
+    const clipRect = useDerivedValue(() => {
+        const width = chartWidth * animationProgress.value;
+        return Skia.XYWHRect(0, 0, width, chartHeight + 50);
+    });
+
     if (chartData.length < 2) {
         return (
             <View style={[styles.container, { backgroundColor: themeColors.surfacePrimary }]}>
@@ -85,11 +102,14 @@ export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChar
 
     return (
         <View style={[styles.container, { backgroundColor: themeColors.surfacePrimary }]}>
-            {/* Target info */}
+            {/* Target info - positioned top right */}
             <View style={styles.targetInfo}>
-                <Text style={[styles.targetLabel, { color: themeColors.mutedText }]}>
-                    {t('clientDetail.chart.target')}:
-                </Text>
+                <PlatformIcon
+                    sf="scope"
+                    IconComponent={Crosshair}
+                    size={16}
+                    color={themeColors.mutedText}
+                />
                 <Text style={[styles.targetValue, { color: themeColors.text }]}>
                     {targetValue}{unit ? ` ${unit}` : ''}
                 </Text>
@@ -131,13 +151,51 @@ export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChar
                                 >
                                     <DashPathEffect intervals={[6, 4]} />
                                 </SkiaLine>
-                                <Line
-                                    points={points.y}
-                                    color={themeColors.primary}
-                                    strokeWidth={2.5}
-                                    curveType="natural"
-                                    animate={{ type: 'timing', duration: 300 }}
-                                />
+                                <Group clip={clipRect}>
+                                    {/* Green shadow for values above target */}
+                                    <Area
+                                        points={points.y}
+                                        y0={referenceLineY}
+                                        curveType="natural"
+                                    >
+                                        <LinearGradient
+                                            start={vec(0, chartBounds.top)}
+                                            end={vec(0, referenceLineY)}
+                                            colors={[
+                                                hexToRgba('#22c55e', 0.35),
+                                                hexToRgba('#22c55e', 0),
+                                            ]}
+                                        />
+                                    </Area>
+                                    {/* Red shadow for values below target */}
+                                    <Area
+                                        points={points.y}
+                                        y0={referenceLineY}
+                                        curveType="natural"
+                                    >
+                                        <LinearGradient
+                                            start={vec(0, referenceLineY)}
+                                            end={vec(0, chartBounds.bottom)}
+                                            colors={[
+                                                hexToRgba('#ef4444', 0),
+                                                hexToRgba('#ef4444', 0.35),
+                                            ]}
+                                        />
+                                    </Area>
+                                    <Line
+                                        points={points.y}
+                                        color="white"
+                                        strokeWidth={2.5}
+                                        curveType="natural"
+                                    >
+                                        <LinearGradient
+                                            start={vec(0, chartBounds.top)}
+                                            end={vec(0, chartBounds.bottom)}
+                                            colors={['#22c55e', '#22c55e', '#ef4444', '#ef4444']}
+                                            positions={[0, 0.48, 0.52, 1]}
+                                        />
+                                    </Line>
+                                </Group>
                             </>
                         );
                     }}
@@ -173,17 +231,16 @@ const styles = StyleSheet.create({
     },
     chartWrapper: {},
     targetInfo: {
+        position: 'absolute',
+        top: 16,
+        right: 16,
         flexDirection: 'row',
-        alignItems: 'baseline',
-        gap: 8,
-        alignSelf: 'flex-start',
-        marginBottom: 8,
-    },
-    targetLabel: {
-        ...typography.p3,
+        alignItems: 'center',
+        gap: 6,
     },
     targetValue: {
-        ...typography.h4,
+        ...typography.h6,
+        fontWeight: '600',
     },
     dateLabels: {
         flexDirection: 'row',

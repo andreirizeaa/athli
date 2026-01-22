@@ -6,12 +6,12 @@ import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager
 import { Storage } from '@/lib/storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useModalCallbacks } from '@/stores';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 
 const DEFAULT_STORAGE_KEY = '@select_date_modal_selected_date';
 
@@ -24,20 +24,24 @@ type MonthData = {
 };
 
 const MONTH_NAMES_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_NAMES_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-// Only generate 2 years of months (1 year back, current, 1 year forward) = 36 months
+const START_YEAR = 2010;
+const END_YEAR = 2030;
+
+// Generate months from START_YEAR to END_YEAR
 const generateMonths = (allowFuture: boolean): MonthData[] => {
   const months: MonthData[] = [];
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth();
 
-  const startYear = currentYear - 1;
-  const endYear = allowFuture ? currentYear + 1 : currentYear;
-
-  for (let year = startYear; year <= endYear; year++) {
+  for (let year = START_YEAR; year <= END_YEAR; year++) {
     for (let month = 0; month <= 11; month++) {
       if (!allowFuture && year === currentYear && month > currentMonth) {
+        break;
+      }
+      if (!allowFuture && year > currentYear) {
         break;
       }
       months.push({ year, month, id: `${year}-${month}` });
@@ -91,6 +95,7 @@ type CalendarMonthPageProps = {
   cellWidth: number;
   gridWidth: number;
   allowFuture: boolean;
+  highlightedDates?: Set<string>;
 };
 
 const CalendarMonthPage = React.memo(({
@@ -101,6 +106,7 @@ const CalendarMonthPage = React.memo(({
   cellWidth,
   gridWidth,
   allowFuture,
+  highlightedDates,
 }: CalendarMonthPageProps) => {
   const firstDay = getFirstDayOfWeek(monthData.year, monthData.month);
   const daysInMonth = getDaysInMonth(monthData.year, monthData.month);
@@ -139,27 +145,53 @@ const CalendarMonthPage = React.memo(({
 
         const isFuture = !allowFuture && normalizeDate(date).getTime() > normalizeDate(new Date()).getTime();
 
+        // Check if this date is highlighted (has photos)
+        const dateKey = `${monthData.year}-${String(monthData.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isHighlighted = highlightedDates?.has(dateKey);
+
         const isActive = isSelected || isTodayDate;
         const currentCircleSize = isActive ? activeCircleSize : circleSize;
+        // For highlight ring, always use the regular size for consistency
+        const highlightRingSize = circleSize + 6;
+
+        // Determine colors based on selection and highlight state
+        const isSelectedWithPhoto = isSelected && isHighlighted;
+        const isSelectedWithoutPhoto = isSelected && !isHighlighted;
+        const greenColor = '#22C55E';
+
+        // For today indicator: only show primary border if NOT highlighted (no photo)
+        const showTodayBorder = isTodayDate && !isSelected && !isHighlighted;
 
         const cellContent = (
-          <View
-            style={[
-              styles.circleIndicator,
-              { width: currentCircleSize, height: currentCircleSize, borderRadius: currentCircleSize / 2 },
-              isSelected && { backgroundColor: themeColors.primary },
-              isTodayDate && !isSelected && { borderWidth: 2, borderColor: themeColors.primary },
-              isFuture && { opacity: 0.25 },
-            ]}
-          >
-            <Text
+          <View style={styles.dayCellContent}>
+            {/* Green outline for highlighted dates (dates with photos) - both selected and unselected */}
+            {isHighlighted && !isFuture && !isSelected && (
+              <View
+                style={[
+                  styles.highlightRing,
+                  { width: highlightRingSize, height: highlightRingSize, borderRadius: highlightRingSize / 2 },
+                ]}
+              />
+            )}
+            <View
               style={[
-                styles.dayText,
-                { color: isSelected ? themeColors.primaryForeground : themeColors.text },
+                styles.circleIndicator,
+                { width: currentCircleSize, height: currentCircleSize, borderRadius: currentCircleSize / 2 },
+                isSelectedWithPhoto && { backgroundColor: greenColor },
+                isSelectedWithoutPhoto && { backgroundColor: themeColors.primary },
+                showTodayBorder && { borderWidth: 2, borderColor: themeColors.primary },
+                isFuture && { opacity: 0.25 },
               ]}
             >
-              {day}
-            </Text>
+              <Text
+                style={[
+                  styles.dayText,
+                  { color: isSelectedWithPhoto ? '#FFFFFF' : isSelectedWithoutPhoto ? themeColors.primaryForeground : themeColors.text },
+                ]}
+              >
+                {day}
+              </Text>
+            </View>
           </View>
         );
 
@@ -244,7 +276,7 @@ WeekdayHeader.displayName = 'WeekdayHeader';
 
 export default function SelectDateModal() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ selectedDate?: string; storageKey?: string; allowFuture?: string }>();
+  const params = useLocalSearchParams<{ selectedDate?: string; storageKey?: string; allowFuture?: string; highlightedDates?: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const { triggerDateSelect } = useModalCallbacks();
@@ -255,6 +287,12 @@ export default function SelectDateModal() {
   // Get storage key from params or use default
   const storageKey = params.storageKey || DEFAULT_STORAGE_KEY;
   const allowFuture = params.allowFuture !== 'false';
+
+  // Parse highlighted dates (comma-separated date strings in YYYY-MM-DD format)
+  const highlightedDates = useMemo(() => {
+    if (!params.highlightedDates) return undefined;
+    return new Set(params.highlightedDates.split(','));
+  }, [params.highlightedDates]);
 
   const monthsData = useMemo(() => generateMonths(allowFuture), [allowFuture]);
   const initialMonthIndex = useMemo(() => getInitialMonthIndex(monthsData), [monthsData]);
@@ -292,13 +330,74 @@ export default function SelectDateModal() {
 
   const [selectedDate, setSelectedDate] = useState<Date>(initialSelectedDate);
 
-  const currentMonthTitle = useMemo(() => {
-    const monthData = monthsData[currentPageIndex];
-    if (monthData) {
-      return `${MONTH_NAMES_SHORT[monthData.month]} ${monthData.year}`;
-    }
-    return '';
+  const currentMonthData = useMemo(() => {
+    return monthsData[currentPageIndex] || { month: 0, year: new Date().getFullYear() };
   }, [currentPageIndex, monthsData]);
+
+  // Generate month dropdown options
+  const monthOptions = useMemo((): DropdownMenuOption[] => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const viewingYear = currentMonthData.year;
+
+    return MONTH_NAMES_FULL.map((name, index) => {
+      // Check if this month exists in monthsData for the viewing year
+      const monthExists = monthsData.some(
+        (m) => m.year === viewingYear && m.month === index
+      );
+
+      // Skip future months that don't exist in the data
+      if (!monthExists) return null;
+
+      return {
+        label: name,
+        onPress: () => {
+          const targetIndex = monthsData.findIndex(
+            (m) => m.year === viewingYear && m.month === index
+          );
+          if (targetIndex >= 0 && targetIndex !== currentPageIndex) {
+            haptics.medium();
+            pagerRef.current?.setPage(targetIndex);
+          }
+        },
+      };
+    }).filter(Boolean) as DropdownMenuOption[];
+  }, [currentMonthData, monthsData, currentPageIndex]);
+
+  // Generate year dropdown options
+  const yearOptions = useMemo((): DropdownMenuOption[] => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const years: DropdownMenuOption[] = [];
+
+    const endYear = allowFuture ? END_YEAR : currentYear;
+
+    for (let year = START_YEAR; year <= endYear; year++) {
+      years.push({
+        label: String(year),
+        onPress: () => {
+          // Find the target month in the new year (same month if possible)
+          let targetMonth = currentMonthData.month;
+
+          // If switching to current year and current month is in the future, use current month
+          if (!allowFuture && year === currentYear && targetMonth > now.getMonth()) {
+            targetMonth = now.getMonth();
+          }
+
+          const targetIndex = monthsData.findIndex(
+            (m) => m.year === year && m.month === targetMonth
+          );
+          if (targetIndex >= 0 && targetIndex !== currentPageIndex) {
+            haptics.medium();
+            pagerRef.current?.setPage(targetIndex);
+          }
+        },
+      });
+    }
+
+    return years;
+  }, [currentMonthData, monthsData, currentPageIndex, allowFuture]);
 
   const handlePageSelected = useCallback((event: PagerViewOnPageSelectedEvent) => {
     const index = event.nativeEvent.position;
@@ -340,12 +439,28 @@ export default function SelectDateModal() {
     <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary, paddingBottom: 200 }]}>
       <View style={styles.header}>
         <View style={styles.headerSideLeft} />
-        <Text style={[styles.title, { color: themeColors.text }]} pointerEvents="none">
-          {currentMonthTitle}
-        </Text>
+        <View style={styles.titleContainer}>
+          <DropdownMenuWrapper options={monthOptions}>
+            <View style={styles.dropdownButton}>
+              <Text style={[styles.title, { color: themeColors.text }]}>
+                {MONTH_NAMES_FULL[currentMonthData.month]}
+              </Text>
+              <View style={[styles.titleUnderline, { backgroundColor: themeColors.text }]} />
+            </View>
+          </DropdownMenuWrapper>
+          <View style={styles.titleGap} />
+          <DropdownMenuWrapper options={yearOptions}>
+            <View style={styles.dropdownButton}>
+              <Text style={[styles.title, { color: themeColors.text }]}>
+                {currentMonthData.year}
+              </Text>
+              <View style={[styles.titleUnderline, { backgroundColor: themeColors.text }]} />
+            </View>
+          </DropdownMenuWrapper>
+        </View>
         <View style={styles.headerSideRight}>
           <PressableOpacity
-            style={[styles.todayButton, { backgroundColor: themeColors.backgroundSecondary }]}
+            style={[styles.todayButton, { backgroundColor: themeColors.surfacePrimary }]}
             onPress={handleSelectToday}
           >
             <Text style={[styles.todayButtonText, { color: themeColors.text }]}>{t('calendar.today')}</Text>
@@ -381,6 +496,7 @@ export default function SelectDateModal() {
                       cellWidth={cellWidth}
                       gridWidth={gridWidth}
                       allowFuture={allowFuture}
+                      highlightedDates={highlightedDates}
                     />
                   ) : null}
                 </View>
@@ -397,6 +513,7 @@ export default function SelectDateModal() {
               cellWidth={cellWidth}
               gridWidth={gridWidth}
               allowFuture={allowFuture}
+              highlightedDates={highlightedDates}
             />
           </View>
         )}
@@ -425,9 +542,26 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'flex-end',
   },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dropdownButton: {
+    alignItems: 'center',
+  },
   title: {
     ...typography.h6,
     textAlign: 'center',
+  },
+  titleUnderline: {
+    height: 1.5,
+    width: '100%',
+    marginTop: 2,
+    opacity: 0.5,
+  },
+  titleGap: {
+    width: 8,
   },
   todayButton: {
     height: 44,
@@ -491,9 +625,18 @@ const styles = StyleSheet.create({
   dayCellLastInRow: {
     marginRight: 0,
   },
+  dayCellContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   circleIndicator: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  highlightRing: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderColor: '#22C55E',
   },
   dayText: {
     ...typography.p1,

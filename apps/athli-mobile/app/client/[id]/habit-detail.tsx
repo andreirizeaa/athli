@@ -307,7 +307,7 @@ export default function HabitDetailScreen() {
             <SegmentedControl
                 segments={timeRangeSegments}
                 value={timeRange}
-                onChange={setTimeRange}
+                onChange={(value) => setTimeRange(value as TimeRange)}
             />
 
             {/* Stats Row 1: Average & Delta */}

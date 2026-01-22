@@ -146,7 +146,7 @@ export const MessageReactionsSheet = ({
                 <PressableOpacity
                   style={styles.reactionRow}
                   onPress={() => handleRemoveReaction(reactionUser)}
-                  disabled={!reactionUser.isCurrentUser}
+                  enabled={reactionUser.isCurrentUser}
                 >
                   {/* Profile picture */}
                   <View
@@ -264,6 +264,9 @@ const styles = StyleSheet.create({
   avatarText: {
     ...typography.p3,
     fontWeight: '600',
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   reactionInfo: {
     flex: 1,

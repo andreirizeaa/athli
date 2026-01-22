@@ -5,14 +5,13 @@ import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check, Repeat } from 'lucide-react-native';
+import { X, Check, CheckCircle } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
+import { useThemePreference, useTranslations, useClientDetailStore, useCoachProfileStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { SearchBar } from '@/components/ui/search-bar';
-import { Separator } from '@/components/ui/separator';
 import { hexToRgba } from '@/utils/colorUtils';
 import { fuzzyMatch } from '@/utils/searchUtils';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -20,6 +19,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { getAllHabits, type Habit } from '@/services/coach/coach-habit-service';
 import { assignHabit } from '@/services/client/client-habit-service';
 import { haptics } from '@/utils/haptics';
+import { HABIT_UNIT_OPTIONS, HABIT_PERIOD_OPTIONS } from '@athli/shared-types';
 
 export default function AssignHabitToClientModal() {
     const router = useRouter();
@@ -30,18 +30,21 @@ export default function AssignHabitToClientModal() {
     const params = useLocalSearchParams<{ clientId: string }>();
     const clientId = params.clientId;
 
-    const coachId = useClientDetailStore((state) => state.coachId);
+    const coachProfile = useCoachProfileStore((state) => state.profile);
+    const coachId = coachProfile?.id;
     const refreshSection = useClientDetailStore((state) => state.refreshSection);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedHabitIds, setSelectedHabitIds] = useState<Set<string>>(new Set());
     const [isSaving, setIsSaving] = useState(false);
 
-    // Fetch coach's habits from library
+    // Use same queryKey as library tabs - reads from existing cache, no new API call
     const { data: habits = [] } = useQuery({
-        queryKey: ['coachHabits'],
+        queryKey: ['habits'],
         queryFn: getAllHabits,
-        staleTime: 5 * 60 * 1000,
+        staleTime: Infinity, // Never consider data stale - library tab handles refresh
+        refetchOnMount: false, // Don't refetch when modal opens
+        refetchOnWindowFocus: false,
     });
 
     // Filter habits based on search query
@@ -102,6 +105,22 @@ export default function AssignHabitToClientModal() {
         });
     }, []);
 
+    // Helper to get formatted label for unit (matching HabitsTab)
+    const getUnitLabel = (value: string | null | undefined): string => {
+        if (!value) return '';
+        const option = HABIT_UNIT_OPTIONS.find(opt => opt.value === value);
+        return option?.label || value;
+    };
+
+    // Helper to get formatted label for period (matching HabitsTab)
+    const getPeriodLabel = (value: string | null | undefined): string => {
+        if (!value) return '';
+        if (value === 'daily') return t('library.addHabit.daily');
+        if (value === 'weekly') return t('library.addHabit.weekly');
+        const option = HABIT_PERIOD_OPTIONS.find(opt => opt.value === value);
+        return option?.label || value;
+    };
+
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
 
@@ -153,59 +172,71 @@ export default function AssignHabitToClientModal() {
                 <FlashList
                     data={filteredHabits}
                     keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => {
+                    renderItem={({ item, index }) => {
                         const isSelected = selectedHabitIds.has(item.id);
+                        const isLastItem = index === filteredHabits.length - 1;
+                        const unitLabel = getUnitLabel(item.unit);
+                        const periodLabel = getPeriodLabel(item.period);
 
                         return (
-                            <PressableOpacity
-                                onPress={() => handleHabitToggle(item.id)}
-                                style={styles.habitRow}
-                            >
-                                <View style={[styles.habitIconContainer, { backgroundColor: `${themeColors.primary}15` }]}>
-                                    <PlatformIcon
-                                        sf="repeat"
-                                        IconComponent={Repeat}
-                                        size={20}
-                                        color={themeColors.primary}
-                                    />
-                                </View>
-                                <View style={styles.habitInfo}>
-                                    <Text
-                                        style={[styles.habitName, { color: themeColors.text }]}
-                                        numberOfLines={1}
-                                    >
-                                        {item.name}
-                                    </Text>
-                                    {item.description && (
+                            <View>
+                                <PressableOpacity
+                                    onPress={() => handleHabitToggle(item.id)}
+                                    style={styles.rowContent}
+                                >
+                                    <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                                        <PlatformIcon
+                                            sf="checkmark.circle.fill"
+                                            IconComponent={CheckCircle}
+                                            size={24}
+                                            color={themeColors.text}
+                                        />
+                                    </View>
+                                    <View style={styles.textContent}>
                                         <Text
-                                            style={[styles.habitDescription, { color: themeColors.mutedText }]}
+                                            style={[styles.name, { color: themeColors.text }]}
                                             numberOfLines={1}
                                         >
-                                            {item.description}
+                                            {item.name}
                                         </Text>
-                                    )}
-                                    <Text style={[styles.habitPeriod, { color: themeColors.mutedText }]}>
-                                        {item.period === 'daily' ? t('general.daily') : t('general.weekly')}
-                                        {item.amount ? ` · ${item.amount} ${item.unit}` : ''}
-                                    </Text>
-                                </View>
-                                <View
-                                    style={[
-                                        styles.checkbox,
-                                        {
-                                            backgroundColor: isSelected ? themeColors.primary : 'transparent',
-                                            borderColor: isSelected ? themeColors.primary : themeColors.border,
-                                        },
-                                    ]}
-                                >
-                                    {isSelected && (
-                                        <Check {...({ size: 16, color: themeColors.primaryForeground } as any)} />
-                                    )}
-                                </View>
-                            </PressableOpacity>
+                                        <View style={styles.metaRow}>
+                                            <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                                                {item.amount} {unitLabel}
+                                            </Text>
+                                            <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                                            <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
+                                                {periodLabel}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <View
+                                        style={[
+                                            styles.checkbox,
+                                            {
+                                                backgroundColor: isSelected ? themeColors.primary : 'transparent',
+                                                borderColor: isSelected ? themeColors.primary : themeColors.border,
+                                            },
+                                        ]}
+                                    >
+                                        {isSelected && (
+                                            <Check {...({ size: 16, color: themeColors.primaryForeground } as any)} />
+                                        )}
+                                    </View>
+                                </PressableOpacity>
+
+                                {!isLastItem && (
+                                    <View style={styles.separatorContainer}>
+                                        <View
+                                            style={[
+                                                styles.separator,
+                                                { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+                                            ]}
+                                        />
+                                    </View>
+                                )}
+                            </View>
                         );
                     }}
-                    ItemSeparatorComponent={() => <Separator style={styles.separator} />}
                     contentContainerStyle={[styles.listContent, { paddingTop: headerHeight + 16 }]}
                     ListHeaderComponent={
                         <View style={styles.searchContainer}>
@@ -265,36 +296,39 @@ const styles = StyleSheet.create({
     listContent: {
         paddingBottom: 40,
     },
-    habitRow: {
+    rowContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
+        paddingVertical: 8,
         paddingHorizontal: 16,
     },
-    habitIconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 10,
+    iconContainer: {
+        width: 58,
+        height: 58,
+        borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 12,
     },
-    habitInfo: {
+    textContent: {
         flex: 1,
-        justifyContent: 'center',
+        marginRight: 8,
     },
-    habitName: {
+    name: {
         ...typography.p1,
-        fontWeight: '500',
+        fontWeight: '600',
+        marginBottom: 4,
     },
-    habitDescription: {
-        ...typography.p3,
-        marginTop: 2,
+    metaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
-    habitPeriod: {
+    metaText: {
         ...typography.p3,
-        fontWeight: '500',
-        marginTop: 2,
+    },
+    metaDot: {
+        marginHorizontal: 6,
+        ...typography.p3,
     },
     checkbox: {
         width: 24,
@@ -305,8 +339,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginLeft: 12,
     },
+    separatorContainer: {
+        paddingLeft: 86,
+        paddingRight: 16,
+    },
     separator: {
-        marginLeft: 68,
-        marginRight: 16,
+        height: 1,
     },
 });

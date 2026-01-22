@@ -1,36 +1,58 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import { Platform, StyleSheet, Text, View, KeyboardAvoidingView, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference, useColorScheme } from '@/stores';
-import { useTranslations, useClientDetailStore } from '@/stores';
+import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { InputBox } from '@/components/ui/form-inputs';
 import { hexToRgba } from '@/utils/colorUtils';
-import { createClientNote } from '@/services/client/client-notes-service';
+import { updateFile } from '@/services/coach/coach-file-service';
 
-export default function AddNoteToClientModal() {
+export default function EditFilenameModal() {
     const router = useRouter();
-    const { clientId } = useLocalSearchParams<{ clientId: string }>();
+    const queryClient = useQueryClient();
+    const params = useLocalSearchParams<{
+        fileId: string;
+        currentName: string;
+    }>();
     const { colors: themeColors } = useThemePreference();
-    const colorScheme = useColorScheme();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
-    const [title, setTitle] = useState('');
-    const [body, setBody] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const coachId = useClientDetailStore((state) => state.coachId);
-    const refreshSection = useClientDetailStore((state) => state.refreshSection);
+    const [filename, setFilename] = useState(params.currentName || '');
 
-    const isFormValid = title.trim().length > 0;
-    const canSave = isFormValid && !isSubmitting;
+    const { isFormValid, hasChanges } = useMemo(() => {
+        const trimmed = filename.trim();
+        return {
+            isFormValid: trimmed.length > 0,
+            hasChanges: trimmed !== (params.currentName || '').trim(),
+        };
+    }, [filename, params.currentName]);
+
+    const updateMutation = useMutation({
+        mutationFn: updateFile,
+        onSuccess: async () => {
+            haptics.success();
+            await queryClient.invalidateQueries({ queryKey: ['files'] });
+            handleClose();
+        },
+        onError: (error: Error) => {
+            haptics.error();
+            Alert.alert(
+                t('general.error'),
+                error.message || t('clientDetail.files.filenameUpdateError'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -38,31 +60,16 @@ export default function AddNoteToClientModal() {
         }
     }, [router]);
 
-    const handleSave = useCallback(async () => {
-        if (!canSave || !clientId || !coachId) return;
+    const handleSave = useCallback(() => {
+        if (!isFormValid || !hasChanges || !params.fileId) return;
 
-        setIsSubmitting(true);
-        try {
-            await createClientNote({
-                contactId: clientId,
-                coachId,
-                title: title.trim(),
-                body: body.trim(),
-            });
-            haptics.success();
-            await refreshSection('notes');
-            handleClose();
-        } catch (error) {
-            haptics.error();
-            Alert.alert(
-                t('general.error'),
-                t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
-        } finally {
-            setIsSubmitting(false);
-        }
-    }, [canSave, clientId, coachId, title, body, refreshSection, handleClose, t]);
+        updateMutation.mutate({
+            fileId: params.fileId,
+            fileName: filename.trim(),
+        });
+    }, [isFormValid, hasChanges, filename, params.fileId, updateMutation]);
+
+    const canComplete = isFormValid && hasChanges && !updateMutation.isPending;
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -100,15 +107,16 @@ export default function AddNoteToClientModal() {
                         color={themeColors.text}
                     />
                     <Text style={[styles.title, { color: themeColors.text }]}>
-                        {t('clientDetail.addNoteModal.title')}
+                        {t('clientDetail.files.editFilenameTitle')}
                     </Text>
                     <IconButton
                         icon={{ sf: 'checkmark', IconComponent: Check }}
                         onPress={handleSave}
                         size="md"
-                        variant={canSave ? 'primary' : 'default'}
-                        disabled={!canSave}
-                        loading={isSubmitting}
+                        color={themeColors.text}
+                        disabled={!canComplete}
+                        variant={canComplete ? 'primary' : 'default'}
+                        loading={updateMutation.isPending}
                     />
                 </View>
             </View>
@@ -121,20 +129,12 @@ export default function AddNoteToClientModal() {
                 bottomOffset={40}
             >
                 <InputBox
-                    label={t('clientDetail.addNoteModal.noteTitle')}
-                    value={title}
-                    onChangeText={setTitle}
-                    placeholder={t('clientDetail.addNoteModal.noteTitlePlaceholder')}
+                    label={t('files.addFile.fileName')}
+                    value={filename}
+                    onChangeText={setFilename}
+                    placeholder={t('clientDetail.files.filenamePlaceholder')}
                     required
-                />
-
-                <TextAreaInput
-                    label={t('clientDetail.addNoteModal.noteBody')}
-                    value={body}
-                    onChangeText={setBody}
-                    placeholder={t('clientDetail.addNoteModal.noteBodyPlaceholder')}
-                    numberOfLines={10}
-                    minHeight={250}
+                    autoFocus
                 />
             </KeyboardAwareScrollView>
         </KeyboardAvoidingView>
