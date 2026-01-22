@@ -116,13 +116,14 @@ export const MessageReplyPreview = ({
       <View style={styles.content}>
         {/* Header with reply icon and sender name */}
         <View style={styles.header}>
-          <PlatformIcon
-            sf="arrowshape.turn.up.left.fill"
-            IconComponent={Reply}
-            size={12}
-            color={textColor}
-            style={{ opacity: 0.7 }}
-          />
+          <View style={{ opacity: 0.7 }}>
+            <PlatformIcon
+              sf="arrowshape.turn.up.left.fill"
+              IconComponent={Reply}
+              size={12}
+              color={textColor}
+            />
+          </View>
           <Text style={[styles.senderName, { color: stripColor }]} numberOfLines={1}>
             {senderName}
           </Text>
@@ -183,13 +184,14 @@ export const MessageReplyPreview = ({
             {/* Voice note indicator */}
             {hasAudio && (
               <View style={styles.audioRow}>
-                <PlatformIcon
-                  sf="mic.fill"
-                  IconComponent={Mic}
-                  size={12}
-                  color={textColor}
-                  style={{ opacity: 0.7 }}
-                />
+                <View style={{ opacity: 0.7 }}>
+                  <PlatformIcon
+                    sf="mic.fill"
+                    IconComponent={Mic}
+                    size={12}
+                    color={textColor}
+                  />
+                </View>
                 <Text style={[styles.audioLabel, { color: textColor, opacity: 0.8 }]}>
                   {voiceNoteLabel}
                 </Text>

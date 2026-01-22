@@ -146,7 +146,7 @@ export const MessageReactionsSheet = ({
                 <PressableOpacity
                   style={styles.reactionRow}
                   onPress={() => handleRemoveReaction(reactionUser)}
-                  disabled={!reactionUser.isCurrentUser}
+                  enabled={reactionUser.isCurrentUser}
                 >
                   {/* Profile picture */}
                   <View

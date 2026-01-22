@@ -100,7 +100,7 @@ export default function EditClientInjuryModal() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [canSave, id, coachId, injuryId, title, date, injuries, refreshSection, handleClose, t, isEmpty, handleDelete]);
+    }, [canSave, id, coachId, injuryId, title, date, injuries, refreshSection, handleClose, t, isEmpty]);
 
     const handleDelete = useCallback(() => {
         Alert.alert(

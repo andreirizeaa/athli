@@ -134,7 +134,7 @@ export default function ClientActivityScreen() {
     try {
       const chat = await createNewChat(id, {
         clientName: client?.name,
-        clientAvatar: client?.avatarUrl,
+        clientAvatar: client?.avatarUrl ?? undefined,
       });
 
       router.push({

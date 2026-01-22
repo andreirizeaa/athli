@@ -90,7 +90,7 @@ export default function EditNoteModal() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [canSave, clientId, coachId, noteId, title, body, refreshSection, handleClose, t, isEmpty, handleDelete]);
+    }, [canSave, clientId, coachId, noteId, title, body, refreshSection, handleClose, t, isEmpty]);
 
     const handleDelete = useCallback(() => {
         Alert.alert(
