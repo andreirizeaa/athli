@@ -75,3 +75,33 @@ clientFileRouter.delete('/', supabaseAuthenticate, clientFilesController.deleteA
  *         schema: { type: string }
  */
 clientFileRouter.get('/:id/url', supabaseAuthenticate, clientFilesController.getFileUrl);
+
+/**
+ * @swagger
+ * /api/v1/client/files/{id}:
+ *   patch:
+ *     summary: Update file metadata (filename)
+ *     tags: [Client Files]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               filename:
+ *                 type: string
+ */
+clientFileRouter.patch('/:id', supabaseAuthenticate, clientFilesController.updateFile);

@@ -292,7 +292,11 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
   // Refresh specific section
   refreshSection: async (section) => {
     const { clientId, coachId } = get();
-    if (!clientId || !coachId) return;
+    console.log('[refreshSection]', section, { clientId, coachId });
+    if (!clientId || !coachId) {
+      console.warn('[refreshSection] Missing IDs, skipping');
+      return;
+    }
 
     const { startDate, endDate } = getDateRange();
 
@@ -340,6 +344,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         case 'files':
           set({ isLoadingFiles: true });
           const filesData = await getClientFiles(clientId, coachId);
+          console.log('[refreshSection] files result:', filesData.length, filesData);
           set({ files: filesData, isLoadingFiles: false });
           break;
 

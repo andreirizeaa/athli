@@ -48,11 +48,12 @@ export default function EditClientInjuryModal() {
     }, [existingInjury]);
 
     const isFormValid = title.trim().length > 0;
+    const isEmpty = title.trim() === '';
     const hasChanges = existingInjury && (
         title.trim() !== existingInjury.injury ||
         (date ? date.toISOString().split('T')[0] : null) !== existingInjury.date
     );
-    const canSave = isFormValid && hasChanges && !isSubmitting && !isDeleting;
+    const canSave = (isFormValid && hasChanges && !isSubmitting && !isDeleting) || isEmpty;
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -62,6 +63,12 @@ export default function EditClientInjuryModal() {
 
     const handleSave = useCallback(async () => {
         if (!canSave || !id || !coachId || !injuryId) return;
+
+        // If title is empty, trigger delete instead
+        if (isEmpty) {
+            handleDelete();
+            return;
+        }
 
         setIsSubmitting(true);
         try {
@@ -93,7 +100,7 @@ export default function EditClientInjuryModal() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [canSave, id, coachId, injuryId, title, date, injuries, refreshSection, handleClose, t]);
+    }, [canSave, id, coachId, injuryId, title, date, injuries, refreshSection, handleClose, t, isEmpty]);
 
     const handleDelete = useCallback(() => {
         Alert.alert(
@@ -192,10 +199,9 @@ export default function EditClientInjuryModal() {
                         icon={{ sf: 'checkmark', IconComponent: Check }}
                         onPress={handleSave}
                         size="md"
-                        color={themeColors.text}
-                        disabled={!canSave}
                         variant={canSave ? 'primary' : 'default'}
-                        loading={isSubmitting}
+                        disabled={!canSave}
+                        loading={isSubmitting || (isDeleting && isEmpty)}
                     />
                 </View>
             </View>
@@ -237,18 +243,14 @@ export default function EditClientInjuryModal() {
                     />
 
                     {/* Delete button */}
-                    <View style={styles.deleteSection}>
+                    <View style={styles.deleteRow}>
                         <IconButton
                             icon={{ sf: 'trash', IconComponent: Trash2 }}
                             onPress={handleDelete}
                             size="md"
-                            color={themeColors.error}
-                            loading={isDeleting}
+                            color="#EF4444"
                             disabled={isSubmitting || isDeleting}
                         />
-                        <Text style={[styles.deleteText, { color: themeColors.error }]}>
-                            {t('general.delete')}
-                        </Text>
                     </View>
                 </View>
             </KeyboardAwareScrollView>
@@ -295,15 +297,9 @@ const styles = StyleSheet.create({
     formSection: {
         gap: 16,
     },
-    deleteSection: {
+    deleteRow: {
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 24,
-        gap: 8,
-    },
-    deleteText: {
-        ...typography.p2,
-        fontWeight: '500',
+        justifyContent: 'flex-start',
+        marginTop: 8,
     },
 });

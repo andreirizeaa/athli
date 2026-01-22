@@ -264,7 +264,7 @@ export default function MetricDetailScreen() {
             <SegmentedControl
                 segments={timeRangeSegments}
                 value={timeRange}
-                onChange={setTimeRange}
+                onChange={(value) => setTimeRange(value as TimeRange)}
             />
 
             {/* Stats Row */}

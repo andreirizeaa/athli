@@ -136,6 +136,9 @@ const WeekCard = ({
             <PressableOpacity onPress={toggleExpand} style={styles.weekHeader}>
                     <Text style={[styles.weekRange, { color: themeColors.text }]}>
                         {formatWeekRange(weekGroup.weekStart, weekGroup.weekEnd)}
+                        <Text style={[styles.weekLogCount, { color: themeColors.mutedText }]}>
+                            {` (${weekGroup.logs.length}/7)`}
+                        </Text>
                     </Text>
                     <View style={styles.weekHeaderRight}>
                         <Text style={[styles.weekAverage, { color: themeColors.text }]}>
@@ -489,6 +492,10 @@ const styles = StyleSheet.create({
     weekRange: {
         ...typography.p2,
         fontWeight: '600',
+    },
+    weekLogCount: {
+        ...typography.p4,
+        fontWeight: '400',
     },
     weekHeaderRight: {
         flexDirection: 'row',

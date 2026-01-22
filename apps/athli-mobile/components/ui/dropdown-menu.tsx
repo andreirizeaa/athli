@@ -148,51 +148,30 @@ type ContextMenuWrapperProps = {
   options: DropdownMenuOption[];
   children: React.ReactNode;
   onLongPress?: () => void;
+  onOpenChange?: (isOpen: boolean) => void;
 };
 
 /**
  * Context menu that appears on long press (iOS/Android native context menu)
- * Includes a custom preview with themed background for better visibility in dark mode
  */
 export const ContextMenuWrapper = ({
   options,
   children,
   onLongPress,
+  onOpenChange,
 }: ContextMenuWrapperProps) => {
-  const { colors: themeColors } = useThemePreference();
-
-  // Clone children with overridden background for the preview
-  const getPreviewChildren = () => {
-    if (React.isValidElement(children)) {
-      // Clone the first child and override its style with surface background
-      return React.cloneElement(children as React.ReactElement<any>, {
-        style: [
-          (children as React.ReactElement<any>).props.style,
-          { backgroundColor: themeColors.backgroundSecondary},
-        ],
-      });
-    }
-    return children;
-  };
-
   return (
     <ContextMenu.Root onOpenChange={(open) => {
       if (open && onLongPress) {
         onLongPress();
       }
+      onOpenChange?.(open);
     }}>
       <ContextMenu.Trigger>
         <View>
           {children}
         </View>
       </ContextMenu.Trigger>
-      <ContextMenu.Preview>
-        {() => (
-          <View style={{ backgroundColor: themeColors.backgroundSecondary}}>
-            {getPreviewChildren()}
-          </View>
-        )}
-      </ContextMenu.Preview>
       <ContextMenu.Content>
         {options.map((option) => {
           // Generate unique key from label (sanitized for safety)
