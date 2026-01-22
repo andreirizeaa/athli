@@ -1,17 +1,18 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
+import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Alert, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, Notebook, Share } from 'lucide-react-native';
+import { ChevronLeft, Plus, Notebook, ChevronRight } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
+import { useThemePreference, useTranslations, useClientDetailStore, useCoachProfileStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { PlatformIcon } from '@/components/ui/platform-icon';
-import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
+import { SwipeableRow } from '@/components/ui/swipeable-row';
+import { deleteClientNote } from '@/services/client/client-notes-service';
 
 // Simple fuzzy search - checks if all characters appear in order
 const fuzzyMatch = (text: string, query: string): boolean => {
@@ -38,10 +39,29 @@ export default function ClientNotesScreen() {
   // Get notes from store (already loaded by parent screen)
   const notes = useClientDetailStore((state) => state.notes);
   const isLoadingNotes = useClientDetailStore((state) => state.isLoadingNotes);
+  const refreshSection = useClientDetailStore((state) => state.refreshSection);
+  const coachProfile = useCoachProfileStore((state) => state.profile);
 
-  // Sort and search state
-  const [sortNewestFirst, setSortNewestFirst] = useState(true);
+  // Search state
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Swipe row management
+  const openRowRef = useRef<(() => void) | null>(null);
+  const hadOpenRowRef = useRef(false);
+
+  const closeOpenRow = useCallback(() => {
+    if (openRowRef.current) {
+      openRowRef.current();
+      openRowRef.current = null;
+    }
+  }, []);
+
+  const registerOpenRow = useCallback((closeRow: () => void) => {
+    if (openRowRef.current && openRowRef.current !== closeRow) {
+      openRowRef.current();
+    }
+    openRowRef.current = closeRow;
+  }, []);
 
   // Filter and sort notes
   const filteredNotes = useMemo(() => {
@@ -56,19 +76,11 @@ export default function ClientNotesScreen() {
       });
     }
 
-    // Sort by date
-    result.sort((a, b) => {
-      const comparison = b.createdAt - a.createdAt;
-      return sortNewestFirst ? comparison : -comparison;
-    });
+    // Sort by date (newest first)
+    result.sort((a, b) => b.createdAt - a.createdAt);
 
     return result;
-  }, [notes, searchQuery, sortNewestFirst]);
-
-  const handleToggleSort = useCallback(() => {
-    haptics.medium();
-    setSortNewestFirst((prev) => !prev);
-  }, []);
+  }, [notes, searchQuery]);
 
   const handleBackPress = () => {
     haptics.medium();
@@ -80,9 +92,36 @@ export default function ClientNotesScreen() {
     router.push(`/modals/client/add-note-to-client-modal?clientId=${id}` as any);
   };
 
-  const handleNotePress = (noteId: string) => {
+  const handleNotePress = useCallback((noteId: string) => {
+    // If a row was just closed, prevent navigation
+    if (hadOpenRowRef.current) {
+      hadOpenRowRef.current = false;
+      return;
+    }
+    // If a row is open, just close it and prevent navigation
+    if (openRowRef.current) {
+      closeOpenRow();
+      return;
+    }
     haptics.medium();
     router.push(`/modals/client/edit-note-modal?clientId=${id}&noteId=${noteId}` as any);
+  }, [closeOpenRow, router, id]);
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!coachProfile?.id || !id) return;
+
+    try {
+      await deleteClientNote({
+        noteId,
+        contactId: id,
+        coachId: coachProfile.id,
+      });
+      haptics.success();
+      refreshSection('notes');
+    } catch (error) {
+      haptics.error();
+      Alert.alert(t('general.error'), t('general.errorDeleting'));
+    }
   };
 
   const formatDate = (timestamp: number) => {
@@ -96,25 +135,68 @@ export default function ClientNotesScreen() {
     });
   };
 
+  const renderNote = useCallback(({ item, index, isLastItem }: { item: typeof notes[0]; index: number; isLastItem: boolean }) => (
+    <View>
+      <SwipeableRow
+        onDelete={() => handleDeleteNote(item.id)}
+        onOpen={registerOpenRow}
+        deleteConfirmTitle={`${t('general.delete')}?`}
+      >
+        <PressableScale onPress={() => handleNotePress(item.id)}>
+          <View style={[styles.noteItem, { backgroundColor: themeColors.backgroundPrimary }]}>
+            <View style={[styles.noteIconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+              <PlatformIcon
+                sf="note.text"
+                IconComponent={Notebook}
+                size={24}
+                color={themeColors.text}
+              />
+            </View>
+            <View style={styles.noteContent}>
+              <Text style={[styles.noteTitle, { color: themeColors.text }]} numberOfLines={1}>
+                {item.title}
+              </Text>
+              {item.body ? (
+                <Text style={[styles.noteText, { color: themeColors.mutedText }]} numberOfLines={2}>
+                  {item.body}
+                </Text>
+              ) : null}
+              <Text style={[styles.noteDate, { color: themeColors.mutedText }]}>
+                {formatDate(item.createdAt)}
+              </Text>
+            </View>
+            <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+          </View>
+        </PressableScale>
+      </SwipeableRow>
+      {!isLastItem && (
+        <View style={styles.separatorContainer}>
+          <View
+            style={[
+              styles.separator,
+              { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+            ]}
+          />
+        </View>
+      )}
+      {isLastItem && <View style={{ height: 24 }} />}
+    </View>
+  ), [themeColors, handleNotePress, handleDeleteNote, registerOpenRow, formatDate, t]);
+
   return (
-    <ScreenWrapper>
-      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
-        <IconButton
-          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-          onPress={handleBackPress}
-          size="md"
-          color={iconColor}
-        />
-        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-          {t('clientDetail.sections.notes')}
-        </Text>
-        <View style={styles.headerRight}>
+    <ScreenWrapper scrollable={false}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
           <IconButton
-            icon={{ sf: 'square.and.arrow.up', IconComponent: Share }}
-            onPress={handleToggleSort}
+            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+            onPress={handleBackPress}
             size="md"
             color={iconColor}
           />
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+            {t('clientDetail.sections.notes')}
+          </Text>
           <IconButton
             icon={{ sf: 'plus', IconComponent: Plus }}
             onPress={handleAddNote}
@@ -122,10 +204,8 @@ export default function ClientNotesScreen() {
             color={iconColor}
           />
         </View>
-      </View>
 
-      {/* Search bar */}
-      {notes.length > 0 && (
+        {/* Search bar */}
         <View style={styles.searchContainer}>
           <SearchBar
             value={searchQuery}
@@ -133,97 +213,93 @@ export default function ClientNotesScreen() {
             placeholder={t('clientDetail.notes.searchPlaceholder')}
           />
         </View>
-      )}
 
-      {/* Loading state */}
-      {isLoadingNotes && notes.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={themeColors.primary} />
-        </View>
-      ) : notes.length === 0 ? (
-        /* Empty state */
-        <View style={styles.emptyContainer}>
-          <PlatformIcon sf="note.text" IconComponent={Notebook} size={48} color={themeColors.mutedText} />
-          <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
-            {t('clientDetail.notes.emptyTitle')}
-          </Text>
-          <Text style={[styles.emptyDescription, { color: themeColors.mutedText }]}>
-            {t('clientDetail.notes.emptyDescription')}
-          </Text>
-        </View>
-      ) : filteredNotes.length === 0 ? (
-        /* No results state */
-        <View style={styles.emptyContainer}>
-          <PlatformIcon sf="magnifyingglass" IconComponent={Notebook} size={48} color={themeColors.mutedText} />
-          <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
-            {t('clientDetail.notes.noResults')}
-          </Text>
-        </View>
-      ) : (
-        /* Notes list */
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardDismissMode="on-drag"
+        {/* Notes List */}
+        <Pressable
+          style={styles.contentContainer}
+          onPressIn={() => {
+            if (openRowRef.current) {
+              hadOpenRowRef.current = true;
+              closeOpenRow();
+            } else {
+              hadOpenRowRef.current = false;
+            }
+          }}
         >
-          {filteredNotes.map((note) => (
-            <View key={note.id}>
-              <PressableScale onPress={() => handleNotePress(note.id)}>
-                <View style={styles.noteItem}>
-                  <View style={styles.noteContent}>
-                    <Text style={[styles.noteTitle, { color: themeColors.text }]} numberOfLines={1}>
-                      {note.title}
-                    </Text>
-                    {note.body ? (
-                      <Text style={[styles.noteText, { color: themeColors.mutedText }]} numberOfLines={2}>
-                        {note.body}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <Text style={[styles.noteDate, { color: themeColors.mutedText }]}>
-                    {formatDate(note.createdAt)}
-                  </Text>
-                </View>
-              </PressableScale>
-              <Separator />
+          {/* Loading state */}
+          {isLoadingNotes && notes.length === 0 ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={themeColors.primary} />
             </View>
-          ))}
-        </ScrollView>
-      )}
+          ) : notes.length === 0 ? (
+            /* Empty state */
+            <View style={styles.emptyContainer}>
+              <PlatformIcon sf="note.text" IconComponent={Notebook} size={48} color={themeColors.mutedText} />
+              <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
+                {t('clientDetail.notes.emptyTitle')}
+              </Text>
+              <Text style={[styles.emptyDescription, { color: themeColors.mutedText }]}>
+                {t('clientDetail.notes.emptyDescription')}
+              </Text>
+            </View>
+          ) : filteredNotes.length === 0 ? (
+            /* No results state */
+            <View style={styles.emptyContainer}>
+              <PlatformIcon sf="magnifyingglass" IconComponent={Notebook} size={48} color={themeColors.mutedText} />
+              <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
+                {t('clientDetail.notes.noResults')}
+              </Text>
+            </View>
+          ) : (
+            /* Notes list */
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardDismissMode="on-drag"
+              bounces={false}
+            >
+              {filteredNotes.map((note, index) => (
+                <View key={note.id}>
+                  {renderNote({ item: note, index, isLastItem: index === filteredNotes.length - 1 })}
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </Pressable>
+      </View>
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
-    paddingHorizontal: 16,
   },
   headerTitle: {
     ...typography.h5,
     flex: 1,
-    textAlign: 'left',
-    marginLeft: 8,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    textAlign: 'center',
   },
   searchContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingBottom: 12,
+  },
+  contentContainer: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
   },
   emptyContainer: {
     flex: 1,
@@ -252,19 +328,27 @@ const styles = StyleSheet.create({
   noteItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    justifyContent: 'space-between',
+    paddingVertical: 8,
     paddingHorizontal: 16,
     gap: 12,
   },
+  noteIconContainer: {
+    width: 58,
+    height: 58,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
   noteContent: {
     flex: 1,
+    marginRight: 12,
     gap: 4,
-    alignItems: 'flex-start',
   },
   noteTitle: {
     ...typography.p2,
     fontWeight: '500',
-    textAlign: 'left',
   },
   noteText: {
     ...typography.p3,
@@ -272,5 +356,12 @@ const styles = StyleSheet.create({
   },
   noteDate: {
     ...typography.p4,
+  },
+  separatorContainer: {
+    paddingLeft: 86,
+    paddingRight: 16,
+  },
+  separator: {
+    height: 1,
   },
 });

@@ -152,8 +152,6 @@ export default function AddPhotoToClientModal() {
                     return;
                 }
                 const result = await ImagePicker.launchCameraAsync({
-                    allowsEditing: true,
-                    aspect: [1, 1],
                     quality: 0.8,
                 });
                 if (!result.canceled && result.assets[0]) {
@@ -170,8 +168,6 @@ export default function AddPhotoToClientModal() {
                     return;
                 }
                 const result = await ImagePicker.launchImageLibraryAsync({
-                    allowsEditing: true,
-                    aspect: [1, 1],
                     quality: 0.8,
                 });
                 if (!result.canceled && result.assets[0]) {

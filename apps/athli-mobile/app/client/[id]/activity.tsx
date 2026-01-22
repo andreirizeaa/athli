@@ -1,11 +1,12 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, MessageCircle, Activity } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference, useTranslations, useClientDetailStore, useChatsStore } from '@/stores';
+import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
+import { createNewChat } from '@/services/chats-service';
 import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { Card } from '@/components/ui/card';
@@ -28,8 +29,8 @@ export default function ClientActivityScreen() {
   const clientId = useClientDetailStore((state) => state.clientId);
   const loadClientData = useClientDetailStore((state) => state.loadClientData);
 
-  // Get chats for navigation
-  const chats = useChatsStore((state) => state.chats);
+  // Loading state for message button
+  const [isLoadingChat, setIsLoadingChat] = useState(false);
 
   // Load client data if not already loaded
   useEffect(() => {
@@ -124,15 +125,29 @@ export default function ClientActivityScreen() {
     router.back();
   };
 
-  const handleMessagePress = () => {
+  const handleMessagePress = async () => {
+    if (isLoadingChat || !id) return;
+
     haptics.medium();
-    // Find chat with this client
-    const chat = chats.find((c) => c.client_id === id);
-    if (chat) {
-      router.push(`/chats/${chat.id}`);
-    } else {
-      // Navigate to chats tab if no existing chat
-      router.push('/(tabs)/chats');
+    setIsLoadingChat(true);
+
+    try {
+      const chat = await createNewChat(id, {
+        clientName: client?.name,
+        clientAvatar: client?.avatarUrl,
+      });
+
+      router.push({
+        pathname: '/chats/[id]',
+        params: {
+          id: chat.id,
+          chat: JSON.stringify(chat),
+        },
+      });
+    } catch (error) {
+      console.error('[ClientActivity] Error loading chat:', error);
+    } finally {
+      setIsLoadingChat(false);
     }
   };
 
@@ -153,10 +168,11 @@ export default function ClientActivityScreen() {
           <View style={styles.headerPlaceholder} />
         ) : (
           <IconButton
-            icon={{ sf: 'message', IconComponent: MessageCircle }}
+            icon={{ sf: 'bubble.left', IconComponent: MessageCircle }}
             onPress={handleMessagePress}
             size="md"
             color={iconColor}
+            loading={isLoadingChat}
           />
         )}
       </View>

@@ -357,6 +357,7 @@ function RootLayoutNav() {
           <Stack.Screen name="client/[id]/training" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/habits" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/photos" options={{ headerShown: false }} />
+          <Stack.Screen name="client/[id]/compare" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/files" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/check-ins" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/questionaires" options={{ headerShown: false }} />
@@ -798,6 +799,14 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="modals/client/file-viewer-modal"
+            options={{
+              presentation: 'fullScreenModal',
+              headerShown: false,
+              animation: 'fade',
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/photo-preview-modal"
             options={{
               presentation: 'fullScreenModal',
               headerShown: false,

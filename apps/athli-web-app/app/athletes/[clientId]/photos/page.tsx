@@ -360,7 +360,7 @@ const ClientPhotosPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-h-0">
                     {/* Front Photo Card */}
                     <Card className="flex flex-col h-full overflow-hidden shadow-sm group">
-                      <div className="w-full pb-2 pt-0 px-4 border-b flex justify-between items-center bg-muted/20 flex-shrink-0">
+                      <div className="w-full py-3 px-4 border-b flex justify-between items-center flex-shrink-0">
                         <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80">Front View</span>
                         <button
                           onClick={(e) => {
@@ -452,7 +452,7 @@ const ClientPhotosPage = () => {
 
                     {/* Side Photo Card */}
                     <Card className="flex flex-col h-full overflow-hidden shadow-sm group">
-                      <div className="w-full pb-2 pt-0 px-4 border-b flex justify-between items-center bg-muted/20 flex-shrink-0">
+                      <div className="w-full py-3 px-4 border-b flex justify-between items-center flex-shrink-0">
                         <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80">Side View</span>
                         <button
                           onClick={(e) => {
@@ -544,7 +544,7 @@ const ClientPhotosPage = () => {
 
                     {/* Back Photo Card */}
                     <Card className="flex flex-col h-full overflow-hidden shadow-sm group">
-                      <div className="w-full pb-2 pt-0 px-4 border-b flex justify-between items-center bg-muted/20 flex-shrink-0">
+                      <div className="w-full py-3 px-4 border-b flex justify-between items-center flex-shrink-0">
                         <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80">Back View</span>
                         <button
                           onClick={(e) => {
@@ -642,7 +642,7 @@ const ClientPhotosPage = () => {
               )
             ) : selectedGroupDate ? (
               <Card className="flex-1 w-full h-full overflow-hidden shadow-md flex flex-col max-w-xs mx-auto">
-                <div className="w-full pb-2 pt-0 px-4 border-b flex justify-between items-center bg-muted/20 flex-shrink-0">
+                <div className="w-full py-3 px-4 border-b flex justify-between items-center flex-shrink-0">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80">{activeView} View</span>
                   <button
                     onClick={(e) => {
