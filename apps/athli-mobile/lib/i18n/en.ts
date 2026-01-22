@@ -917,10 +917,16 @@ export const en = {
     photos: {
       emptyTitle: 'No photos yet',
       emptyDescription: 'Progress photos for this client will appear here',
+      emptyFilteredTitle: 'No photos for this view',
+      emptyFilteredDescription: 'There are no photos uploaded for this angle yet',
+      deleteConfirmation: 'Are you sure you want to delete this photo?',
       viewAll: 'All',
       viewFront: 'Front',
       viewBack: 'Back',
       viewSide: 'Side',
+      compare: 'Compare',
+      noPhotosForDate: 'No progress photos for this date',
+      addPhotos: 'Add Photos',
     },
     checkIns: {
       emptyTitle: 'No check-ins assigned',

@@ -103,7 +103,6 @@ export const SegmentedControl = React.memo(function SegmentedControl<T extends s
 const styles = StyleSheet.create({
     wrapper: {
         paddingHorizontal: 16,
-        paddingTop: 16,
     },
     container: {
         flexDirection: 'row',

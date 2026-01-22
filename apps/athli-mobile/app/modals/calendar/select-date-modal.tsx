@@ -95,6 +95,7 @@ type CalendarMonthPageProps = {
   cellWidth: number;
   gridWidth: number;
   allowFuture: boolean;
+  highlightedDates?: Set<string>;
 };
 
 const CalendarMonthPage = React.memo(({
@@ -105,6 +106,7 @@ const CalendarMonthPage = React.memo(({
   cellWidth,
   gridWidth,
   allowFuture,
+  highlightedDates,
 }: CalendarMonthPageProps) => {
   const firstDay = getFirstDayOfWeek(monthData.year, monthData.month);
   const daysInMonth = getDaysInMonth(monthData.year, monthData.month);
@@ -143,27 +145,53 @@ const CalendarMonthPage = React.memo(({
 
         const isFuture = !allowFuture && normalizeDate(date).getTime() > normalizeDate(new Date()).getTime();
 
+        // Check if this date is highlighted (has photos)
+        const dateKey = `${monthData.year}-${String(monthData.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isHighlighted = highlightedDates?.has(dateKey);
+
         const isActive = isSelected || isTodayDate;
         const currentCircleSize = isActive ? activeCircleSize : circleSize;
+        // For highlight ring, always use the regular size for consistency
+        const highlightRingSize = circleSize + 6;
+
+        // Determine colors based on selection and highlight state
+        const isSelectedWithPhoto = isSelected && isHighlighted;
+        const isSelectedWithoutPhoto = isSelected && !isHighlighted;
+        const greenColor = '#22C55E';
+
+        // For today indicator: only show primary border if NOT highlighted (no photo)
+        const showTodayBorder = isTodayDate && !isSelected && !isHighlighted;
 
         const cellContent = (
-          <View
-            style={[
-              styles.circleIndicator,
-              { width: currentCircleSize, height: currentCircleSize, borderRadius: currentCircleSize / 2 },
-              isSelected && { backgroundColor: themeColors.primary },
-              isTodayDate && !isSelected && { borderWidth: 2, borderColor: themeColors.primary },
-              isFuture && { opacity: 0.25 },
-            ]}
-          >
-            <Text
+          <View style={styles.dayCellContent}>
+            {/* Green outline for highlighted dates (dates with photos) - both selected and unselected */}
+            {isHighlighted && !isFuture && !isSelected && (
+              <View
+                style={[
+                  styles.highlightRing,
+                  { width: highlightRingSize, height: highlightRingSize, borderRadius: highlightRingSize / 2 },
+                ]}
+              />
+            )}
+            <View
               style={[
-                styles.dayText,
-                { color: isSelected ? themeColors.primaryForeground : themeColors.text },
+                styles.circleIndicator,
+                { width: currentCircleSize, height: currentCircleSize, borderRadius: currentCircleSize / 2 },
+                isSelectedWithPhoto && { backgroundColor: greenColor },
+                isSelectedWithoutPhoto && { backgroundColor: themeColors.primary },
+                showTodayBorder && { borderWidth: 2, borderColor: themeColors.primary },
+                isFuture && { opacity: 0.25 },
               ]}
             >
-              {day}
-            </Text>
+              <Text
+                style={[
+                  styles.dayText,
+                  { color: isSelectedWithPhoto ? '#FFFFFF' : isSelectedWithoutPhoto ? themeColors.primaryForeground : themeColors.text },
+                ]}
+              >
+                {day}
+              </Text>
+            </View>
           </View>
         );
 
@@ -248,7 +276,7 @@ WeekdayHeader.displayName = 'WeekdayHeader';
 
 export default function SelectDateModal() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ selectedDate?: string; storageKey?: string; allowFuture?: string }>();
+  const params = useLocalSearchParams<{ selectedDate?: string; storageKey?: string; allowFuture?: string; highlightedDates?: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const { triggerDateSelect } = useModalCallbacks();
@@ -259,6 +287,12 @@ export default function SelectDateModal() {
   // Get storage key from params or use default
   const storageKey = params.storageKey || DEFAULT_STORAGE_KEY;
   const allowFuture = params.allowFuture !== 'false';
+
+  // Parse highlighted dates (comma-separated date strings in YYYY-MM-DD format)
+  const highlightedDates = useMemo(() => {
+    if (!params.highlightedDates) return undefined;
+    return new Set(params.highlightedDates.split(','));
+  }, [params.highlightedDates]);
 
   const monthsData = useMemo(() => generateMonths(allowFuture), [allowFuture]);
   const initialMonthIndex = useMemo(() => getInitialMonthIndex(monthsData), [monthsData]);
@@ -305,20 +339,22 @@ export default function SelectDateModal() {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
+    const viewingYear = currentMonthData.year;
 
     return MONTH_NAMES_FULL.map((name, index) => {
-      // If not allowing future dates and we're in the current year, disable future months
-      const isDisabled = !allowFuture &&
-        currentMonthData.year === currentYear &&
-        index > currentMonth;
+      // Check if this month exists in monthsData for the viewing year
+      const monthExists = monthsData.some(
+        (m) => m.year === viewingYear && m.month === index
+      );
 
-      if (isDisabled) return null;
+      // Skip future months that don't exist in the data
+      if (!monthExists) return null;
 
       return {
         label: name,
         onPress: () => {
           const targetIndex = monthsData.findIndex(
-            (m) => m.year === currentMonthData.year && m.month === index
+            (m) => m.year === viewingYear && m.month === index
           );
           if (targetIndex >= 0 && targetIndex !== currentPageIndex) {
             haptics.medium();
@@ -327,7 +363,7 @@ export default function SelectDateModal() {
         },
       };
     }).filter(Boolean) as DropdownMenuOption[];
-  }, [currentMonthData, monthsData, currentPageIndex, allowFuture]);
+  }, [currentMonthData, monthsData, currentPageIndex]);
 
   // Generate year dropdown options
   const yearOptions = useMemo((): DropdownMenuOption[] => {
@@ -460,6 +496,7 @@ export default function SelectDateModal() {
                       cellWidth={cellWidth}
                       gridWidth={gridWidth}
                       allowFuture={allowFuture}
+                      highlightedDates={highlightedDates}
                     />
                   ) : null}
                 </View>
@@ -476,6 +513,7 @@ export default function SelectDateModal() {
               cellWidth={cellWidth}
               gridWidth={gridWidth}
               allowFuture={allowFuture}
+              highlightedDates={highlightedDates}
             />
           </View>
         )}
@@ -587,9 +625,18 @@ const styles = StyleSheet.create({
   dayCellLastInRow: {
     marginRight: 0,
   },
+  dayCellContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   circleIndicator: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  highlightRing: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderColor: '#22C55E',
   },
   dayText: {
     ...typography.p1,
