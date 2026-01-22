@@ -153,7 +153,7 @@ export const CountrySelectorInput = ({
         presentationStyle="pageSheet"
         onRequestClose={handleClose}
       >
-        <View style={[styles.modalContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+        <View style={[styles.modalContainer, { backgroundColor: themeColors.backgroundSecondary }]}>
           {/* Country List */}
           <View style={styles.listContainer}>
             <FlashList
@@ -180,10 +180,10 @@ export const CountrySelectorInput = ({
           <View style={[styles.fixedHeader, { height: headerHeight }]}>
             <LinearGradient
               colors={[
-                hexToRgba(themeColors.surfacePrimary, 1),
-                hexToRgba(themeColors.surfacePrimary, 0.85),
-                hexToRgba(themeColors.surfacePrimary, 0.5),
-                hexToRgba(themeColors.surfacePrimary, 0),
+                hexToRgba(themeColors.backgroundSecondary, 1),
+                hexToRgba(themeColors.backgroundSecondary, 0.85),
+                hexToRgba(themeColors.backgroundSecondary, 0.5),
+                hexToRgba(themeColors.backgroundSecondary, 0),
               ]}
               locations={[0, 0.5, 0.8, 1]}
               style={[styles.headerGradient, { height: gradientHeight }]}

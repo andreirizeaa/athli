@@ -1,16 +1,14 @@
 import React from 'react';
 import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, ClipboardCheck, HelpCircle, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, Plus, HelpCircle, ChevronRight, ClipboardList } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
-import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
-import { Separator } from '@/components/ui/separator';
 
 export default function ClientQuestionairesScreen() {
   const router = useRouter();
@@ -22,7 +20,6 @@ export default function ClientQuestionairesScreen() {
   // Get questionnaires from store (already loaded by parent screen)
   const questionnaires = useClientDetailStore((state) => state.questionnaires);
   const isLoadingForms = useClientDetailStore((state) => state.isLoadingForms);
-  const refreshSection = useClientDetailStore((state) => state.refreshSection);
 
   const handleBackPress = () => {
     router.back();
@@ -32,36 +29,15 @@ export default function ClientQuestionairesScreen() {
     router.push(`/modals/shared/assign-to-clients-modal?type=questionnaire&clientId=${id}` as any);
   };
 
-  const handleAddQuestionnaire = () => {
-    router.push(`/modals/library/add-questionnaire-modal?clientId=${id}` as any);
-  };
-
-  const handleQuestionnairePress = (questionnaireId: string) => {
-    router.push(
-      `/modals/client/questionnaire-detail-modal?clientId=${id}&questionnaireId=${questionnaireId}` as any
-    );
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
-  const getStatusColor = (status: string | undefined) => {
-    switch (status?.toLowerCase()) {
-      case 'completed':
-        return themeColors.success;
-      case 'pending':
-        return themeColors.warning || '#F5A623';
-      case 'overdue':
-        return themeColors.error;
-      default:
-        return themeColors.mutedText;
-    }
+  const handleQuestionnairePress = (questionnaire: typeof questionnaires[0]) => {
+    router.push({
+      pathname: '/client/[id]/questionnaire-detail',
+      params: {
+        id,
+        questionnaireId: questionnaire.id,
+        questionnaireName: questionnaire.name,
+      },
+    } as any);
   };
 
   return (
@@ -76,27 +52,12 @@ export default function ClientQuestionairesScreen() {
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>
           {t('clientDetail.sections.questionnaires')}
         </Text>
-        <DropdownMenuWrapper
-          options={[
-            {
-              label: t('clientDetail.actions.assignQuestionnaire'),
-              icon: { sf: 'checklist', IconComponent: ClipboardCheck },
-              onPress: handleAssignQuestionnaire,
-            },
-            {
-              label: t('clientDetail.actions.addQuestionnaire'),
-              icon: { sf: 'plus', IconComponent: Plus },
-              onPress: handleAddQuestionnaire,
-            },
-          ]}
-        >
-          <IconButton
-            icon={{ sf: 'plus', IconComponent: Plus }}
-            onPress={() => {}}
-            size="md"
-            color={iconColor}
-          />
-        </DropdownMenuWrapper>
+        <IconButton
+          icon={{ sf: 'plus', IconComponent: Plus }}
+          onPress={handleAssignQuestionnaire}
+          size="md"
+          color={iconColor}
+        />
       </View>
 
       {/* Loading state */}
@@ -128,58 +89,52 @@ export default function ClientQuestionairesScreen() {
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="on-drag"
         >
-          {questionnaires.map((questionnaire) => (
-            <View key={questionnaire.id}>
-              <PressableScale
-                onPress={() =>
-                  handleQuestionnairePress(questionnaire.id)
-                }
-              >
-                <View style={styles.questionnaireItem}>
-                  <View
-                    style={[
-                      styles.questionnaireIconContainer,
-                      { backgroundColor: `${themeColors.primary}15` },
-                    ]}
-                  >
-                    <PlatformIcon
-                      sf="questionmark.circle"
-                      IconComponent={HelpCircle}
-                      size={24}
-                      color={themeColors.primary}
+          {questionnaires.map((questionnaire, index) => {
+            const isLastItem = index === questionnaires.length - 1;
+            return (
+              <View key={questionnaire.id}>
+                <PressableScale
+                  style={styles.rowWrapper}
+                  onPress={() => handleQuestionnairePress(questionnaire)}
+                >
+                  <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
+                    <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                      <PlatformIcon
+                        sf="list.bullet.rectangle.portrait.fill"
+                        IconComponent={ClipboardList}
+                        size={24}
+                        color={themeColors.text}
+                      />
+                    </View>
+                    <View style={styles.textContent}>
+                      <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
+                        {questionnaire.name}
+                      </Text>
+                      <View style={styles.metaRow}>
+                        {questionnaire.status && (
+                          <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                            {questionnaire.status}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                    <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                  </View>
+                </PressableScale>
+
+                {!isLastItem && (
+                  <View style={styles.separatorContainer}>
+                    <View
+                      style={[
+                        styles.separator,
+                        { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+                      ]}
                     />
                   </View>
-                  <View style={styles.questionnaireInfo}>
-                    <Text
-                      style={[styles.questionnaireName, { color: themeColors.text }]}
-                      numberOfLines={1}
-                    >
-                      {questionnaire.name}
-                    </Text>
-                    <View style={styles.questionnaireMeta}>
-                      {questionnaire.status && (
-                        <Text
-                          style={[
-                            styles.questionnaireStatus,
-                            { color: getStatusColor(questionnaire.status) },
-                          ]}
-                        >
-                          {questionnaire.status}
-                        </Text>
-                      )}
-                      {questionnaire.sentAt && (
-                        <Text style={[styles.questionnaireDate, { color: themeColors.mutedText }]}>
-                          {formatDate(questionnaire.sentAt instanceof Date ? questionnaire.sentAt.toISOString() : String(questionnaire.sentAt))}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                  <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-                </View>
-              </PressableScale>
-              <Separator />
-            </View>
-          ))}
+                )}
+              </View>
+            );
+          })}
         </ScrollView>
       )}
     </ScreenWrapper>
@@ -231,39 +186,44 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
-  questionnaireItem: {
+  rowWrapper: {
+    width: '100%',
+  },
+  rowContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 8,
     paddingHorizontal: 16,
-    gap: 12,
   },
-  questionnaireIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  iconContainer: {
+    width: 58,
+    height: 58,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
-  questionnaireInfo: {
+  textContent: {
     flex: 1,
-    gap: 4,
+    marginRight: 8,
   },
-  questionnaireName: {
+  name: {
     ...typography.p1,
-    fontWeight: '500',
+    fontWeight: '600',
+    marginBottom: 4,
   },
-  questionnaireMeta: {
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
-  questionnaireStatus: {
+  metaText: {
     ...typography.p3,
-    fontWeight: '600',
-    textTransform: 'capitalize',
   },
-  questionnaireDate: {
-    ...typography.p3,
+  separatorContainer: {
+    paddingLeft: 86,
+    paddingRight: 16,
+  },
+  separator: {
+    height: 1,
   },
 });

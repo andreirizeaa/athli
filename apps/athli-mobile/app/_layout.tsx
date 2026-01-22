@@ -360,7 +360,9 @@ function RootLayoutNav() {
           <Stack.Screen name="client/[id]/compare" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/files" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/check-ins" options={{ headerShown: false }} />
+          <Stack.Screen name="client/[id]/check-in-detail" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/questionaires" options={{ headerShown: false }} />
+          <Stack.Screen name="client/[id]/questionnaire-detail" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/settings" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/assistant" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/goals" options={{ headerShown: false }} />
@@ -397,6 +399,26 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="library/workout/reorder"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: {
+                backgroundColor: themeColors.backgroundPrimary,
+              },
+            }}
+          />
+          <Stack.Screen
+            name="library/form/form-builder"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: {
+                backgroundColor: themeColors.backgroundPrimary,
+              },
+            }}
+          />
+          <Stack.Screen
+            name="library/form/reorder-questions"
             options={{
               headerShown: false,
               animation: 'slide_from_right',
@@ -951,6 +973,18 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="modals/library/add-questionnaire-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/library/add-question-modal"
             options={{
               presentation: 'modal',
               gestureEnabled: false,

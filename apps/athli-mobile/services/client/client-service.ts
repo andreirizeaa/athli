@@ -125,7 +125,7 @@ export const getClientDetails = async (clientId: string): Promise<AthleteDetails
     phone: profile.phone || '',
     country: profile.country || '',
     height: profile.height_cm || null,
-    avatarUrl: profile.profile_picture_url || null,
+    avatarUrl: profile.profile_picture_url || profile.avatar_url || null,
     status: profile.status || 'invited',
     createdAt: createdAt.getTime(),
     clientFor: clientForDays.toString(),

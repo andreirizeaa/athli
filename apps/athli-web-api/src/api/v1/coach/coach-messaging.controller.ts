@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { success, unauthorized, created, badRequest } from '../../../utils/http-response';
+import { success, ok, unauthorized, created, badRequest } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
 
 export const coachMessagingController = {
@@ -217,6 +217,12 @@ export const coachMessagingController = {
 
     /**
      * Send a message
+     * 
+     * ATOMIC FLOW with client-provided IDs:
+     * 1. Client generates messageId + idempotencyKey
+     * 2. API uses the provided messageId (no ID mismatch with optimistic)
+     * 3. For messages with attachments, attachments_ready=false until all uploaded
+     * 4. Database trigger broadcasts when ready
      */
     sendMessage: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
@@ -225,17 +231,51 @@ export const coachMessagingController = {
             return;
         }
 
-        const { conversationId, content, messageType = 'text', parentMessageId, attachmentCount } = req.body;
-
-        console.log('[sendMessage] attachmentCount from body:', attachmentCount);
+        const { 
+            conversationId, 
+            content, 
+            messageType = 'text', 
+            parentMessageId, 
+            attachmentCount,
+            messageId,      // Client-provided UUID
+            idempotencyKey, // Prevents duplicate on retry
+        } = req.body;
 
         if (!conversationId) {
             badRequest(res, { message: 'Conversation ID is required' });
             return;
         }
 
+        if (!messageId) {
+            badRequest(res, { message: 'Message ID is required (client-provided UUID)' });
+            return;
+        }
+
         try {
             const supabase = getSupabaseClient();
+
+            // Check for idempotency - if a message with this key already exists, return it
+            if (idempotencyKey) {
+                const { data: existingMessage } = await supabase
+                    .from('messages')
+                    .select(`
+                        *,
+                        attachments:message_attachments(*),
+                        reactions:message_reactions(*),
+                        parent_message:messages!parent_message_id(id, content, message_type, sender_id, sent_at, is_deleted, attachments:message_attachments(*))
+                    `)
+                    .eq('idempotency_key', idempotencyKey)
+                    .single();
+
+                if (existingMessage) {
+                    // Message already exists - return it (idempotent response)
+                    created(res, {
+                        message: 'Message already exists (idempotent)',
+                        data: { message: existingMessage },
+                    });
+                    return;
+                }
+            }
 
             // Verify user is participant in this conversation
             const { data: conversation, error: convError } = await supabase
@@ -250,10 +290,15 @@ export const coachMessagingController = {
                 return;
             }
 
-            // Create message
+            // Determine if message should wait for attachments
+            const hasAttachments = (attachmentCount || 0) > 0;
+            const attachmentsReady = !hasAttachments; // Ready if no attachments expected
+
+            // Create message with client-provided ID
             const { data: message, error } = await supabase
                 .from('messages')
                 .insert({
+                    id: messageId, // Client-provided UUID
                     conversation_id: conversationId,
                     sender_id: userId,
                     content,
@@ -261,6 +306,8 @@ export const coachMessagingController = {
                     parent_message_id: parentMessageId,
                     status: 'sent',
                     attachment_count: attachmentCount || 0,
+                    idempotency_key: idempotencyKey,
+                    attachments_ready: attachmentsReady,
                 })
                 .select(`
                     *,
@@ -276,6 +323,58 @@ export const coachMessagingController = {
                 message: 'Message sent successfully',
                 data: { message },
             });
+        } catch (error: any) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    /**
+     * Mark a message as ready (all attachments uploaded)
+     * This is called manually if auto-detection via trigger fails
+     */
+    markMessageReady: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const { messageId } = req.params;
+
+        if (!messageId) {
+            badRequest(res, { message: 'Message ID is required' });
+            return;
+        }
+
+        try {
+            const supabase = getSupabaseClient();
+
+            // Verify user is the sender of this message
+            const { data: message, error: msgError } = await supabase
+                .from('messages')
+                .select('sender_id, conversation_id')
+                .eq('id', messageId)
+                .single();
+
+            if (msgError || !message) {
+                badRequest(res, { message: 'Message not found' });
+                return;
+            }
+
+            if (message.sender_id !== userId) {
+                unauthorized(res, { message: 'You can only mark your own messages as ready' });
+                return;
+            }
+
+            // Mark message as ready (this will trigger the broadcast)
+            const { error } = await supabase
+                .from('messages')
+                .update({ attachments_ready: true })
+                .eq('id', messageId);
+
+            if (error) throw error;
+
+            ok(res, { message: 'Message marked as ready' });
         } catch (error: any) {
             return res.status(500).json({ success: false, message: error.message });
         }

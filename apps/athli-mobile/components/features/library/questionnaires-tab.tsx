@@ -130,11 +130,11 @@ export const QuestionnairesTab = () => {
 
     closeOpenRow();
     router.push({
-      pathname: '/modals/library/add-questionnaire-modal',
+      pathname: '/library/form/form-builder',
       params: {
-        editingId: item.id,
-        name: item.name,
-        description: item.description || '',
+        formType: 'questionnaire',
+        formId: item.id,
+        formName: item.name,
       },
     });
   };
@@ -203,11 +203,14 @@ export const QuestionnairesTab = () => {
                     {item.name}
                   </Text>
                   <View style={styles.metaRow}>
-                    {item.questionCount !== undefined && (
-                      <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
-                        {item.questionCount} {item.questionCount === 1 ? 'question' : 'questions'}
-                      </Text>
-                    )}
+                    {(() => {
+                      const count = item.questionCount ?? item.questions?.length ?? 0;
+                      return (
+                        <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
+                          {count} {count === 1 ? 'question' : 'questions'}
+                        </Text>
+                      );
+                    })()}
                   </View>
                 </View>
                 <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />

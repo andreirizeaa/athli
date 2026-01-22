@@ -1,18 +1,22 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, StyleSheet, Text, Platform, Keyboard, TouchableWithoutFeedback, Alert } from 'react-native';
+import { View, StyleSheet, Text, Platform, Keyboard, TouchableWithoutFeedback, Alert, ActionSheetIOS } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check } from 'lucide-react-native';
+import { X, Check, User, Pencil } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'expo-image';
+import { PressableOpacity } from 'pressto';
 
 import { useThemePreference, useColorScheme } from '@/stores';
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { Card } from '@/components/ui/card';
 import {
   InputBox,
   SelectInput,
@@ -70,6 +74,7 @@ type OriginalValues = {
   height: string;
   country: Country | null;
   phoneNumber: PhoneNumber | null;
+  avatarUrl: string;
 };
 
 export default function EditClientDetailsModal() {
@@ -91,6 +96,7 @@ export default function EditClientDetailsModal() {
   const [phoneNumber, setPhoneNumber] = useState<PhoneNumber | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [originalValues, setOriginalValues] = useState<OriginalValues | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // TanStack Query mutation for updating client
@@ -142,8 +148,10 @@ export default function EditClientDetailsModal() {
     // Change detection
     let changes = false;
     if (originalValues) {
+      // Check for image change first
+      if (selectedImage !== null) changes = true;
       // Simple string comparisons
-      if (trimmedName !== originalValues.name.trim()) changes = true;
+      else if (trimmedName !== originalValues.name.trim()) changes = true;
       else if (trimmedEmail !== originalValues.email.trim()) changes = true;
       else if (category !== originalValues.category) changes = true;
       else if (height.trim() !== originalValues.height.trim()) changes = true;
@@ -176,7 +184,7 @@ export default function EditClientDetailsModal() {
       hasChanges: changes,
       canComplete: formValid && changes && !updateMutation.isPending,
     };
-  }, [name, email, category, dateOfBirth, height, country, phoneNumber, originalValues, updateMutation.isPending]);
+  }, [name, email, category, dateOfBirth, height, country, phoneNumber, originalValues, selectedImage, updateMutation.isPending]);
 
   // Load client data
   useEffect(() => {
@@ -227,6 +235,7 @@ export default function EditClientDetailsModal() {
             height: foundClient.height || '', // Height can be null
             country: foundCountry,
             phoneNumber: parsedPhone,
+            avatarUrl: foundClient.avatarUrl || '',
           });
         }
       } catch (error) {
@@ -268,6 +277,54 @@ export default function EditClientDetailsModal() {
     }
   }, [canComplete, handleClose, t]);
 
+  // Image picker function
+  const pickImage = useCallback(
+    async (useCamera: boolean) => {
+      try {
+        let result: ImagePicker.ImagePickerResult;
+
+        if (useCamera) {
+          const { status } = await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== 'granted') {
+            Alert.alert(
+              t('general.error'),
+              t('clients.editClientModal.cameraPermissionRequired')
+            );
+            return;
+          }
+          result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+        } else {
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== 'granted') {
+            Alert.alert(
+              t('general.error'),
+              t('clients.editClientModal.galleryPermissionRequired')
+            );
+            return;
+          }
+          result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: 'images',
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+        }
+
+        if (!result.canceled && result.assets[0]) {
+          setSelectedImage(result.assets[0].uri);
+        }
+      } catch (error) {
+        console.error('Error picking image:', error);
+        haptics.error();
+      }
+    },
+    [t]
+  );
+
   const handleSave = () => {
     if (!canComplete || !client) return;
 
@@ -275,6 +332,7 @@ export default function EditClientDetailsModal() {
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
+    // Pass avatarUri to the service - it will handle the upload via API
     updateMutation.mutate({
       id: client.id,
       updates: {
@@ -282,9 +340,42 @@ export default function EditClientDetailsModal() {
         lastName,
         email: email.trim(),
         coachingType: category,
+        ...(selectedImage && { avatarUri: selectedImage }),
       },
     });
   };
+
+  // Current image to display (selected or original)
+  const currentImage = selectedImage || originalValues?.avatarUrl || client?.avatarUrl;
+
+  // Show action sheet for profile picture options
+  const handleEditProfilePicture = useCallback(() => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [t('general.cancel'), t('clients.editClientModal.chooseFromLibrary'), t('clients.editClientModal.takePhoto')],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            pickImage(false);
+          } else if (buttonIndex === 2) {
+            pickImage(true);
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        t('clients.editClientModal.profilePicture'),
+        undefined,
+        [
+          { text: t('general.cancel'), style: 'cancel' },
+          { text: t('clients.editClientModal.chooseFromLibrary'), onPress: () => pickImage(false) },
+          { text: t('clients.editClientModal.takePhoto'), onPress: () => pickImage(true) },
+        ]
+      );
+    }
+  }, [t, pickImage]);
 
   const categoryOptions = useMemo(() => [
     { value: 'online' as const, label: t('clients.addClientModal.online') },
@@ -348,6 +439,50 @@ export default function EditClientDetailsModal() {
             keyboardShouldPersistTaps="handled"
             bottomOffset={40}
           >
+            {/* Profile Picture Card */}
+            <Card style={{ marginBottom: 0 }}>
+              <PressableOpacity
+                style={styles.profilePictureRow}
+                onPress={handleEditProfilePicture}
+              >
+                <View style={styles.profilePictureContent}>
+                  <Text style={[styles.profilePictureLabel, { color: themeColors.text }]}>
+                    {t('clients.editClientModal.profilePicture')}
+                  </Text>
+                  {currentImage ? (
+                    <Image
+                      source={{ uri: currentImage }}
+                      style={styles.profilePicturePreview}
+                      contentFit="cover"
+                      transition={200}
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.profilePictureFallback,
+                        { backgroundColor: themeColors.primarySoft },
+                      ]}
+                    >
+                      <PlatformIcon
+                        sf="person.fill"
+                        IconComponent={User}
+                        size={20}
+                        color={themeColors.primary}
+                      />
+                    </View>
+                  )}
+                </View>
+                <View style={styles.editIconContainer}>
+                  <PlatformIcon
+                    sf="pencil"
+                    IconComponent={Pencil}
+                    size={20}
+                    color={themeColors.mutedText}
+                  />
+                </View>
+              </PressableOpacity>
+            </Card>
+
             <InputBox
               label={t('clients.addClientModal.name')}
               value={name}
@@ -451,5 +586,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
     gap: 12,
+  },
+  profilePictureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  profilePictureContent: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  profilePictureLabel: {
+    ...typography.p1,
+    fontWeight: '600',
+  },
+  profilePicturePreview: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  profilePictureFallback: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editIconContainer: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 12,
   },
 });

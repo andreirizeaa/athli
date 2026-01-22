@@ -30,6 +30,7 @@ export type Question = {
 
 type FormDetailContentProps = {
   formId: string;
+  formType: 'check-in' | 'questionnaire';
   form: Form;
   questions: Question[];
   setQuestions: React.Dispatch<React.SetStateAction<Question[]>>;
@@ -46,6 +47,7 @@ type FormDetailContentProps = {
 
 export const FormDetailContent = ({
   formId,
+  formType,
   form,
   questions,
   setQuestions,
@@ -155,10 +157,7 @@ export const FormDetailContent = ({
 
   const handleAddQuestion = async (questionData: any) => {
     try {
-      // Determine which service to use based on form ID prefix or type
-      // Check if it's a check-in or questionnaire based on formId structure
-      const isCheckIn = formId.includes('checkin') || formId.includes('form-2'); // Simple heuristic, check-ins often have checkin in ID
-      // Actually Form type has different fields potentially, but let's check formId
+      const isCheckIn = formType === 'check-in';
       const addQuestionFn = isCheckIn ? addCheckInQuestion : addQuestionnaireQuestion;
 
       const newQuestion = await addQuestionFn({
@@ -195,7 +194,7 @@ export const FormDetailContent = ({
   const handleDeleteQuestion = async (questionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const isCheckIn = formId.includes('checkin') || formId.includes('form-2');
+      const isCheckIn = formType === 'check-in';
       const deleteQuestionFn = isCheckIn ? deleteCheckInQuestion : deleteQuestionnaireQuestion;
 
       await deleteQuestionFn({

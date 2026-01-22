@@ -11,6 +11,7 @@ import {
   type AthleteInjury,
   type TrainingCalendarSchema,
 } from '@/services/client/client-service';
+import { getClients } from '@/services/coach/coach-client-service';
 import {
   getClientMetrics,
   type ClientMetric,
@@ -202,8 +203,20 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
 
     try {
       // 1. First fetch client info (required)
-      const clientData = await getClientDetails(clientId);
-      set({ client: clientData, isLoadingClient: false });
+      // Also fetch from clients list to get the avatar URL (which is more reliable)
+      const [clientData, clientsList] = await Promise.all([
+        getClientDetails(clientId),
+        getClients().catch(() => []),
+      ]);
+
+      // Find the client in the list to get the avatar URL
+      const clientFromList = clientsList.find(c => c.id === clientId);
+      const avatarUrl = clientFromList?.avatarUrl || clientData.avatarUrl;
+
+      set({
+        client: { ...clientData, avatarUrl },
+        isLoadingClient: false
+      });
 
       // 2. Fetch all other data in parallel
       const { startDate, endDate } = getDateRange();
