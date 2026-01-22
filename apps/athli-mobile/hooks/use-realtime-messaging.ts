@@ -68,6 +68,15 @@ export const useMessageMerging = (
 type RealtimeMessagesOptions = {
   conversationId: string;
   userId?: string;
+  /**
+   * Called when a new message INSERT is received.
+   * Return `true` to skip adding this message to realtimeMessages state.
+   * This is useful for optimistic updates where we want to keep showing
+   * the optimistic message instead of the real one until confirmed.
+   * 
+   * With client-provided IDs, simply check if the message ID matches an optimistic ID.
+   */
+  shouldSkipInsert?: (message: Message) => boolean;
   onMessageReceived?: (message: Message) => void;
   onMessageUpdated?: (message: Message) => void;
   onMessageDeleted?: (messageId: string) => void;
@@ -126,6 +135,7 @@ function hasAllAttachments(message: Message): boolean {
 export const useRealtimeMessages = ({
   conversationId,
   userId,
+  shouldSkipInsert,
   onMessageReceived,
   onMessageUpdated,
   onMessageDeleted,
@@ -135,16 +145,18 @@ export const useRealtimeMessages = ({
   const [isSubscribed, setIsSubscribed] = useState(false);
 
   // Use refs to store callbacks to avoid re-subscribing on every render
+  const shouldSkipInsertRef = useRef(shouldSkipInsert);
   const onMessageReceivedRef = useRef(onMessageReceived);
   const onMessageUpdatedRef = useRef(onMessageUpdated);
   const onMessageDeletedRef = useRef(onMessageDeleted);
 
   // Update refs when callbacks change
   useEffect(() => {
+    shouldSkipInsertRef.current = shouldSkipInsert;
     onMessageReceivedRef.current = onMessageReceived;
     onMessageUpdatedRef.current = onMessageUpdated;
     onMessageDeletedRef.current = onMessageDeleted;
-  }, [onMessageReceived, onMessageUpdated, onMessageDeleted]);
+  }, [shouldSkipInsert, onMessageReceived, onMessageUpdated, onMessageDeleted]);
 
   // Remove a message from realtime state (used when refetch will provide complete data)
   const removeRealtimeMessage = (messageId: string) => {
@@ -185,19 +197,27 @@ export const useRealtimeMessages = ({
             const message = convertBroadcastToMessage(data);
             const hasAttachments = message.attachments && message.attachments.length > 0;
 
-            // Add message IMMEDIATELY - UI will show loading skeletons based on attachment_count
-            setRealtimeMessages((prev) => [...prev, message]);
-            onMessageReceivedRef.current?.(message);
+            // Check if we should skip adding this message to state
+            // (e.g., when we have an optimistic message with the same ID)
+            const shouldSkip = shouldSkipInsertRef.current?.(message) ?? false;
 
-            // Then prefetch URLs in background - UI will update when URLs are in cache
-            if (hasAttachments && message.attachments) {
-              prefetchAttachmentUrls(message.attachments).then(() => {
-                // Force re-render after prefetch completes
-                setRealtimeMessages((prev) =>
-                  prev.map((m) => (m.id === message.id ? { ...message } : m))
-                );
-              });
+            if (!shouldSkip) {
+              // Add message IMMEDIATELY - UI will show loading skeletons based on attachment_count
+              setRealtimeMessages((prev) => [...prev, message]);
+
+              // Then prefetch URLs in background - UI will update when URLs are in cache
+              if (hasAttachments && message.attachments) {
+                prefetchAttachmentUrls(message.attachments).then(() => {
+                  // Force re-render after prefetch completes
+                  setRealtimeMessages((prev) =>
+                    prev.map((m) => (m.id === message.id ? { ...message } : m))
+                  );
+                });
+              }
             }
+
+            // Always call the callback (for other processing)
+            onMessageReceivedRef.current?.(message);
           } else if (eventType === 'UPDATE') {
             const message = convertBroadcastToMessage(data);
 
@@ -538,6 +558,10 @@ type RealtimeConversationsOptions = {
 
 /**
  * Subscribe to realtime conversation list updates
+ * 
+ * IMPORTANT: Realtime postgres_changes only include raw table columns,
+ * NOT joined data like other_user_name. The callback receives the RAW
+ * realtime data - it's the caller's responsibility to merge with existing data.
  */
 export const useRealtimeConversations = ({
   userId,
@@ -549,7 +573,7 @@ export const useRealtimeConversations = ({
   // Use ref to store callback to avoid re-subscribing on every render
   const callbackRef = useRef(onConversationUpdated);
 
-  // Update ref when callback changes
+  // Keep ref in sync
   useEffect(() => {
     callbackRef.current = onConversationUpdated;
   }, [onConversationUpdated]);
@@ -558,6 +582,36 @@ export const useRealtimeConversations = ({
     if (!userId) return;
 
     const newChannel = supabase.channel(`conversations:${userId}`);
+
+    // Helper to process conversation update
+    const handleConversationUpdate = (payload: RealtimePostgresChangesPayload<Conversation>) => {
+      const realtimeData = payload.new as Conversation;
+
+      // Convert timestamps to Date objects
+      const conv: Conversation = {
+        ...realtimeData,
+        last_message_at: realtimeData.last_message_at
+          ? new Date(realtimeData.last_message_at)
+          : null,
+        created_at: new Date(realtimeData.created_at),
+        updated_at: new Date(realtimeData.updated_at),
+      };
+
+      // Update internal state
+      setConversations((prev) => {
+        const existing = prev.find((c) => c.id === conv.id);
+        if (existing) {
+          return prev.map((c) => (c.id === conv.id ? conv : c));
+        }
+        return [...prev, conv];
+      });
+
+      // Call callback with raw realtime data
+      // Use setTimeout to avoid "cannot update during render" error
+      setTimeout(() => {
+        callbackRef.current?.(conv);
+      }, 0);
+    };
 
     newChannel
       .on(
@@ -569,29 +623,7 @@ export const useRealtimeConversations = ({
           // Filter for conversations where user is the coach
           filter: `coach_id=eq.${userId}`,
         },
-        (payload: RealtimePostgresChangesPayload<Conversation>) => {
-          const conversation = payload.new as Conversation;
-
-          // Convert timestamps to Date objects
-          const conv: Conversation = {
-            ...conversation,
-            last_message_at: conversation.last_message_at
-              ? new Date(conversation.last_message_at)
-              : null,
-            created_at: new Date(conversation.created_at),
-            updated_at: new Date(conversation.updated_at),
-          };
-
-          setConversations((prev) => {
-            const existing = prev.find((c) => c.id === conv.id);
-            if (existing) {
-              return prev.map((c) => (c.id === conv.id ? conv : c));
-            }
-            return [...prev, conv];
-          });
-
-          callbackRef.current?.(conv);
-        },
+        handleConversationUpdate,
       )
       .on(
         'postgres_changes',
@@ -602,29 +634,7 @@ export const useRealtimeConversations = ({
           // Also filter for conversations where user is the client
           filter: `client_id=eq.${userId}`,
         },
-        (payload: RealtimePostgresChangesPayload<Conversation>) => {
-          const conversation = payload.new as Conversation;
-
-          // Convert timestamps to Date objects
-          const conv: Conversation = {
-            ...conversation,
-            last_message_at: conversation.last_message_at
-              ? new Date(conversation.last_message_at)
-              : null,
-            created_at: new Date(conversation.created_at),
-            updated_at: new Date(conversation.updated_at),
-          };
-
-          setConversations((prev) => {
-            const existing = prev.find((c) => c.id === conv.id);
-            if (existing) {
-              return prev.map((c) => (c.id === conv.id ? conv : c));
-            }
-            return [...prev, conv];
-          });
-
-          callbackRef.current?.(conv);
-        },
+        handleConversationUpdate,
       )
       .subscribe();
 

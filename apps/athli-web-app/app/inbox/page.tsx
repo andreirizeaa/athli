@@ -218,83 +218,53 @@ const InboxPage = () => {
   const { realtimeMessages } = useRealtimeMessages({
     conversationId: selectedConversation?.id || '',
     userId: user?.id,
-    // CRITICAL: Skip realtime messages that match an optimistic message
-    // This prevents flicker by never adding these to realtimeMessages state
-    shouldSkipInsert: React.useCallback((message: { id?: string; sender_id: string; sent_at: Date | string; message_type?: string }) => {
+    // Only skip insert for ATTACHMENT messages that aren't ready yet
+    // For text-only messages, let the realtime message be added - deduplication handles it
+    shouldSkipInsert: React.useCallback((message: { id?: string; attachments_ready?: boolean }) => {
       const currentOptimistic = optimisticMessagesRef.current;
       if (currentOptimistic.length === 0) return false;
 
-      // Check if this message matches any optimistic message
-      return currentOptimistic.some((opt) => {
-        // PRIORITY 1: Exact ID match (most reliable)
-        if (opt.realMessageId && opt.realMessageId === message.id) {
-          return true;
-        }
+      const optimisticMatch = currentOptimistic.find((opt) => opt.id === message.id);
+      if (!optimisticMatch) return false;
 
-        // PRIORITY 2: Fallback to narrow time-based matching
-        // Only for the brief moment before realMessageId is set
-        if (opt.sender_id !== message.sender_id) return false;
+      // For text-only messages, DON'T skip - let realtime be added, then remove optimistic
+      const hasAttachments = optimisticMatch.attachments && optimisticMatch.attachments.length > 0;
+      if (!hasAttachments) return false;
 
-        const optTime = opt.sent_at instanceof Date 
-          ? opt.sent_at.getTime() 
-          : new Date(opt.sent_at).getTime();
-        const msgTime = message.sent_at instanceof Date 
-          ? message.sent_at.getTime() 
-          : new Date(message.sent_at).getTime();
-
-        // Narrow 10-second window to minimize false matches
-        const timeDiff = Math.abs(msgTime - optTime);
-        return timeDiff <= 10000;
-      });
+      // For attachment messages, only skip if NOT ready yet (waiting for uploads)
+      const isReady = message.attachments_ready !== false;
+      return !isReady; // Skip only if attachments are NOT ready
     }, []),
     onMessageReceived: (message) => {
-      // Remove optimistic message that matches this real message
-      // BUT only remove text-only messages here - messages with attachments are
-      // handled by the polling cleanup to ensure attachments are uploaded first
+      // Remove matching optimistic message now that real message is in state
       setOptimisticMessages((prev) => {
-        const toRemove: typeof prev = [];
-        const normalizeContent = (content: string | null | undefined): string => content ?? '';
+        const optimisticMatch = prev.find((opt) => opt.id === message.id);
+        
+        if (!optimisticMatch) {
+          // No matching optimistic message - nothing to remove
+          return prev;
+        }
 
-        const toKeep = prev.filter((opt) => {
-          // ALWAYS keep optimistic messages that have attachments
-          // Let the polling mechanism handle cleanup for these
-          if (opt.attachments && opt.attachments.length > 0) {
-            return true;
-          }
+        // For messages with attachments, only remove if the real message 
+        // has attachments_ready=true (all attachments uploaded)
+        const hasAttachments = optimisticMatch.attachments && optimisticMatch.attachments.length > 0;
+        const isReady = (message as any).attachments_ready !== false;
 
-          // PRIORITY 1: Exact ID match via realMessageId
-          if (opt.realMessageId && opt.realMessageId === message.id) {
-            toRemove.push(opt);
-            return false;
-          }
+        if (hasAttachments && !isReady) {
+          // Keep optimistic - wait for attachments to be ready
+          return prev;
+        }
 
-          // PRIORITY 2: Fallback to content + sender matching for text-only
-          if (opt.sender_id !== message.sender_id) return true;
-          if (normalizeContent(opt.content) !== normalizeContent(message.content)) return true;
+        // Safe to remove - revoke blob URLs to prevent memory leaks
+        if (optimisticMatch.attachments) {
+          optimisticMatch.attachments.forEach((att) => {
+            if (att.local_uri?.startsWith('blob:')) {
+              URL.revokeObjectURL(att.local_uri);
+            }
+          });
+        }
 
-          const optTime = opt.sent_at instanceof Date ? opt.sent_at.getTime() : new Date(opt.sent_at).getTime();
-          const msgTime = message.sent_at instanceof Date ? message.sent_at.getTime() : new Date(message.sent_at).getTime();
-          const timeDiff = Math.abs(msgTime - optTime);
-          // Narrow 10-second window now that we have realMessageId for precision
-          if (timeDiff > 10000) return true;
-
-          // Match found for text-only message - safe to remove
-          toRemove.push(opt);
-          return false;
-        });
-
-        // Revoke blob URLs to prevent memory leaks (only for text-only messages being removed)
-        toRemove.forEach((opt) => {
-          if (opt.attachments) {
-            opt.attachments.forEach((att) => {
-              if (att.local_uri?.startsWith('blob:')) {
-                URL.revokeObjectURL(att.local_uri);
-              }
-            });
-          }
-        });
-
-        return toKeep;
+        return prev.filter((opt) => opt.id !== message.id);
       });
     },
     onMessageUpdated: (message) => {
@@ -316,6 +286,11 @@ const InboxPage = () => {
 
   const { conversations: realtimeConversations } = useRealtimeConversations({
     userId: user?.id || '',
+    onConversationUpdated: React.useCallback((conversation: Conversation) => {
+      console.log('[Inbox Realtime] Conversation updated:', conversation.id, 'preview:', conversation.last_message_preview);
+      // Invalidate the conversations query to refetch with fresh data (including joined fields)
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    }, [queryClient]),
   });
 
   // Optimistic reactions state for instant UI feedback when reacting
@@ -1300,6 +1275,7 @@ const InboxPage = () => {
 
 
   // Handler for MessageInputProvider - uses real messaging API with optimistic updates
+  // ATOMIC FLOW: Client generates messageId, so optimistic ID = real ID (no deduplication needed)
   const handleSendMessageFromContext = React.useCallback(async (params: {
     text: string;
     attachments?: Array<{
@@ -1386,7 +1362,8 @@ const InboxPage = () => {
     })() : undefined;
 
     // Create optimistic message IMMEDIATELY for instant UI feedback
-    // This happens BEFORE any async operations (file conversion, API calls)
+    // IMPORTANT: This uses client-generated messageId, so optimistic ID = real message ID
+    // This eliminates the need for complex deduplication and realMessageId tracking
     const optimisticMsg = createOptimisticMessage(
       selectedConversation.id,
       user.id,
@@ -1405,28 +1382,21 @@ const InboxPage = () => {
     });
 
     try {
-      // 1. Create message via API (this returns the message ID)
-      console.log('[handleSendMessage] params.attachments?.length:', params.attachments?.length);
-      const message = await sendMessageAPI({
+      // 1. Create message via API using client-provided ID
+      // The API will use this exact ID, so no ID mismatch between optimistic and real
+      const hasAttachments = (params.attachments?.length ?? 0) > 0;
+      await sendMessageAPI({
         conversationId: selectedConversation.id,
         content: params.text || undefined,
         messageType,
         parentMessageId: params.replyTo?.id,
         attachmentCount: params.attachments?.length || 0,
+        messageId: optimisticMsg.id, // Client-provided ID
+        idempotencyKey: optimisticMsg.idempotency_key, // Prevents duplicate on retry
       });
 
-      // CRITICAL: Store the real message ID on the optimistic message for precise deduplication
-      // This ensures we only hide THIS specific real message, not other recent messages
-      setOptimisticMessages((prev) =>
-        prev.map((opt) =>
-          opt.id === optimisticMsg.id
-            ? { ...opt, realMessageId: message.id }
-            : opt
-        )
-      );
-
       // 2. Upload attachments if present (convert to base64 here, AFTER optimistic message shown)
-      if (params.attachments && params.attachments.length > 0) {
+      if (hasAttachments && params.attachments) {
         const { uploadAttachments } = await import('@/lib/messaging/upload-attachments');
 
         // Convert File objects to base64 format expected by uploadAttachments
@@ -1442,7 +1412,6 @@ const InboxPage = () => {
         const attachmentsWithData = await Promise.all(
           params.attachments.map(async (att) => {
             const durationSeconds = att.durationMs ? Math.round(att.durationMs / 1000) : undefined;
-            console.log('[handleSendMessage] Converting durationMs:', att.durationMs, 'to durationSeconds:', durationSeconds);
             return {
               name: att.file.name,
               data: await convertToBase64(att.file),
@@ -1454,100 +1423,50 @@ const InboxPage = () => {
           })
         );
 
-        await uploadAttachments({
+        // Upload attachments - DB trigger will mark message as ready when all complete
+        const result = await uploadAttachments({
           conversationId: selectedConversation.id,
-          messageId: message.id,
+          messageId: optimisticMsg.id, // Use same ID as optimistic
           attachments: attachmentsWithData,
         });
+
+        // Handle partial failures
+        if (result.failedCount > 0) {
+          console.warn('[handleSendMessage] Some attachments failed to upload:', result.errors);
+        }
       }
 
       // Invalidate conversations to update last_message_preview and last_message_at
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
 
-      // Handle cleanup differently for messages with/without attachments
-      const attachmentCount = params.attachments?.length ?? 0;
-
-      if (attachmentCount > 0) {
-        // Poll for attachments to appear in database with valid signed URLs
-        // Only remove optimistic message when the real message has attachments WITH usable URLs
-        // This prevents flicker where attachments disappear briefly before signed URLs are ready
-        const maxAttempts = 10;
-        const pollInterval = 1000;
-        let attempts = 0;
-
-        // Helper to check if an attachment has a usable URL (signed_url from API)
-        const attachmentHasUsableUrl = (att: any): boolean => {
-          // API-fetched attachments should have signed_url
-          return Boolean(att.signed_url);
-        };
-
-        const pollForAttachments = async () => {
-          attempts++;
-          // Get fresh messages directly from refetch (avoids stale ref timing issues)
-          const freshMessages = await refetchMessages();
-
-          // Check if real message now has attachments using fresh data
-          const optimisticTime = optimisticMsg.sent_at instanceof Date
-            ? optimisticMsg.sent_at.getTime()
-            : new Date(optimisticMsg.sent_at).getTime();
-
-          // Get the latest optimistic state to check for realMessageId
-          const currentOpt = optimisticMessagesRef.current.find((o) => o.id === optimisticMsg.id);
-          const realMessageId = currentOpt?.realMessageId;
-
-          const matchingRealMessage = freshMessages.find((msg) => {
-            // PRIORITY 1: Exact ID match via realMessageId (most reliable)
-            if (realMessageId && msg.id === realMessageId) {
-              return true;
-            }
-            // PRIORITY 2: Fallback to sender + time matching
-            if (msg.sender_id !== optimisticMsg.sender_id) return false;
-            const msgTime = msg.sent_at instanceof Date
-              ? msg.sent_at.getTime()
-              : new Date(msg.sent_at).getTime();
-            const timeDiff = Math.abs(msgTime - optimisticTime);
-            // Narrow 10-second window
-            return timeDiff <= 10000;
-          });
-
-          const realAttachments = matchingRealMessage?.attachments ?? [];
-          const realAttachmentCount = realAttachments.length;
-          
-          // Check that ALL attachments have usable URLs (signed_url)
-          // This prevents removing optimistic before signed URLs are generated
-          const allAttachmentsHaveUrls = realAttachmentCount >= attachmentCount &&
-            realAttachments.every(attachmentHasUsableUrl);
-
-          if (allAttachmentsHaveUrls) {
-            // Real message has all attachments WITH valid signed URLs - safe to remove optimistic
-            setOptimisticMessages((current) => {
-              const msgToRemove = current.find((m) => m.id === optimisticMsg.id);
-              if (msgToRemove?.attachments) {
-                msgToRemove.attachments.forEach((att) => {
-                  if (att.local_uri?.startsWith('blob:')) {
-                    URL.revokeObjectURL(att.local_uri);
-                  }
-                });
+      // SIMPLIFIED CLEANUP: Since optimistic ID = real ID, realtime will automatically
+      // provide the real message data. We just need to wait for the realtime update
+      // or refetch to confirm, then remove the optimistic message.
+      //
+      // For messages with attachments:
+      // - Database trigger marks message ready when all attachments complete
+      // - This triggers a realtime broadcast with complete attachment data
+      // - The optimistic message is replaced when we receive this broadcast
+      //
+      // For messages without attachments:
+      // - Realtime broadcast happens immediately after insert
+      // - Simple refetch + remove optimistic after short delay
+      setTimeout(async () => {
+        await refetchMessages();
+        // Revoke blob URLs before removing
+        setOptimisticMessages((current) => {
+          const msgToRemove = current.find((m) => m.id === optimisticMsg.id);
+          if (msgToRemove?.attachments) {
+            msgToRemove.attachments.forEach((att) => {
+              if (att.local_uri?.startsWith('blob:')) {
+                URL.revokeObjectURL(att.local_uri);
               }
-              return current.filter((m) => m.id !== optimisticMsg.id);
             });
-          } else if (attempts < maxAttempts) {
-            // Real message doesn't have attachments with valid URLs yet, keep polling
-            setTimeout(pollForAttachments, pollInterval);
           }
-          // After max attempts without valid attachments, keep optimistic visible
-          // (better to show blob preview than nothing)
-        };
+          return current.filter((m) => m.id !== optimisticMsg.id);
+        });
+      }, hasAttachments ? 2000 : 1000); // Give more time for attachments
 
-        // Start polling after a short delay to let DB writes complete
-        setTimeout(pollForAttachments, 500);
-      } else {
-        // No attachments - simpler logic with single refetch
-        setTimeout(async () => {
-          await refetchMessages();
-          setOptimisticMessages((current) => current.filter((m) => m.id !== optimisticMsg.id));
-        }, 1000);
-      }
     } catch (error) {
       console.error('Failed to send message:', error);
 
@@ -1714,24 +1633,7 @@ const InboxPage = () => {
       return;
     }
 
-    // Auto-submit other files
-    const newMessage: Message = {
-      id: `m${Date.now()}`,
-      text: `📎 ${file.name}`,
-      timestamp: new Date().toLocaleTimeString('en-GB', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }),
-      isSent: true,
-    };
-
-    setMessages((prev) => ({
-      ...prev,
-      [selectedContactId]: [...(prev[selectedContactId] || []), newMessage],
-    }));
-
-    // Reset file input
+    // Other file types - just reset input (not supported for auto-submit)
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -2054,68 +1956,13 @@ const InboxPage = () => {
     }
   };
 
-  const handleDeleteMessageImage = (messageId: string, imageIndex: number) => {
-    setMessages((prev) => {
-      const updated = { ...prev };
-      if (updated[selectedContactId!]) {
-        updated[selectedContactId!] = updated[selectedContactId!].map((msg) => {
-          if (msg.id === messageId && msg.images) {
-            const updatedImages = msg.images.filter((_, i) => i !== imageIndex);
-            return {
-              ...msg,
-              images: updatedImages.length > 0 ? updatedImages : undefined,
-            };
-          }
-          return msg;
-        });
-      }
-      return updated;
-    });
-  };
-
-  const handleDeleteMessagePdf = (messageId: string) => {
-    setMessages((prev) => {
-      const updated = { ...prev };
-      if (updated[selectedContactId!]) {
-        updated[selectedContactId!] = updated[selectedContactId!].map((msg) => {
-          if (msg.id === messageId) {
-            return {
-              ...msg,
-              pdf: undefined,
-            };
-          }
-          return msg;
-        });
-      }
-      return updated;
-    });
-  };
-
-  const handleDeleteMessageVideo = (messageId: string) => {
-    setMessages((prev) => {
-      const updated = { ...prev };
-      if (updated[selectedContactId!]) {
-        updated[selectedContactId!] = updated[selectedContactId!].map((msg) => {
-          if (msg.id === messageId) {
-            return {
-              ...msg,
-              video: undefined,
-            };
-          }
-          return msg;
-        });
-      }
-      return updated;
-    });
-  };
-
   const handleDeleteMessage = async (messageId: string) => {
     if (!messageId) return;
 
     // Optimistically remove the message from ALL local states immediately (no flicker)
     // This includes apiMessages, optimisticMessages (for audio/attachment messages that stay longer)
     removeApiMessage(messageId);
-    setOptimisticMessages((prev) => prev.filter((m) => m.id !== messageId && m.realMessageId !== messageId));
+    setOptimisticMessages((prev) => prev.filter((m) => m.id !== messageId));
 
     try {
       // Call the real delete API (soft delete)
@@ -2128,24 +1975,6 @@ const InboxPage = () => {
       // On error, refetch to restore the message
       refetchMessages();
     }
-  };
-
-  const handleDeleteAllImages = (messageId: string) => {
-    setMessages((prev) => {
-      const updated = { ...prev };
-      if (updated[selectedContactId!]) {
-        updated[selectedContactId!] = updated[selectedContactId!].map((msg) => {
-          if (msg.id === messageId) {
-            return {
-              ...msg,
-              images: undefined,
-            };
-          }
-          return msg;
-        });
-      }
-      return updated;
-    });
   };
 
   const getInitials = (name: string) => {
@@ -2255,10 +2084,6 @@ const InboxPage = () => {
                               messageInputContextRef.current?.setReplyingToMessage(message);
                             }}
                             onDeleteMessage={handleDeleteMessage}
-                            onDeleteMessageImage={handleDeleteMessageImage}
-                            onDeleteMessagePdf={handleDeleteMessagePdf}
-                            onDeleteMessageVideo={handleDeleteMessageVideo}
-                            onDeleteAllImages={handleDeleteAllImages}
                             onReaction={handleReaction}
                             messagesEndRef={messagesEndRef}
                             loadMoreTriggerRef={loadMoreTriggerRef}

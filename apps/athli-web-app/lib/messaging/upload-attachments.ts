@@ -1,10 +1,17 @@
 /**
  * Upload Attachments Helper
  * Handles uploading message attachments to Supabase Storage
+ * 
+ * ATOMIC FLOW:
+ * 1. Upload files to storage
+ * 2. Create attachment records in database
+ * 3. When all complete, trigger marks message as ready
+ * 4. Database broadcasts the complete message
  */
 
 import { createClient } from '@/lib/supabase/client';
 import { STORAGE_BUCKET_NAME, getAttachmentPath } from '@athli/shared-types';
+import { addFailedAttachment } from './attachment-retry-queue';
 
 type AttachmentToUpload = {
   name: string;
@@ -19,6 +26,13 @@ type UploadAttachmentsOptions = {
   conversationId: string;
   messageId: string;
   attachments: AttachmentToUpload[];
+};
+
+type UploadResult = {
+  success: boolean;
+  successCount: number;
+  failedCount: number;
+  errors: Array<{ name: string; error: string }>;
 };
 
 /**
@@ -125,13 +139,19 @@ const generateImageThumbnail = async (
 
 /**
  * Upload multiple attachments to Supabase Storage
+ * 
+ * Returns a result object with success/failure counts.
+ * The database trigger will automatically mark the message as ready
+ * when all expected attachments are uploaded.
  */
 export const uploadAttachments = async ({
   conversationId,
   messageId,
   attachments,
-}: UploadAttachmentsOptions): Promise<void> => {
+}: UploadAttachmentsOptions): Promise<UploadResult> => {
   const supabase = createClient();
+  const errors: Array<{ name: string; error: string }> = [];
+  let successCount = 0;
 
   // Upload each attachment
   for (const attachment of attachments) {
@@ -152,7 +172,8 @@ export const uploadAttachments = async ({
 
       if (uploadError) {
         console.error('[UploadAttachments] Failed to upload file:', uploadError);
-        throw uploadError;
+        errors.push({ name: attachment.name, error: uploadError.message });
+        continue; // Continue with other attachments
       }
 
       // 4. Generate thumbnail for images
@@ -168,6 +189,8 @@ export const uploadAttachments = async ({
       }
 
       // 5. Create attachment record in database
+      // The database trigger will check if all attachments are complete
+      // and mark the message as ready automatically
       const insertData = {
         message_id: messageId,
         conversation_id: conversationId,
@@ -182,33 +205,56 @@ export const uploadAttachments = async ({
         upload_status: 'completed',
         duration_seconds: attachment.durationSeconds,
       };
-      console.log('[UploadAttachments] Inserting attachment record:', insertData);
 
       const { error: attachmentError } = await supabase
         .from('message_attachments')
         .insert(insertData);
 
       if (attachmentError) {
-        console.error('[UploadAttachments] Failed to create attachment record:', {
-          message: attachmentError.message,
-          code: attachmentError.code,
-          details: attachmentError.details,
-          hint: attachmentError.hint,
-          raw: JSON.stringify(attachmentError),
-        });
-        throw attachmentError;
+        console.error('[UploadAttachments] Failed to create attachment record:', attachmentError);
+        errors.push({ name: attachment.name, error: attachmentError.message });
+        continue;
       }
+
+      successCount++;
     } catch (error) {
       const err = error as any;
-      console.error('[UploadAttachments] Failed to upload attachment:', attachment.name, {
-        message: err?.message,
-        code: err?.code,
-        details: err?.details,
-        hint: err?.hint,
-        raw: JSON.stringify(error),
+      const errorMessage = err?.message || 'Unknown error';
+      console.error('[UploadAttachments] Failed to upload attachment:', attachment.name, err);
+      errors.push({ name: attachment.name, error: errorMessage });
+
+      // Add to retry queue for later
+      addFailedAttachment({
+        messageId,
+        conversationId,
+        filename: attachment.name,
+        mimeType: attachment.type,
+        size: attachment.size,
+        data: attachment.data,
+        attachmentType: attachment.attachmentType,
+        durationSeconds: attachment.durationSeconds,
+        error: errorMessage,
       });
-      // Continue with other attachments even if one fails
-      // TODO: Implement retry logic or better error handling
     }
   }
+
+  return {
+    success: errors.length === 0,
+    successCount,
+    failedCount: errors.length,
+    errors,
+  };
+};
+
+/**
+ * Retry failed attachment uploads
+ * Can be called with the failed attachments from a previous upload attempt
+ */
+export const retryFailedAttachments = async ({
+  conversationId,
+  messageId,
+  attachments,
+}: UploadAttachmentsOptions): Promise<UploadResult> => {
+  // Same as uploadAttachments, but can be extended with exponential backoff
+  return uploadAttachments({ conversationId, messageId, attachments });
 };

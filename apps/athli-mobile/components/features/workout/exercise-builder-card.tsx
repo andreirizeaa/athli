@@ -57,7 +57,7 @@ const TempoInput = ({ value, onChange, themeColors, hasError }: { value: string;
                     color: themeColors.text,
                     borderColor: hasError ? RED_ERROR : themeColors.border,
                     borderWidth: hasError ? 2 : 1,
-                    backgroundColor: themeColors.backgroundPrimary
+                    backgroundColor: themeColors.surfacePrimary
                 }
             ]}
         />
@@ -78,7 +78,7 @@ export const ExerciseBuilderCard = ({
     validationErrors = [],
     onSwap,
 }: ExerciseBuilderCardProps) => {
-    const { colors: themeColors } = useThemePreference();
+    const { colors: themeColors, preset } = useThemePreference();
     const router = useRouter();
     const { setExercisesSelectCallback } = useModalCallbacks();
 
@@ -269,7 +269,7 @@ export const ExerciseBuilderCard = ({
         <Card style={[
             styles.card,
             {
-                backgroundColor: 'transparent',
+                backgroundColor: themeColors.surfacePrimary,
                 borderColor: themeColors.border,
                 paddingHorizontal: 0,
                 paddingVertical: 0,
@@ -332,7 +332,7 @@ export const ExerciseBuilderCard = ({
                     <Switch
                         value={exercise.eachSide}
                         onValueChange={(val) => onUpdateExercise({ eachSide: val })}
-                        trackColor={{ false: themeColors.border, true: themeColors.primary }}
+                        trackColor={{ false: themeColors.border, true: preset === 'default' ? '#636366' : themeColors.primary }}
                         thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
                         ios_backgroundColor={themeColors.border}
                         style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
@@ -394,7 +394,7 @@ export const ExerciseBuilderCard = ({
                                                 {
                                                     borderColor: setError.column1 ? RED_ERROR : themeColors.border,
                                                     borderWidth: setError.column1 ? 2 : 1,
-                                                    backgroundColor: themeColors.backgroundPrimary,
+                                                    backgroundColor: themeColors.surfacePrimary,
                                                     justifyContent: 'center',
                                                     width: '100%'
                                                 }
@@ -413,7 +413,7 @@ export const ExerciseBuilderCard = ({
                                                 color: themeColors.text,
                                                 borderColor: setError.column1 ? RED_ERROR : themeColors.border,
                                                 borderWidth: setError.column1 ? 2 : 1,
-                                                backgroundColor: themeColors.backgroundPrimary
+                                                backgroundColor: themeColors.surfacePrimary
                                             }
                                         ]}
                                         value={set.column1}
@@ -432,7 +432,7 @@ export const ExerciseBuilderCard = ({
                                                 {
                                                     borderColor: setError.column2 ? RED_ERROR : themeColors.border,
                                                     borderWidth: setError.column2 ? 2 : 1,
-                                                    backgroundColor: themeColors.backgroundPrimary,
+                                                    backgroundColor: themeColors.surfacePrimary,
                                                     justifyContent: 'center',
                                                     width: '100%'
                                                 }
@@ -451,7 +451,7 @@ export const ExerciseBuilderCard = ({
                                                 color: themeColors.text,
                                                 borderColor: setError.column2 ? RED_ERROR : themeColors.border,
                                                 borderWidth: setError.column2 ? 2 : 1,
-                                                backgroundColor: themeColors.backgroundPrimary
+                                                backgroundColor: themeColors.surfacePrimary
                                             }
                                         ]}
                                         value={set.column2}
@@ -645,7 +645,7 @@ const styles = StyleSheet.create({
     headerButton: {
         paddingHorizontal: 16,
         height: 32,
-        borderRadius: 8,
+        borderRadius: 6,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -738,7 +738,7 @@ const styles = StyleSheet.create({
         gap: 6,
         paddingHorizontal: 12,
         paddingVertical: 8,
-        borderRadius: 20,
+        borderRadius: 8,
     },
     restTimerText: {
         ...typography.p3,

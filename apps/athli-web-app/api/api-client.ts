@@ -17,9 +17,10 @@ export interface ApiResponse<T = any> {
 /**
  * Enhanced fetch options for the API client
  */
-export interface ApiRequestOptions extends RequestInit {
+export interface ApiRequestOptions extends Omit<RequestInit, 'body'> {
     authenticated?: boolean;
     params?: Record<string, any>;
+    body?: RequestInit['body'] | Record<string, unknown>;
 }
 
 /**

@@ -191,7 +191,20 @@ export const useChatsStore = create<ChatsStore>((set, get) => ({
     const { chats } = get();
     const exists = chats.find((c) => c.id === chat.id);
     if (exists) {
-      set({ chats: chats.map((c) => (c.id === chat.id ? chat : c)) });
+      // MERGE: Preserve existing joined fields that might be missing from the update
+      set({
+        chats: chats.map((c) => {
+          if (c.id !== chat.id) return c;
+          // Merge the update with existing data, preserving joined fields
+          return {
+            ...c, // Keep all existing data
+            ...chat, // Override with new data
+            // Ensure we keep existing joined fields if they exist and new ones are missing
+            other_user_name: chat.other_user_name || c.other_user_name,
+            other_user_avatar_url: chat.other_user_avatar_url || c.other_user_avatar_url,
+          };
+        }),
+      });
     } else {
       set({ chats: [chat, ...chats] });
     }

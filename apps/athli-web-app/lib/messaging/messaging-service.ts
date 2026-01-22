@@ -325,24 +325,9 @@ export const sendMessage = async ({
 
 /**
  * Create an optimistic message (for UI updates before server confirmation)
+ * Re-exported from shared-types for convenience
  */
-export const createOptimisticMessage = (
-  conversationId: string,
-  senderId: string,
-  content: string | null,
-  messageType: MessageType = 'text',
-): OptimisticMessage => {
-  return {
-    id: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-    conversation_id: conversationId,
-    sender_id: senderId,
-    content,
-    message_type: messageType,
-    status: 'sending',
-    sent_at: new Date(),
-    is_deleted: false,
-  };
-};
+export { createOptimisticMessage } from '@athli/shared-types';
 
 // ================================================
 // MESSAGE ATTACHMENTS

@@ -6,6 +6,7 @@ import type { Exercise } from '@/app/modals/workout/add-exercise-to-builder-moda
 import type { BuilderSection, BuilderItem } from '@/components/features/workout/workout-schema';
 import type { ClientHabit } from '@/services/client/client-habit-service';
 import type { ClientMetric } from '@/services/client/client-metric-service';
+import type { Question } from '@/services/coach/coach-questionnaire-service';
 
 type RepeatData = {
   type: 'weekly' | 'monthly';
@@ -49,12 +50,15 @@ type ModalCallbacksStore = {
   exercisesSelectCallback: ((exercises: Exercise[]) => void) | null;
   sectionSelectCallback: ((section: BuilderSection) => void) | null;
   reorderCallback: ((items: BuilderItem[]) => void) | null;
+  questionSelectCallback: ((question: Question) => void) | null;
+  questionsReorderCallback: ((questions: Question[]) => void) | null;
 
   // Stored data
   storedRepeatData: RepeatData | null;
   storedHabitOptionsData: HabitOptionsData | null;
   storedScheduleData: ScheduleData | null;
   storedReorderItems: BuilderItem[] | null;
+  storedReorderQuestions: Question[] | null;
 
   // Actions - Set callbacks
   setClientSelectCallback: (callback: (client: Client) => void) => void;
@@ -73,6 +77,8 @@ type ModalCallbacksStore = {
   setExercisesSelectCallback: (callback: (exercises: Exercise[]) => void) => void;
   setSectionSelectCallback: (callback: (section: BuilderSection) => void) => void;
   setReorderCallback: (callback: (items: BuilderItem[]) => void) => void;
+  setQuestionSelectCallback: (callback: (question: Question) => void) => void;
+  setQuestionsReorderCallback: (callback: (questions: Question[]) => void) => void;
 
   // Actions - Trigger callbacks
   triggerClientSelect: (client: Client) => void;
@@ -91,6 +97,8 @@ type ModalCallbacksStore = {
   triggerExercisesSelect: (exercises: Exercise[]) => void;
   triggerSectionSelect: (section: BuilderSection) => void;
   triggerReorder: (items: BuilderItem[]) => void;
+  triggerQuestionSelect: (question: Question) => void;
+  triggerQuestionsReorder: (questions: Question[]) => void;
 
   // Actions - Data management
   getRepeatData: () => RepeatData | null;
@@ -101,6 +109,8 @@ type ModalCallbacksStore = {
   setScheduleData: (data: ScheduleData | null) => void;
   getReorderItems: () => BuilderItem[] | null;
   setReorderItems: (items: BuilderItem[] | null) => void;
+  reorderQuestions: Question[] | null;
+  setReorderQuestions: (questions: Question[] | null) => void;
 };
 
 export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => ({
@@ -121,11 +131,15 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
   exercisesSelectCallback: null,
   sectionSelectCallback: null,
   reorderCallback: null,
+  questionSelectCallback: null,
+  questionsReorderCallback: null,
 
   storedRepeatData: null,
   storedHabitOptionsData: null,
   storedScheduleData: null,
   storedReorderItems: null,
+  storedReorderQuestions: null,
+  reorderQuestions: null,
 
   // Set callback actions
   setClientSelectCallback: (callback) => set({ clientSelectCallback: callback }),
@@ -144,6 +158,9 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
   setExercisesSelectCallback: (callback) => set({ exercisesSelectCallback: callback }),
   setSectionSelectCallback: (callback) => set({ sectionSelectCallback: callback }),
   setReorderCallback: (callback) => set({ reorderCallback: callback }),
+  setQuestionSelectCallback: (callback) => set({ questionSelectCallback: callback }),
+  setQuestionsReorderCallback: (callback) => set({ questionsReorderCallback: callback }),
+  setReorderQuestions: (questions) => set({ storedReorderQuestions: questions, reorderQuestions: questions }),
 
   // Trigger callback actions
   triggerClientSelect: (client) => {
@@ -240,6 +257,18 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
     const { reorderCallback } = get();
     if (reorderCallback) {
       reorderCallback(items);
+    }
+  },
+  triggerQuestionSelect: (question) => {
+    const { questionSelectCallback } = get();
+    if (questionSelectCallback) {
+      questionSelectCallback(question);
+    }
+  },
+  triggerQuestionsReorder: (questions) => {
+    const { questionsReorderCallback } = get();
+    if (questionsReorderCallback) {
+      questionsReorderCallback(questions);
     }
   },
 

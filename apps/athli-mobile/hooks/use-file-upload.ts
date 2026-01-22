@@ -361,10 +361,12 @@ export const useSendMessageWithAttachment = () => {
       caption?: string,
       durationSeconds?: number, // For audio attachments
       onProgress?: (progress: UploadProgress) => void,
+      messageId?: string, // Client-provided message ID for deduplication
+      idempotencyKey?: string, // Client-provided idempotency key
     ) => {
-      // Generate a UUID for the storage path to satisfy file_path format constraint
-      // Using expo-crypto for proper UUID format in React Native
-      const tempId = Crypto.randomUUID();
+      // Use client-provided ID or generate a new one
+      // IMPORTANT: This ID should match the optimistic message ID for deduplication
+      const finalMessageId = messageId || Crypto.randomUUID();
 
       try {
         // 1. Determine message type from mime type
@@ -376,23 +378,35 @@ export const useSendMessageWithAttachment = () => {
         // 2. Upload file to storage FIRST - if this fails, no message is created
         const uploadResult = await uploadFile({
           conversationId,
-          messageId: tempId, // Just used for storage path organization
+          messageId: finalMessageId, // Use the final message ID for storage path
           fileUri,
           mimeType,
           onProgress,
         });
 
-        // 3. Create message record AFTER successful upload
+        // Build insert data with client-provided ID
+        const insertData: Record<string, unknown> = {
+          id: finalMessageId, // Use client-provided ID
+          conversation_id: conversationId,
+          sender_id: senderId,
+          content: caption || null,
+          message_type: messageType,
+          status: 'sent',
+          attachment_count: 1, // This message has 1 attachment
+          attachments_ready: false, // Wait for attachments before broadcasting
+        };
+
+        // Add idempotency key if provided
+        if (idempotencyKey) {
+          insertData.idempotency_key = idempotencyKey;
+        }
+
+        // 3. Create message record with attachments_ready=false
+        // The broadcast trigger will skip this message until all attachments are uploaded
+        // Then the attachment trigger will mark it ready and trigger the broadcast
         const { data: message, error: messageError } = await supabase
           .from('messages')
-          .insert({
-            conversation_id: conversationId,
-            sender_id: senderId,
-            content: caption || null,
-            message_type: messageType,
-            status: 'sent',
-            attachment_count: 1, // This message has 1 attachment
-          })
+          .insert(insertData)
           .select()
           .single();
 
@@ -402,6 +416,8 @@ export const useSendMessageWithAttachment = () => {
         }
 
         // 4. Create attachment record with real message_id
+        // The database trigger will automatically mark the message as ready
+        // when all expected attachments (attachment_count) are uploaded
         const { data: attachment, error: attachmentError } = await supabase
           .from('message_attachments')
           .insert({
@@ -460,13 +476,16 @@ export const useSendMessageWithAttachment = () => {
       files: Array<{ uri: string; mimeType: string }>,
       caption?: string,
       onProgress?: (progress: { current: number; total: number }) => void,
+      messageId?: string, // Client-provided message ID for deduplication
+      idempotencyKey?: string, // Client-provided idempotency key
     ) => {
       if (files.length === 0) {
         throw new Error('No files provided');
       }
 
-      // Generate temp IDs for storage paths
-      const tempIds = files.map(() => Crypto.randomUUID());
+      // Use client-provided ID or generate a new one
+      // IMPORTANT: This ID should match the optimistic message ID for deduplication
+      const finalMessageId = messageId || Crypto.randomUUID();
 
       try {
         // 1. Determine message type from first file's mime type
@@ -477,10 +496,11 @@ export const useSendMessageWithAttachment = () => {
         else if (firstMimeType.startsWith('audio/')) messageType = 'audio';
 
         // 2. Upload ALL files in parallel for speed
+        // Use the final message ID for ALL attachments (they belong to same message)
         const uploadPromises = files.map((file, index) =>
           uploadFile({
             conversationId,
-            messageId: tempIds[index],
+            messageId: finalMessageId, // Use same message ID for all attachments
             fileUri: file.uri,
             mimeType: file.mimeType,
             onProgress: (p) => {
@@ -491,17 +511,29 @@ export const useSendMessageWithAttachment = () => {
 
         const uploadResults = await Promise.all(uploadPromises);
 
-        // 3. Create ONE message record with attachment_count
+        // Build insert data with client-provided ID
+        const insertData: Record<string, unknown> = {
+          id: finalMessageId, // Use client-provided ID
+          conversation_id: conversationId,
+          sender_id: senderId,
+          content: caption || null,
+          message_type: messageType,
+          status: 'sent',
+          attachment_count: files.length,
+          attachments_ready: false, // Wait for attachments before broadcasting
+        };
+
+        // Add idempotency key if provided
+        if (idempotencyKey) {
+          insertData.idempotency_key = idempotencyKey;
+        }
+
+        // 3. Create ONE message record with attachments_ready=false
+        // The broadcast trigger will skip this message until all attachments are uploaded
+        // Then the attachment trigger will mark it ready and trigger the broadcast
         const { data: message, error: messageError } = await supabase
           .from('messages')
-          .insert({
-            conversation_id: conversationId,
-            sender_id: senderId,
-            content: caption || null,
-            message_type: messageType,
-            status: 'sent',
-            attachment_count: files.length,
-          })
+          .insert(insertData)
           .select()
           .single();
 
@@ -511,8 +543,10 @@ export const useSendMessageWithAttachment = () => {
         }
 
         // 4. Create attachment records for ALL files
+        // The database trigger will automatically mark the message as ready
+        // when all expected attachments (attachment_count) are uploaded
         const attachmentInserts = uploadResults.map((result) => ({
-          message_id: message.id,
+          message_id: finalMessageId, // Use the client-provided ID
           conversation_id: conversationId,
           bucket_id: STORAGE_BUCKET_NAME,
           file_path: result.filePath,

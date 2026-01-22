@@ -63,6 +63,7 @@ interface MessageInputProviderProps {
     attachments?: Array<{
       file: File;
       attachmentType: AttachmentType;
+      durationMs?: number;
     }>;
     replyTo?: Message['replyTo'];
   }) => Promise<void>;

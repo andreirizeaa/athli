@@ -350,11 +350,32 @@ type SendMessageOptions = {
   content?: string;
   messageType?: MessageType;
   parentMessageId?: string;
+  /**
+   * Client-provided message ID (UUID v4).
+   * This becomes the real message ID in the database.
+   * Enables instant deduplication: optimistic ID = real ID.
+   */
+  messageId?: string;
+  /**
+   * Idempotency key to prevent duplicate messages on retry.
+   * Format: {senderId}-{timestamp}-{random}
+   */
+  idempotencyKey?: string;
+  /**
+   * Number of attachments to expect for this message.
+   * If > 0, message will be created with attachments_ready=false
+   */
+  attachmentCount?: number;
 };
 
 /**
- * Send a text message
- * Returns the created message with optimistic ID replaced
+ * Send a message with optional client-provided ID for atomic deduplication.
+ * 
+ * ATOMIC FLOW:
+ * 1. Client generates messageId + idempotencyKey
+ * 2. Creates optimistic message with same ID
+ * 3. Sends to database with that ID
+ * 4. For messages with attachments, attachments_ready=false until all uploaded
  */
 export const sendMessage = async ({
   conversationId,
@@ -362,18 +383,61 @@ export const sendMessage = async ({
   content,
   messageType = 'text',
   parentMessageId,
+  messageId,
+  idempotencyKey,
+  attachmentCount = 0,
 }: SendMessageOptions): Promise<Message> => {
   try {
+    // Check for idempotency - if a message with this key already exists, return it
+    if (idempotencyKey) {
+      const { data: existingMessage } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('idempotency_key', idempotencyKey)
+        .single();
+
+      if (existingMessage) {
+        // Message already exists - return it (idempotent response)
+        return {
+          ...existingMessage,
+          sent_at: new Date(existingMessage.sent_at),
+          read_at: existingMessage.read_at ? new Date(existingMessage.read_at) : null,
+          edited_at: existingMessage.edited_at ? new Date(existingMessage.edited_at) : null,
+          deleted_at: existingMessage.deleted_at ? new Date(existingMessage.deleted_at) : null,
+          created_at: new Date(existingMessage.created_at),
+        } as Message;
+      }
+    }
+
+    // Determine if message should wait for attachments
+    const hasAttachments = attachmentCount > 0;
+    const attachmentsReady = !hasAttachments;
+
+    // Build insert data
+    const insertData: Record<string, unknown> = {
+      conversation_id: conversationId,
+      sender_id: senderId,
+      content,
+      message_type: messageType,
+      parent_message_id: parentMessageId,
+      status: 'sent',
+      attachment_count: attachmentCount,
+      attachments_ready: attachmentsReady,
+    };
+
+    // Add client-provided ID if provided
+    if (messageId) {
+      insertData.id = messageId;
+    }
+
+    // Add idempotency key if provided
+    if (idempotencyKey) {
+      insertData.idempotency_key = idempotencyKey;
+    }
+
     const { data: message, error } = await supabase
       .from('messages')
-      .insert({
-        conversation_id: conversationId,
-        sender_id: senderId,
-        content,
-        message_type: messageType,
-        parent_message_id: parentMessageId,
-        status: 'sent',
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -390,7 +454,23 @@ export const sendMessage = async ({
       created_at: new Date(message.created_at),
     } as Message;
   } catch (error) {
-    console.error('[ChatsService] Error sending message:', error);
+    console.error('[MessagingService] Error sending message:', error);
+    throw error;
+  }
+};
+
+/**
+ * Mark a message as ready after all attachments are uploaded.
+ * This triggers the realtime broadcast with complete data.
+ */
+export const markMessageReady = async (messageId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('messages')
+    .update({ attachments_ready: true })
+    .eq('id', messageId);
+
+  if (error) {
+    console.error('[MessagingService] Error marking message ready:', error);
     throw error;
   }
 };

@@ -241,6 +241,7 @@ const QuestionnaireFormDetailPage = () => {
 
       <FormDetailContent
         formId={formId}
+        formType="questionnaire"
         form={currentForm as Form}
         questions={questions}
         setQuestions={setQuestions}

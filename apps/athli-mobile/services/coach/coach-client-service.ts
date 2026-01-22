@@ -148,10 +148,14 @@ export interface UpdateClientData {
   lastName?: string;
   email?: string;
   coachingType?: 'online' | 'in-person' | 'hybrid';
+  avatarUrl?: string;
+  avatarUri?: string; // Local file URI for upload
 }
 
 export const updateClient = async (athleteId: string, data: UpdateClientData): Promise<void> => {
-  const updatePayload: any = {};
+  const updatePayload: Record<string, any> = {
+    id: athleteId,
+  };
 
   if (data.firstName !== undefined) {
     updatePayload.first_name = data.firstName;
@@ -165,14 +169,45 @@ export const updateClient = async (athleteId: string, data: UpdateClientData): P
   if (data.coachingType !== undefined) {
     updatePayload.category = data.coachingType;
   }
+  if (data.avatarUrl !== undefined) {
+    updatePayload.avatar_url = data.avatarUrl;
+  }
 
-  // Add the client ID to the payload
-  updatePayload.id = athleteId;
+  // If there's an avatar file URI, use FormData and /client endpoint (like web app)
+  if (data.avatarUri) {
+    const formData = new FormData();
 
-  await apiFetch(`/clients`, {
-    method: 'PATCH',
-    body: JSON.stringify(updatePayload) as any,
-  });
+    // Add the avatar file
+    const fileExt = data.avatarUri.split('.').pop()?.toLowerCase() || 'jpg';
+    const mimeType = fileExt === 'png' ? 'image/png' : 'image/jpeg';
+    formData.append('avatar', {
+      uri: data.avatarUri,
+      name: `avatar.${fileExt}`,
+      type: mimeType,
+    } as any);
+
+    // Add other fields to FormData
+    Object.keys(updatePayload).forEach(key => {
+      if (updatePayload[key] !== undefined && updatePayload[key] !== null) {
+        formData.append(key, String(updatePayload[key]));
+      }
+    });
+
+    // Use /client endpoint with x-client-id header (same as web app)
+    await apiFetch(`/client`, {
+      method: 'PATCH',
+      headers: {
+        'x-client-id': athleteId,
+      },
+      body: formData as any,
+    });
+  } else {
+    // No avatar file, use regular JSON request to /clients
+    await apiFetch(`/clients`, {
+      method: 'PATCH',
+      body: JSON.stringify(updatePayload) as any,
+    });
+  }
 };
 
 /**

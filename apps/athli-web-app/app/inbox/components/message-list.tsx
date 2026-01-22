@@ -78,10 +78,6 @@ interface MessageListProps {
     selectedContact: Contact | null;
     onReply: (message: Message) => void;
     onDeleteMessage: (messageId: string) => void;
-    onDeleteMessageImage: (messageId: string, imageIndex: number) => void;
-    onDeleteMessagePdf: (messageId: string) => void;
-    onDeleteMessageVideo: (messageId: string) => void;
-    onDeleteAllImages: (messageId: string) => void;
     onReaction?: (messageId: string, emoji: string) => void;
     messagesEndRef: React.RefObject<HTMLDivElement | null>;
     /** Callback ref to attach to load more trigger element */
@@ -97,10 +93,6 @@ export const MessageList = React.memo(function MessageList({
     selectedContact,
     onReply,
     onDeleteMessage,
-    onDeleteMessageImage,
-    onDeleteMessagePdf,
-    onDeleteMessageVideo,
-    onDeleteAllImages,
     onReaction,
     messagesEndRef,
     loadMoreTriggerRef,
