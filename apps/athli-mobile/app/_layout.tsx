@@ -872,6 +872,18 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="modals/client/add-workout-to-day-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
             name="modals/calendar/repeat-options-modal"
             options={{
               presentation: 'modal',
