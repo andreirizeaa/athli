@@ -5,6 +5,8 @@
 
 import { apiFetch } from '@/api/api-client';
 import type {
+  BroadcastMessageData,
+  BroadcastResult,
   Conversation,
   Message,
   MessageAttachment,
@@ -294,4 +296,25 @@ export const deleteMessage = async (messageId: string): Promise<void> => {
   await apiFetch(`/coach/messaging/messages/${messageId}`, {
     method: 'DELETE',
   });
+};
+
+// ================================================
+// BROADCAST MESSAGE
+// ================================================
+
+/**
+ * Broadcast a message to multiple clients.
+ * Creates a separate message in each client's conversation.
+ */
+export const broadcastMessage = async (
+  data: BroadcastMessageData
+): Promise<BroadcastResult> => {
+  const response = await apiFetch<{ data: BroadcastResult }>(
+    '/coach/messaging/broadcast',
+    {
+      method: 'POST',
+      body: { ...data },
+    }
+  );
+  return response.data;
 };

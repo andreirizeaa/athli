@@ -2467,27 +2467,6 @@ const ClientTrainingCalendarPage = () => {
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 border-primary gap-1"
-                  >
-                    {t('athletes.trainingCalendar.saveAs')}
-                    <ChevronDown className="size-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setIsSaveAsWorkoutOpen(true)}>
-                    <span>{t('athletes.trainingCalendar.saveAsWorkout.menuItem')}</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsSaveAsProgramOpen(true)}>
-                    <span>{t('athletes.trainingCalendar.saveAsProgram.menuItem')}</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
               <Tabs value={selectedWeek} onValueChange={setSelectedWeek}>
                 <TabsList className="w-auto">
                   <TabsTrigger

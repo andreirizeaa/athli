@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   X,
@@ -22,10 +22,14 @@ import { DataGrid } from '@/components/app/data-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/general/utils';
-import { mockAthletes, type Athlete } from '@/components/app/app-shell';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Spinner } from '@/components/ui/spinner';
+import { useCoachClients } from '@/hooks/use-coach-clients';
+import { Athlete } from '@/api/coach/coach-client-service';
 import { broadcastMessage, type BroadcastMessageData } from '../../../api/coach/coach-message-service';
+
+const MAX_ATTACHMENTS = 4;
 
 type BroadcastSidePanelProps = {
   open: boolean;
@@ -36,6 +40,7 @@ type BroadcastStep = 1 | 2 | 3 | 4;
 
 export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelProps) => {
   const t = useTranslations();
+  const { clients, isLoading: isLoadingClients } = useCoachClients();
   const [step, setStep] = useState<BroadcastStep>(1);
   const [message, setMessage] = useState<string>('');
   const [attachedPdf, setAttachedPdf] = useState<File | null>(null);
@@ -50,6 +55,16 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
   const imageInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+
+  // Filter clients to only show connected ones (status 'accepted' or 'connected')
+  const connectedClients = useMemo(() =>
+    (clients || []).filter(c => c.connected === true),
+    [clients]
+  );
+
+  // Calculate total attachments for limit enforcement
+  const totalAttachments = attachedImages.length + (attachedPdf ? 1 : 0) + (attachedVideo ? 1 : 0);
+  const remainingSlots = MAX_ATTACHMENTS - totalAttachments;
 
   const handleOpenChange = (isOpen: boolean) => {
     onOpenChange(isOpen);
@@ -73,8 +88,10 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
     if (files.length === 0) return;
 
     const imageFiles = files.filter((file) => file.type.startsWith('image/'));
-    if (imageFiles.length > 0) {
-      setAttachedImages((prev) => [...prev, ...imageFiles]);
+    // Limit to remaining slots
+    const filesToAdd = imageFiles.slice(0, remainingSlots);
+    if (filesToAdd.length > 0) {
+      setAttachedImages((prev) => [...prev, ...filesToAdd]);
     }
 
     if (imageInputRef.current) {
@@ -85,6 +102,7 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
   const handlePdfChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (totalAttachments >= MAX_ATTACHMENTS && !attachedPdf) return; // No slots available
 
     if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
       setAttachedPdf(file);
@@ -98,6 +116,7 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
   const handleVideoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (totalAttachments >= MAX_ATTACHMENTS && !attachedVideo) return; // No slots available
 
     if (file.type === 'video/mp4' || file.name.endsWith('.mp4')) {
       setAttachedVideo(file);
@@ -164,6 +183,10 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
     const files = Array.from(event.dataTransfer.files);
     if (files.length === 0) return;
 
+    // Calculate current total (need fresh calculation for callback)
+    const currentTotal = attachedImages.length + (attachedPdf ? 1 : 0) + (attachedVideo ? 1 : 0);
+    let slotsUsed = 0;
+
     // Separate PDFs, videos, and images
     const pdfFiles = files.filter(
       (file) => file.type === 'application/pdf' || file.name.endsWith('.pdf')
@@ -174,22 +197,38 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
     const imageFiles = files.filter((file) => file.type.startsWith('image/'));
 
     // Handle PDF (only one PDF can be attached)
-    if (pdfFiles.length > 0) {
+    if (pdfFiles.length > 0 && currentTotal + slotsUsed < MAX_ATTACHMENTS) {
       const pdfFile = pdfFiles[0];
-      setAttachedPdf(pdfFile);
+      if (!attachedPdf) {
+        setAttachedPdf(pdfFile);
+        slotsUsed++;
+      } else {
+        // Replace existing PDF (doesn't use a new slot)
+        setAttachedPdf(pdfFile);
+      }
     }
 
     // Handle video (only one video can be attached)
-    if (videoFiles.length > 0) {
+    if (videoFiles.length > 0 && currentTotal + slotsUsed < MAX_ATTACHMENTS) {
       const videoFile = videoFiles[0];
-      setAttachedVideo(videoFile);
+      if (!attachedVideo) {
+        setAttachedVideo(videoFile);
+        slotsUsed++;
+      } else {
+        // Replace existing video (doesn't use a new slot)
+        setAttachedVideo(videoFile);
+      }
     }
 
-    // Handle images (multiple images can be attached)
+    // Handle images (multiple images can be attached, up to limit)
     if (imageFiles.length > 0) {
-      setAttachedImages((prev) => [...prev, ...imageFiles]);
+      const availableSlots = MAX_ATTACHMENTS - (currentTotal + slotsUsed);
+      const imagesToAdd = imageFiles.slice(0, Math.max(0, availableSlots));
+      if (imagesToAdd.length > 0) {
+        setAttachedImages((prev) => [...prev, ...imagesToAdd]);
+      }
     }
-  }, []);
+  }, [attachedImages.length, attachedPdf, attachedVideo]);
 
   const handleToggleClient = (clientId: string) => {
     setSelectedClientIds((prev) => {
@@ -293,7 +332,7 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
     });
   };
 
-  const selectedClients = mockAthletes.filter((athlete) => selectedClientIds.has(athlete.id));
+  const selectedClients = connectedClients.filter((athlete) => selectedClientIds.has(athlete.id));
   const isAllClients = isAllClientsSelected;
 
   const getInitials = (name: string) => {
@@ -347,15 +386,13 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
         </div>
       );
     } else if (step === 4) {
-      const broadcastButtonText = isSaving
-        ? t('general.saving')
-        : isAllClients
-          ? t('messages.broadcastPanel.broadcastToAllClients')
-          : t('messages.broadcastPanel.broadcastToClients', { count: selectedClients.length });
+      const broadcastButtonText = isAllClients
+        ? t('messages.broadcastPanel.broadcastToAllClients')
+        : t('messages.broadcastPanel.broadcastToClients', { count: selectedClients.length });
 
       return (
         <div className="flex w-full justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isSaving}>
             {t('general.cancel')}
           </Button>
           <Button
@@ -406,7 +443,7 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder={t('messages.broadcastPanel.messagePlaceholder')}
-                rows={6}
+                rows={8}
                 className="resize-none"
               />
             </div>
@@ -495,9 +532,11 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
                             variant="outline"
                             className="gap-2 w-full justify-start"
                             aria-label={t('messages.attachFile')}
+                            disabled={totalAttachments >= MAX_ATTACHMENTS}
                           >
                             <Plus className="h-4 w-4" />
                             {t('messages.attachFiles')}
+                            {totalAttachments > 0 && ` (${totalAttachments}/${MAX_ATTACHMENTS})`}
                           </Button>
                         </DropdownMenuTrigger>
                       </TooltipTrigger>
@@ -558,101 +597,107 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
               <span>{t('athletes.title')}<RequiredAsterisk /></span>
             </Label>
             <div className="flex-1 min-h-0 overflow-hidden">
-              <DataGrid
-                data={mockAthletes}
-                columns={[
-                  {
-                    id: 'name',
-                    label: 'Athlete',
-                    icon: <UserPlus className="size-3" />,
-                    width: { class: 'w-full', pixel: '100%' },
-                    getSortValue: (row) => row.name.toLowerCase(),
-                    getSearchValue: (row) => `${row.name} ${row.email} ${row.country}`,
-                  },
-                ]}
-                getRowId={(row) => row.id}
-                gridKey="broadcast-select-clients"
-                searchPlaceholder={t('messages.broadcastPanel.searchClients')}
-                enableSearch={true}
-                enableEditColumns={false}
-                enableExport={false}
-                enableRowSelection={true}
-                selectedRowIds={selectedClientIds}
-                onSelectionChange={(newSelection) => {
-                  setSelectedClientIds(newSelection);
-                  // Clear "all clients" flag if selection changes and it's no longer all clients
-                  if (newSelection.size !== mockAthletes.length || mockAthletes.length === 0) {
-                    setIsAllClientsSelected(false);
-                  }
-                }}
-                onRowClick={(row, event) => {
-                  const targetElement = event.target as HTMLElement;
-                  if (targetElement.closest('[data-no-row-link="true"]')) {
-                    return;
-                  }
-                  handleToggleClient(row.id);
-                }}
-                onRowKeyDown={(row, event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
+              {isLoadingClients ? (
+                <div className="flex items-center justify-center h-full">
+                  <Spinner className="size-6" />
+                </div>
+              ) : (
+                <DataGrid
+                  data={connectedClients}
+                  columns={[
+                    {
+                      id: 'name',
+                      label: 'Athlete',
+                      icon: <UserPlus className="size-3" />,
+                      width: { class: 'w-full', pixel: '100%' },
+                      getSortValue: (row) => row.name.toLowerCase(),
+                      getSearchValue: (row) => `${row.name} ${row.email} ${row.country}`,
+                    },
+                  ]}
+                  getRowId={(row) => row.id}
+                  gridKey="broadcast-select-clients"
+                  searchPlaceholder={t('messages.broadcastPanel.searchClients')}
+                  enableSearch={true}
+                  enableEditColumns={false}
+                  enableExport={false}
+                  enableRowSelection={true}
+                  selectedRowIds={selectedClientIds}
+                  onSelectionChange={(newSelection) => {
+                    setSelectedClientIds(newSelection);
+                    // Clear "all clients" flag if selection changes and it's no longer all clients
+                    if (newSelection.size !== connectedClients.length || connectedClients.length === 0) {
+                      setIsAllClientsSelected(false);
+                    }
+                  }}
+                  onRowClick={(row, event) => {
                     const targetElement = event.target as HTMLElement;
                     if (targetElement.closest('[data-no-row-link="true"]')) {
                       return;
                     }
-                    event.preventDefault();
                     handleToggleClient(row.id);
-                  }
-                }}
-                firstColumnId="name"
-                stickyFirstColumn={true}
-                firstColumnWidth="100%"
-                hideFirstColumnBorder={true}
-                renderFirstColumn={(row, isSelected) => {
-                  const initials = getInitials(row.name);
-                  return (
-                    <div className="flex items-center gap-3 h-full w-full">
-                      <div
-                        className="flex items-center justify-center h-full flex-shrink-0"
-                        data-no-row-link="true"
-                      >
-                        <Checkbox checked={isSelected} onCheckedChange={() => handleToggleClient(row.id)} />
+                  }}
+                  onRowKeyDown={(row, event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      const targetElement = event.target as HTMLElement;
+                      if (targetElement.closest('[data-no-row-link="true"]')) {
+                        return;
+                      }
+                      event.preventDefault();
+                      handleToggleClient(row.id);
+                    }
+                  }}
+                  firstColumnId="name"
+                  stickyFirstColumn={true}
+                  firstColumnWidth="100%"
+                  hideFirstColumnBorder={true}
+                  renderFirstColumn={(row, isSelected) => {
+                    const initials = getInitials(row.name);
+                    return (
+                      <div className="flex items-center gap-3 h-full w-full">
+                        <div
+                          className="flex items-center justify-center h-full flex-shrink-0"
+                          data-no-row-link="true"
+                        >
+                          <Checkbox checked={isSelected} onCheckedChange={() => handleToggleClient(row.id)} />
+                        </div>
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <Avatar className="h-8 w-8 flex-shrink-0">
+                            <AvatarImage src={row.avatarUrl} alt={row.name} />
+                            <AvatarFallback>{initials}</AvatarFallback>
+                          </Avatar>
+                          <span className={cn('truncate text-sm font-medium')}>{row.name}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <Avatar className="h-8 w-8 flex-shrink-0">
-                          <AvatarImage src={row.avatar} alt={row.name} />
-                          <AvatarFallback>{initials}</AvatarFallback>
-                        </Avatar>
-                        <span className={cn('truncate text-sm font-medium')}>{row.name}</span>
+                    );
+                  }}
+                  renderFirstColumnHeader={({ isAllSelected, onToggleAll }) => {
+                    return (
+                      <div className="flex items-center gap-3 h-full w-full">
+                        <Checkbox
+                          checked={isAllSelected}
+                          onCheckedChange={(checked) => {
+                            if (checked !== isAllSelected) {
+                              onToggleAll();
+                            }
+                            setIsAllClientsSelected(checked === true);
+                          }}
+                          aria-label={t('general.selectAll')}
+                        />
+                        <div className="flex items-center gap-2">
+                          <UserPlus className="size-3 text-muted-foreground" />
+                          <span className="text-xs uppercase text-muted-foreground">{t('athletes.title')}</span>
+                        </div>
                       </div>
-                    </div>
-                  );
-                }}
-                renderFirstColumnHeader={({ isAllSelected, onToggleAll }) => {
-                  return (
-                    <div className="flex items-center gap-3 h-full w-full">
-                      <Checkbox
-                        checked={isAllSelected}
-                        onCheckedChange={(checked) => {
-                          if (checked !== isAllSelected) {
-                            onToggleAll();
-                          }
-                          setIsAllClientsSelected(checked === true);
-                        }}
-                        aria-label={t('general.selectAll')}
-                      />
-                      <div className="flex items-center gap-2">
-                        <UserPlus className="size-3 text-muted-foreground" />
-                        <span className="text-xs uppercase text-muted-foreground">{t('athletes.title')}</span>
-                      </div>
-                    </div>
-                  );
-                }}
-                emptyMessage={t('messages.broadcastPanel.noClientsFound')}
-                rowHeight="54px"
-                compactMode={true}
-                showPagination={true}
-                itemsPerPage={10}
-                gridPadding={true}
-              />
+                    );
+                  }}
+                  emptyMessage={t('messages.broadcastPanel.noClientsFound')}
+                  rowHeight="54px"
+                  compactMode={true}
+                  showPagination={true}
+                  itemsPerPage={10}
+                  gridPadding={false}
+                />
+              )}
             </div>
           </div>
         )}
@@ -689,7 +734,7 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
                     >
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <Avatar className="h-8 w-8 flex-shrink-0">
-                          <AvatarImage src={client.avatar} alt={client.name} />
+                          <AvatarImage src={client.avatarUrl} alt={client.name} />
                           <AvatarFallback>{initials}</AvatarFallback>
                         </Avatar>
                         <span className="text-sm truncate">{client.name}</span>
@@ -724,7 +769,7 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder={t('messages.broadcastPanel.messagePlaceholder')}
-                rows={6}
+                rows={8}
                 className="resize-none"
               />
             </div>
@@ -813,9 +858,11 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
                             variant="outline"
                             className="gap-2 w-full justify-start"
                             aria-label={t('messages.attachFile')}
+                            disabled={totalAttachments >= MAX_ATTACHMENTS}
                           >
                             <Plus className="h-4 w-4" />
                             {t('messages.attachFiles')}
+                            {totalAttachments > 0 && ` (${totalAttachments}/${MAX_ATTACHMENTS})`}
                           </Button>
                         </DropdownMenuTrigger>
                       </TooltipTrigger>
@@ -871,7 +918,7 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <Avatar className="h-8 w-8 flex-shrink-0">
-                            <AvatarImage src={client.avatar} alt={client.name} />
+                            <AvatarImage src={client.avatarUrl} alt={client.name} />
                             <AvatarFallback>{initials}</AvatarFallback>
                           </Avatar>
                           <span className="text-sm truncate">{client.name}</span>

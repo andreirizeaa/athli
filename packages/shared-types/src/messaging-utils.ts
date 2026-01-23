@@ -6,6 +6,7 @@
  */
 
 import type {
+  BroadcastMessageData,
   Message,
   MessageAttachment,
   MessageReaction,
@@ -649,4 +650,44 @@ export function canReplyToMessage(message: Message): boolean {
   }
 
   return true;
+}
+
+// ================================================
+// BROADCAST UTILITIES
+// ================================================
+
+/**
+ * Create a broadcast payload with pre-generated IDs for optimistic updates.
+ *
+ * Each client gets a unique messageId and idempotencyKey to:
+ * - Enable instant optimistic UI updates
+ * - Prevent duplicate messages on retry
+ *
+ * @param clientIds - Array of client IDs to broadcast to
+ * @param content - Message content
+ * @param userId - ID of the sender (for idempotency key generation)
+ * @param attachmentCount - Optional number of attachments
+ * @returns BroadcastMessageData ready to send to API
+ *
+ * @example
+ * const payload = createBroadcastPayload(
+ *   ["client-1", "client-2", "client-3"],
+ *   "Hello everyone!",
+ *   "coach-123",
+ *   2
+ * );
+ */
+export function createBroadcastPayload(
+  clientIds: string[],
+  content: string,
+  userId: string,
+  attachmentCount?: number,
+): BroadcastMessageData {
+  return {
+    clientIds,
+    content,
+    attachmentCount,
+    messageIds: clientIds.map(() => generateMessageId()),
+    idempotencyKeys: clientIds.map(() => generateIdempotencyKey(userId)),
+  };
 }
