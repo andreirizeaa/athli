@@ -43,6 +43,7 @@ export default function EditClientGoalModal() {
     useEffect(() => {
         if (existingGoal) {
             setTitle(existingGoal.goal);
+            setBody(existingGoal.details || '');
             setDate(existingGoal.target_date ? new Date(existingGoal.target_date) : null);
         }
     }, [existingGoal]);
@@ -51,6 +52,7 @@ export default function EditClientGoalModal() {
     const isEmpty = title.trim() === '';
     const hasChanges = existingGoal && (
         title.trim() !== existingGoal.goal ||
+        body.trim() !== (existingGoal.details || '') ||
         (date ? date.toISOString().split('T')[0] : null) !== existingGoal.target_date
     );
     const canSave = (isFormValid && hasChanges && !isSubmitting && !isDeleting) || isEmpty;
@@ -78,11 +80,13 @@ export default function EditClientGoalModal() {
                     return {
                         goal: title.trim(),
                         target_date: date ? date.toISOString().split('T')[0] : null,
+                        details: body.trim() || null,
                     };
                 }
                 return {
                     goal: g.goal,
                     target_date: g.target_date,
+                    details: g.details || null,
                 };
             });
 
@@ -100,7 +104,7 @@ export default function EditClientGoalModal() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [canSave, id, coachId, goalId, title, date, goals, refreshSection, handleClose, t, isEmpty]);
+    }, [canSave, id, coachId, goalId, title, body, date, goals, refreshSection, handleClose, t, isEmpty]);
 
     const handleDelete = useCallback(() => {
         Alert.alert(
@@ -122,6 +126,7 @@ export default function EditClientGoalModal() {
                                 .map(g => ({
                                     goal: g.goal,
                                     target_date: g.target_date,
+                                    details: g.details || null,
                                 }));
 
                             await saveAthleteGoals(id, coachId, updatedGoals);
@@ -234,10 +239,10 @@ export default function EditClientGoalModal() {
                     />
 
                     <TextAreaInput
-                        label={t('clientDetail.editGoalModal.goalBody')}
+                        label={t('clientDetail.editGoalModal.goalDetails')}
                         value={body}
                         onChangeText={setBody}
-                        placeholder={t('clientDetail.editGoalModal.goalBodyPlaceholder')}
+                        placeholder={t('clientDetail.editGoalModal.goalDetailsPlaceholder')}
                         numberOfLines={8}
                         minHeight={200}
                     />

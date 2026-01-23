@@ -94,7 +94,7 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
 
 // Helper function to format workout type for display
 const formatWorkoutType = (type: string): string => {
-  if (!type) return '-';
+  if (!type) return '--';
   // Convert snake_case or kebab-case to Title Case
   return type
     .replace(/_/g, ' ')
@@ -106,7 +106,7 @@ const formatWorkoutType = (type: string): string => {
 
 // Helper function to format difficulty for display
 const formatDifficulty = (difficulty: string): string => {
-  if (!difficulty) return '-';
+  if (!difficulty) return '--';
   // Convert all_levels to "All Levels", intermediate to "Intermediate", etc.
   if (difficulty === 'all_levels') return 'All Levels';
   return difficulty.charAt(0).toUpperCase() + difficulty.slice(1).toLowerCase();
@@ -247,7 +247,7 @@ const WorkoutsPage = () => {
   };
 
   const formatDate = (dateStr: string | undefined): string => {
-    if (!dateStr) return '-';
+    if (!dateStr) return '--';
     const [day, month, year] = dateStr.split('-');
     const date = new Date(2000 + parseInt(year), parseInt(month) - 1, parseInt(day));
     const months = [

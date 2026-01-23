@@ -18,12 +18,14 @@ export interface AthleteGoal {
   goal: string;
   target_date: string | null;
   achieved: boolean;
+  details?: string;
 }
 
 export interface AthleteInjury {
   id: string;
   injury: string;
   date: string | null;
+  details?: string;
 }
 
 /**

@@ -50,12 +50,14 @@ export default function AddClientInjuryModal() {
             const newInjury = {
                 injury: title.trim(),
                 date: date ? date.toISOString().split('T')[0] : null,
+                details: body.trim() || null,
             };
 
             // Save all injuries including the new one
             const updatedInjuries = [...injuries.map(i => ({
                 injury: i.injury,
                 date: i.date,
+                details: i.details || null,
             })), newInjury];
 
             await saveAthleteInjuries(id, coachId, updatedInjuries);
@@ -72,7 +74,7 @@ export default function AddClientInjuryModal() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [canSave, id, coachId, title, date, injuries, refreshSection, handleClose, t]);
+    }, [canSave, id, coachId, title, body, date, injuries, refreshSection, handleClose, t]);
 
     const handleSelectDatePress = useCallback(() => {
         setDateSelectCallback((newDate: Date) => {
@@ -164,10 +166,10 @@ export default function AddClientInjuryModal() {
                     />
 
                     <TextAreaInput
-                        label={t('clientDetail.addInjuryModal.injuryBody')}
+                        label={t('clientDetail.addInjuryModal.injuryDetails')}
                         value={body}
                         onChangeText={setBody}
-                        placeholder={t('clientDetail.addInjuryModal.injuryBodyPlaceholder')}
+                        placeholder={t('clientDetail.addInjuryModal.injuryDetailsPlaceholder')}
                         numberOfLines={8}
                         minHeight={200}
                     />

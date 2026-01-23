@@ -2822,7 +2822,7 @@ Focus on proper form and progressive overload.`;
               <div
                 className={cn(
                   "flex flex-col h-full min-h-0 transition-all duration-500 ease-in-out",
-                  isOverviewOpen ? "w-[22%]" : "w-14"
+                  isOverviewOpen ? "w-[22%]" : "w-28"
                 )}
                 onClick={(e) => {
                   // Only trigger close if clicking on the container itself (dead zone), not on child elements
@@ -2837,7 +2837,7 @@ Focus on proper form and progressive overload.`;
               >
                 {/* Toggle Button Area - Positioned at top */}
                 <div
-                  className="flex-shrink-0 flex flex-col justify-start pb-4 items-start pt-2"
+                  className="flex-shrink-0 flex flex-row items-center pt-2 pb-4 gap-2 justify-between px-2"
                   onClick={(e) => {
                     // Only trigger close if clicking on the container itself (dead zone), not on child elements
                     if (e.target === e.currentTarget) {
@@ -2849,21 +2849,41 @@ Focus on proper form and progressive overload.`;
                     }
                   }}
                 >
+                  {/* Close button - always visible */}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         variant="outline"
                         size="icon"
-                        className={cn(
-                          "h-10 w-10 rounded-full border shadow-sm hover:bg-muted",
-                          isOverviewOpen ? "bg-background" : "bg-background opacity-100"
-                        )}
+                        className="h-10 w-10 rounded-full border shadow-sm hover:bg-muted bg-background"
+                        onClick={() => {
+                          if (isDirty) {
+                            setShowCloseConfirm(true);
+                          } else {
+                            onOpenChange(false);
+                          }
+                        }}
+                      >
+                        <X className="size-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>Close</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  {/* Toggle chevron - position changes based on overview state */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10 rounded-full border shadow-sm hover:bg-muted bg-background"
                         onClick={() => setIsOverviewOpen(!isOverviewOpen)}
                       >
                         {isOverviewOpen ? <ChevronLeft className="size-5" /> : <ChevronRight className="size-5" />}
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent side={isOverviewOpen ? "right" : "left"}>
+                    <TooltipContent side="top">
                       <p>{isOverviewOpen ? "Collapse overview" : "Expand overview"}</p>
                     </TooltipContent>
                   </Tooltip>

@@ -119,7 +119,7 @@ const MetricsPage = () => {
       getSearchValue: (row) => row.description || '',
       renderCell: (row) => (
         <span className="text-sm text-muted-foreground truncate block">
-          {row.description || '-'}
+          {row.description || '--'}
         </span>
       ),
     },
@@ -163,7 +163,7 @@ const MetricsPage = () => {
     const schedule = metric.schedule_config;
 
     if (!schedule || !schedule.frequency) {
-      return '-';
+      return '--';
     }
 
     if (schedule.frequency === 'daily') {
@@ -201,7 +201,7 @@ const MetricsPage = () => {
       return t('metrics.schedule.frequency.monthly');
     }
 
-    return '-';
+    return '--';
   };
 
   const handleOpenAddMetric = () => {
