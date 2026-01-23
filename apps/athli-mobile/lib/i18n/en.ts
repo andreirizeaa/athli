@@ -15,6 +15,7 @@ export const en = {
     errorLoading: 'Failed to load data',
     errorSaving: 'Failed to save changes',
     errorDeleting: 'Failed to delete',
+    deleteConfirmation: 'Are you sure you want to delete',
     success: 'Success',
     warning: 'Warning',
     description: 'Description',
@@ -1115,6 +1116,13 @@ export const en = {
       completed: 'Completed',
       inProgress: 'In Progress',
       notStarted: 'Not Started',
+      addWorkout: 'Add Workout',
+      addWorkoutModal: {
+        title: 'Add Workout',
+        searchPlaceholder: 'Search workouts...',
+        noWorkouts: 'No workouts found',
+        noWorkoutsDescription: 'Create workouts in your library first',
+      },
     },
     addPhotoModal: {
       title: 'Add Photo',

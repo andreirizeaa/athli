@@ -20,7 +20,6 @@ export type RootStackParamList = {
   'client/[id]/questionaires': { id: string };
   'client/[id]/settings': { id: string };
   'client/[id]/training': { id: string };
-  'client/[id]/training-calendar': { id: string };
   'inbox/[id]': { id: string; coachName?: string; coachAvatar?: string };
   'library/workout/[id]': { id: string };
   'personal-details': undefined;
