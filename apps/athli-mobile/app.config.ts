@@ -70,7 +70,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     orientation: "portrait",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
-    icon: icon,
     scheme: scheme,
     ios: {
       supportsTablet: true,
@@ -90,11 +89,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         ]
       },
       usesAppleSignIn: true,
-      icon: {
-        light: "./assets/app-icons/ios-light.png",
-        dark: "./assets/app-icons/ios-dark.png",
-        tinted: "./assets/app-icons/ios-tinted.png",
-      }
+      icon: "./assets/app-icons/athli-ios.icon"
     },
     android: {
       adaptiveIcon: {
