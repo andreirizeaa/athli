@@ -2420,6 +2420,9 @@ export const enMessages = {
     },
     searchAthletes: 'Search athletes...',
     noAthletesFound: 'No athletes found.',
+    assignSuccessSingle: 'Successfully assigned {formName} to {clientName}',
+    assignSuccessFormMultiClient: 'Successfully assigned {formName} to {count} clients',
+    assignSuccessMultiFormSingleClient: 'Successfully assigned {count} forms to {clientName}',
     columns: {
       name: 'Name',
       description: 'Description',

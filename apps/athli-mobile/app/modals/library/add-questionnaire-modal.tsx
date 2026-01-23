@@ -273,7 +273,7 @@ export default function AddQuestionnaireModal() {
                         color={themeColors.text}
                     />
                     <Text style={[styles.title, { color: themeColors.text }]}>
-                        {t('library.addQuestionnaire.title')}
+                        {isEditing ? t('library.addQuestionnaire.editTitle') : t('library.addQuestionnaire.title')}
                     </Text>
                     <IconButton
                         icon={{ sf: 'checkmark', IconComponent: Check }}
@@ -299,50 +299,52 @@ export default function AddQuestionnaireModal() {
                     keyboardDismissMode="on-drag"
                     bottomOffset={40}
                 >
-                    {/* Tab Bar - rendered once */}
-                    <View style={[styles.tabsWrapper, { borderBottomColor: themeColors.border }]}>
-                        <View style={styles.tabsContainer}>
-                            {tabs.map((tab) => {
-                                const isSelected = selectedTab === tab.key;
-                                return (
-                                    <View
-                                        key={tab.key}
-                                        style={styles.tabContainer}
-                                        onLayout={(event) => handleTabLayout(tab.key, event)}
-                                    >
-                                        <PressableOpacity
-                                            style={styles.tab}
-                                            onPress={() => handleTabPress(tab.key)}
+                    {/* Tab Bar - only show when not editing */}
+                    {!isEditing && (
+                        <View style={[styles.tabsWrapper, { borderBottomColor: themeColors.border }]}>
+                            <View style={styles.tabsContainer}>
+                                {tabs.map((tab) => {
+                                    const isSelected = selectedTab === tab.key;
+                                    return (
+                                        <View
+                                            key={tab.key}
+                                            style={styles.tabContainer}
+                                            onLayout={(event) => handleTabLayout(tab.key, event)}
                                         >
-                                            <Text
-                                                style={[
-                                                    styles.tabText,
-                                                    {
-                                                        color: isSelected ? themeColors.text : themeColors.mutedText,
-                                                        fontWeight: isSelected ? '700' : '600',
-                                                    },
-                                                ]}
+                                            <PressableOpacity
+                                                style={styles.tab}
+                                                onPress={() => handleTabPress(tab.key)}
                                             >
-                                                {tab.label}
-                                            </Text>
-                                        </PressableOpacity>
-                                    </View>
-                                );
-                            })}
+                                                <Text
+                                                    style={[
+                                                        styles.tabText,
+                                                        {
+                                                            color: isSelected ? themeColors.text : themeColors.mutedText,
+                                                            fontWeight: isSelected ? '700' : '600',
+                                                        },
+                                                    ]}
+                                                >
+                                                    {tab.label}
+                                                </Text>
+                                            </PressableOpacity>
+                                        </View>
+                                    );
+                                })}
 
-                            {/* Animated underline */}
-                            <Animated.View
-                                style={[
-                                    styles.animatedUnderline,
-                                    { backgroundColor: primaryColor },
-                                    animatedUnderlineStyle,
-                                ]}
-                            />
+                                {/* Animated underline */}
+                                <Animated.View
+                                    style={[
+                                        styles.animatedUnderline,
+                                        { backgroundColor: primaryColor },
+                                        animatedUnderlineStyle,
+                                    ]}
+                                />
+                            </View>
                         </View>
-                    </View>
+                    )}
 
                     {/* Conditional Content */}
-                    {selectedTab === 'templates' ? (
+                    {!isEditing && selectedTab === 'templates' ? (
                         <>
                             {/* Search Bar */}
                             <SearchBar

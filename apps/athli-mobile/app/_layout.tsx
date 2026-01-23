@@ -283,6 +283,9 @@ function RootLayoutNav() {
     return hideStatusBarRoutes.includes(currentRoute);
   }, [segments]);
 
+  // Check if we're on the welcome screen to use black background
+  const isWelcomeScreen = segments[0] === 'welcome';
+
   const navigationTheme =
     colorScheme === 'dark'
       ? {
@@ -303,10 +306,10 @@ function RootLayoutNav() {
       };
 
   return (
-    <RNView style={{ flex: 1, backgroundColor: themeColors.backgroundPrimary }}>
+    <RNView style={{ flex: 1, backgroundColor: isWelcomeScreen ? '#090909' : themeColors.backgroundPrimary }}>
       <ThemeProvider value={navigationTheme}>
         <StatusBar
-          style={colorScheme === 'dark' ? 'light' : 'dark'}
+          style={isWelcomeScreen ? 'light' : (colorScheme === 'dark' ? 'light' : 'dark')}
           translucent={true}
           backgroundColor="transparent"
           hidden={shouldHideStatusBar}
@@ -325,6 +328,9 @@ function RootLayoutNav() {
             options={{
               headerShown: false,
               animation: 'none',
+              contentStyle: {
+                backgroundColor: '#090909',
+              },
             }}
           />
           <Stack.Screen
@@ -360,7 +366,9 @@ function RootLayoutNav() {
           <Stack.Screen name="client/[id]/compare" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/files" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/check-ins" options={{ headerShown: false }} />
+          <Stack.Screen name="client/[id]/check-in-detail" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/questionaires" options={{ headerShown: false }} />
+          <Stack.Screen name="client/[id]/questionnaire-detail" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/settings" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/assistant" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/goals" options={{ headerShown: false }} />
@@ -397,6 +405,26 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="library/workout/reorder"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: {
+                backgroundColor: themeColors.backgroundPrimary,
+              },
+            }}
+          />
+          <Stack.Screen
+            name="library/form/form-builder"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: {
+                backgroundColor: themeColors.backgroundPrimary,
+              },
+            }}
+          />
+          <Stack.Screen
+            name="library/form/reorder-questions"
             options={{
               headerShown: false,
               animation: 'slide_from_right',
@@ -577,6 +605,13 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="settings/company-details"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="settings/profile"
             options={{
               headerShown: false,
               animation: 'slide_from_right',
@@ -951,6 +986,18 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="modals/library/add-questionnaire-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/library/add-question-modal"
             options={{
               presentation: 'modal',
               gestureEnabled: false,

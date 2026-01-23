@@ -31,6 +31,7 @@ export interface Question {
   scaleTo?: string;
   mediaCount?: number;
   metricId?: string;
+  metricName?: string;
 }
 
 export interface AddQuestionData {

@@ -9,22 +9,21 @@ import { SymbolView } from 'expo-symbols';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { LucideIcon } from 'lucide-react-native';
 import {
-  Building2,
+  ChevronRight,
   Cog,
   FileText,
-  IdCard,
   LogOut,
   MailPlus,
   Megaphone,
-  Pencil,
   RefreshCw,
   ShieldCheck,
   User,
   UserMinus,
 } from 'lucide-react-native';
+import { Image } from 'expo-image';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference, useCoachProfileStore } from '@/stores';
+import { useThemePreference, useCoachProfileStore, useClientProfileStore } from '@/stores';
 import { useAppView } from '@/stores';
 import { useTranslations } from '@/stores';
 import { Card } from '@/components/ui/card';
@@ -60,8 +59,14 @@ export default function SettingsScreen() {
   const { appView, setAppView } = useAppView();
   const { t } = useTranslations();
   const coachProfile = useCoachProfileStore((state) => state.profile);
+  const clientProfile = useClientProfileStore((state) => state.profile);
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
+
+  // Get the appropriate profile based on view
+  const currentProfile = appView === 'athlete' ? clientProfile : coachProfile;
+  const profileName = currentProfile?.name || t('profile.enterYourName');
+  const profilePictureUrl = currentProfile?.profile_picture_url;
 
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -115,16 +120,12 @@ export default function SettingsScreen() {
     router.push({ pathname: '/settings/preferences' });
   };
 
+  const handleOpenProfile = () => {
+    router.push('/settings/profile');
+  };
+
   const handleOpenWebURL = (url: string) => {
     Linking.openURL(url).catch((err) => console.error('Failed to open URL:', err));
-  };
-
-  const handleOpenPersonalDetails = () => {
-    router.push('/settings/personal-details');
-  };
-
-  const handleOpenCompanyDetails = () => {
-    router.push('/settings/company-details');
   };
 
   const handleOpenDeleteAccount = () => {
@@ -163,57 +164,40 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.contentContainer}>
-        {/* Profile Card - Only shown in athlete view */}
-        {isAthleteView && (
+        {/* Profile Card */}
+        <PressableScale onPress={handleOpenProfile}>
           <Card>
-            <PressableScale style={styles.profileRow}>
+            <View style={styles.profileRow}>
               <View style={styles.profileAvatar}>
-                <View style={styles.fallbackAvatar}>
-                  <PlatformIcon sf="person.fill" mdi="person" IconComponent={User} size={iconSizes.tabBarIcons} color="#ffffff" />
-                </View>
+                {profilePictureUrl ? (
+                  <Image
+                    source={{ uri: profilePictureUrl }}
+                    style={styles.avatarImage}
+                    contentFit="cover"
+                    transition={200}
+                  />
+                ) : (
+                  <View style={styles.fallbackAvatar}>
+                    <PlatformIcon sf="person.fill" mdi="person" IconComponent={User} size={iconSizes.tabBarIcons} color="#ffffff" />
+                  </View>
+                )}
               </View>
               <View style={styles.profileTextContainer}>
-                <View style={styles.profileNameRow}>
-                  <Text
-                    style={[styles.profileNameText, { color: themeColors.text }]}
-                    numberOfLines={1}
-                  >
-                    {t('profile.enterYourName')}
-                  </Text>
-                  <PlatformIcon sf="pencil" mdi="edit" IconComponent={Pencil} size={iconSizes.smallIcons} color={themeColors.mutedText} />
-                </View>
                 <Text
-                  style={[styles.profileSubtitleText, { color: themeColors.mutedText }]}
+                  style={[styles.profileNameText, { color: themeColors.text }]}
                   numberOfLines={1}
                 >
-                  {t('profile.memberSince')} 2024
+                  {profileName}
                 </Text>
               </View>
-            </PressableScale>
+              <PlatformIcon sf="chevron.right" mdi="chevron-right" IconComponent={ChevronRight} size={iconSizes.extraSmallIcons} color={themeColors.mutedText} />
+            </View>
           </Card>
-        )}
+        </PressableScale>
 
         {/* Account */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.account')}</Text>
         <Card>
-          <SettingsOption
-            icon={<PlatformIcon sf="person.text.rectangle" mdi="badge" IconComponent={IdCard} size={iconSize} color={iconColor} />}
-            title={t('profile.personalDetails')}
-            showChevron
-            onPress={handleOpenPersonalDetails}
-          />
-          {!isAthleteView && (
-            <>
-              <Separator />
-              <SettingsOption
-                icon={<PlatformIcon sf="building.2" mdi="business" IconComponent={Building2} size={iconSize} color={iconColor} />}
-                title={t('profile.companyDetails')}
-                showChevron
-                onPress={handleOpenCompanyDetails}
-              />
-            </>
-          )}
-          <Separator />
           <SettingsOption
             icon={<PlatformIcon sf="gear" mdi="settings" IconComponent={Cog} size={iconSize} color={iconColor} />}
             title={t('profile.preferences')}
@@ -311,12 +295,12 @@ const styles = StyleSheet.create({
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 4,
   },
   profileAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 30,
+    width: 65,
+    height: 65,
+    borderRadius: 40,
     overflow: 'hidden',
     marginRight: 14,
     backgroundColor: 'transparent',
@@ -324,24 +308,19 @@ const styles = StyleSheet.create({
   fallbackAvatar: {
     width: '100%',
     height: '100%',
-    borderRadius: 21,
+    borderRadius: 30,
     backgroundColor: '#ffb86a',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
   profileTextContainer: {
     flex: 1,
   },
-  profileNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
   profileNameText: {
     ...typography.h5,
-  },
-  profileSubtitleText: {
-    ...typography.p3,
-    marginTop: 2,
   },
 });

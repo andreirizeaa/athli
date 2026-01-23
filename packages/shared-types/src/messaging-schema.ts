@@ -60,6 +60,10 @@ export interface Message {
 
   // Attachment count from broadcast (for loading placeholders)
   attachment_count?: number;
+
+  // Reliability fields (added in migration 104)
+  idempotency_key?: string | null;
+  attachments_ready?: boolean;
 }
 
 /**
@@ -177,7 +181,7 @@ export interface ReadReceipt {
  * Used to show messages immediately while they're being sent
  */
 export interface OptimisticMessage extends Partial<Message> {
-  id: string; // Temporary ID: `temp-${timestamp}-${random}`
+  id: string; // Client-provided ID that becomes the real message ID
   conversation_id: string;
   sender_id: string;
   content: string | null;
@@ -190,11 +194,10 @@ export interface OptimisticMessage extends Partial<Message> {
   attachments?: Array<MessageAttachment & { local_uri: string }>;
 
   /**
-   * The real message ID returned by the API after successful creation.
-   * Used for precise deduplication - only hide the real message with this exact ID.
-   * Set after sendMessage API call succeeds.
+   * Idempotency key to prevent duplicate messages on retry.
+   * Format: {sender_id}-{timestamp}-{random}
    */
-  realMessageId?: string;
+  idempotency_key: string;
 }
 
 // ================================================

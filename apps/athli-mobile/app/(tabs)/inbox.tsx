@@ -67,17 +67,30 @@ export default function InboxScreen() {
   }, [openRowCloseFn]);
 
   // Realtime conversation updates - only subscribe when authenticated and ready
+  // IMPORTANT: The realtime hook sends RAW data - we must merge with existing coaches
   const { conversations: realtimeConversations } = useRealtimeConversations({
     userId: userId || '',
-    onConversationUpdated: (conversation) => {
-      console.log('[Inbox Realtime] Conversation updated:', conversation.id);
-      // Update the conversation in the list
+    onConversationUpdated: (realtimeConversation) => {
+      // CRITICAL: Invalidate the messages cache so clicking into chat loads fresh messages
+      invalidateMessagesCache(realtimeConversation.id);
+
       setCoaches((prev) => {
-        const existing = prev.find((c) => c.id === conversation.id);
+        const existing = prev.find((c) => c.id === realtimeConversation.id);
         if (existing) {
-          return prev.map((c) => (c.id === conversation.id ? conversation : c));
+          // MERGE: Preserve existing joined fields, update realtime fields
+          const merged = {
+            ...existing, // Keep existing data (name, avatar, etc.)
+            ...realtimeConversation, // Override with realtime updates
+            // Explicitly preserve joined fields that don't come from realtime
+            other_user_name: existing.other_user_name,
+            other_user_avatar: existing.other_user_avatar,
+          };
+          console.log('[Inbox Realtime] Merged update:', merged.id, 'name:', merged.other_user_name);
+          return prev.map((c) => (c.id === merged.id ? merged : c));
         }
-        return [...prev, conversation];
+        // New conversation
+        console.log('[Inbox Realtime] New conversation:', realtimeConversation.id);
+        return [...prev, realtimeConversation];
       });
     },
   });
@@ -101,6 +114,11 @@ export default function InboxScreen() {
     }
 
     return cached.messages;
+  }, []);
+
+  // Invalidate messages cache for a coach (call when realtime update arrives)
+  const invalidateMessagesCache = useCallback((coachId: string) => {
+    delete messagesCacheRef.current[coachId];
   }, []);
 
   const prefetchMessages = useCallback(async (coachId: string) => {

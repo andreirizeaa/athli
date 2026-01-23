@@ -645,37 +645,60 @@ export default function ChatDetailScreen() {
   const lastVoiceNoteDurationMsRef = useRef(0);
   const recordingStartedAtMsRef = useRef<number | null>(null);
 
+  // Keep a ref to optimistic messages for shouldSkipInsert callback
+  const optimisticMessagesRef = useRef<OptimisticMessage[]>([]);
+  useEffect(() => {
+    optimisticMessagesRef.current = optimisticMessages;
+  }, [optimisticMessages]);
+
   // Realtime messages subscription (uses broadcast events for scalability)
-  // When a real message arrives via realtime, immediately remove matching optimistic message
-  // to prevent visual glitch/duplication
+  // CRITICAL: Use shouldSkipInsert to prevent duplicates ONLY for attachment messages
   const { realtimeMessages } = useRealtimeMessages({
     conversationId: id,
     userId: currentUserId || undefined,
+    // Only skip insert for ATTACHMENT messages that aren't ready yet
+    // For text-only messages, let the realtime message be added - deduplication handles it
+    shouldSkipInsert: (message) => {
+      const currentOptimistic = optimisticMessagesRef.current;
+      if (currentOptimistic.length === 0) return false;
+      
+      const optimisticMatch = currentOptimistic.find((opt) => opt.id === message.id);
+      if (!optimisticMatch) return false;
+      
+      // For text-only messages, DON'T skip - let realtime be added, then remove optimistic
+      const hasAttachments = optimisticMatch.attachments && optimisticMatch.attachments.length > 0;
+      if (!hasAttachments) return false;
+      
+      // For attachment messages, only skip if NOT ready yet (waiting for uploads)
+      const isReady = (message as any).attachments_ready !== false;
+      return !isReady; // Skip only if attachments are NOT ready
+    },
     onMessageReceived: (message) => {
       console.log('[Chat Detail] onMessageReceived:', message.message_type, message.id, 'attachments:', message.attachments?.length || 0);
       // Message now includes attachments from enhanced broadcast trigger - no refetch needed
 
-      // Remove optimistic message that matches this real message
-      setOptimisticMessages((prev) => prev.filter((opt) => {
-        // ALWAYS keep optimistic messages that have attachments
-        // Let the send handler's cleanup handle these after upload confirms
-        if (opt.attachments && opt.attachments.length > 0) {
-          return true;
+      // Remove matching optimistic message now that real message is in state
+      setOptimisticMessages((prev) => {
+        const optimisticMatch = prev.find((opt) => opt.id === message.id);
+        
+        if (!optimisticMatch) {
+          // No matching optimistic message - nothing to remove
+          return prev;
         }
 
-        // For text-only messages, check if this is a match
-        // Keep if different sender
-        if (opt.sender_id !== message.sender_id) return true;
-        // Keep if different content
-        if (opt.content !== message.content) return true;
-        // Keep if outside 30 second window
-        const optTime = opt.sent_at instanceof Date ? opt.sent_at.getTime() : new Date(opt.sent_at).getTime();
-        const msgTime = message.sent_at instanceof Date ? message.sent_at.getTime() : new Date(message.sent_at).getTime();
-        const timeDiff = Math.abs(msgTime - optTime);
-        if (timeDiff > 30000) return true;
-        // Match found for text-only - safe to remove
-        return false;
-      }));
+        // For messages with attachments, only remove if the real message 
+        // has attachments_ready=true (all attachments uploaded)
+        const hasAttachments = optimisticMatch.attachments && optimisticMatch.attachments.length > 0;
+        const isReady = (message as any).attachments_ready !== false;
+
+        if (hasAttachments && !isReady) {
+          // Keep optimistic - wait for attachments to be ready
+          return prev;
+        }
+
+        // Safe to remove - the real message is now in realtimeMessages
+        return prev.filter((opt) => opt.id !== message.id);
+      });
     },
     onMessageUpdated: (message) => {
       console.log('[Chat Detail] onMessageUpdated:', message.message_type, message.id, 'attachments:', message.attachments?.length || 0, 'is_deleted:', message.is_deleted);
@@ -854,39 +877,21 @@ export default function ChatDetailScreen() {
         setShowAttachmentPicker(false);
 
         try {
+          // Use the optimistic message ID for deduplication
           await sendWithAttachment(
             id,
             currentUserId,
             documentData.uri,
             mimeType,
             documentData.caption || undefined,
+            undefined, // durationSeconds
+            undefined, // onProgress
+            optimisticMsg.id, // client-provided message ID
+            optimisticMsg.idempotency_key, // client-provided idempotency key
           );
 
-          // Poll for signed URLs before removing optimistic message
-          const pollForSignedUrl = async (attempts = 0) => {
-            if (attempts >= 10) return;
-
-            const freshMessages = await refetchMessages();
-            const realMsg = freshMessages.find((m) => {
-              if (m.sender_id !== currentUserId) return false;
-              const mTime = m.sent_at instanceof Date ? m.sent_at.getTime() : new Date(m.sent_at).getTime();
-              return Math.abs(mTime - optMsgSentAt) <= 30000;
-            });
-
-            const hasSignedUrls = realMsg?.attachments?.every(
-              (a: any) => Boolean(a.signed_url)
-            );
-
-            if (hasSignedUrls) {
-              setOptimisticMessages((prev) =>
-                prev.filter((m) => m.id !== optimisticMsg.id)
-              );
-            } else {
-              setTimeout(() => pollForSignedUrl(attempts + 1), 1000);
-            }
-          };
-
-          setTimeout(() => pollForSignedUrl(0), 500);
+          // Don't remove optimistic message here - onMessageReceived will handle it
+          // when the realtime broadcast arrives with attachments_ready=true
           useChatsStore.getState().loadChats();
         } catch (error) {
           console.error('[ChatDetail] Error uploading document:', error);
@@ -904,7 +909,7 @@ export default function ChatDetailScreen() {
 
       uploadDocument();
     }
-  }, [documentSent, sentDocument, currentUserId, id, sendWithAttachment, router, refetchMessages]);
+  }, [documentSent, sentDocument, currentUserId, id, sendWithAttachment, router]);
 
   // Handle images sent - upload to Supabase and send as ONE message with all attachments
   useEffect(() => {
@@ -942,6 +947,7 @@ export default function ChatDetailScreen() {
 
         try {
           // Upload ALL images as ONE message with multiple attachments
+          // Use the optimistic message ID for deduplication
           await sendWithMultipleAttachments(
             id,
             currentUserId,
@@ -950,39 +956,13 @@ export default function ChatDetailScreen() {
               mimeType: img.isVideo ? 'video/mp4' : 'image/jpeg',
             })),
             sentImagesCaption || undefined,
+            undefined, // onProgress
+            optimisticMsg.id, // client-provided message ID
+            optimisticMsg.idempotency_key, // client-provided idempotency key
           );
 
-          // Poll for signed URLs before removing optimistic message
-          const pollForSignedUrl = async (attempts = 0) => {
-            if (attempts >= 10) {
-              // Fallback: remove optimistic message after max attempts
-              setOptimisticMessages((prev) =>
-                prev.filter((m) => m.id !== optimisticMsg.id)
-              );
-              return;
-            }
-
-            const freshMessages = await refetchMessages();
-            const realMsg = freshMessages.find((m) => {
-              if (m.sender_id !== currentUserId) return false;
-              const mTime = m.sent_at instanceof Date ? m.sent_at.getTime() : new Date(m.sent_at).getTime();
-              return Math.abs(mTime - optMsgSentAt) <= 30000;
-            });
-
-            // Check if all attachments have signed URLs
-            const hasAllSignedUrls = realMsg?.attachments?.length === imageAttachments.length &&
-              realMsg?.attachments?.every((a: any) => Boolean(a.signed_url));
-
-            if (hasAllSignedUrls) {
-              setOptimisticMessages((prev) =>
-                prev.filter((m) => m.id !== optimisticMsg.id)
-              );
-            } else {
-              setTimeout(() => pollForSignedUrl(attempts + 1), 1000);
-            }
-          };
-
-          setTimeout(() => pollForSignedUrl(0), 500);
+          // Don't remove optimistic message here - onMessageReceived will handle it
+          // when the realtime broadcast arrives with attachments_ready=true
 
           // Refresh chats list
           useChatsStore.getState().loadChats();
@@ -998,7 +978,7 @@ export default function ChatDetailScreen() {
 
       uploadImages();
     }
-  }, [imagesSent, sentImages, sentImagesCaption, currentUserId, id, sendWithMultipleAttachments, router, refetchMessages]);
+  }, [imagesSent, sentImages, sentImagesCaption, currentUserId, id, sendWithMultipleAttachments, router]);
 
   // Handle video sent - upload to Supabase and send message
   useEffect(() => {
@@ -1030,39 +1010,21 @@ export default function ChatDetailScreen() {
         setShowAttachmentPicker(false);
 
         try {
+          // Use the optimistic message ID for deduplication
           await sendWithAttachment(
             id,
             currentUserId,
             videoData.uri,
             'video/mp4',
             videoData.caption || undefined,
+            undefined, // durationSeconds
+            undefined, // onProgress
+            optimisticMsg.id, // client-provided message ID
+            optimisticMsg.idempotency_key, // client-provided idempotency key
           );
 
-          // Poll for signed URLs before removing optimistic message
-          const pollForSignedUrl = async (attempts = 0) => {
-            if (attempts >= 10) return;
-
-            const freshMessages = await refetchMessages();
-            const realMsg = freshMessages.find((m) => {
-              if (m.sender_id !== currentUserId) return false;
-              const mTime = m.sent_at instanceof Date ? m.sent_at.getTime() : new Date(m.sent_at).getTime();
-              return Math.abs(mTime - optMsgSentAt) <= 30000;
-            });
-
-            const hasSignedUrls = realMsg?.attachments?.every(
-              (a: any) => Boolean(a.signed_url)
-            );
-
-            if (hasSignedUrls) {
-              setOptimisticMessages((prev) =>
-                prev.filter((m) => m.id !== optimisticMsg.id)
-              );
-            } else {
-              setTimeout(() => pollForSignedUrl(attempts + 1), 1000);
-            }
-          };
-
-          setTimeout(() => pollForSignedUrl(0), 500);
+          // Don't remove optimistic message here - onMessageReceived will handle it
+          // when the realtime broadcast arrives with attachments_ready=true
           useChatsStore.getState().loadChats();
         } catch (error) {
           console.error('[ChatDetail] Error uploading video:', error);
@@ -1075,7 +1037,7 @@ export default function ChatDetailScreen() {
 
       uploadVideo();
     }
-  }, [videoSent, sentVideo, currentUserId, id, sendWithAttachment, router, refetchMessages]);
+  }, [videoSent, sentVideo, currentUserId, id, sendWithAttachment, router]);
 
   const hasText = searchQuery.trim().length > 0;
 
@@ -1215,6 +1177,7 @@ export default function ChatDetailScreen() {
       const durationSeconds = Math.round(durationMs / 1000);
       console.log('[ChatDetail] Sending voice note - durationMs:', durationMs, 'durationSeconds:', durationSeconds);
 
+      // Use the optimistic message ID for deduplication
       await sendWithAttachment(
         id,
         currentUserId,
@@ -1222,33 +1185,13 @@ export default function ChatDetailScreen() {
         'audio/mp4',
         undefined, // caption
         durationSeconds, // duration in seconds for DB
+        undefined, // onProgress
+        optimisticMsg.id, // client-provided message ID
+        optimisticMsg.idempotency_key, // client-provided idempotency key
       );
 
-      // Poll for signed URLs before removing optimistic message
-      const pollForSignedUrl = async (attempts = 0) => {
-        if (attempts >= 10) return;
-
-        const freshMessages = await refetchMessages();
-        const realMsg = freshMessages.find((m) => {
-          if (m.sender_id !== currentUserId) return false;
-          const mTime = m.sent_at instanceof Date ? m.sent_at.getTime() : new Date(m.sent_at).getTime();
-          return Math.abs(mTime - optMsgSentAt) <= 30000;
-        });
-
-        const hasSignedUrls = realMsg?.attachments?.every(
-          (a: any) => Boolean(a.signed_url)
-        );
-
-        if (hasSignedUrls) {
-          setOptimisticMessages((prev) =>
-            prev.filter((m) => m.id !== optimisticMsg.id)
-          );
-        } else {
-          setTimeout(() => pollForSignedUrl(attempts + 1), 1000);
-        }
-      };
-
-      setTimeout(() => pollForSignedUrl(0), 500);
+      // Don't remove optimistic message here - onMessageReceived will handle it
+      // when the realtime broadcast arrives with attachments_ready=true
       useChatsStore.getState().loadChats();
     } catch (e) {
       console.error('[ChatDetail] Failed to send voice note:', e);
@@ -1359,6 +1302,7 @@ export default function ChatDetailScreen() {
     setReplyingToMessage(null);
 
     // Create optimistic message for immediate UI update
+    // IMPORTANT: The optimistic message ID will be the REAL message ID
     const optimisticMsg = createOptimisticMessage(
       id, // conversationId
       currentUserId,
@@ -1371,15 +1315,17 @@ export default function ChatDetailScreen() {
     setOptimisticMessages((prev) => [...prev, optimisticMsg]);
 
     try {
-      // Send to database
+      // Send to database with client-provided ID for deduplication
+      // The message ID matches the optimistic message ID
       await sendMessage(id, text, {
         messageType: 'text',
         parentMessageId,
+        messageId: optimisticMsg.id,
+        idempotencyKey: optimisticMsg.idempotency_key,
       });
 
-      // Remove optimistic message after successful send
-      // The realtime subscription will add the actual message
-      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      // Don't remove optimistic message here - onMessageReceived will handle it
+      // when the realtime broadcast arrives with the same ID
 
       // Refresh chats list to update last_message_preview and last_message_at
       useChatsStore.getState().loadChats();
@@ -1397,7 +1343,7 @@ export default function ChatDetailScreen() {
     // Optimistically remove from ALL local states for instant UI feedback
     // This includes savedMessages and optimisticMessages (for audio/attachment messages that stay longer)
     removeSavedMessage(message.id);
-    setOptimisticMessages((prev) => prev.filter((m) => m.id !== message.id && m.realMessageId !== message.id));
+    setOptimisticMessages((prev) => prev.filter((m) => m.id !== message.id));
 
     try {
       // Call the real delete API (soft delete)

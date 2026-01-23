@@ -1,16 +1,14 @@
 import React from 'react';
 import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, ClipboardCheck, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, Plus, ClipboardCheck, ChevronRight, Calendar } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
-import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
-import { Separator } from '@/components/ui/separator';
 
 export default function ClientCheckInsScreen() {
   const router = useRouter();
@@ -22,7 +20,6 @@ export default function ClientCheckInsScreen() {
   // Get check-ins from store (already loaded by parent screen)
   const checkIns = useClientDetailStore((state) => state.checkIns);
   const isLoadingForms = useClientDetailStore((state) => state.isLoadingForms);
-  const refreshSection = useClientDetailStore((state) => state.refreshSection);
 
   const handleBackPress = () => {
     router.back();
@@ -32,34 +29,15 @@ export default function ClientCheckInsScreen() {
     router.push(`/modals/shared/assign-to-clients-modal?type=checkIn&clientId=${id}` as any);
   };
 
-  const handleAddCheckIn = () => {
-    router.push(`/modals/library/add-check-in-modal?clientId=${id}` as any);
-  };
-
-  const handleCheckInPress = (checkInId: string) => {
-    router.push(`/modals/client/check-in-detail-modal?clientId=${id}&checkInId=${checkInId}` as any);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
-  const getStatusColor = (status: string | undefined) => {
-    switch (status?.toLowerCase()) {
-      case 'completed':
-        return '#16A34A'; // Green - success
-      case 'pending':
-        return '#F5A623'; // Orange - warning
-      case 'overdue':
-        return '#DC2626'; // Red - error
-      default:
-        return themeColors.mutedText;
-    }
+  const handleCheckInPress = (checkIn: typeof checkIns[0]) => {
+    router.push({
+      pathname: '/client/[id]/check-in-detail',
+      params: {
+        id,
+        checkInId: checkIn.id,
+        checkInName: checkIn.name,
+      },
+    } as any);
   };
 
   return (
@@ -74,27 +52,12 @@ export default function ClientCheckInsScreen() {
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>
           {t('clientDetail.sections.checkIns')}
         </Text>
-        <DropdownMenuWrapper
-          options={[
-            {
-              label: t('clientDetail.actions.assignCheckIn'),
-              icon: { sf: 'checklist', IconComponent: ClipboardCheck },
-              onPress: handleAssignCheckIn,
-            },
-            {
-              label: t('clientDetail.actions.addCheckIn'),
-              icon: { sf: 'plus', IconComponent: Plus },
-              onPress: handleAddCheckIn,
-            },
-          ]}
-        >
-          <IconButton
-            icon={{ sf: 'plus', IconComponent: Plus }}
-            onPress={() => {}}
-            size="md"
-            color={iconColor}
-          />
-        </DropdownMenuWrapper>
+        <IconButton
+          icon={{ sf: 'plus', IconComponent: Plus }}
+          onPress={handleAssignCheckIn}
+          size="md"
+          color={iconColor}
+        />
       </View>
 
       {/* Loading state */}
@@ -126,36 +89,52 @@ export default function ClientCheckInsScreen() {
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="on-drag"
         >
-          {checkIns.map((checkIn) => (
-            <View key={checkIn.id}>
-              <PressableScale onPress={() => handleCheckInPress(checkIn.id)}>
-                <View style={styles.checkInItem}>
-                  <View
-                    style={[styles.checkInIconContainer, { backgroundColor: `${themeColors.primary}15` }]}
-                  >
-                    <PlatformIcon
-                      sf="checkmark.circle"
-                      IconComponent={ClipboardCheck}
-                      size={24}
-                      color={themeColors.primary}
+          {checkIns.map((checkIn, index) => {
+            const isLastItem = index === checkIns.length - 1;
+            return (
+              <View key={checkIn.id}>
+                <PressableScale
+                  style={styles.rowWrapper}
+                  onPress={() => handleCheckInPress(checkIn)}
+                >
+                  <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
+                    <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                      <PlatformIcon
+                        sf="calendar.badge.clock"
+                        IconComponent={Calendar}
+                        size={24}
+                        color={themeColors.text}
+                      />
+                    </View>
+                    <View style={styles.textContent}>
+                      <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
+                        {checkIn.name}
+                      </Text>
+                      <View style={styles.metaRow}>
+                        {checkIn.schedule && (
+                          <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                            {checkIn.schedule}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                    <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                  </View>
+                </PressableScale>
+
+                {!isLastItem && (
+                  <View style={styles.separatorContainer}>
+                    <View
+                      style={[
+                        styles.separator,
+                        { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+                      ]}
                     />
                   </View>
-                  <View style={styles.checkInInfo}>
-                    <Text style={[styles.checkInName, { color: themeColors.text }]} numberOfLines={1}>
-                      {checkIn.name}
-                    </Text>
-                    <View style={styles.checkInMeta}>
-                      <Text style={[styles.checkInDate, { color: themeColors.mutedText }]}>
-                        {checkIn.schedule}
-                      </Text>
-                    </View>
-                  </View>
-                  <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-                </View>
-              </PressableScale>
-              <Separator />
-            </View>
-          ))}
+                )}
+              </View>
+            );
+          })}
         </ScrollView>
       )}
     </ScreenWrapper>
@@ -207,39 +186,44 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
-  checkInItem: {
+  rowWrapper: {
+    width: '100%',
+  },
+  rowContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 8,
     paddingHorizontal: 16,
-    gap: 12,
   },
-  checkInIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  iconContainer: {
+    width: 58,
+    height: 58,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
-  checkInInfo: {
+  textContent: {
     flex: 1,
-    gap: 4,
+    marginRight: 8,
   },
-  checkInName: {
+  name: {
     ...typography.p1,
-    fontWeight: '500',
+    fontWeight: '600',
+    marginBottom: 4,
   },
-  checkInMeta: {
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
-  checkInStatus: {
+  metaText: {
     ...typography.p3,
-    fontWeight: '600',
-    textTransform: 'capitalize',
   },
-  checkInDate: {
-    ...typography.p3,
+  separatorContainer: {
+    paddingLeft: 86,
+    paddingRight: 16,
+  },
+  separator: {
+    height: 1,
   },
 });

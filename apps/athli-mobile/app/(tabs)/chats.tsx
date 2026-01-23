@@ -46,6 +46,7 @@ export default function ChatsScreen() {
   const storeMarkAllAsRead = useChatsStore((state) => state.markAllAsRead);
   const getCachedMessages = useChatsStore((state) => state.getCachedMessages);
   const prefetchMessages = useChatsStore((state) => state.prefetchMessages);
+  const invalidateMessagesCache = useChatsStore((state) => state.invalidateMessagesCache);
 
   const registerOpenRow = useCallback((closeFn: () => void) => {
     if (openRowCloseFn && openRowCloseFn !== closeFn) {
@@ -65,12 +66,33 @@ export default function ChatsScreen() {
   const iconColor = themeColors.text;
 
   // Realtime conversation updates - only subscribe when authenticated
+  // IMPORTANT: The realtime hook sends RAW data - we must merge with existing chats
   const { conversations: realtimeConversations } = useRealtimeConversations({
     userId: userId || '',
-    onConversationUpdated: (conversation) => {
-      console.log('[Chats Realtime] Conversation updated:', conversation.id);
-      // Update the conversation in the store
-      updateChat(conversation);
+    onConversationUpdated: (realtimeConversation) => {
+      // CRITICAL: Invalidate the messages cache so clicking into chat loads fresh messages
+      invalidateMessagesCache(realtimeConversation.id);
+
+      // Get FRESH chats from store (not stale reference from render)
+      const currentChats = useChatsStore.getState().chats;
+      const existingChat = currentChats.find((c) => c.id === realtimeConversation.id);
+      
+      if (existingChat) {
+        // MERGE: Preserve existing joined fields, update realtime fields
+        const mergedChat = {
+          ...existingChat, // Keep existing data (name, avatar, etc.)
+          ...realtimeConversation, // Override with realtime updates (unread_count, last_message_at, etc.)
+          // Explicitly preserve joined fields that don't come from realtime
+          other_user_name: existingChat.other_user_name,
+          other_user_avatar: existingChat.other_user_avatar,
+        };
+        console.log('[Chats Realtime] Merged update:', mergedChat.id, 'name:', mergedChat.other_user_name, 'preview:', mergedChat.last_message_preview);
+        updateChat(mergedChat);
+      } else {
+        // New conversation - add as-is (next refresh will fill in missing data)
+        console.log('[Chats Realtime] New conversation:', realtimeConversation.id);
+        updateChat(realtimeConversation);
+      }
     },
   });
 

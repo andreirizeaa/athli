@@ -117,7 +117,7 @@ export const getMessages = async ({
 };
 
 // ================================================
-// SEND MESSAGE
+// SEND MESSAGE (ATOMIC FLOW)
 // ================================================
 
 type SendMessageOptions = {
@@ -126,16 +126,43 @@ type SendMessageOptions = {
   messageType?: MessageType;
   parentMessageId?: string;
   attachmentCount?: number;
+  /**
+   * Client-provided message ID (UUID v4).
+   * This becomes the real message ID in the database.
+   * Enables instant deduplication: optimistic ID = real ID.
+   */
+  messageId: string;
+  /**
+   * Idempotency key to prevent duplicate messages on retry.
+   * Format: {senderId}-{timestamp}-{random}
+   */
+  idempotencyKey: string;
 };
 
+/**
+ * Send a message with client-provided ID for atomic deduplication.
+ * 
+ * The flow is:
+ * 1. Client generates messageId + idempotencyKey
+ * 2. Creates optimistic message with same ID
+ * 3. Sends to API with that ID
+ * 4. API uses the provided ID (no ID mismatch)
+ * 
+ * For messages with attachments:
+ * 1. Message is created with attachments_ready=false
+ * 2. Attachments are uploaded with the messageId
+ * 3. When all attachments complete, message is marked ready
+ * 4. Database trigger broadcasts the complete message
+ */
 export const sendMessage = async ({
   conversationId,
   content,
   messageType = 'text',
   parentMessageId,
   attachmentCount,
+  messageId,
+  idempotencyKey,
 }: SendMessageOptions): Promise<Message> => {
-  console.log('[sendMessage API] attachmentCount:', attachmentCount);
   const response = await apiFetch<{ data: { message: any } }>(
     '/coach/messaging/messages',
     {
@@ -146,6 +173,8 @@ export const sendMessage = async ({
         messageType,
         parentMessageId,
         attachmentCount,
+        messageId,
+        idempotencyKey,
       },
     }
   );
@@ -160,6 +189,16 @@ export const sendMessage = async ({
     deleted_at: msg.deleted_at ? new Date(msg.deleted_at) : null,
     created_at: new Date(msg.created_at),
   };
+};
+
+/**
+ * Mark message as ready after all attachments are uploaded.
+ * This triggers the realtime broadcast with complete data.
+ */
+export const markMessageReady = async (messageId: string): Promise<void> => {
+  await apiFetch(`/coach/messaging/messages/${messageId}/ready`, {
+    method: 'POST',
+  });
 };
 
 // ================================================

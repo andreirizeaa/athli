@@ -147,19 +147,50 @@ export function transformMessages(
 }
 
 // ================================================
-// OPTIMISTIC MESSAGE HELPERS
+// ID & IDEMPOTENCY KEY GENERATORS
 // ================================================
 
 /**
- * Generate a unique temporary ID for optimistic messages
+ * Generate a UUID v4 for message IDs
+ * Client-provided IDs ensure instant deduplication (optimistic ID = real ID)
  *
- * Format: temp-{timestamp}-{random}
+ * @returns UUID v4 string
+ */
+export function generateMessageId(): string {
+  // Use crypto.randomUUID if available (modern browsers/Node 19+)
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older environments
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+/**
+ * Generate an idempotency key for message sending
+ * Prevents duplicate messages on network retry
  *
- * @returns Unique temporary message ID
+ * Format: {senderId}-{timestamp}-{random}
+ *
+ * @param senderId - UUID of the sender
+ * @returns Idempotency key string
  *
  * @example
- * createOptimisticMessageId()
- * // Returns: "temp-1704067200000-0.123456789"
+ * generateIdempotencyKey("user-123")
+ * // Returns: "user-123-1704067200000-abc123"
+ */
+export function generateIdempotencyKey(senderId: string): string {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 8);
+  return `${senderId}-${timestamp}-${random}`;
+}
+
+/**
+ * @deprecated Use generateMessageId() instead
+ * Legacy function for backward compatibility
  */
 export function createOptimisticMessageId(): string {
   return `temp-${Date.now()}-${Math.random()}`;
@@ -181,6 +212,9 @@ export interface OptimisticParentMessage {
 
 /**
  * Create an optimistic message for immediate UI updates
+ * 
+ * IMPORTANT: Uses client-provided UUID so optimistic ID = real message ID.
+ * This eliminates the need for complex deduplication logic.
  *
  * @param conversationId - UUID of conversation
  * @param senderId - UUID of sender
@@ -189,6 +223,7 @@ export interface OptimisticParentMessage {
  * @param parentMessageId - Optional parent message ID for threading
  * @param attachments - Optional array of attachments with local_uri for optimistic display
  * @param parentMessage - Optional parent message object for reply preview
+ * @param messageId - Optional pre-generated message ID (uses generateMessageId() if not provided)
  * @returns Optimistic message object
  *
  * @example
@@ -207,9 +242,14 @@ export function createOptimisticMessage(
   parentMessageId?: string,
   attachments?: Array<{ local_uri: string; mime_type: string; filename?: string; duration?: number }>,
   parentMessage?: OptimisticParentMessage,
+  messageId?: string,
 ): OptimisticMessage {
+  // Generate IDs upfront - messageId will be the REAL message ID
+  const id = messageId || generateMessageId();
+  const idempotencyKey = generateIdempotencyKey(senderId);
+
   const optimisticMessage: OptimisticMessage = {
-    id: createOptimisticMessageId(),
+    id,
     conversation_id: conversationId,
     sender_id: senderId,
     content,
@@ -218,11 +258,12 @@ export function createOptimisticMessage(
     status: 'sending',
     sent_at: new Date(),
     is_deleted: false,
+    idempotency_key: idempotencyKey,
     attachments: attachments?.map((att) => ({
-      id: createOptimisticMessageId(),
-      message_id: '',
+      id: generateMessageId(),
+      message_id: id,
       conversation_id: conversationId,
-      bucket_id: '',
+      bucket_id: 'message_attachments',
       file_path: '',
       filename: att.filename || 'attachment',
       mime_type: att.mime_type,
@@ -230,7 +271,7 @@ export function createOptimisticMessage(
       upload_status: 'uploading' as const,
       created_at: new Date(),
       local_uri: att.local_uri,
-      duration: att.duration,
+      duration_seconds: att.duration ? Math.round(att.duration / 1000) : undefined,
     })),
   };
 
@@ -252,9 +293,11 @@ export function createOptimisticMessage(
 
 /**
  * Type guard to check if a message is optimistic
+ * 
+ * With client-provided IDs, we now check the status field instead of ID prefix.
  *
  * @param message - Message to check
- * @returns True if message is optimistic (temp ID)
+ * @returns True if message is optimistic (status === 'sending')
  *
  * @example
  * if (isOptimisticMessage(message)) {
@@ -264,6 +307,11 @@ export function createOptimisticMessage(
 export function isOptimisticMessage(
   message: Message | OptimisticMessage,
 ): message is OptimisticMessage {
+  // Check status first (new approach with client-provided IDs)
+  if (message.status === 'sending') {
+    return true;
+  }
+  // Legacy check for old temp- prefixed IDs (backward compatibility)
   return message.id.startsWith('temp-');
 }
 
@@ -285,16 +333,10 @@ function getTimestamp(sentAt: Date | string): number {
 /**
  * Merge and deduplicate messages from multiple sources.
  *
- * CORE PRINCIPLE: Optimistic messages ALWAYS win over their corresponding real messages.
- * 
- * MATCHING STRATEGY (prioritized):
- * 1. **Exact ID match**: If optimistic has `realMessageId`, hide ONLY that specific real message
- * 2. **Fallback time-based**: For optimistic without realMessageId yet, use sender + time matching
- *
- * This ensures:
- * - Optimistic messages never flicker or disappear unexpectedly  
- * - ONLY the specific real duplicate is hidden, not other recent messages
- * - The polling mechanism is the ONLY way optimistic messages get removed
+ * SIMPLIFIED APPROACH with client-provided IDs:
+ * - Optimistic messages use the SAME ID as the real message
+ * - Deduplication is now trivial: same ID = same message
+ * - Optimistic messages with status 'sending' win over real messages
  *
  * @param savedMessages - Messages from database (API)
  * @param realtimeMessages - Messages from realtime subscription
@@ -307,72 +349,46 @@ export function deduplicateMessages(
   optimisticMessages: OptimisticMessage[],
 ): Array<Message | OptimisticMessage> {
   const resultMap = new Map<string, Message | OptimisticMessage>();
-  const hiddenRealMessageIds = new Set<string>();
 
-  // Step 1: Identify real messages that should be hidden
-  optimisticMessages.forEach((opt) => {
-    // PRIORITY 1: Use realMessageId if available (exact match - no false positives)
-    if (opt.realMessageId) {
-      hiddenRealMessageIds.add(opt.realMessageId);
-      return;
-    }
+  // Step 1: Build set of optimistic message IDs for quick lookup
+  const optimisticIds = new Set(optimisticMessages.map((m) => m.id));
 
-    // PRIORITY 2: Fallback to time-based matching for optimistic without realMessageId yet
-    // This only applies briefly before the API call returns
-    // Use a NARROW 10-second window to minimize false matches
-    const optTime = getTimestamp(opt.sent_at);
-
-    [...savedMessages, ...realtimeMessages].forEach((real) => {
-      if (hiddenRealMessageIds.has(real.id)) return;
-      if (real.sender_id !== opt.sender_id) return;
-
-      const realTime = getTimestamp(real.sent_at);
-      const timeDiff = Math.abs(realTime - optTime);
-
-      // Narrow 10-second window - only for the brief period before realMessageId is set
-      if (timeDiff <= 10000) {
-        hiddenRealMessageIds.add(real.id);
-      }
-    });
-  });
-
-  // Step 2: Add saved messages that aren't hidden
+  // Step 2: Add saved messages (skip if we have optimistic version)
   savedMessages.forEach((msg) => {
-    if (!hiddenRealMessageIds.has(msg.id)) {
+    if (!optimisticIds.has(msg.id)) {
       resultMap.set(msg.id, msg);
     }
   });
 
-  // Step 3: Add or MERGE realtime messages
-  // IMPORTANT: Realtime messages may have more up-to-date data (reactions, attachments, read status)
-  // because they come from database triggers that fire on updates.
-  // When a message exists in both saved and realtime, merge the realtime data into the saved message.
+  // Step 3: Add or merge realtime messages (skip if we have optimistic version)
   realtimeMessages.forEach((realtimeMsg) => {
-    if (hiddenRealMessageIds.has(realtimeMsg.id)) return;
+    if (optimisticIds.has(realtimeMsg.id)) {
+      // We have an optimistic version - skip realtime
+      return;
+    }
 
     const existingMsg = resultMap.get(realtimeMsg.id);
-    if (existingMsg && !isOptimisticMessage(existingMsg)) {
+    if (existingMsg) {
       // Message exists in saved - merge realtime updates into it
       // Realtime has fresher data for: reactions, read_at, attachments
       const mergedMsg: Message = {
         ...(existingMsg as Message),
-        // Use realtime reactions (most up-to-date from broadcast trigger)
         reactions: realtimeMsg.reactions,
-        // Use realtime attachments if they have more data
         attachments: realtimeMsg.attachments?.length
           ? realtimeMsg.attachments
           : (existingMsg as Message).attachments,
-        // Use realtime read_at if set (message was read)
         read_at: realtimeMsg.read_at || (existingMsg as Message).read_at,
+        // Take attachments_ready from realtime if message wasn't ready before
+        attachments_ready: realtimeMsg.attachments_ready ?? (existingMsg as Message).attachments_ready,
       };
       resultMap.set(realtimeMsg.id, mergedMsg);
-    } else if (!existingMsg) {
+    } else {
       // Message doesn't exist in saved - add from realtime
       resultMap.set(realtimeMsg.id, realtimeMsg);
     }
   });
 
-  // Step 4: Add ALL optimistic messages - they ALWAYS appear
+  // Step 4: Add ALL optimistic messages - they ALWAYS appear (and override by ID)
   optimisticMessages.forEach((msg) => {
     resultMap.set(msg.id, msg);
   });

@@ -227,6 +227,7 @@ const CheckInFormDetailPage = () => {
 
       <FormDetailContent
         formId={formId}
+        formType="check-in"
         form={currentForm}
         questions={questions}
         setQuestions={setQuestions}
