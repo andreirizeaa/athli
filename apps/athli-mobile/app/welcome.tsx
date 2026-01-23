@@ -1,4 +1,4 @@
-import { StyleSheet, View, Text, Platform, Image, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PressableScale } from 'pressto';
@@ -6,46 +6,56 @@ import { LinearGradient } from 'expo-linear-gradient';
 import SquircleView from 'react-native-fast-squircle';
 
 import { typography } from '@/constants/typography';
-import { useTranslations, useThemePreference } from '@/stores';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import { useTranslations } from '@/stores';
 
 export default function WelcomeScreen() {
   const { t } = useTranslations();
   const { colors: themeColors } = useThemePreference();
   const router = useRouter();
 
-  const handleContinuePress = () => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 40,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const handleGetStartedPress = () => {
+    // TODO: Navigate to get started flow
+  };
+
+  const handleSignInPress = () => {
     router.push('/modals/auth/sign-in-modal');
   };
 
   return (
-    <View style={styles.container}>
-      {/* Background Gradient */}
-      <LinearGradient
-        colors={['#1c1c1e', '#000000']}
-        style={StyleSheet.absoluteFill}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 0.6 }}
-      />
-
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <View style={styles.content}>
-          <View style={styles.imageContainer}>
-            <SquircleView
-              style={styles.squircle}
-              cornerSmoothing={1}
-            >
-              <Image
-                source={require('@/assets/app-icons/splash-icon-light.png')}
-                style={styles.heroImage}
-                resizeMode="contain"
-              />
-            </SquircleView>
-          </View>
-
-          <Text style={styles.motto}>
-            ELEVATE YOUR{'\n'}POTENTIAL.
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={styles.content}>
+        {/* Title Section */}
+        <Animated.View
+          style={[
+            styles.titleContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <Text style={styles.appName}>ATHLI</Text>
+          <Text style={styles.tagline}>
+            {t('welcome.title')}
           </Text>
         </View>
 
@@ -76,6 +86,26 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  appName: {
+    fontSize: 64,
+    fontWeight: '700',
+    letterSpacing: -2,
+    color: '#000000',
+    marginBottom: 16,
+  },
+  tagline: {
+    ...typography.h5,
+    fontSize: 17,
+    fontWeight: '400',
+    textAlign: 'center',
+    color: '#666666',
+    lineHeight: 24,
+    letterSpacing: -0.3,
+  },
+  buttonContainer: {
+    gap: 12,
     paddingHorizontal: 24,
     gap: 48,
   },
