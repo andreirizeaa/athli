@@ -107,7 +107,7 @@ export default function SignInModal() {
     };
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary, paddingBottom: 200 }]}>
             <AuthLoadingOverlay visible={isLoading} />
 
             <View style={styles.header}>
@@ -257,7 +257,6 @@ const styles = StyleSheet.create({
     buttonText: {
         ...typography.h6,
         fontWeight: '700',
-        textTransform: 'uppercase',
     },
     termsContainer: {
         flexDirection: 'row',

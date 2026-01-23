@@ -283,6 +283,9 @@ function RootLayoutNav() {
     return hideStatusBarRoutes.includes(currentRoute);
   }, [segments]);
 
+  // Check if we're on the welcome screen to use black background
+  const isWelcomeScreen = segments[0] === 'welcome';
+
   const navigationTheme =
     colorScheme === 'dark'
       ? {
@@ -303,10 +306,10 @@ function RootLayoutNav() {
       };
 
   return (
-    <RNView style={{ flex: 1, backgroundColor: themeColors.backgroundPrimary }}>
+    <RNView style={{ flex: 1, backgroundColor: isWelcomeScreen ? '#090909' : themeColors.backgroundPrimary }}>
       <ThemeProvider value={navigationTheme}>
         <StatusBar
-          style={colorScheme === 'dark' ? 'light' : 'dark'}
+          style={isWelcomeScreen ? 'light' : (colorScheme === 'dark' ? 'light' : 'dark')}
           translucent={true}
           backgroundColor="transparent"
           hidden={shouldHideStatusBar}
@@ -325,6 +328,9 @@ function RootLayoutNav() {
             options={{
               headerShown: false,
               animation: 'none',
+              contentStyle: {
+                backgroundColor: '#090909',
+              },
             }}
           />
           <Stack.Screen
@@ -599,6 +605,13 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="settings/company-details"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="settings/profile"
             options={{
               headerShown: false,
               animation: 'slide_from_right',
