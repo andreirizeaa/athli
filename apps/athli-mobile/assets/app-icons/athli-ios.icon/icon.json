@@ -4,20 +4,28 @@
   },
   "groups" : [
     {
-      "blend-mode" : "normal",
+      "layers" : [
+
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    },
+    {
       "layers" : [
         {
-          "fill" : "none",
-          "glass" : true,
-          "hidden" : false,
-          "image-name" : "ChatGPT Image Jan 19, 2026, 10_35_10 PM.png",
-          "name" : "ChatGPT Image Jan 19, 2026, 10_35_10 PM",
-          "opacity" : 1,
+          "image-name" : "ChatGPT Image Jan 11, 2026, 10_46_11 PM.png",
+          "name" : "ChatGPT Image Jan 11, 2026, 10_46_11 PM",
           "position" : {
             "scale" : 1.2,
             "translation-in-points" : [
-              -0.6000000000000796,
-              26.834437082257068
+              -11.564470620602947,
+              16.199999999999818
             ]
           }
         }
