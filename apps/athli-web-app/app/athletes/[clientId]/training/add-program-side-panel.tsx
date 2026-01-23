@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { Pencil, Loader2, Dumbbell, FileText, Check } from 'lucide-react';
+import { Pencil, Loader2, Dumbbell, FileText, Check, ChevronDownIcon } from 'lucide-react';
 import {
     Tooltip,
     TooltipContent,
@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
-import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -36,7 +35,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 
 type AddProgramSidePanelProps = {
@@ -63,26 +62,65 @@ export const AddProgramSidePanel = ({
     const [step, setStep] = useState<number>(1);
     const { programs, isLoading } = useCoachPrograms();
     const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
-    const [startDate, setStartDate] = useState<Date | undefined>(selectedDate);
 
     // Step 2 state
     const [detailedProgram, setDetailedProgram] = useState<(Program & { program_data: ProgramData }) | null>(null);
     const [isLoadingDetails, setIsLoadingDetails] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [startDay, setStartDay] = useState<string>("1");
-    const [endDay, setEndDay] = useState<string>("1");
+    const [startWeek, setStartWeek] = useState<string>("1");
+    const [endWeek, setEndWeek] = useState<string>("1");
+    const [programStartDate, setProgramStartDate] = useState<Date | undefined>(selectedDate);
+
+    // Calculate total weeks from schema
+    const totalWeeks = useMemo(() => {
+        if (!detailedProgram?.program_data.schema) return 1;
+        const totalDays = detailedProgram.program_data.schema.length;
+        return Math.ceil(totalDays / 7);
+    }, [detailedProgram]);
+
+    // Group days by week for preview
+    const weeklyBreakdown = useMemo(() => {
+        if (!detailedProgram?.program_data.schema) return [];
+        const schema = detailedProgram.program_data.schema;
+        const weeks: Array<{ week: number; days: Array<{ day: number; workouts: any[] }> }> = [];
+
+        for (let i = 0; i < schema.length; i += 7) {
+            const weekNum = Math.floor(i / 7) + 1;
+            const weekDays = schema.slice(i, i + 7).map((day, idx) => ({
+                ...day,
+                day: day.day || (i + idx + 1)
+            }));
+            weeks.push({ week: weekNum, days: weekDays });
+        }
+
+        return weeks;
+    }, [detailedProgram]);
+
+    // Get today's date at midnight for comparison
+    const today = useMemo(() => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }, []);
 
     useEffect(() => {
         if (open) {
             setStep(1);
-            setStartDate(selectedDate || new Date());
             setDetailedProgram(null);
-            setStartDay("1");
-            setEndDay("1");
+            setStartWeek("1");
+            setEndWeek("1");
+            // Initialize program start date to selected date or today
+            const initialDate = selectedDate || new Date();
+            // Ensure it's not in the past
+            if (initialDate < today) {
+                setProgramStartDate(today);
+            } else {
+                setProgramStartDate(initialDate);
+            }
             // Use pre-selected program if provided
             setSelectedProgramId(preSelectedProgramId || null);
         }
-    }, [open, selectedDate, preSelectedProgramId]);
+    }, [open, selectedDate, preSelectedProgramId, today]);
 
     const selectedProgram = useMemo(() =>
         programs.find(p => p.id === selectedProgramId),
@@ -103,11 +141,12 @@ export const AddProgramSidePanel = ({
                 const details = await getProgramById(selectedProgramId);
                 setDetailedProgram(details);
 
-                // Initialize range based on schema length
+                // Initialize range based on schema length (in weeks)
                 const schema = details.program_data.schema || details.program_data.days || [];
-                const maxDays = schema.length > 0 ? schema.length : 1;
-                setStartDay("1");
-                setEndDay(maxDays.toString());
+                const totalDays = schema.length > 0 ? schema.length : 1;
+                const maxWeeks = Math.ceil(totalDays / 7);
+                setStartWeek("1");
+                setEndWeek(maxWeeks.toString());
 
                 setStep(2);
             } catch (error) {
@@ -125,14 +164,17 @@ export const AddProgramSidePanel = ({
     };
 
     const handleSave = async () => {
-        if (!selectedProgram || !startDate) return;
+        if (!selectedProgram || !programStartDate) return;
         setIsSaving(true);
         try {
+            // Convert weeks to days for the API
+            const startDayNum = (parseInt(startWeek) - 1) * 7 + 1;
+            const endDayNum = parseInt(endWeek) * 7;
             await onSave(
                 selectedProgram,
-                startDate,
+                programStartDate,
                 detailedProgram || undefined,
-                { start: parseInt(startDay), end: parseInt(endDay) }
+                { start: startDayNum, end: endDayNum }
             );
             handleClose();
         } catch (error) {
@@ -275,7 +317,7 @@ export const AddProgramSidePanel = ({
                         <Button
                             type="button"
                             onClick={handleSave}
-                            disabled={!startDate || isSaving}
+                            disabled={!programStartDate || isSaving}
                             className="gap-2 relative"
                         >
                             {isSaving ? (
@@ -329,37 +371,59 @@ export const AddProgramSidePanel = ({
                 </div>
             ) : (
                 <div className="flex flex-col h-full gap-4">
-                    {/* Range Selection */}
+                    {/* Program Start Date */}
+                    <div className="space-y-2">
+                        <Label>Program Start Date <RequiredAsterisk /></Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className="w-full justify-between font-normal bg-sidebar border-muted-foreground/20 hover:border-primary/50 transition-colors h-9 text-sm px-3"
+                                >
+                                    <span>{programStartDate ? format(programStartDate, "d MMM, yyyy") : "Select"}</span>
+                                    <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                                <CalendarComponent
+                                    mode="single"
+                                    selected={programStartDate}
+                                    onSelect={setProgramStartDate}
+                                    disabled={(date) => date < today}
+                                    captionLayout="dropdown"
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+
+                    {/* Week Range Selection */}
                     <div className="flex flex-col gap-2">
-                        <span className="text-sm font-medium">Select range <RequiredAsterisk /></span>
+                        <span className="text-sm font-medium">Select Range <RequiredAsterisk /></span>
                         <div className="grid grid-cols-2 gap-4">
                             <Select
-                                value={startDay}
+                                value={startWeek}
                                 onValueChange={(val) => {
-                                    setStartDay(val);
-                                    // Ensure end day is at least start day
-                                    if (parseInt(endDay) < parseInt(val)) {
-                                        setEndDay(val);
+                                    setStartWeek(val);
+                                    // Ensure end week is at least start week
+                                    if (parseInt(endWeek) < parseInt(val)) {
+                                        setEndWeek(val);
                                     }
                                 }}
                             >
                                 <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Start Day" />
+                                    <SelectValue placeholder="Start Week" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {detailedProgram?.program_data.schema?.map((day: { day: number; workouts: any[] }, idx: number) => {
-                                        const dayNum = idx + 1;
-                                        // Disable if greater than current end day (optional, user req: "disable up to that date in the left")
-                                        // "disable up to that date in the left" -> prevent selecting day > endDay?
-                                        // "prevent the left being more than the right"
-                                        const isDisabled = parseInt(endDay) < dayNum;
+                                    {Array.from({ length: totalWeeks }, (_, idx) => {
+                                        const weekNum = idx + 1;
+                                        const isDisabled = parseInt(endWeek) < weekNum;
                                         return (
                                             <SelectItem
-                                                key={dayNum}
-                                                value={dayNum.toString()}
+                                                key={weekNum}
+                                                value={weekNum.toString()}
                                                 disabled={isDisabled}
                                             >
-                                                Day {dayNum}
+                                                Week {weekNum}
                                             </SelectItem>
                                         );
                                     })}
@@ -367,31 +431,29 @@ export const AddProgramSidePanel = ({
                             </Select>
 
                             <Select
-                                value={endDay}
+                                value={endWeek}
                                 onValueChange={(val) => {
-                                    setEndDay(val);
-                                    // Ensure start day is at most end day
-                                    if (parseInt(startDay) > parseInt(val)) {
-                                        setStartDay(val);
+                                    setEndWeek(val);
+                                    // Ensure start week is at most end week
+                                    if (parseInt(startWeek) > parseInt(val)) {
+                                        setStartWeek(val);
                                     }
                                 }}
                             >
                                 <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="End Day" />
+                                    <SelectValue placeholder="End Week" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {detailedProgram?.program_data.schema?.map((day: { day: number; workouts: any[] }, idx: number) => {
-                                        const dayNum = idx + 1;
-                                        // "same thing for the other one to prevent the left being more than the right"
-                                        // For End Day dropdown, disable days less than Start Day
-                                        const isDisabled = parseInt(startDay) > dayNum;
+                                    {Array.from({ length: totalWeeks }, (_, idx) => {
+                                        const weekNum = idx + 1;
+                                        const isDisabled = parseInt(startWeek) > weekNum;
                                         return (
                                             <SelectItem
-                                                key={dayNum}
-                                                value={dayNum.toString()}
+                                                key={weekNum}
+                                                value={weekNum.toString()}
                                                 disabled={isDisabled}
                                             >
-                                                Day {dayNum}
+                                                Week {weekNum}
                                             </SelectItem>
                                         );
                                     })}
@@ -421,36 +483,49 @@ export const AddProgramSidePanel = ({
                                 </TooltipProvider>
                             </div>
 
-                            <div className="flex flex-col gap-2">
-                                {detailedProgram?.program_data.schema?.filter((day: { day: number; workouts: any[] }, idx: number) => {
-                                    const dayNum = idx + 1;
-                                    return dayNum >= parseInt(startDay) && dayNum <= parseInt(endDay);
-                                }).map((day: { day: number; workouts: any[] }, idx: number) => {
-                                    const workouts = day.workouts || [];
-                                    const dayNumber = day.day || (detailedProgram.program_data.schema?.indexOf(day) ?? 0) + 1;
+                            <div className="flex flex-col gap-3">
+                                {weeklyBreakdown
+                                    .filter((week) => week.week >= parseInt(startWeek) && week.week <= parseInt(endWeek))
+                                    .map((week) => {
+                                        const workoutsInWeek = week.days.filter(day => day.workouts && day.workouts.length > 0);
+                                        if (workoutsInWeek.length === 0) return null;
 
-                                    if (workouts.length === 0) return null;
-
-                                    return (
-                                        <div
-                                            key={dayNumber}
-                                            className="px-2 py-2 bg-sidebar border rounded-md shadow-xs"
-                                        >
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div className="flex flex-col gap-1 min-w-0 flex-1">
-                                                    {workouts.map((workout: any, wIdx: number) => (
-                                                        <div key={wIdx} className="text-xs font-medium text-foreground truncate">
-                                                            {workout.name || workout.title}
-                                                        </div>
-                                                    ))}
+                                        return (
+                                            <Card key={week.week} className="p-3">
+                                                <div className="mb-2">
+                                                    <Badge variant="outline" className="text-xs text-primary border-primary">
+                                                        Week {week.week}
+                                                    </Badge>
                                                 </div>
-                                                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                                    Day {dayNumber}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                                <div className="flex flex-col gap-2">
+                                                    {week.days.map((day) => {
+                                                        const workouts = day.workouts || [];
+                                                        if (workouts.length === 0) return null;
+
+                                                        return (
+                                                            <div
+                                                                key={day.day}
+                                                                className="px-2 py-2 bg-muted/50 border rounded-md"
+                                                            >
+                                                                <div className="flex items-start justify-between gap-2">
+                                                                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                                                                        {workouts.map((workout: any, wIdx: number) => (
+                                                                            <div key={wIdx} className="text-xs font-medium text-foreground truncate">
+                                                                                {workout.name || workout.title}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                                                        Day {day.day}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </Card>
+                                        );
+                                    })}
                             </div>
                         </ScrollArea>
                     </div>
