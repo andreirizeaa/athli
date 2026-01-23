@@ -23,6 +23,29 @@ import { haptics } from '@/utils/haptics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+// Extract video ID from YouTube/Vimeo URLs
+const extractVideoId = (url: string): { id: string; type: 'youtube' | 'vimeo' | null } => {
+    if (!url?.trim()) {
+        return { id: '', type: null };
+    }
+
+    // YouTube patterns
+    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const youtubeMatch = url.match(youtubeRegex);
+    if (youtubeMatch) {
+        return { id: youtubeMatch[1], type: 'youtube' };
+    }
+
+    // Vimeo patterns
+    const vimeoRegex = /(?:vimeo\.com\/)(?:.*\/)?(\d+)/;
+    const vimeoMatch = url.match(vimeoRegex);
+    if (vimeoMatch) {
+        return { id: vimeoMatch[1], type: 'vimeo' };
+    }
+
+    return { id: '', type: null };
+};
+
 export default function LibraryFileViewerModal() {
     const router = useRouter();
     const { colors: themeColors } = useThemePreference();
@@ -58,6 +81,12 @@ export default function LibraryFileViewerModal() {
     const isImage = fileType === 'image';
     const isVideo = fileType === 'video';
     const isPdf = fileType === 'pdf';
+
+    // Detect YouTube/Vimeo for external video embedding
+    const videoInfo = isVideo && signedUrl ? extractVideoId(signedUrl) : { id: '', type: null };
+    const isExternalVideo = Boolean(videoInfo.id && videoInfo.type);
+
+    const [isVideoLoading, setIsVideoLoading] = useState(false);
 
     // Only show loading when fetching via fileId (not when direct URI provided)
     const showLoading = isLoading && !directUri;
@@ -129,10 +158,13 @@ export default function LibraryFileViewerModal() {
         ],
     }));
 
-    // Video player
-    const videoPlayer = useVideoPlayer(signedUrl || '', (player) => {
-        player.loop = false;
-    });
+    // Video player - only for non-external videos
+    const videoPlayer = useVideoPlayer(
+        isVideo && !isExternalVideo && signedUrl ? signedUrl : '',
+        (player) => {
+            player.loop = false;
+        }
+    );
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -193,6 +225,65 @@ export default function LibraryFileViewerModal() {
         }
 
         if (isVideo) {
+            // Use WebView for YouTube/Vimeo
+            if (isExternalVideo && videoInfo.id && videoInfo.type) {
+                const embedUrl = videoInfo.type === 'youtube'
+                    ? `https://www.youtube.com/embed/${videoInfo.id}?autoplay=0&playsinline=1&rel=0&modestbranding=1`
+                    : `https://player.vimeo.com/video/${videoInfo.id}?autoplay=1`;
+
+                const htmlContent = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                        <style>
+                            * { margin: 0; padding: 0; }
+                            html, body { height: 100%; overflow: hidden; background: #000; }
+                            iframe {
+                                position: absolute;
+                                top: 0;
+                                left: 0;
+                                width: 100%;
+                                height: 100%;
+                                border: none;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <iframe
+                            src="${embedUrl}"
+                            frameborder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowfullscreen
+                        ></iframe>
+                    </body>
+                    </html>
+                `;
+
+                return (
+                    <View style={styles.videoContainer}>
+                        <WebView
+                            source={{ html: htmlContent }}
+                            style={styles.video}
+                            allowsFullscreenVideo
+                            allowsInlineMediaPlayback
+                            mediaPlaybackRequiresUserAction={false}
+                            javaScriptEnabled
+                            domStorageEnabled
+                            startInLoadingState
+                            onLoadStart={() => setIsVideoLoading(true)}
+                            onLoadEnd={() => setIsVideoLoading(false)}
+                        />
+                        {isVideoLoading && (
+                            <View style={[styles.videoContainer, styles.videoLoadingOverlay]}>
+                                <ActivityIndicator size="large" color="#FFFFFF" />
+                            </View>
+                        )}
+                    </View>
+                );
+            }
+
+            // Use VideoView for uploaded videos
             return (
                 <View style={styles.videoContainer}>
                     <VideoView
@@ -338,6 +429,10 @@ const styles = StyleSheet.create({
     video: {
         width: SCREEN_WIDTH,
         height: SCREEN_WIDTH * (9 / 16), // 16:9 aspect ratio
+    },
+    videoLoadingOverlay: {
+        position: 'absolute',
+        backgroundColor: '#000000',
     },
     webview: {
         flex: 1,

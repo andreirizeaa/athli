@@ -97,6 +97,26 @@ coachMessagingRouter.post('/messages', supabaseAuthenticate, coachMessagingContr
 
 /**
  * @swagger
+ * /api/v1/coach/messaging/messages/{messageId}/ready:
+ *   post:
+ *     summary: Mark a message as ready (all attachments uploaded)
+ *     tags: [Coach Messaging]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: messageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Message marked as ready
+ */
+coachMessagingRouter.post('/messages/:messageId/ready', supabaseAuthenticate, coachMessagingController.markMessageReady);
+
+/**
+ * @swagger
  * /api/v1/coach/messaging/messages/{messageId}:
  *   delete:
  *     summary: Delete a message (soft delete)

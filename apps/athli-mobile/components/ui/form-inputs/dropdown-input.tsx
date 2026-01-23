@@ -42,17 +42,15 @@ export const DropdownInput = ({
         >
             <View style={styles.content}>
                 <View style={styles.labelRow}>
-                    <Text style={[styles.label, { color: themeColors.mutedText }]}>
-                        {label}
-                    </Text>
+                    <View style={styles.labelWithAsterisk}>
+                        <Text style={[styles.label, { color: themeColors.mutedText }]}>
+                            {label}
+                        </Text>
+                        {required && <Text style={styles.requiredAsterisk}>*</Text>}
+                    </View>
                     {optional && (
                         <Text style={[styles.optionalLabel, { color: themeColors.mutedText }]}>
                             Optional
-                        </Text>
-                    )}
-                    {required && (
-                        <Text style={[styles.requiredLabel, { color: themeColors.mutedText }]}>
-                            Required
                         </Text>
                     )}
                 </View>
@@ -105,13 +103,19 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         marginBottom: 2,
     },
+    labelWithAsterisk: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     label: {
         ...typography.p4,
     },
-    optionalLabel: {
+    requiredAsterisk: {
         ...typography.p4,
+        color: '#EF4444',
+        marginLeft: 2,
     },
-    requiredLabel: {
+    optionalLabel: {
         ...typography.p4,
     },
     valueRow: {

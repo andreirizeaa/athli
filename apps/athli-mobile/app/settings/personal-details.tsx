@@ -53,7 +53,7 @@ export default function PersonalDetailsScreen() {
     >
       <View style={styles.header}>
         <IconButton
-          icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
           onPress={handleGoBack}
           size="md"
           color={themeColors.text}

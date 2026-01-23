@@ -107,7 +107,6 @@ const styles = StyleSheet.create({
     ...typography.p2,
     fontWeight: '700',
     color: '#FF3B30',
-    textTransform: 'uppercase',
   },
   cancelButton: {
     width: '100%',
@@ -121,6 +120,5 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     ...typography.p2,
     fontWeight: '700',
-    textTransform: 'uppercase',
   },
 });

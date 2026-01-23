@@ -131,11 +131,11 @@ export const CheckInsTab = () => {
 
     closeOpenRow();
     router.push({
-      pathname: '/modals/library/add-check-in-modal',
+      pathname: '/library/form/form-builder',
       params: {
-        editingId: item.id,
-        name: item.name,
-        description: item.description || '',
+        formType: 'checkIn',
+        formId: item.id,
+        formName: item.name,
       },
     });
   };
@@ -209,16 +209,19 @@ export const CheckInsTab = () => {
                         {item.schedule_config.frequency}
                       </Text>
                     )}
-                    {item.questionCount !== undefined && (
-                      <>
-                        {item.schedule_config?.frequency && (
-                          <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                        )}
-                        <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
-                          {item.questionCount} {item.questionCount === 1 ? 'question' : 'questions'}
-                        </Text>
-                      </>
-                    )}
+                    {(() => {
+                      const count = item.questionCount ?? item.questions?.length ?? 0;
+                      return (
+                        <>
+                          {item.schedule_config?.frequency && (
+                            <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                          )}
+                          <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
+                            {count} {count === 1 ? 'question' : 'questions'}
+                          </Text>
+                        </>
+                      );
+                    })()}
                   </View>
                 </View>
                 <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />

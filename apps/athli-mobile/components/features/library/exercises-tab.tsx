@@ -191,11 +191,10 @@ export const ExercisesTab = () => {
     closeOpenRow();
     if (exercise.video_link) {
       router.push({
-        pathname: '/library/file-preview',
+        pathname: '/modals/files/file-viewer-modal',
         params: {
           uri: exercise.video_link,
-          name: exercise.name,
-          type: 'video',
+          filename: exercise.name,
           mimeType: 'video/youtube',
         },
       });
