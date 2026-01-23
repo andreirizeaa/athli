@@ -209,3 +209,31 @@ export interface OptimisticMessage extends Partial<Message> {
  * Format: {conversation_id}/{message_id}/{filename}
  */
 export type AttachmentPathFormat = `${string}/${string}/${string}`;
+
+// ================================================
+// BROADCAST TYPES
+// ================================================
+
+/**
+ * Data for broadcasting a message to multiple clients
+ */
+export interface BroadcastMessageData {
+  clientIds: string[];
+  content: string;
+  attachmentCount?: number;
+  /** Pre-generated UUIDs for optimistic updates */
+  messageIds?: string[];
+  /** Unique keys for retry safety */
+  idempotencyKeys?: string[];
+}
+
+/**
+ * Result of a broadcast operation
+ */
+export interface BroadcastResult {
+  results: Array<{
+    clientId: string;
+    conversationId: string;
+    messageId: string;
+  }>;
+}
