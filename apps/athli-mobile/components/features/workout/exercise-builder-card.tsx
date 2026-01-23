@@ -332,9 +332,9 @@ export const ExerciseBuilderCard = ({
                     <Switch
                         value={exercise.eachSide}
                         onValueChange={(val) => onUpdateExercise({ eachSide: val })}
-                        trackColor={{ false: themeColors.border, true: preset === 'default' ? '#636366' : themeColors.primary }}
+                        trackColor={preset === 'default' ? undefined : { false: themeColors.border, true: themeColors.primary }}
                         thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
-                        ios_backgroundColor={themeColors.border}
+                        ios_backgroundColor={preset === 'default' ? undefined : themeColors.border}
                         style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
                     />
                 </View>

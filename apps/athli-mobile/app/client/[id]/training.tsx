@@ -14,7 +14,7 @@ import {
   Dumbbell,
 } from 'lucide-react-native';
 import { haptics } from '@/utils/haptics';
-import { deleteWorkoutByKey, getClientWorkoutInstance } from '@/services/client/client-training-service';
+import { deleteWorkoutByKey } from '@/services/client/client-training-service';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
@@ -44,6 +44,9 @@ export default function ClientTrainingScreen() {
 
   // Get refreshSection to force reload training data
   const refreshSection = useClientDetailStore((state) => state.refreshSection);
+  const fetchTrainingDataForDate = useClientDetailStore((state) => state.fetchTrainingDataForDate);
+  const extendTrainingRange = useClientDetailStore((state) => state.extendTrainingRange);
+  const isDateInLoadedRange = useClientDetailStore((state) => state.isDateInLoadedRange);
 
   // Load client data if not already loaded
   useEffect(() => {
@@ -115,6 +118,10 @@ export default function ClientTrainingScreen() {
               setHasSelectedDate(true);
               setCurrentMonth(date.getMonth());
               setCurrentYear(date.getFullYear());
+              
+              // Always fetch data for the selected date
+              fetchTrainingDataForDate(date);
+              
               Storage.removeItem(SELECTED_DATE_KEY);
             }
           }
@@ -123,22 +130,34 @@ export default function ClientTrainingScreen() {
         }
       };
       checkSelectedDate();
-    }, [animateCalendarForDateChange])
+    }, [animateCalendarForDateChange, fetchTrainingDataForDate])
   );
 
-  const handleDateSelect = (date: Date) => {
+  const handleDateSelect = async (date: Date) => {
     const newDate = new Date(date);
     newDate.setHours(0, 0, 0, 0);
+    
+    // Always update the selected date immediately for UI responsiveness
     animateCalendarForDateChange(newDate);
     setSelectedDate(newDate);
     setHasSelectedDate(true);
     setCurrentMonth(newDate.getMonth());
     setCurrentYear(newDate.getFullYear());
+
+    // ALWAYS fetch training data for the clicked date - fetch just that one date
+    // This ensures we can click ANY date and get its data
+    await fetchTrainingDataForDate(newDate);
   };
 
-  const handleCalendarSwipe = (month: number, year: number) => {
+  const handleCalendarSwipe = async (month: number, year: number) => {
     setCurrentMonth(month);
     setCurrentYear(year);
+
+    // When swiping to a new month, check if middle of month is in range
+    const midMonthDate = new Date(year, month, 15);
+    if (!isDateInLoadedRange(midMonthDate)) {
+      await extendTrainingRange(midMonthDate);
+    }
   };
 
   // Get workouts for selected date
@@ -151,8 +170,15 @@ export default function ClientTrainingScreen() {
 
     if (!workoutsObj) return [];
 
-    // Convert object values to array (API returns { workout_1: {...}, workout_2: {...} })
-    const workoutsArray = Object.values(workoutsObj);
+    // Convert object entries to array, preserving the key as the instance ID
+    // API returns { workout_1: {...}, workout_2: {...} }
+    // The key (workout_1, workout_2) is the unique instance ID for this client's workout
+    // The workout.id inside is the template ID from the coach's library
+    const workoutsArray = Object.entries(workoutsObj).map(([key, workout]: [string, any]) => ({
+      ...workout,
+      id: key, // Instance ID (unique to this client's training)
+      templateId: workout.id, // Original template ID from coach's library
+    }));
     return workoutsArray;
   }, [selectedDate, trainingCalendar]);
 
@@ -187,58 +213,27 @@ export default function ClientTrainingScreen() {
     router.back();
   };
 
-  // Loading state for fetching workout instance - tracks which workout ID is loading
-  const [loadingWorkoutId, setLoadingWorkoutId] = useState<string | null>(null);
+  const handleWorkoutPress = (workout: any) => {
+    if (!selectedDate || !id || !coachId) return;
 
-  const handleWorkoutPress = async (workout: any) => {
-    if (!selectedDate || !coachId || !id) return;
-
-    const workoutKey = workout.templateId || workout.id;
-    setLoadingWorkoutId(workoutKey);
-
-    // Small delay to ensure loading state renders before API call
-    await new Promise(resolve => setTimeout(resolve, 50));
-
-    // API expects YYYY-MM-DD format for the date parameter
-    const dateForApi = formatDateYYYYMMDD(selectedDate);
-
-    try {
-      // Fetch full workout instance data
-      const fullWorkout = await getClientWorkoutInstance(
-        id,
-        coachId,
-        dateForApi,
-        workout.templateId || workout.id
-      );
-
-
-      // Navigate to workout builder with full data
-      router.push({
-        pathname: '/library/workout/[id]',
-        params: {
-          id: fullWorkout?.id || workout.templateId || workout.id,
-          name: fullWorkout?.name || workout.workout,
-          description: fullWorkout?.description || workout.description || '',
-          type: fullWorkout?.type || workout.type || '',
-          difficulty: fullWorkout?.difficulty || workout.difficulty || 'all_levels',
-          // Pass client context for client-specific workout editing
-          clientId: id,
-          clientWorkoutDate: formatDateYYYYMMDD(selectedDate),
-          // Pass the full workout data as JSON
-          workoutData: JSON.stringify(fullWorkout),
-        },
-      });
-    } catch (error) {
-      console.error('[Training] Failed to fetch workout instance:', error);
-      haptics.error();
-      Alert.alert(
-        t('general.error'),
-        'Failed to load workout details',
-        [{ text: t('general.ok') }]
-      );
-    } finally {
-      setLoadingWorkoutId(null);
-    }
+    // Navigate to workout builder with client context
+    // The workout builder will fetch the client workout instance directly
+    // workout.id is the instance ID (e.g., "workout_1") unique to this client's training
+    // workout.templateId is the original template ID from the coach's library
+    router.push({
+      pathname: '/library/workout/[id]',
+      params: {
+        id: workout.id, // Pass the instance ID, not the template ID
+        name: workout.workout,
+        description: workout.description || '',
+        type: workout.type || '',
+        difficulty: workout.difficulty || 'all_levels',
+        // Pass client context for client-specific workout editing
+        clientId: id,
+        clientWorkoutDate: formatDateYYYYMMDD(selectedDate),
+        coachId: coachId, // Pass coachId to ensure the workout screen can fetch data
+      },
+    });
   };
 
   // Check if selected date is today or in the future
@@ -419,14 +414,10 @@ export default function ClientTrainingScreen() {
           keyboardDismissMode="on-drag"
         >
           {(workoutsForSelectedDate || []).map((workout, index) => {
-            const workoutKey = workout.templateId || workout.id;
-            const isLoading = loadingWorkoutId === workoutKey;
-
             return (
               <PressableScale
                 key={workout.id || index}
                 onPress={() => handleWorkoutPress(workout)}
-                disabled={isLoading}
               >
                 <View
                   style={[styles.workoutCard, { backgroundColor: themeColors.surfacePrimary }]}
@@ -434,13 +425,9 @@ export default function ClientTrainingScreen() {
                   {/* Workout Header */}
                   <View style={styles.workoutHeader}>
                     <View style={styles.workoutHeaderLeft}>
-                      {/* Status Icon or Loading Spinner */}
+                      {/* Status Icon */}
                       <View style={styles.statusIconContainer}>
-                        {isLoading ? (
-                          <ActivityIndicator size="small" color={themeColors.primary} />
-                        ) : (
-                          renderStatusIcon(workout.completedSummary?.status)
-                        )}
+                        {renderStatusIcon(workout.completedSummary?.status)}
                       </View>
                       <View style={styles.workoutInfo}>
                         <Text
@@ -457,16 +444,13 @@ export default function ClientTrainingScreen() {
                         </Text>
                       </View>
                     </View>
-                    {!isLoading && (
-                      <View style={[styles.deleteButtonContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
-                        <IconButton
-                          icon={{ sf: 'trash', IconComponent: Trash2 }}
-                          onPress={() => handleDeleteWorkout(workout)}
-                          size="sm"
-                          color={themeColors.mutedText}
-                        />
-                      </View>
-                    )}
+                    <IconButton
+                      icon={{ sf: 'trash', IconComponent: Trash2 }}
+                      onPress={() => handleDeleteWorkout(workout)}
+                      size="sm"
+                      color={themeColors.mutedText}
+                      backgroundColor={themeColors.surfaceSecondary}
+                    />
                   </View>
                 </View>
               </PressableScale>
@@ -593,9 +577,5 @@ const styles = StyleSheet.create({
   },
   addWorkoutButtonInList: {
     marginTop: 8,
-  },
-  deleteButtonContainer: {
-    borderRadius: 10,
-    overflow: 'hidden',
   },
 });

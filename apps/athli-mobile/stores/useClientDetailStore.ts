@@ -42,6 +42,7 @@ import {
   getClientNotes,
   type ClientNote,
 } from '@/services/client/client-notes-service';
+import { formatDateDDMMYYYY } from '@/lib/utils/date-formatters';
 
 interface ClientDetailStore {
   // IDs
@@ -62,6 +63,9 @@ interface ClientDetailStore {
   updates: ClientUpdate[];
   notes: ClientNote[];
   trainingCalendar: TrainingCalendarSchema;
+
+  // Track loaded date range for training calendar
+  loadedTrainingRange: { startDate: string; endDate: string } | null;
 
   // Loading states
   isLoading: boolean;
@@ -97,25 +101,90 @@ interface ClientDetailStore {
       | 'notes'
       | 'training'
   ) => Promise<void>;
+  fetchTrainingDataForDate: (targetDate: Date) => Promise<void>;
+  extendTrainingRange: (targetDate: Date, forceFetch?: boolean) => Promise<void>;
+  isDateInLoadedRange: (date: Date) => boolean;
   clearClientData: () => void;
 }
 
-// Helper to get date range for training calendar
+// Helper to format date as YYYY-MM-DD
+const formatDateForApi = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Helper to get initial date range for training calendar (1 year back, 1 year forward)
 const getDateRange = () => {
   const today = new Date();
-  const startDate = new Date(today.getFullYear(), today.getMonth() - 2, 1);
-  const endDate = new Date(today.getFullYear(), today.getMonth() + 3, 0);
-
-  const formatDate = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
+  const startDate = new Date(today.getFullYear() - 1, today.getMonth(), 1);
+  const endDate = new Date(today.getFullYear() + 1, today.getMonth() + 1, 0);
 
   return {
-    startDate: formatDate(startDate),
-    endDate: formatDate(endDate),
+    startDate: formatDateForApi(startDate),
+    endDate: formatDateForApi(endDate),
+  };
+};
+
+// Helper to extend date range to include a target date
+const getExtendedDateRange = (
+  currentRange: { startDate: string; endDate: string } | null,
+  targetDate: Date
+) => {
+  const target = new Date(targetDate);
+  target.setHours(0, 0, 0, 0);
+
+  // If no current range, return a 6-month range centered around target
+  if (!currentRange) {
+    const start = new Date(target);
+    start.setMonth(start.getMonth() - 3);
+    const end = new Date(target);
+    end.setMonth(end.getMonth() + 3);
+    return {
+      startDate: formatDateForApi(start),
+      endDate: formatDateForApi(end),
+      needsFetch: true,
+    };
+  }
+
+  const currentStart = new Date(currentRange.startDate);
+  const currentEnd = new Date(currentRange.endDate);
+
+  // Add 3-month buffer on each side when extending
+  const bufferMonths = 3;
+
+  if (target < currentStart) {
+    // Need to extend backward - fetch from 3 months before target to current start
+    const newStart = new Date(target);
+    newStart.setMonth(newStart.getMonth() - bufferMonths);
+    return {
+      startDate: formatDateForApi(newStart),
+      endDate: currentRange.startDate, // Fetch up to current start
+      newRangeStart: formatDateForApi(newStart),
+      newRangeEnd: currentRange.endDate,
+      needsFetch: true,
+    };
+  }
+
+  if (target > currentEnd) {
+    // Need to extend forward - fetch from current end to 3 months after target
+    const newEnd = new Date(target);
+    newEnd.setMonth(newEnd.getMonth() + bufferMonths);
+    return {
+      startDate: currentRange.endDate, // Fetch from current end
+      endDate: formatDateForApi(newEnd),
+      newRangeStart: currentRange.startDate,
+      newRangeEnd: formatDateForApi(newEnd),
+      needsFetch: true,
+    };
+  }
+
+  // Target is within range, no fetch needed
+  return {
+    startDate: currentRange.startDate,
+    endDate: currentRange.endDate,
+    needsFetch: false,
   };
 };
 
@@ -136,6 +205,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
   updates: [],
   notes: [],
   trainingCalendar: {},
+  loadedTrainingRange: null,
   isLoading: false,
   isLoadingClient: false,
   isLoadingMetrics: false,
@@ -188,6 +258,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       updates: [],
       notes: [],
       trainingCalendar: {},
+      loadedTrainingRange: null,
       isLoading: true,
       isLoadingClient: true,
       isLoadingMetrics: true,
@@ -262,6 +333,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         updates: updatesData,
         notes: notesData,
         trainingCalendar: trainingData,
+        loadedTrainingRange: { startDate, endDate },
         isLoading: false,
         isLoadingMetrics: false,
         isLoadingHabits: false,
@@ -388,12 +460,204 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         case 'training':
           set({ isLoadingTraining: true });
           const trainingData = await getTrainingCalendarRange(clientId, coachId, startDate, endDate);
-          set({ trainingCalendar: trainingData, isLoadingTraining: false });
+          set({ 
+            trainingCalendar: trainingData, 
+            loadedTrainingRange: { startDate, endDate },
+            isLoadingTraining: false 
+          });
           break;
       }
     } catch (err) {
       console.error(`[ClientDetailStore] Error refreshing ${section}:`, err);
     }
+  },
+
+  // Fetch training data for a single date - always fetches regardless of loaded range
+  fetchTrainingDataForDate: async (targetDate: Date) => {
+    const { clientId, coachId, trainingCalendar } = get();
+    
+    if (!clientId || !coachId) {
+      console.warn('[fetchTrainingDataForDate] Missing IDs, skipping');
+      return;
+    }
+
+    const dateKey = formatDateDDMMYYYY(targetDate);
+    
+    // Check if we already have data for this specific date
+    if (trainingCalendar[dateKey]) {
+      // Already have data, no need to fetch
+      return;
+    }
+
+    // Fetch data for just this one date (start and end are the same date)
+    const dateStr = formatDateForApi(targetDate);
+
+    console.log('[ClientDetailStore] Fetching training data for single date:', dateStr);
+
+    set({ isLoadingTraining: true });
+
+    try {
+      const newTrainingData = await getTrainingCalendarRange(
+        clientId, 
+        coachId, 
+        dateStr, 
+        dateStr
+      );
+
+      // Merge new data with existing data
+      const mergedCalendar = { ...trainingCalendar, ...newTrainingData };
+      
+      // Update the loaded range to include this date if needed
+      const currentRange = get().loadedTrainingRange;
+      let newRange = currentRange;
+      
+      if (!currentRange) {
+        // No range exists, create one around this date
+        const start = new Date(targetDate);
+        start.setMonth(start.getMonth() - 3);
+        const end = new Date(targetDate);
+        end.setMonth(end.getMonth() + 3);
+        newRange = {
+          startDate: formatDateForApi(start),
+          endDate: formatDateForApi(end),
+        };
+      } else {
+        // Extend range if needed
+        const rangeStart = new Date(currentRange.startDate);
+        const rangeEnd = new Date(currentRange.endDate);
+        const target = new Date(targetDate);
+        
+        if (target < rangeStart) {
+          newRange = {
+            startDate: formatDateForApi(target),
+            endDate: currentRange.endDate,
+          };
+        } else if (target > rangeEnd) {
+          newRange = {
+            startDate: currentRange.startDate,
+            endDate: formatDateForApi(target),
+          };
+        }
+      }
+
+      set({ 
+        trainingCalendar: mergedCalendar,
+        loadedTrainingRange: newRange,
+        isLoadingTraining: false,
+      });
+
+      console.log('[ClientDetailStore] Fetched training data for date:', dateStr);
+    } catch (err) {
+      console.error('[ClientDetailStore] Error fetching training data for date:', err);
+      set({ isLoadingTraining: false });
+    }
+  },
+
+  // Extend training range when user navigates to dates outside current range
+  // If forceFetch is true, will fetch data even if date is in range (useful for refreshing)
+  extendTrainingRange: async (targetDate: Date, forceFetch: boolean = false) => {
+    const { clientId, coachId, loadedTrainingRange, trainingCalendar } = get();
+    
+    if (!clientId || !coachId) {
+      console.warn('[extendTrainingRange] Missing IDs, skipping');
+      return;
+    }
+
+    const extendResult = getExtendedDateRange(loadedTrainingRange, targetDate);
+    
+    // Check if we already have data for this specific date
+    const dateKey = formatDateDDMMYYYY(targetDate);
+    const hasDataForDate = !!trainingCalendar[dateKey];
+    
+    // If date is in range and we have data, and not forcing fetch, skip
+    if (!extendResult.needsFetch && hasDataForDate && !forceFetch) {
+      return;
+    }
+
+    // If date is in range but we don't have data, or forceFetch is true, fetch a small range around the date
+    let fetchStartDate: string;
+    let fetchEndDate: string;
+    let newRangeStart: string;
+    let newRangeEnd: string;
+
+    if (!extendResult.needsFetch && (!hasDataForDate || forceFetch)) {
+      // Date is in range but missing data, fetch a 1-month range around it
+      const target = new Date(targetDate);
+      target.setHours(0, 0, 0, 0);
+      const start = new Date(target);
+      start.setMonth(start.getMonth() - 1);
+      start.setDate(1); // First day of month
+      const end = new Date(target);
+      end.setMonth(end.getMonth() + 1);
+      end.setDate(0); // Last day of month
+      
+      fetchStartDate = formatDateForApi(start);
+      fetchEndDate = formatDateForApi(end);
+      newRangeStart = loadedTrainingRange!.startDate;
+      newRangeEnd = loadedTrainingRange!.endDate;
+    } else {
+      // Date is outside range, use extendResult
+      fetchStartDate = extendResult.startDate;
+      fetchEndDate = extendResult.endDate;
+      newRangeStart = extendResult.newRangeStart || extendResult.startDate;
+      newRangeEnd = extendResult.newRangeEnd || extendResult.endDate;
+    }
+
+    console.log('[ClientDetailStore] Fetching training data:', {
+      currentRange: loadedTrainingRange,
+      targetDate: formatDateForApi(targetDate),
+      hasDataForDate,
+      forceFetch,
+      fetchRange: { start: fetchStartDate, end: fetchEndDate },
+    });
+
+    set({ isLoadingTraining: true });
+
+    try {
+      const newTrainingData = await getTrainingCalendarRange(
+        clientId, 
+        coachId, 
+        fetchStartDate, 
+        fetchEndDate
+      );
+
+      // Merge new data with existing data
+      const mergedCalendar = { ...trainingCalendar, ...newTrainingData };
+      
+      // Update the loaded range
+      const newRange = {
+        startDate: newRangeStart,
+        endDate: newRangeEnd,
+      };
+
+      set({ 
+        trainingCalendar: mergedCalendar,
+        loadedTrainingRange: newRange,
+        isLoadingTraining: false,
+      });
+
+      console.log('[ClientDetailStore] Updated training range to:', newRange);
+    } catch (err) {
+      console.error('[ClientDetailStore] Error extending training range:', err);
+      set({ isLoadingTraining: false });
+    }
+  },
+
+  // Check if a date is within the loaded training range
+  isDateInLoadedRange: (date: Date) => {
+    const { loadedTrainingRange } = get();
+    
+    if (!loadedTrainingRange) {
+      return false;
+    }
+
+    const targetDate = new Date(date);
+    targetDate.setHours(0, 0, 0, 0);
+    
+    const rangeStart = new Date(loadedTrainingRange.startDate);
+    const rangeEnd = new Date(loadedTrainingRange.endDate);
+    
+    return targetDate >= rangeStart && targetDate <= rangeEnd;
   },
 
   // Clear client data (when navigating away)
@@ -414,6 +678,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       updates: [],
       notes: [],
       trainingCalendar: {},
+      loadedTrainingRange: null,
       isLoading: false,
       isLoadingClient: false,
       isLoadingMetrics: false,
