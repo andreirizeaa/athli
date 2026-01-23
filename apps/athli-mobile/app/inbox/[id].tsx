@@ -713,7 +713,7 @@ export default function InboxDetailScreen() {
   const handleMessageDelete = async (message: any) => {
     // Remove from ALL local states (messages and optimisticMessages)
     setMessages((prev) => prev.filter((m) => m.id !== message.id));
-    setOptimisticMessages((prev) => prev.filter((m) => m.id !== message.id && m.realMessageId !== message.id));
+    setOptimisticMessages((prev) => prev.filter((m) => m.id !== message.id));
   };
 
   const handleReactionPress = (message: any) => {

@@ -201,7 +201,7 @@ export const useChatsStore = create<ChatsStore>((set, get) => ({
             ...chat, // Override with new data
             // Ensure we keep existing joined fields if they exist and new ones are missing
             other_user_name: chat.other_user_name || c.other_user_name,
-            other_user_avatar_url: chat.other_user_avatar_url || c.other_user_avatar_url,
+            other_user_avatar: chat.other_user_avatar || c.other_user_avatar,
           };
         }),
       });

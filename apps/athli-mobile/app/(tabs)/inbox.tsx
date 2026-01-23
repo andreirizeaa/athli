@@ -83,7 +83,7 @@ export default function InboxScreen() {
             ...realtimeConversation, // Override with realtime updates
             // Explicitly preserve joined fields that don't come from realtime
             other_user_name: existing.other_user_name,
-            other_user_avatar_url: existing.other_user_avatar_url,
+            other_user_avatar: existing.other_user_avatar,
           };
           console.log('[Inbox Realtime] Merged update:', merged.id, 'name:', merged.other_user_name);
           return prev.map((c) => (c.id === merged.id ? merged : c));

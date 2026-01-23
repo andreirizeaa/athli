@@ -84,7 +84,7 @@ export default function ChatsScreen() {
           ...realtimeConversation, // Override with realtime updates (unread_count, last_message_at, etc.)
           // Explicitly preserve joined fields that don't come from realtime
           other_user_name: existingChat.other_user_name,
-          other_user_avatar_url: existingChat.other_user_avatar_url,
+          other_user_avatar: existingChat.other_user_avatar,
         };
         console.log('[Chats Realtime] Merged update:', mergedChat.id, 'name:', mergedChat.other_user_name, 'preview:', mergedChat.last_message_preview);
         updateChat(mergedChat);

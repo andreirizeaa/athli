@@ -52,9 +52,7 @@ export const en = {
     permissionMessage: 'Please grant camera permission to take photos and videos.',
   },
   welcome: {
-    title: 'Welcome',
-    getStarted: 'Get started',
-    alreadyHaveAccount: 'I already have an account',
+    subtitle: 'Welcome to',
   },
   auth: {
     signInModalTitle: 'Welcome back',

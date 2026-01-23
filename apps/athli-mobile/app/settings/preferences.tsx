@@ -18,7 +18,6 @@ import {
   Languages,
   Moon,
   Palette,
-  Ruler,
   Sun,
   Vibrate,
 } from 'lucide-react-native';
@@ -31,7 +30,6 @@ import {
   useClientProfileStore,
 } from '@/stores';
 import { useTranslations } from '@/stores';
-import { useUnits, type UnitsPreference } from '@/stores';
 import { useHaptics } from '@/stores';
 
 import { Card } from '@/components/ui/card';
@@ -64,7 +62,6 @@ export default function PreferencesScreen() {
     colors: themeColors,
   } = useThemePreference();
   const { t, locale } = useTranslations();
-  const { units, setUnits } = useUnits();
   const { hapticsEnabled, setHapticsEnabled } = useHaptics();
   const insets = useSafeAreaInsets();
   const iconSize = iconSizes.tabBarIcons;
@@ -90,10 +87,6 @@ export default function PreferencesScreen() {
 
   const handleOpenPaletteModal = () => {
     router.push('/modals/settings/palette-modal');
-  };
-
-  const handleUnitsChange = (newUnits: UnitsPreference) => {
-    setUnits(newUnits);
   };
 
   const handleHapticsToggle = (value: boolean) => {
@@ -162,11 +155,6 @@ export default function PreferencesScreen() {
       ro: 'Română',
     };
     return languageMap[locale] ?? 'English';
-  };
-
-  // Get the display label for units
-  const getUnitsLabel = (): string => {
-    return units === 'metric' ? t('preferences.metric') : t('preferences.imperial');
   };
 
   // Theme dropdown options
@@ -256,31 +244,6 @@ export default function PreferencesScreen() {
             onPress={handleOpenLanguageModal}
           />
           <Separator />
-          {/* Units row with dropdown */}
-          <DropdownMenuWrapper options={[
-            {
-              label: t('preferences.metric'),
-              icon: { sf: 'ruler', IconComponent: Ruler },
-              onPress: () => handleUnitsChange('metric'),
-            },
-            {
-              label: t('preferences.imperial'),
-              icon: { sf: 'ruler', IconComponent: Ruler },
-              onPress: () => handleUnitsChange('imperial'),
-            },
-          ]}>
-            <SettingsOption
-              icon={<PlatformIcon sf="ruler" IconComponent={Ruler} size={iconSize} color={iconColor} />}
-              title={t('preferences.units')}
-              subtitle={getUnitsLabel()}
-              subtitleRight
-              showChevron
-              chevronSize={14}
-              chevronIcon={{ sf: 'chevron.down', IconComponent: ChevronDown }}
-              onPress={() => {}}
-            />
-          </DropdownMenuWrapper>
-          <Separator />
           {/* Haptics toggle row */}
           <View style={styles.switchRow}>
             <View style={styles.switchRowLeft}>
@@ -292,9 +255,9 @@ export default function PreferencesScreen() {
             <Switch
               value={hapticsEnabled}
               onValueChange={handleHapticsToggle}
-              trackColor={{ false: themeColors.border, true: themeColors.primary }}
+              trackColor={preset === 'default' ? undefined : { false: themeColors.border, true: themeColors.primary }}
               thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
-              ios_backgroundColor={themeColors.border}
+              ios_backgroundColor={preset === 'default' ? undefined : themeColors.border}
               style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
             />
           </View>
