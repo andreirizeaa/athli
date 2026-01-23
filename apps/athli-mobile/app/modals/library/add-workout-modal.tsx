@@ -18,10 +18,12 @@ import {
 } from '@athli/shared-types';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
+import { useClientDetailStore, useModalCallbacks } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SelectInput } from '@/components/ui/form-inputs';
 import { hexToRgba } from '@/utils/colorUtils';
 import { createWorkout, updateWorkoutDetails } from '@/services/coach/coach-workout-service';
+import { assignWorkout } from '@/services/client/client-training-service';
 
 export default function AddWorkoutModal() {
     const router = useRouter();
@@ -36,8 +38,34 @@ export default function AddWorkoutModal() {
         description?: string;
         type?: string;
         difficulty?: string;
+        // Client workout context - when editing a client training workout
+        clientId?: string;
+        clientWorkoutDate?: string;
+        coachId?: string;
+        // Full workout payload (serialized JSON) for preserving items when editing client workouts
+        workoutPayloadJson?: string;
     }>();
     const isEditing = !!params.editingId;
+    const isClientWorkout = !!params.clientId && !!params.clientWorkoutDate;
+    
+    // Parse the workout payload if provided (for client workouts)
+    const existingWorkoutPayload = useMemo(() => {
+        if (params.workoutPayloadJson) {
+            try {
+                return JSON.parse(params.workoutPayloadJson);
+            } catch (e) {
+                console.error('[AddWorkoutModal] Failed to parse workoutPayloadJson:', e);
+                return null;
+            }
+        }
+        return null;
+    }, [params.workoutPayloadJson]);
+    
+    // Get refreshSection to update training data after client workout edit
+    const refreshSection = useClientDetailStore((state) => state.refreshSection);
+    
+    // Get triggerMetadataUpdate to notify the workout builder of metadata changes
+    const { triggerMetadataUpdate } = useModalCallbacks();
 
     // Form state - initialize with params if editing
     const [name, setName] = useState(params.name || '');
@@ -49,9 +77,46 @@ export default function AddWorkoutModal() {
     const queryClient = useQueryClient();
 
     const saveMutation = useMutation({
-        mutationFn: (workoutData: any) => {
+        mutationFn: async (workoutData: any) => {
             if (isEditing && params.editingId) {
-                // Only update metadata, preserve workout_data (exercise payloads)
+                if (isClientWorkout && params.clientId && params.clientWorkoutDate && params.coachId) {
+                    // For client workouts, use assignWorkout to update
+                    // This updates the workout in the client's training table
+                    // Merge new metadata with existing workout data to preserve items
+                    const fullPayload = existingWorkoutPayload ? {
+                        ...existingWorkoutPayload,
+                        id: params.editingId,
+                        name: workoutData.name,
+                        description: workoutData.description || '',
+                        type: workoutData.type || '',
+                        difficulty: workoutData.difficulty || '',
+                    } : {
+                        id: params.editingId,
+                        name: workoutData.name,
+                        description: workoutData.description || '',
+                        type: workoutData.type || '',
+                        difficulty: workoutData.difficulty || '',
+                    };
+                    
+                    console.log('[AddWorkoutModal] Updating client workout with full payload:', {
+                        clientId: params.clientId,
+                        coachId: params.coachId,
+                        date: params.clientWorkoutDate,
+                        workoutId: params.editingId,
+                        hasExistingPayload: !!existingWorkoutPayload,
+                        itemsCount: fullPayload.items?.length || 0,
+                    });
+                    
+                    return assignWorkout({
+                        clientId: params.clientId,
+                        coachId: params.coachId,
+                        date: params.clientWorkoutDate,
+                        workoutId: params.editingId,
+                        workoutPayload: fullPayload,
+                        isNew: false,
+                    });
+                }
+                // For library workouts, update metadata only
                 return updateWorkoutDetails(params.editingId, {
                     name: workoutData.name,
                     description: workoutData.description || '',
@@ -61,9 +126,24 @@ export default function AddWorkoutModal() {
             }
             return createWorkout(workoutData);
         },
-        onSuccess: async () => {
-            // Refetch to update the cache and trigger Zustand store update
-            await queryClient.refetchQueries({ queryKey: ['workouts'] });
+        onSuccess: async (_, variables) => {
+            // Trigger callback to update workout builder's local state with new metadata
+            if (isEditing) {
+                triggerMetadataUpdate({
+                    name: variables.name,
+                    description: variables.description || '',
+                    type: variables.type || '',
+                    difficulty: variables.difficulty || '',
+                });
+            }
+            
+            if (isClientWorkout) {
+                // Refresh client training data
+                await refreshSection('training');
+            } else {
+                // Refetch library workouts to update the cache
+                await queryClient.refetchQueries({ queryKey: ['workouts'] });
+            }
             haptics.success();
             handleClose();
         },
