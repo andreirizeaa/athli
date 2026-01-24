@@ -11,7 +11,7 @@ import {
     Easing,
 } from 'react-native-reanimated';
 
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useAppView } from '@/stores';
 import { typography } from '@/constants/typography';
 import { useTranslations, useClientDetailStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
@@ -25,6 +25,7 @@ import { ValueLineChart } from '@/components/ui/value-line-chart';
 import { TargetLineChart } from '@/components/ui/target-line-chart';
 import { LogsList } from '@/components/ui/logs-list';
 import { FlipCard } from '@/components/ui/flip-card';
+import { Card } from '@/components/ui/card';
 import { hexToRgba } from '@/utils/colorUtils';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { getHabitStreaks, deleteClientHabits, type HabitStreaks } from '@/services/client/client-habit-service';
@@ -60,6 +61,8 @@ export default function HabitDetailScreen() {
     const router = useRouter();
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
+    const { appView } = useAppView();
+    const isAthleteView = appView === 'athlete';
 
     const params = useLocalSearchParams<{
         id: string;
@@ -293,14 +296,23 @@ export default function HabitDetailScreen() {
                 <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
                     {habit.name}
                 </Text>
-                <DropdownMenuWrapper options={dropdownOptions}>
+                {isAthleteView ? (
                     <IconButton
-                        icon={{ sf: 'ellipsis', IconComponent: MoreHorizontal }}
-                        onPress={() => {}}
+                        icon={{ sf: 'plus', IconComponent: Plus }}
+                        onPress={handleLogHabit}
                         size="md"
                         color={themeColors.text}
                     />
-                </DropdownMenuWrapper>
+                ) : (
+                    <DropdownMenuWrapper options={dropdownOptions}>
+                        <IconButton
+                            icon={{ sf: 'ellipsis', IconComponent: MoreHorizontal }}
+                            onPress={() => {}}
+                            size="md"
+                            color={themeColors.text}
+                        />
+                    </DropdownMenuWrapper>
+                )}
             </View>
 
             {/* Time Range Filter */}
@@ -315,7 +327,7 @@ export default function HabitDetailScreen() {
                 {/* Average/Completion Rate Card */}
                 <FlipCard
                     frontContent={
-                        <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
+                        <Card variant="stat">
                             <View style={[
                                 styles.statIconContainer,
                                 { backgroundColor: averageValue !== null
@@ -342,23 +354,23 @@ export default function HabitDetailScreen() {
                                     ? t('clientDetail.habitDetail.average')
                                     : t('clientDetail.habitDetail.completionRate')}
                             </Text>
-                        </View>
+                        </Card>
                     }
                     backContent={
-                        <View style={[styles.statCard, styles.statCardBack, { backgroundColor: themeColors.surfacePrimary }]}>
+                        <Card variant="stat" style={styles.statCardBack}>
                             <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
                                 {averageValue !== null
                                     ? t('clientDetail.habitDetail.descriptions.average')
                                     : t('clientDetail.habitDetail.descriptions.completionRate')}
                             </Text>
-                        </View>
+                        </Card>
                     }
                 />
 
                 {/* Delta Card */}
                 <FlipCard
                     frontContent={
-                        <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
+                        <Card variant="stat">
                             <View style={[
                                 styles.statIconContainer,
                                 { backgroundColor: delta === null || delta.value === 0
@@ -392,14 +404,14 @@ export default function HabitDetailScreen() {
                             <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
                                 {t('clientDetail.habitDetail.delta')}
                             </Text>
-                        </View>
+                        </Card>
                     }
                     backContent={
-                        <View style={[styles.statCard, styles.statCardBack, { backgroundColor: themeColors.surfacePrimary }]}>
+                        <Card variant="stat" style={styles.statCardBack}>
                             <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
                                 {t('clientDetail.habitDetail.descriptions.delta')}
                             </Text>
-                        </View>
+                        </Card>
                     }
                 />
             </View>
@@ -409,7 +421,7 @@ export default function HabitDetailScreen() {
                 {/* Completion Rate Card */}
                 <FlipCard
                     frontContent={
-                        <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
+                        <Card variant="stat">
                             <View style={[styles.statIconContainer, { backgroundColor: completionRateColors.bg }]}>
                                 <Target {...({ size: 18, color: completionRateColors.text } as any)} />
                             </View>
@@ -419,21 +431,21 @@ export default function HabitDetailScreen() {
                             <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
                                 {t('clientDetail.habitDetail.completionRate')}
                             </Text>
-                        </View>
+                        </Card>
                     }
                     backContent={
-                        <View style={[styles.statCard, styles.statCardBack, { backgroundColor: themeColors.surfacePrimary }]}>
+                        <Card variant="stat" style={styles.statCardBack}>
                             <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
                                 {t('clientDetail.habitDetail.descriptions.completionRate')}
                             </Text>
-                        </View>
+                        </Card>
                     }
                 />
 
                 {/* Current Streak Card */}
                 <FlipCard
                     frontContent={
-                        <View style={[styles.statCard, { backgroundColor: themeColors.surfacePrimary }]}>
+                        <Card variant="stat">
                             <View style={[styles.statIconContainer, { backgroundColor: 'rgba(249, 115, 22, 0.15)' }]}>
                                 <Flame {...({ size: 18, color: '#f97316' } as any)} />
                             </View>
@@ -443,14 +455,14 @@ export default function HabitDetailScreen() {
                             <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
                                 {t('clientDetail.habitDetail.currentStreak')}
                             </Text>
-                        </View>
+                        </Card>
                     }
                     backContent={
-                        <View style={[styles.statCard, styles.statCardBack, { backgroundColor: themeColors.surfacePrimary }]}>
+                        <Card variant="stat" style={styles.statCardBack}>
                             <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
                                 {t('clientDetail.habitDetail.descriptions.currentStreak')}
                             </Text>
-                        </View>
+                        </Card>
                     }
                 />
             </View>
@@ -507,14 +519,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 12,
         gap: 12,
-    },
-    statCard: {
-        flex: 1,
-        borderRadius: 24,
-        paddingVertical: 20,
-        paddingHorizontal: 16,
-        alignItems: 'flex-start',
-        justifyContent: 'flex-start',
     },
     statCardBack: {
         alignItems: 'center',

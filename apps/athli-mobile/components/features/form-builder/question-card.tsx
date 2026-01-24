@@ -6,6 +6,7 @@ import { PressableOpacity, PressableScale } from 'pressto';
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
+import { Card } from '@/components/ui/card';
 import type { Question } from '@/services/coach/coach-questionnaire-service';
 
 type QuestionCardProps = {
@@ -56,7 +57,7 @@ export const QuestionCard = ({ question, index, isReorderMode, onDelete, onPress
   };
 
   const cardContent = (
-    <View style={[styles.container, { backgroundColor: themeColors.surfacePrimary }]}>
+    <Card style={styles.container}>
       <View style={[styles.numberCircle, { backgroundColor: themeColors.primary }]}>
         <Text style={[styles.numberText, { color: themeColors.primaryForeground }]}>
           {index + 1}
@@ -82,7 +83,7 @@ export const QuestionCard = ({ question, index, isReorderMode, onDelete, onPress
           <Trash2 {...({ size: 20, color: themeColors.text } as any)} />
         </PressableOpacity>
       )}
-    </View>
+    </Card>
   );
 
   // Wrap in PressableScale when not in reorder mode and onPress is provided
@@ -101,8 +102,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
+    paddingVertical: 12,
     marginBottom: 12,
   },
   numberCircle: {

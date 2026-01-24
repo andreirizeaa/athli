@@ -12,3 +12,4 @@ export { type Country, COUNTRIES, DEFAULT_COUNTRY } from './countries-data';
 export { SelectionInput } from './selection-input';
 export { DropdownInput } from './dropdown-input';
 export { SectionTypeSelect } from './section-type-select';
+export { ProfilePictureInput } from './profile-picture-input';

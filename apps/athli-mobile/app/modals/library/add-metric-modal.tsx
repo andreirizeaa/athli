@@ -532,7 +532,7 @@ export default function AddMetricModal() {
                                         <Text style={[styles.categoryLabel, { color: themeColors.mutedText }]}>
                                             {section.label}
                                         </Text>
-                                        <Card style={{ backgroundColor: themeColors.surfacePrimary }}>
+                                        <Card variant="form">
                                             {section.metrics.map((metric, index) => (
                                                 <React.Fragment key={metric.name}>
                                                     {index > 0 && <Separator />}

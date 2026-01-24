@@ -269,16 +269,14 @@ export const ExerciseBuilderCard = ({
         <Card style={[
             styles.card,
             {
-                backgroundColor: themeColors.surfacePrimary,
-                borderColor: themeColors.border,
                 paddingHorizontal: 0,
                 paddingVertical: 0,
-                borderTopLeftRadius: isLinkedToPrev ? 0 : 24,
-                borderTopRightRadius: isLinkedToPrev ? 0 : 24,
-                borderBottomLeftRadius: isLinkedToNext ? 0 : 24,
-                borderBottomRightRadius: isLinkedToNext ? 0 : 24,
-                borderTopWidth: isLinkedToPrev ? 0 : 1,
-                borderBottomWidth: isLinkedToNext ? 0 : 1,
+                borderTopLeftRadius: isLinkedToPrev ? 0 : 20,
+                borderTopRightRadius: isLinkedToPrev ? 0 : 20,
+                borderBottomLeftRadius: isLinkedToNext ? 0 : 20,
+                borderBottomRightRadius: isLinkedToNext ? 0 : 20,
+                borderTopWidth: isLinkedToPrev ? 0 : 0.5,
+                borderBottomWidth: isLinkedToNext ? 0 : 0.5,
                 marginBottom: isLinkedToNext ? 0 : 16,
             }
         ]}>
@@ -289,7 +287,7 @@ export const ExerciseBuilderCard = ({
                         source={{ uri: exercise.imageUrl }}
                         style={[
                             styles.thumbnail,
-                            isLinkedToPrev && { borderTopRightRadius: 24 }
+                            isLinkedToPrev && { borderTopRightRadius: 20 }
                         ]}
                         contentFit="cover"
                     />
@@ -585,8 +583,6 @@ export const ExerciseBuilderCard = ({
 const styles = StyleSheet.create({
     card: {
         marginBottom: 16,
-        borderRadius: 24,
-        borderWidth: 1,
         overflow: 'hidden',
     },
     topSection: {

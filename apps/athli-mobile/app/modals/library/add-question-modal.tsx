@@ -359,21 +359,20 @@ export default function AddQuestionModal() {
         overScrollMode="never"
       >
         {/* Format type selector */}
-        <PressableOpacity
-          style={[styles.formatTypeCard, { backgroundColor: themeColors.surfacePrimary }]}
-          onPress={() => setFormatModalVisible(true)}
-        >
-          <View style={styles.formatTypeLabelRow}>
-            <Text style={[styles.formatTypeLabel, { color: themeColors.mutedText }]}>
-              {t('library.addQuestion.questionType')}
-            </Text>
-          </View>
-          <View style={styles.formatTypeValueRow}>
-            <Text style={[styles.formatTypeValue, { color: selectedFormatInfo ? themeColors.text : themeColors.mutedText }]}>
-              {selectedFormatInfo ? t(selectedFormatInfo.labelKey) : t('library.addQuestion.selectType')}
-            </Text>
-            <ChevronDown {...({ size: 20, color: themeColors.mutedText } as any)} />
-          </View>
+        <PressableOpacity onPress={() => setFormatModalVisible(true)}>
+          <Card variant="form">
+            <View style={styles.formatTypeLabelRow}>
+              <Text style={[styles.formatTypeLabel, { color: themeColors.mutedText }]}>
+                {t('library.addQuestion.questionType')}
+              </Text>
+            </View>
+            <View style={styles.formatTypeValueRow}>
+              <Text style={[styles.formatTypeValue, { color: selectedFormatInfo ? themeColors.text : themeColors.mutedText }]}>
+                {selectedFormatInfo ? t(selectedFormatInfo.labelKey) : t('library.addQuestion.selectType')}
+              </Text>
+              <ChevronDown {...({ size: 20, color: themeColors.mutedText } as any)} />
+            </View>
+          </Card>
         </PressableOpacity>
 
         {/* Metric selector - shown directly under question type when metrics format is selected */}
@@ -560,7 +559,7 @@ export default function AddQuestionModal() {
                 <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>
                   {t('library.addQuestion.syncsWith')}
                 </Text>
-                <Card style={{ backgroundColor: themeColors.surfacePrimary }}>
+                <Card>
                   {filteredSyncsWithFormats.map((format, index) =>
                     renderFormatRow(format, index)
                   )}
@@ -573,7 +572,7 @@ export default function AddQuestionModal() {
               <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>
                 {t('library.addQuestion.general')}
               </Text>
-              <Card style={{ backgroundColor: themeColors.surfacePrimary }}>
+              <Card>
                 {GENERAL_FORMATS.map((format, index) =>
                   renderFormatRow(format, index)
                 )}
@@ -776,12 +775,6 @@ const styles = StyleSheet.create({
   formatSubtitle: {
     ...typography.p3,
     marginTop: 2,
-  },
-  formatTypeCard: {
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12,
   },
   formatTypeLabelRow: {
     flexDirection: 'row',

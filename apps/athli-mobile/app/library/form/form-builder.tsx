@@ -343,8 +343,6 @@ export default function FormBuilderScreen() {
           </View>
         </View>
 
-        <View style={[styles.fullWidthDivider, { backgroundColor: themeColors.border }]} />
-
         {renderQuestionsList()}
 
         <View style={{ height: 160 }} />
@@ -432,11 +430,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-  },
-  fullWidthDivider: {
-    height: 1,
-    marginHorizontal: -16,
-    marginBottom: 24,
   },
   loadingContainer: {
     flex: 1,

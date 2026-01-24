@@ -1,10 +1,10 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { Platform, StyleSheet, Text, View, LayoutChangeEvent, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { Platform, StyleSheet, Text, View, LayoutChangeEvent, ActivityIndicator } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check, ChevronRight, ChevronDown, Layers } from 'lucide-react-native';
+import { X, Check, ChevronRight } from 'lucide-react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -22,12 +22,10 @@ import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useModalCallbacks } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
-import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';
+import { InputBox, TextAreaInput, SectionTypeSelect } from '@/components/ui/form-inputs';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
-import { PlatformIcon } from '@/components/ui/platform-icon';
 import { EmptyState } from '@/components/ui/empty-state';
 import { hexToRgba } from '@/utils/colorUtils';
 import { type BuilderSection } from '@/components/features/workout/workout-schema';
@@ -403,14 +401,6 @@ export default function AddSectionToBuilderModal() {
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
 
-    const sectionTypeOptions = useMemo(() =>
-        SECTION_TYPES.map((type) => ({
-            value: type.value,
-            label: type.label,
-            subtitle: type.description,
-        }))
-        , []);
-
     const getSectionTypeLabel = (type: SectionType) => {
         return SECTION_TYPES.find((t) => t.value === type)?.label || type;
     };
@@ -529,13 +519,11 @@ export default function AddSectionToBuilderModal() {
                 {selectedTab === 'saved' ? (
                     <>
                         {/* Search Bar */}
-                        <View style={styles.searchBarContainer}>
-                            <SearchBar
-                                value={searchQuery}
-                                onChangeText={setSearchQuery}
-                                placeholder={t('library.searchPlaceholders.sections')}
-                            />
-                        </View>
+                        <SearchBar
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            placeholder={t('library.searchPlaceholders.sections')}
+                        />
 
                         {/* Loading State */}
                         {isLoadingSection ? (
@@ -548,70 +536,47 @@ export default function AddSectionToBuilderModal() {
                         ) : filteredSections.length === 0 ? (
                             <EmptyState message={t('library.empty.sections')} />
                         ) : (
-                            <>
+                            <Card variant="form">
                                 {filteredSections.map((item, index) => {
-                                    const isLastItem = index === filteredSections.length - 1;
                                     const typeInfo = getSectionTypeInfo(item);
                                     return (
-                                        <View key={item.id}>
+                                        <React.Fragment key={item.id}>
+                                            {index > 0 && <Separator />}
                                             <PressableOpacity
-                                                style={styles.rowWrapper}
+                                                style={styles.sectionRow}
                                                 onPress={() => handleSelectSavedSection(item)}
                                             >
-                                                <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
-                                                    <View style={styles.iconContainer}>
-                                                        <PlatformIcon
-                                                            sf="square.stack.3d.up.fill"
-                                                            IconComponent={Layers}
-                                                            size={24}
-                                                            color={themeColors.text}
-                                                        />
-                                                    </View>
-                                                    <View style={styles.textContent}>
-                                                        <Text style={[styles.sectionName, { color: themeColors.text }]} numberOfLines={1}>
-                                                            {item.program}
+                                                <View style={styles.sectionInfo}>
+                                                    <Text style={[styles.sectionName, { color: themeColors.text }]} numberOfLines={1}>
+                                                        {item.program}
+                                                    </Text>
+                                                    <View style={styles.sectionMeta}>
+                                                        <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                                                            {getSectionTypeLabel(item.sectionType as SectionType)}
                                                         </Text>
-                                                        <View style={styles.sectionMeta}>
-                                                            <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                                                                {getSectionTypeLabel(item.sectionType as SectionType)}
-                                                            </Text>
-                                                            {typeInfo && (
-                                                                <>
-                                                                    <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                                                                    <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                                                                        {typeInfo}
-                                                                    </Text>
-                                                                </>
-                                                            )}
-                                                            <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                                                            <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                                                                {item.totalExercises === 0
-                                                                    ? 'Empty'
-                                                                    : `${item.totalExercises} ${item.totalExercises === 1 ? t('library.exercise') : t('library.exercises')}`
-                                                                }
-                                                            </Text>
-                                                        </View>
+                                                        {typeInfo && (
+                                                            <>
+                                                                <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                                                                <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                                                                    {typeInfo}
+                                                                </Text>
+                                                            </>
+                                                        )}
+                                                        <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
+                                                        <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
+                                                            {item.totalExercises === 0
+                                                                ? 'Empty'
+                                                                : `${item.totalExercises} ${item.totalExercises === 1 ? t('library.exercise') : t('library.exercises')}`
+                                                            }
+                                                        </Text>
                                                     </View>
-                                                    <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
                                                 </View>
+                                                <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
                                             </PressableOpacity>
-
-                                            {!isLastItem && (
-                                                <View style={styles.separatorContainer}>
-                                                    <View
-                                                        style={[
-                                                            styles.separator,
-                                                            { backgroundColor: themeColors.mutedText, opacity: 0.2 },
-                                                        ]}
-                                                    />
-                                                </View>
-                                            )}
-
-                                            {isLastItem && <View style={{ height: 24 }} />}
-                                        </View>
+                                        </React.Fragment>
                                     );
                                 })}
-                            </>
+                            </Card>
                         )}
                     </>
                 ) : (
@@ -626,71 +591,16 @@ export default function AddSectionToBuilderModal() {
                             autoFocus
                         />
 
-                        <View style={[styles.card, { backgroundColor: themeColors.backgroundTertiary }]}>
-                            <DropdownMenuWrapper options={sectionTypeOptions.map(opt => ({
-                                label: opt.label,
-                                subtitle: opt.subtitle,
-                                onPress: () => setSectionType(opt.value as SectionType)
-                            }))}>
-                                <View style={styles.fieldRow}>
-                                    <View style={styles.labelContainer}>
-                                        <Text style={[styles.fieldLabel, { color: themeColors.mutedText }]}>{t('library.section.type')}</Text>
-                                        <Text style={styles.requiredAsterisk}>*</Text>
-                                    </View>
-                                    <View style={styles.dropdownValueRow}>
-                                        <Text style={[styles.dropdownValue, { color: themeColors.text }]}>
-                                            {getSectionTypeLabel(sectionType)}
-                                        </Text>
-                                        <ChevronDown {...({ size: 14, color: themeColors.mutedText } as any)} />
-                                    </View>
-                                </View>
-                            </DropdownMenuWrapper>
-
-                            {sectionType === 'amrap' && (
-                                <>
-                                    <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
-                                    <View style={styles.fieldRow}>
-                                        <View style={styles.labelContainer}>
-                                            <Text style={[styles.fieldLabel, { color: themeColors.mutedText }]}>{t('library.section.duration')}</Text>
-                                            <Text style={styles.requiredAsterisk}>*</Text>
-                                        </View>
-                                        <View style={[styles.dropdownValueRow, { flex: 1, justifyContent: 'flex-end' }]}>
-                                            <TextInput
-                                                value={duration}
-                                                onChangeText={setDuration}
-                                                placeholder="0"
-                                                placeholderTextColor={themeColors.mutedText}
-                                                keyboardType="number-pad"
-                                                style={[styles.dropdownValue, { color: themeColors.text, textAlign: 'right', minWidth: 120, height: '100%' }]}
-                                            />
-                                            <Text style={[styles.dropdownValue, { color: themeColors.mutedText }]}>m</Text>
-                                        </View>
-                                    </View>
-                                </>
-                            )}
-
-                            {(sectionType === 'timed' || sectionType === 'circuits') && (
-                                <>
-                                    <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
-                                    <View style={styles.fieldRow}>
-                                        <View style={styles.labelContainer}>
-                                            <Text style={[styles.fieldLabel, { color: themeColors.mutedText }]}>{t('library.section.rounds')}</Text>
-                                            <Text style={styles.requiredAsterisk}>*</Text>
-                                        </View>
-                                        <View style={[styles.dropdownValueRow, { flex: 1, justifyContent: 'flex-end' }]}>
-                                            <TextInput
-                                                value={rounds}
-                                                onChangeText={setRounds}
-                                                placeholder="0"
-                                                placeholderTextColor={themeColors.mutedText}
-                                                keyboardType="number-pad"
-                                                style={[styles.dropdownValue, { color: themeColors.text, textAlign: 'right', minWidth: 120, height: '100%' }]}
-                                            />
-                                        </View>
-                                    </View>
-                                </>
-                            )}
-                        </View>
+                        <SectionTypeSelect
+                            sectionType={sectionType}
+                            onSectionTypeChange={setSectionType}
+                            duration={duration}
+                            onDurationChange={setDuration}
+                            rounds={rounds}
+                            onRoundsChange={setRounds}
+                            metadataErrors={{ durationError: false, roundsError: false }}
+                            required
+                        />
 
                         <TextAreaInput
                             label={t('library.section.notes')}
@@ -742,12 +652,13 @@ const styles = StyleSheet.create({
     scrollContent: {
         paddingHorizontal: 16,
         paddingBottom: 24,
+        gap: 16,
     },
     tabsWrapper: {
         flexDirection: 'row',
         borderBottomWidth: 1,
         marginBottom: 16,
-        marginHorizontal: -16, // Full width
+        marginHorizontal: -16,
         paddingHorizontal: 16,
     },
     tabsContainer: {
@@ -771,9 +682,6 @@ const styles = StyleSheet.create({
         height: 3,
         borderRadius: 1.5,
     },
-    searchBarContainer: {
-        paddingBottom: 8,
-    },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
@@ -784,35 +692,26 @@ const styles = StyleSheet.create({
     loadingText: {
         ...typography.p2,
     },
-    rowWrapper: {
-        overflow: 'hidden',
-    },
-    rowContent: {
+    sectionRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
         paddingVertical: 12,
-        gap: 12,
     },
-    iconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    textContent: {
+    sectionInfo: {
         flex: 1,
-        gap: 4,
+        marginRight: 12,
     },
     sectionName: {
         ...typography.p1,
-        fontWeight: '600',
+        fontWeight: '500',
     },
     sectionMeta: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
         flexWrap: 'wrap',
+        marginTop: 2,
     },
     metaText: {
         ...typography.p3,
@@ -820,48 +719,7 @@ const styles = StyleSheet.create({
     metaDot: {
         ...typography.p3,
     },
-    separatorContainer: {
-        paddingLeft: 52,
-    },
-    separator: {
-        height: 1,
-    },
     formContent: {
         gap: 16,
-    },
-    card: {
-        borderRadius: 16,
-        overflow: 'hidden',
-    },
-    divider: {
-        height: 1,
-        marginHorizontal: 16,
-    },
-    fieldRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-    },
-    fieldLabel: {
-        ...typography.p4,
-    },
-    labelContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    requiredAsterisk: {
-        ...typography.p4,
-        color: '#EF4444',
-        marginLeft: 2,
-    },
-    dropdownValueRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    dropdownValue: {
-        ...typography.p2,
     },
 });

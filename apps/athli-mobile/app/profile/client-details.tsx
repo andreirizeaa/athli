@@ -11,29 +11,25 @@ import {
   ActionSheetIOS,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Check, ChevronLeft, User, Pencil } from 'lucide-react-native';
+import { Check, ChevronLeft } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import * as ImagePicker from 'expo-image-picker';
-import { Image } from 'expo-image';
-import { PressableOpacity } from 'pressto';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { typography, iconSizes } from '@/constants/typography';
+import { typography } from '@/constants/typography';
 import { useAuthSessionStore, useClientProfileStore, useThemePreference, useTranslations } from '@/stores';
 import { haptics } from '@/utils/haptics';
 import { IconButton } from '@/components/ui/icon-button';
-import { Card } from '@/components/ui/card';
-import { PlatformIcon } from '@/components/ui/platform-icon';
 import { supabase } from '@/lib/supabase';
 import { hexToRgba } from '@/utils/colorUtils';
 import {
   CountrySelectorInput,
   DateSelectInput,
   GenderInput,
-  HeightInput,
   InputBox,
   PhoneNumberInput,
+  ProfilePictureInput,
   type Country,
   type GenderValue,
   type PhoneNumber,
@@ -348,15 +344,15 @@ export default function ClientDetailsScreen() {
   const gradientHeight = headerHeight + 12;
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
       {/* Fixed gradient header overlay */}
       <View style={[styles.fixedHeader, { height: headerHeight }]}>
         <LinearGradient
           colors={[
-            hexToRgba(themeColors.backgroundSecondary, 1),
-            hexToRgba(themeColors.backgroundSecondary, 0.85),
-            hexToRgba(themeColors.backgroundSecondary, 0.5),
-            hexToRgba(themeColors.backgroundSecondary, 0),
+            hexToRgba(themeColors.backgroundPrimary, 1),
+            hexToRgba(themeColors.backgroundPrimary, 0.85),
+            hexToRgba(themeColors.backgroundPrimary, 0.5),
+            hexToRgba(themeColors.backgroundPrimary, 0),
           ]}
           locations={[0, 0.5, 0.8, 1]}
           style={[styles.headerGradient, { height: gradientHeight }]}
@@ -395,49 +391,12 @@ export default function ClientDetailsScreen() {
               loading={isLoadingProfile}
             />
           </View>
-            {/* Profile Picture Card */}
-            <Card style={{ marginBottom: 0 }}>
-              <PressableOpacity
-                style={styles.profilePictureRow}
-                onPress={handleEditProfilePicture}
-              >
-                <View style={styles.profilePictureContent}>
-                  <Text style={[styles.profilePictureLabel, { color: themeColors.text }]}>
-                    {t('settings.personalDetails.profilePicture')}
-                  </Text>
-                  {currentImage ? (
-                    <Image
-                      source={{ uri: currentImage }}
-                      style={styles.profilePicturePreview}
-                      contentFit="cover"
-                      transition={200}
-                    />
-                  ) : (
-                    <View
-                      style={[
-                        styles.profilePictureFallback,
-                        { backgroundColor: themeColors.primarySoft },
-                      ]}
-                    >
-                      <PlatformIcon
-                        sf="person.fill"
-                        IconComponent={User}
-                        size={20}
-                        color={themeColors.primary}
-                      />
-                    </View>
-                  )}
-                </View>
-                <View style={styles.editIconContainer}>
-                  <PlatformIcon
-                    sf="pencil"
-                    IconComponent={Pencil}
-                    size={20}
-                    color={themeColors.mutedText}
-                  />
-                </View>
-              </PressableOpacity>
-            </Card>
+
+            <ProfilePictureInput
+              label={t('settings.personalDetails.profilePicture')}
+              imageUrl={currentImage}
+              onPress={handleEditProfilePicture}
+            />
 
             <InputBox
               label={t('clients.addClientModal.name')}
@@ -543,39 +502,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 32,
     gap: 12,
-  },
-  profilePictureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  profilePictureContent: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  profilePictureLabel: {
-    ...typography.p1,
-    fontWeight: '600',
-  },
-  profilePicturePreview: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-  profilePictureFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  editIconContainer: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 12,
   },
 });
