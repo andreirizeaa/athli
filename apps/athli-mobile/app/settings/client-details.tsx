@@ -10,14 +10,14 @@ import {
   View,
   ActionSheetIOS,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Check, ChevronLeft, User, Pencil } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { PressableOpacity } from 'pressto';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useAuthSessionStore, useClientProfileStore, useThemePreference, useTranslations } from '@/stores';
@@ -344,62 +344,57 @@ export default function ClientDetailsScreen() {
   // Current image to display (selected or original)
   const currentImage = selectedImage || profile?.profile_picture_url;
 
-  const headerHeight = 56 + insets.top;
+  const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
   const gradientHeight = headerHeight + 12;
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
-      <TouchableWithoutFeedback onPress={handleDismissKeyboard} accessible={false}>
-        <View style={styles.container}>
-          {/* Header with blur effect */}
-          <View style={[styles.fixedHeader, { height: headerHeight }]}>
-            <LinearGradient
-              colors={[
-                hexToRgba(themeColors.backgroundPrimary, 1),
-                hexToRgba(themeColors.backgroundPrimary, 0.85),
-                hexToRgba(themeColors.backgroundPrimary, 0.5),
-                hexToRgba(themeColors.backgroundPrimary, 0),
-              ]}
-              locations={[0, 0.5, 0.8, 1]}
-              style={[styles.headerGradient, { height: gradientHeight }]}
-              pointerEvents="none"
-            />
-            <View
-              style={[
-                styles.header,
-                {
-                  paddingTop: insets.top + 8,
-                },
-              ]}
-            >
-              <IconButton
-                icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-                onPress={handleBackPress}
-                size="md"
-                color={themeColors.text}
-              />
-              <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-                {t('profile.editTitle')}
-              </Text>
-              <IconButton
-                icon={{ sf: 'checkmark', IconComponent: Check }}
-                onPress={handleSave}
-                size="md"
-                variant={canSave ? 'primary' : 'default'}
-                disabled={!canSave}
-                loading={isLoadingProfile}
-              />
-            </View>
-          </View>
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
+      {/* Fixed gradient header overlay */}
+      <View style={[styles.fixedHeader, { height: headerHeight }]}>
+        <LinearGradient
+          colors={[
+            hexToRgba(themeColors.backgroundSecondary, 1),
+            hexToRgba(themeColors.backgroundSecondary, 0.85),
+            hexToRgba(themeColors.backgroundSecondary, 0.5),
+            hexToRgba(themeColors.backgroundSecondary, 0),
+          ]}
+          locations={[0, 0.5, 0.8, 1]}
+          style={[styles.headerGradient, { height: gradientHeight }]}
+          pointerEvents="none"
+        />
+      </View>
 
-          {/* Content */}
-          <KeyboardAwareScrollView
-            style={styles.scrollView}
-            contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            bottomOffset={40}
-          >
+      <TouchableWithoutFeedback onPress={handleDismissKeyboard} accessible={false}>
+        <KeyboardAwareScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top }
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          bottomOffset={40}
+        >
+          {/* Header - scrolls with content */}
+          <View style={styles.header}>
+            <IconButton
+              icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+              onPress={handleBackPress}
+              size="md"
+              color={themeColors.text}
+            />
+            <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+              {t('profile.editTitle')}
+            </Text>
+            <IconButton
+              icon={{ sf: 'checkmark', IconComponent: Check }}
+              onPress={handleSave}
+              size="md"
+              variant={canSave ? 'primary' : 'default'}
+              disabled={!canSave}
+              loading={isLoadingProfile}
+            />
+          </View>
             {/* Profile Picture Card */}
             <Card style={{ marginBottom: 0 }}>
               <PressableOpacity
@@ -505,8 +500,7 @@ export default function ClientDetailsScreen() {
               placeholder={t('clients.editClientModal.phoneNumberPlaceholder')}
               modalTitle={t('clients.editClientModal.countryModalTitle')}
             />
-          </KeyboardAwareScrollView>
-        </View>
+        </KeyboardAwareScrollView>
       </TouchableWithoutFeedback>
     </View>
   );
@@ -533,8 +527,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingTop: 12,
+    marginBottom: 16,
+    height: 56,
   },
   headerTitle: {
     ...typography.h5,
