@@ -89,7 +89,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         ]
       },
       usesAppleSignIn: true,
-      icon: "./assets/app-icons/athli-ios.icon"
+      icon: "./assets/app-icons/ios.png"
     },
     android: {
       adaptiveIcon: {
