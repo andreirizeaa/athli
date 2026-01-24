@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react-native';
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
+import { Card } from '@/components/ui/card';
 
 type SelectOption<T extends string> = {
   value: T;
@@ -62,7 +63,7 @@ export const SelectInput = <T extends string>({
 
   return (
     <DropdownMenuWrapper options={menuOptions}>
-      <View style={[styles.inputBox, { backgroundColor: themeColors.surfacePrimary }]}>
+      <Card variant="form">
         {label.length > 0 && (
           <View style={styles.labelRow}>
             <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
@@ -82,18 +83,12 @@ export const SelectInput = <T extends string>({
           </Text>
           <ChevronDown {...({ size: 20, color: themeColors.mutedText } as any)} />
         </View>
-      </View>
+      </Card>
     </DropdownMenuWrapper>
   );
 };
 
 const styles = StyleSheet.create({
-  inputBox: {
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12,
-  },
   labelRow: {
     flexDirection: 'row',
     alignItems: 'center',

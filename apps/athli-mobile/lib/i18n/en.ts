@@ -96,6 +96,10 @@ export const en = {
   },
   training: {
     title: 'Training',
+    athlete: {
+      noWorkouts: 'Rest day!',
+      noWorkoutsDescription: 'No workouts scheduled - take it easy today',
+    },
     addOptions: {
       addFromLibrary: 'Add from library',
       createSession: 'Create a session',
@@ -111,6 +115,12 @@ export const en = {
   },
   progress: {
     title: 'Progress',
+    metrics: 'Metrics',
+    habits: 'Habits',
+    noMetrics: 'No metrics to display',
+    noHabits: 'No habits to display',
+    noData: 'No progress data yet. Metrics and habits will appear here once you start tracking.',
+    photos: 'Progress Photos',
   },
   tasks: {
     title: 'Tasks',
@@ -1089,10 +1099,10 @@ export const en = {
       },
     },
     timeRanges: {
-      ninetyDays: '90 days',
-      sixMonths: '6 months',
-      oneYear: '1 year',
-      allTime: 'All time',
+      ninetyDays: '90D',
+      sixMonths: '6M',
+      oneYear: '1Y',
+      allTime: 'ALL',
     },
     chart: {
       notEnoughData: 'Not enough data to display chart',

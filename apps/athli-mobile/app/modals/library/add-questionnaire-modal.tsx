@@ -23,6 +23,7 @@ import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
+import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
@@ -292,7 +293,7 @@ export default function AddQuestionnaireModal() {
                     style={styles.scrollView}
                     contentContainerStyle={[
                         selectedTab === 'templates' ? styles.templatesContent : styles.formContent,
-                        { paddingTop: headerHeight }
+                        { paddingTop: headerHeight + (isEditing ? 16 : 0) }
                     ]}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
@@ -366,7 +367,7 @@ export default function AddQuestionnaireModal() {
                                                 {group.label}
                                             </Text>
                                         )}
-                                        <View style={[styles.card, { backgroundColor: themeColors.backgroundTertiary }]}>
+                                        <Card variant="form">
                                             {group.templates.map((template, index) => (
                                                 <React.Fragment key={template.name}>
                                                     {index > 0 && <Separator />}
@@ -391,7 +392,7 @@ export default function AddQuestionnaireModal() {
                                                     </PressableOpacity>
                                                 </React.Fragment>
                                             ))}
-                                        </View>
+                                        </Card>
                                     </View>
                                 ))
                             )}
@@ -508,11 +509,6 @@ const styles = StyleSheet.create({
     categoryLabel: {
         ...typography.p1,
         fontWeight: '600',
-    },
-    card: {
-        borderRadius: 16,
-        overflow: 'hidden',
-        paddingHorizontal: 16,
     },
     templateRow: {
         flexDirection: 'row',

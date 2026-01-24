@@ -14,7 +14,7 @@ import { useTranslations } from '@/stores';
 import { useModalCallbacks, type ScheduleData, type ScheduleFrequency, type MonthlyOption } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
-import { Separator } from '@/components/ui/separator';
+import { Card } from '@/components/ui/card';
 import { hexToRgba } from '@/utils/colorUtils';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
@@ -362,7 +362,7 @@ export default function DefineScheduleModal() {
                     >
                         <View style={styles.content}>
                             {/* Frequency Card */}
-                            <View style={[styles.card, { backgroundColor: themeColors.surfacePrimary }]}>
+                            <Card variant="form" style={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}>
                                 {/* Frequency Row */}
                                 <DropdownMenuWrapper options={frequencyOptions}>
                                     <View style={styles.fieldRow}>
@@ -417,11 +417,11 @@ export default function DefineScheduleModal() {
                                         )}
                                     </>
                                 )}
-                            </View>
+                            </Card>
 
                             {/* Days Selection Card (only for daily/weekly/biweekly) */}
                             {(frequency === 'daily' || frequency === 'weekly' || frequency === 'biweekly') && (
-                                <View style={[styles.card, { backgroundColor: themeColors.surfacePrimary }]}>
+                                <Card variant="form" style={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}>
                                     {DAYS.map((day, index) => {
                                         const isSelected = selectedDays.has(day);
                                         return (
@@ -443,7 +443,7 @@ export default function DefineScheduleModal() {
                                             </React.Fragment>
                                         );
                                     })}
-                                </View>
+                                </Card>
                             )}
                         </View>
                     </KeyboardAwareScrollView>
@@ -491,10 +491,6 @@ const styles = StyleSheet.create({
     },
     content: {
         gap: 16,
-    },
-    card: {
-        borderRadius: 16,
-        overflow: 'hidden',
     },
     cardTitle: {
         ...typography.p1,

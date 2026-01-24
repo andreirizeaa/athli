@@ -105,6 +105,11 @@ interface ClientDetailStore {
   extendTrainingRange: (targetDate: Date, forceFetch?: boolean) => Promise<void>;
   isDateInLoadedRange: (date: Date) => boolean;
   clearClientData: () => void;
+
+  // Direct setters for athlete self-access
+  setMetrics: (metrics: ClientMetric[]) => void;
+  setHabits: (habits: ClientHabit[]) => void;
+  setClientId: (clientId: string) => void;
 }
 
 // Helper to format date as YYYY-MM-DD
@@ -115,11 +120,17 @@ const formatDateForApi = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-// Helper to get initial date range for training calendar (1 year back, 1 year forward)
+// Helper to get initial date range for training calendar (30 days back, 30 days forward)
+// Using a smaller window for faster initial load - range can be extended as user navigates
 const getDateRange = () => {
   const today = new Date();
-  const startDate = new Date(today.getFullYear() - 1, today.getMonth(), 1);
-  const endDate = new Date(today.getFullYear() + 1, today.getMonth() + 1, 0);
+  today.setHours(0, 0, 0, 0);
+  
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - 30);
+  
+  const endDate = new Date(today);
+  endDate.setDate(today.getDate() + 30);
 
   return {
     startDate: formatDateForApi(startDate),
@@ -691,5 +702,18 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       isLoadingTraining: false,
       error: null,
     });
+  },
+
+  // Direct setters for athlete self-access
+  setMetrics: (metrics: ClientMetric[]) => {
+    set({ metrics, isLoadingMetrics: false });
+  },
+
+  setHabits: (habits: ClientHabit[]) => {
+    set({ habits, isLoadingHabits: false });
+  },
+
+  setClientId: (clientId: string) => {
+    set({ clientId });
   },
 }));

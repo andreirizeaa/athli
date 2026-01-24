@@ -56,7 +56,7 @@ export default function ProfileTabScreen() {
 
   const handleOpenProfileDetails = () => {
     if (isAthleteView) {
-      router.push({ pathname: '/settings/client-details' });
+      router.push({ pathname: '/profile/client-details' });
       return;
     }
 

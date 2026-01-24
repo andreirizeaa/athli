@@ -19,6 +19,7 @@ import { useTranslations } from '@/stores';
 import { useModalCallbacks, type HabitOptionsData } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
+import { Card } from '@/components/ui/card';
 import { hexToRgba } from '@/utils/colorUtils';
 
 // Helper to create a date from time string "HH:MM"
@@ -342,7 +343,7 @@ export default function HabitOptionsModal() {
                     >
                         <View style={styles.content}>
                             {/* Duration Card */}
-                            <View style={[styles.card, { backgroundColor: themeColors.surfacePrimary }]}>
+                            <Card variant="form" style={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}>
                                 {/* Switch Row */}
                                 <View style={styles.switchRow}>
                                     <Text style={[styles.cardTitle, { color: themeColors.text }]}>
@@ -351,9 +352,9 @@ export default function HabitOptionsModal() {
                                     <Switch
                                         value={durationEnabled}
                                         onValueChange={setDurationEnabled}
-                                        trackColor={{ false: themeColors.border, true: primaryColor }}
+                                        trackColor={colorScheme === 'dark' ? { false: themeColors.border, true: primaryColor } : undefined}
                                         thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
-                                        ios_backgroundColor={themeColors.border}
+                                        ios_backgroundColor={colorScheme === 'dark' ? themeColors.border : undefined}
                                     />
                                 </View>
 
@@ -397,10 +398,10 @@ export default function HabitOptionsModal() {
                                         </DropdownMenuWrapper>
                                     </>
                                 )}
-                            </View>
+                            </Card>
 
                             {/* Notification Card */}
-                            <View style={[styles.card, { backgroundColor: themeColors.surfacePrimary }]}>
+                            <Card variant="form" style={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}>
                                 {/* Switch Row */}
                                 <View style={styles.switchRow}>
                                     <Text style={[styles.cardTitle, { color: themeColors.text }]}>
@@ -409,9 +410,9 @@ export default function HabitOptionsModal() {
                                     <Switch
                                         value={notificationEnabled}
                                         onValueChange={setNotificationEnabled}
-                                        trackColor={{ false: themeColors.border, true: primaryColor }}
+                                        trackColor={colorScheme === 'dark' ? { false: themeColors.border, true: primaryColor } : undefined}
                                         thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
-                                        ios_backgroundColor={themeColors.border}
+                                        ios_backgroundColor={colorScheme === 'dark' ? themeColors.border : undefined}
                                     />
                                 </View>
 
@@ -483,7 +484,7 @@ export default function HabitOptionsModal() {
                                         </View>
                                     </>
                                 )}
-                            </View>
+                            </Card>
                         </View>
                     </KeyboardAwareScrollView>
                 </View>
@@ -530,10 +531,6 @@ const styles = StyleSheet.create({
     },
     content: {
         gap: 16,
-    },
-    card: {
-        borderRadius: 16,
-        overflow: 'hidden',
     },
     switchRow: {
         flexDirection: 'row',

@@ -1,10 +1,9 @@
 import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import { StyleSheet, Text, TextInput, View, TextInputProps, StyleProp, ViewStyle, TextStyle } from 'react-native';
-import { PressableOpacity } from 'pressto';
-import { X } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
+import { Card } from '@/components/ui/card';
 
 type InputBoxProps = {
   label: string;
@@ -43,12 +42,13 @@ export const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     }));
 
     return (
-      <View style={[
-        styles.inputBox,
-        { backgroundColor: themeColors.surfacePrimary },
-        hideLabel && { paddingTop: 12, paddingBottom: 12 },
-        containerStyle
-      ]}>
+      <Card
+        variant="form"
+        style={StyleSheet.flatten([
+          hideLabel && { paddingTop: 12, paddingBottom: 12 },
+          containerStyle,
+        ])}
+      >
         {!hideLabel && (
           <View style={styles.labelRow}>
             <View style={styles.labelLeft}>
@@ -76,30 +76,13 @@ export const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
             {...textInputProps}
           />
           {rightIcon && <View style={styles.rightIconContainer}>{rightIcon}</View>}
-          {value.length > 0 && (
-            <PressableOpacity
-              style={styles.clearButton}
-              onPress={handleClear}
-              hitSlop={8}
-            >
-              <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                <X {...({ size: 12, color: themeColors.surfaceSecondary, strokeWidth: 3 } as any)} />
-              </View>
-            </PressableOpacity>
-          )}
         </View>
-      </View>
+      </Card>
     );
   }
 );
 
 const styles = StyleSheet.create({
-  inputBox: {
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12,
-  },
   labelRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -136,16 +119,6 @@ const styles = StyleSheet.create({
   },
   rightIconContainer: {
     marginLeft: 12,
-  },
-  clearButton: {
-    marginLeft: 12,
-  },
-  clearButtonIcon: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
 

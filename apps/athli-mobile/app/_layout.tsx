@@ -636,7 +636,7 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
-            name="settings/client-details"
+            name="profile/client-details"
             options={{
               headerShown: false,
               animation: 'slide_from_right',

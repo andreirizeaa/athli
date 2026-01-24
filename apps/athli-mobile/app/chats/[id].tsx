@@ -52,6 +52,7 @@ import { typography } from '@/constants/typography';
 import { SlidingPanel, SlidingPanelRef } from '@/components/ui/sliding-panel';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { Separator } from '@/components/ui/separator';
+import { Card } from '@/components/ui/card';
 import { MessageList } from '@/components/features/message/message-list-flashlist';
 import { ReplyPreviewRow } from '@/components/features/chats/reply-preview-row';
 import { AttachmentPickerRow } from '@/components/features/chats/attachment-picker-row';
@@ -261,11 +262,11 @@ const ClientPanelContent = ({ clientId, clientName: initialClientName, clientAva
     },
   ];
 
-  const handleMenuItemPress = (route: string) => {
+  const handleMenuItemPress = (item: MenuItem) => {
     haptics.medium();
     // Don't close sidebar - let the new page push in smoothly
     // When user goes back, sidebar will still be open
-    router.push(route as any);
+    router.push(item.route as any);
   };
 
   // Loading state - show while client data is being fetched
@@ -307,7 +308,7 @@ const ClientPanelContent = ({ clientId, clientName: initialClientName, clientAva
         keyboardDismissMode="on-drag"
       >
         {/* Profile Card */}
-        <View style={[panelStyles.profileCard, { backgroundColor: themeColors.surfacePrimary, marginRight: 0 }]}>
+        <Card variant="profile" style={{ marginRight: 0 }}>
           <View style={panelStyles.avatarLarge}>
             {clientAvatar ? (
               <Image
@@ -339,13 +340,13 @@ const ClientPanelContent = ({ clientId, clientName: initialClientName, clientAva
               {t('clientDetail.editProfile')}
             </Text>
           </PressableOpacity>
-        </View>
+        </Card>
 
         {/* Menu Items */}
         <View style={panelStyles.menuContainer}>
           {menuItems.map((item) => (
             <View key={item.id}>
-              <PressableScale onPress={() => handleMenuItemPress(item.route)}>
+              <PressableScale onPress={() => handleMenuItemPress(item)}>
                 <View style={panelStyles.menuItem}>
                   <View style={panelStyles.menuItemLeft}>
                     <PlatformIcon
@@ -398,16 +399,6 @@ const panelStyles = StyleSheet.create({
   errorText: {
     ...typography.p1,
     textAlign: 'center',
-  },
-  profileCard: {
-    borderRadius: 28,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    marginBottom: 24,
-    marginTop: 8,
-    marginLeft: 16,
-    marginRight: 16,
   },
   avatarLarge: {
     width: 80,
