@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { success, ok, unauthorized, created, badRequest } from '../../../utils/http-response';
+import { success, unauthorized, created, badRequest } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
 
 export const coachMessagingController = {
@@ -374,7 +374,7 @@ export const coachMessagingController = {
 
             if (error) throw error;
 
-            ok(res, { message: 'Message marked as ready' });
+            success(res, { message: 'Message marked as ready' });
         } catch (error: any) {
             return res.status(500).json({ success: false, message: error.message });
         }
@@ -797,6 +797,122 @@ export const coachMessagingController = {
             if (error) throw error;
 
             success(res, { message: 'Conversation unmuted successfully' });
+        } catch (error: any) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    /**
+     * Broadcast a message to multiple clients
+     * Creates a separate message in each client's conversation
+     */
+    broadcastMessage: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const { clientIds, content, attachmentCount, messageIds, idempotencyKeys } = req.body;
+
+        // Validate input
+        if (!clientIds?.length || !content?.trim()) {
+            badRequest(res, { message: 'Client IDs and content are required' });
+            return;
+        }
+
+        try {
+            const supabase = getSupabaseClient();
+            const results: Array<{ clientId: string; conversationId: string; messageId: string }> = [];
+
+            for (let i = 0; i < clientIds.length; i++) {
+                const clientId = clientIds[i];
+                const messageId = messageIds?.[i] || crypto.randomUUID();
+                const idempotencyKey = idempotencyKeys?.[i] || `${userId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+                // Check for idempotency - if message already exists, skip
+                if (idempotencyKey) {
+                    const { data: existingMessage } = await supabase
+                        .from('messages')
+                        .select('id, conversation_id')
+                        .eq('idempotency_key', idempotencyKey)
+                        .single();
+
+                    if (existingMessage) {
+                        // Message already exists - add to results and continue
+                        results.push({
+                            clientId,
+                            conversationId: existingMessage.conversation_id,
+                            messageId: existingMessage.id,
+                        });
+                        continue;
+                    }
+                }
+
+                // Find existing conversation for this client
+                let { data: conversation } = await supabase
+                    .from('conversations')
+                    .select('id')
+                    .eq('coach_id', userId)
+                    .eq('client_id', clientId)
+                    .single();
+
+                if (!conversation) {
+                    // Create new conversation
+                    const { data: newConv, error: convError } = await supabase
+                        .from('conversations')
+                        .insert({
+                            coach_id: userId,
+                            client_id: clientId,
+                        })
+                        .select('id')
+                        .single();
+
+                    if (convError) {
+                        console.error(`Failed to create conversation for client ${clientId}:`, convError);
+                        continue;
+                    }
+                    conversation = newConv;
+                }
+
+                // Determine if message should wait for attachments
+                const hasAttachments = (attachmentCount || 0) > 0;
+                const attachmentsReady = !hasAttachments;
+
+                // Insert message (database trigger will broadcast it)
+                const { data: message, error: msgError } = await supabase
+                    .from('messages')
+                    .insert({
+                        id: messageId,
+                        conversation_id: conversation.id,
+                        sender_id: userId,
+                        content: content.trim(),
+                        message_type: 'text',
+                        status: 'sent',
+                        sent_at: new Date().toISOString(),
+                        attachment_count: attachmentCount || 0,
+                        attachments_ready: attachmentsReady,
+                        idempotency_key: idempotencyKey,
+                    })
+                    .select('id')
+                    .single();
+
+                if (msgError) {
+                    console.error(`Failed to create message for client ${clientId}:`, msgError);
+                    continue;
+                }
+
+                results.push({
+                    clientId,
+                    conversationId: conversation.id,
+                    messageId: message.id,
+                });
+            }
+
+            success(res, {
+                message: 'Broadcast sent successfully',
+                data: { results },
+            });
         } catch (error: any) {
             return res.status(500).json({ success: false, message: error.message });
         }

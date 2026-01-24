@@ -1938,7 +1938,8 @@ const ClientTrainingCalendarPage = () => {
       workouts.forEach((workout: any) => {
         // All workouts from program schema are embedded data, not references to coach_workouts
         // The workout.id here is an internal program identifier, not a coach_workouts table ID
-        if (workout.title || workout.items) {
+        // Note: Program schema uses .name, not .title
+        if (workout.name || workout.items) {
           workoutsToAssign.push({
             workout,
             date: new Date(targetDate)
@@ -1965,11 +1966,11 @@ const ClientTrainingCalendarPage = () => {
         const workoutId = `${assignment.workout.id || 'prog'}-${dateKey}-${Date.now()}`;
         const optimisticWorkout: Workout & { id: string } = {
           id: workoutId,
-          name: assignment.workout.title,
+          name: assignment.workout.name || assignment.workout.title || 'Untitled Workout',
           description: assignment.workout.description || '',
           type: assignment.workout.type || 'strength',
           difficulty: assignment.workout.difficulty || 'intermediate',
-          totalExercises: assignment.workout.totalExercises || 0,
+          totalExercises: assignment.workout.items?.length || assignment.workout.totalExercises || 0,
           equipment: assignment.workout.equipment || [],
           created: formatDate(new Date()),
           isFavourite: false,
@@ -2002,13 +2003,13 @@ const ClientTrainingCalendarPage = () => {
           date: dateKey,
           workoutPayload: {
             id: workoutId,
-            title: assignment.workout.title,
-            name: assignment.workout.title,
+            title: assignment.workout.name || assignment.workout.title,
+            name: assignment.workout.name || assignment.workout.title,
             description: assignment.workout.description || '',
             type: assignment.workout.type || 'strength',
             difficulty: assignment.workout.difficulty || 'intermediate',
             equipment: assignment.workout.equipment || [],
-            totalExercises: assignment.workout.totalExercises || 0,
+            totalExercises: assignment.workout.items?.length || assignment.workout.totalExercises || 0,
             items: assignment.workout.items || [],
             ...DEFAULT_EXECUTION_FIELDS,
           },
@@ -2466,27 +2467,6 @@ const ClientTrainingCalendarPage = () => {
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 border-primary gap-1"
-                  >
-                    {t('athletes.trainingCalendar.saveAs')}
-                    <ChevronDown className="size-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setIsSaveAsWorkoutOpen(true)}>
-                    <span>{t('athletes.trainingCalendar.saveAsWorkout.menuItem')}</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsSaveAsProgramOpen(true)}>
-                    <span>{t('athletes.trainingCalendar.saveAsProgram.menuItem')}</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
               <Tabs value={selectedWeek} onValueChange={setSelectedWeek}>
                 <TabsList className="w-auto">
                   <TabsTrigger

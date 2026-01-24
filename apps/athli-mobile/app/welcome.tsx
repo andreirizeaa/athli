@@ -1,4 +1,4 @@
-import { StyleSheet, View, Text, Platform, Image, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, Platform, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PressableScale } from 'pressto';
@@ -7,8 +7,6 @@ import SquircleView from 'react-native-fast-squircle';
 
 import { typography } from '@/constants/typography';
 import { useTranslations, useThemePreference } from '@/stores';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
   const { t } = useTranslations();
@@ -37,7 +35,7 @@ export default function WelcomeScreen() {
               cornerSmoothing={1}
             >
               <Image
-                source={require('@/assets/app-icons/splash-icon-light.png')}
+                source={require('@/assets/app-icons/ios-icon-dark.png')}
                 style={styles.heroImage}
                 resizeMode="contain"
               />
@@ -86,9 +84,10 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 50, // Approx 25% of size for iOS feel
-    backgroundColor: '#000',
+    backgroundColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
     // Subtle white glow shadow with elevation
     shadowColor: '#FFFFFF',
     shadowOffset: { width: 0, height: 4 },
@@ -97,8 +96,8 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   heroImage: {
-    width: 200,
-    height: 200,
+    width: 150,
+    height: 150,
   },
   motto: {
     ...typography.h1,

@@ -39,6 +39,8 @@ import {
     validateWorkoutItems,
 } from '@/components/features/workout/validation';
 import { createWorkout, editWorkout, getWorkoutById } from '@/services/coach/coach-workout-service';
+import { assignWorkout, getClientWorkoutInstance } from '@/services/client/client-training-service';
+import { useClientDetailStore } from '@/stores';
 import { getExerciseById } from '@/services/coach/coach-exercise-service';
 import { createSection } from '@/services/coach/coach-section-service';
 import { MOCK_EXERCISES } from '@/app/modals/workout/add-exercise-to-builder-modal';
@@ -76,12 +78,19 @@ export default function WorkoutDetailScreen() {
         description?: string;
         type?: string;
         difficulty?: string;
+        // Client workout context - when editing a workout from client training
+        clientId?: string;
+        clientWorkoutDate?: string;
+        coachId?: string; // Coach ID passed from training screen
     }>();
+
+    // Determine if we're editing a client's workout instance vs a library workout
+    const isClientWorkout = !!params.clientId && !!params.clientWorkoutDate;
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
 
-    const { setExercisesSelectCallback, setSectionSelectCallback, setExerciseSelectCallback, setReorderCallback, setReorderItems } = useModalCallbacks();
+    const { setExercisesSelectCallback, setSectionSelectCallback, setExerciseSelectCallback, setReorderCallback, setReorderItems, setMetadataUpdateCallback } = useModalCallbacks();
     const queryClient = useQueryClient();
 
     // Workout state management - Initialize with params for immediate display
@@ -124,11 +133,52 @@ export default function WorkoutDetailScreen() {
         },
     });
 
-    // Mutation for updating workout
+    // Mutation for updating workout (library workout)
     const editMutation = useMutation({
         mutationFn: ({ id, data }: { id: string; data: any }) => editWorkout(id, data),
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['workouts'] });
+            haptics.success();
+            if (router.canGoBack()) {
+                router.back();
+            }
+        },
+        onError: (error: Error) => {
+            haptics.error();
+            Alert.alert(
+                t('general.error'),
+                error.message || t('general.errorSaving'),
+                [{ text: t('general.ok') }]
+            );
+        },
+    });
+
+    // Get coachId for client workout saves - prefer from params (passed from training screen)
+    const storeCoachId = useClientDetailStore((state) => state.coachId);
+    const coachId = params.coachId || storeCoachId;
+    const refreshTrainingSection = useClientDetailStore((state) => state.refreshSection);
+
+    // Mutation for updating client workout instance (not library)
+    const clientWorkoutMutation = useMutation({
+        mutationFn: async ({ payload }: { payload: WorkoutProgramPayload }) => {
+            if (!params.clientId || !params.clientWorkoutDate || !coachId) {
+                throw new Error('Missing client context for save');
+            }
+            return assignWorkout({
+                clientId: params.clientId,
+                coachId,
+                date: params.clientWorkoutDate,
+                workoutId: params.id,
+                workoutPayload: { ...payload, id: params.id },
+                isNew: false,
+            });
+        },
+        onSuccess: async () => {
+            // Refresh client training data
+            refreshTrainingSection('training');
+            // Also invalidate client-specific queries
+            queryClient.invalidateQueries({ queryKey: ['client-workout-instance', params.clientId] });
+            queryClient.invalidateQueries({ queryKey: ['client-training-calendar', params.clientId] });
             haptics.success();
             if (router.canGoBack()) {
                 router.back();
@@ -172,8 +222,77 @@ export default function WorkoutDetailScreen() {
             if (params.id && params.id !== 'new') {
                 setIsLoadingData(true);
                 try {
-                    const workoutData = await getWorkoutById(params.id);
-                    console.log('[WorkoutDetailScreen] Loaded workout data:', {
+                    let workoutData: any;
+
+                    if (isClientWorkout && params.clientId && params.clientWorkoutDate && coachId) {
+                        // For client workouts, fetch from client training table (not library)
+                        console.log('[WorkoutDetailScreen] Fetching client workout instance:', {
+                            clientId: params.clientId,
+                            coachId,
+                            date: params.clientWorkoutDate,
+                            workoutId: params.id,
+                        });
+                        const clientWorkout = await getClientWorkoutInstance(
+                            params.clientId,
+                            coachId,
+                            params.clientWorkoutDate,
+                            params.id
+                        );
+                        console.log('[WorkoutDetailScreen] Raw client workout response:', {
+                            hasData: !!clientWorkout,
+                            keys: clientWorkout ? Object.keys(clientWorkout) : [],
+                            hasItems: !!clientWorkout?.items,
+                            hasWorkoutData: !!clientWorkout?.workout_data,
+                            hasNestedItems: !!clientWorkout?.workout_data?.items,
+                            itemsLength: clientWorkout?.items?.length || 0,
+                            nestedItemsLength: clientWorkout?.workout_data?.items?.length || 0,
+                        });
+                        
+                        // Items can be at top level OR nested under workout_data
+                        // Handle both API response formats
+                        const workoutItems = clientWorkout?.items || 
+                            clientWorkout?.workout_data?.items || 
+                            [];
+                        
+                        console.log('[WorkoutDetailScreen] Resolved workout items:', {
+                            count: workoutItems.length,
+                            firstItem: workoutItems[0] ? { 
+                                itemType: workoutItems[0].itemType,
+                                hasData: !!workoutItems[0].data,
+                            } : null,
+                        });
+                        
+                        // Transform client workout instance format to match expected structure
+                        workoutData = {
+                            id: clientWorkout?.id || params.id,
+                            name: clientWorkout?.name || clientWorkout?.workout || params.name,
+                            description: clientWorkout?.description || params.description,
+                            type: clientWorkout?.type || params.type,
+                            difficulty: clientWorkout?.difficulty || params.difficulty,
+                            workout_data: {
+                                items: workoutItems,
+                            },
+                        };
+                        console.log('[WorkoutDetailScreen] Loaded client workout instance:', {
+                            id: workoutData.id,
+                            name: workoutData.name,
+                            itemsCount: workoutData.workout_data?.items?.length || 0,
+                            hasTopLevelItems: !!clientWorkout?.items,
+                            hasNestedItems: !!clientWorkout?.workout_data?.items,
+                        });
+                    } else {
+                        // For library workouts, fetch from coach's workout library
+                        workoutData = await getWorkoutById(params.id);
+                        console.log('[WorkoutDetailScreen] Loaded workout data from library:', {
+                            id: params.id,
+                            name: workoutData.name,
+                            type: workoutData.type,
+                            difficulty: workoutData.difficulty,
+                            hasWorkoutData: !!workoutData.workout_data,
+                            itemsCount: workoutData.workout_data?.items?.length || 0,
+                        });
+                    }
+                    console.log('[WorkoutDetailScreen] Processing workout data:', {
                         id: params.id,
                         name: workoutData.name,
                         type: workoutData.type,
@@ -183,7 +302,7 @@ export default function WorkoutDetailScreen() {
                         fullData: workoutData,
                     });
                     console.log('[WorkoutDetailScreen] Workout items:', JSON.stringify(workoutData.workout_data?.items, null, 2));
-                    if (workoutData.workout_data && workoutData.workout_data.items) {
+                    if (workoutData.workout_data && workoutData.workout_data.items && workoutData.workout_data.items.length > 0) {
                         // Map set type from API format to builder format
                         const mapSetType = (type: string): 'R' | 'W' | 'F' | 'D' => {
                             const typeMap: Record<string, 'R' | 'W' | 'F' | 'D'> = {
@@ -376,7 +495,10 @@ export default function WorkoutDetailScreen() {
                                     type: 'section' as const,
                                     name: data.name || '',
                                     sectionType: data.type || 'regular',
-                                    duration: data.durationSec ? data.durationSec.toString() : undefined,
+                                    // Convert durationSec (seconds) to minutes for AMRAP sections
+                                    duration: data.durationSec !== undefined && data.type === 'amrap' 
+                                        ? String(Math.round(data.durationSec / 60)) 
+                                        : undefined,
                                     rounds: data.targetRounds ? data.targetRounds.toString() : undefined,
                                     notes: data.notes || '',
                                     exercises: sectionExercises,
@@ -411,6 +533,19 @@ export default function WorkoutDetailScreen() {
                             },
                             items: fixedItems,
                         });
+                    } else {
+                        // No items found - just update the meta data
+                        console.log('[WorkoutDetailScreen] No workout items found, updating meta only');
+                        setWorkoutState({
+                            meta: {
+                                id: params.id,
+                                name: workoutData.name || params.name || '',
+                                description: workoutData.description || params.description || '',
+                                type: workoutData.type || params.type || '',
+                                difficulty: workoutData.difficulty || params.difficulty || 'all_levels',
+                            },
+                            items: [],
+                        });
                     }
                 } catch (error) {
                     console.error('Failed to load workout data:', error);
@@ -426,7 +561,7 @@ export default function WorkoutDetailScreen() {
         };
 
         loadWorkoutData();
-    }, [params.id, t]);
+    }, [params.id, params.clientId, params.clientWorkoutDate, params.coachId, isClientWorkout, storeCoachId, t]);
 
     // TODO: Fetch exercise details after workout data is loaded
     // Currently disabled because exercises in the workout data use placeholder IDs
@@ -621,6 +756,32 @@ export default function WorkoutDetailScreen() {
     }, [isDirty, router, showDiscardAlert]);
 
     const handleEditMetadata = useCallback(() => {
+        // Build the full workout payload to pass to the modal
+        // For client workouts, we need to include items so the save doesn't lose exercise data
+        const workoutPayload = isClientWorkout ? buildWorkoutPayload(workoutState) : null;
+        
+        // Set callback to update local state when modal saves
+        setMetadataUpdateCallback((metadata) => {
+            setWorkoutState(prev => {
+                const newState = {
+                    ...prev,
+                    meta: {
+                        ...prev.meta,
+                        name: metadata.name,
+                        description: metadata.description,
+                        type: metadata.type,
+                        difficulty: metadata.difficulty,
+                    },
+                };
+                // Also update initialStateRef so this doesn't count as a dirty change
+                // (the changes were already saved via the modal)
+                if (initialStateRef.current) {
+                    initialStateRef.current = JSON.parse(JSON.stringify(newState));
+                }
+                return newState;
+            });
+        });
+        
         router.push({
             pathname: '/modals/library/add-workout-modal',
             params: {
@@ -629,11 +790,30 @@ export default function WorkoutDetailScreen() {
                 description: workoutState.meta.description || '',
                 type: workoutState.meta.type || '',
                 difficulty: workoutState.meta.difficulty || '',
+                // Pass client context if editing a client workout
+                ...(isClientWorkout && {
+                    clientId: params.clientId,
+                    clientWorkoutDate: params.clientWorkoutDate,
+                    coachId: coachId,
+                    // Pass full workout payload as JSON so modal can include items in save
+                    workoutPayloadJson: JSON.stringify(workoutPayload),
+                }),
             },
         });
-    }, [router, workoutState.meta]);
+    }, [router, workoutState, isClientWorkout, params.clientId, params.clientWorkoutDate, coachId, setMetadataUpdateCallback]);
 
     const handleSave = useCallback(() => {
+        // Debug: Log params and isClientWorkout determination
+        console.log('[WorkoutDetailScreen] handleSave called');
+        console.log('[WorkoutDetailScreen] params:', {
+            id: params.id,
+            clientId: params.clientId,
+            clientWorkoutDate: params.clientWorkoutDate,
+            coachId: params.coachId,
+        });
+        console.log('[WorkoutDetailScreen] isClientWorkout:', isClientWorkout);
+        console.log('[WorkoutDetailScreen] coachId (resolved):', coachId);
+
         if (!workoutState.meta.name) {
             Alert.alert(t('library.workout.error'), t('library.workout.nameRequired'));
             return;
@@ -657,12 +837,25 @@ export default function WorkoutDetailScreen() {
         console.log('Saving workout payload:', JSON.stringify(payload, null, 2));
 
         // Call API to save workout
-        if (workoutState.meta.id && workoutState.meta.id !== 'new') {
+        if (isClientWorkout) {
+            // Save to client's training instance (not library)
+            console.log('[WorkoutDetailScreen] Saving client workout instance with:', {
+                clientId: params.clientId,
+                coachId,
+                date: params.clientWorkoutDate,
+                workoutId: params.id,
+            });
+            clientWorkoutMutation.mutate({ payload });
+        } else if (workoutState.meta.id && workoutState.meta.id !== 'new') {
+            // Update existing library workout
+            console.log('[WorkoutDetailScreen] Saving to library workout (editMutation) with id:', workoutState.meta.id);
             editMutation.mutate({ id: workoutState.meta.id, data: payload });
         } else {
+            // Create new library workout
+            console.log('[WorkoutDetailScreen] Creating new library workout');
             createMutation.mutate(payload);
         }
-    }, [workoutState, createMutation, editMutation, t]);
+    }, [workoutState, createMutation, editMutation, clientWorkoutMutation, isClientWorkout, params, coachId, t]);
 
     const handleReorder = () => {
         // Set up callback to receive reordered items
@@ -1074,7 +1267,7 @@ export default function WorkoutDetailScreen() {
                             size="md"
                             variant={canSave ? 'primary' : 'default'}
                             disabled={!canSave}
-                            loading={createMutation.isPending || editMutation.isPending}
+                            loading={createMutation.isPending || editMutation.isPending || clientWorkoutMutation.isPending}
                         />
                     </View>
                 </View>

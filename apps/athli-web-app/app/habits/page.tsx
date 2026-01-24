@@ -517,12 +517,12 @@ const HabitsPage = () => {
   };
 
   const getDurationText = (habit: Habit): string => {
-    if (!habit.duration) return 'Not defined';
+    if (!habit.duration) return '--';
     return `${habit.duration} ${t('habits.form.durationLabel')}`;
   };
 
   const getReminderText = (habit: Habit): string => {
-    if (!habit.reminderTime) return 'Not defined';
+    if (!habit.reminderTime) return '--';
     return habit.reminderTime;
   };
 

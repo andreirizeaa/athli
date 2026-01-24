@@ -128,7 +128,7 @@ const isEmpty = (value: any): boolean => {
 
 // Helper function to format program type for display
 const formatProgramType = (type: string): string => {
-  if (!type) return '-';
+  if (!type) return '--';
   // Handle common abbreviations and special cases
   const abbreviations: Record<string, string> = {
     hiit: 'HIIT',
@@ -152,7 +152,7 @@ const formatProgramType = (type: string): string => {
 
 // Helper function to format difficulty for display
 const formatDifficulty = (difficulty: string): string => {
-  if (!difficulty) return '-';
+  if (!difficulty) return '--';
   const level = DIFFICULTY_LEVELS.find((l) => l.value === difficulty.toLowerCase());
   if (level) return level.label;
 
@@ -407,7 +407,7 @@ const ProgramsPage = () => {
   };
 
   const formatDate = (dateStr: string | undefined): string => {
-    if (!dateStr) return '-';
+    if (!dateStr) return '--';
     const [day, month, year] = dateStr.split('-');
     const date = new Date(2000 + parseInt(year), parseInt(month) - 1, parseInt(day));
     const months = [

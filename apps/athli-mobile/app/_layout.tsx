@@ -648,6 +648,18 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="modals/message/broadcast-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
             name="modals/auth/sign-in-modal"
             options={{
               presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
@@ -852,6 +864,18 @@ function RootLayoutNav() {
             name="modals/client/edit-log-modal"
             options={{
               presentation: 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/add-workout-to-day-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',

@@ -23,6 +23,7 @@ export type IconButtonProps = {
   onPress: () => void;
   size?: IconButtonSize;
   color?: string;
+  backgroundColor?: string;
   loadingColor?: string;
   scheme?: IconButtonScheme;
   variant?: IconButtonVariant;
@@ -64,6 +65,7 @@ export const IconButton = ({
   onPress,
   size = 'md',
   color,
+  backgroundColor,
   loadingColor,
   scheme = 'auto',
   variant = 'default',
@@ -78,7 +80,7 @@ export const IconButton = ({
   const resolvedColors =
     scheme === 'auto' ? themeColors : createPresetPalette(preset, scheme);
 
-  const background = variant === 'primary' ? resolvedColors.primary : resolvedColors.surfacePrimary;
+  const background = backgroundColor ?? (variant === 'primary' ? resolvedColors.primary : resolvedColors.surfacePrimary);
   const iconColor =
     color ?? (variant === 'primary' ? resolvedColors.primaryForeground : resolvedColors.text);
 

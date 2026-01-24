@@ -301,7 +301,7 @@ const QuestionnairesPage = () => {
       getSearchValue: (row) => row.description || '',
       renderCell: (row) => (
         <span className="text-sm text-muted-foreground truncate block">
-          {row.description || '-'}
+          {row.description || '--'}
         </span>
       ),
     },

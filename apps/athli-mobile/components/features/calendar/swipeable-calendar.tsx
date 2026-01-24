@@ -156,9 +156,18 @@ export const SwipeableCalendar = ({
       const currentNormalized = normalizeDate(selectedDate);
       if (normalized.getTime() !== currentNormalized.getTime()) {
         setSelectedDate(normalized);
+        // Trigger scroll to the new date
+        const idx = Math.max(0, Math.min(weeks.length - 1, getWeekIndexForDate(normalized, weeks)));
+        setCurrentWeekIndex(idx);
+        setLocalIndex(idx);
+        if (listRef.current && hasMounted.current) {
+          setTimeout(() => {
+            listRef.current?.scrollToIndex({ index: idx, animated: true });
+          }, 100);
+        }
       }
     }
-  }, [initialSelectedDate, selectedDate]);
+  }, [initialSelectedDate, selectedDate, weeks]);
 
   const dayAcronyms = [
     t('calendar.days.monday'),
@@ -241,10 +250,11 @@ export const SwipeableCalendar = ({
     onDateSelect?.(normalized);
   };
 
-  // Lazy window uses localIndex
+  // Always render all weeks to ensure all dates are clickable
+  // The FlashList will handle virtualization efficiently
   const shouldRenderIndex = useCallback(
-    (index: number) => Math.abs(index - localIndex) <= 1,
-    [localIndex]
+    () => true, // Always render - FlashList handles optimization
+    []
   );
 
   // Follow finger smoothly — local only

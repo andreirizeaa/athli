@@ -243,7 +243,7 @@ const CheckInsPage = () => {
     }
 
     if (!schedule || schedule.type !== 'check-in') {
-      return '-';
+      return '--';
     }
 
     if (schedule.frequency === 'daily') {
@@ -281,7 +281,7 @@ const CheckInsPage = () => {
       return t('athletes.profile.checkIns.schedule.frequency.monthly');
     }
 
-    return '-';
+    return '--';
   };
 
   const checkInColumns: ColumnDefinition<Form>[] = [
@@ -369,7 +369,7 @@ const CheckInsPage = () => {
       getSearchValue: (row) => row.description || '',
       renderCell: (row) => (
         <span className="text-sm text-muted-foreground truncate block">
-          {row.description || '-'}
+          {row.description || '--'}
         </span>
       ),
     },

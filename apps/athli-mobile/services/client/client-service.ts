@@ -28,16 +28,19 @@ export interface AthleteGoal {
   goal: string;
   target_date: string | null;
   achieved: boolean;
+  details?: string;
 }
 
 export interface AthleteInjury {
   id: string;
   injury: string;
   date: string | null;
+  details?: string;
 }
 
 export interface TrainingCalendarItem {
   id: string;
+  templateId?: string; // Original template ID from coach's library
   workout: string;
   description: string;
   type: string;
@@ -48,10 +51,17 @@ export interface TrainingCalendarItem {
   created: string;
   workout_data?: any;
   day_status?: 'not_started' | 'in_progress' | 'completed';
+  completedSummary?: {
+    status: 'not_started' | 'in_progress' | 'completed';
+    completedAt?: number;
+    startedAt?: number;
+  };
 }
 
+// API returns dates as keys with values being objects keyed by workout instance IDs
+// e.g., { "23-01-2026": { "workout_1": {...}, "workout_2": {...} } }
 export interface TrainingCalendarSchema {
-  [date: string]: TrainingCalendarItem[];
+  [date: string]: { [workoutKey: string]: TrainingCalendarItem } | TrainingCalendarItem[];
 }
 
 export interface WorkoutCompletionStatus {

@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Check, Ellipsis, MailCheck, CheckCircle2, Archive } from 'lucide-react-native';
+import { Check, Megaphone, Archive } from 'lucide-react-native';
 import { FlashList } from '@shopify/flash-list';
 
 
@@ -13,7 +13,6 @@ import { SearchBar } from '@/components/ui/search-bar';
 import { IconButton } from '@/components/ui/icon-button';
 import { ChatListItem } from '@/components/features/chats/chat-list-item';
 import { ArchivedItem } from '@/components/features/chats/archived-item';
-import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import {
@@ -256,37 +255,6 @@ export default function ChatsScreen() {
   };
 
 
-  const dropdownOptions: DropdownMenuOption[] = isEditMode
-    ? [
-      {
-        label: t('chats.archive'),
-        icon: {
-          sf: 'archivebox',
-          IconComponent: Archive,
-        },
-        onPress: handleArchivePress,
-      },
-    ]
-    : [
-      {
-        label: t('chats.selectChats'),
-        icon: {
-          sf: 'checkmark.circle',
-          IconComponent: CheckCircle2,
-        },
-        onPress: handleSelectChatsPress,
-      },
-      {
-        label: t('chats.readAll'),
-        icon: {
-          sf: 'checkmark.message',
-          IconComponent: MailCheck,
-        },
-        onPress: handleReadAllPress,
-      },
-
-    ];
-
   const renderChatItem = useCallback(({ item }: { item: Chat }) => (
     <ChatListItem
       chat={item}
@@ -359,14 +327,12 @@ export default function ChatsScreen() {
                   color={themeColors.text}
                 />
               ) : (
-                <DropdownMenuWrapper options={dropdownOptions}>
-                  <IconButton
-                    icon={{ sf: 'ellipsis', IconComponent: Ellipsis }}
-                    onPress={() => {}}
-                    size="md"
-                    color={themeColors.text}
-                  />
-                </DropdownMenuWrapper>
+                <IconButton
+                  icon={{ sf: 'megaphone', IconComponent: Megaphone }}
+                  onPress={() => router.push('/modals/message/broadcast-modal')}
+                  size="md"
+                  color={themeColors.text}
+                />
               )}
             </View>
           </View>
