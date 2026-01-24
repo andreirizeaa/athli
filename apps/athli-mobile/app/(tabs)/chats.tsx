@@ -20,7 +20,7 @@ import {
   getChatMessages,
   type Chat,
 } from '@/services/chats-service';
-import { useRealtimeConversations } from '@/hooks/use-realtime-messaging';
+import { useRealtimeConversations, useRealtimeReadReceiptsForUser } from '@/hooks/use-realtime-messaging';
 
 export default function ChatsScreen() {
   const router = useRouter();
@@ -92,6 +92,34 @@ export default function ChatsScreen() {
         console.log('[Chats Realtime] New conversation:', realtimeConversation.id);
         updateChat(realtimeConversation);
       }
+    },
+  });
+
+  // Get conversation IDs for read receipt subscription
+  const conversationIds = useMemo(() => chats.map((c) => c.id), [chats]);
+
+  // Store reference for loadChats
+  const loadChats = useChatsStore((state) => state.loadChats);
+
+  // Debounce timer ref to prevent excessive API calls
+  const readReceiptDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Subscribe to read receipt changes to update "read" status in chat list
+  // When a client reads a message, this triggers and refreshes the chat list
+  useRealtimeReadReceiptsForUser({
+    userId: userId || '',
+    conversationIds,
+    onReadReceiptUpdated: (receipt) => {
+      console.log('[Chats] Read receipt updated, debouncing reload');
+      // Debounce: wait 1 second before reloading to batch multiple updates
+      if (readReceiptDebounceRef.current) {
+        clearTimeout(readReceiptDebounceRef.current);
+      }
+      readReceiptDebounceRef.current = setTimeout(() => {
+        console.log('[Chats] Reloading chats after debounce');
+        loadChats();
+        readReceiptDebounceRef.current = null;
+      }, 1000);
     },
   });
 

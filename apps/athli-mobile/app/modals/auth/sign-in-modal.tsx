@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { PressableScale, PressableOpacity } from 'pressto';
 import { Ionicons } from '@expo/vector-icons';
 import { X } from 'lucide-react-native';
-import { useThemePreference, useTranslations, useCoachProfileStore, useClientProfileStore } from '@/stores';
+import { useThemePreference, useTranslations, useCoachProfileStore, useClientProfileStore, useAppView } from '@/stores';
 import { typography } from '@/constants/typography';
 import { IconButton } from '@/components/ui/icon-button';
 import { AuthLoadingOverlay } from '@/components/auth/auth-loading-overlay';
@@ -15,6 +15,7 @@ export default function SignInModal() {
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const router = useRouter();
+    const { setAppView } = useAppView();
     const [isLoading, setIsLoading] = useState(false);
     const setCoachProfile = useCoachProfileStore((state) => state.setProfile);
     const setClientProfile = useClientProfileStore((state) => state.setProfile);
@@ -25,9 +26,11 @@ export default function SignInModal() {
 
         if (profileType === 'coach') {
             setCoachProfile(profile as CoachProfile);
+            setAppView('coach');
             console.log('🟢 [Sign-In Modal] Coach profile set');
         } else {
             setClientProfile(profile as ClientProfile);
+            setAppView('athlete');
             console.log('🟢 [Sign-In Modal] Client profile set');
         }
 

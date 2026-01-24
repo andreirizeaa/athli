@@ -8,7 +8,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { PressableOpacity, PressableScale } from 'pressto';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference, useTranslations, useCoachProfileStore, useClientProfileStore } from '@/stores';
+import { useThemePreference, useTranslations, useCoachProfileStore, useClientProfileStore, useAppView } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, type InputBoxRef } from '@/components/ui/form-inputs/input-box';
 import { AuthLoadingOverlay } from '@/components/auth/auth-loading-overlay';
@@ -20,6 +20,7 @@ export default function EmailSignInScreen() {
     const insets = useSafeAreaInsets();
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
+    const { setAppView } = useAppView();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -49,13 +50,16 @@ export default function EmailSignInScreen() {
     };
 
     const handleAuthSuccess = (profileType: 'coach' | 'client', profile: CoachProfile | ClientProfile) => {
+        // Note: We don't navigate here - the auth state listener in _layout.tsx
+        // handles navigation to tabs when SIGNED_IN event fires.
+        // Setting profile/appView here for faster UI update.
         if (profileType === 'coach') {
             setCoachProfile(profile as CoachProfile);
+            setAppView('coach');
         } else {
             setClientProfile(profile as ClientProfile);
+            setAppView('athlete');
         }
-
-        router.back();
     };
 
     const handleAuthError = (error: any) => {
@@ -83,9 +87,44 @@ export default function EmailSignInScreen() {
     };
 
     const handleSignIn = async () => {
-        if (!email || !password) return;
-
         Keyboard.dismiss();
+
+        if (!email.trim() && !password.trim()) {
+            Alert.alert(
+                t('auth.signInError'),
+                t('auth.enterEmailAndPassword'),
+                [{ text: t('general.ok') }]
+            );
+            return;
+        }
+
+        if (!email.trim()) {
+            Alert.alert(
+                t('auth.signInError'),
+                t('auth.enterEmail'),
+                [{ text: t('general.ok') }]
+            );
+            return;
+        }
+
+        if (!isValidEmail(email)) {
+            Alert.alert(
+                t('auth.signInError'),
+                t('auth.invalidEmail'),
+                [{ text: t('general.ok') }]
+            );
+            return;
+        }
+
+        if (!password.trim()) {
+            Alert.alert(
+                t('auth.signInError'),
+                t('auth.enterPassword'),
+                [{ text: t('general.ok') }]
+            );
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -105,8 +144,6 @@ export default function EmailSignInScreen() {
     const handlePrivacyPolicyPress = () => {
         console.log('Privacy Policy pressed');
     };
-
-    const isButtonEnabled = isValidEmail(email) && password.trim().length > 0;
 
     return (
         <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top }]}>
@@ -146,7 +183,7 @@ export default function EmailSignInScreen() {
                         value={password}
                         onChangeText={setPassword}
                         secureTextEntry={!showPassword}
-                        editable={isValidEmail(email)}
+                        editable={true}
                         returnKeyType="go"
                         onSubmitEditing={handleSignIn}
                         rightIcon={
@@ -168,12 +205,10 @@ export default function EmailSignInScreen() {
                     style={[
                         styles.signInButton,
                         { backgroundColor: themeColors.surfacePrimary },
-                        !isButtonEnabled && styles.signInButtonDisabled
                     ]}
                     onPress={handleSignIn}
-                    enabled={isButtonEnabled}
                 >
-                    <Text style={styles.signInButtonText}>
+                    <Text style={[styles.signInButtonText, { color: themeColors.text }]}>
                         {t('auth.signIn')}
                     </Text>
                 </PressableScale>
@@ -236,13 +271,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginTop: 24,
     },
-    signInButtonDisabled: {
-        opacity: 0.5,
-    },
     signInButtonText: {
         ...typography.h6,
         fontWeight: '700',
-        color: '#FFFFFF',
     },
     termsContainer: {
         flexDirection: 'row',

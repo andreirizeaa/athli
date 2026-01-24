@@ -294,25 +294,15 @@ class AuthService {
       return { provider: 'google', exists: true };
     }
 
-    // Also check the profile tables for signin_method
-    const { data: coachProfile } = await supabase
-      .from('coach_profiles')
+    // Check user_profiles for signin_method (single source of truth)
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
       .select('signin_method')
       .eq('id', user.id)
       .single();
 
-    if (coachProfile?.signin_method && coachProfile.signin_method !== 'email') {
-      return { provider: coachProfile.signin_method as 'google' | 'apple', exists: true };
-    }
-
-    const { data: clientProfile } = await supabase
-      .from('client_profiles')
-      .select('signin_method')
-      .eq('client_id', user.id)
-      .single();
-
-    if (clientProfile?.signin_method && clientProfile.signin_method !== 'email') {
-      return { provider: clientProfile.signin_method as 'google' | 'apple', exists: true };
+    if (userProfile?.signin_method && userProfile.signin_method !== 'email') {
+      return { provider: userProfile.signin_method as 'google' | 'apple', exists: true };
     }
 
     // Default to email
@@ -468,7 +458,7 @@ class AuthService {
   }
 
   /**
-   * Get user by ID - checks both coach_profiles and client_profiles
+   * Get user by ID - uses views that merge user_profiles with coach/client profiles
    */
   async getUserById(userId: string): Promise<User | null> {
     const supabase = getSupabaseClient();
@@ -480,9 +470,9 @@ class AuthService {
       return null;
     }
 
-    // Try to get coach profile first
+    // Try to get coach profile first using the full view (merges user_profiles)
     const { data: coachProfile, error: coachError } = await supabase
-      .from('coach_profiles')
+      .from('coach_profiles_full')
       .select('*')
       .eq('id', userId)
       .single();
@@ -500,9 +490,9 @@ class AuthService {
       };
     }
 
-    // Try client_profiles if not a coach
+    // Try client_profiles_full view if not a coach
     const { data: clientProfile, error: clientError } = await supabase
-      .from('client_profiles')
+      .from('client_profiles_full')
       .select('*')
       .eq('client_id', userId)
       .single();
@@ -515,27 +505,27 @@ class AuthService {
         userType: 'client',
         profilePictureUrl: clientProfile.profile_picture_url || authUser.user.user_metadata?.avatar_url || null,
         signinMethod: clientProfile.signin_method || 'email',
-        isActive: clientProfile.is_active,
+        isActive: true,
         createdAt: authUser.user.created_at,
       };
     }
 
-    // Fallback: Try legacy user_profiles table for backward compatibility
-    const { data: legacyProfile, error: legacyError } = await supabase
+    // Fallback: Try user_profiles table directly
+    const { data: userProfile, error: userError } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('id', userId)
       .single();
 
-    if (legacyProfile && !legacyError) {
+    if (userProfile && !userError) {
       return {
         id: authUser.user.id,
-        email: legacyProfile.email,
-        name: legacyProfile.name,
-        userType: legacyProfile.user_type,
-        profilePictureUrl: legacyProfile.profile_picture_url,
-        signinMethod: legacyProfile.signin_method,
-        isActive: legacyProfile.is_active,
+        email: userProfile.email,
+        name: userProfile.name,
+        userType: userProfile.user_type,
+        profilePictureUrl: userProfile.profile_picture_url,
+        signinMethod: userProfile.signin_method,
+        isActive: true,
         createdAt: authUser.user.created_at,
       };
     }

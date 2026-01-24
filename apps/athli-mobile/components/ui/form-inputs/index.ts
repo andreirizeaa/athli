@@ -2,6 +2,7 @@ export { InputBox, type InputBoxRef } from './input-box';
 export { TextAreaInput, type TextAreaInputRef } from './text-area-input';
 export { ButtonTabGroup } from './button-tab-group';
 export { DateOfBirthInput } from './date-of-birth-input';
+export { DateSelectInput } from './date-select-input';
 export { GenderInput, type GenderValue } from './gender-input';
 export { SelectInput } from './select-input';
 export { HeightInput } from './height-input';

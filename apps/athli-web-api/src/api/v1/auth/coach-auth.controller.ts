@@ -132,9 +132,9 @@ export class CoachAuthController {
                 isNew = true;
             }
 
-            // Get coach profile
+            // Get coach profile using the full view (merges user_profiles)
             const { data: profile, error: profileError } = await supabase
-                .from('coach_profiles')
+                .from('coach_profiles_full')
                 .select('*')
                 .eq('id', userId)
                 .single();

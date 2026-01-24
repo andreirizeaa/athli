@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { Play, Pause, Square } from 'lucide-react-native';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -39,9 +39,6 @@ type MessageAudioPreviewProps = {
   themeColors: ThemeColors;
   parentBackgroundColor: string;
   isParentSent: boolean;
-  onLongPress?: () => void;
-  onPressIn?: () => void;
-  onPressOut?: () => void;
 };
 
 const withAlpha = (color: string, alpha: number) => {
@@ -112,9 +109,6 @@ export const MessageAudioPreview = ({
   themeColors,
   parentBackgroundColor,
   isParentSent,
-  onLongPress,
-  onPressIn,
-  onPressOut,
 }: MessageAudioPreviewProps) => {
   const waveformRef = useRef<ExtendedWaveformRef>(null);
   const [playerState, setPlayerState] = useState<PlayerState>(PlayerState.stopped);
@@ -313,15 +307,11 @@ export const MessageAudioPreview = ({
   }
 
   return (
-    <Pressable
+    <View
       style={[styles.container, { borderColor }]}
-      onLongPress={onLongPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
     >
       <PressableOpacity
         style={styles.playButton}
-        onLongPress={onLongPress}
         onPress={handleTogglePlay}
       >
         <PlatformIcon
@@ -352,7 +342,6 @@ export const MessageAudioPreview = ({
 
       <PressableOpacity
         style={[styles.speedButton, { backgroundColor: withAlpha(foregroundColor, 0.14) }]}
-        onLongPress={onLongPress}
         onPress={handleSpeedButtonPress}
       >
         <Text style={[styles.speedButtonText, { color: foregroundColor }]}>
@@ -367,7 +356,7 @@ export const MessageAudioPreview = ({
           {formatDuration(getAudioDurationMs(audio))}
         </Text>
       </View>
-    </Pressable>
+    </View>
   );
 };
 

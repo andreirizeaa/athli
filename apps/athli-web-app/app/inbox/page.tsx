@@ -47,7 +47,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { useConversations } from '@/hooks/use-conversations';
 import { useInfiniteMessages } from '@/hooks/use-infinite-messages';
-import { useRealtimeConversations, useRealtimeMessages, useSyncReadReceipt, useMessageMerging } from '@/hooks/use-realtime-messaging';
+import { useRealtimeConversations, useRealtimeMessages, useSyncReadReceipt, useMessageMerging, useRealtimeReadReceiptsForUser, useRealtimeReadReceipts } from '@/hooks/use-realtime-messaging';
 import { sendMessage as sendMessageAPI, markConversationAsRead, addReaction, removeReaction, deleteMessage as deleteMessageAPI } from '@/lib/messaging/messaging-api-client';
 import type { Conversation, OptimisticMessage } from '@athli/shared-types';
 import { createOptimisticMessage } from '@athli/shared-types';
@@ -293,6 +293,31 @@ const InboxPage = () => {
     }, [queryClient]),
   });
 
+  // Get conversation IDs for read receipt subscription
+  const conversationIds = React.useMemo(() => conversations.map((c) => c.id), [conversations]);
+
+  // Debounce timer ref to prevent excessive API calls
+  const readReceiptDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Subscribe to read receipt changes to update "read" status in chat list
+  // When a client reads a message, this triggers and refreshes the conversations list
+  useRealtimeReadReceiptsForUser({
+    userId: user?.id || '',
+    conversationIds,
+    onReadReceiptUpdated: React.useCallback(() => {
+      console.log('[Inbox] Read receipt updated, debouncing refetch');
+      // Debounce: wait 1 second before refetching to batch multiple updates
+      if (readReceiptDebounceRef.current) {
+        clearTimeout(readReceiptDebounceRef.current);
+      }
+      readReceiptDebounceRef.current = setTimeout(() => {
+        console.log('[Inbox] Refetching conversations after debounce');
+        refetchConversations();
+        readReceiptDebounceRef.current = null;
+      }, 1000);
+    }, [refetchConversations]),
+  });
+
   // Optimistic reactions state for instant UI feedback when reacting
   // Maps messageId -> { senderReaction, recipientReaction }
   const [optimisticReactions, setOptimisticReactions] = React.useState<
@@ -306,12 +331,51 @@ const InboxPage = () => {
   }, [selectedConversation?.id]);
 
   // Merge all 3 message sources: API + realtime + optimistic - transforms to UIMessage[]
-  const mergedMessages = useMessageMerging(
+  const mergedMessagesRaw = useMessageMerging(
     apiMessages || [],
     realtimeMessages,
     optimisticMessages,
     user?.id || null
   );
+
+  // Subscribe to read receipt updates for this conversation
+  // This allows the sender to see when their messages are read in realtime
+  const { readReceipts } = useRealtimeReadReceipts({
+    conversationId: selectedConversation?.id || '',
+    onReadReceiptUpdated: React.useCallback((receipt) => {
+      console.log('[Inbox Detail] Read receipt updated:', receipt.user_id, 'at', receipt.last_read_at);
+    }, []),
+  });
+
+  // Compute final message status using read receipts
+  // For sent messages, check if recipient has read them based on their read receipt
+  // This enhances the database-computed isRead with real-time read receipt data
+  const mergedMessages = React.useMemo(() => {
+    if (!user?.id) return mergedMessagesRaw;
+
+    // Find the recipient's read receipt (not the current user's)
+    const recipientReceipt = readReceipts.find((r) => r.user_id !== user.id);
+
+    return mergedMessagesRaw.map((msg) => {
+      // Only update read status for own sent messages
+      if (msg.sender_id !== user.id) return msg;
+
+      // If already marked as read from database, preserve it
+      if (msg.isRead) return msg;
+
+      // If recipient has a read receipt and it's after this message was sent
+      if (recipientReceipt?.last_read_at) {
+        const msgSentAt = new Date(msg.sent_at).getTime();
+        const readAt = new Date(recipientReceipt.last_read_at).getTime();
+
+        if (readAt >= msgSentAt) {
+          return { ...msg, isRead: true };
+        }
+      }
+
+      return msg;
+    });
+  }, [mergedMessagesRaw, readReceipts, user?.id]);
 
   // Collect attachments that need signed URL generation
   // Skip attachments that already have URLs (optimistic with local_uri, or API with signed_url)

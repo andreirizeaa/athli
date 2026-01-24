@@ -24,7 +24,7 @@ import {
   type Coach,
   type InboxMessage,
 } from '@/services/inbox-service';
-import { useRealtimeConversations } from '@/hooks/use-realtime-messaging';
+import { useRealtimeConversations, useRealtimeReadReceiptsForUser } from '@/hooks/use-realtime-messaging';
 
 // Messages cache for instant navigation
 type MessagesCache = {
@@ -92,6 +92,31 @@ export default function InboxScreen() {
         console.log('[Inbox Realtime] New conversation:', realtimeConversation.id);
         return [...prev, realtimeConversation];
       });
+    },
+  });
+
+  // Get conversation IDs for read receipt subscription
+  const conversationIds = useMemo(() => coaches.map((c) => c.id), [coaches]);
+
+  // Debounce timer ref to prevent excessive API calls
+  const readReceiptDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Subscribe to read receipt changes to update "read" status in inbox list
+  // When the coach reads a message, this triggers and refreshes the inbox
+  useRealtimeReadReceiptsForUser({
+    userId: userId || '',
+    conversationIds,
+    onReadReceiptUpdated: (receipt) => {
+      console.log('[Inbox] Read receipt updated, debouncing reload');
+      // Debounce: wait 1 second before reloading to batch multiple updates
+      if (readReceiptDebounceRef.current) {
+        clearTimeout(readReceiptDebounceRef.current);
+      }
+      readReceiptDebounceRef.current = setTimeout(() => {
+        console.log('[Inbox] Reloading coaches after debounce');
+        loadCoaches(false);
+        readReceiptDebounceRef.current = null;
+      }, 1000);
     },
   });
 
@@ -533,6 +558,9 @@ const styles = StyleSheet.create({
     right: 0,
     top: '50%',
     transform: [{ translateY: -22 }],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   coachListContainer: {
   },
@@ -559,7 +587,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingTop: 16,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
   actionButton: {
     paddingHorizontal: 16,
