@@ -43,6 +43,7 @@ export default function EditClientInjuryModal() {
     useEffect(() => {
         if (existingInjury) {
             setTitle(existingInjury.injury);
+            setBody(existingInjury.details || '');
             setDate(existingInjury.date ? new Date(existingInjury.date) : null);
         }
     }, [existingInjury]);
@@ -51,6 +52,7 @@ export default function EditClientInjuryModal() {
     const isEmpty = title.trim() === '';
     const hasChanges = existingInjury && (
         title.trim() !== existingInjury.injury ||
+        body.trim() !== (existingInjury.details || '') ||
         (date ? date.toISOString().split('T')[0] : null) !== existingInjury.date
     );
     const canSave = (isFormValid && hasChanges && !isSubmitting && !isDeleting) || isEmpty;
@@ -78,11 +80,13 @@ export default function EditClientInjuryModal() {
                     return {
                         injury: title.trim(),
                         date: date ? date.toISOString().split('T')[0] : null,
+                        details: body.trim() || null,
                     };
                 }
                 return {
                     injury: i.injury,
                     date: i.date,
+                    details: i.details || null,
                 };
             });
 
@@ -100,7 +104,7 @@ export default function EditClientInjuryModal() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [canSave, id, coachId, injuryId, title, date, injuries, refreshSection, handleClose, t, isEmpty]);
+    }, [canSave, id, coachId, injuryId, title, body, date, injuries, refreshSection, handleClose, t, isEmpty]);
 
     const handleDelete = useCallback(() => {
         Alert.alert(
@@ -122,6 +126,7 @@ export default function EditClientInjuryModal() {
                                 .map(i => ({
                                     injury: i.injury,
                                     date: i.date,
+                                    details: i.details || null,
                                 }));
 
                             await saveAthleteInjuries(id, coachId, updatedInjuries);
@@ -234,10 +239,10 @@ export default function EditClientInjuryModal() {
                     />
 
                     <TextAreaInput
-                        label={t('clientDetail.editInjuryModal.injuryBody')}
+                        label={t('clientDetail.editInjuryModal.injuryDetails')}
                         value={body}
                         onChangeText={setBody}
-                        placeholder={t('clientDetail.editInjuryModal.injuryBodyPlaceholder')}
+                        placeholder={t('clientDetail.editInjuryModal.injuryDetailsPlaceholder')}
                         numberOfLines={8}
                         minHeight={200}
                     />

@@ -143,6 +143,7 @@ export const clientDetailsController = {
                     coach_id: coachId,
                     goal: g.goal,
                     target_date: g.target_date || null,
+                    details: g.details || null,
                 }));
 
                 const { error: insertError } = await supabase.from('client_goals').insert(inserts);
@@ -222,6 +223,7 @@ export const clientDetailsController = {
                     coach_id: coachId,
                     injury: i.injury,
                     date: i.date || null,
+                    details: i.details || null,
                 }));
 
                 const { error: insertError } = await supabase.from('client_injuries').insert(inserts);

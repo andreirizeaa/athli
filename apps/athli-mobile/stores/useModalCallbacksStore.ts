@@ -52,6 +52,7 @@ type ModalCallbacksStore = {
   reorderCallback: ((items: BuilderItem[]) => void) | null;
   questionSelectCallback: ((question: Question) => void) | null;
   questionsReorderCallback: ((questions: Question[]) => void) | null;
+  metadataUpdateCallback: ((metadata: { name: string; description: string; type: string; difficulty: string }) => void) | null;
 
   // Stored data
   storedRepeatData: RepeatData | null;
@@ -79,6 +80,7 @@ type ModalCallbacksStore = {
   setReorderCallback: (callback: (items: BuilderItem[]) => void) => void;
   setQuestionSelectCallback: (callback: (question: Question) => void) => void;
   setQuestionsReorderCallback: (callback: (questions: Question[]) => void) => void;
+  setMetadataUpdateCallback: (callback: (metadata: { name: string; description: string; type: string; difficulty: string }) => void) => void;
 
   // Actions - Trigger callbacks
   triggerClientSelect: (client: Client) => void;
@@ -99,6 +101,7 @@ type ModalCallbacksStore = {
   triggerReorder: (items: BuilderItem[]) => void;
   triggerQuestionSelect: (question: Question) => void;
   triggerQuestionsReorder: (questions: Question[]) => void;
+  triggerMetadataUpdate: (metadata: { name: string; description: string; type: string; difficulty: string }) => void;
 
   // Actions - Data management
   getRepeatData: () => RepeatData | null;
@@ -133,6 +136,7 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
   reorderCallback: null,
   questionSelectCallback: null,
   questionsReorderCallback: null,
+  metadataUpdateCallback: null,
 
   storedRepeatData: null,
   storedHabitOptionsData: null,
@@ -160,6 +164,7 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
   setReorderCallback: (callback) => set({ reorderCallback: callback }),
   setQuestionSelectCallback: (callback) => set({ questionSelectCallback: callback }),
   setQuestionsReorderCallback: (callback) => set({ questionsReorderCallback: callback }),
+  setMetadataUpdateCallback: (callback) => set({ metadataUpdateCallback: callback }),
   setReorderQuestions: (questions) => set({ storedReorderQuestions: questions, reorderQuestions: questions }),
 
   // Trigger callback actions
@@ -269,6 +274,12 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
     const { questionsReorderCallback } = get();
     if (questionsReorderCallback) {
       questionsReorderCallback(questions);
+    }
+  },
+  triggerMetadataUpdate: (metadata) => {
+    const { metadataUpdateCallback } = get();
+    if (metadataUpdateCallback) {
+      metadataUpdateCallback(metadata);
     }
   },
 

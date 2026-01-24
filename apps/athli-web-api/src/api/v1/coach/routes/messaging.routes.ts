@@ -326,3 +326,48 @@ coachMessagingRouter.post('/conversations/:conversationId/mute', supabaseAuthent
  *         description: Conversation unmuted successfully
  */
 coachMessagingRouter.post('/conversations/:conversationId/unmute', supabaseAuthenticate, coachMessagingController.unmuteConversation);
+
+/**
+ * @swagger
+ * /api/v1/coach/messaging/broadcast:
+ *   post:
+ *     summary: Broadcast a message to multiple clients
+ *     tags: [Coach Messaging]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - clientIds
+ *               - content
+ *             properties:
+ *               clientIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of client IDs to send message to
+ *               content:
+ *                 type: string
+ *                 description: Message content
+ *               attachmentCount:
+ *                 type: integer
+ *                 description: Number of attachments (if any)
+ *               messageIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Pre-generated message IDs for each client
+ *               idempotencyKeys:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Idempotency keys for each client
+ *     responses:
+ *       200:
+ *         description: Broadcast sent successfully
+ */
+coachMessagingRouter.post('/broadcast', supabaseAuthenticate, coachMessagingController.broadcastMessage);

@@ -50,12 +50,14 @@ export default function AddClientGoalModal() {
             const newGoal = {
                 goal: title.trim(),
                 target_date: date ? date.toISOString().split('T')[0] : null,
+                details: body.trim() || null,
             };
 
             // Save all goals including the new one
             const updatedGoals = [...goals.map(g => ({
                 goal: g.goal,
                 target_date: g.target_date,
+                details: g.details || null,
             })), newGoal];
 
             await saveAthleteGoals(id, coachId, updatedGoals);
@@ -72,7 +74,7 @@ export default function AddClientGoalModal() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [canSave, id, coachId, title, date, goals, refreshSection, handleClose, t]);
+    }, [canSave, id, coachId, title, body, date, goals, refreshSection, handleClose, t]);
 
     const handleSelectDatePress = useCallback(() => {
         setDateSelectCallback((newDate: Date) => {
@@ -164,10 +166,10 @@ export default function AddClientGoalModal() {
                     />
 
                     <TextAreaInput
-                        label={t('clientDetail.addGoalModal.goalBody')}
+                        label={t('clientDetail.addGoalModal.goalDetails')}
                         value={body}
                         onChangeText={setBody}
-                        placeholder={t('clientDetail.addGoalModal.goalBodyPlaceholder')}
+                        placeholder={t('clientDetail.addGoalModal.goalDetailsPlaceholder')}
                         numberOfLines={8}
                         minHeight={200}
                     />

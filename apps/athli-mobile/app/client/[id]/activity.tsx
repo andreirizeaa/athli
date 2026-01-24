@@ -64,7 +64,7 @@ export default function ClientActivityScreen() {
       const date = new Date(dateStr);
       date.setHours(0, 0, 0, 0);
 
-      workouts.forEach((workout) => {
+      (Array.isArray(workouts) ? workouts : []).forEach((workout) => {
         // Check for completed workouts
         if (workout.day_status === 'completed' || workout.day_status === 'in_progress') {
           // Update last activity

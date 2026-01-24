@@ -1,16 +1,20 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { PressableOpacity, PressableScale } from 'pressto';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useMutation } from '@tanstack/react-query';
 import { Storage } from '@/lib/storage';
 import {
   ChevronDown,
   ChevronLeft,
-  Plus,
+  Trash2,
+  CircleX,
+  CircleDashed,
+  CircleCheck,
   Dumbbell,
-  ClipboardList,
-  ChevronRight,
 } from 'lucide-react-native';
+import { haptics } from '@/utils/haptics';
+import { deleteWorkoutByKey } from '@/services/client/client-training-service';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
@@ -19,17 +23,10 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableCalendar } from '@/components/features/calendar/swipeable-calendar';
 import { formatDateDDMMYYYY, formatDateYYYYMMDD } from '@/lib/utils/date-formatters';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
-import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';
+import { FilledButton } from '@/components/ui/buttons';
 import type { TrainingCalendarItem } from '@/services/client/client-service';
 
 const SELECTED_DATE_KEY = '@select_date_modal_selected_date_client';
-
-// Type for workout exercise display
-interface WorkoutExercise {
-  id: string;
-  name: string;
-  sets: number;
-}
 
 export default function ClientTrainingScreen() {
   const router = useRouter();
@@ -45,12 +42,21 @@ export default function ClientTrainingScreen() {
   const coachId = useClientDetailStore((state) => state.coachId);
   const loadClientData = useClientDetailStore((state) => state.loadClientData);
 
+  // Get refreshSection to force reload training data
+  const refreshSection = useClientDetailStore((state) => state.refreshSection);
+  const fetchTrainingDataForDate = useClientDetailStore((state) => state.fetchTrainingDataForDate);
+  const extendTrainingRange = useClientDetailStore((state) => state.extendTrainingRange);
+  const isDateInLoadedRange = useClientDetailStore((state) => state.isDateInLoadedRange);
+
   // Load client data if not already loaded
   useEffect(() => {
     if (id && !clientId) {
       loadClientData(id);
+    } else if (id && clientId && Object.keys(trainingCalendar).length === 0) {
+      // If client is loaded but training data is empty, refresh training section
+      refreshSection('training');
     }
-  }, [id, clientId, loadClientData]);
+  }, [id, clientId, loadClientData, trainingCalendar, refreshSection]);
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
     const today = new Date();
@@ -112,6 +118,10 @@ export default function ClientTrainingScreen() {
               setHasSelectedDate(true);
               setCurrentMonth(date.getMonth());
               setCurrentYear(date.getFullYear());
+              
+              // Always fetch data for the selected date
+              fetchTrainingDataForDate(date);
+              
               Storage.removeItem(SELECTED_DATE_KEY);
             }
           }
@@ -120,62 +130,57 @@ export default function ClientTrainingScreen() {
         }
       };
       checkSelectedDate();
-    }, [animateCalendarForDateChange])
+    }, [animateCalendarForDateChange, fetchTrainingDataForDate])
   );
 
-  const handleDateSelect = (date: Date) => {
+  const handleDateSelect = async (date: Date) => {
     const newDate = new Date(date);
     newDate.setHours(0, 0, 0, 0);
+    
+    // Always update the selected date immediately for UI responsiveness
     animateCalendarForDateChange(newDate);
     setSelectedDate(newDate);
     setHasSelectedDate(true);
     setCurrentMonth(newDate.getMonth());
     setCurrentYear(newDate.getFullYear());
+
+    // ALWAYS fetch training data for the clicked date - fetch just that one date
+    // This ensures we can click ANY date and get its data
+    await fetchTrainingDataForDate(newDate);
   };
 
-  const handleCalendarSwipe = (month: number, year: number) => {
+  const handleCalendarSwipe = async (month: number, year: number) => {
     setCurrentMonth(month);
     setCurrentYear(year);
+
+    // When swiping to a new month, check if middle of month is in range
+    const midMonthDate = new Date(year, month, 15);
+    if (!isDateInLoadedRange(midMonthDate)) {
+      await extendTrainingRange(midMonthDate);
+    }
   };
 
   // Get workouts for selected date
+  // Note: API returns dates in DD-MM-YYYY format
+  // Each date contains an object with workout keys (workout_1, workout_2, etc.), not an array
   const workoutsForSelectedDate = useMemo(() => {
     if (!selectedDate || !trainingCalendar) return [];
-    const dateKey = formatDateYYYYMMDD(selectedDate);
-    return trainingCalendar[dateKey] || [];
+    const dateKey = formatDateDDMMYYYY(selectedDate);
+    const workoutsObj = trainingCalendar[dateKey];
+
+    if (!workoutsObj) return [];
+
+    // Convert object entries to array, preserving the key as the instance ID
+    // API returns { workout_1: {...}, workout_2: {...} }
+    // The key (workout_1, workout_2) is the unique instance ID for this client's workout
+    // The workout.id inside is the template ID from the coach's library
+    const workoutsArray = Object.entries(workoutsObj).map(([key, workout]: [string, any]) => ({
+      ...workout,
+      id: key, // Instance ID (unique to this client's training)
+      templateId: workout.id, // Original template ID from coach's library
+    }));
+    return workoutsArray;
   }, [selectedDate, trainingCalendar]);
-
-  // Extract exercises from workout data
-  const getExercisesFromWorkout = (workout: TrainingCalendarItem): WorkoutExercise[] => {
-    if (!workout.workout_data?.items) return [];
-
-    const exercises: WorkoutExercise[] = [];
-
-    workout.workout_data.items.forEach((item: any) => {
-      if (item.itemType === 'exercise') {
-        exercises.push({
-          id: item.data?.id || `ex-${exercises.length}`,
-          name: item.data?.name || 'Exercise',
-          sets: item.data?.sets?.length || 0,
-        });
-      } else if (item.itemType === 'section') {
-        // Extract exercises from section
-        const sectionExercises = item.data?.exercises || [];
-        sectionExercises.forEach((group: any) => {
-          const groupExercises = group.exercises || [group];
-          groupExercises.forEach((ex: any) => {
-            exercises.push({
-              id: ex.id || `ex-${exercises.length}`,
-              name: ex.name || 'Exercise',
-              sets: ex.sets?.length || 1,
-            });
-          });
-        });
-      }
-    });
-
-    return exercises;
-  };
 
   const displayText = useMemo(() => {
     const monthKeys = [
@@ -208,42 +213,89 @@ export default function ClientTrainingScreen() {
     router.back();
   };
 
-  const handleWorkoutPress = (workout: TrainingCalendarItem) => {
-    // Navigate to workout builder with client workout data
+  const handleWorkoutPress = (workout: any) => {
+    if (!selectedDate || !id || !coachId) return;
+
+    // Navigate to workout builder with client context
+    // The workout builder will fetch the client workout instance directly
+    // workout.id is the instance ID (e.g., "workout_1") unique to this client's training
+    // workout.templateId is the original template ID from the coach's library
     router.push({
       pathname: '/library/workout/[id]',
       params: {
-        id: workout.id,
+        id: workout.id, // Pass the instance ID, not the template ID
         name: workout.workout,
         description: workout.description || '',
         type: workout.type || '',
         difficulty: workout.difficulty || 'all_levels',
         // Pass client context for client-specific workout editing
         clientId: id,
-        clientWorkoutDate: selectedDate ? formatDateYYYYMMDD(selectedDate) : '',
+        clientWorkoutDate: formatDateYYYYMMDD(selectedDate),
+        coachId: coachId, // Pass coachId to ensure the workout screen can fetch data
       },
     });
   };
 
-  const dropdownOptions = useMemo(
-    () => [
-      {
-        label: t('clientDetail.actions.assignWorkout'),
-        icon: { sf: 'figure.run', IconComponent: Dumbbell },
-        onPress: () => {
-          router.push(`/modals/shared/assign-to-clients-modal?type=workout&clientId=${id}`);
-        },
+  // Check if selected date is today or in the future
+  const isDateTodayOrFuture = useMemo(() => {
+    if (!selectedDate) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return selectedDate >= today;
+  }, [selectedDate]);
+
+  const handleAddWorkout = () => {
+    if (!selectedDate) return;
+    router.push({
+      pathname: '/modals/client/add-workout-to-day-modal',
+      params: {
+        clientId: id,
+        date: formatDateYYYYMMDD(selectedDate),
       },
-      {
-        label: t('clientDetail.actions.addWorkout'),
-        icon: { sf: 'plus.circle', IconComponent: Plus },
-        onPress: () => {
-          router.push(`/modals/library/add-workout-modal?clientId=${id}`);
+    });
+  };
+
+  // Delete workout mutation
+  const deleteMutation = useMutation({
+    mutationFn: (workout: TrainingCalendarItem) => {
+      if (!selectedDate || !coachId || !id) {
+        throw new Error('Missing required data for delete');
+      }
+      return deleteWorkoutByKey({
+        clientId: id,
+        coachId,
+        sourceDate: formatDateYYYYMMDD(selectedDate),
+        workoutId: workout.id,
+      });
+    },
+    onSuccess: () => {
+      haptics.success();
+      refreshSection('training');
+    },
+    onError: (error: Error) => {
+      haptics.error();
+      Alert.alert(
+        t('general.error'),
+        error.message || t('general.errorDeleting'),
+        [{ text: t('general.ok') }]
+      );
+    },
+  });
+
+  const handleDeleteWorkout = (workout: TrainingCalendarItem) => {
+    Alert.alert(
+      t('general.delete'),
+      `${t('general.deleteConfirmation')} "${workout.workout}"?`,
+      [
+        { text: t('general.cancel'), style: 'cancel' },
+        {
+          text: t('general.delete'),
+          style: 'destructive',
+          onPress: () => deleteMutation.mutate(workout),
         },
-      },
-    ],
-    [t, router, id]
-  );
+      ]
+    );
+  };
 
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
@@ -267,6 +319,34 @@ export default function ClientTrainingScreen() {
     }
   };
 
+  // Render status icon based on workout status
+  const renderStatusIcon = (status: string | undefined) => {
+    const completedSummaryStatus = status;
+    switch (completedSummaryStatus) {
+      case 'completed':
+        return (
+          <CircleCheck
+            size={20}
+            color="#22C55E"
+          />
+        );
+      case 'in_progress':
+        return (
+          <CircleDashed
+            size={20}
+            color="#F59E0B"
+          />
+        );
+      default:
+        return (
+          <CircleX
+            size={20}
+            color={themeColors.mutedText}
+          />
+        );
+    }
+  };
+
   return (
     <ScreenWrapper scrollable={false}>
       <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
@@ -285,14 +365,7 @@ export default function ClientTrainingScreen() {
             color={themeColors.text}
           />
         </PressableOpacity>
-        <DropdownMenuWrapper options={dropdownOptions}>
-          <IconButton
-            icon={{ sf: 'plus', IconComponent: Plus }}
-            onPress={() => {}}
-            size="md"
-            color={iconColor}
-          />
-        </DropdownMenuWrapper>
+        <View style={styles.headerSpacer} />
       </View>
 
       {/* Calendar */}
@@ -316,7 +389,7 @@ export default function ClientTrainingScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={themeColors.primary} />
         </View>
-      ) : workoutsForSelectedDate.length === 0 ? (
+      ) : !workoutsForSelectedDate || workoutsForSelectedDate.length === 0 ? (
         <View style={styles.emptyContainer}>
           <PlatformIcon sf="dumbbell" IconComponent={Dumbbell} size={48} color={themeColors.mutedText} />
           <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
@@ -325,6 +398,13 @@ export default function ClientTrainingScreen() {
           <Text style={[styles.emptyDescription, { color: themeColors.mutedText }]}>
             {t('clientDetail.training.noWorkoutsDescription')}
           </Text>
+          {isDateTodayOrFuture && (
+            <FilledButton
+              label={t('clientDetail.training.addWorkout')}
+              onPress={handleAddWorkout}
+              style={styles.addWorkoutButton}
+            />
+          )}
         </View>
       ) : (
         <ScrollView
@@ -333,8 +413,7 @@ export default function ClientTrainingScreen() {
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="on-drag"
         >
-          {workoutsForSelectedDate.map((workout, index) => {
-            const exercises = getExercisesFromWorkout(workout);
+          {(workoutsForSelectedDate || []).map((workout, index) => {
             return (
               <PressableScale
                 key={workout.id || index}
@@ -346,18 +425,9 @@ export default function ClientTrainingScreen() {
                   {/* Workout Header */}
                   <View style={styles.workoutHeader}>
                     <View style={styles.workoutHeaderLeft}>
-                      <View
-                        style={[
-                          styles.workoutIcon,
-                          { backgroundColor: `${themeColors.primary}15` },
-                        ]}
-                      >
-                        <PlatformIcon
-                          sf="dumbbell.fill"
-                          IconComponent={Dumbbell}
-                          size={20}
-                          color={themeColors.primary}
-                        />
+                      {/* Status Icon */}
+                      <View style={styles.statusIconContainer}>
+                        {renderStatusIcon(workout.completedSummary?.status)}
                       </View>
                       <View style={styles.workoutInfo}>
                         <Text
@@ -366,82 +436,33 @@ export default function ClientTrainingScreen() {
                         >
                           {workout.workout}
                         </Text>
-                        <View style={styles.workoutMeta}>
-                          <Text style={[styles.workoutMetaText, { color: themeColors.mutedText }]}>
-                            {workout.totalExercises || exercises.length}{' '}
-                            {workout.totalExercises === 1
-                              ? t('library.exercise')
-                              : t('library.exercises')}
-                          </Text>
-                          <View
-                            style={[
-                              styles.statusBadge,
-                              { backgroundColor: `${getStatusColor(workout.day_status)}20` },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.statusText,
-                                { color: getStatusColor(workout.day_status) },
-                              ]}
-                            >
-                              {getStatusLabel(workout.day_status)}
-                            </Text>
-                          </View>
-                        </View>
+                        <Text style={[styles.exerciseCount, { color: themeColors.mutedText }]}>
+                          {workout.totalExercises || 0}{' '}
+                          {(workout.totalExercises || 0) === 1
+                            ? t('library.exercise')
+                            : t('library.exercises')}
+                        </Text>
                       </View>
                     </View>
-                    <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                    <IconButton
+                      icon={{ sf: 'trash', IconComponent: Trash2 }}
+                      onPress={() => handleDeleteWorkout(workout)}
+                      size="sm"
+                      color={themeColors.mutedText}
+                      backgroundColor={themeColors.surfaceSecondary}
+                    />
                   </View>
-
-                  {/* Exercises List */}
-                  {exercises.length > 0 && (
-                    <View
-                      style={[
-                        styles.exercisesContainer,
-                        { borderTopColor: themeColors.border },
-                      ]}
-                    >
-                      {exercises.slice(0, 5).map((exercise, exIndex) => (
-                        <View key={exercise.id} style={styles.exerciseRow}>
-                          <View
-                            style={[
-                              styles.exerciseNumber,
-                              { backgroundColor: themeColors.backgroundSecondary },
-                            ]}
-                          >
-                            <Text
-                              style={[styles.exerciseNumberText, { color: themeColors.mutedText }]}
-                            >
-                              {exIndex + 1}
-                            </Text>
-                          </View>
-                          <Text
-                            style={[styles.exerciseName, { color: themeColors.text }]}
-                            numberOfLines={1}
-                          >
-                            {exercise.name}
-                          </Text>
-                          {exercise.sets > 0 && (
-                            <Text
-                              style={[styles.exerciseSets, { color: themeColors.mutedText }]}
-                            >
-                              {exercise.sets} {exercise.sets === 1 ? 'set' : 'sets'}
-                            </Text>
-                          )}
-                        </View>
-                      ))}
-                      {exercises.length > 5 && (
-                        <Text style={[styles.moreExercises, { color: themeColors.mutedText }]}>
-                          +{exercises.length - 5} more
-                        </Text>
-                      )}
-                    </View>
-                  )}
                 </View>
               </PressableScale>
             );
           })}
+          {isDateTodayOrFuture && (
+            <FilledButton
+              label={t('clientDetail.training.addWorkout')}
+              onPress={handleAddWorkout}
+              style={styles.addWorkoutButtonInList}
+            />
+          )}
         </ScrollView>
       )}
     </ScreenWrapper>
@@ -491,8 +512,9 @@ const styles = StyleSheet.create({
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingHorizontal: 32,
+    paddingTop: 48,
     gap: 12,
   },
   emptyTitle: {
@@ -530,73 +552,30 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 12,
   },
-  workoutIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  statusIconContainer: {
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
   workoutInfo: {
     flex: 1,
-    gap: 4,
+    gap: 2,
   },
   workoutName: {
     ...typography.p1,
     fontWeight: '600',
   },
-  workoutMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  workoutMetaText: {
+  exerciseCount: {
     ...typography.p3,
   },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
+  headerSpacer: {
+    width: 44,
   },
-  statusText: {
-    ...typography.p4,
-    fontWeight: '600',
-    textTransform: 'capitalize',
+  addWorkoutButton: {
+    marginTop: 24,
   },
-  exercisesContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    gap: 8,
-  },
-  exerciseRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  exerciseNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  exerciseNumberText: {
-    ...typography.p4,
-    fontWeight: '600',
-  },
-  exerciseName: {
-    ...typography.p2,
-    flex: 1,
-  },
-  exerciseSets: {
-    ...typography.p3,
-  },
-  moreExercises: {
-    ...typography.p3,
-    fontStyle: 'italic',
-    marginTop: 4,
-    textAlign: 'center',
+  addWorkoutButtonInList: {
+    marginTop: 8,
   },
 });

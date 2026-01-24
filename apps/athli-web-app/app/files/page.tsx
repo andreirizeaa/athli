@@ -324,7 +324,7 @@ const FilesPage = () => {
       label: t('files.columns.size'),
       width: { class: 'w-[120px]', pixel: '120px' },
       renderCell: (row) => {
-        if (!row.size) return <span className="text-sm text-muted-foreground">-</span>;
+        if (!row.size) return <span className="text-sm text-muted-foreground">--</span>;
         const sizeInKB = row.size / 1024;
         const sizeInMB = sizeInKB / 1024;
         const displaySize = sizeInMB > 1 ? `${sizeInMB.toFixed(2)} MB` : `${sizeInKB.toFixed(2)} KB`;

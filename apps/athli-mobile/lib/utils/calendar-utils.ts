@@ -1,7 +1,11 @@
 // Generate weeks starting from Monday to Sunday
 // Returns an array of weeks, where each week is an array of 7 Date objects (Monday to Sunday)
 
-const WEEKS_TO_GENERATE = 104; // ~2 years worth of weeks (52 weeks * 2)
+// Generate 20 years worth of weeks (10 years back, 10 years forward)
+// This ensures users can select any date within a reasonable range
+const YEARS_BACK = 10;
+const YEARS_FORWARD = 10;
+const WEEKS_TO_GENERATE = (YEARS_BACK + YEARS_FORWARD) * 52; // ~20 years worth of weeks
 
 // Normalize date to start of day
 const normalizeDateForWeek = (date: Date): Date => {
@@ -26,9 +30,9 @@ export const generateWeeks = (): Date[][] => {
     return normalizeDateForWeek(monday);
   };
 
-  // Start from 52 weeks ago (1 year back)
+  // Start from YEARS_BACK years ago
   const startMonday = getMonday(today);
-  startMonday.setDate(startMonday.getDate() - (52 * 7));
+  startMonday.setDate(startMonday.getDate() - (YEARS_BACK * 52 * 7));
 
   for (let weekIndex = 0; weekIndex < WEEKS_TO_GENERATE; weekIndex++) {
     const weekStart = new Date(startMonday);
@@ -62,6 +66,7 @@ export const getWeekIndexForDate = (date: Date, weeks: Date[][]): number => {
   const normalizedDate = normalizeDate(date);
   const dateTime = normalizedDate.getTime();
   
+  // First, try to find exact match
   for (let i = 0; i < weeks.length; i++) {
     const week = weeks[i];
     if (week.some((d) => {
@@ -71,7 +76,27 @@ export const getWeekIndexForDate = (date: Date, weeks: Date[][]): number => {
       return i;
     }
   }
-  return Math.floor(weeks.length / 2); // Default to middle week if not found
+  
+  // If not found, find the closest week (the week that contains dates closest to the target date)
+  let closestIndex = Math.floor(weeks.length / 2);
+  let minDistance = Infinity;
+  
+  for (let i = 0; i < weeks.length; i++) {
+    const week = weeks[i];
+    if (week.length === 0) continue;
+    
+    // Calculate distance from target date to the middle of the week (Thursday)
+    const weekMiddle = week[3] || week[0];
+    const weekMiddleTime = normalizeDate(weekMiddle).getTime();
+    const distance = Math.abs(dateTime - weekMiddleTime);
+    
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestIndex = i;
+    }
+  }
+  
+  return closestIndex;
 };
 
 // Get the month and year for a week (returns the month/year of the middle of the week)

@@ -337,6 +337,7 @@ export default function LibraryFileViewerModal() {
                     onPress={handleShare}
                     size="lg"
                     color="#FFFFFF"
+                    scheme="dark"
                 />
             </View>
         );
@@ -360,6 +361,7 @@ export default function LibraryFileViewerModal() {
                         onPress={handleClose}
                         size="md"
                         color="#FFFFFF"
+                        scheme="dark"
                     />
                     <View style={styles.headerSpacer} />
                     <IconButton
@@ -367,6 +369,7 @@ export default function LibraryFileViewerModal() {
                         onPress={handleShare}
                         size="md"
                         color="#FFFFFF"
+                        scheme="dark"
                         loading={isSharing}
                     />
                 </View>

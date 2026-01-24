@@ -235,6 +235,7 @@ export default function FileViewerModal() {
                     onPress={handleShare}
                     size="lg"
                     color="#FFFFFF"
+                    scheme="dark"
                 />
             </View>
         );
@@ -258,6 +259,7 @@ export default function FileViewerModal() {
                         onPress={handleClose}
                         size="md"
                         color="#FFFFFF"
+                        scheme="dark"
                     />
                     <View style={styles.headerSpacer} />
                     <IconButton
@@ -265,6 +267,7 @@ export default function FileViewerModal() {
                         onPress={handleShare}
                         size="md"
                         color="#FFFFFF"
+                        scheme="dark"
                         loading={isSharing}
                     />
                 </View>
