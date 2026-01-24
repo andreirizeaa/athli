@@ -121,7 +121,7 @@ export default function SettingsScreen() {
   };
 
   const handleOpenProfile = () => {
-    router.push('/settings/profile');
+    router.push('/settings/edit-profile');
   };
 
   const handleOpenWebURL = (url: string) => {

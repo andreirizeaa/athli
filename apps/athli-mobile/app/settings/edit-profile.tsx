@@ -1,11 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Building2, ChevronLeft, User } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference, useAppView, useCoachProfileStore, useCoachCompanyStore } from '@/stores';
+import {
+  useThemePreference,
+  useAppView,
+  useCoachProfileStore,
+  useCoachCompanyStore,
+  useClientProfileStore,
+} from '@/stores';
 import { useTranslations } from '@/stores';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -13,7 +19,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { DetailRow } from '@/components/ui/detail-row';
 
-export default function ProfileScreen() {
+export default function EditProfileScreen() {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { appView } = useAppView();
@@ -22,8 +28,19 @@ export default function ProfileScreen() {
 
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const company = useCoachCompanyStore((state) => state.company);
+  const clientProfile = useClientProfileStore((state) => state.profile);
 
   const isAthleteView = appView === 'athlete';
+
+  // Log client data when navigating to this screen
+  useEffect(() => {
+    if (isAthleteView) {
+      console.log('[EditProfileScreen] Client profile data:', clientProfile);
+    } else {
+      console.log('[EditProfileScreen] Coach profile data:', coachProfile);
+      console.log('[EditProfileScreen] Company data:', company);
+    }
+  }, [isAthleteView, clientProfile, coachProfile, company]);
 
   const handleGoBack = () => {
     router.back();
@@ -93,6 +110,9 @@ export default function ProfileScreen() {
     return `${count} ${t('settings.companyDetails.selected')}`;
   };
 
+  // Get the appropriate profile based on view
+  const currentProfile = isAthleteView ? clientProfile : coachProfile;
+
   return (
     <View
       style={[
@@ -127,7 +147,7 @@ export default function ProfileScreen() {
         <Card>
           <DetailRow
             label={t('settings.personalDetails.profilePicture')}
-            avatarUrl={coachProfile?.profile_picture_url}
+            avatarUrl={currentProfile?.profile_picture_url}
             avatarFallback={
               <PlatformIcon
                 sf="person.fill"
@@ -141,7 +161,7 @@ export default function ProfileScreen() {
           <Separator />
           <DetailRow
             label={t('settings.personalDetails.fullName')}
-            value={coachProfile?.name || t('settings.personalDetails.notSet')}
+            value={currentProfile?.name || t('settings.personalDetails.notSet')}
             onPress={handleEditName}
           />
         </Card>

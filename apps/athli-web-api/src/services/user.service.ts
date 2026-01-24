@@ -84,31 +84,46 @@ class UserService {
       updates.profilePictureUrl = avatarUrl;
     }
 
-    // Update auth.users metadata if name is being updated
-    if (updates.name !== undefined || updates.profilePictureUrl !== undefined) {
-      const metadataUpdates: any = {};
+    // Build updates for user_profiles (single source of truth for name/email/avatar)
+    const userProfileUpdates: Record<string, unknown> = {};
+    const authMetadataUpdates: Record<string, unknown> = {};
 
-      if (updates.name !== undefined) {
-        metadataUpdates.name = updates.name;
+    if (updates.name !== undefined) {
+      userProfileUpdates.name = updates.name;
+      authMetadataUpdates.name = updates.name;
+    }
+
+    if (updates.profilePictureUrl !== undefined) {
+      userProfileUpdates.profile_picture_url = updates.profilePictureUrl;
+      authMetadataUpdates.profile_picture_url = updates.profilePictureUrl;
+      authMetadataUpdates.avatar_url = updates.profilePictureUrl;
+    }
+
+    // Directly update user_profiles (don't rely solely on trigger)
+    if (Object.keys(userProfileUpdates).length > 0) {
+      userProfileUpdates.updated_at = new Date().toISOString();
+      
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update(userProfileUpdates)
+        .eq('id', userId);
+
+      if (profileError) {
+        console.error('Failed to update user_profiles:', profileError);
+        throw new Error(`Failed to update profile: ${profileError.message}`);
       }
+    }
 
-      if (updates.profilePictureUrl !== undefined) {
-        metadataUpdates.profile_picture_url = updates.profilePictureUrl;
-        // Also update avatar_url for consistency
-        metadataUpdates.avatar_url = updates.profilePictureUrl;
-      }
-
+    // Also update auth.users metadata for consistency (used by OAuth flows)
+    if (Object.keys(authMetadataUpdates).length > 0) {
       const { error: authError } = await supabase.auth.admin.updateUserById(userId, {
-        user_metadata: metadataUpdates,
+        user_metadata: authMetadataUpdates,
       });
 
       if (authError) {
-        throw new Error(`Failed to update auth metadata: ${authError.message}`);
+        console.error('Failed to update auth metadata:', authError);
+        // Don't throw - profile update succeeded, auth metadata sync is secondary
       }
-
-      // The trigger will automatically sync these changes to user_profiles
-      // Wait a bit for the trigger to complete
-      await new Promise((resolve) => setTimeout(resolve, 200));
     }
 
     // Return updated profile
@@ -283,15 +298,12 @@ class UserService {
       throw new Error(`Failed to create user profile: ${userProfileInsertError.message}`);
     }
 
-    // Also insert into coach_profiles for complete data
+    // Also insert into coach_profiles for coach-specific data
+    // Note: email/name/profile_picture_url/signin_method are stored in user_profiles only
     const { error: coachProfileInsertError } = await supabase
       .from('coach_profiles')
       .insert({
         id: userId,
-        email: userEmail,
-        name: userName,
-        profile_picture_url: finalProfilePictureUrl,
-        signin_method: signinMethod,
         is_active: true,
         unique_code: uniqueCode,
       });
@@ -406,16 +418,13 @@ class UserService {
         .maybeSingle();
 
       if (!existingClientProfile) {
-        console.log('[Service] Creating client_profiles entry', { userId, email: userEmail, name: userName });
+        console.log('[Service] Creating client_profiles entry', { userId });
 
+        // Note: email/name/profile_picture_url/signin_method are stored in user_profiles only
         const { error: clientProfileError } = await supabase
           .from('client_profiles')
           .insert({
             client_id: userId,
-            email: userEmail,
-            name: userName,
-            profile_picture_url: finalProfilePictureUrl,
-            signin_method: signinMethod,
           });
 
         if (clientProfileError) {
@@ -570,15 +579,12 @@ class UserService {
       throw new Error(`Failed to create client profile: ${insertError.message}`);
     }
 
-    // Create client_profiles entry with email and name (other details filled later via app)
+    // Create client_profiles entry (other details filled later via app)
+    // Note: email/name/profile_picture_url/signin_method are stored in user_profiles only
     const { error: clientProfileError } = await supabase
       .from('client_profiles')
       .insert({
         client_id: userId,
-        email: userEmail,
-        name: userName,
-        profile_picture_url: finalProfilePictureUrl,
-        signin_method: signinMethod,
       });
 
     // Ignore if already exists (race condition), but throw for other errors

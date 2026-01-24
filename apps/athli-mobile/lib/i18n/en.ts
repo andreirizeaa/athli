@@ -80,6 +80,10 @@ export const en = {
     signInErrorMessage: 'An error occurred while signing in. Please try again.',
     validationError: 'Validation Error',
     emailPasswordRequired: 'Please enter both email and password.',
+    enterEmailAndPassword: 'Please enter your email and password.',
+    enterEmail: 'Please enter your email address.',
+    enterPassword: 'Please enter your password.',
+    invalidEmail: 'Please enter a valid email address.',
   },
   common: {
     discardChanges: 'Discard Changes?',
@@ -532,6 +536,7 @@ export const en = {
   },
   profile: {
     title: 'Profile',
+    editTitle: 'Edit Profile',
     coachView: 'Coach view',
     viewCoachesArea: 'View Coaches Area',
     enterYourName: 'Enter your name',
@@ -625,6 +630,7 @@ export const en = {
       discardChangesMessage: 'You have unsaved changes. Are you sure you want to discard them?',
       discardChanges: 'Discard',
       dateOfBirth: 'Date of birth',
+      dateOfBirthPlaceholder: 'Select date',
       day: 'Day',
       month: 'Month',
       year: 'Year',

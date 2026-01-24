@@ -20,7 +20,7 @@ import { Card } from '@/components/ui/card';
 import {
   InputBox,
   SelectInput,
-  DateOfBirthInput,
+  DateSelectInput,
   HeightInput,
   CountrySelectorInput,
   PhoneNumberInput,
@@ -507,18 +507,22 @@ export default function EditClientDetailsModal() {
               placeholder={t('clients.editClientModal.typePlaceholder')}
             />
 
-            <DateOfBirthInput
+            <DateSelectInput
               label={t('clients.editClientModal.dateOfBirth')}
               value={dateOfBirth}
               onChange={setDateOfBirth}
+              placeholder={t('clients.editClientModal.dateOfBirthPlaceholder')}
+              allowFuture={false}
             />
 
+            {/* Height input temporarily hidden
             <HeightInput
               label={t('clients.editClientModal.height')}
               value={height}
               onChangeText={setHeight}
               placeholder={t('clients.editClientModal.heightPlaceholder')}
             />
+            */}
 
             <CountrySelectorInput
               label={t('clients.editClientModal.country')}

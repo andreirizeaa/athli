@@ -18,31 +18,16 @@ export const clientProfileController = {
 
         const supabase = getSupabaseClient();
 
-        // Fetch from both tables to ensure we have all data
-        // client_profiles has the physical stats, user_profiles has the auth info/name/email
-        const { data: userProfile, error: userError } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', targetClientId)
-            .single();
-
-        if (userError || !userProfile) {
-            return notFound(res, { message: 'Profile not found' });
-        }
-
-        const { data: clientProfile, error: clientError } = await supabase
-            .from('client_profiles')
+        // Use the client_profiles_full view which merges user_profiles and client_profiles
+        const { data: fullProfile, error } = await supabase
+            .from('client_profiles_full')
             .select('*')
             .eq('client_id', targetClientId)
             .single();
 
-        // Merge the profiles if clientProfile exists
-        const fullProfile = {
-            ...userProfile,
-            ...(clientProfile || {}),
-            // Ensure ID is consistent
-            id: userProfile.id,
-        };
+        if (error || !fullProfile) {
+            return notFound(res, { message: 'Profile not found' });
+        }
 
         // Also try to get category from assignment if possible
         const { data: assignment } = await supabase
@@ -52,13 +37,15 @@ export const clientProfileController = {
             .limit(1)
             .single();
 
-        if (assignment) {
-            (fullProfile as any).category = assignment.category;
-        }
+        const profile = {
+            ...fullProfile,
+            id: targetClientId,
+            category: assignment?.category || null,
+        };
 
         success(res, {
             message: 'Client profile retrieved successfully',
-            data: { profile: fullProfile },
+            data: { profile },
         });
     },
 
@@ -127,42 +114,30 @@ export const clientProfileController = {
             }
 
 
-            // Re-fetch full profile to return
-            const { data: userProfile } = await supabase
-                .from('user_profiles')
-                .select('*')
-                .eq('id', targetClientId)
-                .single();
-
-            const { data: clientProfile } = await supabase
-                .from('client_profiles')
+            // Re-fetch full profile using the view
+            const { data: fullProfile } = await supabase
+                .from('client_profiles_full')
                 .select('*')
                 .eq('client_id', targetClientId)
                 .single();
 
-            const fullProfile = {
-                ...userProfile,
-                ...(clientProfile || {}),
+            // Get category from assignment if needed
+            const { data: assignment } = await supabase
+                .from('coach_client_assignments')
+                .select('category')
+                .eq('client_id', targetClientId)
+                .limit(1)
+                .single();
+
+            const profile = {
+                ...fullProfile,
                 id: targetClientId,
+                category: assignment?.category || null,
             };
-
-            if (updates.category) {
-                // If they try to update category, we should probably ignore it or update assignment?
-                // Clients usually can't change their category (coach decides).
-                // We'll just read it back.
-                const { data: assignment } = await supabase
-                    .from('coach_client_assignments')
-                    .select('category')
-                    .eq('client_id', targetClientId)
-                    .limit(1)
-                    .single();
-                if (assignment) (fullProfile as any).category = assignment.category;
-            }
-
 
             success(res, {
                 message: 'Client profile updated successfully',
-                data: { profile: fullProfile },
+                data: { profile },
             });
         } catch (error: any) {
             console.error('Error updating client profile:', error);

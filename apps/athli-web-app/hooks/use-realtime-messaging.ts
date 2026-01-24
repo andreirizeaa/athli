@@ -299,6 +299,40 @@ export const useRealtimeReadReceipts = ({
     callbackRef.current = onReadReceiptUpdated;
   }, [onReadReceiptUpdated]);
 
+  // Fetch initial read receipts when conversation changes
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const fetchInitialReceipts = async () => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('message_read_receipts')
+          .select('*')
+          .eq('conversation_id', conversationId);
+
+        if (error) {
+          console.error('[useRealtimeReadReceipts] Error fetching initial receipts:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          const receipts: ReadReceipt[] = data.map((r) => ({
+            ...r,
+            last_read_at: new Date(r.last_read_at),
+            updated_at: new Date(r.updated_at),
+          }));
+          setReadReceipts(receipts);
+        }
+      } catch (error) {
+        console.error('[useRealtimeReadReceipts] Error fetching initial receipts:', error);
+      }
+    };
+
+    fetchInitialReceipts();
+  }, [conversationId]);
+
+  // Subscribe to realtime updates
   useEffect(() => {
     if (!conversationId) return;
 
@@ -653,6 +687,86 @@ export const useRealtimeConversations = ({
   }, [userId]); // Only re-subscribe when userId changes
 
   return { conversations, channel };
+};
+
+// ================================================
+// REALTIME READ RECEIPTS FOR USER (All Conversations)
+// ================================================
+
+type RealtimeReadReceiptsForUserOptions = {
+  userId: string;
+  conversationIds: string[];
+  onReadReceiptUpdated?: (receipt: ReadReceipt) => void;
+};
+
+/**
+ * Subscribe to realtime read receipt updates for all conversations where user is a participant.
+ * This is used by the chat list to update "read" status when the other party reads a message.
+ */
+export const useRealtimeReadReceiptsForUser = ({
+  userId,
+  conversationIds,
+  onReadReceiptUpdated,
+}: RealtimeReadReceiptsForUserOptions) => {
+  const [channel, setChannel] = useState<RealtimeChannel | null>(null);
+
+  // Use ref to store callback
+  const callbackRef = useRef(onReadReceiptUpdated);
+
+  useEffect(() => {
+    callbackRef.current = onReadReceiptUpdated;
+  }, [onReadReceiptUpdated]);
+
+  // Create stable key for conversationIds to prevent unnecessary re-subscriptions
+  const conversationIdsKey = useMemo(() => conversationIds.sort().join(','), [conversationIds]);
+
+  useEffect(() => {
+    if (!userId || conversationIds.length === 0) return;
+
+    const supabase = createClient();
+
+    // Subscribe to read receipts for all conversations
+    // Filter by conversation_id using an "in" filter is not supported by Supabase realtime
+    // Instead, subscribe to all read_receipts and filter in the callback
+    const newChannel = supabase.channel(`read-receipts:${userId}`);
+
+    newChannel
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT or UPDATE
+          schema: 'public',
+          table: 'message_read_receipts',
+        },
+        (payload: RealtimePostgresChangesPayload<ReadReceipt>) => {
+          const receipt = payload.new as ReadReceipt;
+
+          // Only process if this is for one of our conversations
+          // and not from the current user (someone else read)
+          if (!conversationIds.includes(receipt.conversation_id)) return;
+          if (receipt.user_id === userId) return;
+
+          // Convert timestamps to Date objects
+          const readReceipt: ReadReceipt = {
+            ...receipt,
+            last_read_at: new Date(receipt.last_read_at),
+            updated_at: new Date(receipt.updated_at),
+          };
+
+          console.log('[Realtime] Read receipt updated by other user:', readReceipt.conversation_id);
+          callbackRef.current?.(readReceipt);
+        },
+      )
+      .subscribe();
+
+    setChannel(newChannel);
+
+    return () => {
+      newChannel.unsubscribe();
+    };
+  }, [userId, conversationIdsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return { channel };
 };
 
 // ================================================

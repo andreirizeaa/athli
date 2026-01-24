@@ -4,13 +4,13 @@ import { useFonts } from 'expo-font';
 import { Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Platform, View as RNView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import 'react-native-reanimated';
 import { PressablesConfig } from 'pressto';
 
-import { useColorScheme, useThemePreference, useCoachProfileStore, useCoachCompanyStore, useClientProfileStore, useAuthSessionStore, useAppInitStore, useChatsStore } from '@/stores';
+import { useColorScheme, useThemePreference, useCoachProfileStore, useCoachCompanyStore, useClientProfileStore, useAuthSessionStore, useAppInitStore, useChatsStore, useAppView } from '@/stores';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { useTranslationsStore } from '@/stores/useTranslationsStore';
 import { useUnitsStore } from '@/stores/useUnitsStore';
@@ -100,10 +100,15 @@ function RootLayoutNav() {
   const setClientProfile = useClientProfileStore((state) => state.setProfile);
   const clearCoachProfile = useCoachProfileStore((state) => state.clearProfile);
   const clearClientProfile = useClientProfileStore((state) => state.clearProfile);
+  const { setAppView } = useAppView();
   const router = useRouter();
 
-  // Initialize stores synchronously before first render
-  useMemo(() => {
+  // Initialize stores synchronously before paint (useLayoutEffect runs after render but before paint)
+  // Each store's initialize() is idempotent - it checks if already initialized
+  const storesInitialized = useRef(false);
+  useLayoutEffect(() => {
+    if (storesInitialized.current) return;
+    storesInitialized.current = true;
     useThemeStore.getState().initialize();
     useTranslationsStore.getState().initialize();
     useUnitsStore.getState().initialize();
@@ -138,21 +143,26 @@ function RootLayoutNav() {
           hasClient: !!clientProfile
         });
 
-        // STEP 3: If no profile in storage but we have a session, fetch profile from DB
+        // STEP 3: Fetch profile from DB if we have a session
+        // Always refresh to ensure we have the latest data (e.g., correct avatar URL)
         const session = useAuthSessionStore.getState().session;
-        if (session && !coachProfile && !clientProfile) {
-          console.log('[RootLayout] No profile in storage, fetching from database...');
+        if (session) {
+          if (!coachProfile && !clientProfile) {
+            console.log('[RootLayout] No profile in storage, fetching from database...');
+          } else {
+            console.log('[RootLayout] Profile in storage, refreshing from database...');
+          }
           const authResult = await restoreSession();
           if (authResult && authResult.profile) {
             if (authResult.profileType === 'coach') {
               setCoachProfile(authResult.profile as CoachProfile);
+              setAppView('coach');
             } else if (authResult.profileType === 'client') {
               setClientProfile(authResult.profile as ClientProfile);
+              setAppView('athlete');
             }
             console.log('[RootLayout] Profile fetched and stored');
           }
-        } else if (coachProfile || clientProfile) {
-          console.log('[RootLayout] Profile restored from storage, no fetch needed');
         }
 
         // STEP 4: Load company data and chats if coach profile exists
@@ -189,7 +199,7 @@ function RootLayoutNav() {
     };
 
     initializeApp();
-  }, [setCoachProfile, setClientProfile]);
+  }, [setCoachProfile, setClientProfile, setAppView]);
 
   // Listen to Supabase auth state changes
   useEffect(() => {
@@ -200,8 +210,11 @@ function RootLayoutNav() {
         console.log('[RootLayout] Auth state changed:', event);
 
         if (event === 'INITIAL_SESSION') {
-          // Session loaded from storage - already handled by initializeApp
-          useAuthSessionStore.getState().setSession(session);
+          // Session loaded from storage - only update if we have a session
+          // Don't clear an existing session (could be a race condition after sign-in)
+          if (session) {
+            useAuthSessionStore.getState().setSession(session);
+          }
         } else if (event === 'SIGNED_IN') {
           // User signed in - update session and fetch profile
           useAuthSessionStore.getState().setSession(session);
@@ -209,6 +222,7 @@ function RootLayoutNav() {
           if (authResult && authResult.profile) {
             if (authResult.profileType === 'coach') {
               setCoachProfile(authResult.profile as CoachProfile);
+              setAppView('coach');
               // Load company data and chats for coach
               await Promise.all([
                 useCoachCompanyStore.getState().loadCompany(),
@@ -220,7 +234,11 @@ function RootLayoutNav() {
               });
             } else if (authResult.profileType === 'client') {
               setClientProfile(authResult.profile as ClientProfile);
+              setAppView('athlete');
             }
+            // Navigate to tabs after successful sign-in
+            console.log('[RootLayout] Sign-in complete, navigating to tabs');
+            router.replace('/(tabs)');
           }
         } else if (event === 'SIGNED_OUT') {
           // User signed out or session expired - clear everything
@@ -243,7 +261,7 @@ function RootLayoutNav() {
       console.log('[RootLayout] Cleaning up auth state listener');
       subscription.unsubscribe();
     };
-  }, [setCoachProfile, setClientProfile, clearCoachProfile, clearClientProfile, router]);
+  }, [setCoachProfile, setClientProfile, clearCoachProfile, clearClientProfile, setAppView, router]);
 
   // Listen to app state changes for foreground refresh
   useEffect(() => {
@@ -611,7 +629,14 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
-            name="settings/profile"
+            name="settings/edit-profile"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="settings/client-details"
             options={{
               headerShown: false,
               animation: 'slide_from_right',
