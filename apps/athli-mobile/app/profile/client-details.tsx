@@ -412,6 +412,7 @@ export default function ClientDetailsScreen() {
               placeholder={t('clients.addClientModal.emailPlaceholder')}
               keyboardType="email-address"
               autoCapitalize="none"
+              editable={false}
             />
 
             <GenderInput

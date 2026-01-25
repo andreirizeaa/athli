@@ -12,7 +12,7 @@ import { Card } from '@/components/ui/card';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { haptics } from '@/utils/haptics';
 import { getMyMetrics, type ClientMetric } from '@/services/client/client-metric-service';
-import { getMyHabits, type ClientHabit } from '@/services/client/client-habit-service';
+import { getMyHabits, getMyHabitStreaks, type ClientHabit } from '@/services/client/client-habit-service';
 
 export default function ProgressScreen() {
   const router = useRouter();
@@ -23,6 +23,7 @@ export default function ProgressScreen() {
   // State
   const [metrics, setMetrics] = useState<ClientMetric[]>([]);
   const [habits, setHabits] = useState<ClientHabit[]>([]);
+  const [habitStreaks, setHabitStreaks] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   // Store setters for athlete self-access
@@ -55,6 +56,20 @@ export default function ProgressScreen() {
         // Also update the store so detail pages can access the data
         setStoreMetrics(metricsData);
         setStoreHabits(habitsData);
+
+        // Fetch streaks for each habit
+        const streaksMap: Record<string, number> = {};
+        await Promise.all(
+          habitsData.map(async (habit) => {
+            try {
+              const streaks = await getMyHabitStreaks(habit.assignment_id);
+              streaksMap[habit.assignment_id] = streaks.current_streak;
+            } catch {
+              streaksMap[habit.assignment_id] = 0;
+            }
+          })
+        );
+        setHabitStreaks(streaksMap);
       } catch (error) {
         console.error('[ProgressScreen] Error fetching data:', error);
       } finally {
@@ -107,18 +122,8 @@ export default function ProgressScreen() {
       // Get target value from habit
       const targetValue = h.amount ?? h.schedule_config?.amount;
 
-      // Calculate current streak (consecutive completed days from most recent)
-      const allLogs = [...(h.logs || [])].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-      let streak = 0;
-      for (const log of allLogs) {
-        if (log.status === 'completed') {
-          streak++;
-        } else {
-          break;
-        }
-      }
+      // Get streak from API (or 0 if not yet fetched)
+      const streak = habitStreaks[h.assignment_id] ?? 0;
 
       return {
         id: h.assignment_id,
@@ -130,7 +135,7 @@ export default function ProgressScreen() {
         streak,
       };
     });
-  }, [habits]);
+  }, [habits, habitStreaks]);
 
   // Handlers
   const handleMetricsPageChange = useCallback((index: number) => {

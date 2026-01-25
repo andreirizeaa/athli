@@ -615,6 +615,45 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="modals/settings/change-email-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/settings/change-password-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/settings/delete-account-modal"
+            options={{
+              presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'ios' && {
+                sheetAllowedDetents: [0.35],
+                sheetGrabberVisible: true,
+              }),
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
             name="settings/personal-details"
             options={{
               headerShown: false,
@@ -708,6 +747,17 @@ function RootLayoutNav() {
                 sheetAllowedDetents: [0.35],
                 sheetGrabberVisible: true,
               }),
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/auth/forgot-password-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
                 gestureDirection: 'vertical',

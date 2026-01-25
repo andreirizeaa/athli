@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -13,13 +13,44 @@ import { AuthLayout } from '@/components/auth/auth-layout';
 import { toast } from 'sonner';
 
 export default function ResetPasswordPage() {
-  const { updatePassword } = useSupabaseAuth();
+  const { updatePassword, supabaseUser, isLoading: isAuthLoading } = useSupabaseAuth();
   const router = useRouter();
   const [isResetting, setIsResetting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
+
+  // Wait for auth to initialize and check for a valid session
+  useEffect(() => {
+    if (!isAuthLoading) {
+      // Give Supabase a moment to process the hash tokens from the recovery link
+      const timer = setTimeout(() => {
+        if (!supabaseUser) {
+          // No session found, redirect to forgot password
+          toast.error('Invalid or expired reset link. Please request a new one.');
+          router.push('/auth/forgot-password');
+        } else {
+          setIsCheckingSession(false);
+        }
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthLoading, supabaseUser, router]);
+
+  // Show loading while checking session
+  if (isAuthLoading || isCheckingSession) {
+    return (
+      <AuthLayout>
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-white" />
+          <p className="text-white/60">Verifying reset link...</p>
+        </div>
+      </AuthLayout>
+    );
+  }
 
   const validatePassword = (password: string): string | null => {
     if (password.length < 8) {

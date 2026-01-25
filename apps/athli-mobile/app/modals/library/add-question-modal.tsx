@@ -364,6 +364,7 @@ export default function AddQuestionModal() {
             <View style={styles.formatTypeLabelRow}>
               <Text style={[styles.formatTypeLabel, { color: themeColors.mutedText }]}>
                 {t('library.addQuestion.questionType')}
+                <Text style={styles.requiredAsterisk}>*</Text>
               </Text>
             </View>
             <View style={styles.formatTypeValueRow}>
@@ -783,6 +784,9 @@ const styles = StyleSheet.create({
   },
   formatTypeLabel: {
     ...typography.p4,
+  },
+  requiredAsterisk: {
+    color: '#EF4444',
   },
   formatTypeValueRow: {
     flexDirection: 'row',

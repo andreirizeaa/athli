@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { PageTabs } from '@/components/page-tabs';
 import { useUnsavedChanges } from '@/app/settings/context/unsaved-changes-context';
 import { useCompanySave, CompanySaveProvider } from './context/company-save-context';
+import { Check, Loader2 } from 'lucide-react';
 
 type CompanyLayoutProps = {
   children: React.ReactNode;
@@ -54,11 +55,16 @@ const CompanyLayoutContent = ({ children }: CompanyLayoutProps) => {
               {t('settings.sections.company')}
             </h1>
             {hasSaveHandler && onSave && (
-              <Button 
+              <Button
                 onClick={onSave}
                 disabled={!hasUnsavedChanges || isSaving}
               >
-                {isSaving ? t('general.saving') : t('general.save')}
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+                {t('general.save')}
               </Button>
             )}
           </div>

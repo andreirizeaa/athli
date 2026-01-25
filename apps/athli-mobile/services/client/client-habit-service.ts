@@ -242,3 +242,20 @@ export const getHabitStreaks = async (
   );
   return response.data;
 };
+
+/**
+ * Get habit streaks for the authenticated athlete (self-access)
+ * No coach ID required - the API will use the authenticated user's ID
+ */
+export const getMyHabitStreaks = async (
+  assignmentId: string
+): Promise<HabitStreaks> => {
+  const response = await apiFetch<{ success: boolean; data: HabitStreaks }>(
+    '/client/habits/streaks',
+    {
+      method: 'POST',
+      body: JSON.stringify({ assignmentId }),
+    }
+  );
+  return response.data;
+};

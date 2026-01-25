@@ -52,7 +52,7 @@ const SIZE_CONFIG: Record<IconButtonSize, { buttonSize: number; iconSize: number
   },
   md: {
     buttonSize: 44,
-    iconSize: iconSizes.navigationChevrons,
+    iconSize: iconSizes.navigationChevrons + 4,
   },
   lg: {
     buttonSize: 52,
