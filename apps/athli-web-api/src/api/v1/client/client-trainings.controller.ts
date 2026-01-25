@@ -128,6 +128,81 @@ const extractExercisesFromWorkout = (workout: any): Array<{ exerciseId: string; 
 };
 
 /**
+ * Extract superset flags from a workout for calendar preview display.
+ * Returns array of booleans where true means the exercise at that index is supersetted with the next exercise.
+ * Example: [true, false, false] means exercise 1 & 2 are supersetted, exercise 3 is standalone.
+ */
+const extractSupersetFlagsFromWorkout = (workout: any): boolean[] => {
+    const flags: boolean[] = [];
+
+    // Items can be at top level or inside workout_data
+    const items = workout?.items || workout?.workout_data?.items;
+
+    if (!items || !Array.isArray(items)) {
+        return flags;
+    }
+
+    for (const item of items) {
+        if (item.itemType === 'section' && item.data) {
+            const section = item.data;
+
+            switch (section.type) {
+                case 'regular':
+                case 'auxiliary':
+                    // ExerciseGroupPayload[] -> each group has isSuperset flag
+                    if (Array.isArray(section.exercises)) {
+                        for (const group of section.exercises) {
+                            if (Array.isArray(group.exercises)) {
+                                const exerciseCount = group.exercises.length;
+                                for (let i = 0; i < exerciseCount; i++) {
+                                    // If group is superset and not the last exercise in group, mark as linked to next
+                                    const isLinkedToNext = group.isSuperset && i < exerciseCount - 1;
+                                    flags.push(isLinkedToNext);
+                                }
+                            }
+                        }
+                    }
+                    break;
+
+                case 'amrap':
+                case 'timed':
+                    // For AMRAP/timed, exercises with the same non-null supersetId are supersetted
+                    if (Array.isArray(section.exercises)) {
+                        const exercises = section.exercises;
+                        for (let i = 0; i < exercises.length; i++) {
+                            const exercise = exercises[i];
+                            const nextExercise = exercises[i + 1];
+                            // Exercise is linked to next if both have the same non-null supersetId
+                            const isLinkedToNext = exercise.supersetId &&
+                                                   nextExercise?.supersetId &&
+                                                   exercise.supersetId === nextExercise.supersetId;
+                            flags.push(isLinkedToNext);
+                        }
+                    }
+                    break;
+
+                case 'circuits':
+                    // CircuitExerciseGroupPayload[] -> each group has isSuperset flag
+                    if (Array.isArray(section.exercises)) {
+                        for (const group of section.exercises) {
+                            if (Array.isArray(group.exercises)) {
+                                const exerciseCount = group.exercises.length;
+                                for (let i = 0; i < exerciseCount; i++) {
+                                    const isLinkedToNext = group.isSuperset && i < exerciseCount - 1;
+                                    flags.push(isLinkedToNext);
+                                }
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+    }
+
+    return flags;
+};
+
+/**
  * Insert exercise history records for a completed workout.
  * Also upserts the training history record first (required for FK constraint).
  */
@@ -291,26 +366,22 @@ export const clientTrainingsController = {
                 // Ensure data is Object
                 const workoutsMap = ensureObjectData(entry.training_data);
 
-                // OPTIMIZATION: Return only metadata, mapped object
-                const metadataMap: Record<string, any> = {};
+                // Return full workout payload with computed fields
+                const workoutMap: Record<string, any> = {};
 
                 Object.entries(workoutsMap).forEach(([key, workoutVal]) => {
-                    const workout = workoutVal as any;
-                    metadataMap[key] = {
+                    const workout = normalizeWorkoutData(workoutVal as any);
+                    workoutMap[key] = {
+                        ...workout,
                         id: key, // Use Key as ID for frontend list
-                        templateId: workout.id, // Preserve original ID
+                        templateId: workout.id, // Preserve original template ID
                         workout: workout.program || workout.title || workout.name || workout.workoutName || 'Untitled Workout',
-                        description: workout.description,
                         totalExercises: workout.totalExercises || workout.total_exercises || workout.exercises?.length || 0,
-                        type: workout.type,
-                        difficulty: workout.difficulty,
-                        equipment: workout.equipment,
-                        isFavourite: workout.isFavourite || workout.is_favourite,
-                        completedSummary: workout.completedSummary || workout.workout_data?.completedSummary || workout.meta || workout.workout_data?.meta || null,
+                        supersetFlags: extractSupersetFlagsFromWorkout(workout),
                     };
                 });
 
-                calendar[formattedDate] = metadataMap;
+                calendar[formattedDate] = workoutMap;
             });
         }
 
