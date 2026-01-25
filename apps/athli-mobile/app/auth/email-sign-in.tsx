@@ -151,14 +151,6 @@ export default function EmailSignInScreen() {
         Linking.openURL(forgotPasswordUrl);
     };
 
-    const handleTermsOfServicePress = () => {
-        console.log('Terms of Service pressed');
-    };
-
-    const handlePrivacyPolicyPress = () => {
-        console.log('Privacy Policy pressed');
-    };
-
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top }]}>
@@ -235,25 +227,6 @@ export default function EmailSignInScreen() {
                         {t('auth.signIn')}
                     </Text>
                 </PressableScale>
-
-                <View style={styles.termsContainer}>
-                    <Text style={[styles.termsText, { color: themeColors.mutedText }]}>
-                        {t('auth.termsAgreement')}{' '}
-                    </Text>
-                    <PressableOpacity onPress={handleTermsOfServicePress}>
-                        <Text style={[styles.termsLink, { color: themeColors.primary }]}>
-                            {t('auth.termsOfUse')}
-                        </Text>
-                    </PressableOpacity>
-                    <Text style={[styles.termsText, { color: themeColors.mutedText }]}>
-                        {' '}{t('auth.and')}{' '}
-                    </Text>
-                    <PressableOpacity onPress={handlePrivacyPolicyPress}>
-                        <Text style={[styles.termsLink, { color: themeColors.primary }]}>
-                            {t('auth.privacyPolicy')}
-                        </Text>
-                    </PressableOpacity>
-                </View>
             </View>
         </View>
         </TouchableWithoutFeedback>
@@ -298,23 +271,6 @@ const styles = StyleSheet.create({
     signInButtonText: {
         ...typography.h6,
         fontWeight: '700',
-    },
-    termsContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 24,
-        paddingHorizontal: 20,
-    },
-    termsText: {
-        ...typography.p3,
-        textAlign: 'center',
-    },
-    termsLink: {
-        ...typography.p3,
-        fontWeight: '600',
-        textDecorationLine: 'underline',
     },
     forgotPasswordContainer: {
         alignSelf: 'flex-end',
