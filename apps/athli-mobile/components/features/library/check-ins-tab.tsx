@@ -190,7 +190,7 @@ export const CheckInsTab = () => {
               style={styles.rowWrapper}
               onPress={() => handleCheckInPress(item)}
             >
-              <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
+              <View style={[styles.rowContent, { backgroundColor: 'transparent' }]}>
                 <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
                   <PlatformIcon
                     sf="calendar.badge.clock"

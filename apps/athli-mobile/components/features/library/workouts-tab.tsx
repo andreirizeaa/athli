@@ -193,7 +193,7 @@ export const WorkoutsTab = () => {
                   onPress={() => handleWorkoutPress(workout)}
                   style={styles.rowWrapper}
                 >
-                  <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
+                  <View style={[styles.rowContent, { backgroundColor: 'transparent' }]}>
                     <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
                       <PlatformIcon
                         sf="dumbbell.fill"
