@@ -1392,7 +1392,7 @@ const styles = StyleSheet.create({
   },
   reactionsContainerRight: {
     alignSelf: 'flex-end',
-    marginRight: 12,
+    marginRight: 56,
   },
   reactionsContainerLeft: {
     alignSelf: 'flex-start',
@@ -1417,7 +1417,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reactionEmoji: {
-    fontSize: 12,
+    fontSize: 16,
   },
   reactionCount: {
     ...typography.p7,

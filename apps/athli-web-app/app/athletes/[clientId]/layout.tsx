@@ -17,7 +17,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { toast } from 'sonner';
-import { ChevronRight, MessageCircle, Users, Send, Copy, Check, Dna, Cake, Ruler } from 'lucide-react';
+import { ChevronRight, MessageCircle, Users, Send, Copy, Check, Dna, Cake } from 'lucide-react';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
@@ -27,6 +27,7 @@ import { resendClientInvite } from '@/api/coach/coach-client-invite-service';
 import { FullScreenLoader } from '@/components/ui/full-screen-loader';
 import { SectionLoader } from '@/components/ui/section-loader';
 import { EditClientDetailsSidePanel } from './components/edit-client-details-side-panel';
+import { getFlagEmoji } from '@/lib/general/country-utils';
 
 export type ClientProfileLayoutProps = {
   children: React.ReactNode;
@@ -137,15 +138,6 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
               : (lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'overview');
 
   const activeTab = activeTabProp || activeTabFromSegments;
-
-  const getFlagEmoji = (countryCode: string) => {
-    if (!countryCode) return null;
-    const codePoints = countryCode
-      .toUpperCase()
-      .split('')
-      .map(char => 127397 + char.charCodeAt(0));
-    return String.fromCodePoint(...codePoints);
-  };
 
   const handleTabChange = (value: string) => {
     if (!clientId) {
@@ -360,11 +352,6 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
                 <div className="flex items-center gap-1.5">
                   <Cake className="size-3" />
                   <span>{athlete?.age ? `${athlete.age} years old` : '--'}</span>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <Ruler className="size-3" />
-                  <span>{details?.height ? `${details.height} cm` : '--'}</span>
                 </div>
 
                 {details?.country && (

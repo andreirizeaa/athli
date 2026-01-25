@@ -553,7 +553,7 @@ export default function AddHabitModal() {
                                         <Text style={[styles.categoryLabel, { color: themeColors.mutedText }]}>
                                             {section.label}
                                         </Text>
-                                        <Card style={{ backgroundColor: themeColors.surfacePrimary }}>
+                                        <Card variant="form">
                                             {section.habits.map((habit, index) => (
                                                 <React.Fragment key={habit.name}>
                                                     {index > 0 && <Separator />}
@@ -634,11 +634,8 @@ export default function AddHabitModal() {
                             />
 
                             {/* Duration and Notification - Optional */}
-                            <PressableOpacity
-                                style={[styles.optionsContainer, { backgroundColor: themeColors.surfacePrimary }]}
-                                onPress={handleOpenOptionsModal}
-                            >
-                                <View style={styles.optionsContent}>
+                            <PressableOpacity onPress={handleOpenOptionsModal}>
+                                <Card variant="form">
                                     <View style={styles.optionsLabelRow}>
                                         <Text style={[styles.optionsLabel, { color: themeColors.mutedText }]}>
                                             {t('library.addHabit.durationAndNotification')}
@@ -705,7 +702,7 @@ export default function AddHabitModal() {
                                             <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
                                         </View>
                                     )}
-                                </View>
+                                </Card>
                             </PressableOpacity>
                         </>
                     )}
@@ -825,15 +822,6 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     halfWidth: {
-        flex: 1,
-    },
-    optionsContainer: {
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingTop: 10,
-        paddingBottom: 12,
-    },
-    optionsContent: {
         flex: 1,
     },
     optionsLabelRow: {

@@ -4,27 +4,22 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Check, Ellipsis, MailCheck, CheckCircle2, Archive } from 'lucide-react-native';
 import { FlashList } from '@shopify/flash-list';
 
-import { typography, iconSizes } from '@/constants/typography';
+import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations, useAuth } from '@/stores';
 import { SearchBar } from '@/components/ui/search-bar';
-import { IconButton } from '@/components/ui/icon-button';
 import { CoachListItem } from '@/components/features/inbox/coach-list-item';
-import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
-import { PlatformIcon } from '@/components/ui/platform-icon';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import {
   getCoaches,
   getInboxMessages,
-  readAllInbox,
   archiveCoach,
   markCoachAsRead,
   type Coach,
   type InboxMessage,
 } from '@/services/inbox-service';
-import { useRealtimeConversations } from '@/hooks/use-realtime-messaging';
+import { useRealtimeConversations, useRealtimeReadReceiptsForUser } from '@/hooks/use-realtime-messaging';
 
 // Messages cache for instant navigation
 type MessagesCache = {
@@ -92,6 +87,31 @@ export default function InboxScreen() {
         console.log('[Inbox Realtime] New conversation:', realtimeConversation.id);
         return [...prev, realtimeConversation];
       });
+    },
+  });
+
+  // Get conversation IDs for read receipt subscription
+  const conversationIds = useMemo(() => coaches.map((c) => c.id), [coaches]);
+
+  // Debounce timer ref to prevent excessive API calls
+  const readReceiptDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Subscribe to read receipt changes to update "read" status in inbox list
+  // When the coach reads a message, this triggers and refreshes the inbox
+  useRealtimeReadReceiptsForUser({
+    userId: userId || '',
+    conversationIds,
+    onReadReceiptUpdated: (receipt) => {
+      console.log('[Inbox] Read receipt updated, debouncing reload');
+      // Debounce: wait 1 second before reloading to batch multiple updates
+      if (readReceiptDebounceRef.current) {
+        clearTimeout(readReceiptDebounceRef.current);
+      }
+      readReceiptDebounceRef.current = setTimeout(() => {
+        console.log('[Inbox] Reloading coaches after debounce');
+        loadCoaches(false);
+        readReceiptDebounceRef.current = null;
+      }, 1000);
     },
   });
 
@@ -302,31 +322,6 @@ export default function InboxScreen() {
     }
   };
 
-  const handleEllipsisPress = () => {
-    if (isEditMode) {
-      setIsEditMode(false);
-      setSelectedCoachIds(new Set());
-    }
-  };
-
-  const handleReadAllPress = async () => {
-    await readAllInbox();
-    // Reload coaches to update unread counts
-    const fetchedCoaches = await getCoaches();
-    const coachesWithMessages = await Promise.all(
-      fetchedCoaches.map(async (coach) => {
-        const messages = await getInboxMessages(coach.id);
-        return messages.length > 0 ? coach : null;
-      }),
-    );
-    const filtered = coachesWithMessages.filter((coach) => coach !== null) as Coach[];
-    setCoaches(filtered);
-  };
-
-  const handleSelectChatsPress = () => {
-    setIsEditMode(true);
-  };
-
   const handleArchivePress = async () => {
     for (const coachId of selectedCoachIds) {
       await archiveCoach(coachId);
@@ -370,36 +365,6 @@ export default function InboxScreen() {
     const filtered = coachesWithMessages.filter((coach) => coach !== null) as Coach[];
     setCoaches(filtered);
   };
-
-  const dropdownOptions: DropdownMenuOption[] = isEditMode
-    ? [
-      {
-        label: t('chats.archive'),
-        icon: {
-          sf: 'archivebox',
-          IconComponent: Archive,
-        },
-        onPress: handleArchivePress,
-      },
-    ]
-    : [
-      {
-        label: t('chats.selectChats'),
-        icon: {
-          sf: 'checkmark.circle',
-          IconComponent: CheckCircle2,
-        },
-        onPress: handleSelectChatsPress,
-      },
-      {
-        label: t('chats.readAll'),
-        icon: {
-          sf: 'checkmark.message',
-          IconComponent: MailCheck,
-        },
-        onPress: handleReadAllPress,
-      },
-    ];
 
   const renderCoachItem = useCallback(({ item }: { item: Coach }) => (
     <CoachListItem
@@ -456,25 +421,6 @@ export default function InboxScreen() {
             <Text style={[styles.title, { color: themeColors.text }]}>
               {t('inbox.title')}
             </Text>
-            <View style={styles.headerButtonContainer}>
-              {isEditMode ? (
-                <IconButton
-                  icon={{ sf: 'checkmark', IconComponent: Check }}
-                  onPress={handleEllipsisPress}
-                  size="md"
-                  color={themeColors.text}
-                />
-              ) : (
-                <DropdownMenuWrapper options={dropdownOptions}>
-                  <IconButton
-                    icon={{ sf: 'ellipsis', IconComponent: Ellipsis }}
-                    onPress={() => {}}
-                    size="md"
-                    color={themeColors.text}
-                  />
-                </DropdownMenuWrapper>
-              )}
-            </View>
           </View>
           <SearchBar
             value={searchQuery}
@@ -526,13 +472,6 @@ const styles = StyleSheet.create({
   title: {
     ...typography.h1,
     textAlign: 'left',
-    paddingRight: 52, // Space for the button (44px width + 8px margin)
-  },
-  headerButtonContainer: {
-    position: 'absolute',
-    right: 0,
-    top: '50%',
-    transform: [{ translateY: -22 }],
   },
   coachListContainer: {
   },
@@ -559,7 +498,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingTop: 16,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
   actionButton: {
     paddingHorizontal: 16,

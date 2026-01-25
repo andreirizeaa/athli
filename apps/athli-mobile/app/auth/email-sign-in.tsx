@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, Keyboard, Alert } from 'react-native';
+import { StyleSheet, View, Text, Keyboard, Alert, TouchableWithoutFeedback, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Eye, EyeOff } from 'lucide-react-native';
 
@@ -8,7 +9,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { PressableOpacity, PressableScale } from 'pressto';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference, useTranslations, useCoachProfileStore, useClientProfileStore } from '@/stores';
+import { useThemePreference, useTranslations, useCoachProfileStore, useClientProfileStore, useAppView } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, type InputBoxRef } from '@/components/ui/form-inputs/input-box';
 import { AuthLoadingOverlay } from '@/components/auth/auth-loading-overlay';
@@ -20,6 +21,7 @@ export default function EmailSignInScreen() {
     const insets = useSafeAreaInsets();
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
+    const { setAppView } = useAppView();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -49,13 +51,16 @@ export default function EmailSignInScreen() {
     };
 
     const handleAuthSuccess = (profileType: 'coach' | 'client', profile: CoachProfile | ClientProfile) => {
+        // Note: We don't navigate here - the auth state listener in _layout.tsx
+        // handles navigation to tabs when SIGNED_IN event fires.
+        // Setting profile/appView here for faster UI update.
         if (profileType === 'coach') {
             setCoachProfile(profile as CoachProfile);
+            setAppView('coach');
         } else {
             setClientProfile(profile as ClientProfile);
+            setAppView('athlete');
         }
-
-        router.back();
     };
 
     const handleAuthError = (error: any) => {
@@ -83,9 +88,44 @@ export default function EmailSignInScreen() {
     };
 
     const handleSignIn = async () => {
-        if (!email || !password) return;
-
         Keyboard.dismiss();
+
+        if (!email.trim() && !password.trim()) {
+            Alert.alert(
+                t('auth.signInError'),
+                t('auth.enterEmailAndPassword'),
+                [{ text: t('general.ok') }]
+            );
+            return;
+        }
+
+        if (!email.trim()) {
+            Alert.alert(
+                t('auth.signInError'),
+                t('auth.enterEmail'),
+                [{ text: t('general.ok') }]
+            );
+            return;
+        }
+
+        if (!isValidEmail(email)) {
+            Alert.alert(
+                t('auth.signInError'),
+                t('auth.invalidEmail'),
+                [{ text: t('general.ok') }]
+            );
+            return;
+        }
+
+        if (!password.trim()) {
+            Alert.alert(
+                t('auth.signInError'),
+                t('auth.enterPassword'),
+                [{ text: t('general.ok') }]
+            );
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -98,21 +138,25 @@ export default function EmailSignInScreen() {
         }
     };
 
-    const handleTermsOfServicePress = () => {
-        console.log('Terms of Service pressed');
-    };
+    const handleForgotPassword = () => {
+        // Open the web app's forgot password page directly
+        const webAppUrl = process.env.EXPO_PUBLIC_WEB_APP_URL ||
+            Constants.expoConfig?.extra?.EXPO_PUBLIC_WEB_APP_URL ||
+            'http://localhost:3001';
 
-    const handlePrivacyPolicyPress = () => {
-        console.log('Privacy Policy pressed');
-    };
+        const forgotPasswordUrl = email.trim()
+            ? `${webAppUrl}/auth/forgot-password?email=${encodeURIComponent(email.trim())}`
+            : `${webAppUrl}/auth/forgot-password`;
 
-    const isButtonEnabled = isValidEmail(email) && password.trim().length > 0;
+        Linking.openURL(forgotPasswordUrl);
+    };
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top }]}>
-            <AuthLoadingOverlay visible={isLoading} />
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top }]}>
+                <AuthLoadingOverlay visible={isLoading} />
 
-            <View style={styles.header}>
+                <View style={styles.header}>
                 <IconButton
                     icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                     onPress={handleBackPress}
@@ -146,7 +190,7 @@ export default function EmailSignInScreen() {
                         value={password}
                         onChangeText={setPassword}
                         secureTextEntry={!showPassword}
-                        editable={isValidEmail(email)}
+                        editable={true}
                         returnKeyType="go"
                         onSubmitEditing={handleSignIn}
                         rightIcon={
@@ -162,42 +206,30 @@ export default function EmailSignInScreen() {
                             </PressableOpacity>
                         }
                     />
+                    <PressableOpacity
+                        style={styles.forgotPasswordContainer}
+                        onPress={handleForgotPassword}
+                    >
+                        <Text style={[styles.forgotPasswordText, { color: themeColors.primary }]}>
+                            {t('auth.forgotPassword.linkText')}
+                        </Text>
+                    </PressableOpacity>
                 </View>
 
                 <PressableScale
                     style={[
                         styles.signInButton,
-                        { backgroundColor: themeColors.surfacePrimary },
-                        !isButtonEnabled && styles.signInButtonDisabled
+                        { backgroundColor: '#FFFFFF' },
                     ]}
                     onPress={handleSignIn}
-                    enabled={isButtonEnabled}
                 >
-                    <Text style={styles.signInButtonText}>
+                    <Text style={[styles.signInButtonText, { color: '#000000' }]}>
                         {t('auth.signIn')}
                     </Text>
                 </PressableScale>
-
-                <View style={styles.termsContainer}>
-                    <Text style={[styles.termsText, { color: themeColors.mutedText }]}>
-                        {t('auth.termsAgreement')}{' '}
-                    </Text>
-                    <PressableOpacity onPress={handleTermsOfServicePress}>
-                        <Text style={[styles.termsLink, { color: themeColors.primary }]}>
-                            {t('auth.termsOfUse')}
-                        </Text>
-                    </PressableOpacity>
-                    <Text style={[styles.termsText, { color: themeColors.mutedText }]}>
-                        {' '}{t('auth.and')}{' '}
-                    </Text>
-                    <PressableOpacity onPress={handlePrivacyPolicyPress}>
-                        <Text style={[styles.termsLink, { color: themeColors.primary }]}>
-                            {t('auth.privacyPolicy')}
-                        </Text>
-                    </PressableOpacity>
-                </View>
             </View>
         </View>
+        </TouchableWithoutFeedback>
     );
 }
 
@@ -236,29 +268,15 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginTop: 24,
     },
-    signInButtonDisabled: {
-        opacity: 0.5,
-    },
     signInButtonText: {
         ...typography.h6,
         fontWeight: '700',
-        color: '#FFFFFF',
     },
-    termsContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 24,
-        paddingHorizontal: 20,
+    forgotPasswordContainer: {
+        alignSelf: 'flex-end',
     },
-    termsText: {
-        ...typography.p3,
-        textAlign: 'center',
-    },
-    termsLink: {
+    forgotPasswordText: {
         ...typography.p3,
         fontWeight: '600',
-        textDecorationLine: 'underline',
     },
 });

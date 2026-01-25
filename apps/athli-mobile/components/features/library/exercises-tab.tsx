@@ -295,7 +295,7 @@ export const ExercisesTab = () => {
         >
           <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
             <View style={styles.rowWrapper}>
-              <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
+              <View style={[styles.rowContent, { backgroundColor: 'transparent' }]}>
                 {/* Thumbnail - Separate Pressable */}
                 <PressableScale
                   onPress={() => handleThumbnailPress(exercise)}

@@ -52,6 +52,7 @@ import { typography } from '@/constants/typography';
 import { SlidingPanel, SlidingPanelRef } from '@/components/ui/sliding-panel';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { Separator } from '@/components/ui/separator';
+import { Card } from '@/components/ui/card';
 import { MessageList } from '@/components/features/message/message-list-flashlist';
 import { ReplyPreviewRow } from '@/components/features/chats/reply-preview-row';
 import { AttachmentPickerRow } from '@/components/features/chats/attachment-picker-row';
@@ -64,7 +65,6 @@ import {
   getChats,
   getArchivedChats,
   sendMessage,
-  markConversationAsRead,
   deleteMessage,
   type Chat,
   type ChatMessage,
@@ -76,6 +76,8 @@ import { createOptimisticMessage } from '@athli/shared-types';
 import {
   useRealtimeMessages,
   useMessageMerging,
+  useRealtimeReadReceipts,
+  useSyncReadReceipt,
 } from '@/hooks/use-realtime-messaging';
 import { useSendMessageWithAttachment } from '@/hooks/use-file-upload';
 import { useInfiniteMessages } from '@/hooks/use-infinite-messages';
@@ -260,11 +262,11 @@ const ClientPanelContent = ({ clientId, clientName: initialClientName, clientAva
     },
   ];
 
-  const handleMenuItemPress = (route: string) => {
+  const handleMenuItemPress = (item: MenuItem) => {
     haptics.medium();
     // Don't close sidebar - let the new page push in smoothly
     // When user goes back, sidebar will still be open
-    router.push(route as any);
+    router.push(item.route as any);
   };
 
   // Loading state - show while client data is being fetched
@@ -306,7 +308,7 @@ const ClientPanelContent = ({ clientId, clientName: initialClientName, clientAva
         keyboardDismissMode="on-drag"
       >
         {/* Profile Card */}
-        <View style={[panelStyles.profileCard, { backgroundColor: themeColors.surfacePrimary, marginRight: 0 }]}>
+        <Card variant="profile" style={{ marginRight: 0 }}>
           <View style={panelStyles.avatarLarge}>
             {clientAvatar ? (
               <Image
@@ -338,13 +340,13 @@ const ClientPanelContent = ({ clientId, clientName: initialClientName, clientAva
               {t('clientDetail.editProfile')}
             </Text>
           </PressableOpacity>
-        </View>
+        </Card>
 
         {/* Menu Items */}
         <View style={panelStyles.menuContainer}>
           {menuItems.map((item) => (
             <View key={item.id}>
-              <PressableScale onPress={() => handleMenuItemPress(item.route)}>
+              <PressableScale onPress={() => handleMenuItemPress(item)}>
                 <View style={panelStyles.menuItem}>
                   <View style={panelStyles.menuItemLeft}>
                     <PlatformIcon
@@ -397,16 +399,6 @@ const panelStyles = StyleSheet.create({
   errorText: {
     ...typography.p1,
     textAlign: 'center',
-  },
-  profileCard: {
-    borderRadius: 28,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    marginBottom: 24,
-    marginTop: 8,
-    marginLeft: 16,
-    marginRight: 16,
   },
   avatarLarge: {
     width: 80,
@@ -720,7 +712,56 @@ export default function ChatDetailScreen() {
   });
 
   // Merge saved, realtime, and optimistic messages - transforms to UIMessage[]
-  const allMessages = useMessageMerging(savedMessages, realtimeMessages, optimisticMessages, currentUserId);
+  const mergedMessages = useMessageMerging(savedMessages, realtimeMessages, optimisticMessages, currentUserId);
+
+  // Subscribe to read receipt updates for this conversation
+  // This allows the sender to see when their messages are read in realtime
+  const { readReceipts } = useRealtimeReadReceipts({
+    conversationId: id,
+    onReadReceiptUpdated: (receipt) => {
+      console.log('[Chat Detail] Read receipt updated:', receipt.user_id, 'at', receipt.last_read_at);
+    },
+  });
+
+  // Compute final message status using read receipts
+  // For sent messages, check if recipient has read them based on their read receipt
+  // This enhances the database-computed isRead with real-time read receipt data
+  const allMessages = useMemo(() => {
+    if (!currentUserId) return mergedMessages;
+
+    // Find the recipient's read receipt (not the current user's)
+    const recipientReceipt = readReceipts.find((r) => r.user_id !== currentUserId);
+
+    return mergedMessages.map((msg) => {
+      // Only update read status for own sent messages
+      if (msg.sender_id !== currentUserId) return msg;
+
+      // If already marked as read from database, preserve it
+      if (msg.isRead) return msg;
+
+      // If recipient has a read receipt and it's after this message was sent
+      if (recipientReceipt?.last_read_at) {
+        const msgSentAt = new Date(msg.sent_at).getTime();
+        const readAt = new Date(recipientReceipt.last_read_at).getTime();
+
+        if (readAt >= msgSentAt) {
+          return { ...msg, isRead: true };
+        }
+      }
+
+      return msg;
+    });
+  }, [mergedMessages, readReceipts, currentUserId]);
+
+  // Auto-sync read receipt when viewing the conversation
+  // This marks messages as read for the coach (updates unread_count)
+  // Pass allMessages.length to re-sync when new messages arrive
+  useSyncReadReceipt({
+    conversationId: id,
+    userId: currentUserId || '',
+    enabled: !!id && !!currentUserId,
+    messageCount: allMessages.length,
+  });
 
   useEffect(() => {
     const handleKeyboardHide = () => {
@@ -1072,22 +1113,8 @@ export default function ChatDetailScreen() {
     };
   }, [id, chatParam]);
 
-  // Mark conversation as read when opening/viewing
-  useEffect(() => {
-    if (!id || !currentUserId) return;
-
-    const markAsRead = async () => {
-      try {
-        await markConversationAsRead(id);
-      } catch {
-        // Silently handle mark as read errors - not critical
-      }
-    };
-
-    // Mark as read immediately when opening
-    markAsRead();
-  }, [id, currentUserId]);
-
+  // Note: useSyncReadReceipt hook handles marking conversation as read
+  // when screen is focused - no need for manual useEffect
 
   const handleBackPress = () => {
     router.back();

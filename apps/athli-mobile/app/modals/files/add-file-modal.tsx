@@ -18,6 +18,7 @@ import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { InputBox } from '@/components/ui/form-inputs';
+import { Card } from '@/components/ui/card';
 import { uploadFile, updateFile } from '@/services/coach/coach-file-service';
 import { uploadClientFile, updateClientFile } from '@/services/client/client-file-service';
 import { hexToRgba } from '@/utils/colorUtils';
@@ -461,7 +462,7 @@ export default function AddFileModal() {
 
                         {/* File Type Selection - Hidden in edit name only mode */}
                         {!isEditNameOnly && (
-                        <View style={[styles.attachSection, { backgroundColor: themeColors.surfacePrimary }]}>
+                        <Card variant="form" style={{ paddingBottom: 16 }}>
                             <View style={styles.attachLabelRow}>
                                 <Text style={[styles.attachLabel, { color: themeColors.mutedText }]}>
                                     {t('files.addFile.attachFile')}
@@ -479,7 +480,7 @@ export default function AddFileModal() {
                                     ]}
                                     onPress={isEditing ? undefined : handlePhotoPress}
                                 >
-                                    <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
+                                    <View style={[styles.iconCircle, { backgroundColor: themeColors.surfacePrimary }]}>
                                         <PlatformIcon
                                             sf="photo.on.rectangle"
                                             IconComponent={ImageIcon}
@@ -502,7 +503,7 @@ export default function AddFileModal() {
                                     ]}
                                     onPress={isEditing ? undefined : handleVideoPress}
                                 >
-                                    <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
+                                    <View style={[styles.iconCircle, { backgroundColor: themeColors.surfacePrimary }]}>
                                         <PlatformIcon
                                             sf="video"
                                             IconComponent={Video}
@@ -525,7 +526,7 @@ export default function AddFileModal() {
                                     ]}
                                     onPress={isEditing ? undefined : handleDocumentPress}
                                 >
-                                    <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
+                                    <View style={[styles.iconCircle, { backgroundColor: themeColors.surfacePrimary }]}>
                                         <PlatformIcon
                                             sf="doc.text"
                                             IconComponent={FileText}
@@ -584,7 +585,7 @@ export default function AddFileModal() {
                                     </View>
                                 </View>
                             )}
-                        </View>
+                        </Card>
                         )}
                     </KeyboardAwareScrollView>
                 </View>
@@ -629,12 +630,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingBottom: 16,
         gap: 12,
-    },
-    attachSection: {
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingTop: 10,
-        paddingBottom: 16,
     },
     attachLabelRow: {
         flexDirection: 'row',

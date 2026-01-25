@@ -6,10 +6,10 @@ const publicRoutes = [
   '/auth/login',
   '/auth/register',
   '/auth/forgot-password',
+  '/auth/reset-password', // Public so Supabase recovery tokens in URL hash can be processed client-side
   '/client/invite',  // Client invite pages (public)
   '/coach/referral', // Coach referral pages (public)
 ];
-const restrictedAuthRoutes = ['/auth/reset-password'];
 // OAuth callback must be publicly accessible for OAuth providers to redirect to
 const oauthCallbackRoutes = ['/auth/callback'];
 // Routes that require authentication
@@ -28,19 +28,6 @@ export async function middleware(request: NextRequest) {
   // Allow OAuth callback routes (needed for Google OAuth redirect)
   if (oauthCallbackRoutes.some((route) => pathname.startsWith(route))) {
     return NextResponse.next();
-  }
-
-  // Block direct access to restricted auth routes
-  // These should only be accessible via navigation from other auth flows
-  if (restrictedAuthRoutes.some((route) => pathname.startsWith(route))) {
-    const referer = request.headers.get('referer');
-    const origin = request.nextUrl.origin;
-
-    // Allow if coming from the same app (internal navigation)
-    // Block if no referer (direct access) or external referer
-    if (!referer || !referer.startsWith(origin)) {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
-    }
   }
 
   // Handle download routes - require authentication but allow after auth flow

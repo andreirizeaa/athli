@@ -1,15 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Dimensions,
   Keyboard,
   StyleSheet,
   TextInput,
   View,
-  unstable_batchedUpdates,
 } from 'react-native';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
-import { useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { useSharedValue, withTiming, useAnimatedStyle } from 'react-native-reanimated';
 import { Image } from 'expo-image';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -24,6 +25,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { type IWaveformRef, PlayerState, FinishMode } from '@/components/features/audio';
 
 import { useThemePreference, useColorScheme, useAuthSessionStore, useClientProfileStore } from '@/stores';
+import { hexToRgba } from '@/utils/colorUtils';
 import { useTranslations } from '@/stores';
 import { haptics } from '@/utils/haptics';
 import { MessageList } from '@/components/features/message/message-list-flashlist';
@@ -45,7 +47,10 @@ import { createOptimisticMessage } from '@athli/shared-types';
 import {
   useRealtimeMessages,
   useMessageMerging,
+  useSyncReadReceipt,
+  useRealtimeReadReceipts,
 } from '@/hooks/use-realtime-messaging';
+import { useSendMessageWithAttachment } from '@/hooks/use-file-upload';
 
 const BAR_INTERVAL_MS = 100;
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -125,6 +130,20 @@ export default function InboxDetailScreen() {
     []
   );
 
+  // Single animated style for the entire chat content (messages + toolbar move together)
+  const chatContentAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -keyboardHeight.value }],
+  }));
+
+  // Animated bottom offset for toolbar - smoothly transitions as keyboard opens/closes
+  // When keyboard fully closed: bottom = insets.bottom (toolbar above safe area)
+  // When keyboard opens past insets.bottom: bottom = 0 (toolbar flush with keyboard)
+  const toolbarBottomStyle = useAnimatedStyle(() => {
+    'worklet';
+    const bottom = Math.max(0, insets.bottom - keyboardHeight.value);
+    return { bottom };
+  });
+
   // Dynamic toolbar height - tracks actual height including reply preview and attachment picker
   const [toolbarHeight, setToolbarHeight] = useState(60 + insets.bottom);
   const toolbarHeightAnimated = useSharedValue(60 + insets.bottom);
@@ -162,6 +181,9 @@ export default function InboxDetailScreen() {
 
   // Get client profile for reactions display
   const clientProfile = useClientProfileStore((state) => state.profile);
+
+  // File upload hook for sending messages with attachments
+  const { sendWithAttachment, sendWithMultipleAttachments, isUploading: isUploadingAttachment } = useSendMessageWithAttachment();
 
   const [isLoading, setIsLoading] = useState(!coachParam || !messagesParam);
   const [replyingToMessage, setReplyingToMessage] = useState<InboxMessage | null>(null);
@@ -226,6 +248,29 @@ export default function InboxDetailScreen() {
     onMessageReceived: (message) => {
       console.log('[Inbox Detail] onMessageReceived:', message.message_type, message.id, 'attachments:', message.attachments?.length || 0);
       // Message now includes attachments from enhanced broadcast trigger - no refetch needed
+
+      // Remove matching optimistic message now that real message is in state
+      setOptimisticMessages((prev) => {
+        const optimisticMatch = prev.find((opt) => opt.id === message.id);
+
+        if (!optimisticMatch) {
+          // No matching optimistic message - nothing to remove
+          return prev;
+        }
+
+        // For messages with attachments, only remove if the real message 
+        // has attachments_ready=true (all attachments uploaded)
+        const hasAttachments = optimisticMatch.attachments && optimisticMatch.attachments.length > 0;
+        const isReady = (message as any).attachments_ready !== false;
+
+        if (hasAttachments && !isReady) {
+          // Keep optimistic - wait for attachments to be ready
+          return prev;
+        }
+
+        // Safe to remove - the real message is now in realtimeMessages
+        return prev.filter((opt) => opt.id !== message.id);
+      });
     },
     onMessageUpdated: (message) => {
       console.log('[Inbox Detail] onMessageUpdated:', message.message_type, message.id, 'attachments:', message.attachments?.length || 0, 'is_deleted:', message.is_deleted);
@@ -241,7 +286,56 @@ export default function InboxDetailScreen() {
   });
 
   // Merge saved, realtime, and optimistic messages - transforms to UIMessage[]
-  const allMessages = useMessageMerging(messages, realtimeMessages, optimisticMessages, currentUserId);
+  const mergedMessages = useMessageMerging(messages, realtimeMessages, optimisticMessages, currentUserId);
+
+  // Subscribe to read receipt updates for this conversation
+  // This allows the sender to see when their messages are read in realtime
+  const { readReceipts } = useRealtimeReadReceipts({
+    conversationId: id,
+    onReadReceiptUpdated: (receipt) => {
+      console.log('[Inbox Detail] Read receipt updated:', receipt.user_id, 'at', receipt.last_read_at);
+    },
+  });
+
+  // Compute final message status using read receipts
+  // For sent messages, check if recipient has read them based on their read receipt
+  // This enhances the database-computed isRead with real-time read receipt data
+  const allMessages = useMemo(() => {
+    if (!currentUserId) return mergedMessages;
+
+    // Find the recipient's read receipt (not the current user's)
+    const recipientReceipt = readReceipts.find((r) => r.user_id !== currentUserId);
+
+    return mergedMessages.map((msg) => {
+      // Only update read status for own sent messages
+      if (msg.sender_id !== currentUserId) return msg;
+
+      // If already marked as read from database, preserve it
+      if (msg.isRead) return msg;
+
+      // If recipient has a read receipt and it's after this message was sent
+      if (recipientReceipt?.last_read_at) {
+        const msgSentAt = new Date(msg.sent_at).getTime();
+        const readAt = new Date(recipientReceipt.last_read_at).getTime();
+
+        if (readAt >= msgSentAt) {
+          return { ...msg, isRead: true };
+        }
+      }
+
+      return msg;
+    });
+  }, [mergedMessages, readReceipts, currentUserId]);
+
+  // Auto-sync read receipt when screen is focused or when new messages arrive
+  // This hook handles marking the conversation as read - no need for manual useEffect
+  // Pass allMessages.length to re-sync when new messages arrive
+  useSyncReadReceipt({
+    conversationId: id,
+    userId: currentUserId || '',
+    enabled: !!id && !!currentUserId,
+    messageCount: allMessages.length,
+  });
 
   useEffect(() => {
     const handleKeyboardHide = () => {
@@ -361,107 +455,179 @@ export default function InboxDetailScreen() {
     }
   }, [recorderState.metering, recorderState.isRecording, isStopped]);
 
+  // Handle document sent - upload to Supabase and send message
   useEffect(() => {
-    if (documentSent === 'true' && sentDocument) {
-      try {
+    if (documentSent === 'true' && sentDocument && currentUserId && id) {
+      const uploadDocument = async () => {
         const documentData = JSON.parse(sentDocument);
+        const mimeType = documentData.mimeType || 'application/pdf';
 
-        const newMessage = {
-          id: `inbox-${Date.now()}`,
-          text: documentData.caption || '',
-          timestamp: new Date(),
-          isSent: true,
-          isRead: false,
-          document: {
-            uri: documentData.uri,
-            name: documentData.name,
-            mimeType: documentData.mimeType,
-            size: documentData.size ? parseInt(documentData.size) : undefined,
-          },
-        } as any;
+        // Create optimistic message for instant display
+        const optimisticMsg = createOptimisticMessage(
+          id,
+          currentUserId,
+          documentData.caption || '',
+          'file',
+          undefined,
+          [{ local_uri: documentData.uri, mime_type: mimeType, filename: documentData.name || 'document.pdf' }]
+        );
 
-        setMessages((prev) => [...prev, newMessage]);
+        setOptimisticMessages((prev) => [...prev, optimisticMsg]);
+
+        // Clear UI immediately
         setSearchQuery('');
         setShowAttachmentPicker(false);
-        router.setParams({
-          documentSent: '',
-          sentDocument: '',
-        });
-      } catch (error) {
-        console.error('Error parsing sent document:', error);
-        setShowAttachmentPicker(false);
-        router.setParams({
-          documentSent: '',
-          sentDocument: '',
-        });
-      }
+
+        try {
+          // Use the optimistic message ID for deduplication
+          await sendWithAttachment(
+            id,
+            currentUserId,
+            documentData.uri,
+            mimeType,
+            documentData.caption || undefined,
+            undefined, // durationSeconds
+            undefined, // onProgress
+            optimisticMsg.id, // client-provided message ID
+            optimisticMsg.idempotency_key, // client-provided idempotency key
+          );
+
+          // Don't remove optimistic message here - onMessageReceived will handle it
+        } catch (error) {
+          console.error('[Inbox] Error uploading document:', error);
+          setOptimisticMessages((prev) =>
+            prev.filter((m) => m.id !== optimisticMsg.id)
+          );
+          Alert.alert('Upload Failed', 'Could not upload document. Please try again.');
+        } finally {
+          router.setParams({
+            documentSent: '',
+            sentDocument: '',
+          });
+        }
+      };
+
+      uploadDocument();
     }
-  }, [documentSent, sentDocument, router]);
+  }, [documentSent, sentDocument, currentUserId, id, sendWithAttachment, router]);
 
+  // Handle images sent - upload to Supabase and send as ONE message with all attachments
   useEffect(() => {
-    if (imagesSent === 'true' && sentImages) {
-      // Clear params IMMEDIATELY to prevent re-triggering
-      router.setParams({
-        imagesSent: '',
-        sentImages: '',
-        sentImagesCaption: '',
-      });
-
-      try {
+    if (imagesSent === 'true' && sentImages && currentUserId && id) {
+      const uploadImages = async () => {
         const imageAttachments = JSON.parse(sentImages);
 
-        const newMessage = {
-          id: `inbox-${Date.now()}`,
-          text: sentImagesCaption || '',
-          timestamp: new Date(),
-          isSent: true,
-          isRead: false,
-          images: imageAttachments,
-        } as any;
+        // Create ONE optimistic message with ALL attachments for instant UI feedback
+        const optimisticMsg = createOptimisticMessage(
+          id,
+          currentUserId,
+          sentImagesCaption || '',
+          'image',
+          undefined,
+          imageAttachments.map((img: { uri: string; id: string; isVideo?: boolean }) => ({
+            local_uri: img.uri,
+            mime_type: img.isVideo ? 'video/mp4' : 'image/jpeg',
+            filename: img.isVideo ? 'video.mp4' : 'photo.jpg',
+          }))
+        );
 
-        setMessages((prev) => [...prev, newMessage]);
+        setOptimisticMessages((prev) => [...prev, optimisticMsg]);
+
+        // Clear draft text and close picker immediately
         setSearchQuery('');
         setShowAttachmentPicker(false);
-      } catch (error) {
-        console.error('Error parsing sent images:', error);
-        setShowAttachmentPicker(false);
-      }
+
+        // Clear params immediately to prevent re-triggering
+        router.setParams({
+          imagesSent: '',
+          sentImages: '',
+          sentImagesCaption: '',
+        });
+
+        try {
+          // Upload ALL images as ONE message with multiple attachments
+          await sendWithMultipleAttachments(
+            id,
+            currentUserId,
+            imageAttachments.map((img: { uri: string; isVideo?: boolean }) => ({
+              uri: img.uri,
+              mimeType: img.isVideo ? 'video/mp4' : 'image/jpeg',
+            })),
+            sentImagesCaption || undefined,
+            undefined, // onProgress
+            optimisticMsg.id, // client-provided message ID
+            optimisticMsg.idempotency_key, // client-provided idempotency key
+          );
+
+          // Don't remove optimistic message here - onMessageReceived will handle it
+        } catch (error) {
+          console.error('[Inbox] Error uploading images:', error);
+          setOptimisticMessages((prev) =>
+            prev.filter((m) => m.id !== optimisticMsg.id)
+          );
+          Alert.alert('Upload Failed', 'Could not upload images. Please try again.');
+        }
+      };
+
+      uploadImages();
     }
-  }, [imagesSent, sentImages, sentImagesCaption, router]);
+  }, [imagesSent, sentImages, sentImagesCaption, currentUserId, id, sendWithMultipleAttachments, router]);
 
+  // Handle video sent - upload to Supabase and send message
   useEffect(() => {
-    if (videoSent === 'true' && sentVideo) {
-      // Clear params IMMEDIATELY to prevent re-triggering and navigation race condition
-      router.setParams({
-        videoSent: '',
-        sentVideo: '',
-      });
-
-      try {
+    if (videoSent === 'true' && sentVideo && currentUserId && id) {
+      const uploadVideo = async () => {
         const videoData = JSON.parse(sentVideo);
 
-        const newMessage = {
-          id: `inbox-${Date.now()}`,
-          text: videoData.caption || '',
-          timestamp: new Date(),
-          isSent: true,
-          isRead: false,
-          video: {
-            uri: videoData.uri,
-            duration: videoData.duration,
-            orientation: videoData.orientation,
-          },
-        } as any;
+        // Clear params IMMEDIATELY to prevent re-triggering and navigation race condition
+        router.setParams({
+          videoSent: '',
+          sentVideo: '',
+        });
 
-        setMessages((prev) => [...prev, newMessage]);
+        // Create optimistic message for instant display
+        const optimisticMsg = createOptimisticMessage(
+          id,
+          currentUserId,
+          videoData.caption || '',
+          'video',
+          undefined,
+          [{ local_uri: videoData.uri, mime_type: 'video/mp4', filename: 'video.mp4' }]
+        );
+
+        setOptimisticMessages((prev) => [...prev, optimisticMsg]);
+
+        // Clear UI immediately
         setSearchQuery('');
         setShowAttachmentPicker(false);
-      } catch (error) {
-        console.error('Error parsing sent video:', error);
-        setShowAttachmentPicker(false);
-      }
+
+        try {
+          // Use the optimistic message ID for deduplication
+          await sendWithAttachment(
+            id,
+            currentUserId,
+            videoData.uri,
+            'video/mp4',
+            videoData.caption || undefined,
+            undefined, // durationSeconds
+            undefined, // onProgress
+            optimisticMsg.id, // client-provided message ID
+            optimisticMsg.idempotency_key, // client-provided idempotency key
+          );
+
+          // Don't remove optimistic message here - onMessageReceived will handle it
+        } catch (error) {
+          console.error('[Inbox] Error uploading video:', error);
+          setOptimisticMessages((prev) =>
+            prev.filter((m) => m.id !== optimisticMsg.id)
+          );
+          Alert.alert('Upload Failed', 'Could not upload video. Please try again.');
+        }
+      };
+
+      uploadVideo();
     }
-  }, [videoSent, sentVideo, router]);
+  }, [videoSent, sentVideo, currentUserId, id, sendWithAttachment, router]);
 
   const hasText = searchQuery.trim().length > 0;
 
@@ -555,31 +721,51 @@ export default function InboxDetailScreen() {
 
   const handleSendPress = async (pathOverride?: string | null) => {
     const pathToSend = pathOverride ?? previewPath;
-    if (!isMicrophoneMode || !pathToSend) return;
+    if (!isMicrophoneMode || !pathToSend || !currentUserId || !id) return;
+
+    // Stop preview player and close microphone mode immediately
+    previewWaveRef.current?.stopPlayer?.();
+    setIsMicrophoneMode(false);
+
+    const audioUri = pathToSend.startsWith('file://') ? pathToSend : `file://${pathToSend}`;
+
+    // Create optimistic message for instant display
+    const optimisticMsg = createOptimisticMessage(
+      id,
+      currentUserId,
+      '',
+      'audio',
+      undefined,
+      [{ local_uri: audioUri, mime_type: 'audio/mp4', filename: 'voicenote.m4a', duration: lastVoiceNoteDurationMsRef.current }]
+    );
+
+    setOptimisticMessages((prev) => [...prev, optimisticMsg]);
 
     try {
-      previewWaveRef.current?.stopPlayer?.();
-      setIsMicrophoneMode(false);
+      // Convert duration from ms to seconds for database storage
+      const durationMs = lastVoiceNoteDurationMsRef.current;
+      const durationSeconds = Math.round(durationMs / 1000);
 
-      const duration = lastVoiceNoteDurationMsRef.current;
-      const audioUri = pathToSend.startsWith('file://') ? pathToSend : `file://${pathToSend}`;
+      // Use the optimistic message ID for deduplication
+      await sendWithAttachment(
+        id,
+        currentUserId,
+        audioUri,
+        'audio/mp4',
+        undefined, // caption
+        durationSeconds, // duration in seconds for DB
+        undefined, // onProgress
+        optimisticMsg.id, // client-provided message ID
+        optimisticMsg.idempotency_key, // client-provided idempotency key
+      );
 
-      const newMessage = {
-        id: `inbox-${Date.now()}`,
-        text: '',
-        timestamp: new Date(),
-        isSent: true,
-        isRead: false,
-        audio: {
-          uri: audioUri,
-          duration: duration,
-        },
-      } as any;
-
-      setMessages((prev) => [...prev, newMessage]);
+      // Don't remove optimistic message here - onMessageReceived will handle it
     } catch (e) {
-      console.warn('Failed to send voice note:', e);
-      setIsMicrophoneMode(false);
+      console.error('[Inbox] Failed to send voice note:', e);
+      setOptimisticMessages((prev) =>
+        prev.filter((m) => m.id !== optimisticMsg.id)
+      );
+      Alert.alert('Upload Failed', 'Could not upload voice note. Please try again.');
     }
   };
 
@@ -672,7 +858,8 @@ export default function InboxDetailScreen() {
     const parentMessageId = replyingToMessage?.id;
     setReplyingToMessage(null);
 
-    // Create optimistic message
+    // Create optimistic message for immediate UI update
+    // IMPORTANT: The optimistic message ID will be the REAL message ID
     const optimisticMsg = createOptimisticMessage(
       id, // conversationId
       currentUserId,
@@ -685,28 +872,24 @@ export default function InboxDetailScreen() {
     setOptimisticMessages((prev) => [...prev, optimisticMsg]);
 
     try {
-      // Send to database
+      // Send to database with client-provided ID for deduplication
+      // The message ID matches the optimistic message ID
       await sendInboxMessage(id, text, {
         messageType: 'text',
         parentMessageId,
+        messageId: optimisticMsg.id,
+        idempotencyKey: optimisticMsg.idempotency_key,
       });
 
-      // Fetch first while optimistic is still visible
-      const updatedMessages = await getInboxMessages(id);
-      // Batch both state updates to prevent flicker
-      unstable_batchedUpdates(() => {
-        setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
-        setMessages(updatedMessages);
-      });
+      // Don't remove optimistic message here - onMessageReceived will handle it
+      // when the realtime broadcast arrives with the same ID
     } catch (error) {
       console.error('[Inbox] Failed to send message:', error);
-      // Mark as failed
+      // Remove failed message from optimistic list
       setOptimisticMessages((prev) =>
-        prev.map((m) =>
-          m.id === optimisticMsg.id ? { ...m, status: 'failed' } as any : m
-        )
+        prev.filter((m) => m.id !== optimisticMsg.id)
       );
-      // TODO: Show error toast
+      // TODO: Show error toast and allow retry
     }
   };
 
@@ -735,56 +918,51 @@ export default function InboxDetailScreen() {
   };
 
   const handleDocumentPress = (document: any) => {
+    const uri = document.uri || document.url || '';
+    const mimeType = document.mimeType || document.mime_type || 'application/pdf';
+    const filename = document.name || document.filename || 'document.pdf';
+
     router.push({
-      pathname: '/chats/document-preview',
-      params: {
-        uri: document.uri,
-        name: document.name,
-        mimeType: document.mimeType,
-        size: document.size?.toString() || '',
-        chatId: 'inbox',
-        clientId: coach?.id || '',
-        clientName: coach?.other_user_name || '',
-        fromMessage: 'true',
-      },
-    } as any);
+      pathname: '/modals/files/file-viewer-modal',
+      params: { uri, mimeType, filename },
+    });
   };
 
   const handleImagePress = (
     images: any[],
-    senderName: string,
-    isSent: boolean,
-    messageTimestamp?: Date | string
+    _senderName: string,
+    _isSent: boolean,
+    _messageTimestamp?: Date | string
   ) => {
+    // For simplicity, open the first image in the viewer
+    // Multi-image gallery can be added later if needed
+    const firstImage = images[0];
+    if (!firstImage) return;
+
+    const uri = firstImage.uri || firstImage.url || '';
+    const mimeType = firstImage.mimeType || firstImage.mime_type || 'image/jpeg';
+    const filename = firstImage.filename || 'image.jpg';
+
     router.push({
-      pathname: '/chats/message-image-preview',
-      params: {
-        images: JSON.stringify(images),
-        senderName: senderName,
-        isSent: isSent.toString(),
-        messageTimestamp: messageTimestamp instanceof Date ? messageTimestamp.toISOString() : messageTimestamp?.toString() || '',
-      },
-    } as any);
+      pathname: '/modals/files/file-viewer-modal',
+      params: { uri, mimeType, filename },
+    });
   };
 
   const handleVideoPress = (
     video: any,
-    senderName: string,
-    isSent: boolean,
-    messageTimestamp?: Date | string
+    _senderName: string,
+    _isSent: boolean,
+    _messageTimestamp?: Date | string
   ) => {
+    const uri = video.uri || video.url || '';
+    const mimeType = video.mimeType || video.mime_type || 'video/mp4';
+    const filename = video.filename || 'video.mp4';
+
     router.push({
-      pathname: '/chats/video-preview',
-      params: {
-        uri: video.uri,
-        duration: video.duration.toString(),
-        orientation: video.orientation,
-        fromMessage: 'true',
-        senderName: senderName,
-        isSent: isSent.toString(),
-        messageTimestamp: messageTimestamp instanceof Date ? messageTimestamp.toISOString() : messageTimestamp?.toString() || '',
-      },
-    } as any);
+      pathname: '/modals/files/file-viewer-modal',
+      params: { uri, mimeType, filename },
+    });
   };
 
   const handleToolbarHeightChange = (height: number) => {
@@ -815,52 +993,78 @@ export default function InboxDetailScreen() {
         onBackPress={handleBackPress}
       />
 
-      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-        <MessageList
-          messages={allMessages}
-          backgroundColor="transparent"
-          themeColors={themeColors}
-          clientName={coach.other_user_name || 'Coach'}
-          onReply={handleMessageReply}
-          onDelete={handleMessageDelete}
-          onReactionPress={handleReactionPress}
-          onDocumentPress={handleDocumentPress}
-          onImagePress={handleImagePress}
-          onVideoPress={handleVideoPress}
-          headerHeight={insets.top + 60}
-          bottomOffset={toolbarHeight}
+      {/* Messages + Toolbar container - moves together with keyboard */}
+      <Animated.View style={[{ flex: 1 }, chatContentAnimatedStyle]}>
+        {/* SCROLL WINDOW - Fills space between header and toolbar */}
+        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+          <MessageList
+            messages={allMessages}
+            backgroundColor="transparent"
+            themeColors={themeColors}
+            clientName={coach.other_user_name || 'Coach'}
+            onReply={handleMessageReply}
+            onDelete={handleMessageDelete}
+            onReactionPress={handleReactionPress}
+            onDocumentPress={handleDocumentPress}
+            onImagePress={handleImagePress}
+            onVideoPress={handleVideoPress}
+            headerHeight={insets.top + 60}
+            bottomOffset={toolbarHeight + 8 + insets.bottom}
+          />
+        </View>
+
+        {/* TOOLBAR - Absolutely positioned within this container */}
+        <ChatToolbar
+          coach={coach ? { id: coach.id, name: coach.other_user_name || '' } : undefined}
+          replyingToMessage={replyingToMessage}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          inputRef={inputRef}
+          hasText={hasText}
+          isMicrophoneMode={isMicrophoneMode}
+          isStopped={isStopped}
+          showAttachmentPicker={showAttachmentPicker}
+          durationLabel={durationLabel}
+          waveform={waveform}
+          previewPath={previewPath}
+          previewPlayerState={previewPlayerState}
+          onPlayerStateChange={setPreviewPlayerState}
+          onTogglePreviewPlay={handleTogglePreviewPlay}
+          previewWaveRef={previewWaveRef}
+          onPlusPress={handlePlusPress}
+          onMicrophonePress={handleMicrophonePress}
+          onSendMessage={handleSendMessage}
+          onTrashPress={handleTrashPress}
+          onStopToggle={handleStopToggle}
+          onSendPress={handleSendPress}
+          onCancelReply={handleCancelReply}
+          bottomInset={0}
+          animatedBottomStyle={toolbarBottomStyle}
+          onHeightChange={handleToolbarHeightChange}
+        />
+      </Animated.View>
+
+      {/* Fixed bottom filler - doesn't move with keyboard */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: insets.bottom,
+          overflow: 'hidden',
+        }}
+        pointerEvents="none"
+      >
+        <BlurView
+          intensity={30}
+          tint={isDark ? 'dark' : 'light'}
+          style={{
+            flex: 1,
+            backgroundColor: hexToRgba(themeColors.translucentBackground, 0.95),
+          }}
         />
       </View>
-
-      {/* TOOLBAR */}
-      <ChatToolbar
-        coach={coach ? { id: coach.id, name: coach.other_user_name || '' } : undefined}
-        replyingToMessage={replyingToMessage}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        inputRef={inputRef}
-        hasText={hasText}
-        isMicrophoneMode={isMicrophoneMode}
-        isStopped={isStopped}
-        showAttachmentPicker={showAttachmentPicker}
-        durationLabel={durationLabel}
-        waveform={waveform}
-        previewPath={previewPath}
-        previewPlayerState={previewPlayerState}
-        onPlayerStateChange={setPreviewPlayerState}
-        onTogglePreviewPlay={handleTogglePreviewPlay}
-        previewWaveRef={previewWaveRef}
-        onPlusPress={handlePlusPress}
-        onMicrophonePress={handleMicrophonePress}
-        onSendMessage={handleSendMessage}
-        onTrashPress={handleTrashPress}
-        onStopToggle={handleStopToggle}
-        onSendPress={handleSendPress}
-        onCancelReply={handleCancelReply}
-        bottomInset={insets.bottom}
-        keyboardHeight={keyboardHeight}
-        onHeightChange={handleToolbarHeightChange}
-      />
 
     </View>
   );

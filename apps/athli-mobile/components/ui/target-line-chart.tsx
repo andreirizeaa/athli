@@ -4,11 +4,12 @@ import { CartesianChart, Line, Area } from 'victory-native';
 import { Line as SkiaLine, vec, DashPathEffect, useFont, Group, Skia, LinearGradient } from '@shopify/react-native-skia';
 import { hexToRgba } from '@/utils/colorUtils';
 import { useSharedValue, withTiming, withDelay, useDerivedValue } from 'react-native-reanimated';
-import { Crosshair } from 'lucide-react-native';
+import { Flame } from 'lucide-react-native';
 
 import { useThemePreference, useTranslations } from '@/stores';
 import { typography } from '@/constants/typography';
 import { PlatformIcon } from '@/components/ui/platform-icon';
+import { Card } from '@/components/ui/card';
 
 type DataPoint = {
     value: number;
@@ -19,6 +20,9 @@ type TargetLineChartProps = {
     data: DataPoint[];
     targetValue: number;
     unit?: string;
+    name?: string;
+    streak?: number;
+    renderFooter?: () => React.ReactNode;
 };
 
 type ChartDataPoint = {
@@ -36,7 +40,7 @@ const formatShortDate = (dateStr: string): string => {
     return `${day} ${month}`;
 };
 
-export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChartProps) => {
+export const TargetLineChart = ({ data, targetValue, unit = '', name, streak, renderFooter }: TargetLineChartProps) => {
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const font = useFont(require('../../assets/fonts/SpaceMono-Regular.ttf'), 12);
@@ -88,31 +92,64 @@ export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChar
         return Skia.XYWHRect(0, 0, width, chartHeight + 50);
     });
 
+    const streakColor = '#f97316';
+
     if (chartData.length < 2) {
         return (
-            <View style={[styles.container, { backgroundColor: themeColors.surfacePrimary }]}>
+            <Card variant="chart">
+                {/* Header row with name and streak */}
+                <View style={styles.headerRow}>
+                    {name && (
+                        <Text style={[styles.nameText, { color: themeColors.text }]} numberOfLines={1}>
+                            {name}
+                        </Text>
+                    )}
+                    {streak !== undefined && (
+                        <View style={[styles.streakPill, { backgroundColor: hexToRgba(streakColor, 0.15) }]}>
+                            <PlatformIcon
+                                sf="flame.fill"
+                                IconComponent={Flame}
+                                size={14}
+                                color={streakColor}
+                            />
+                            <Text style={[styles.streakText, { color: streakColor }]}>
+                                {streak}
+                            </Text>
+                        </View>
+                    )}
+                </View>
                 <View style={styles.emptyState}>
                     <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
                         {t('clientDetail.chart.notEnoughData')}
                     </Text>
                 </View>
-            </View>
+                {renderFooter?.()}
+            </Card>
         );
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.surfacePrimary }]}>
-            {/* Target info - positioned top right */}
-            <View style={styles.targetInfo}>
-                <PlatformIcon
-                    sf="scope"
-                    IconComponent={Crosshair}
-                    size={16}
-                    color={themeColors.mutedText}
-                />
-                <Text style={[styles.targetValue, { color: themeColors.text }]}>
-                    {targetValue}{unit ? ` ${unit}` : ''}
-                </Text>
+        <Card variant="chart">
+            {/* Header row with name and streak */}
+            <View style={styles.headerRow}>
+                {name && (
+                    <Text style={[styles.nameText, { color: themeColors.text }]} numberOfLines={1}>
+                        {name}
+                    </Text>
+                )}
+                {streak !== undefined && (
+                    <View style={[styles.streakPill, { backgroundColor: hexToRgba(streakColor, 0.15) }]}>
+                        <PlatformIcon
+                            sf="flame.fill"
+                            IconComponent={Flame}
+                            size={14}
+                            color={streakColor}
+                        />
+                        <Text style={[styles.streakText, { color: streakColor }]}>
+                            {streak}
+                        </Text>
+                    </View>
+                )}
             </View>
 
             <View style={[styles.chartWrapper, { width: chartWidth, height: chartHeight }]}>
@@ -135,6 +172,7 @@ export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChar
                             return actualValue.toFixed(0);
                         },
                     }}
+                    frame={{ lineWidth: 0 }}
                 >
                     {({ points, chartBounds, yScale }) => {
                         // Calculate the y position for the reference line at y=0
@@ -216,30 +254,33 @@ export const TargetLineChart = ({ data, targetValue, unit = '' }: TargetLineChar
                     {endDate}
                 </Text>
             </View>
-        </View>
+            {renderFooter?.()}
+        </Card>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        marginHorizontal: 16,
-        marginTop: 12,
-        borderRadius: 24,
-        paddingVertical: 24,
-        paddingHorizontal: 16,
-        alignItems: 'center',
-    },
-    chartWrapper: {},
-    targetInfo: {
-        position: 'absolute',
-        top: 16,
-        right: 16,
+    headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        alignSelf: 'stretch',
+        marginBottom: 16,
     },
-    targetValue: {
-        ...typography.h6,
+    nameText: {
+        ...typography.h5,
+        flex: 1,
+    },
+    chartWrapper: {},
+    streakPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 16,
+        gap: 4,
+    },
+    streakText: {
+        ...typography.p3,
         fontWeight: '600',
     },
     dateLabels: {

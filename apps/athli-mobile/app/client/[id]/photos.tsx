@@ -460,17 +460,17 @@ export default function ClientPhotosScreen() {
       ]}>
         <View style={styles.bottomBarContent}>
           <PressableScale
-            style={[styles.sortButton, { backgroundColor: themeColors.surfacePrimary }]}
+            style={[styles.sortButton, { backgroundColor: themeColors.primary }]}
             onPress={() => setSortAscending(!sortAscending)}
           >
-            <ArrowUpDown {...({ size: 18, color: themeColors.text } as any)} />
+            <ArrowUpDown {...({ size: 18, color: themeColors.primaryForeground } as any)} />
           </PressableScale>
           <PressableScale
-            style={[styles.compareButton, { backgroundColor: themeColors.surfacePrimary }]}
+            style={[styles.compareButton, { backgroundColor: themeColors.primary }]}
             onPress={handleCompare}
           >
-            <Columns {...({ size: 18, color: themeColors.text, style: styles.buttonIcon } as any)} />
-            <Text style={[styles.compareButtonText, { color: themeColors.text }]}>
+            <Columns {...({ size: 18, color: themeColors.primaryForeground, style: styles.buttonIcon } as any)} />
+            <Text style={[styles.compareButtonText, { color: themeColors.primaryForeground }]}>
               {t('clientDetail.photos.compare')}
             </Text>
           </PressableScale>

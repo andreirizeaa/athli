@@ -32,6 +32,7 @@ import type { AthleteDetails } from '@/api/client/client-service';
 import { parsePhoneNumber } from 'react-phone-number-input';
 import type { Value as PhoneValue, Country } from 'react-phone-number-input';
 import { toast } from 'sonner';
+import { getCountryCode, getCountryName } from '@/lib/general/country-utils';
 
 interface EditClientDetailsSidePanelProps {
     open: boolean;
@@ -59,6 +60,7 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
     const [isDragging, setIsDragging] = useState(false);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const firstNameInputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const dragCounterRef = useRef(0);
@@ -286,15 +288,35 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
 
                 <div className="space-y-2">
                     <Label htmlFor="birth-date"><span>{t('athletes.profile.birthDate')}</span></Label>
-                    <Popover>
+                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                         <PopoverTrigger asChild>
-                            <Button variant="outline" className={cn("w-full justify-between text-left font-normal h-10 px-3", !formData.birthDate && "text-muted-foreground")}>
-                                {formData.birthDate ? format(new Date(formData.birthDate), "d MMM, yyyy") : <span>{t('athletes.profile.selectBirthDate')}</span>}
-                                <ChevronDown className="h-4 w-4 opacity-50" />
+                            <Button 
+                                variant="outline" 
+                                id="birth-date"
+                                className="w-full justify-between font-normal bg-sidebar border-muted-foreground/20 hover:border-primary/50 transition-colors"
+                                aria-label={t('athletes.profile.selectBirthDate')}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <span className={cn("text-sm", !formData.birthDate && "text-muted-foreground")}>
+                                        {formData.birthDate ? format(new Date(formData.birthDate), "d MMM, yyyy") : t('athletes.profile.selectBirthDate')}
+                                    </span>
+                                </div>
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent mode="single" selected={formData.birthDate ? new Date(formData.birthDate) : undefined} onSelect={(date) => setFormData({ ...formData, birthDate: date ? format(date, 'yyyy-MM-dd') : null })} captionLayout="dropdown" fromYear={1900} toYear={new Date().getFullYear()} disabled={(date) => date > new Date()} initialFocus />
+                        <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                            <CalendarComponent 
+                                mode="single" 
+                                selected={formData.birthDate ? new Date(formData.birthDate) : undefined} 
+                                onSelect={(date) => {
+                                    setFormData({ ...formData, birthDate: date ? format(date, 'yyyy-MM-dd') : null });
+                                    setIsCalendarOpen(false);
+                                }} 
+                                captionLayout="dropdown" 
+                                fromYear={1900} 
+                                toYear={new Date().getFullYear()} 
+                                disabled={(date) => date > new Date()} 
+                            />
                         </PopoverContent>
                     </Popover>
                 </div>
@@ -312,33 +334,16 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
                         </Select>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="height"><span>Height</span></Label>
-                        <div className="relative">
-                            <Input
-                                id="height"
-                                type="number"
-                                value={formData.height || ''}
-                                onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                                placeholder="e.g. 180"
-                                className="pr-10"
-                            />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium pointer-events-none">
-                                cm
-                            </span>
-                        </div>
+                        <Label htmlFor="category"><span>{t('athletes.profile.category')}</span></Label>
+                        <Select value={formData.category || undefined} onValueChange={(value: any) => setFormData({ ...formData, category: value })}>
+                            <SelectTrigger className="w-full"><SelectValue placeholder={t('athletes.profile.selectCategory')} /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="online">{t('athletes.profile.online')}</SelectItem>
+                                <SelectItem value="in-person">{t('athletes.profile.inPerson')}</SelectItem>
+                                <SelectItem value="hybrid">{t('athletes.profile.hybrid')}</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
-                </div>
-
-                <div className="space-y-2">
-                    <Label htmlFor="category"><span>{t('athletes.profile.category')}</span></Label>
-                    <Select value={formData.category || undefined} onValueChange={(value: any) => setFormData({ ...formData, category: value })}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder={t('athletes.profile.selectCategory')} /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="online">{t('athletes.profile.online')}</SelectItem>
-                            <SelectItem value="in-person">{t('athletes.profile.inPerson')}</SelectItem>
-                            <SelectItem value="hybrid">{t('athletes.profile.hybrid')}</SelectItem>
-                        </SelectContent>
-                    </Select>
                 </div>
 
                 <div className="space-y-2">
@@ -348,7 +353,10 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
 
                 <div className="space-y-2">
                     <Label htmlFor="country"><span>{t('athletes.profile.country')}</span></Label>
-                    <CountrySelect value={formData.country as Country | undefined} onChange={(country) => setFormData({ ...formData, country })} />
+                    <CountrySelect 
+                        value={getCountryCode(formData.country) as Country | undefined} 
+                        onChange={(country) => setFormData({ ...formData, country: getCountryName(country) || country })} 
+                    />
                 </div>
             </div>
         </SidePanel>

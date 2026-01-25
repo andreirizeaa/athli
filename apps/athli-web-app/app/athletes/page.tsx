@@ -63,6 +63,7 @@ import {
 } from 'lucide-react';
 import flags from 'react-phone-number-input/flags';
 import type { Country } from 'react-phone-number-input';
+import { getCountryCode, getCountryName } from '@/lib/general/country-utils';
 
 type ColumnId =
   | 'lastActivity'
@@ -892,12 +893,14 @@ const AthletesPage = () => {
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
             renderCell: (row) => {
-              const Flag = row.country ? flags[row.country as Country] : null;
+              const countryCode = getCountryCode(row.country);
+              const Flag = countryCode ? flags[countryCode] : null;
+              const countryDisplayName = getCountryName(row.country);
               return (
                 <div className="flex items-center w-full">
                   {Flag ? (
                     <div className="flex h-4 w-6 overflow-hidden rounded-sm bg-foreground/20 [&_svg:not([class*='size-'])]:size-full">
-                      <Flag title={row.country} />
+                      <Flag title={countryDisplayName || ''} />
                     </div>
                   ) : (
                     <span className="text-sm">{row.country || '--'}</span>

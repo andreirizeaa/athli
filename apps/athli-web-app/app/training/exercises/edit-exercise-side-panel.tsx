@@ -280,12 +280,9 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
       setExerciseNameError(null);
     }
 
-    // Video validation - either link or file is required
-    if (!videoLink.trim() && !videoFile) {
-      setVideoLinkError(t('exercises.addExercise.videoLinkRequiredError'));
-      hasError = true;
-    } else if (videoLink.trim() && !videoFile) {
-      // Validate link only if no file is selected
+    // Video validation - optional, but if provided must be valid
+    if (videoLink.trim() && !videoFile) {
+      // Validate link only if provided and no file is selected
       const { id, type } = extractVideoId(videoLink);
       if (!id || !type) {
         setVideoLinkError(t('exercises.addExercise.videoLinkInvalidError'));
@@ -469,7 +466,7 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
 
             <div className="flex flex-col gap-2">
               <label htmlFor="video-link" className="text-sm font-medium">
-                {t('exercises.addExercise.video')}<RequiredAsterisk />
+                {t('exercises.addExercise.video')}
               </label>
 
               {/* Video Link Input - shown when no file is selected */}

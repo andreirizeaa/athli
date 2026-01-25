@@ -185,10 +185,11 @@ export default function AddExerciseModal() {
         const trimmedTitle = title.trim();
         const trimmedVideoLink = videoLink.trim();
 
-        // Title, category, and valid video link are mandatory
+        // Title and category are mandatory, video is optional
         const titleValid = trimmedTitle.length > 0;
         const categoryValid = category !== null;
-        const videoValid = isValidVideoUrl(trimmedVideoLink);
+        // Video is optional - only validate format if provided
+        const videoValid = trimmedVideoLink.length === 0 || isValidVideoUrl(trimmedVideoLink);
 
         const formValid = titleValid && categoryValid && videoValid;
 
@@ -362,7 +363,6 @@ export default function AddExerciseModal() {
                                 keyboardType="url"
                                 autoCapitalize="none"
                                 autoCorrect={false}
-                                required
                             />
                             {!isVideoLinkValid && (
                                 <Text style={styles.errorText}>

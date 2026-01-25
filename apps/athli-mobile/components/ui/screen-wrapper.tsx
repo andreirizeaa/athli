@@ -1,8 +1,11 @@
 import { ReactNode } from 'react';
-import { View, ScrollView, StyleSheet, ViewStyle } from 'react-native';
+import { View, ScrollView, StyleSheet, ViewStyle, ImageBackground } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useColorScheme } from '@/stores';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
+
+const darkBackground = require('@/assets/backgrounds/dark.png');
+const lightBackground = require('@/assets/backgrounds/light.png');
 
 type ScreenWrapperProps = {
   children: ReactNode;
@@ -29,10 +32,12 @@ export const ScreenWrapper = ({
 }: ScreenWrapperProps) => {
   const insets = useSafeAreaInsets();
   const { colors: themeColors } = useThemePreference();
+  const colorScheme = useColorScheme();
+  const backgroundImage = colorScheme === 'dark' ? darkBackground : lightBackground;
 
   if (scrollable) {
     return (
-      <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <ImageBackground source={backgroundImage} style={styles.screen} resizeMode="cover">
         <View
           style={[
             styles.safeArea,
@@ -59,13 +64,13 @@ export const ScreenWrapper = ({
           {overlay}
           {!hideStatusBarBlur && <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} />}
         </View>
-      </View>
+      </ImageBackground>
     );
   }
 
   // Static layout (no ScrollView)
   return (
-    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+    <ImageBackground source={backgroundImage} style={styles.screen} resizeMode="cover">
       <View
         style={[
           styles.container,
@@ -80,7 +85,7 @@ export const ScreenWrapper = ({
       </View>
       {overlay}
       {!hideStatusBarBlur && <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} />}
-    </View>
+    </ImageBackground>
   );
 };
 

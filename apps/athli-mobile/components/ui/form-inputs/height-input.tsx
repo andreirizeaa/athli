@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TextInput } from 'react-native';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
+import { Card } from '@/components/ui/card';
 
 type HeightInputProps = {
   label: string;
@@ -38,7 +39,7 @@ export const HeightInput = ({
   };
 
   return (
-    <View style={[styles.inputBox, { backgroundColor: themeColors.surfacePrimary }]}>
+    <Card variant="form">
       <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
         {label}
       </Text>
@@ -58,17 +59,11 @@ export const HeightInput = ({
           </Text>
         )}
       </View>
-    </View>
+    </Card>
   );
 };
 
 const styles = StyleSheet.create({
-  inputBox: {
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12,
-  },
   inputBoxLabel: {
     ...typography.p4,
     marginBottom: 2,

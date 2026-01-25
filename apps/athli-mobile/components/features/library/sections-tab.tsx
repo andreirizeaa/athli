@@ -247,7 +247,7 @@ export const SectionsTab = () => {
               style={styles.rowWrapper}
               onPress={() => handleSectionPress(item)}
             >
-              <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
+              <View style={[styles.rowContent, { backgroundColor: 'transparent' }]}>
                 <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
                   <PlatformIcon
                     sf="square.stack.3d.up.fill"

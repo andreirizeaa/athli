@@ -5,8 +5,9 @@ import {
   Text,
   Image as RNImage,
   Dimensions,
-  Pressable,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 import { FileText, Play } from 'lucide-react-native';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { type ThemeColors } from '@/constants/theme';
@@ -69,6 +70,7 @@ const SkeletonCell = ({
 };
 
 // Image cell
+// Uses Tap gesture to only respond to taps - long press propagates to parent ContextMenuWrapper
 const ImageCell = ({
   attachment,
   size,
@@ -77,14 +79,22 @@ const ImageCell = ({
   attachment: AttachmentItem;
   size: number;
   onPress?: () => void;
-}) => (
-  <Pressable
-    style={({ pressed }) => [styles.gridCell, { width: size, height: size }, pressed && styles.pressed]}
-    onPress={onPress}
-  >
-    <RNImage source={{ uri: attachment.uri }} style={styles.cellImage} resizeMode="cover" />
-  </Pressable>
-);
+}) => {
+  const tapGesture = Gesture.Tap()
+    .onEnd(() => {
+      if (onPress) {
+        runOnJS(onPress)();
+      }
+    });
+
+  return (
+    <GestureDetector gesture={tapGesture}>
+      <View style={[styles.gridCell, { width: size, height: size }]}>
+        <RNImage source={{ uri: attachment.uri }} style={styles.cellImage} resizeMode="cover" />
+      </View>
+    </GestureDetector>
+  );
+};
 
 // Video cell with play icon - generates thumbnail for local videos
 // Uses same size parameter as ImageCell and DocumentCell for consistent grid layout
@@ -131,20 +141,26 @@ const VideoCell = ({
     generateThumbnail();
   }, [attachment.uri]);
 
+  const tapGesture = Gesture.Tap()
+    .onEnd(() => {
+      if (onPress) {
+        runOnJS(onPress)();
+      }
+    });
+
   return (
-    <Pressable
-      style={({ pressed }) => [styles.gridCell, { width: size, height: size, backgroundColor: '#000' }, pressed && styles.pressed]}
-      onPress={onPress}
-    >
-      {thumbnailUri && (
-        <RNImage source={{ uri: thumbnailUri }} style={styles.cellImage} resizeMode="cover" />
-      )}
-      <View style={styles.playOverlay}>
-        <View style={styles.playButton}>
-          <PlatformIcon sf="play.fill" IconComponent={Play} size={24} color="#fff" />
+    <GestureDetector gesture={tapGesture}>
+      <View style={[styles.gridCell, { width: size, height: size, backgroundColor: '#000' }]}>
+        {thumbnailUri && (
+          <RNImage source={{ uri: thumbnailUri }} style={styles.cellImage} resizeMode="cover" />
+        )}
+        <View style={styles.playOverlay}>
+          <View style={styles.playButton}>
+            <PlatformIcon sf="play.fill" IconComponent={Play} size={24} color="#fff" />
+          </View>
         </View>
       </View>
-    </Pressable>
+    </GestureDetector>
   );
 };
 
@@ -170,23 +186,30 @@ const DocumentCell = ({
 
   const textColor = isParentSent ? themeColors.primaryForeground : themeColors.text;
 
+  const tapGesture = Gesture.Tap()
+    .onEnd(() => {
+      if (onPress) {
+        runOnJS(onPress)();
+      }
+    });
+
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.gridCell,
-        styles.documentCell,
-        { width: size, height: size, backgroundColor: adjustedBackground },
-        pressed && styles.pressed,
-      ]}
-      onPress={onPress}
-    >
-      <View style={styles.documentIconContainer}>
-        <PlatformIcon sf="doc.fill" IconComponent={FileText} size={24} color="#ea580c" />
+    <GestureDetector gesture={tapGesture}>
+      <View
+        style={[
+          styles.gridCell,
+          styles.documentCell,
+          { width: size, height: size, backgroundColor: adjustedBackground },
+        ]}
+      >
+        <View style={styles.documentIconContainer}>
+          <PlatformIcon sf="doc.fill" IconComponent={FileText} size={24} color="#ea580c" />
+        </View>
+        <Text style={[styles.documentName, { color: textColor }]} numberOfLines={2}>
+          {attachment.filename || 'Document'}
+        </Text>
       </View>
-      <Text style={[styles.documentName, { color: textColor }]} numberOfLines={2}>
-        {attachment.filename || 'Document'}
-      </Text>
-    </Pressable>
+    </GestureDetector>
   );
 };
 

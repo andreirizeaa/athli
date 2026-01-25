@@ -331,6 +331,37 @@ function getTimestamp(sentAt: Date | string): number {
   return new Date(sentAt).getTime();
 }
 
+// Persistent cache for local_uri values from optimistic messages
+// Allows seamless transition from optimistic to real without flickering
+// Cache entries are automatically cleaned up after 5 minutes (attachment should be loaded by then)
+const localUriCache = new Map<string, { uri: string; timestamp: number }>();
+const LOCAL_URI_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Cache a local_uri for an attachment ID
+ * Called when optimistic messages are processed
+ */
+function cacheLocalUri(attachmentId: string, localUri: string): void {
+  localUriCache.set(attachmentId, { uri: localUri, timestamp: Date.now() });
+}
+
+/**
+ * Get a cached local_uri for an attachment ID
+ * Returns undefined if not found or expired
+ */
+function getCachedLocalUri(attachmentId: string): string | undefined {
+  const cached = localUriCache.get(attachmentId);
+  if (!cached) return undefined;
+
+  // Check if expired
+  if (Date.now() - cached.timestamp > LOCAL_URI_CACHE_TTL_MS) {
+    localUriCache.delete(attachmentId);
+    return undefined;
+  }
+
+  return cached.uri;
+}
+
 /**
  * Merge and deduplicate messages from multiple sources.
  *
@@ -338,6 +369,8 @@ function getTimestamp(sentAt: Date | string): number {
  * - Optimistic messages use the SAME ID as the real message
  * - Deduplication is now trivial: same ID = same message
  * - Optimistic messages with status 'sending' win over real messages
+ * - Preserves local_uri from optimistic attachments when transitioning to real messages
+ *   using a persistent cache to prevent flickering
  *
  * @param savedMessages - Messages from database (API)
  * @param realtimeMessages - Messages from realtime subscription
@@ -354,10 +387,43 @@ export function deduplicateMessages(
   // Step 1: Build set of optimistic message IDs for quick lookup
   const optimisticIds = new Set(optimisticMessages.map((m) => m.id));
 
+  // Step 1.5: Cache local_uri from optimistic attachments for persistence across calls
+  // This ensures we can preserve local_uri even after optimistic is removed
+  optimisticMessages.forEach((msg) => {
+    if (msg.attachments) {
+      msg.attachments.forEach((att: any) => {
+        if (att.local_uri && att.id) {
+          cacheLocalUri(att.id, att.local_uri);
+        }
+      });
+    }
+  });
+
+  // Helper to enrich attachments with preserved local_uri from cache
+  const enrichAttachmentsWithLocalUri = (attachments: MessageAttachment[] | undefined): MessageAttachment[] | undefined => {
+    if (!attachments) return attachments;
+    return attachments.map((att) => {
+      // If attachment already has local_uri, keep it
+      if ((att as any).local_uri) return att;
+
+      // Check cache for preserved local_uri
+      const cachedUri = getCachedLocalUri(att.id);
+      if (cachedUri) {
+        return { ...att, local_uri: cachedUri } as MessageAttachment;
+      }
+      return att;
+    });
+  };
+
   // Step 2: Add saved messages (skip if we have optimistic version)
   savedMessages.forEach((msg) => {
     if (!optimisticIds.has(msg.id)) {
-      resultMap.set(msg.id, msg);
+      // Enrich attachments with preserved local_uri from cache
+      const enrichedMsg = {
+        ...msg,
+        attachments: enrichAttachmentsWithLocalUri(msg.attachments),
+      };
+      resultMap.set(msg.id, enrichedMsg);
     }
   });
 
@@ -372,12 +438,13 @@ export function deduplicateMessages(
     if (existingMsg) {
       // Message exists in saved - merge realtime updates into it
       // Realtime has fresher data for: reactions, read_at, attachments
+      const mergedAttachments = realtimeMsg.attachments?.length
+        ? enrichAttachmentsWithLocalUri(realtimeMsg.attachments)
+        : (existingMsg as Message).attachments;
       const mergedMsg: Message = {
         ...(existingMsg as Message),
         reactions: realtimeMsg.reactions,
-        attachments: realtimeMsg.attachments?.length
-          ? realtimeMsg.attachments
-          : (existingMsg as Message).attachments,
+        attachments: mergedAttachments,
         read_at: realtimeMsg.read_at || (existingMsg as Message).read_at,
         // Take attachments_ready from realtime if message wasn't ready before
         attachments_ready: realtimeMsg.attachments_ready ?? (existingMsg as Message).attachments_ready,
@@ -385,7 +452,12 @@ export function deduplicateMessages(
       resultMap.set(realtimeMsg.id, mergedMsg);
     } else {
       // Message doesn't exist in saved - add from realtime
-      resultMap.set(realtimeMsg.id, realtimeMsg);
+      // Enrich attachments with preserved local_uri from cache
+      const enrichedMsg = {
+        ...realtimeMsg,
+        attachments: enrichAttachmentsWithLocalUri(realtimeMsg.attachments),
+      };
+      resultMap.set(realtimeMsg.id, enrichedMsg);
     }
   });
 

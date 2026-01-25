@@ -8,8 +8,9 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { CountrySelect } from '@/components/ui/country-select';
+import type { Country } from 'react-phone-number-input';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
 import { Upload, Building2, Loader2 } from 'lucide-react';
@@ -19,49 +20,6 @@ import { useUnsavedChanges } from '@/app/settings/context/unsaved-changes-contex
 import { useCompanySave } from '../context/company-save-context';
 import { toast } from 'sonner';
 import { ImageCropDialog } from '@/components/app/image-crop-dialog';
-
-const countries = [
-  'United States',
-  'United Kingdom',
-  'Canada',
-  'Australia',
-  'Germany',
-  'France',
-  'Italy',
-  'Spain',
-  'Netherlands',
-  'Belgium',
-  'Switzerland',
-  'Austria',
-  'Sweden',
-  'Norway',
-  'Denmark',
-  'Finland',
-  'Poland',
-  'Portugal',
-  'Ireland',
-  'Greece',
-  'Czech Republic',
-  'Romania',
-  'Hungary',
-  'New Zealand',
-  'South Africa',
-  'Brazil',
-  'Mexico',
-  'Argentina',
-  'Chile',
-  'Japan',
-  'South Korea',
-  'China',
-  'India',
-  'Singapore',
-  'Hong Kong',
-  'United Arab Emirates',
-  'Saudi Arabia',
-  'Israel',
-  'Turkey',
-  'Russia',
-];
 
 const specialityOptions: Option[] = [
   { label: 'Physiotherapy', value: 'physiotherapy' },
@@ -100,7 +58,7 @@ const InformationPage = () => {
   const [companyName, setCompanyName] = useState('');
   const [website, setWebsite] = useState('');
   const [linkedin, setLinkedin] = useState('');
-  const [location, setLocation] = useState('');
+  const [location, setLocation] = useState<Country | undefined>(undefined);
   const [specialities, setSpecialities] = useState<string[]>([]);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -115,7 +73,7 @@ const InformationPage = () => {
       setCompanyName(company.company_name || '');
       setWebsite(company.website || '');
       setLinkedin(company.linkedin || '');
-      setLocation(company.location || '');
+      setLocation((company.location as Country) || undefined);
       setSpecialities(company.specialities || []);
       setLogoPreview(company.logo_url || null);
 
@@ -164,7 +122,7 @@ const InformationPage = () => {
       company_name: companyName,
       website: website,
       linkedin: linkedin,
-      location: location,
+      location: location || '',
       specialities: specialities,
       logo_url: logoPreview || undefined,
     };
@@ -174,7 +132,7 @@ const InformationPage = () => {
       currentData.company_name !== (savedData.company_name || '') ||
       currentData.website !== (savedData.website || '') ||
       currentData.linkedin !== (savedData.linkedin || '') ||
-      currentData.location !== (savedData.location || '') ||
+      (currentData.location || '') !== (savedData.location || '') ||
       JSON.stringify(currentData.specialities) !== JSON.stringify(savedData.specialities || []) ||
       currentData.logo_url !== (savedData.logo_url || undefined);
 
@@ -199,7 +157,7 @@ const InformationPage = () => {
   const companyNameRef = useRef(companyName);
   const websiteRef = useRef(website);
   const linkedinRef = useRef(linkedin);
-  const locationRef = useRef(location);
+  const locationRef = useRef<Country | undefined>(location);
   const specialitiesRef = useRef(specialities);
   const logoPreviewRef = useRef(logoPreview);
 
@@ -221,7 +179,7 @@ const InformationPage = () => {
         company_name: companyNameRef.current,
         website: websiteRef.current,
         linkedin: linkedinRef.current,
-        location: locationRef.current,
+        location: locationRef.current || '',
         specialities: specialitiesRef.current,
         logo_url: logoPreviewRef.current || undefined,
       };
@@ -340,18 +298,11 @@ const InformationPage = () => {
 
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="location">{t('settings.company.information.location')}</Label>
-                    <Select value={location} onValueChange={setLocation}>
-                      <SelectTrigger id="location" className="w-full">
-                        <SelectValue placeholder={t('settings.company.information.locationPlaceholder')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {countries.map((country) => (
-                          <SelectItem key={country} value={country}>
-                            {country}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <CountrySelect
+                      value={location}
+                      onChange={setLocation}
+                      placeholder={t('settings.company.information.locationPlaceholder')}
+                    />
                   </div>
 
                   <div className="flex flex-col gap-2">

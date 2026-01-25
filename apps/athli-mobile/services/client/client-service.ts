@@ -107,36 +107,37 @@ const calculateAge = (dateOfBirth: string | null): number | null => {
 
 /**
  * Get client details by ID (for coach viewing client)
+ * Uses /clients/detail endpoint which returns data from coach_clients_view with correct avatar_url
  */
 export const getClientDetails = async (clientId: string): Promise<AthleteDetails> => {
-  const response = await apiFetch<{ success: boolean; data: { profile: any } }>('/client', {
+  const response = await apiFetch<{ success: boolean; data: { client: any } }>('/clients/detail', {
     headers: { 'x-client-id': clientId },
   });
 
-  const profile = response.data.profile;
+  const client = response.data.client;
 
-  if (!profile) {
+  if (!client) {
     throw new Error('Client not found');
   }
 
-  const names = profile.name?.split(' ') || ['', ''];
-  const createdAt = new Date(profile.created_at || Date.now());
+  const names = client.full_name?.split(' ') || ['', ''];
+  const createdAt = new Date(client.created_at || Date.now());
   const clientForDays = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
 
   return {
-    id: profile.client_id || clientId,
-    name: profile.name || '',
+    id: client.client_id || clientId,
+    name: client.full_name || '',
     firstName: names[0] || '',
     lastName: names.slice(1).join(' ') || '',
-    email: profile.email || '',
-    birthDate: profile.date_of_birth || null,
-    category: profile.category || 'online',
-    gender: profile.gender || null,
-    phone: profile.phone || '',
-    country: profile.country || '',
-    height: profile.height_cm || null,
-    avatarUrl: profile.profile_picture_url || profile.avatar_url || null,
-    status: profile.status || 'invited',
+    email: client.email || '',
+    birthDate: client.date_of_birth || null,
+    category: client.category || 'online',
+    gender: client.gender || null,
+    phone: client.phone || '',
+    country: client.country || '',
+    height: client.height_cm || null,
+    avatarUrl: client.avatar_url || null,
+    status: client.status || 'invited',
     createdAt: createdAt.getTime(),
     clientFor: clientForDays.toString(),
   };

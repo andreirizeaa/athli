@@ -200,7 +200,7 @@ export const logMetric = async (data: LogMetricData): Promise<void> => {
 };
 
 /**
- * Get metrics for a client
+ * Get metrics for a client (coach view)
  */
 export const getClientMetrics = async (clientId: string, coachId: string): Promise<ClientMetric[]> => {
   const response = await apiFetch<{ success: boolean; data: { metrics: ClientMetric[] } }>(
@@ -208,6 +208,17 @@ export const getClientMetrics = async (clientId: string, coachId: string): Promi
     {
       headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
     }
+  );
+  return response.data.metrics;
+};
+
+/**
+ * Get metrics for the authenticated athlete (self-access)
+ * No coach ID required - the API will use the authenticated user's ID
+ */
+export const getMyMetrics = async (): Promise<ClientMetric[]> => {
+  const response = await apiFetch<{ success: boolean; data: { metrics: ClientMetric[] } }>(
+    '/client/metrics'
   );
   return response.data.metrics;
 };

@@ -6,13 +6,13 @@ import {
   TextInput,
 } from 'react-native';
 import { PressableOpacity } from 'pressto';
-import { X } from 'lucide-react-native';
 import { AsYouType, type CountryCode } from 'libphonenumber-js';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { CountryPickerModal } from './country-picker-modal';
 import { DEFAULT_COUNTRY, type Country } from './countries-data';
+import { Card } from '@/components/ui/card';
 
 export type PhoneNumber = {
   country: Country;
@@ -117,23 +117,22 @@ export const PhoneNumberInput = ({
     <>
       <View style={styles.container}>
         {/* Left Box: Country Code Dropdown */}
-        <PressableOpacity
-          style={[styles.codeBox, { backgroundColor: themeColors.surfacePrimary }]}
-          onPress={handleOpenCountryPicker}
-        >
-          <Text style={[styles.boxLabel, { color: themeColors.mutedText }]}>
-            {codeLabel}
-          </Text>
-          <View style={styles.codeRow}>
-            <Text style={styles.codeFlag}>{selectedCountry.flag}</Text>
-            <Text style={[styles.codeValue, { color: themeColors.text }]}>
-              {selectedCountry.dialCode}
+        <PressableOpacity onPress={handleOpenCountryPicker}>
+          <Card variant="form">
+            <Text style={[styles.boxLabel, { color: themeColors.mutedText }]}>
+              {codeLabel}
             </Text>
-          </View>
+            <View style={styles.codeRow}>
+              <Text style={styles.codeFlag}>{selectedCountry.flag}</Text>
+              <Text style={[styles.codeValue, { color: themeColors.text }]}>
+                {selectedCountry.dialCode}
+              </Text>
+            </View>
+          </Card>
         </PressableOpacity>
 
         {/* Right Box: Phone Number Input */}
-        <View style={[styles.numberBox, { backgroundColor: themeColors.surfacePrimary }]}>
+        <Card variant="form" style={styles.numberBox}>
           <Text style={[styles.boxLabel, { color: themeColors.mutedText }]}>
             {numberLabel}
           </Text>
@@ -147,19 +146,8 @@ export const PhoneNumberInput = ({
               onChangeText={handlePhoneNumberChange}
               keyboardType="number-pad"
             />
-            {phoneNumber.length > 0 && (
-              <PressableOpacity
-                style={styles.clearButton}
-                onPress={handleClearNumber}
-                hitSlop={8}
-              >
-                <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                  <X size={12} {...({ stroke: themeColors.surfaceSecondary } as any)} strokeWidth={3} />
-                </View>
-              </PressableOpacity>
-            )}
           </View>
-        </View>
+        </Card>
       </View>
 
       <CountryPickerModal
@@ -180,13 +168,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
-  // Code Box (left)
-  codeBox: {
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12,
-  },
   codeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -199,13 +180,8 @@ const styles = StyleSheet.create({
   codeValue: {
     ...typography.p1,
   },
-  // Number Box (right)
   numberBox: {
     flex: 1,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12,
   },
   boxLabel: {
     ...typography.p4,
@@ -223,15 +199,5 @@ const styles = StyleSheet.create({
     margin: 0,
     height: 28,
     textAlignVertical: 'center',
-  },
-  clearButton: {
-    marginLeft: 12,
-  },
-  clearButtonIcon: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

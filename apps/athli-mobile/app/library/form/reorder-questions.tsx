@@ -331,7 +331,8 @@ export default function ReorderQuestionsScreen() {
               icon={{ sf: 'checkmark', IconComponent: Check }}
               onPress={handleSave}
               size="md"
-              variant="primary"
+              variant={hasUnsavedChanges ? 'primary' : 'default'}
+              disabled={!hasUnsavedChanges}
             />
           </View>
 

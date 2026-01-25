@@ -8,6 +8,8 @@ type AppViewStore = {
 };
 
 export const useAppViewStore = create<AppViewStore>((set) => ({
-  appView: 'coach',
+  // Default to athlete to avoid accidentally rendering coach data
+  // when the app view hasn't been resolved from auth/profile yet.
+  appView: 'athlete',
   setAppView: (view) => set({ appView: view }),
 }));
