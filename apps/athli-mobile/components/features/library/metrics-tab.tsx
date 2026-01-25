@@ -195,7 +195,7 @@ export const MetricsTab = () => {
               style={styles.rowWrapper}
               onPress={() => handleMetricPress(item)}
             >
-              <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
+              <View style={[styles.rowContent, { backgroundColor: 'transparent' }]}>
                 <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
                   <PlatformIcon
                     sf="chart.bar.fill"

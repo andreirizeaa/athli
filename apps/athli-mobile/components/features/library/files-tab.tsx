@@ -307,7 +307,7 @@ export const FilesTab = () => {
             deleteConfirmTitle={`${t('general.delete')} ${item.filename}?`}
           >
             <PressableScale onPress={() => handleFilePress(item)}>
-              <View style={[styles.fileItem, { backgroundColor: themeColors.backgroundPrimary }]}>
+              <View style={[styles.fileItem, { backgroundColor: 'transparent' }]}>
                 {renderThumbnail(item)}
                 <View style={styles.fileInfo}>
                   <Text style={[styles.fileName, { color: themeColors.text }]} numberOfLines={1}>

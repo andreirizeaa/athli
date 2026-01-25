@@ -1,16 +1,15 @@
-import { StyleSheet, View, Text, Platform, Image, Alert } from 'react-native';
+import { StyleSheet, View, Text, Platform, Image, Alert, ImageBackground } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PressableScale, PressableOpacity } from 'pressto';
-import { LinearGradient } from 'expo-linear-gradient';
-import SquircleView from 'react-native-fast-squircle';
 import { Ionicons } from '@expo/vector-icons';
 
 import { typography } from '@/constants/typography';
 import { useTranslations, useThemePreference, useCoachProfileStore, useClientProfileStore, useAppView } from '@/stores';
 import { AuthLoadingOverlay } from '@/components/auth/auth-loading-overlay';
 import { authenticateUser } from '@/services/auth/supabase-auth';
+import { haptics } from '@/utils/haptics';
 import type { CoachProfile, ClientProfile } from '@/types/profile';
 
 export default function WelcomeScreen() {
@@ -58,6 +57,7 @@ export default function WelcomeScreen() {
   };
 
   const handleGoogleSignIn = async () => {
+    haptics.medium();
     setIsLoading(true);
     try {
       const result = await authenticateUser('google');
@@ -70,6 +70,7 @@ export default function WelcomeScreen() {
   };
 
   const handleAppleSignIn = async () => {
+    haptics.medium();
     setIsLoading(true);
     try {
       const result = await authenticateUser('apple');
@@ -82,6 +83,7 @@ export default function WelcomeScreen() {
   };
 
   const handleEmailSignIn = () => {
+    haptics.medium();
     router.push('/auth/email-sign-in');
   };
 
@@ -94,38 +96,20 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <ImageBackground
+      source={require('@/assets/backgrounds/dark.png')}
+      style={styles.container}
+      resizeMode="cover"
+    >
       <AuthLoadingOverlay visible={isLoading} />
 
-      {/* Background Gradient */}
-      <LinearGradient
-        colors={['#1c1c1e', '#000000']}
-        style={StyleSheet.absoluteFill}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 0.6 }}
-      />
-
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <View style={styles.content}>
-          <View style={styles.imageContainer}>
-            <SquircleView
-              style={styles.squircle}
-              cornerSmoothing={1}
-            >
-              <Image
-                source={require('@/assets/app-icons/ios-icon-dark.png')}
-                style={styles.heroImage}
-                resizeMode="contain"
-              />
-            </SquircleView>
-          </View>
+        <View style={styles.spacer} />
 
+        <View style={styles.footer}>
           <Text style={styles.motto}>
             ELEVATE YOUR{'\n'}POTENTIAL.
           </Text>
-        </View>
-
-        <View style={styles.footer}>
           <View style={styles.buttonContainer}>
             {Platform.OS === 'ios' && (
               <PressableScale
@@ -197,7 +181,7 @@ export default function WelcomeScreen() {
           </View>
         </View>
       </SafeAreaView>
-    </View>
+    </ImageBackground>
   );
 }
 
@@ -209,35 +193,11 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  content: {
+  spacer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    gap: 48,
-  },
-  imageContainer: {
-    marginBottom: 0,
-  },
-  squircle: {
-    width: 180,
-    height: 180,
-    borderRadius: 50,
-    backgroundColor: '#000000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 15,
-    elevation: 12,
-  },
-  heroImage: {
-    width: 150,
-    height: 150,
   },
   motto: {
+    marginBottom: 32,
     ...typography.h1,
     fontSize: 56,
     lineHeight: 60,
