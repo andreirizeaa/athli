@@ -724,21 +724,6 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
-            name="modals/auth/sign-in-modal"
-            options={{
-              presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
-              headerShown: false,
-              ...(Platform.OS === 'ios' && {
-                sheetAllowedDetents: [0.50],
-                sheetGrabberVisible: true,
-              }),
-              ...(Platform.OS === 'android' && {
-                animation: 'slide_from_bottom',
-                gestureDirection: 'vertical',
-              }),
-            }}
-          />
-          <Stack.Screen
             name="modals/auth/logout-confirmation-modal"
             options={{
               presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
