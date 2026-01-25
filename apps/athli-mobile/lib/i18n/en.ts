@@ -132,6 +132,7 @@ export const en = {
     noMetrics: 'No metrics to display',
     noHabits: 'No habits to display',
     noData: 'No progress data yet. Metrics and habits will appear here once you start tracking.',
+    exerciseHistory: 'Exercise History',
     photos: 'Progress Photos',
   },
   tasks: {

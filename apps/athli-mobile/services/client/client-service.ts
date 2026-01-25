@@ -56,6 +56,7 @@ export interface TrainingCalendarItem {
     completedAt?: number;
     startedAt?: number;
   };
+  supersetFlags?: boolean[]; // true at index i means exercise i is supersetted with exercise i+1
 }
 
 // API returns dates as keys with values being objects keyed by workout instance IDs
