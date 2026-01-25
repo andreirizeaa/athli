@@ -15,6 +15,7 @@ type DateSelectInputProps = {
   onChange: (date: Date | null) => void;
   placeholder?: string;
   allowFuture?: boolean;
+  mode?: 'default' | 'birthdate';
 };
 
 export const DateSelectInput = ({
@@ -23,6 +24,7 @@ export const DateSelectInput = ({
   onChange,
   placeholder = 'Select date',
   allowFuture = true,
+  mode = 'default',
 }: DateSelectInputProps) => {
   const { colors: themeColors } = useThemePreference();
   const { setDateSelectCallback } = useModalCallbacks();
@@ -46,9 +48,10 @@ export const DateSelectInput = ({
       params: {
         selectedDate: (value || new Date()).toISOString(),
         allowFuture: allowFuture ? 'true' : 'false',
+        mode,
       },
     });
-  }, [router, setDateSelectCallback, value, onChange, allowFuture]);
+  }, [router, setDateSelectCallback, value, onChange, allowFuture, mode]);
 
   return (
     <PressableOpacity onPress={handlePress}>

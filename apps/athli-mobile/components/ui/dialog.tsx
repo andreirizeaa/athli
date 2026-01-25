@@ -71,7 +71,7 @@ export function Dialog({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <Pressable style={styles.container} onPress={onClose}>
         <Pressable style={styles.cardWrapper} onPress={(e) => e.stopPropagation()}>
           <SquircleView
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   message: {
-    ...typography.p2,
+    ...typography.p1,
     marginBottom: 20,
     lineHeight: 22,
   },

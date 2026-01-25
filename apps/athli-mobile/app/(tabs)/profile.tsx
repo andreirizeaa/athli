@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Linking } from 'react-native';
+import { StyleSheet, Text, View, Linking, InteractionManager } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   ChevronRight,
@@ -13,6 +13,7 @@ import {
   RefreshCw,
   ShieldCheck,
   User,
+  UserMinus,
 } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { PressableScale } from 'pressto';
@@ -43,6 +44,7 @@ export default function ProfileTabScreen() {
   const profileName = currentProfile?.name || t('profile.enterYourName');
   const profilePictureUrl = currentProfile?.profile_picture_url;
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [showDeletionDialog, setShowDeletionDialog] = useState(false);
 
   // Log client data when on profile screen
   useEffect(() => {
@@ -83,7 +85,9 @@ export default function ProfileTabScreen() {
   };
 
   const handleLogout = () => {
-    setShowLogoutDialog(true);
+    InteractionManager.runAfterInteractions(() => {
+      setShowLogoutDialog(true);
+    });
   };
 
   const handleLogoutConfirm = async () => {
@@ -98,6 +102,21 @@ export default function ProfileTabScreen() {
 
   const handleLogoutCancel = () => {
     setShowLogoutDialog(false);
+  };
+
+  const handleRequestDeletion = () => {
+    InteractionManager.runAfterInteractions(() => {
+      setShowDeletionDialog(true);
+    });
+  };
+
+  const handleDeletionConfirm = () => {
+    // TODO: Implement deletion request to coach
+    setShowDeletionDialog(false);
+  };
+
+  const handleDeletionCancel = () => {
+    setShowDeletionDialog(false);
   };
 
   const handleManageGoogle = useCallback(() => {
@@ -271,6 +290,7 @@ export default function ProfileTabScreen() {
           <SettingsOption
             icon={<PlatformIcon sf="megaphone" IconComponent={Megaphone} size={iconSize} color={iconColor} />}
             title={t('profile.featureRequests')}
+            onPress={() => router.push('/settings/feature-requests')}
           />
           <Separator />
           <SettingsOption
@@ -299,8 +319,8 @@ export default function ProfileTabScreen() {
 
         {/* Account Actions */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.accountActions')}</Text>
-        <PressableScale onPress={handleLogout}>
-          <Card>
+        <Card>
+          <PressableScale onPress={handleLogout}>
             <View style={styles.optionRow}>
               <View style={styles.optionIconContainer}>
                 <PlatformIcon sf="rectangle.portrait.and.arrow.right" IconComponent={LogOut} size={iconSize} color={iconColor} />
@@ -311,8 +331,21 @@ export default function ProfileTabScreen() {
                 </Text>
               </View>
             </View>
-          </Card>
-        </PressableScale>
+          </PressableScale>
+          <Separator />
+          <PressableScale onPress={handleRequestDeletion}>
+            <View style={styles.optionRow}>
+              <View style={styles.optionIconContainer}>
+                <PlatformIcon sf="person.badge.minus" IconComponent={UserMinus} size={iconSize} color={iconColor} />
+              </View>
+              <View style={styles.optionTextContainer}>
+                <Text style={[styles.optionTitle, { color: themeColors.text }]}>
+                  {t('profile.requestDeletion')}
+                </Text>
+              </View>
+            </View>
+          </PressableScale>
+        </Card>
         <View style={{ height: 60 }} />
       </View>
     </ScreenWrapper>
@@ -330,6 +363,24 @@ export default function ProfileTabScreen() {
         {
           label: t('profile.logout'),
           onPress: handleLogoutConfirm,
+          variant: 'destructive',
+        },
+      ]}
+    />
+    <Dialog
+      visible={showDeletionDialog}
+      onClose={handleDeletionCancel}
+      title={t('profile.requestDeletionTitle')}
+      message={t('profile.requestDeletionMessage')}
+      buttons={[
+        {
+          label: t('general.cancel'),
+          onPress: handleDeletionCancel,
+          variant: 'secondary',
+        },
+        {
+          label: t('profile.requestDeletion'),
+          onPress: handleDeletionConfirm,
           variant: 'destructive',
         },
       ]}

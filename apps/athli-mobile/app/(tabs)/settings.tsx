@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Platform, StyleSheet, Text, View, Linking, ActivityIndicator } from 'react-native';
+import { Platform, StyleSheet, Text, View, Linking, ActivityIndicator, InteractionManager } from 'react-native';
 import { PressableScale } from 'pressto';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -17,6 +17,7 @@ import {
   Megaphone,
   RefreshCw,
   ShieldCheck,
+  Trash2,
   User,
 } from 'lucide-react-native';
 import { Image } from 'expo-image';
@@ -148,7 +149,9 @@ export default function SettingsScreen() {
   };
 
   const handleLogout = () => {
-    setShowLogoutDialog(true);
+    InteractionManager.runAfterInteractions(() => {
+      setShowLogoutDialog(true);
+    });
   };
 
   const handleLogoutConfirm = async () => {
@@ -163,6 +166,15 @@ export default function SettingsScreen() {
 
   const handleLogoutCancel = () => {
     setShowLogoutDialog(false);
+  };
+
+  const handleDeleteAccount = () => {
+    const webAppUrl = process.env.EXPO_PUBLIC_WEB_APP_URL;
+    if (webAppUrl) {
+      Linking.openURL(`${webAppUrl}/delete-account`).catch((err) =>
+        console.error('Failed to open delete account URL:', err)
+      );
+    }
   };
 
   return (
@@ -236,6 +248,7 @@ export default function SettingsScreen() {
           <SettingsOption
             icon={<PlatformIcon sf="megaphone" mdi="campaign" IconComponent={Megaphone} size={iconSize} color={iconColor} />}
             title={t('profile.featureRequests')}
+            onPress={() => router.push('/settings/feature-requests')}
           />
           <Separator />
           <SettingsOption
@@ -275,6 +288,21 @@ export default function SettingsScreen() {
               <View style={styles.profileTextContainer}>
                 <Text style={[styles.optionTitle, { color: themeColors.text }]}>
                   {t('profile.logout')}
+                </Text>
+              </View>
+            </View>
+          </Card>
+        </PressableScale>
+
+        <PressableScale onPress={handleDeleteAccount} style={styles.deleteAccountButton}>
+          <Card>
+            <View style={styles.profileRow}>
+              <View style={styles.optionIconContainer}>
+                <PlatformIcon sf="trash" mdi="delete" IconComponent={Trash2} size={iconSize} color="#ef4444" />
+              </View>
+              <View style={styles.profileTextContainer}>
+                <Text style={[styles.optionTitle, { color: '#ef4444' }]}>
+                  {t('profile.deleteAccount')}
                 </Text>
               </View>
             </View>
@@ -367,5 +395,8 @@ const styles = StyleSheet.create({
   optionTitle: {
     ...typography.p1,
     lineHeight: 22,
+  },
+  deleteAccountButton: {
+    marginTop: 12,
   },
 });

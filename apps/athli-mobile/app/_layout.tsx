@@ -389,6 +389,7 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen name="settings/preferences" options={{ headerShown: false }} />
+          <Stack.Screen name="settings/feature-requests" options={{ headerShown: false }} />
           <Stack.Screen
             name="client/[id]"
             options={{
@@ -413,6 +414,7 @@ function RootLayoutNav() {
           <Stack.Screen name="client/[id]/assistant" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/goals" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/injuries" options={{ headerShown: false }} />
+          <Stack.Screen name="client/[id]/exercise-history" options={{ headerShown: false }} />
           <Stack.Screen
             name="client/[id]/edit-details"
             options={{
