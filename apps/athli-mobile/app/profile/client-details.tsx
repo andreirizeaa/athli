@@ -428,6 +428,7 @@ export default function ClientDetailsScreen() {
               onChange={setDateOfBirth}
               placeholder={t('clients.editClientModal.dateOfBirthPlaceholder')}
               allowFuture={false}
+              mode="birthdate"
             />
 
             {/* Height input temporarily hidden

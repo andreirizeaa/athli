@@ -40,13 +40,13 @@ export function Card({ children, style, variant = 'default', themeColors: propTh
           borderColor: themeColors.cardSecondary,
           borderWidth: colorScheme === 'dark' ? 0 : 0.5,
           shadowColor: colorScheme === 'light' ? '#000' : '#fff',
-          shadowOpacity: colorScheme === 'dark' ? 0.02 : 0.05,
-          elevation: colorScheme === 'dark' ? 1 : 3,
+          shadowOpacity: colorScheme === 'dark' ? 0 : 0.05,
+          elevation: colorScheme === 'dark' ? 0 : 3,
           ...((isForm || isPhoto || isOptions) && {
             shadowOpacity: 0,
             elevation: 0,
           }),
-          ...(isOptions && {
+          ...((isForm || isOptions) && {
             backgroundColor: themeColors.surfacePrimary,
             borderWidth: 0,
           }),
