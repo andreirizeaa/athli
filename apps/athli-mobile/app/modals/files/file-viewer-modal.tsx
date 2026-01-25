@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Platform, StyleSheet, View, ActivityIndicator, Dimensions, StatusBar, Alert } from 'react-native';
+import { Platform, StyleSheet, View, ActivityIndicator, Dimensions, StatusBar } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Share2 } from 'lucide-react-native';

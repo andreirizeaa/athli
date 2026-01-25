@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Platform, StyleSheet, Text, View, KeyboardAvoidingView, Alert } from 'react-native';
+import { Platform, StyleSheet, Text, View, KeyboardAvoidingView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +14,7 @@ import { InputBox, TextAreaInput, SelectionInput } from '@/components/ui/form-in
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { hexToRgba } from '@/utils/colorUtils';
 import { saveAthleteInjuries } from '@/services/client/client-service';
+import { Dialog } from '@/components/ui/dialog';
 
 export default function AddClientInjuryModal() {
     const router = useRouter();
@@ -27,6 +28,8 @@ export default function AddClientInjuryModal() {
     const [body, setBody] = useState('');
     const [date, setDate] = useState<Date | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     const coachId = useClientDetailStore((state) => state.coachId);
     const injuries = useClientDetailStore((state) => state.injuries);
@@ -66,11 +69,8 @@ export default function AddClientInjuryModal() {
             handleClose();
         } catch (error) {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(t('general.errorSaving'));
+            setShowErrorDialog(true);
         } finally {
             setIsSubmitting(false);
         }
@@ -175,6 +175,15 @@ export default function AddClientInjuryModal() {
                     />
                 </View>
             </KeyboardAwareScrollView>
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={errorMessage}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
         </KeyboardAvoidingView>
     );
 }

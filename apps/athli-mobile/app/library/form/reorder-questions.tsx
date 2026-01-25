@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Platform, ScrollView, Alert } from 'react-native';
+import { StyleSheet, Text, View, Platform, ScrollView } from 'react-native';
+import { Dialog } from '@/components/ui/dialog';
 import { ChevronLeft, GripVertical, Check } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -227,6 +228,9 @@ export default function ReorderQuestionsScreen() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const initialQuestionsRef = useRef<Question[]>([]);
 
+  // Dialog states
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+
   useEffect(() => {
     if (reorderQuestions && reorderQuestions.length > 0) {
       setQuestions(reorderQuestions);
@@ -265,27 +269,18 @@ export default function ReorderQuestionsScreen() {
     router.back();
   }, [questions, triggerQuestionsReorder, router]);
 
+  const handleDiscard = useCallback(() => {
+    setShowDiscardDialog(false);
+    router.back();
+  }, [router]);
+
   const handleBack = useCallback(() => {
     if (hasUnsavedChanges) {
-      Alert.alert(
-        t('common.discardChanges'),
-        t('common.discardChangesMessage'),
-        [
-          {
-            text: t('common.discard'),
-            style: 'destructive',
-            onPress: () => router.back(),
-          },
-          {
-            text: t('common.cancel'),
-            style: 'cancel',
-          },
-        ]
-      );
+      setShowDiscardDialog(true);
     } else {
       router.back();
     }
-  }, [hasUnsavedChanges, router, t]);
+  }, [hasUnsavedChanges, router]);
 
   const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
   const gradientHeight = headerHeight + 12;
@@ -353,6 +348,17 @@ export default function ReorderQuestionsScreen() {
             ))}
           </View>
         </ScrollView>
+
+        <Dialog
+          visible={showDiscardDialog}
+          onClose={() => setShowDiscardDialog(false)}
+          title={t('common.discardChanges')}
+          message={t('common.discardChangesMessage')}
+          buttons={[
+            { label: t('common.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+            { label: t('common.discard'), onPress: handleDiscard, variant: 'destructive' }
+          ]}
+        />
       </View>
     </GestureHandlerRootView>
   );

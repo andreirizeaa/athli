@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Alert, InteractionManager } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, ActivityIndicator, InteractionManager } from 'react-native';
+
+import { Dialog } from '@/components/ui/dialog';
 import { PressableOpacity, PressableScale } from 'pressto';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
@@ -337,9 +339,9 @@ const pageStyles = StyleSheet.create({
 
 const SELECTED_DATE_KEY = '@select_date_modal_selected_date_client';
 
-// Days pager configuration
-const DAYS_BACK = 365;
-const DAYS_FORWARD = 365;
+// Days pager configuration - limited range, use date picker for more
+const DAYS_BACK = 14; // 2 weeks
+const DAYS_FORWARD = 28; // 4 weeks
 
 export default function ClientTrainingScreen() {
   const router = useRouter();
@@ -396,6 +398,9 @@ export default function ClientTrainingScreen() {
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
   const [calendarKey, setCalendarKey] = useState(0);
   const [currentPageIndex, setCurrentPageIndex] = useState(DAYS_BACK); // Track for visibility-based rendering
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [workoutToDelete, setWorkoutToDelete] = useState<TrainingCalendarItem | null>(null);
 
   // Generate days array (centered on today)
   const daysArray = useMemo(() => {
@@ -409,6 +414,17 @@ export default function ClientTrainingScreen() {
       days.push(date);
     }
     return days;
+  }, []);
+
+  // Calendar scroll boundaries
+  const { calendarMinDate, calendarMaxDate } = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const min = new Date(today);
+    min.setDate(today.getDate() - DAYS_BACK);
+    const max = new Date(today);
+    max.setDate(today.getDate() + DAYS_FORWARD);
+    return { calendarMinDate: min, calendarMaxDate: max };
   }, []);
 
   const initialDayIndex = DAYS_BACK; // Today's index
@@ -612,30 +628,24 @@ export default function ClientTrainingScreen() {
       haptics.success();
       refreshSection('training');
     },
-    onError: (error: Error) => {
+    onError: () => {
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorDeleting'),
-        [{ text: t('general.ok') }]
-      );
+      setShowErrorDialog(true);
     },
   });
 
   const handleDeleteWorkout = useCallback((workout: TrainingCalendarItem) => {
-    Alert.alert(
-      t('general.delete'),
-      `${t('general.deleteConfirmation')} "${workout.workout}"?`,
-      [
-        { text: t('general.cancel'), style: 'cancel' },
-        {
-          text: t('general.delete'),
-          style: 'destructive',
-          onPress: () => deleteMutation.mutate(workout),
-        },
-      ]
-    );
-  }, [t, deleteMutation]);
+    setWorkoutToDelete(workout);
+    setShowDeleteDialog(true);
+  }, []);
+
+  const confirmDeleteWorkout = useCallback(() => {
+    if (workoutToDelete) {
+      setShowDeleteDialog(false);
+      deleteMutation.mutate(workoutToDelete);
+      setWorkoutToDelete(null);
+    }
+  }, [workoutToDelete, deleteMutation]);
 
   // Render status icon based on workout status - memoized to prevent re-renders
   const renderStatusIcon = useCallback((status: string | undefined) => {
@@ -672,7 +682,7 @@ export default function ClientTrainingScreen() {
   }, []);
 
   return (
-    <ScreenWrapper scrollable={false}>
+    <ScreenWrapper scrollable={false} useImageBackground={false}>
       <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton
           icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
@@ -702,6 +712,8 @@ export default function ClientTrainingScreen() {
               initialSelectedDate={selectedDate || undefined}
               onDateSelect={handleDateSelect}
               onSwipe={handleCalendarSwipe}
+              minDate={calendarMinDate}
+              maxDate={calendarMaxDate}
             />
           </View>
 
@@ -746,6 +758,46 @@ export default function ClientTrainingScreen() {
           <ActivityIndicator size="large" color={primaryColor} />
         </View>
       )}
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={t('general.errorDeleting')}
+        showCloseIcon={false}
+        buttons={[
+          {
+            label: t('general.ok'),
+            onPress: () => setShowErrorDialog(false),
+            variant: 'primary',
+          },
+        ]}
+      />
+
+      <Dialog
+        visible={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setWorkoutToDelete(null);
+        }}
+        title={t('general.delete')}
+        message={`${t('general.deleteConfirmation')} "${workoutToDelete?.workout || ''}"?`}
+        buttons={[
+          {
+            label: t('general.cancel'),
+            onPress: () => {
+              setShowDeleteDialog(false);
+              setWorkoutToDelete(null);
+            },
+            variant: 'secondary',
+          },
+          {
+            label: t('general.delete'),
+            onPress: confirmDeleteWorkout,
+            variant: 'destructive',
+          },
+        ]}
+      />
     </ScreenWrapper>
   );
 }

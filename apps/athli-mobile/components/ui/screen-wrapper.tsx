@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
-import { View, ScrollView, StyleSheet, ViewStyle, ImageBackground } from 'react-native';
+import { View, ScrollView, StyleSheet, ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
@@ -17,6 +18,7 @@ type ScreenWrapperProps = {
   overlay?: ReactNode;
   hideStatusBarBlur?: boolean;
   scrollEnabled?: boolean;
+  useImageBackground?: boolean; // Set to false to use solid backgroundPrimary instead
 };
 
 export const ScreenWrapper = ({
@@ -29,15 +31,35 @@ export const ScreenWrapper = ({
   overlay,
   hideStatusBarBlur = false,
   scrollEnabled = true,
+  useImageBackground = true,
 }: ScreenWrapperProps) => {
   const insets = useSafeAreaInsets();
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
   const backgroundImage = colorScheme === 'dark' ? darkBackground : lightBackground;
 
+  // Wrapper component - either Image background or View with solid color
+  const BackgroundWrapper = useImageBackground
+    ? ({ children: wrapperChildren }: { children: ReactNode }) => (
+        <View style={styles.screen}>
+          <Image
+            source={backgroundImage}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+          {wrapperChildren}
+        </View>
+      )
+    : ({ children: wrapperChildren }: { children: ReactNode }) => (
+        <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+          {wrapperChildren}
+        </View>
+      );
+
   if (scrollable) {
     return (
-      <ImageBackground source={backgroundImage} style={styles.screen} resizeMode="cover">
+      <BackgroundWrapper>
         <View
           style={[
             styles.safeArea,
@@ -64,13 +86,13 @@ export const ScreenWrapper = ({
           {overlay}
           {!hideStatusBarBlur && <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} />}
         </View>
-      </ImageBackground>
+      </BackgroundWrapper>
     );
   }
 
   // Static layout (no ScrollView)
   return (
-    <ImageBackground source={backgroundImage} style={styles.screen} resizeMode="cover">
+    <BackgroundWrapper>
       <View
         style={[
           styles.container,
@@ -85,7 +107,7 @@ export const ScreenWrapper = ({
       </View>
       {overlay}
       {!hideStatusBarBlur && <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} />}
-    </ImageBackground>
+    </BackgroundWrapper>
   );
 };
 

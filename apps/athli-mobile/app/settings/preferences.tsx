@@ -1,13 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { GestureResponderEvent } from 'react-native';
 import {
   Platform,
   StyleSheet,
   Text,
   View,
-  Alert,
   Switch,
 } from 'react-native';
+import { Dialog } from '@/components/ui/dialog';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
@@ -69,6 +69,10 @@ export default function PreferencesScreen() {
   const clearCoachProfile = useCoachProfileStore((state) => state.clearProfile);
   const clearClientProfile = useClientProfileStore((state) => state.clearProfile);
 
+  // Dialog state
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [showLogoutErrorDialog, setShowLogoutErrorDialog] = useState(false);
+
   const handleGoBack = () => {
     router.back();
   };
@@ -94,35 +98,20 @@ export default function PreferencesScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      t('auth.logout'),
-      t('auth.logoutConfirmation'),
-      [
-        {
-          text: t('general.cancel'),
-          style: 'cancel',
-        },
-        {
-          text: t('auth.logout'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await signOut();
-              clearCoachProfile();
-              clearClientProfile();
-              router.replace('/welcome');
-            } catch (error) {
-              console.error('Logout error:', error);
-              Alert.alert(
-                t('auth.logoutError'),
-                t('auth.logoutErrorMessage'),
-                [{ text: t('general.ok') }]
-              );
-            }
-          },
-        },
-      ]
-    );
+    setShowLogoutDialog(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    setShowLogoutDialog(false);
+    try {
+      await signOut();
+      clearCoachProfile();
+      clearClientProfile();
+      router.replace('/welcome');
+    } catch (error) {
+      console.error('Logout error:', error);
+      setShowLogoutErrorDialog(true);
+    }
   };
 
   // Get the display label for current theme preference
@@ -263,6 +252,26 @@ export default function PreferencesScreen() {
           </View>
         </Card>
       </View>
+
+      <Dialog
+        visible={showLogoutDialog}
+        onClose={() => setShowLogoutDialog(false)}
+        title={t('auth.logout')}
+        message={t('auth.logoutConfirmation')}
+        buttons={[
+          { label: t('general.cancel'), onPress: () => setShowLogoutDialog(false), variant: 'secondary' },
+          { label: t('auth.logout'), onPress: handleConfirmLogout, variant: 'destructive' },
+        ]}
+      />
+
+      <Dialog
+        visible={showLogoutErrorDialog}
+        onClose={() => setShowLogoutErrorDialog(false)}
+        title={t('auth.logoutError')}
+        message={t('auth.logoutErrorMessage')}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowLogoutErrorDialog(false), variant: 'primary' }]}
+      />
     </View>
   );
 }

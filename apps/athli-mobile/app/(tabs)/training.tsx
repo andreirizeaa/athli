@@ -20,13 +20,12 @@ import { getTrainingCalendarRange, TrainingCalendarSchema } from '@/services/cli
 
 const SELECTED_DATE_KEY = '@select_date_modal_selected_date';
 
-// Days pager configuration
-const DAYS_BACK = 365;
-const DAYS_FORWARD = 365;
+// Days pager configuration - limited range, use date picker for more
+const DAYS_BACK = 14; // 2 weeks
+const DAYS_FORWARD = 28; // 4 weeks
 
 // WorkoutDayPage component types
 type WorkoutDayPageProps = {
-  date: Date;
   workouts: any[];
   isLoading: boolean;
   onWorkoutPress: (workout: any) => void;
@@ -37,7 +36,7 @@ type WorkoutDayPageProps = {
 
 // Memoized component for each day's workout content
 const WorkoutDayPage = React.memo(
-  ({ date, workouts, isLoading, onWorkoutPress, themeColors, t, renderStatusIcon }: WorkoutDayPageProps) => {
+  ({ workouts, isLoading, onWorkoutPress, themeColors, t, renderStatusIcon }: WorkoutDayPageProps) => {
     if (isLoading) {
       return (
         <View style={pageStyles.loadingContainer}>
@@ -167,7 +166,7 @@ const pageStyles = StyleSheet.create({
 
 export default function TrainingScreen() {
   const router = useRouter();
-  const { primaryColor, colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
 
   // Get profile data from store
@@ -194,7 +193,7 @@ export default function TrainingScreen() {
   });
   const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
-  const [calendarKey, setCalendarKey] = useState(0);
+  const [calendarKey] = useState(0);
 
   // Generate days array (centered on today)
   const daysArray = useMemo(() => {
@@ -208,6 +207,17 @@ export default function TrainingScreen() {
       days.push(date);
     }
     return days;
+  }, []);
+
+  // Calendar scroll boundaries
+  const { calendarMinDate, calendarMaxDate } = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const min = new Date(today);
+    min.setDate(today.getDate() - DAYS_BACK);
+    const max = new Date(today);
+    max.setDate(today.getDate() + DAYS_FORWARD);
+    return { calendarMinDate: min, calendarMaxDate: max };
   }, []);
 
   const initialDayIndex = DAYS_BACK; // Today's index
@@ -497,11 +507,11 @@ export default function TrainingScreen() {
     const completedSummaryStatus = status;
     switch (completedSummaryStatus) {
       case 'completed':
-        return <CircleCheck size={20} color="#22C55E" />;
+        return <CircleCheck {...({ size: 20, color: '#22C55E' } as any)} />;
       case 'in_progress':
-        return <CircleDashed size={20} color="#F59E0B" />;
+        return <CircleDashed {...({ size: 20, color: '#F59E0B' } as any)} />;
       default:
-        return <CircleX size={20} color={themeColors.mutedText} />;
+        return <CircleX {...({ size: 20, color: themeColors.mutedText } as any)} />;
     }
   };
 
@@ -528,11 +538,9 @@ export default function TrainingScreen() {
             initialSelectedDate={selectedDate || undefined}
             onDateSelect={handleDateSelect}
             onSwipe={handleCalendarSwipe}
+            minDate={calendarMinDate}
+            maxDate={calendarMaxDate}
           />
-        </View>
-
-        <View style={styles.staticHeader}>
-          <View style={[styles.divider, { backgroundColor: themeColors.mutedText, opacity: 0.3 }]} />
         </View>
 
         {/* Day Content Pager */}
@@ -561,7 +569,6 @@ export default function TrainingScreen() {
             return (
               <View key={`day-${index}`} style={styles.pageContainer}>
                 <WorkoutDayPage
-                  date={date}
                   workouts={dayWorkouts}
                   isLoading={isCurrentPageLoading}
                   onWorkoutPress={handleWorkoutPress}

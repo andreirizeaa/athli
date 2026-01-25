@@ -2,21 +2,24 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import SquircleView from 'react-native-fast-squircle';
 
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { typography } from '@/constants/typography';
-import { generateWeeks, getWeekIndexForDate, getWeekMonthYear } from '@/lib/utils/calendar-utils';
+import { generateWeeks, getWeekIndexForDate, getWeekMonthYear, generateWeeksInRange } from '@/lib/utils/calendar-utils';
 
 const { width: RAW_W } = Dimensions.get('window');
 const SCREEN_WIDTH = Math.round(RAW_W);
 const ITEM_WIDTH = SCREEN_WIDTH; // page width
-const WEEK_HEIGHT = 80;
+const WEEK_HEIGHT = 90;
 
 interface SwipeableCalendarProps {
   onDateSelect?: (date: Date) => void;
   onSwipe?: (month: number, year: number) => void;
   initialSelectedDate?: Date;
+  minDate?: Date; // Minimum scrollable date
+  maxDate?: Date; // Maximum scrollable date
 }
 
 interface DayData {
@@ -35,14 +38,41 @@ const WeekPage = React.memo(
     onPressDay,
     shouldRender,
     themeColors,
-    primaryColor,
+    isLightMode,
   }: {
     days: DayData[];
     onPressDay: (d: DayData) => void;
     shouldRender: boolean;
     themeColors: any;
-    primaryColor: string;
+    isLightMode: boolean;
   }) {
+    // In light mode use white with border, in dark mode use surfacePrimary
+    const pillBackgroundColor = isLightMode ? '#FFFFFF' : themeColors.surfacePrimary;
+
+    // Card-like styling for active/today pills
+    const getActivePillStyle = (isActive: boolean, isToday: boolean) => {
+      if (!isActive && !isToday) return {};
+
+      const baseStyle: any = {
+        backgroundColor: pillBackgroundColor,
+        ...(isLightMode && {
+          borderColor: themeColors.cardSecondary,
+          borderWidth: 0.5,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
+          elevation: 3,
+        }),
+      };
+
+      if (isToday && !isActive) {
+        baseStyle.opacity = 0.5;
+      }
+
+      return baseStyle;
+    };
+
     return (
       <View style={styles.weekPage} renderToHardwareTextureAndroid shouldRasterizeIOS>
         <View style={styles.weekContent}>
@@ -52,45 +82,47 @@ const WeekPage = React.memo(
               style={styles.dayContainer}
               onPress={() => onPressDay(day)}
             >
-              <View
+              <SquircleView
                 style={[
-                  styles.dayWrapper,
+                  styles.dayPill,
+                  getActivePillStyle(day.isActive, day.isToday),
                 ]}
+                cornerSmoothing={1}
               >
-                {/* Day acronym above the circle */}
                 <Text
                   style={[
                     styles.dayAcronym,
-                    { color: day.isActive ? themeColors.text : themeColors.mutedText },
-                    day.isActive && { fontWeight: '700' },
+                    {
+                      color: day.isActive ? themeColors.text : themeColors.mutedText,
+                      opacity: day.isActive ? 1 : (day.isFuture ? 0.3 : 0.7),
+                      fontWeight: day.isActive ? '600' : '500',
+                    },
                   ]}
                 >
                   {day.dayName}
                 </Text>
-
                 <View
                   style={[
                     styles.dayCircle,
-                    day.isActive && { backgroundColor: primaryColor },
-                    day.isToday && !day.isActive && {
-                      borderWidth: 1.5,
-                      borderColor: primaryColor,
+                    {
+                      borderColor: themeColors.mutedText,
+                      borderStyle: day.isFuture || day.isToday ? 'solid' : 'dashed',
+                      opacity: day.isActive ? 1 : (day.isFuture ? 0.3 : 0.5),
                     },
                   ]}
                 >
-                  {/* Day number inside the circle */}
                   <Text
                     style={[
                       styles.dayNumber,
                       day.isActive
-                        ? { color: themeColors.primaryForeground }
-                        : { color: themeColors.mutedText },
+                        ? { color: themeColors.text, fontWeight: '600' }
+                        : { color: day.isFuture ? themeColors.mutedText : themeColors.text },
                     ]}
                   >
                     {day.dayNumber}
                   </Text>
                 </View>
-              </View>
+              </SquircleView>
             </PressableOpacity>
           ))}
         </View>
@@ -99,11 +131,14 @@ const WeekPage = React.memo(
   },
   (a, b) =>
     a.shouldRender === b.shouldRender &&
+    a.isLightMode === b.isLightMode &&
     a.days.length === b.days.length &&
     a.days.every(
       (day, i) =>
         day.date.toISOString() === b.days[i]?.date.toISOString() &&
-        day.isActive === b.days[i]?.isActive
+        day.isActive === b.days[i]?.isActive &&
+        day.isFuture === b.days[i]?.isFuture &&
+        day.isToday === b.days[i]?.isToday
     )
 );
 
@@ -121,8 +156,12 @@ export const SwipeableCalendar = ({
   onDateSelect,
   onSwipe,
   initialSelectedDate,
+  minDate,
+  maxDate,
 }: SwipeableCalendarProps) => {
-  const { primaryColor, colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useThemePreference();
+  const colorScheme = useColorScheme();
+  const isLightMode = colorScheme === 'light';
   const { t } = useTranslations();
 
   // Normalize initial date
@@ -137,8 +176,13 @@ export const SwipeableCalendar = ({
   const listRef = useRef<FlashListRef<DayData[]> | null>(null);
   const hasMounted = useRef(false);
 
-  // Generate weeks once
-  const weeks = useMemo(() => generateWeeks(), []);
+  // Generate weeks - limited range if minDate/maxDate provided, otherwise full range
+  const weeks = useMemo(() => {
+    if (minDate && maxDate) {
+      return generateWeeksInRange(minDate, maxDate);
+    }
+    return generateWeeks();
+  }, [minDate, maxDate]);
 
   // Seed initial index from selected date
   const initialIndexRef = useRef<number>(0);
@@ -177,7 +221,7 @@ export const SwipeableCalendar = ({
     t('calendar.days.friday'),
     t('calendar.days.saturday'),
     t('calendar.days.sunday'),
-  ].map((d) => d?.trim()?.[0] ?? '');
+  ].map((d) => d?.trim()?.slice(0, 3) ?? '');
 
   const generateWeekData = useCallback(
     (weekDates: Date[]): DayData[] => {
@@ -297,18 +341,18 @@ export const SwipeableCalendar = ({
   );
 
   const renderItem = useCallback(
-    ({ item, index }: { item: DayData[]; index: number }) => (
+    ({ item }: { item: DayData[] }) => (
       <View style={styles.renderItemContainer}>
         <WeekPage
           days={item}
           onPressDay={handleDatePress}
-          shouldRender={shouldRenderIndex(index)}
+          shouldRender={shouldRenderIndex()}
           themeColors={themeColors}
-          primaryColor={primaryColor}
+          isLightMode={isLightMode}
         />
       </View>
     ),
-    [shouldRenderIndex, themeColors, primaryColor]
+    [shouldRenderIndex, themeColors, isLightMode]
   );
 
   return (
@@ -374,34 +418,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 0,
-    marginHorizontal: 0,
+    paddingHorizontal: 16,
   },
   dayContainer: {
     alignItems: 'center',
     flex: 1,
-    minWidth: 0, // Allow flex items to shrink
-    overflow: 'visible',
-    paddingHorizontal: 0,
-    marginHorizontal: 0,
-  },
-  dayWrapper: {
-    alignItems: 'center',
-    paddingTop: 6,
-    paddingBottom: 2,
+    minWidth: 0,
   },
   dayAcronym: {
-    ...typography.h8,
+    ...typography.p3,
     marginBottom: 8,
   },
   dayCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 17,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+  },
+  dayPill: {
+    width: 48,
+    height: 76,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'transparent',
+    paddingVertical: 10,
   },
   dayNumber: {
     ...typography.h6,

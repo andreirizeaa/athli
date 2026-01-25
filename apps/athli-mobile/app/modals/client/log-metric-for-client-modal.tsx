@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, StyleSheet, Text, Platform, Alert } from 'react-native';
+import { View, StyleSheet, Text, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check, AlertTriangle } from 'lucide-react-native';
@@ -15,6 +15,7 @@ import { useModalCallbacks, useClientDetailStore } from '@/stores';
 import { type ClientMetric, logMetric } from '@/services/client/client-metric-service';
 import { hexToRgba } from '@/utils/colorUtils';
 import { haptics } from '@/utils/haptics';
+import { Dialog } from '@/components/ui/dialog';
 
 export default function LogMetricForClientModal() {
     const router = useRouter();
@@ -43,6 +44,7 @@ export default function LogMetricForClientModal() {
     const [value, setValue] = useState('');
     const [date, setDate] = useState<Date>(new Date());
     const [isSaving, setIsSaving] = useState(false);
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
 
     // Pre-select metric if provided
     useEffect(() => {
@@ -100,10 +102,7 @@ export default function LogMetricForClientModal() {
             router.back();
         } catch (error) {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                t('general.errorSaving')
-            );
+            setShowErrorDialog(true);
         } finally {
             setIsSaving(false);
         }
@@ -213,6 +212,15 @@ export default function LogMetricForClientModal() {
                     )}
                 </View>
             </KeyboardAwareScrollView>
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={t('general.errorSaving')}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
         </View>
     );
 }

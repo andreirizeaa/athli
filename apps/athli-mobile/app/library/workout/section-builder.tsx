@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { StyleSheet, Text, View, Platform, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Platform, ActivityIndicator } from 'react-native';
+import { Dialog } from '@/components/ui/dialog';
 import { ChevronLeft, Check, Plus, Repeat, Link as LinkIcon } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -104,6 +105,11 @@ export default function SectionBuilderScreen() {
     const [validationErrors, setValidationErrors] = useState<ExerciseValidationError[]>([]);
     const [metadataErrors, setMetadataErrors] = useState({ durationError: false, roundsError: false });
     const [isLoadingData, setIsLoadingData] = useState(false);
+
+    // Dialog states
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
     // Load section data from API when editing
     useEffect(() => {
@@ -298,11 +304,8 @@ export default function SectionBuilderScreen() {
                     initialStateRef.current = JSON.parse(JSON.stringify(loadedState));
                 } catch (error) {
                     console.error('Failed to load section data:', error);
-                    Alert.alert(
-                        t('general.error'),
-                        t('general.errorLoading'),
-                        [{ text: t('general.ok') }]
-                    );
+                    setErrorMessage(t('general.errorLoading'));
+                    setShowErrorDialog(true);
                 } finally {
                     setIsLoadingData(false);
                 }
@@ -338,11 +341,8 @@ export default function SectionBuilderScreen() {
         },
         onError: (error: Error) => {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                error.message || t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(error.message || t('general.errorSaving'));
+            setShowErrorDialog(true);
         },
     });
 
@@ -357,33 +357,19 @@ export default function SectionBuilderScreen() {
         },
         onError: (error: Error) => {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                error.message || t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(error.message || t('general.errorSaving'));
+            setShowErrorDialog(true);
         },
     });
 
+    const handleDiscard = useCallback(() => {
+        setShowDiscardDialog(false);
+        router.back();
+    }, [router]);
+
     const showDiscardAlert = useCallback(() => {
-        Alert.alert(
-            t('common.discardChanges'),
-            t('common.discardChangesMessage'),
-            [
-                {
-                    text: t('common.cancel'),
-                    style: 'cancel',
-                },
-                {
-                    text: t('common.discard'),
-                    style: 'destructive',
-                    onPress: () => {
-                        router.back();
-                    },
-                },
-            ]
-        );
-    }, [router, t]);
+        setShowDiscardDialog(true);
+    }, []);
 
     // Disable swipe-to-go-back gesture when there are unsaved changes
     const navigation = useNavigation();
@@ -395,7 +381,8 @@ export default function SectionBuilderScreen() {
 
     const handleSave = useCallback(() => {
         if (!state.name.trim()) {
-            Alert.alert(t('library.section.error'), t('library.section.nameRequired'));
+            setErrorMessage(t('library.section.nameRequired'));
+            setShowErrorDialog(true);
             return;
         }
 
@@ -428,25 +415,26 @@ export default function SectionBuilderScreen() {
         // If there are any errors, show the combined error message
         if (hasMetadataError || !exerciseValidation.isValid) {
             // Build combined error message
-            let errorMessage = 'Please fix the following issues:\n\n';
+            let validationErrorMessage = 'Please fix the following issues:\n\n';
 
             if (sectionMetadataError.durationError) {
-                errorMessage += '• Duration is required for AMRAP sections\n';
+                validationErrorMessage += '• Duration is required for AMRAP sections\n';
             }
             if (sectionMetadataError.roundsError) {
-                errorMessage += '• Rounds are required for this section type\n';
+                validationErrorMessage += '• Rounds are required for this section type\n';
             }
 
             // Add exercise validation errors to the message
             if (!exerciseValidation.isValid && exerciseValidation.errorMessage) {
                 const exerciseErrors = exerciseValidation.errorMessage
                     .replace('Please fix the following issues:\n\n', '');
-                errorMessage += exerciseErrors;
+                validationErrorMessage += exerciseErrors;
             }
 
             setValidationErrors(exerciseValidation.errors);
             setMetadataErrors(sectionMetadataError);
-            Alert.alert(t('library.section.error'), errorMessage);
+            setErrorMessage(validationErrorMessage);
+            setShowErrorDialog(true);
             return;
         }
 
@@ -928,6 +916,26 @@ export default function SectionBuilderScreen() {
                     </View>
                 </View>
             </View>
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={errorMessage}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
+
+            <Dialog
+                visible={showDiscardDialog}
+                onClose={() => setShowDiscardDialog(false)}
+                title={t('common.discardChanges')}
+                message={t('common.discardChangesMessage')}
+                buttons={[
+                    { label: t('common.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+                    { label: t('common.discard'), onPress: handleDiscard, variant: 'destructive' }
+                ]}
+            />
         </View>
     );
 }

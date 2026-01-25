@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { StyleSheet, Text, View, Platform, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, Platform, ActivityIndicator, ScrollView } from 'react-native';
+import { Dialog } from '@/components/ui/dialog';
 import { ChevronLeft, Check, Plus, Repeat, Pencil } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
@@ -49,6 +50,11 @@ export default function FormBuilderScreen() {
   const [isDirty, setIsDirty] = useState(false);
   const [formName, setFormName] = useState(params.formName || '');
   const [formDescription, setFormDescription] = useState('');
+
+  // Dialog states
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   const isQuestionnaire = params.formType === 'questionnaire';
 
@@ -106,37 +112,24 @@ export default function FormBuilderScreen() {
     },
     onError: (error: Error) => {
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorSaving'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorSaving'));
+      setShowErrorDialog(true);
     },
   });
 
+  const handleDiscard = useCallback(() => {
+    setShowDiscardDialog(false);
+    router.back();
+  }, [router]);
+
   const handleBack = useCallback(() => {
     if (isDirty) {
-      // Show discard changes confirmation
-      Alert.alert(
-        t('common.discardChanges'),
-        t('common.discardChangesMessage'),
-        [
-          {
-            text: t('common.cancel'),
-            style: 'cancel',
-          },
-          {
-            text: t('common.discard'),
-            style: 'destructive',
-            onPress: () => router.back(),
-          },
-        ]
-      );
+      setShowDiscardDialog(true);
       return;
     }
 
     router.back();
-  }, [isDirty, router, t]);
+  }, [isDirty, router]);
 
   const handleSave = useCallback(() => {
     if (isDirty) {
@@ -386,6 +379,26 @@ export default function FormBuilderScreen() {
           </View>
         </View>
       </View>
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
+
+      <Dialog
+        visible={showDiscardDialog}
+        onClose={() => setShowDiscardDialog(false)}
+        title={t('common.discardChanges')}
+        message={t('common.discardChangesMessage')}
+        buttons={[
+          { label: t('common.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+          { label: t('common.discard'), onPress: handleDiscard, variant: 'destructive' }
+        ]}
+      />
     </View>
   );
 }

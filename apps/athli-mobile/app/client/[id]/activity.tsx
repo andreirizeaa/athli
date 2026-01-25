@@ -152,7 +152,7 @@ export default function ClientActivityScreen() {
   };
 
   return (
-    <ScreenWrapper scrollable={true}>
+    <ScreenWrapper scrollable={true} useImageBackground={false}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton

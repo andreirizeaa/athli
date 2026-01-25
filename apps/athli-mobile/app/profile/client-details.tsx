@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { GestureResponderEvent } from 'react-native';
 import {
-  Alert,
   Keyboard,
   Platform,
   StyleSheet,
@@ -10,6 +9,7 @@ import {
   View,
   ActionSheetIOS,
 } from 'react-native';
+import { Dialog } from '@/components/ui/dialog';
 import { useRouter } from 'expo-router';
 import { Check, ChevronLeft } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -113,6 +113,11 @@ export default function ClientDetailsScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
+  // Dialog state
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showPhotoSourceDialog, setShowPhotoSourceDialog] = useState(false);
+
   useEffect(() => {
     if (!userId) return;
     if (profile?.client_id === userId) return;
@@ -168,10 +173,8 @@ export default function ClientDetailsScreen() {
         if (useCamera) {
           const { status } = await ImagePicker.requestCameraPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
-              t('general.error'),
-              t('settings.personalDetails.cameraPermissionRequired')
-            );
+            setErrorMessage(t('settings.personalDetails.cameraPermissionRequired'));
+            setShowErrorDialog(true);
             return;
           }
           result = await ImagePicker.launchCameraAsync({
@@ -182,10 +185,8 @@ export default function ClientDetailsScreen() {
         } else {
           const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
-              t('general.error'),
-              t('settings.personalDetails.galleryPermissionRequired')
-            );
+            setErrorMessage(t('settings.personalDetails.galleryPermissionRequired'));
+            setShowErrorDialog(true);
             return;
           }
           result = await ImagePicker.launchImageLibraryAsync({
@@ -245,7 +246,8 @@ export default function ClientDetailsScreen() {
       console.error('Failed to update profile picture:', error);
       haptics.error();
       setSelectedImage(null);
-      Alert.alert(t('general.error'), t('settings.personalDetails.uploadFailed'));
+      setErrorMessage(t('settings.personalDetails.uploadFailed'));
+      setShowErrorDialog(true);
     } finally {
       setIsUploadingImage(false);
     }
@@ -272,15 +274,7 @@ export default function ClientDetailsScreen() {
         }
       );
     } else {
-      Alert.alert(
-        t('settings.personalDetails.profilePicture'),
-        undefined,
-        [
-          { text: t('general.cancel'), style: 'cancel' },
-          { text: t('settings.personalDetails.chooseFromLibrary'), onPress: () => pickImage(false) },
-          { text: t('settings.personalDetails.takePhoto'), onPress: () => pickImage(true) },
-        ]
-      );
+      setShowPhotoSourceDialog(true);
     }
   }, [t, pickImage]);
 
@@ -333,7 +327,8 @@ export default function ClientDetailsScreen() {
       router.back();
     } catch (error: any) {
       haptics.error();
-      Alert.alert(t('general.error'), error?.message || t('general.tryAgain'), [{ text: t('general.ok') }]);
+      setErrorMessage(error?.message || t('general.tryAgain'));
+      setShowErrorDialog(true);
     }
   }, [canSave, country, dateOfBirth, email, gender, height, name, phoneNumber, router, t, updateProfile, userId]);
 
@@ -462,6 +457,28 @@ export default function ClientDetailsScreen() {
             />
         </KeyboardAwareScrollView>
       </TouchableWithoutFeedback>
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
+
+      <Dialog
+        visible={showPhotoSourceDialog}
+        onClose={() => setShowPhotoSourceDialog(false)}
+        title={t('settings.personalDetails.profilePicture')}
+        buttonLayout="vertical"
+        showCloseIcon={false}
+        buttons={[
+          { label: t('settings.personalDetails.takePhoto'), onPress: () => { setShowPhotoSourceDialog(false); pickImage(true); }, variant: 'primary' },
+          { label: t('settings.personalDetails.chooseFromLibrary'), onPress: () => { setShowPhotoSourceDialog(false); pickImage(false); }, variant: 'primary' },
+          { label: t('general.cancel'), onPress: () => setShowPhotoSourceDialog(false), variant: 'secondary' },
+        ]}
+      />
     </View>
   );
 }

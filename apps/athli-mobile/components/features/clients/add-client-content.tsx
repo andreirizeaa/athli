@@ -1,5 +1,5 @@
 import React, { useState, useImperativeHandle, forwardRef, useMemo } from 'react';
-import { StyleSheet, ScrollView, Alert } from 'react-native';
+import { StyleSheet, ScrollView } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useThemePreference } from '@/stores';
@@ -7,6 +7,7 @@ import { haptics } from '@/utils/haptics';
 import { useTranslations } from '@/stores';
 import { addClient } from '@/services/client-service';
 import { InputBox, SelectInput } from '@/components/ui/form-inputs';
+import { Dialog } from '@/components/ui/dialog';
 
 type AddClientContentProps = {
   onClose: () => void;
@@ -30,6 +31,10 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [category, setCategory] = useState<ClientCategory>('online');
+
+    // Dialog state
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     // Email validation regex
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -56,12 +61,9 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
         // Error haptic feedback
         haptics.error();
 
-        // Show error alert
-        Alert.alert(
-          t('general.error'),
-          error.message || t('clients.addClientModal.errorAdding'),
-          [{ text: t('general.ok') }]
-        );
+        // Show error dialog
+        setErrorMessage(error.message || t('clients.addClientModal.errorAdding'));
+        setShowErrorDialog(true);
       },
     });
 
@@ -119,6 +121,15 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
           onChange={setCategory}
           options={categoryOptions}
           placeholder={t('clients.editClientModal.typePlaceholder')}
+        />
+
+        <Dialog
+          visible={showErrorDialog}
+          onClose={() => setShowErrorDialog(false)}
+          title={t('general.error')}
+          message={errorMessage}
+          showCloseIcon={false}
+          buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
         />
       </ScrollView>
     );

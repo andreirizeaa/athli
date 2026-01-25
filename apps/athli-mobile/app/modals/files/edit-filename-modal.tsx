@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useMemo } from 'react';
-import { Platform, StyleSheet, Text, View, KeyboardAvoidingView, Alert } from 'react-native';
+import { Platform, StyleSheet, Text, View, KeyboardAvoidingView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +15,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { InputBox } from '@/components/ui/form-inputs';
 import { hexToRgba } from '@/utils/colorUtils';
 import { updateFile } from '@/services/coach/coach-file-service';
+import { Dialog } from '@/components/ui/dialog';
 
 export default function EditFilenameModal() {
     const router = useRouter();
@@ -28,6 +29,8 @@ export default function EditFilenameModal() {
     const insets = useSafeAreaInsets();
 
     const [filename, setFilename] = useState(params.currentName || '');
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     const { isFormValid, hasChanges } = useMemo(() => {
         const trimmed = filename.trim();
@@ -46,11 +49,8 @@ export default function EditFilenameModal() {
         },
         onError: (error: Error) => {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                error.message || t('clientDetail.files.filenameUpdateError'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(error.message || t('clientDetail.files.filenameUpdateError'));
+            setShowErrorDialog(true);
         },
     });
 
@@ -137,6 +137,15 @@ export default function EditFilenameModal() {
                     autoFocus
                 />
             </KeyboardAwareScrollView>
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={errorMessage}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
         </KeyboardAvoidingView>
     );
 }

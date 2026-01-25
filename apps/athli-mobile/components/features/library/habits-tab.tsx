@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo } from 'react';
-import { StyleSheet, Text, View, Alert } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { ChevronRight, CheckCircle, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableScale } from 'pressto';
@@ -18,6 +18,7 @@ import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { getAllHabits, deleteHabit, duplicateHabit } from '@/services/coach/coach-habit-service';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Dialog } from '@/components/ui/dialog';
 import { HABIT_UNIT_OPTIONS, HABIT_PERIOD_OPTIONS } from '@athli/shared-types';
 
 export const HabitsTab = () => {
@@ -28,6 +29,10 @@ export const HabitsTab = () => {
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
+
+  // Dialog state
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Fetch habits directly with TanStack Query
   const { data: habits = [], refetch } = useQuery({
@@ -91,11 +96,8 @@ export const HabitsTab = () => {
         queryClient.setQueryData(['habits'], context.previousHabits);
       }
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorDeleting'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorDeleting'));
+      setShowErrorDialog(true);
     },
     onSettled: () => {
       // Refetch to ensure server state
@@ -115,11 +117,8 @@ export const HabitsTab = () => {
     },
     onError: (error: Error) => {
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorDuplicating'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorDuplicating'));
+      setShowErrorDialog(true);
     },
   });
 
@@ -265,20 +264,31 @@ export const HabitsTab = () => {
   }, [filteredHabits.length, themeColors, t, deleteMutation, registerOpenRow, handleHabitPress, handleAssign, getUnitLabel, getPeriodLabel]);
 
   return (
-    <FlashList
-      data={filteredHabits}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={{ paddingBottom: 40 }}
-      ListHeaderComponent={ListHeaderComponent}
-      refreshControl={refreshControl}
-      showsVerticalScrollIndicator={false}
-      ListEmptyComponent={
-        <EmptyState
-          message={t('library.empty.habits')}
-        />
-      }
-    />
+    <>
+      <FlashList
+        data={filteredHabits}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        ListHeaderComponent={ListHeaderComponent}
+        refreshControl={refreshControl}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <EmptyState
+            message={t('library.empty.habits')}
+          />
+        }
+      />
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
+    </>
   );
 };
 

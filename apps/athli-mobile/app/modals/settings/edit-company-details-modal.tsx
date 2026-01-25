@@ -4,7 +4,6 @@ import {
   Text,
   View,
   Platform,
-  Alert,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +30,7 @@ import { Separator } from '@/components/ui/separator';
 import { InputBox } from '@/components/ui/form-inputs/input-box';
 import { haptics } from '@/utils/haptics';
 import { hexToRgba } from '@/utils/colorUtils';
+import { Dialog } from '@/components/ui/dialog';
 import {
   uploadCompanyLogo,
   SPECIALITY_OPTIONS,
@@ -70,6 +70,8 @@ export default function EditCompanyDetailsModal() {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const listRef = useRef<any>(null);
 
@@ -138,10 +140,8 @@ export default function EditCompanyDetailsModal() {
         if (useCamera) {
           const { status } = await ImagePicker.requestCameraPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
-              t('general.error'),
-              t('settings.companyDetails.cameraPermissionRequired')
-            );
+            setErrorMessage(t('settings.companyDetails.cameraPermissionRequired'));
+            setShowErrorDialog(true);
             return;
           }
           result = await ImagePicker.launchCameraAsync({
@@ -153,10 +153,8 @@ export default function EditCompanyDetailsModal() {
           const { status } =
             await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
-              t('general.error'),
-              t('settings.companyDetails.galleryPermissionRequired')
-            );
+            setErrorMessage(t('settings.companyDetails.galleryPermissionRequired'));
+            setShowErrorDialog(true);
             return;
           }
           result = await ImagePicker.launchImageLibraryAsync({
@@ -214,7 +212,8 @@ export default function EditCompanyDetailsModal() {
     } catch (error) {
       console.error('Failed to update company info:', error);
       haptics.error();
-      Alert.alert(t('general.error'), t('general.errorSaving'));
+      setErrorMessage(t('general.errorSaving'));
+      setShowErrorDialog(true);
     } finally {
       setIsSaving(false);
     }
@@ -580,6 +579,15 @@ export default function EditCompanyDetailsModal() {
             />
           </View>
         </View>
+
+        <Dialog
+          visible={showErrorDialog}
+          onClose={() => setShowErrorDialog(false)}
+          title={t('general.error')}
+          message={errorMessage}
+          showCloseIcon={false}
+          buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+        />
       </View>
     );
   }
@@ -618,6 +626,15 @@ export default function EditCompanyDetailsModal() {
       <View style={styles.content}>
         {renderContent()}
       </View>
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
     </View>
   );
 }

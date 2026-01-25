@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   Dimensions,
   Keyboard,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
+import { Dialog } from '@/components/ui/dialog';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
 import Animated, { useSharedValue, withTiming, useAnimatedStyle } from 'react-native-reanimated';
 import { Image } from 'expo-image';
@@ -192,6 +192,10 @@ export default function InboxDetailScreen() {
   const inputRef = useRef<TextInput>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Dialog state
+  const [showUploadErrorDialog, setShowUploadErrorDialog] = useState(false);
+  const [uploadErrorMessage, setUploadErrorMessage] = useState('');
 
   const formatMmSs = (ms: number) => {
     const totalSec = Math.max(0, Math.floor(ms / 1000));
@@ -498,7 +502,8 @@ export default function InboxDetailScreen() {
           setOptimisticMessages((prev) =>
             prev.filter((m) => m.id !== optimisticMsg.id)
           );
-          Alert.alert('Upload Failed', 'Could not upload document. Please try again.');
+          setUploadErrorMessage('Could not upload document. Please try again.');
+          setShowUploadErrorDialog(true);
         } finally {
           router.setParams({
             documentSent: '',
@@ -565,7 +570,8 @@ export default function InboxDetailScreen() {
           setOptimisticMessages((prev) =>
             prev.filter((m) => m.id !== optimisticMsg.id)
           );
-          Alert.alert('Upload Failed', 'Could not upload images. Please try again.');
+          setUploadErrorMessage('Could not upload images. Please try again.');
+          setShowUploadErrorDialog(true);
         }
       };
 
@@ -621,7 +627,8 @@ export default function InboxDetailScreen() {
           setOptimisticMessages((prev) =>
             prev.filter((m) => m.id !== optimisticMsg.id)
           );
-          Alert.alert('Upload Failed', 'Could not upload video. Please try again.');
+          setUploadErrorMessage('Could not upload video. Please try again.');
+          setShowUploadErrorDialog(true);
         }
       };
 
@@ -765,7 +772,8 @@ export default function InboxDetailScreen() {
       setOptimisticMessages((prev) =>
         prev.filter((m) => m.id !== optimisticMsg.id)
       );
-      Alert.alert('Upload Failed', 'Could not upload voice note. Please try again.');
+      setUploadErrorMessage('Could not upload voice note. Please try again.');
+      setShowUploadErrorDialog(true);
     }
   };
 
@@ -1066,6 +1074,14 @@ export default function InboxDetailScreen() {
         />
       </View>
 
+      <Dialog
+        visible={showUploadErrorDialog}
+        onClose={() => setShowUploadErrorDialog(false)}
+        title="Upload Failed"
+        message={uploadErrorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: 'OK', onPress: () => setShowUploadErrorDialog(false), variant: 'primary' }]}
+      />
     </View>
   );
 }

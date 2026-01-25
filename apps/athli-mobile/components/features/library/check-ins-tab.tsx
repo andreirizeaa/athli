@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo } from 'react';
-import { StyleSheet, Text, View, Alert } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { ChevronRight, Calendar, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableScale } from 'pressto';
@@ -18,6 +18,7 @@ import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { getCheckIns, deleteCheckIn, duplicateCheckIn } from '@/services/coach/coach-check-in-service';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Dialog } from '@/components/ui/dialog';
 
 export const CheckInsTab = () => {
   const { colors: themeColors } = useThemePreference();
@@ -27,6 +28,10 @@ export const CheckInsTab = () => {
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
+
+  // Dialog state
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Fetch check-ins directly with TanStack Query
   const { data: checkIns = [], refetch } = useQuery({
@@ -89,11 +94,8 @@ export const CheckInsTab = () => {
         queryClient.setQueryData(['checkIns'], context.previousCheckIns);
       }
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorDeleting'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorDeleting'));
+      setShowErrorDialog(true);
     },
     onSettled: () => {
       // Refetch to ensure server state
@@ -114,11 +116,8 @@ export const CheckInsTab = () => {
     },
     onError: (error: Error) => {
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorDuplicating'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorDuplicating'));
+      setShowErrorDialog(true);
     },
   });
 
@@ -247,20 +246,31 @@ export const CheckInsTab = () => {
   }, [filteredCheckIns.length, themeColors, t, deleteMutation, registerOpenRow, handleCheckInPress, handleAssign]);
 
   return (
-    <FlashList
-      data={filteredCheckIns}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={{ paddingBottom: 40 }}
-      ListHeaderComponent={ListHeaderComponent}
-      refreshControl={refreshControl}
-      showsVerticalScrollIndicator={false}
-      ListEmptyComponent={
-        <EmptyState
-          message={t('library.empty.checkIns')}
-        />
-      }
-    />
+    <>
+      <FlashList
+        data={filteredCheckIns}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        ListHeaderComponent={ListHeaderComponent}
+        refreshControl={refreshControl}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <EmptyState
+            message={t('library.empty.checkIns')}
+          />
+        }
+      />
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
+    </>
   );
 };
 

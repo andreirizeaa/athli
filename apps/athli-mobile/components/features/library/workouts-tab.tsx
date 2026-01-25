@@ -1,5 +1,5 @@
-import React, { useMemo, useCallback } from 'react';
-import { StyleSheet, Text, View, Alert } from 'react-native';
+import React, { useMemo, useCallback, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Dumbbell, UserPlus, Trash2 } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
@@ -18,6 +18,7 @@ import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { getWorkouts, deleteWorkouts } from '@/services/coach/coach-workout-service';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Dialog } from '@/components/ui/dialog';
 
 export const WorkoutsTab = () => {
   const router = useRouter();
@@ -27,6 +28,10 @@ export const WorkoutsTab = () => {
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
+
+  // Error dialog state
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Fetch workouts directly with TanStack Query
   const { data: workouts = [], refetch } = useQuery({
@@ -90,11 +95,8 @@ export const WorkoutsTab = () => {
         queryClient.setQueryData(['workouts'], context.previousWorkouts);
       }
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorDeleting'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorDeleting'));
+      setShowErrorDialog(true);
     },
     onSettled: () => {
       // Refetch to ensure server state
@@ -159,93 +161,104 @@ export const WorkoutsTab = () => {
   }, [queryClient]);
 
   return (
-    <FlashList
-      data={filteredWorkouts}
-      ListHeaderComponent={ListHeaderComponent}
-      refreshControl={refreshControl}
-      showsVerticalScrollIndicator={false}
-      renderItem={({ item: workout, index }) => {
-        const isLastItem = index === filteredWorkouts.length - 1;
+    <>
+      <FlashList
+        data={filteredWorkouts}
+        ListHeaderComponent={ListHeaderComponent}
+        refreshControl={refreshControl}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item: workout, index }) => {
+          const isLastItem = index === filteredWorkouts.length - 1;
 
-        const dropdownOptions: DropdownMenuOption[] = [
-          {
-            label: t('general.assign'),
-            icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
-            onPress: () => handleAssign(workout),
-          },
-          {
-            label: `${t('general.delete')} Workout`,
-            icon: { sf: 'trash', IconComponent: Trash2 },
-            destructive: true,
-            onPress: () => deleteMutation.mutateAsync(workout.id),
-          }
-        ];
+          const dropdownOptions: DropdownMenuOption[] = [
+            {
+              label: t('general.assign'),
+              icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
+              onPress: () => handleAssign(workout),
+            },
+            {
+              label: `${t('general.delete')} Workout`,
+              icon: { sf: 'trash', IconComponent: Trash2 },
+              destructive: true,
+              onPress: () => deleteMutation.mutateAsync(workout.id),
+            }
+          ];
 
-        return (
-          <View>
-            <SwipeableRow
-              onDelete={() => deleteMutation.mutateAsync(workout.id)}
-              onOpen={registerOpenRow}
-              deleteConfirmTitle={`${t('general.delete')} ${workout.name}?`}
-            >
-              <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
-                <PressableScale
-                  onPress={() => handleWorkoutPress(workout)}
-                  style={styles.rowWrapper}
-                >
-                  <View style={[styles.rowContent, { backgroundColor: 'transparent' }]}>
-                    <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
-                      <PlatformIcon
-                        sf="dumbbell.fill"
-                        IconComponent={Dumbbell}
-                        size={24}
-                        color={themeColors.text}
-                      />
+          return (
+            <View>
+              <SwipeableRow
+                onDelete={() => deleteMutation.mutateAsync(workout.id)}
+                onOpen={registerOpenRow}
+                deleteConfirmTitle={`${t('general.delete')} ${workout.name}?`}
+              >
+                <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
+                  <PressableScale
+                    onPress={() => handleWorkoutPress(workout)}
+                    style={styles.rowWrapper}
+                  >
+                    <View style={[styles.rowContent, { backgroundColor: 'transparent' }]}>
+                      <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                        <PlatformIcon
+                          sf="dumbbell.fill"
+                          IconComponent={Dumbbell}
+                          size={24}
+                          color={themeColors.text}
+                        />
+                      </View>
+                      <View style={styles.textContent}>
+                        <Text
+                          style={[styles.workoutName, { color: themeColors.text }]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {workout.name}
+                        </Text>
+                        <Text style={[styles.exerciseCount, { color: themeColors.mutedText }]}>
+                          {workout.totalExercises === 0
+                            ? 'Empty'
+                            : `${workout.totalExercises} ${workout.totalExercises === 1 ? t('library.exercise') : t('library.exercises')}`
+                          }
+                        </Text>
+                      </View>
+                      <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
                     </View>
-                    <View style={styles.textContent}>
-                      <Text
-                        style={[styles.workoutName, { color: themeColors.text }]}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {workout.name}
-                      </Text>
-                      <Text style={[styles.exerciseCount, { color: themeColors.mutedText }]}>
-                        {workout.totalExercises === 0
-                          ? 'Empty'
-                          : `${workout.totalExercises} ${workout.totalExercises === 1 ? t('library.exercise') : t('library.exercises')}`
-                        }
-                      </Text>
-                    </View>
-                    <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-                  </View>
-                </PressableScale>
-              </ContextMenuWrapper>
-            </SwipeableRow>
+                  </PressableScale>
+                </ContextMenuWrapper>
+              </SwipeableRow>
 
-            {!isLastItem && (
-              <View style={styles.separatorContainer}>
-                <View
-                  style={[
-                    styles.separator,
-                    { backgroundColor: themeColors.mutedText, opacity: 0.2 },
-                  ]}
-                />
-              </View>
-            )}
+              {!isLastItem && (
+                <View style={styles.separatorContainer}>
+                  <View
+                    style={[
+                      styles.separator,
+                      { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+                    ]}
+                  />
+                </View>
+              )}
 
-            {isLastItem && <View style={{ height: 24 }} />}
-          </View>
-        );
-      }}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={{ paddingBottom: 40 }}
-      ListEmptyComponent={
-        <EmptyState
-          message={t('library.empty.workouts')}
-        />
-      }
-    />
+              {isLastItem && <View style={{ height: 24 }} />}
+            </View>
+          );
+        }}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        ListEmptyComponent={
+          <EmptyState
+            message={t('library.empty.workouts')}
+          />
+        }
+      />
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
+    </>
   );
 };
 

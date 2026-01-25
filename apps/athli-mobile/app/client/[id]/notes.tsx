@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Alert, Pressable } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+
+import { Dialog } from '@/components/ui/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus, Notebook, ChevronRight } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
@@ -44,6 +46,9 @@ export default function ClientNotesScreen() {
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Dialog state
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
 
   // Swipe row management
   const openRowRef = useRef<(() => void) | null>(null);
@@ -120,7 +125,7 @@ export default function ClientNotesScreen() {
       refreshSection('notes');
     } catch (error) {
       haptics.error();
-      Alert.alert(t('general.error'), t('general.errorDeleting'));
+      setShowErrorDialog(true);
     }
   };
 
@@ -184,7 +189,7 @@ export default function ClientNotesScreen() {
   ), [themeColors, handleNotePress, handleDeleteNote, registerOpenRow, formatDate, t]);
 
   return (
-    <ScreenWrapper scrollable={false}>
+    <ScreenWrapper scrollable={false} useImageBackground={false}>
       <View style={styles.container}>
         {/* Header */}
         <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
@@ -267,6 +272,21 @@ export default function ClientNotesScreen() {
             </ScrollView>
           )}
         </Pressable>
+
+        <Dialog
+          visible={showErrorDialog}
+          onClose={() => setShowErrorDialog(false)}
+          title={t('general.error')}
+          message={t('general.errorDeleting')}
+          showCloseIcon={false}
+          buttons={[
+            {
+              label: t('general.ok'),
+              onPress: () => setShowErrorDialog(false),
+              variant: 'primary',
+            },
+          ]}
+        />
       </View>
     </ScreenWrapper>
   );

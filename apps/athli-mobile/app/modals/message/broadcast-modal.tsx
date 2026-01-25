@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Platform, StyleSheet, Text, View, Alert, ScrollView } from 'react-native';
+import { Platform, StyleSheet, Text, View, ScrollView } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { PressableOpacity } from 'pressto';
 import { useRouter } from 'expo-router';
@@ -37,6 +37,7 @@ import { getClients, type Athlete } from '@/services/coach/coach-client-service'
 import { EmptyState } from '@/components/ui/empty-state';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { apiFetch } from '@/lib/api-client';
+import { Dialog } from '@/components/ui/dialog';
 
 const MAX_ATTACHMENTS = 4;
 
@@ -68,6 +69,8 @@ export default function BroadcastModal() {
     const [isAllClientsSelected, setIsAllClientsSelected] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     // Fetch clients
     const { data: clients = [] } = useQuery({
@@ -128,7 +131,8 @@ export default function BroadcastModal() {
 
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert(t('files.addFile.errors.permissionRequired'));
+            setErrorMessage(t('files.addFile.errors.permissionRequired'));
+            setShowErrorDialog(true);
             return;
         }
 
@@ -156,7 +160,8 @@ export default function BroadcastModal() {
 
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert(t('files.addFile.errors.permissionRequired'));
+            setErrorMessage(t('files.addFile.errors.permissionRequired'));
+            setShowErrorDialog(true);
             return;
         }
 
@@ -204,7 +209,8 @@ export default function BroadcastModal() {
 
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert(t('general.permissionRequired'), t('camera.permissionMessage'));
+            setErrorMessage(t('camera.permissionMessage'));
+            setShowErrorDialog(true);
             return;
         }
 
@@ -398,11 +404,8 @@ export default function BroadcastModal() {
         } catch (error) {
             console.error('Failed to broadcast message:', error);
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                t('messages.broadcastModal.sendError'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(t('messages.broadcastModal.sendError'));
+            setShowErrorDialog(true);
         } finally {
             setIsSaving(false);
         }
@@ -843,6 +846,15 @@ export default function BroadcastModal() {
             {step === 1 && renderStep1()}
             {step === 2 && renderStep2()}
             {step === 3 && renderStep3()}
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={errorMessage}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
         </View>
     );
 }

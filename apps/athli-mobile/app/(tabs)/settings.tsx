@@ -26,9 +26,11 @@ import { useThemePreference, useCoachProfileStore, useClientProfileStore } from 
 import { useAppView } from '@/stores';
 import { useTranslations } from '@/stores';
 import { Card } from '@/components/ui/card';
+import { Dialog } from '@/components/ui/dialog';
 import { SettingsOption } from '@/components/ui/settings-option';
 import { Separator } from '@/components/ui/separator';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { signOut } from '@/services/auth/supabase-auth';
 
 type PlatformIconProps = {
   sf: string;
@@ -69,6 +71,7 @@ export default function SettingsScreen() {
 
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   useEffect(() => {
     const storedTime = Storage.getItem(LAST_SYNC_KEY);
@@ -145,10 +148,25 @@ export default function SettingsScreen() {
   };
 
   const handleLogout = () => {
-    router.push('/modals/auth/logout-confirmation-modal');
+    setShowLogoutDialog(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    try {
+      await signOut();
+      setShowLogoutDialog(false);
+      router.replace('/welcome');
+    } catch (error) {
+      setShowLogoutDialog(false);
+    }
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutDialog(false);
   };
 
   return (
+    <>
     <ScreenWrapper contentContainerStyle={styles.scrollContent}>
       <View style={styles.headerSection}>
         <Text style={[styles.title, { color: themeColors.text }]}>
@@ -190,14 +208,21 @@ export default function SettingsScreen() {
 
         {/* Account */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.account')}</Text>
-        <Card>
-          <SettingsOption
-            icon={<PlatformIcon sf="gear" mdi="settings" IconComponent={Cog} size={iconSize} color={iconColor} />}
-            title={t('profile.preferences')}
-            showChevron
-            onPress={handleOpenPreferences}
-          />
-        </Card>
+        <PressableScale onPress={handleOpenPreferences}>
+          <Card>
+            <View style={styles.profileRow}>
+              <View style={styles.optionIconContainer}>
+                <PlatformIcon sf="gear" mdi="settings" IconComponent={Cog} size={iconSize} color={iconColor} />
+              </View>
+              <View style={styles.profileTextContainer}>
+                <Text style={[styles.optionTitle, { color: themeColors.text }]}>
+                  {t('profile.preferences')}
+                </Text>
+              </View>
+              <PlatformIcon sf="chevron.right" mdi="chevron-right" IconComponent={ChevronRight} size={iconSizes.extraSmallIcons} color={themeColors.mutedText} />
+            </View>
+          </Card>
+        </PressableScale>
 
         {/* Support */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.support')}</Text>
@@ -241,15 +266,41 @@ export default function SettingsScreen() {
 
         {/* Account Actions */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.accountActions')}</Text>
-        <Card>
-          <SettingsOption
-            icon={<PlatformIcon sf="rectangle.portrait.and.arrow.right" mdi="logout" IconComponent={LogOut} size={iconSize} color={iconColor} />}
-            title={t('profile.logout')}
-            onPress={handleLogout}
-          />
-        </Card>
+        <PressableScale onPress={handleLogout}>
+          <Card>
+            <View style={styles.profileRow}>
+              <View style={styles.optionIconContainer}>
+                <PlatformIcon sf="rectangle.portrait.and.arrow.right" mdi="logout" IconComponent={LogOut} size={iconSize} color={iconColor} />
+              </View>
+              <View style={styles.profileTextContainer}>
+                <Text style={[styles.optionTitle, { color: themeColors.text }]}>
+                  {t('profile.logout')}
+                </Text>
+              </View>
+            </View>
+          </Card>
+        </PressableScale>
       </View>
     </ScreenWrapper>
+    <Dialog
+      visible={showLogoutDialog}
+      onClose={handleLogoutCancel}
+      title={t('profile.logoutConfirmTitle')}
+      message={t('profile.logoutConfirmMessage')}
+      buttons={[
+        {
+          label: t('general.cancel'),
+          onPress: handleLogoutCancel,
+          variant: 'secondary',
+        },
+        {
+          label: t('profile.logout'),
+          onPress: handleLogoutConfirm,
+          variant: 'destructive',
+        },
+      ]}
+    />
+    </>
   );
 }
 
@@ -305,5 +356,16 @@ const styles = StyleSheet.create({
   },
   profileNameText: {
     ...typography.h5,
+  },
+  optionIconContainer: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4,
+  },
+  optionTitle: {
+    ...typography.p1,
+    lineHeight: 22,
   },
 });

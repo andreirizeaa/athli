@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Alert } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { Dialog } from '@/components/ui/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Archive, UserMinus } from 'lucide-react-native';
 
@@ -23,6 +25,8 @@ export default function ClientSettingsScreen() {
     const iconSize = iconSizes.listIcons;
 
     const [client, setClient] = useState<Client | null>(null);
+    const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     useEffect(() => {
         const loadClient = async () => {
@@ -42,36 +46,20 @@ export default function ClientSettingsScreen() {
     };
 
     const handleArchiveClient = () => {
-        const clientName = client?.name || '';
-        Alert.alert(
-            `${t('clientDetail.settings.archivePrefix') || 'Archive'} ${clientName}?`,
-            t('clientDetail.settings.archiveClientMessage'),
-            [
-                { text: t('general.cancel'), style: 'cancel' },
-                { text: t('clientDetail.settings.archiveClient'), style: 'destructive', onPress: () => { } }
-            ]
-        );
+        setShowArchiveDialog(true);
     };
 
     const handleDeleteClient = () => {
-        const clientName = client?.name || '';
-        Alert.alert(
-            `${t('clientDetail.settings.deletePrefix') || 'Delete'} ${clientName}?`,
-            t('clientDetail.settings.deleteClientMessage'),
-            [
-                { text: t('general.cancel'), style: 'cancel' },
-                { text: t('clientDetail.settings.deleteClient'), style: 'destructive', onPress: () => { } }
-            ]
-        );
+        setShowDeleteDialog(true);
     };
 
     return (
-        <ScreenWrapper contentContainerStyle={styles.scrollContent}>
+        <ScreenWrapper contentContainerStyle={styles.scrollContent} useImageBackground={false}>
             <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
                 <IconButton
                     icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                     onPress={handleBackPress}
-                    size="sm"
+                    size="md"
                     color={iconColor}
                 />
                 <Text style={[styles.headerTitle, { color: themeColors.text }]}>
@@ -111,6 +99,50 @@ export default function ClientSettingsScreen() {
                     />
                 </Card>
             </View>
+
+            <Dialog
+                visible={showArchiveDialog}
+                onClose={() => setShowArchiveDialog(false)}
+                title={`${t('clientDetail.settings.archivePrefix') || 'Archive'} ${client?.name || ''}?`}
+                message={t('clientDetail.settings.archiveClientMessage')}
+                buttons={[
+                    {
+                        label: t('general.cancel'),
+                        onPress: () => setShowArchiveDialog(false),
+                        variant: 'secondary',
+                    },
+                    {
+                        label: t('clientDetail.settings.archiveClient'),
+                        onPress: () => {
+                            setShowArchiveDialog(false);
+                            // TODO: Implement archive logic
+                        },
+                        variant: 'destructive',
+                    },
+                ]}
+            />
+
+            <Dialog
+                visible={showDeleteDialog}
+                onClose={() => setShowDeleteDialog(false)}
+                title={`${t('clientDetail.settings.deletePrefix') || 'Delete'} ${client?.name || ''}?`}
+                message={t('clientDetail.settings.deleteClientMessage')}
+                buttons={[
+                    {
+                        label: t('general.cancel'),
+                        onPress: () => setShowDeleteDialog(false),
+                        variant: 'secondary',
+                    },
+                    {
+                        label: t('clientDetail.settings.deleteClient'),
+                        onPress: () => {
+                            setShowDeleteDialog(false);
+                            // TODO: Implement delete logic
+                        },
+                        variant: 'destructive',
+                    },
+                ]}
+            />
         </ScreenWrapper>
     );
 }

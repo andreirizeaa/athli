@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useRef } from 'react';
-import { StyleSheet, Text, View, Alert, ActivityIndicator } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { FileText, File, Play, UserPlus, Trash2, Pencil } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { PressableScale } from 'pressto';
@@ -19,6 +19,7 @@ import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { getAllFiles, getFileTypeFromMime, getFileUrl, deleteFile } from '@/services/coach/coach-file-service';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Dialog } from '@/components/ui/dialog';
 
 export const FilesTab = () => {
   const { colors: themeColors } = useThemePreference();
@@ -28,6 +29,13 @@ export const FilesTab = () => {
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
+
+  // Dialog state
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteDialogTitle, setDeleteDialogTitle] = useState('');
+  const [fileToDelete, setFileToDelete] = useState<string | null>(null);
 
   // Fetch files directly with TanStack Query
   const { data: files = [], refetch } = useQuery({
@@ -91,11 +99,8 @@ export const FilesTab = () => {
         queryClient.setQueryData(['files'], context.previousFiles);
       }
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorDeleting'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorDeleting'));
+      setShowErrorDialog(true);
     },
     onSettled: () => {
       // Refetch to ensure server state
@@ -136,18 +141,17 @@ export const FilesTab = () => {
   };
 
   const handleDeleteWithConfirmation = (item: typeof filteredFiles[0]) => {
-    Alert.alert(
-      `${t('general.delete')} ${item.filename}?`,
-      t('library.deleteConfirmMessage'),
-      [
-        { text: t('general.cancel'), style: 'cancel' },
-        {
-          text: t('general.delete'),
-          style: 'destructive',
-          onPress: () => deleteMutation.mutateAsync(item.id),
-        },
-      ]
-    );
+    setDeleteDialogTitle(`${t('general.delete')} ${item.filename}?`);
+    setFileToDelete(item.id);
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (fileToDelete) {
+      deleteMutation.mutateAsync(fileToDelete);
+    }
+    setShowDeleteDialog(false);
+    setFileToDelete(null);
   };
 
   const handleAssign = (item: typeof filteredFiles[0]) => {
@@ -346,20 +350,42 @@ export const FilesTab = () => {
   }, [filteredFiles.length, themeColors, t, registerOpenRow, handleFilePress, handleAssign, handleEditFilename, handleDeleteWithConfirmation, handleLongPress, deleteMutation, renderThumbnail, formatSize, formatDate]);
 
   return (
-    <FlashList
-      data={filteredFiles}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={{ paddingBottom: 40 }}
-      ListHeaderComponent={ListHeaderComponent}
-      refreshControl={refreshControl}
-      showsVerticalScrollIndicator={false}
-      ListEmptyComponent={
-        <EmptyState
-          message={t('library.empty.files')}
-        />
-      }
-    />
+    <>
+      <FlashList
+        data={filteredFiles}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        ListHeaderComponent={ListHeaderComponent}
+        refreshControl={refreshControl}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <EmptyState
+            message={t('library.empty.files')}
+          />
+        }
+      />
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
+
+      <Dialog
+        visible={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        title={deleteDialogTitle}
+        message={t('library.deleteConfirmMessage')}
+        buttons={[
+          { label: t('general.cancel'), onPress: () => setShowDeleteDialog(false), variant: 'secondary' },
+          { label: t('general.delete'), onPress: handleConfirmDelete, variant: 'destructive' }
+        ]}
+      />
+    </>
   );
 };
 

@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Alert, Pressable } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+
+import { Dialog } from '@/components/ui/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus, Share, File, FileText, Play, Pencil, Trash2 } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
@@ -47,6 +49,11 @@ export default function ClientFilesScreen() {
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Dialog state
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Swipe row management
   const openRowRef = useRef<(() => void) | null>(null);
@@ -114,7 +121,7 @@ export default function ClientFilesScreen() {
       refreshSection('files');
     } catch (error) {
       haptics.error();
-      Alert.alert(t('general.error'), t('general.errorDeleting'));
+      setShowErrorDialog(true);
     }
   };
 
@@ -160,19 +167,17 @@ export default function ClientFilesScreen() {
 
   const handleDeleteFileWithConfirmation = useCallback((file: ClientFile) => {
     const fileName = getClientFileName(file);
-    Alert.alert(
-      `${t('general.delete')} ${fileName}?`,
-      t('library.deleteConfirmMessage'),
-      [
-        { text: t('general.cancel'), style: 'cancel' },
-        {
-          text: t('general.delete'),
-          style: 'destructive',
-          onPress: () => handleDeleteFile(file.id),
-        },
-      ]
-    );
-  }, [t, handleDeleteFile]);
+    setFileToDelete({ id: file.id, name: fileName });
+    setShowDeleteDialog(true);
+  }, []);
+
+  const confirmDeleteFile = useCallback(() => {
+    if (fileToDelete) {
+      setShowDeleteDialog(false);
+      handleDeleteFile(fileToDelete.id);
+      setFileToDelete(null);
+    }
+  }, [fileToDelete, handleDeleteFile]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -238,7 +243,7 @@ export default function ClientFilesScreen() {
   };
 
   return (
-    <ScreenWrapper>
+    <ScreenWrapper useImageBackground={false}>
       <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton
           icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
@@ -390,6 +395,46 @@ export default function ClientFilesScreen() {
           </ScrollView>
         )}
       </Pressable>
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={t('general.errorDeleting')}
+        showCloseIcon={false}
+        buttons={[
+          {
+            label: t('general.ok'),
+            onPress: () => setShowErrorDialog(false),
+            variant: 'primary',
+          },
+        ]}
+      />
+
+      <Dialog
+        visible={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setFileToDelete(null);
+        }}
+        title={`${t('general.delete')} ${fileToDelete?.name || ''}?`}
+        message={t('library.deleteConfirmMessage')}
+        buttons={[
+          {
+            label: t('general.cancel'),
+            onPress: () => {
+              setShowDeleteDialog(false);
+              setFileToDelete(null);
+            },
+            variant: 'secondary',
+          },
+          {
+            label: t('general.delete'),
+            onPress: confirmDeleteFile,
+            variant: 'destructive',
+          },
+        ]}
+      />
     </ScreenWrapper>
   );
 }
