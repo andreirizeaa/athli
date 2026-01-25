@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo } from 'react';
-import { StyleSheet, Text, View, Alert } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { ChevronRight, Layers, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableScale } from 'pressto';
@@ -19,6 +19,7 @@ import { useLibraryTab } from '@/stores';
 import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { getSections, deleteSections, duplicateSection, starSections, archiveSections } from '@/services/coach/coach-section-service';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Dialog } from '@/components/ui/dialog';
 
 export const SectionsTab = () => {
   const { colors: themeColors } = useThemePreference();
@@ -28,6 +29,10 @@ export const SectionsTab = () => {
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
+
+  // Error dialog state
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Fetch sections directly with TanStack Query
   const { data: sections = [], refetch } = useQuery({
@@ -90,11 +95,8 @@ export const SectionsTab = () => {
         queryClient.setQueryData(['sections'], context.previousSections);
       }
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorDeleting'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorDeleting'));
+      setShowErrorDialog(true);
     },
     onSettled: () => {
       // Refetch to ensure server state
@@ -114,11 +116,8 @@ export const SectionsTab = () => {
     },
     onError: (error: Error) => {
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorDuplicating'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorDuplicating'));
+      setShowErrorDialog(true);
     },
   });
 
@@ -131,11 +130,8 @@ export const SectionsTab = () => {
     },
     onError: (error: Error) => {
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorUpdating'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorUpdating'));
+      setShowErrorDialog(true);
     },
   });
 
@@ -148,11 +144,8 @@ export const SectionsTab = () => {
     },
     onError: (error: Error) => {
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorUpdating'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorUpdating'));
+      setShowErrorDialog(true);
     },
   });
 
@@ -304,20 +297,31 @@ export const SectionsTab = () => {
   }, [filteredSections.length, themeColors, t, deleteMutation, registerOpenRow, handleSectionPress, handleAssign, handleLongPress]);
 
   return (
-    <FlashList
-      data={filteredSections}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={{ paddingBottom: 40 }}
-      ListHeaderComponent={ListHeaderComponent}
-      refreshControl={refreshControl}
-      showsVerticalScrollIndicator={false}
-      ListEmptyComponent={
-        <EmptyState
-          message={t('library.empty.sections')}
-        />
-      }
-    />
+    <>
+      <FlashList
+        data={filteredSections}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        ListHeaderComponent={ListHeaderComponent}
+        refreshControl={refreshControl}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <EmptyState
+            message={t('library.empty.sections')}
+          />
+        }
+      />
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
+    </>
   );
 };
 

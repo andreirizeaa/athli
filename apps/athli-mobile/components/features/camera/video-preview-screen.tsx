@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Pressable, View, Text, Alert, Keyboard } from 'react-native';
+import { StyleSheet, Pressable, View, Text, Keyboard } from 'react-native';
+import { Dialog } from '@/components/ui/dialog';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -44,6 +45,10 @@ export const VideoPreviewScreen = () => {
   const iconColor = themeColors.text;
   const [caption, setCaption] = useState(params.caption || '');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  // Dialog state
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   if (!params.uri) {
     return null;
@@ -122,7 +127,8 @@ export const VideoPreviewScreen = () => {
     try {
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) {
-        Alert.alert('Error', 'Sharing is not available on this device');
+        setErrorMessage('Sharing is not available on this device');
+        setShowErrorDialog(true);
         return;
       }
       await Sharing.shareAsync(video.uri, {
@@ -131,7 +137,8 @@ export const VideoPreviewScreen = () => {
       });
     } catch (error: any) {
       console.error('Error sharing video:', error);
-      Alert.alert('Error', 'Failed to share video');
+      setErrorMessage('Failed to share video');
+      setShowErrorDialog(true);
     }
   };
 
@@ -283,6 +290,15 @@ export const VideoPreviewScreen = () => {
           onPress={handleVideoPress}
         />
       )}
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title="Error"
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: 'OK', onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
     </View>
   );
 };

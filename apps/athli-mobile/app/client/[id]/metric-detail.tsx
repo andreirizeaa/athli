@@ -1,15 +1,9 @@
-import React, { useMemo, useEffect, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { View, StyleSheet, Text, Alert } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
+
+import { Dialog } from '@/components/ui/dialog';
 import { ChevronLeft, MoreHorizontal, TrendingUp, TrendingDown, Calculator, Activity, Pencil, Plus, Trash2 } from 'lucide-react-native';
-import {
-    useSharedValue,
-    useAnimatedReaction,
-    withTiming,
-    withDelay,
-    runOnJS,
-    Easing,
-} from 'react-native-reanimated';
 
 import { useThemePreference, useAppView } from '@/stores';
 import { typography } from '@/constants/typography';
@@ -30,32 +24,6 @@ import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dr
 import { removeMetric } from '@/services/client/client-metric-service';
 import { haptics } from '@/utils/haptics';
 
-// Animated counter hook
-const useAnimatedCounter = (targetValue: number, decimals: number = 1) => {
-    const [displayValue, setDisplayValue] = useState(0);
-    const animatedValue = useSharedValue(0);
-
-    useAnimatedReaction(
-        () => animatedValue.value,
-        (current) => {
-            runOnJS(setDisplayValue)(current);
-        }
-    );
-
-    useEffect(() => {
-        animatedValue.value = 0;
-        animatedValue.value = withDelay(
-            100,
-            withTiming(targetValue, {
-                duration: 800,
-                easing: Easing.out(Easing.cubic),
-            })
-        );
-    }, [targetValue]);
-
-    return displayValue.toFixed(decimals);
-};
-
 export default function MetricDetailScreen() {
     const router = useRouter();
     const { colors: themeColors } = useThemePreference();
@@ -73,6 +41,9 @@ export default function MetricDetailScreen() {
 
     // Time range state
     const [timeRange, setTimeRange] = useState<TimeRange>('all');
+
+    // Dialog state
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     // Time range segments
     const timeRangeSegments = useMemo(() => [
@@ -128,9 +99,9 @@ export default function MetricDetailScreen() {
         }));
     }, [sortedLogs]);
 
-    // Animated values
-    const animatedAverage = useAnimatedCounter(averageValue ?? 0, 1);
-    const animatedMovement = useAnimatedCounter(movement?.percentage ?? 0, 1);
+    // Format display values
+    const displayAverage = (averageValue ?? 0).toFixed(1);
+    const displayMovement = (movement?.percentage ?? 0).toFixed(1);
 
     const handleBackPress = () => {
         router.back();
@@ -172,28 +143,21 @@ export default function MetricDetailScreen() {
 
     const handleDeleteMetric = useCallback(() => {
         if (!metric || !coachId) return;
-        Alert.alert(
-            t('clientDetail.metricDetail.deleteMetric'),
-            `${t('general.delete')} ${metric.name}?`,
-            [
-                { text: t('general.cancel'), style: 'cancel' },
-                {
-                    text: t('general.delete'),
-                    style: 'destructive',
-                    onPress: async () => {
-                        await removeMetric({
-                            metricIds: [metric.assignment_id],
-                            clientId,
-                            coachId,
-                        });
-                        haptics.success();
-                        refreshSection('metrics');
-                        router.back();
-                    },
-                },
-            ]
-        );
-    }, [metric, coachId, clientId, t, refreshSection, router]);
+        setShowDeleteDialog(true);
+    }, [metric, coachId]);
+
+    const confirmDeleteMetric = useCallback(async () => {
+        if (!metric || !coachId) return;
+        setShowDeleteDialog(false);
+        await removeMetric({
+            metricIds: [metric.assignment_id],
+            clientId,
+            coachId,
+        });
+        haptics.success();
+        refreshSection('metrics');
+        router.back();
+    }, [metric, coachId, clientId, refreshSection, router]);
 
     const dropdownOptions: DropdownMenuOption[] = useMemo(() => [
         {
@@ -216,7 +180,7 @@ export default function MetricDetailScreen() {
 
     if (!metric) {
         return (
-            <ScreenWrapper>
+            <ScreenWrapper useImageBackground={false}>
                 <Stack.Screen options={{ headerShown: false }} />
                 <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
                     <IconButton
@@ -240,7 +204,7 @@ export default function MetricDetailScreen() {
     }
 
     return (
-        <ScreenWrapper>
+        <ScreenWrapper useImageBackground={false}>
             <Stack.Screen options={{ headerShown: false }} />
             {/* Header */}
             <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
@@ -289,7 +253,7 @@ export default function MetricDetailScreen() {
                                 <Calculator {...({ size: 18, color: themeColors.primary } as any)} />
                             </View>
                             <Text style={[styles.statValue, { color: themeColors.text }]}>
-                                {animatedAverage}{metric.unit ? ` ${metric.unit}` : ''}
+                                {displayAverage}{metric.unit ? ` ${metric.unit}` : ''}
                             </Text>
                             <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
                                 {t('clientDetail.metricDetail.average')}
@@ -337,7 +301,7 @@ export default function MetricDetailScreen() {
                                         : '#ef4444'
                                 }
                             ]}>
-                                {animatedMovement}%
+                                {displayMovement}%
                             </Text>
                             <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
                                 {t('clientDetail.metricDetail.delta')}
@@ -363,6 +327,25 @@ export default function MetricDetailScreen() {
                 unit={metric.unit}
                 clientId={clientId}
                 assignmentId={metric.assignment_id}
+            />
+
+            <Dialog
+                visible={showDeleteDialog}
+                onClose={() => setShowDeleteDialog(false)}
+                title={t('clientDetail.metricDetail.deleteMetric')}
+                message={`${t('general.delete')} ${metric.name}?`}
+                buttons={[
+                    {
+                        label: t('general.cancel'),
+                        onPress: () => setShowDeleteDialog(false),
+                        variant: 'secondary',
+                    },
+                    {
+                        label: t('general.delete'),
+                        onPress: confirmDeleteMetric,
+                        variant: 'destructive',
+                    },
+                ]}
             />
         </ScreenWrapper>
     );

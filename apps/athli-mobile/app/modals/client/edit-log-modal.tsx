@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { StyleSheet, Text, View, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { X, Check, Trash2 } from 'lucide-react-native';
 
@@ -10,6 +10,7 @@ import { InputBox } from '@/components/ui/form-inputs/input-box';
 import { IconButton } from '@/components/ui/icon-button';
 import { updateMetricLog, deleteMetricLog } from '@/services/client/client-metric-service';
 import { updateHabitLog, deleteHabitLog } from '@/services/client/client-habit-service';
+import { Dialog } from '@/components/ui/dialog';
 
 export default function EditLogModal() {
     const router = useRouter();
@@ -34,6 +35,9 @@ export default function EditLogModal() {
     const [value, setValue] = useState(initialValue);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     const hasChanged = useMemo(() => {
         return value !== initialValue;
@@ -47,41 +51,34 @@ export default function EditLogModal() {
         router.back();
     }, [router]);
 
-    const handleDelete = useCallback(() => {
-        Alert.alert(
-            t('clientDetail.editLog.deleteTitle'),
-            t('clientDetail.editLog.deleteMessage'),
-            [
-                { text: t('general.cancel'), style: 'cancel' },
-                {
-                    text: t('general.delete'),
-                    style: 'destructive',
-                    onPress: async () => {
-                        setIsDeleting(true);
-                        haptics.medium();
+    const handleDeleteConfirm = useCallback(async () => {
+        setShowDeleteDialog(false);
+        setIsDeleting(true);
+        haptics.medium();
 
-                        try {
-                            if (isHabit) {
-                                await deleteHabitLog(params.logId, params.clientId, coachId || '');
-                                await refreshSection('habits');
-                            } else {
-                                await deleteMetricLog(params.logId, params.clientId, coachId || '');
-                                await refreshSection('metrics');
-                            }
+        try {
+            if (isHabit) {
+                await deleteHabitLog(params.logId, params.clientId, coachId || '');
+                await refreshSection('habits');
+            } else {
+                await deleteMetricLog(params.logId, params.clientId, coachId || '');
+                await refreshSection('metrics');
+            }
 
-                            haptics.success();
-                            router.back();
-                        } catch (error) {
-                            haptics.error();
-                            Alert.alert(t('general.error'), t('general.errorDeleting'));
-                        } finally {
-                            setIsDeleting(false);
-                        }
-                    },
-                },
-            ]
-        );
+            haptics.success();
+            router.back();
+        } catch (error) {
+            haptics.error();
+            setErrorMessage(t('general.errorDeleting'));
+            setShowErrorDialog(true);
+        } finally {
+            setIsDeleting(false);
+        }
     }, [isHabit, params, coachId, refreshSection, router, t]);
+
+    const handleDelete = useCallback(() => {
+        setShowDeleteDialog(true);
+    }, []);
 
     const handleSave = useCallback(async () => {
         if ((!hasChanged && !isEmpty) || isSaving || isDeleting) return;
@@ -94,7 +91,8 @@ export default function EditLogModal() {
 
         const numValue = parseFloat(value);
         if (isNaN(numValue)) {
-            Alert.alert(t('general.error'), t('clientDetail.editLog.invalidValue'));
+            setErrorMessage(t('clientDetail.editLog.invalidValue'));
+            setShowErrorDialog(true);
             return;
         }
 
@@ -125,7 +123,8 @@ export default function EditLogModal() {
             router.back();
         } catch (error) {
             haptics.error();
-            Alert.alert(t('general.error'), t('general.errorSaving'));
+            setErrorMessage(t('general.errorSaving'));
+            setShowErrorDialog(true);
         } finally {
             setIsSaving(false);
         }
@@ -192,6 +191,26 @@ export default function EditLogModal() {
                     )}
                 </View>
             </View>
+
+            <Dialog
+                visible={showDeleteDialog}
+                onClose={() => setShowDeleteDialog(false)}
+                title={t('clientDetail.editLog.deleteTitle')}
+                message={t('clientDetail.editLog.deleteMessage')}
+                buttons={[
+                    { label: t('general.cancel'), onPress: () => setShowDeleteDialog(false), variant: 'secondary' },
+                    { label: t('general.delete'), onPress: handleDeleteConfirm, variant: 'destructive' },
+                ]}
+            />
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={errorMessage}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
         </View>
     );
 }

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { Platform, StyleSheet, Text, View, Alert, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { Platform, StyleSheet, Text, View, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
@@ -16,6 +16,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { Card } from '@/components/ui/card';
 import { hexToRgba } from '@/utils/colorUtils';
+import { Dialog } from '@/components/ui/dialog';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 type Day = typeof DAYS[number];
@@ -45,6 +46,7 @@ export default function DefineScheduleModal() {
     );
     const [monthlyOption, setMonthlyOption] = useState<MonthlyOption>('last');
     const [specificDay, setSpecificDay] = useState<number>(1);
+    const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
     // Load existing data when modal gains focus
     useEffect(() => {
@@ -272,25 +274,11 @@ export default function DefineScheduleModal() {
 
     const handleCloseWithConfirmation = useCallback(() => {
         if (hasChanges) {
-            Alert.alert(
-                t('shared.defineSchedule.discardTitle'),
-                t('shared.defineSchedule.discardMessage'),
-                [
-                    {
-                        text: t('general.cancel'),
-                        style: 'cancel',
-                    },
-                    {
-                        text: t('shared.defineSchedule.discard'),
-                        style: 'destructive',
-                        onPress: handleClose,
-                    },
-                ]
-            );
+            setShowDiscardDialog(true);
         } else {
             handleClose();
         }
-    }, [hasChanges, handleClose, t]);
+    }, [hasChanges, handleClose]);
 
     const handleSave = useCallback(() => {
         if (!canComplete) return;
@@ -449,6 +437,17 @@ export default function DefineScheduleModal() {
                     </KeyboardAwareScrollView>
                 </View>
             </TouchableWithoutFeedback>
+
+            <Dialog
+                visible={showDiscardDialog}
+                onClose={() => setShowDiscardDialog(false)}
+                title={t('shared.defineSchedule.discardTitle')}
+                message={t('shared.defineSchedule.discardMessage')}
+                buttons={[
+                    { label: t('general.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+                    { label: t('shared.defineSchedule.discard'), onPress: handleClose, variant: 'destructive' },
+                ]}
+            />
         </View>
     );
 }

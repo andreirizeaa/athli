@@ -1,5 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { StyleSheet, Text, View, Dimensions, ActivityIndicator, Alert, Platform } from 'react-native';
+import { StyleSheet, Text, View, Dimensions, ActivityIndicator, Platform } from 'react-native';
+
+import { Dialog } from '@/components/ui/dialog';
 import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, ChevronRight, ChevronDown, Plus, Image as ImageIcon } from 'lucide-react-native';
@@ -209,6 +211,14 @@ export default function ComparePhotosScreen() {
   // State for tracking uploading photos
   const [uploadingPhotos, setUploadingPhotos] = useState<Record<string, string>>({});
 
+  // Dialog state
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const [permissionMessage, setPermissionMessage] = useState('');
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [showSourceDialog, setShowSourceDialog] = useState(false);
+  const [currentAngle, setCurrentAngle] = useState<PhotoAngle>('front');
+  const [currentDateKey, setCurrentDateKey] = useState('');
+
   const pickImage = useCallback(
     async (angle: PhotoAngle, dateKey: string, source: 'camera' | 'library') => {
       const uploadKey = `${dateKey}-${angle}`;
@@ -218,22 +228,16 @@ export default function ComparePhotosScreen() {
         if (source === 'camera') {
           const { status } = await ImagePicker.requestCameraPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
-              t('general.permissionRequired'),
-              t('general.cameraPermissionMessage'),
-              [{ text: t('general.ok') }]
-            );
+            setPermissionMessage(t('general.cameraPermissionMessage'));
+            setShowPermissionDialog(true);
             return;
           }
           result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
         } else {
           const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
-              t('general.permissionRequired'),
-              t('general.libraryPermissionMessage'),
-              [{ text: t('general.ok') }]
-            );
+            setPermissionMessage(t('general.libraryPermissionMessage'));
+            setShowPermissionDialog(true);
             return;
           }
           result = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
@@ -264,7 +268,7 @@ export default function ComparePhotosScreen() {
         }
       } catch (error) {
         haptics.error();
-        Alert.alert(t('general.error'), t('general.errorSaving'));
+        setShowErrorDialog(true);
         setUploadingPhotos((prev) => {
           const next = { ...prev };
           delete next[uploadKey];
@@ -277,22 +281,11 @@ export default function ComparePhotosScreen() {
 
   const handleEmptyThumbnailPress = useCallback(
     (angle: PhotoAngle, dateKey: string) => {
-      Alert.alert(t('clientDetail.addPhotoModal.selectSource'), undefined, [
-        {
-          text: t('clientDetail.addPhotoModal.takePhoto'),
-          onPress: () => pickImage(angle, dateKey, 'camera'),
-        },
-        {
-          text: t('clientDetail.addPhotoModal.chooseFromLibrary'),
-          onPress: () => pickImage(angle, dateKey, 'library'),
-        },
-        {
-          text: t('general.cancel'),
-          style: 'cancel',
-        },
-      ]);
+      setCurrentAngle(angle);
+      setCurrentDateKey(dateKey);
+      setShowSourceDialog(true);
     },
-    [pickImage, t]
+    []
   );
 
   const handlePhotoPress = (photo: ClientPhoto) => {
@@ -549,6 +542,67 @@ export default function ComparePhotosScreen() {
         <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
         {renderPhotoPanel(bottomDate, 'bottom')}
       </View>
+
+      <Dialog
+        visible={showPermissionDialog}
+        onClose={() => setShowPermissionDialog(false)}
+        title={t('general.permissionRequired')}
+        message={permissionMessage}
+        showCloseIcon={false}
+        buttons={[
+          {
+            label: t('general.ok'),
+            onPress: () => setShowPermissionDialog(false),
+            variant: 'primary',
+          },
+        ]}
+      />
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={t('general.errorSaving')}
+        showCloseIcon={false}
+        buttons={[
+          {
+            label: t('general.ok'),
+            onPress: () => setShowErrorDialog(false),
+            variant: 'primary',
+          },
+        ]}
+      />
+
+      <Dialog
+        visible={showSourceDialog}
+        onClose={() => setShowSourceDialog(false)}
+        title={t('clientDetail.addPhotoModal.selectSource')}
+        buttonLayout="vertical"
+        showCloseIcon={false}
+        buttons={[
+          {
+            label: t('clientDetail.addPhotoModal.takePhoto'),
+            onPress: () => {
+              setShowSourceDialog(false);
+              pickImage(currentAngle, currentDateKey, 'camera');
+            },
+            variant: 'primary',
+          },
+          {
+            label: t('clientDetail.addPhotoModal.chooseFromLibrary'),
+            onPress: () => {
+              setShowSourceDialog(false);
+              pickImage(currentAngle, currentDateKey, 'library');
+            },
+            variant: 'primary',
+          },
+          {
+            label: t('general.cancel'),
+            onPress: () => setShowSourceDialog(false),
+            variant: 'secondary',
+          },
+        ]}
+      />
     </View>
   );
 }

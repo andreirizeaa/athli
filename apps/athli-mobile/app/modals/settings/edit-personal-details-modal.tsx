@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, Text, View, Platform, Alert } from 'react-native';
+import { StyleSheet, Text, View, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { X, Check, User, Camera, ImageIcon } from 'lucide-react-native';
@@ -16,6 +16,7 @@ import { InputBox } from '@/components/ui/form-inputs/input-box';
 import { haptics } from '@/utils/haptics';
 import { supabase } from '@/lib/supabase';
 import { updateCoachProfile } from '@/services/coach/coach-profile-service';
+import { Dialog } from '@/components/ui/dialog';
 
 type EditField = 'name' | 'profilePicture';
 
@@ -33,6 +34,8 @@ export default function EditPersonalDetailsModal() {
   const [name, setName] = useState(coachProfile?.name || '');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const hasChanges =
     field === 'name'
@@ -83,10 +86,8 @@ export default function EditPersonalDetailsModal() {
         if (useCamera) {
           const { status } = await ImagePicker.requestCameraPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
-              t('general.error'),
-              t('settings.personalDetails.cameraPermissionRequired')
-            );
+            setErrorMessage(t('settings.personalDetails.cameraPermissionRequired'));
+            setShowErrorDialog(true);
             return;
           }
           result = await ImagePicker.launchCameraAsync({
@@ -98,10 +99,8 @@ export default function EditPersonalDetailsModal() {
           const { status } =
             await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
-              t('general.error'),
-              t('settings.personalDetails.galleryPermissionRequired')
-            );
+            setErrorMessage(t('settings.personalDetails.galleryPermissionRequired'));
+            setShowErrorDialog(true);
             return;
           }
           result = await ImagePicker.launchImageLibraryAsync({
@@ -169,7 +168,8 @@ export default function EditPersonalDetailsModal() {
     } catch (error) {
       console.error('Failed to update profile picture:', error);
       haptics.error();
-      Alert.alert(t('general.error'), t('settings.personalDetails.uploadFailed'));
+      setErrorMessage(t('settings.personalDetails.uploadFailed'));
+      setShowErrorDialog(true);
     } finally {
       setIsSaving(false);
     }
@@ -288,6 +288,15 @@ export default function EditPersonalDetailsModal() {
         {field === 'name' && renderNameField()}
         {field === 'profilePicture' && renderProfilePictureField()}
       </View>
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
     </View>
   );
 }

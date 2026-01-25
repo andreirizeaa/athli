@@ -1,5 +1,6 @@
-import React, { RefObject, useCallback, useEffect } from 'react';
-import { StyleSheet, TextInput, View, Alert, InteractionManager, ViewStyle } from 'react-native';
+import React, { RefObject, useCallback, useEffect, useState } from 'react';
+import { StyleSheet, TextInput, View, InteractionManager, ViewStyle } from 'react-native';
+import { Dialog } from '@/components/ui/dialog';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { PressableOpacity } from 'pressto';
 import { BlurView } from 'expo-blur';
@@ -98,6 +99,9 @@ export const ChatToolbar = ({
   const iconColor = themeColors.text;
   const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.95);
 
+  // Dialog state
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+
   // Animated height for attachment picker row (0 when closed, 110 when open)
   const attachmentPickerHeight = useSharedValue(showAttachmentPicker ? 110 : 0);
 
@@ -137,7 +141,7 @@ export const ChatToolbar = ({
   const handleCameraPress = useCallback(async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(t('general.permissionRequired'), t('camera.permissionMessage'));
+      setShowPermissionDialog(true);
       return;
     }
 
@@ -303,6 +307,15 @@ export const ChatToolbar = ({
           </Animated.View>
         </View>
       </BlurView>
+
+      <Dialog
+        visible={showPermissionDialog}
+        onClose={() => setShowPermissionDialog(false)}
+        title={t('general.permissionRequired')}
+        message={t('camera.permissionMessage')}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowPermissionDialog(false), variant: 'primary' }]}
+      />
     </Animated.View>
   );
 };

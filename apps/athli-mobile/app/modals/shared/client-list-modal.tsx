@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { StyleSheet, Text, View, Platform, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Platform, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, UserPlus, Check } from 'lucide-react-native';
@@ -15,6 +15,7 @@ import { type Client } from '@/services/client-service';
 import { IconButton } from '@/components/ui/icon-button';
 import { hexToRgba } from '@/utils/colorUtils';
 import { FilledButton } from '@/components/ui/buttons';
+import { Dialog } from '@/components/ui/dialog';
 
 // TODO: Replace with actual TanStack Query hook: const { data: clients, isLoading } = useClients()
 // Mock data to mimic TanStack Query behavior
@@ -33,6 +34,7 @@ export default function ClientListModal() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
 
     // TODO: Replace with TanStack Query: const { data: clients, isLoading } = useClients()
     // For now, use mock data directly (simulates cached TanStack Query data)
@@ -58,14 +60,14 @@ export default function ClientListModal() {
 
     const handleAction = useCallback(() => {
         if (selectedClientIds.size === 0) {
-            Alert.alert(t('general.error'), t('clients.selectAtLeastOne'));
+            setShowErrorDialog(true);
             return;
         }
 
         const selectedClients = clients.filter((c: any) => selectedClientIds.has(c.id));
         triggerClientsSelect(selectedClients as any);
         router.back();
-    }, [selectedClientIds, clients, triggerClientsSelect, router, t]);
+    }, [selectedClientIds, clients, triggerClientsSelect, router]);
 
     const handleClose = () => {
         router.back();
@@ -142,6 +144,15 @@ export default function ClientListModal() {
                     </View>
                 )}
             </View>
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={t('clients.selectAtLeastOne')}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
         </View>
     );
 }

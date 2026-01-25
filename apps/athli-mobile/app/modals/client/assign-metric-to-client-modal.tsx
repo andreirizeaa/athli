@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useMemo } from 'react';
-import { Platform, StyleSheet, Text, View, Alert } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -19,6 +19,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { getAllMetrics, type Metric } from '@/services/coach/coach-metric-service';
 import { assignMetric } from '@/services/client/client-metric-service';
 import { haptics } from '@/utils/haptics';
+import { Dialog } from '@/components/ui/dialog';
 
 export default function AssignMetricToClientModal() {
     const router = useRouter();
@@ -36,6 +37,7 @@ export default function AssignMetricToClientModal() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedMetricIds, setSelectedMetricIds] = useState<Set<string>>(new Set());
     const [isSaving, setIsSaving] = useState(false);
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
 
     // Use same queryKey as library tabs - reads from existing cache, no new API call
     const { data: metrics = [] } = useQuery({
@@ -81,10 +83,7 @@ export default function AssignMetricToClientModal() {
             handleClose();
         } catch (error) {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                t('general.errorSaving')
-            );
+            setShowErrorDialog(true);
         } finally {
             setIsSaving(false);
         }
@@ -151,6 +150,15 @@ export default function AssignMetricToClientModal() {
             </View>
 
             {/* Content */}
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={t('general.errorSaving')}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
+
             <View style={styles.content}>
                 <FlashList
                     data={filteredMetrics}

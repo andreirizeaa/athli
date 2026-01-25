@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -20,10 +20,12 @@ import { PressableScale } from 'pressto';
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference, useClientProfileStore, useCoachProfileStore, useAppView, useTranslations } from '@/stores';
 import { Card } from '@/components/ui/card';
+import { Dialog } from '@/components/ui/dialog';
 import { SettingsOption } from '@/components/ui/settings-option';
 import { Separator } from '@/components/ui/separator';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { signOut } from '@/services/auth/supabase-auth';
 
 export default function ProfileTabScreen() {
   const router = useRouter();
@@ -40,6 +42,7 @@ export default function ProfileTabScreen() {
   const currentProfile = isAthleteView ? clientProfile : coachProfile;
   const profileName = currentProfile?.name || t('profile.enterYourName');
   const profilePictureUrl = currentProfile?.profile_picture_url;
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   // Log client data when on profile screen
   useEffect(() => {
@@ -80,7 +83,21 @@ export default function ProfileTabScreen() {
   };
 
   const handleLogout = () => {
-    router.push('/modals/auth/logout-confirmation-modal');
+    setShowLogoutDialog(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    try {
+      await signOut();
+      setShowLogoutDialog(false);
+      router.replace('/welcome');
+    } catch (error) {
+      setShowLogoutDialog(false);
+    }
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutDialog(false);
   };
 
   const handleManageGoogle = useCallback(() => {
@@ -100,6 +117,7 @@ export default function ProfileTabScreen() {
   }, [router]);
 
   return (
+    <>
     <ScreenWrapper contentContainerStyle={{ paddingBottom: 60 }}>
       <View style={styles.content}>
         <View style={styles.titleRow}>
@@ -298,6 +316,25 @@ export default function ProfileTabScreen() {
         <View style={{ height: 60 }} />
       </View>
     </ScreenWrapper>
+    <Dialog
+      visible={showLogoutDialog}
+      onClose={handleLogoutCancel}
+      title={t('profile.logoutConfirmTitle')}
+      message={t('profile.logoutConfirmMessage')}
+      buttons={[
+        {
+          label: t('general.cancel'),
+          onPress: handleLogoutCancel,
+          variant: 'secondary',
+        },
+        {
+          label: t('profile.logout'),
+          onPress: handleLogoutConfirm,
+          variant: 'destructive',
+        },
+      ]}
+    />
+    </>
   );
 }
 

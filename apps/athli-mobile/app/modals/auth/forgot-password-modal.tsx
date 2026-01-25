@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, Platform, Alert, Keyboard, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Platform, Keyboard, ActivityIndicator } from 'react-native';
+
+import { Dialog } from '@/components/ui/dialog';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { X } from 'lucide-react-native';
@@ -41,6 +43,9 @@ export default function ForgotPasswordModal() {
   const [email, setEmail] = useState(params.email || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const emailRef = useRef<InputBoxRef>(null);
 
@@ -86,30 +91,14 @@ export default function ForgotPasswordModal() {
       }
 
       haptics.success();
-
-      Alert.alert(
-        t('auth.forgotPassword.successTitle'),
-        t('auth.forgotPassword.successMessage'),
-        [
-          {
-            text: t('general.ok'),
-            onPress: () => {
-              router.back();
-            },
-          },
-        ],
-        { cancelable: false }
-      );
+      setShowSuccessDialog(true);
     } catch (error: any) {
       setIsSubmitting(false);
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('auth.forgotPassword.errorMessage'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('auth.forgotPassword.errorMessage'));
+      setShowErrorDialog(true);
     }
-  }, [email, t, router]);
+  }, [email, t]);
 
   return (
     <View
@@ -182,6 +171,42 @@ export default function ForgotPasswordModal() {
           )}
         </PressableScale>
       </View>
+
+      <Dialog
+        visible={showSuccessDialog}
+        onClose={() => {
+          setShowSuccessDialog(false);
+          router.back();
+        }}
+        title={t('auth.forgotPassword.successTitle')}
+        message={t('auth.forgotPassword.successMessage')}
+        showCloseIcon={false}
+        buttons={[
+          {
+            label: t('general.ok'),
+            onPress: () => {
+              setShowSuccessDialog(false);
+              router.back();
+            },
+            variant: 'primary',
+          },
+        ]}
+      />
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[
+          {
+            label: t('general.ok'),
+            onPress: () => setShowErrorDialog(false),
+            variant: 'primary',
+          },
+        ]}
+      />
     </View>
   );
 }

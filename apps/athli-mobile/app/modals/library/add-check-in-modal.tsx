@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { Platform, StyleSheet, Text, View, LayoutChangeEvent, Alert } from 'react-native';
+import { Platform, StyleSheet, Text, View, LayoutChangeEvent } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,6 +24,7 @@ import { useModalCallbacks, type ScheduleData } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, DropdownInput } from '@/components/ui/form-inputs';
 import { Card } from '@/components/ui/card';
+import { Dialog } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
@@ -58,6 +59,11 @@ export default function AddCheckInModal() {
     const [name, setName] = useState(params.name || '');
     const [description, setDescription] = useState(params.description || '');
 
+    // Dialog state
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+
     // TanStack Query
     const queryClient = useQueryClient();
 
@@ -71,11 +77,8 @@ export default function AddCheckInModal() {
         },
         onError: (error: Error) => {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                error.message || t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(error.message || t('general.errorSaving'));
+            setShowErrorDialog(true);
         },
     });
 
@@ -298,25 +301,11 @@ export default function AddCheckInModal() {
 
     const handleCloseWithConfirmation = useCallback(() => {
         if (hasChanges) {
-            Alert.alert(
-                t('library.addCheckIn.discardChangesTitle'),
-                t('library.addCheckIn.discardChangesMessage'),
-                [
-                    {
-                        text: t('general.cancel'),
-                        style: 'cancel',
-                    },
-                    {
-                        text: t('library.addCheckIn.discardChanges'),
-                        style: 'destructive',
-                        onPress: handleClose,
-                    },
-                ]
-            );
+            setShowDiscardDialog(true);
         } else {
             handleClose();
         }
-    }, [hasChanges, handleClose, t]);
+    }, [hasChanges, handleClose]);
 
     const handleSave = useCallback(() => {
         if (!canComplete) return;
@@ -525,6 +514,26 @@ export default function AddCheckInModal() {
                     )}
                 </KeyboardAwareScrollView>
             </View>
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={errorMessage}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
+
+            <Dialog
+                visible={showDiscardDialog}
+                onClose={() => setShowDiscardDialog(false)}
+                title={t('library.addCheckIn.discardChangesTitle')}
+                message={t('library.addCheckIn.discardChangesMessage')}
+                buttons={[
+                    { label: t('general.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+                    { label: t('library.addCheckIn.discardChanges'), onPress: handleClose, variant: 'destructive' },
+                ]}
+            />
         </View>
     );
 }

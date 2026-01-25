@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, Keyboard, TouchableWithoutFeedback, Image as RNImage, Alert, ActivityIndicator, Platform } from 'react-native';
+import { StyleSheet, View, Text, Keyboard, TouchableWithoutFeedback, Image as RNImage, ActivityIndicator, Platform } from 'react-native';
+import { Dialog } from '@/components/ui/dialog';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -39,6 +40,10 @@ const DocumentPreviewScreen = () => {
   const [pdfUri, setPdfUri] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Dialog state
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const documentUri = params.uri || '';
   const documentName = params.name || 'Document';
@@ -137,7 +142,8 @@ const DocumentPreviewScreen = () => {
     try {
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) {
-        Alert.alert('Error', 'Sharing is not available on this device');
+        setErrorMessage('Sharing is not available on this device');
+        setShowErrorDialog(true);
         return;
       }
 
@@ -148,7 +154,8 @@ const DocumentPreviewScreen = () => {
       });
     } catch (error) {
       console.error('Error downloading document:', error);
-      Alert.alert('Error', 'Failed to download document');
+      setErrorMessage('Failed to download document');
+      setShowErrorDialog(true);
     }
   };
 
@@ -402,6 +409,15 @@ const DocumentPreviewScreen = () => {
             />
           </View>
         )}
+
+        <Dialog
+          visible={showErrorDialog}
+          onClose={() => setShowErrorDialog(false)}
+          title="Error"
+          message={errorMessage}
+          showCloseIcon={false}
+          buttons={[{ label: 'OK', onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+        />
       </View>
     </TouchableWithoutFeedback>
   );

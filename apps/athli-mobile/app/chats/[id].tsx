@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   Keyboard,
   ScrollView,
@@ -10,6 +9,7 @@ import {
   View,
   Text,
 } from 'react-native';
+import { Dialog } from '@/components/ui/dialog';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
 import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { Image } from 'expo-image';
@@ -572,6 +572,10 @@ export default function ChatDetailScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Dialog state
+  const [showUploadErrorDialog, setShowUploadErrorDialog] = useState(false);
+  const [uploadErrorMessage, setUploadErrorMessage] = useState('');
+
   // Dynamic toolbar height - calculated from current state
   // Base toolbar: ~46px (input row with buttons)
   // Reply preview: adds ~50px
@@ -939,7 +943,8 @@ export default function ChatDetailScreen() {
           setOptimisticMessages((prev) =>
             prev.filter((m) => m.id !== optimisticMsg.id)
           );
-          Alert.alert('Upload Failed', 'Could not upload document. Please try again.');
+          setUploadErrorMessage('Could not upload document. Please try again.');
+          setShowUploadErrorDialog(true);
         } finally {
           router.setParams({
             documentSent: '',
@@ -1013,7 +1018,8 @@ export default function ChatDetailScreen() {
           setOptimisticMessages((prev) =>
             prev.filter((m) => m.id !== optimisticMsg.id)
           );
-          Alert.alert('Upload Failed', 'Could not upload images. Please try again.');
+          setUploadErrorMessage('Could not upload images. Please try again.');
+          setShowUploadErrorDialog(true);
         }
       };
 
@@ -1072,7 +1078,8 @@ export default function ChatDetailScreen() {
           setOptimisticMessages((prev) =>
             prev.filter((m) => m.id !== optimisticMsg.id)
           );
-          Alert.alert('Upload Failed', 'Could not upload video. Please try again.');
+          setUploadErrorMessage('Could not upload video. Please try again.');
+          setShowUploadErrorDialog(true);
         }
       };
 
@@ -1225,7 +1232,8 @@ export default function ChatDetailScreen() {
       setOptimisticMessages((prev) =>
         prev.filter((m) => m.id !== optimisticMsg.id)
       );
-      Alert.alert('Upload Failed', 'Could not upload voice note. Please try again.');
+      setUploadErrorMessage('Could not upload voice note. Please try again.');
+      setShowUploadErrorDialog(true);
     }
   };
 
@@ -1565,6 +1573,15 @@ export default function ChatDetailScreen() {
         </View>
 
       </View>
+
+      <Dialog
+        visible={showUploadErrorDialog}
+        onClose={() => setShowUploadErrorDialog(false)}
+        title="Upload Failed"
+        message={uploadErrorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: 'OK', onPress: () => setShowUploadErrorDialog(false), variant: 'primary' }]}
+      />
     </SlidingPanel>
   );
 }

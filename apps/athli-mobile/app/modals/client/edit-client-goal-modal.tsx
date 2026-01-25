@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
-import { Platform, StyleSheet, Text, View, KeyboardAvoidingView, Alert } from 'react-native';
+import { Platform, StyleSheet, Text, View, KeyboardAvoidingView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,6 +13,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SelectionInput } from '@/components/ui/form-inputs';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { hexToRgba } from '@/utils/colorUtils';
+import { Dialog } from '@/components/ui/dialog';
 import { saveAthleteGoals } from '@/services/client/client-service';
 
 export default function EditClientGoalModal() {
@@ -38,6 +39,9 @@ export default function EditClientGoalModal() {
     const [date, setDate] = useState<Date | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     // Initialize form with existing goal data
     useEffect(() => {
@@ -96,58 +100,44 @@ export default function EditClientGoalModal() {
             handleClose();
         } catch (error) {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(t('general.errorSaving'));
+            setShowErrorDialog(true);
         } finally {
             setIsSubmitting(false);
         }
     }, [canSave, id, coachId, goalId, title, body, date, goals, refreshSection, handleClose, t, isEmpty]);
 
-    const handleDelete = useCallback(() => {
-        Alert.alert(
-            t('general.delete'),
-            t('clientDetail.goals.deleteConfirmation'),
-            [
-                { text: t('general.cancel'), style: 'cancel' },
-                {
-                    text: t('general.delete'),
-                    style: 'destructive',
-                    onPress: async () => {
-                        if (!id || !coachId || !goalId) return;
+    const handleDeleteConfirm = useCallback(async () => {
+        if (!id || !coachId || !goalId) return;
 
-                        setIsDeleting(true);
-                        try {
-                            // Remove the goal from the list
-                            const updatedGoals = goals
-                                .filter(g => g.id !== goalId)
-                                .map(g => ({
-                                    goal: g.goal,
-                                    target_date: g.target_date,
-                                    details: g.details || null,
-                                }));
+        setShowDeleteDialog(false);
+        setIsDeleting(true);
+        try {
+            // Remove the goal from the list
+            const updatedGoals = goals
+                .filter(g => g.id !== goalId)
+                .map(g => ({
+                    goal: g.goal,
+                    target_date: g.target_date,
+                    details: g.details || null,
+                }));
 
-                            await saveAthleteGoals(id, coachId, updatedGoals);
-                            haptics.success();
-                            await refreshSection('goals');
-                            handleClose();
-                        } catch (error) {
-                            haptics.error();
-                            Alert.alert(
-                                t('general.error'),
-                                t('general.errorDeleting'),
-                                [{ text: t('general.ok') }]
-                            );
-                        } finally {
-                            setIsDeleting(false);
-                        }
-                    },
-                },
-            ]
-        );
+            await saveAthleteGoals(id, coachId, updatedGoals);
+            haptics.success();
+            await refreshSection('goals');
+            handleClose();
+        } catch (error) {
+            haptics.error();
+            setErrorMessage(t('general.errorDeleting'));
+            setShowErrorDialog(true);
+        } finally {
+            setIsDeleting(false);
+        }
     }, [id, coachId, goalId, goals, refreshSection, handleClose, t]);
+
+    const handleDelete = useCallback(() => {
+        setShowDeleteDialog(true);
+    }, []);
 
     const handleSelectDatePress = useCallback(() => {
         setDateSelectCallback((newDate: Date) => {
@@ -259,6 +249,26 @@ export default function EditClientGoalModal() {
                     </View>
                 </View>
             </KeyboardAwareScrollView>
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={errorMessage}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
+
+            <Dialog
+                visible={showDeleteDialog}
+                onClose={() => setShowDeleteDialog(false)}
+                title={t('general.delete')}
+                message={t('clientDetail.goals.deleteConfirmation')}
+                buttons={[
+                    { label: t('general.cancel'), onPress: () => setShowDeleteDialog(false), variant: 'secondary' },
+                    { label: t('general.delete'), onPress: handleDeleteConfirm, variant: 'destructive' }
+                ]}
+            />
         </KeyboardAvoidingView>
     );
 }

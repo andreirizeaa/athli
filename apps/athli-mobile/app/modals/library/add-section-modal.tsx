@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Platform, StyleSheet, Text, View, Keyboard, TouchableWithoutFeedback, Alert } from 'react-native';
+import { Platform, StyleSheet, Text, View, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,6 +13,7 @@ import { SECTION_TYPES, type SectionType } from '@athli/shared-types';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
+import { Dialog } from '@/components/ui/dialog';
 import { InputBox, TextAreaInput, SectionTypeSelect } from '@/components/ui/form-inputs';
 import { hexToRgba } from '@/utils/colorUtils';
 import { createSection, updateSection } from '@/services/coach/coach-section-service';
@@ -40,6 +41,11 @@ export default function AddSectionModal() {
     const [rounds, setRounds] = useState('');
     const [metadataErrors, setMetadataErrors] = useState({ durationError: false, roundsError: false });
 
+    // Dialog state
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+
     // TanStack Query
     const queryClient = useQueryClient();
 
@@ -58,11 +64,8 @@ export default function AddSectionModal() {
         },
         onError: (error: Error) => {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                error.message || t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(error.message || t('general.errorSaving'));
+            setShowErrorDialog(true);
         },
     });
 
@@ -122,25 +125,11 @@ export default function AddSectionModal() {
     const handleCloseWithConfirmation = useCallback(() => {
         // Only show discard alert if there are changes
         if (hasChanges) {
-            Alert.alert(
-                t('library.addSection.discardChangesTitle'),
-                t('library.addSection.discardChangesMessage'),
-                [
-                    {
-                        text: t('general.cancel'),
-                        style: 'cancel',
-                    },
-                    {
-                        text: t('library.addSection.discardChanges'),
-                        style: 'destructive',
-                        onPress: handleClose,
-                    },
-                ]
-            );
+            setShowDiscardDialog(true);
         } else {
             handleClose();
         }
-    }, [hasChanges, handleClose, t]);
+    }, [hasChanges, handleClose]);
 
     const handleSave = useCallback(() => {
         if (!canComplete) return;
@@ -167,14 +156,15 @@ export default function AddSectionModal() {
 
         if (hasMetadataError) {
             setMetadataErrors(sectionMetadataError);
-            let errorMessage = t('library.section.error') + '\n\n';
+            let validationErrorMessage = t('library.section.error') + '\n\n';
             if (sectionMetadataError.durationError) {
-                errorMessage += '• Duration is required for AMRAP sections\n';
+                validationErrorMessage += '• Duration is required for AMRAP sections\n';
             }
             if (sectionMetadataError.roundsError) {
-                errorMessage += '• Rounds are required for this section type\n';
+                validationErrorMessage += '• Rounds are required for this section type\n';
             }
-            Alert.alert(t('general.error'), errorMessage);
+            setErrorMessage(validationErrorMessage);
+            setShowErrorDialog(true);
             return;
         }
 
@@ -311,6 +301,26 @@ export default function AddSectionModal() {
                     </KeyboardAwareScrollView>
                 </View>
             </TouchableWithoutFeedback>
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={errorMessage}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
+
+            <Dialog
+                visible={showDiscardDialog}
+                onClose={() => setShowDiscardDialog(false)}
+                title={t('library.addSection.discardChangesTitle')}
+                message={t('library.addSection.discardChangesMessage')}
+                buttons={[
+                    { label: t('general.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+                    { label: t('library.addSection.discardChanges'), onPress: handleClose, variant: 'destructive' },
+                ]}
+            />
         </View>
     );
 }

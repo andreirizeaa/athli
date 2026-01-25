@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { Platform, StyleSheet, Text, View, Alert, Keyboard, TouchableWithoutFeedback, Switch, TextInput } from 'react-native';
+import { Platform, StyleSheet, Text, View, Keyboard, TouchableWithoutFeedback, Switch, TextInput } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
@@ -20,6 +20,7 @@ import { useModalCallbacks, type HabitOptionsData } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { Card } from '@/components/ui/card';
+import { Dialog } from '@/components/ui/dialog';
 import { hexToRgba } from '@/utils/colorUtils';
 
 // Helper to create a date from time string "HH:MM"
@@ -100,6 +101,9 @@ export default function HabitOptionsModal() {
     const [notificationTime, setNotificationTime] = useState<Date>(parseTimeString('07:00'));
     const [notificationMessage, setNotificationMessage] = useState('');
     const [showAndroidTimePicker, setShowAndroidTimePicker] = useState(false);
+
+    // Dialog state
+    const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
     // Load existing data when modal gains focus
     useEffect(() => {
@@ -234,25 +238,11 @@ export default function HabitOptionsModal() {
 
     const handleCloseWithConfirmation = useCallback(() => {
         if (hasChanges) {
-            Alert.alert(
-                t('library.habitOptions.discardTitle'),
-                t('library.habitOptions.discardMessage'),
-                [
-                    {
-                        text: t('general.cancel'),
-                        style: 'cancel',
-                    },
-                    {
-                        text: t('library.habitOptions.discard'),
-                        style: 'destructive',
-                        onPress: handleClose,
-                    },
-                ]
-            );
+            setShowDiscardDialog(true);
         } else {
             handleClose();
         }
-    }, [hasChanges, handleClose, t]);
+    }, [hasChanges, handleClose]);
 
     const handleSave = useCallback(() => {
         if (!canComplete) return;
@@ -489,6 +479,17 @@ export default function HabitOptionsModal() {
                     </KeyboardAwareScrollView>
                 </View>
             </TouchableWithoutFeedback>
+
+            <Dialog
+                visible={showDiscardDialog}
+                onClose={() => setShowDiscardDialog(false)}
+                title={t('library.habitOptions.discardTitle')}
+                message={t('library.habitOptions.discardMessage')}
+                buttons={[
+                    { label: t('general.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+                    { label: t('library.habitOptions.discard'), onPress: handleClose, variant: 'destructive' },
+                ]}
+            />
         </View>
     );
 }

@@ -8,6 +8,7 @@ import { useThemePreference, useTranslations } from '@/stores';
 import { typography } from '@/constants/typography';
 import { IconButton } from '@/components/ui/icon-button';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
+import { Card } from '@/components/ui/card';
 
 type LogEntry = {
     id?: string;
@@ -132,7 +133,7 @@ const WeekCard = ({
     const ChevronIcon = isExpanded ? ChevronUp : ChevronDown;
 
     return (
-        <View style={[styles.weekCard, { backgroundColor: themeColors.surfacePrimary }]}>
+        <Card style={styles.weekCard}>
             <PressableOpacity onPress={toggleExpand} style={styles.weekHeader}>
                     <Text style={[styles.weekRange, { color: themeColors.text }]}>
                         {formatWeekRange(weekGroup.weekStart, weekGroup.weekEnd)}
@@ -207,7 +208,7 @@ const WeekCard = ({
                     })}
                 </View>
             )}
-        </View>
+        </Card>
     );
 };
 
@@ -266,19 +267,18 @@ const EntryCard = ({
 
     if (canEdit) {
         return (
-            <PressableScale
-                style={[styles.entryCard, { backgroundColor: themeColors.surfacePrimary }]}
-                onPress={() => onLogPress(log)}
-            >
-                {content}
+            <PressableScale onPress={() => onLogPress(log)}>
+                <Card style={styles.entryCard}>
+                    {content}
+                </Card>
             </PressableScale>
         );
     }
 
     return (
-        <View style={[styles.entryCard, { backgroundColor: themeColors.surfacePrimary }]}>
+        <Card style={styles.entryCard}>
             {content}
-        </View>
+        </Card>
     );
 };
 
@@ -478,8 +478,9 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
     },
     weekCard: {
-        borderRadius: 16,
         marginBottom: 8,
+        paddingHorizontal: 0,
+        paddingVertical: 0,
         overflow: 'hidden',
     },
     weekHeader: {
@@ -543,9 +544,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-        borderRadius: 16,
+        paddingVertical: 8,
         marginBottom: 8,
     },
     entryDate: {

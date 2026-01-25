@@ -41,7 +41,7 @@ export default function ClientCheckInsScreen() {
   };
 
   return (
-    <ScreenWrapper>
+    <ScreenWrapper useImageBackground={false}>
       <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton
           icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
