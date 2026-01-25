@@ -10,7 +10,7 @@ import { IconButton } from '@/components/ui/icon-button';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useModalCallbacks } from '@/stores';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
@@ -394,6 +394,7 @@ export default function SelectDateModal() {
   const router = useRouter();
   const params = useLocalSearchParams<{ selectedDate?: string; storageKey?: string; allowFuture?: string; highlightedDates?: string; mode?: string }>();
   const { colors: themeColors } = useThemePreference();
+  const colorScheme = useColorScheme();
   const { t } = useTranslations();
   const { triggerDateSelect } = useModalCallbacks();
   const { width } = useWindowDimensions();
@@ -693,7 +694,7 @@ export default function SelectDateModal() {
             }}
             maximumDate={maxDate}
             minimumDate={minDate}
-            themeVariant="dark"
+            themeVariant={colorScheme}
           />
         </View>
         <View style={styles.bottomSpacer} />

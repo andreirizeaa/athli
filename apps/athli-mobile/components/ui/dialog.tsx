@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, Pressable, Modal } from 'react-native';
+import { StyleSheet, View, Text, Pressable, Modal, ActivityIndicator } from 'react-native';
 import { PressableScale } from 'pressto';
 import { X } from 'lucide-react-native';
 import SquircleView from 'react-native-fast-squircle';
@@ -12,6 +12,7 @@ export type DialogButton = {
   label: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'destructive';
+  loading?: boolean;
 };
 
 export type DialogProps = {
@@ -102,7 +103,8 @@ export function Dialog({
                   <PressableScale
                     key={index}
                     style={[styles.buttonWrapper, buttonLayout === 'horizontal' && styles.buttonHorizontal]}
-                    onPress={button.onPress}
+                    onPress={button.loading ? undefined : button.onPress}
+                    disabled={button.loading}
                   >
                     <SquircleView
                       cornerSmoothing={1}
@@ -115,7 +117,11 @@ export function Dialog({
                         },
                       ]}
                     >
-                      <Text style={[styles.buttonText, { color: btnStyles.textColor }]}>{button.label}</Text>
+                      {button.loading ? (
+                        <ActivityIndicator size="small" color={btnStyles.textColor} />
+                      ) : (
+                        <Text style={[styles.buttonText, { color: btnStyles.textColor }]}>{button.label}</Text>
+                      )}
                     </SquircleView>
                   </PressableScale>
                 );

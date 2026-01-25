@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useCallback } from 'react';
 import { Platform, StyleSheet, Text, View, ScrollView, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Building2, ChevronLeft, ChevronRight, Lock, Mail, Trash2, User } from 'lucide-react-native';
+import { Building2, ChevronLeft, ChevronRight, Lock, Mail, User } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { PressableScale } from 'pressto';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -124,10 +124,6 @@ export default function EditProfileScreen() {
 
   const handleChangePassword = useCallback(() => {
     router.push('/modals/settings/change-password-modal');
-  }, [router]);
-
-  const handleDeleteAccount = useCallback(() => {
-    router.push('/modals/settings/delete-account-modal');
   }, [router]);
 
   const getSpecialitiesLabel = () => {
@@ -343,24 +339,6 @@ export default function EditProfileScreen() {
           </>
         )}
 
-        {/* Danger Zone */}
-        <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>
-          {t('profile.dangerZone')}
-        </Text>
-        <Card>
-          <PressableScale style={styles.providerRow} onPress={handleDeleteAccount}>
-            <PlatformIcon
-              sf="trash"
-              IconComponent={Trash2}
-              size={iconSizes.tabBarIcons}
-              color="#EF4444"
-            />
-            <Text style={[styles.providerText, { color: '#EF4444' }]}>
-              {t('profile.deleteAccount.title')}
-            </Text>
-            <ChevronRight size={20} color={themeColors.mutedText} />
-          </PressableScale>
-        </Card>
       </ScrollView>
     </View>
   );

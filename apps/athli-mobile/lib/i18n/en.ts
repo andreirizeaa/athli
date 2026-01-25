@@ -635,7 +635,7 @@ export const en = {
       confirmationSentMessage: 'We sent a confirmation link to your new email.\n\nYou will be logged out for security.',
       updateFailed: 'Failed to update email. Please try again.',
     },
-    deleteAccount: {
+    deleteAccountModal: {
       title: 'Delete Account',
       message: 'To delete your account, please visit your web dashboard.',
       goToDashboard: 'Go to Dashboard',
@@ -945,6 +945,61 @@ export const en = {
       takePhoto: 'Take Photo',
       cameraPermissionRequired: 'Camera permission is required to take photos',
       galleryPermissionRequired: 'Gallery permission is required to select photos',
+    },
+  },
+  featureRequests: {
+    title: 'Feature Requests',
+    detailTitle: 'Feature Request',
+    addRequest: 'Request a Feature',
+    empty: 'No feature requests yet. Be the first to suggest something!',
+    noResults: 'No feature requests match your search.',
+    notFound: 'Feature request not found.',
+    reply: 'Reply',
+    replies: 'Replies',
+    noReplies: 'No replies',
+    noRepliesDescription: 'No replies yet. Start the conversation!',
+    filters: {
+      newest: 'Newest',
+      oldest: 'Oldest',
+      popular: 'Popular',
+      yours: 'Yours',
+    },
+    status: {
+      inProgress: 'In Progress',
+      completed: 'Completed',
+    },
+    userType: {
+      coach: 'Coach',
+      client: 'Client',
+    },
+    addModal: {
+      title: 'Request a Feature',
+      titleLabel: 'Title',
+      titlePlaceholder: 'Enter a title',
+      descriptionLabel: 'Description',
+      descriptionPlaceholder: 'Optional',
+    },
+    replyModal: {
+      title: 'Add Reply',
+      messageLabel: 'Message',
+      messagePlaceholder: 'Write your reply...',
+    },
+    contextMenu: {
+      delete: 'Delete',
+      reportUser: 'Report User',
+    },
+    deleteRequestDialog: {
+      title: 'Delete Request',
+      message: 'Are you sure you want to delete this feature request? This action cannot be undone.',
+    },
+    deleteReplyDialog: {
+      title: 'Delete Reply',
+      message: 'Are you sure you want to delete this reply? This action cannot be undone.',
+    },
+    reportDialog: {
+      title: 'Report User',
+      message: 'Are you sure you want to report this user? Our team will review the report.',
+      confirm: 'Report',
     },
   },
   files: {

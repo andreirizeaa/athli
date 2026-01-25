@@ -450,6 +450,7 @@ export default function EditClientDetailsModal() {
               onChange={setDateOfBirth}
               placeholder={t('clients.editClientModal.dateOfBirthPlaceholder')}
               allowFuture={false}
+              mode="birthdate"
             />
 
             {/* Height input temporarily hidden

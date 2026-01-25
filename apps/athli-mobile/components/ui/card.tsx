@@ -37,8 +37,8 @@ export function Card({ children, style, variant = 'default', themeColors: propTh
         isOptions && styles.optionsLayout,
         {
           backgroundColor: isForm || isOptions ? 'transparent' : themeColors.cardPrimary,
-          borderColor: themeColors.cardSecondary,
-          borderWidth: colorScheme === 'dark' ? 0 : 0.5,
+          borderColor: themeColors.border,
+          borderWidth: isForm ? 1 : (colorScheme === 'dark' ? 0 : 0.5),
           shadowColor: colorScheme === 'light' ? '#000' : '#fff',
           shadowOpacity: colorScheme === 'dark' ? 0 : 0.05,
           elevation: colorScheme === 'dark' ? 0 : 3,
@@ -46,8 +46,7 @@ export function Card({ children, style, variant = 'default', themeColors: propTh
             shadowOpacity: 0,
             elevation: 0,
           }),
-          ...((isForm || isOptions) && {
-            backgroundColor: themeColors.surfacePrimary,
+          ...(isOptions && {
             borderWidth: 0,
           }),
         },
