@@ -3,27 +3,24 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { View, StyleSheet, Text, Platform, Keyboard, TouchableWithoutFeedback, Alert, ActionSheetIOS } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check, User, Pencil } from 'lucide-react-native';
+import { X, Check } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
-import { Image } from 'expo-image';
-import { PressableOpacity } from 'pressto';
 
 import { useThemePreference, useColorScheme } from '@/stores';
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { PlatformIcon } from '@/components/ui/platform-icon';
-import { Card } from '@/components/ui/card';
 import {
   InputBox,
   SelectInput,
-  DateOfBirthInput,
+  DateSelectInput,
   HeightInput,
   CountrySelectorInput,
   PhoneNumberInput,
+  ProfilePictureInput,
   type Country,
   type PhoneNumber,
 } from '@/components/ui/form-inputs';
@@ -439,49 +436,11 @@ export default function EditClientDetailsModal() {
             keyboardShouldPersistTaps="handled"
             bottomOffset={40}
           >
-            {/* Profile Picture Card */}
-            <Card style={{ marginBottom: 0 }}>
-              <PressableOpacity
-                style={styles.profilePictureRow}
-                onPress={handleEditProfilePicture}
-              >
-                <View style={styles.profilePictureContent}>
-                  <Text style={[styles.profilePictureLabel, { color: themeColors.text }]}>
-                    {t('clients.editClientModal.profilePicture')}
-                  </Text>
-                  {currentImage ? (
-                    <Image
-                      source={{ uri: currentImage }}
-                      style={styles.profilePicturePreview}
-                      contentFit="cover"
-                      transition={200}
-                    />
-                  ) : (
-                    <View
-                      style={[
-                        styles.profilePictureFallback,
-                        { backgroundColor: themeColors.primarySoft },
-                      ]}
-                    >
-                      <PlatformIcon
-                        sf="person.fill"
-                        IconComponent={User}
-                        size={20}
-                        color={themeColors.primary}
-                      />
-                    </View>
-                  )}
-                </View>
-                <View style={styles.editIconContainer}>
-                  <PlatformIcon
-                    sf="pencil"
-                    IconComponent={Pencil}
-                    size={20}
-                    color={themeColors.mutedText}
-                  />
-                </View>
-              </PressableOpacity>
-            </Card>
+            <ProfilePictureInput
+              label={t('clients.editClientModal.profilePicture')}
+              imageUrl={currentImage || null}
+              onPress={handleEditProfilePicture}
+            />
 
             <InputBox
               label={t('clients.addClientModal.name')}
@@ -507,18 +466,22 @@ export default function EditClientDetailsModal() {
               placeholder={t('clients.editClientModal.typePlaceholder')}
             />
 
-            <DateOfBirthInput
+            <DateSelectInput
               label={t('clients.editClientModal.dateOfBirth')}
               value={dateOfBirth}
               onChange={setDateOfBirth}
+              placeholder={t('clients.editClientModal.dateOfBirthPlaceholder')}
+              allowFuture={false}
             />
 
+            {/* Height input temporarily hidden
             <HeightInput
               label={t('clients.editClientModal.height')}
               value={height}
               onChangeText={setHeight}
               placeholder={t('clients.editClientModal.heightPlaceholder')}
             />
+            */}
 
             <CountrySelectorInput
               label={t('clients.editClientModal.country')}
@@ -572,13 +535,6 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-  closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   scrollView: {
     flex: 1,
   },
@@ -586,39 +542,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
     gap: 12,
-  },
-  profilePictureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  profilePictureContent: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  profilePictureLabel: {
-    ...typography.p1,
-    fontWeight: '600',
-  },
-  profilePicturePreview: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-  profilePictureFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  editIconContainer: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 12,
   },
 });

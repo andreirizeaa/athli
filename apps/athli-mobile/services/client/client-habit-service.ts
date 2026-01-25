@@ -153,7 +153,7 @@ export const logHabit = async (data: LogHabitData): Promise<void> => {
 };
 
 /**
- * Get habits for a client
+ * Get habits for a client (coach view)
  */
 export const getClientHabits = async (clientId: string, coachId: string): Promise<ClientHabit[]> => {
   const response = await apiFetch<{ success: boolean; data: { habits: ClientHabit[] } }>(
@@ -161,6 +161,17 @@ export const getClientHabits = async (clientId: string, coachId: string): Promis
     {
       headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
     }
+  );
+  return response.data.habits;
+};
+
+/**
+ * Get habits for the authenticated athlete (self-access)
+ * No coach ID required - the API will use the authenticated user's ID
+ */
+export const getMyHabits = async (): Promise<ClientHabit[]> => {
+  const response = await apiFetch<{ success: boolean; data: { habits: ClientHabit[] } }>(
+    '/client/habits'
   );
   return response.data.habits;
 };
@@ -226,6 +237,23 @@ export const getHabitStreaks = async (
     {
       method: 'POST',
       headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+      body: JSON.stringify({ assignmentId }),
+    }
+  );
+  return response.data;
+};
+
+/**
+ * Get habit streaks for the authenticated athlete (self-access)
+ * No coach ID required - the API will use the authenticated user's ID
+ */
+export const getMyHabitStreaks = async (
+  assignmentId: string
+): Promise<HabitStreaks> => {
+  const response = await apiFetch<{ success: boolean; data: HabitStreaks }>(
+    '/client/habits/streaks',
+    {
+      method: 'POST',
       body: JSON.stringify({ assignmentId }),
     }
   );

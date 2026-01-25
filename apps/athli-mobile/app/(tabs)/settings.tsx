@@ -18,7 +18,6 @@ import {
   RefreshCw,
   ShieldCheck,
   User,
-  UserMinus,
 } from 'lucide-react-native';
 import { Image } from 'expo-image';
 
@@ -121,17 +120,11 @@ export default function SettingsScreen() {
   };
 
   const handleOpenProfile = () => {
-    router.push('/settings/profile');
+    router.push('/settings/edit-profile');
   };
 
   const handleOpenWebURL = (url: string) => {
     Linking.openURL(url).catch((err) => console.error('Failed to open URL:', err));
-  };
-
-  const handleOpenDeleteAccount = () => {
-    if (!isAthleteView) {
-      handleOpenWebURL('https://app.tryathli.com/');
-    }
   };
 
   const handleOpenTermsOfService = () => {
@@ -254,16 +247,6 @@ export default function SettingsScreen() {
             title={t('profile.logout')}
             onPress={handleLogout}
           />
-          {!isCoach && (
-            <>
-              <Separator />
-              <SettingsOption
-                icon={<PlatformIcon sf="person.badge.minus" mdi="person-remove" IconComponent={UserMinus} size={iconSize} color={iconColor} />}
-                title={t('profile.deleteAccount')}
-                onPress={handleOpenDeleteAccount}
-              />
-            </>
-          )}
         </Card>
       </View>
     </ScreenWrapper>

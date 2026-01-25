@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TextInput } from 'react-native';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
+import { Card } from '@/components/ui/card';
 
 type DateOfBirthInputProps = {
   label: string;
@@ -132,7 +133,7 @@ export const DateOfBirthInput = ({
   };
 
   return (
-    <View style={[styles.inputBox, { backgroundColor: themeColors.surfacePrimary }]}>
+    <Card variant="form">
       <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
         {label}
       </Text>
@@ -148,17 +149,11 @@ export const DateOfBirthInput = ({
           maxLength={10}
         />
       </View>
-    </View>
+    </Card>
   );
 };
 
 const styles = StyleSheet.create({
-  inputBox: {
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12,
-  },
   inputBoxLabel: {
     ...typography.p4,
     marginBottom: 2,

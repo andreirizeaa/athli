@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, type ViewStyle } from 'react-native';
 import { PressableOpacity } from 'pressto';
-import { ChevronRight, X } from 'lucide-react-native';
+import { ChevronRight } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
+import { Card } from '@/components/ui/card';
 
 type DropdownInputProps = {
     label: string;
@@ -29,18 +30,10 @@ export const DropdownInput = ({
 }: DropdownInputProps) => {
     const { colors: themeColors } = useThemePreference();
     const hasValue = value.trim() !== '';
-    const showClearButton = hasValue && onClear;
 
     return (
-        <PressableOpacity
-            style={[
-                styles.container,
-                { backgroundColor: themeColors.surfacePrimary },
-                style,
-            ]}
-            onPress={onPress}
-        >
-            <View style={styles.content}>
+        <PressableOpacity onPress={onPress}>
+            <Card variant="form" style={style}>
                 <View style={styles.labelRow}>
                     <View style={styles.labelWithAsterisk}>
                         <Text style={[styles.label, { color: themeColors.mutedText }]}>
@@ -64,39 +57,16 @@ export const DropdownInput = ({
                     >
                         {hasValue ? value : placeholder}
                     </Text>
-                    {showClearButton ? (
-                        <View style={styles.clearButtonContainer}>
-                            <PressableOpacity
-                                style={styles.clearButton}
-                                onPress={onClear}
-                                hitSlop={8}
-                            >
-                                <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                                    <X {...({ size: 12, color: themeColors.backgroundTertiary, strokeWidth: 3 } as any)} />
-                                </View>
-                            </PressableOpacity>
-                        </View>
-                    ) : (
-                        <View style={styles.chevronContainer}>
-                            <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
-                        </View>
-                    )}
+                    <View style={styles.chevronContainer}>
+                        <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
+                    </View>
                 </View>
-            </View>
+            </Card>
         </PressableOpacity>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingTop: 10,
-        paddingBottom: 12,
-    },
-    content: {
-        flex: 1,
-    },
     labelRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -128,22 +98,8 @@ const styles = StyleSheet.create({
         flex: 1,
         flexShrink: 1,
     },
-    clearButtonContainer: {
-        flexShrink: 0,
-        paddingTop: 2,
-    },
     chevronContainer: {
         flexShrink: 0,
         paddingTop: 2,
-    },
-    clearButton: {
-        // No margin needed, using gap in parent
-    },
-    clearButtonIcon: {
-        width: 22,
-        height: 22,
-        borderRadius: 11,
-        alignItems: 'center',
-        justifyContent: 'center',
     },
 });

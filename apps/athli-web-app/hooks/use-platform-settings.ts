@@ -107,7 +107,7 @@ export function usePlatformSettings() {
         notifications: notificationsQuery.data || [],
         uniqueCode: uniqueCodeQuery.data || null,
 
-        isLoading: isAuthLoading || preferencesQuery.isLoading || companyQuery.isLoading || notificationsQuery.isLoading || uniqueCodeQuery.isLoading || uploadCompanyLogoMutation.isPending || updateCompanyMutation.isPending,
+        isLoading: isAuthLoading || preferencesQuery.isLoading || companyQuery.isLoading || notificationsQuery.isLoading || uniqueCodeQuery.isLoading,
         isUploadingLogo: uploadCompanyLogoMutation.isPending,
         isUpdatingCompany: updateCompanyMutation.isPending,
 

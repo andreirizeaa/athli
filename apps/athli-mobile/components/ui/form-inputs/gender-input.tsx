@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react-native';
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
+import { Card } from '@/components/ui/card';
 
 export type GenderValue = 'male' | 'female' | 'prefer-not-to-say' | null;
 
@@ -59,7 +60,7 @@ export const GenderInput = ({
 
   return (
     <DropdownMenuWrapper options={menuOptions}>
-      <View style={[styles.inputBox, { backgroundColor: themeColors.surfacePrimary }]}>
+      <Card variant="form">
         <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
           {label}
         </Text>
@@ -74,18 +75,12 @@ export const GenderInput = ({
           </Text>
           <ChevronDown {...({ size: 20, color: themeColors.mutedText } as any)} />
         </View>
-      </View>
+      </Card>
     </DropdownMenuWrapper>
   );
 };
 
 const styles = StyleSheet.create({
-  inputBox: {
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12,
-  },
   inputBoxLabel: {
     ...typography.p4,
     marginBottom: 2,

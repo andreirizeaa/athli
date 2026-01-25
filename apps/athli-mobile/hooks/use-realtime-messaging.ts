@@ -330,6 +330,39 @@ export const useRealtimeReadReceipts = ({
     callbackRef.current = onReadReceiptUpdated;
   }, [onReadReceiptUpdated]);
 
+  // Fetch initial read receipts when conversation changes
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const fetchInitialReceipts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('message_read_receipts')
+          .select('*')
+          .eq('conversation_id', conversationId);
+
+        if (error) {
+          console.error('[useRealtimeReadReceipts] Error fetching initial receipts:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          const receipts: ReadReceipt[] = data.map((r) => ({
+            ...r,
+            last_read_at: new Date(r.last_read_at),
+            updated_at: new Date(r.updated_at),
+          }));
+          setReadReceipts(receipts);
+        }
+      } catch (error) {
+        console.error('[useRealtimeReadReceipts] Error fetching initial receipts:', error);
+      }
+    };
+
+    fetchInitialReceipts();
+  }, [conversationId]);
+
+  // Subscribe to realtime updates
   useEffect(() => {
     if (!conversationId) return;
 
@@ -474,24 +507,33 @@ type SyncReadReceiptOptions = {
   conversationId: string;
   userId: string;
   enabled?: boolean; // Enable/disable syncing
+  messageCount?: number; // Pass message count to trigger re-sync when new messages arrive
 };
 
 /**
- * Automatically update read receipt when screen is focused
+ * Automatically update read receipt when screen is focused or new messages arrive
  * Debounced to avoid excessive updates
  */
 export const useSyncReadReceipt = ({
   conversationId,
   userId,
   enabled = true,
+  messageCount = 0,
 }: SyncReadReceiptOptions) => {
   const isFocused = useIsFocused();
-  const [isSyncing, setIsSyncing] = useState(false);
+  // Use ref to avoid infinite loop - isSyncing in deps would cause recreation
+  const isSyncingRef = useRef(false);
+  // Track last synced message count to avoid redundant syncs
+  const lastSyncedMessageCountRef = useRef<number>(0);
+  // Debounce timer ref
+  const syncTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const syncReadReceipt = useCallback(async () => {
-    if (!enabled || isSyncing) return;
+  const syncReadReceipt = useCallback(async (force = false) => {
+    if (!enabled || isSyncingRef.current) return;
+    // Skip if message count hasn't changed (unless forced)
+    if (!force && messageCount === lastSyncedMessageCountRef.current && messageCount > 0) return;
 
-    setIsSyncing(true);
+    isSyncingRef.current = true;
 
     try {
       // Get latest message in conversation
@@ -504,7 +546,7 @@ export const useSyncReadReceipt = ({
 
       if (messagesError) throw messagesError;
       if (!messages || messages.length === 0) {
-        setIsSyncing(false);
+        isSyncingRef.current = false;
         return;
       }
 
@@ -526,25 +568,43 @@ export const useSyncReadReceipt = ({
         );
 
       if (receiptError) throw receiptError;
+      
+      // Mark as synced for this message count
+      lastSyncedMessageCountRef.current = messageCount;
     } catch (error) {
       // Silently handle sync errors - not critical
     } finally {
-      setIsSyncing(false);
+      isSyncingRef.current = false;
     }
-  }, [conversationId, userId, enabled, isSyncing]);
+  }, [conversationId, userId, enabled, messageCount]);
 
+  // Reset last synced count when conversation changes
   useEffect(() => {
-    if (!isFocused || !enabled) return;
+    lastSyncedMessageCountRef.current = 0;
+  }, [conversationId]);
 
-    // Debounce: update read receipt after 500ms of screen focus
-    const timer = setTimeout(() => {
+  // Sync on focus change or when message count changes
+  useEffect(() => {
+    if (!isFocused || !enabled || !conversationId || !userId) return;
+
+    // Clear any pending timer
+    if (syncTimerRef.current) {
+      clearTimeout(syncTimerRef.current);
+    }
+
+    // Debounce: update read receipt after 300ms
+    syncTimerRef.current = setTimeout(() => {
       syncReadReceipt();
-    }, 500);
+    }, 300);
 
-    return () => clearTimeout(timer);
-  }, [isFocused, enabled, syncReadReceipt]);
+    return () => {
+      if (syncTimerRef.current) {
+        clearTimeout(syncTimerRef.current);
+      }
+    };
+  }, [isFocused, enabled, conversationId, userId, messageCount, syncReadReceipt]);
 
-  return { syncReadReceipt, isSyncing };
+  return { syncReadReceipt };
 };
 
 // ================================================
@@ -646,6 +706,84 @@ export const useRealtimeConversations = ({
   }, [userId]); // Only re-subscribe when userId changes
 
   return { conversations, channel };
+};
+
+// ================================================
+// REALTIME READ RECEIPTS FOR USER (All Conversations)
+// ================================================
+
+type RealtimeReadReceiptsForUserOptions = {
+  userId: string;
+  conversationIds: string[];
+  onReadReceiptUpdated?: (receipt: ReadReceipt) => void;
+};
+
+/**
+ * Subscribe to realtime read receipt updates for all conversations where user is a participant.
+ * This is used by the chat list to update "read" status when the other party reads a message.
+ */
+export const useRealtimeReadReceiptsForUser = ({
+  userId,
+  conversationIds,
+  onReadReceiptUpdated,
+}: RealtimeReadReceiptsForUserOptions) => {
+  const [channel, setChannel] = useState<RealtimeChannel | null>(null);
+
+  // Use ref to store callback
+  const callbackRef = useRef(onReadReceiptUpdated);
+
+  useEffect(() => {
+    callbackRef.current = onReadReceiptUpdated;
+  }, [onReadReceiptUpdated]);
+
+  // Create stable key for conversationIds to prevent unnecessary re-subscriptions
+  const conversationIdsKey = useMemo(() => conversationIds.sort().join(','), [conversationIds]);
+
+  useEffect(() => {
+    if (!userId || conversationIds.length === 0) return;
+
+    // Subscribe to read receipts for all conversations
+    // Filter by conversation_id using an "in" filter is not supported by Supabase realtime
+    // Instead, subscribe to all read_receipts and filter in the callback
+    const newChannel = supabase.channel(`read-receipts:${userId}`);
+
+    newChannel
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT or UPDATE
+          schema: 'public',
+          table: 'message_read_receipts',
+        },
+        (payload: RealtimePostgresChangesPayload<ReadReceipt>) => {
+          const receipt = payload.new as ReadReceipt;
+
+          // Only process if this is for one of our conversations
+          // and not from the current user (someone else read)
+          if (!conversationIds.includes(receipt.conversation_id)) return;
+          if (receipt.user_id === userId) return;
+
+          // Convert timestamps to Date objects
+          const readReceipt: ReadReceipt = {
+            ...receipt,
+            last_read_at: new Date(receipt.last_read_at),
+            updated_at: new Date(receipt.updated_at),
+          };
+
+          console.log('[Realtime] Read receipt updated by other user:', readReceipt.conversation_id);
+          callbackRef.current?.(readReceipt);
+        },
+      )
+      .subscribe();
+
+    setChannel(newChannel);
+
+    return () => {
+      newChannel.unsubscribe();
+    };
+  }, [userId, conversationIdsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return { channel };
 };
 
 // ================================================

@@ -345,7 +345,9 @@ export const coachClientController = {
                         .update(userProfileUpdates)
                         .eq('id', targetClientId);
 
-                    delete profileUpdates.name; // Don't try to update name in client_profiles
+                    // Don't duplicate these fields in client_profiles - they belong in user_profiles
+                    delete profileUpdates.name;
+                    delete profileUpdates.profile_picture_url;
                 }
 
                 // Update client_profiles

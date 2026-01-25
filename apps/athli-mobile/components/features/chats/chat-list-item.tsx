@@ -171,7 +171,7 @@ export const ChatListItem = ({
             onPressIn={handlePressIn}
             style={[
               styles.rowWrapper,
-              { backgroundColor: themeColors.backgroundPrimary }
+              { backgroundColor: 'transparent' }
             ]}
           >
             <View

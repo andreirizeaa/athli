@@ -19,6 +19,7 @@ type ThemeStore = {
   // State
   preference: ColorSchemePreference;
   preset: PresetValue;
+  isInitialized: boolean;
 
   // Computed values
   colors: ThemeColors;
@@ -36,17 +37,23 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
   // Initial state
   preference: 'system',
   preset: DEFAULT_THEME.preset,
+  isInitialized: false,
   colors: createPresetPalette(DEFAULT_THEME.preset, 'light'),
   primaryColor: createPresetPalette(DEFAULT_THEME.preset, 'light').primary,
   primarySoftColor: createPresetPalette(DEFAULT_THEME.preset, 'light').primarySoft,
 
-  // Initialize from storage
+  // Initialize from storage (idempotent - only runs once)
   initialize: () => {
+    // Skip if already initialized
+    if (get().isInitialized) {
+      return;
+    }
+
     try {
       const savedPreference = Storage.getItem(THEME_PREFERENCE_KEY);
       const savedPreset = Storage.getItem(COLOR_PALETTE_KEY);
 
-      const updates: Partial<ThemeStore> = {};
+      const updates: Partial<ThemeStore> = { isInitialized: true };
 
       if (
         savedPreference &&
@@ -62,24 +69,23 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
         }
       }
 
-      // Update colors if we loaded new preferences
-      if (Object.keys(updates).length > 0) {
-        const state = get();
-        const preference = updates.preference ?? state.preference;
-        const preset = updates.preset ?? state.preset;
-        const systemScheme = Appearance.getColorScheme() ?? 'light';
-        const effectiveScheme = resolveEffectiveScheme(preference, systemScheme);
-        const colors = createPresetPalette(preset, effectiveScheme);
+      // Always update to mark as initialized
+      const state = get();
+      const preference = updates.preference ?? state.preference;
+      const preset = updates.preset ?? state.preset;
+      const systemScheme = Appearance.getColorScheme() ?? 'light';
+      const effectiveScheme = resolveEffectiveScheme(preference, systemScheme);
+      const colors = createPresetPalette(preset, effectiveScheme);
 
-        set({
-          ...updates,
-          colors,
-          primaryColor: colors.primary,
-          primarySoftColor: colors.primarySoft,
-        });
-      }
+      set({
+        ...updates,
+        colors,
+        primaryColor: colors.primary,
+        primarySoftColor: colors.primarySoft,
+      });
     } catch (error) {
-      // Ignore errors and use defaults
+      // Mark as initialized even on error to prevent retry loops
+      set({ isInitialized: true });
       console.error('Failed to load theme preferences:', error);
     }
   },

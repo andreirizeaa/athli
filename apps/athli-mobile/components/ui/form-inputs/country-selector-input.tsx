@@ -11,6 +11,7 @@ import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { CountryPickerModal } from './country-picker-modal';
 import { type Country } from './countries-data';
+import { Card } from '@/components/ui/card';
 
 export type { Country } from './countries-data';
 
@@ -51,27 +52,26 @@ export const CountrySelectorInput = ({
 
   return (
     <>
-      <PressableOpacity
-        style={[styles.inputBox, { backgroundColor: themeColors.surfacePrimary }]}
-        onPress={handlePress}
-      >
-        <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
-          {label}
-        </Text>
-        <View style={styles.inputRow}>
-          {value && (
-            <Text style={styles.selectedFlag}>{value.flag}</Text>
-          )}
-          <Text
-            style={[
-              styles.inputBoxValue,
-              { color: value ? themeColors.text : themeColors.mutedText },
-            ]}
-          >
-            {value ? value.name : placeholder}
+      <PressableOpacity onPress={handlePress}>
+        <Card variant="form">
+          <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
+            {label}
           </Text>
-          <ChevronDown {...({ size: 20, color: themeColors.mutedText } as any)} />
-        </View>
+          <View style={styles.inputRow}>
+            {value && (
+              <Text style={styles.selectedFlag}>{value.flag}</Text>
+            )}
+            <Text
+              style={[
+                styles.inputBoxValue,
+                { color: value ? themeColors.text : themeColors.mutedText },
+              ]}
+            >
+              {value ? value.name : placeholder}
+            </Text>
+            <ChevronDown {...({ size: 20, color: themeColors.mutedText } as any)} />
+          </View>
+        </Card>
       </PressableOpacity>
 
       <CountryPickerModal
@@ -88,12 +88,6 @@ export const CountrySelectorInput = ({
 };
 
 const styles = StyleSheet.create({
-  inputBox: {
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12,
-  },
   inputBoxLabel: {
     ...typography.p4,
     marginBottom: 2,

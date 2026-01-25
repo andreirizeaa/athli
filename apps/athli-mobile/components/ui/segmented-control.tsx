@@ -23,12 +23,16 @@ type SegmentedControlProps<T extends string> = {
     segments: Segment<T>[];
     value: T;
     onChange: (value: T) => void;
+    backgroundColor?: string;
+    noPadding?: boolean;
 };
 
 export const SegmentedControl = React.memo(function SegmentedControl<T extends string>({
     segments,
     value,
     onChange,
+    backgroundColor,
+    noPadding,
 }: SegmentedControlProps<T>) {
     const { colors: themeColors } = useThemePreference();
 
@@ -56,9 +60,9 @@ export const SegmentedControl = React.memo(function SegmentedControl<T extends s
     }, [segmentWidth]);
 
     return (
-        <View style={styles.wrapper}>
+        <View style={[styles.wrapper, noPadding && styles.wrapperNoPadding]}>
             <View
-                style={[styles.container, { backgroundColor: themeColors.surfacePrimary }]}
+                style={[styles.container, { backgroundColor: backgroundColor ?? themeColors.surfacePrimary }]}
                 onLayout={(e) => setContainerW(e.nativeEvent.layout.width)}
             >
                 <Animated.View
@@ -104,10 +108,13 @@ const styles = StyleSheet.create({
     wrapper: {
         paddingHorizontal: 16,
     },
+    wrapperNoPadding: {
+        paddingHorizontal: 0,
+    },
     container: {
         flexDirection: 'row',
-        borderRadius: 16,
-        padding: 4,
+        borderRadius: 28,
+        padding: 1,
         position: 'relative',
     },
     activeBackground: {
@@ -120,8 +127,7 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 8,
-        marginHorizontal: 1,
+        paddingVertical: 6,
     },
     segmentTouchable: {
         zIndex: 1,

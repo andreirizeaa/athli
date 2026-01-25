@@ -5,6 +5,7 @@ import { PressableOpacity } from 'pressto';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
+import { Card } from '@/components/ui/card';
 
 export type SelectionInputProps = {
     label: string;
@@ -27,7 +28,7 @@ export const SelectionInput = ({
 
     return (
         <PressableOpacity onPress={onPress} enabled={!disabled}>
-            <View style={[styles.inputBox, { backgroundColor: themeColors.surfacePrimary }]}>
+            <Card variant="form">
                 {label.length > 0 && (
                     <View style={styles.labelRow}>
                         <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
@@ -47,18 +48,12 @@ export const SelectionInput = ({
                     </Text>
                     <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
                 </View>
-            </View>
+            </Card>
         </PressableOpacity>
     );
 };
 
 const styles = StyleSheet.create({
-    inputBox: {
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingTop: 10,
-        paddingBottom: 12,
-    },
     labelRow: {
         flexDirection: 'row',
         alignItems: 'center',

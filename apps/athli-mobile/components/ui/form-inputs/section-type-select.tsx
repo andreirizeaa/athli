@@ -7,6 +7,7 @@ import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';
 import { SECTION_TYPES, type SectionType } from '@athli/shared-types';
+import { Card } from '@/components/ui/card';
 
 type SectionTypeSelectProps = {
   sectionType: SectionType | null;
@@ -38,7 +39,7 @@ export const SectionTypeSelect = ({
   const selectedType = SECTION_TYPES.find((opt) => opt.value === sectionType);
 
   return (
-    <View style={[styles.configCard, { backgroundColor: themeColors.surfacePrimary }]}>
+    <Card variant="form" style={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}>
       {/* Section Type Dropdown */}
       <DropdownMenuWrapper
         options={SECTION_TYPES.map((type) => ({
@@ -139,15 +140,11 @@ export const SectionTypeSelect = ({
           </View>
         </>
       )}
-    </View>
+    </Card>
   );
 };
 
 const styles = StyleSheet.create({
-  configCard: {
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
   fieldRow: {
     flexDirection: 'row',
     alignItems: 'center',

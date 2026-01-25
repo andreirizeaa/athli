@@ -26,7 +26,7 @@ type MonthData = {
 const MONTH_NAMES_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONTH_NAMES_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-const START_YEAR = 2010;
+const START_YEAR = 1900;
 const END_YEAR = 2030;
 
 // Generate months from START_YEAR to END_YEAR

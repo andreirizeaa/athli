@@ -31,6 +31,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { Separator } from '@/components/ui/separator';
+import { Card } from '@/components/ui/card';
 import { createNewChat } from '@/services/chats-service';
 
 type MenuItem = {
@@ -62,7 +63,7 @@ export default function ClientProfileScreen() {
   // Loading state for message button
   const [isLoadingChat, setIsLoadingChat] = useState(false);
 
-  // Load client data when screen mounts or id changes
+  // Load client data (including training) when screen mounts or id changes
   useEffect(() => {
     if (id) {
       loadClientData(id);
@@ -110,9 +111,9 @@ export default function ClientProfileScreen() {
     router.push(`/modals/client/edit-client-details-modal?id=${id}`);
   };
 
-  const handleMenuItemPress = (route: string) => {
+  const handleMenuItemPress = (item: MenuItem) => {
     haptics.medium();
-    router.push(route as any);
+    router.push(item.route as any);
   };
 
   // Menu items organized by section
@@ -289,7 +290,7 @@ export default function ClientProfileScreen() {
       </View>
 
       {/* Profile Card */}
-      <View style={[styles.profileCard, { backgroundColor: themeColors.surfacePrimary }]}>
+      <Card variant="profile">
         <View style={styles.avatarLarge}>
           {client.avatarUrl ? (
             <Image
@@ -324,13 +325,13 @@ export default function ClientProfileScreen() {
             {t('clientDetail.editProfile')}
           </Text>
         </PressableOpacity>
-      </View>
+      </Card>
 
       {/* Menu Items */}
       <View style={styles.menuContainer}>
         {menuItems.map((item) => (
           <View key={item.id}>
-            <PressableScale onPress={() => handleMenuItemPress(item.route)}>
+            <PressableScale onPress={() => handleMenuItemPress(item)}>
               <View style={styles.menuItem}>
                 <View style={styles.menuItemLeft}>
                   <PlatformIcon
@@ -396,15 +397,6 @@ const styles = StyleSheet.create({
   errorText: {
     ...typography.p1,
     textAlign: 'center',
-  },
-  profileCard: {
-    borderRadius: 28,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    marginBottom: 24,
-    marginTop: 8,
-    marginHorizontal: 16,
   },
   avatarLarge: {
     width: 80,

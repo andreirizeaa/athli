@@ -74,6 +74,7 @@ export async function getMessages(
 
 /**
  * Send a message
+ * IMPORTANT: Pass messageId and idempotencyKey to enable deduplication
  */
 export async function sendMessage(
   conversationId: string,
@@ -81,6 +82,9 @@ export async function sendMessage(
   options?: {
     messageType?: MessagingService.MessageType;
     parentMessageId?: string;
+    messageId?: string;
+    idempotencyKey?: string;
+    attachmentCount?: number;
   },
 ) {
   const userId = await getCurrentUserId();
@@ -88,7 +92,11 @@ export async function sendMessage(
     conversationId,
     senderId: userId,
     content,
-    ...options,
+    messageType: options?.messageType,
+    parentMessageId: options?.parentMessageId,
+    messageId: options?.messageId,
+    idempotencyKey: options?.idempotencyKey,
+    attachmentCount: options?.attachmentCount || 0,
   });
 }
 
