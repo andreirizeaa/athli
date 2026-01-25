@@ -391,6 +391,13 @@ function RootLayoutNav() {
           <Stack.Screen name="settings/preferences" options={{ headerShown: false }} />
           <Stack.Screen name="settings/feature-requests" options={{ headerShown: false }} />
           <Stack.Screen
+            name="settings/feature-request-detail"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
             name="client/[id]"
             options={{
               headerShown: false,
@@ -1241,6 +1248,30 @@ function RootLayoutNav() {
           <Stack.Screen name="chats/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="chats/archived" options={{ headerShown: false }} />
           <Stack.Screen name="inbox/[id]" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="modals/feature-requests/add-feature-request-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/feature-requests/add-reply-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
         </Stack>
       </ThemeProvider>
 

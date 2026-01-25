@@ -17,8 +17,8 @@ import {
   Megaphone,
   RefreshCw,
   ShieldCheck,
-  Trash2,
   User,
+  UserMinus,
 } from 'lucide-react-native';
 import { Image } from 'expo-image';
 
@@ -279,35 +279,19 @@ export default function SettingsScreen() {
 
         {/* Account Actions */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.accountActions')}</Text>
-        <PressableScale onPress={handleLogout}>
-          <Card>
-            <View style={styles.profileRow}>
-              <View style={styles.optionIconContainer}>
-                <PlatformIcon sf="rectangle.portrait.and.arrow.right" mdi="logout" IconComponent={LogOut} size={iconSize} color={iconColor} />
-              </View>
-              <View style={styles.profileTextContainer}>
-                <Text style={[styles.optionTitle, { color: themeColors.text }]}>
-                  {t('profile.logout')}
-                </Text>
-              </View>
-            </View>
-          </Card>
-        </PressableScale>
-
-        <PressableScale onPress={handleDeleteAccount} style={styles.deleteAccountButton}>
-          <Card>
-            <View style={styles.profileRow}>
-              <View style={styles.optionIconContainer}>
-                <PlatformIcon sf="trash" mdi="delete" IconComponent={Trash2} size={iconSize} color="#ef4444" />
-              </View>
-              <View style={styles.profileTextContainer}>
-                <Text style={[styles.optionTitle, { color: '#ef4444' }]}>
-                  {t('profile.deleteAccount')}
-                </Text>
-              </View>
-            </View>
-          </Card>
-        </PressableScale>
+        <Card>
+          <SettingsOption
+            icon={<PlatformIcon sf="rectangle.portrait.and.arrow.right" mdi="logout" IconComponent={LogOut} size={iconSize} color={iconColor} />}
+            title={t('profile.logout')}
+            onPress={handleLogout}
+          />
+          <Separator />
+          <SettingsOption
+            icon={<PlatformIcon sf="person.badge.minus" mdi="person-remove" IconComponent={UserMinus} size={iconSize} color={iconColor} />}
+            title={t('profile.deleteAccount')}
+            onPress={handleDeleteAccount}
+          />
+        </Card>
       </View>
     </ScreenWrapper>
     <Dialog
@@ -395,8 +379,5 @@ const styles = StyleSheet.create({
   optionTitle: {
     ...typography.p1,
     lineHeight: 22,
-  },
-  deleteAccountButton: {
-    marginTop: 12,
   },
 });

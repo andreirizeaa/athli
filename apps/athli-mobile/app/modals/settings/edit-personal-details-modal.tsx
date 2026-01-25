@@ -13,6 +13,7 @@ import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { InputBox } from '@/components/ui/form-inputs/input-box';
+import { Card } from '@/components/ui/card';
 import { haptics } from '@/utils/haptics';
 import { supabase } from '@/lib/supabase';
 import { updateCoachProfile } from '@/services/coach/coach-profile-service';
@@ -221,34 +222,40 @@ export default function EditPersonalDetailsModal() {
       </View>
 
       <View style={styles.optionsContainer}>
-        <PressableScale
-          style={[styles.option, { backgroundColor: themeColors.surfacePrimary }]}
-          onPress={() => pickImage(false)}
-        >
-          <PlatformIcon
-            sf="photo"
-            IconComponent={ImageIcon}
-            size={iconSizes.tabBarIcons}
-            color={themeColors.text}
-          />
-          <Text style={[styles.optionText, { color: themeColors.text }]}>
-            {t('settings.personalDetails.chooseFromLibrary')}
-          </Text>
+        <PressableScale onPress={() => pickImage(false)}>
+          <Card>
+            <View style={styles.option}>
+              <View style={styles.optionIcon}>
+                <PlatformIcon
+                  sf="photo"
+                  IconComponent={ImageIcon}
+                  size={iconSizes.tabBarIcons}
+                  color={themeColors.text}
+                />
+              </View>
+              <Text style={[styles.optionText, { color: themeColors.text }]}>
+                {t('settings.personalDetails.chooseFromLibrary')}
+              </Text>
+            </View>
+          </Card>
         </PressableScale>
 
-        <PressableScale
-          style={[styles.option, { backgroundColor: themeColors.surfacePrimary }]}
-          onPress={() => pickImage(true)}
-        >
-          <PlatformIcon
-            sf="camera"
-            IconComponent={Camera}
-            size={iconSizes.tabBarIcons}
-            color={themeColors.text}
-          />
-          <Text style={[styles.optionText, { color: themeColors.text }]}>
-            {t('settings.personalDetails.takePhoto')}
-          </Text>
+        <PressableScale onPress={() => pickImage(true)}>
+          <Card>
+            <View style={styles.option}>
+              <View style={styles.optionIcon}>
+                <PlatformIcon
+                  sf="camera"
+                  IconComponent={Camera}
+                  size={iconSizes.tabBarIcons}
+                  color={themeColors.text}
+                />
+              </View>
+              <Text style={[styles.optionText, { color: themeColors.text }]}>
+                {t('settings.personalDetails.takePhoto')}
+              </Text>
+            </View>
+          </Card>
         </PressableScale>
       </View>
     </View>
@@ -342,18 +349,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  optionsContainer: {
-    gap: 12,
-  },
+  optionsContainer: {},
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    gap: 12,
+    paddingVertical: 4,
+  },
+  optionIcon: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4,
   },
   optionText: {
     ...typography.p1,
+    flex: 1,
   },
 });
