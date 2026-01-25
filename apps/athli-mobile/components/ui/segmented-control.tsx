@@ -127,8 +127,7 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 8,
-        marginHorizontal: 1,
+        paddingVertical: 6,
     },
     segmentTouchable: {
         zIndex: 1,

@@ -56,9 +56,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginBottom: 16,
     borderWidth: 0.5,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
     elevation: 3,
   },
   chartLayout: {

@@ -1,8 +1,13 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import React, { useEffect, useMemo, useCallback } from 'react';
+import { Platform, StyleSheet, Text, View, ScrollView, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Building2, ChevronLeft, User } from 'lucide-react-native';
+import { Building2, ChevronLeft, ChevronRight, Lock, Mail, Trash2, User } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import { PressableScale } from 'pressto';
+import { LinearGradient } from 'expo-linear-gradient';
+
+import { hexToRgba } from '@/utils/colorUtils';
 
 import { typography, iconSizes } from '@/constants/typography';
 import {
@@ -18,6 +23,7 @@ import { Separator } from '@/components/ui/separator';
 import { IconButton } from '@/components/ui/icon-button';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { DetailRow } from '@/components/ui/detail-row';
+import { findCountry } from '@/services/coach/coach-company-service';
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -104,42 +110,85 @@ export default function EditProfileScreen() {
     });
   };
 
+  const handleManageGoogle = useCallback(() => {
+    Linking.openURL('https://myaccount.google.com/security');
+  }, []);
+
+  const handleManageApple = useCallback(() => {
+    Linking.openURL('https://appleid.apple.com/account/manage');
+  }, []);
+
+  const handleChangeEmail = useCallback(() => {
+    router.push('/modals/settings/change-email-modal');
+  }, [router]);
+
+  const handleChangePassword = useCallback(() => {
+    router.push('/modals/settings/change-password-modal');
+  }, [router]);
+
+  const handleDeleteAccount = useCallback(() => {
+    router.push('/modals/settings/delete-account-modal');
+  }, [router]);
+
   const getSpecialitiesLabel = () => {
     const count = company?.specialities?.length || 0;
     if (count === 0) return t('settings.companyDetails.noneSelected');
     return `${count} ${t('settings.companyDetails.selected')}`;
   };
 
+  // Get country with flag for display
+  const locationCountry = useMemo(() => {
+    return findCountry(company?.location);
+  }, [company?.location]);
+
+  const getLocationDisplay = () => {
+    if (!company?.location) return t('settings.companyDetails.notSet');
+    if (locationCountry) {
+      return `${locationCountry.flag} ${locationCountry.name}`;
+    }
+    return company.location;
+  };
+
   // Get the appropriate profile based on view
   const currentProfile = isAthleteView ? clientProfile : coachProfile;
 
+  const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
+  const gradientHeight = headerHeight + 12;
+
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: themeColors.backgroundPrimary,
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom,
-          paddingLeft: insets.left,
-          paddingRight: insets.right,
-        },
-      ]}
-    >
-      <View style={styles.header}>
-        <IconButton
-          icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
-          onPress={handleGoBack}
-          size="md"
-          color={themeColors.text}
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
+      {/* Fixed gradient header overlay */}
+      <View style={[styles.fixedHeader, { height: headerHeight }]}>
+        <LinearGradient
+          colors={[
+            hexToRgba(themeColors.backgroundPrimary, 1),
+            hexToRgba(themeColors.backgroundPrimary, 0.85),
+            hexToRgba(themeColors.backgroundPrimary, 0.5),
+            hexToRgba(themeColors.backgroundPrimary, 0),
+          ]}
+          locations={[0, 0.5, 0.8, 1]}
+          style={[styles.headerGradient, { height: gradientHeight }]}
+          pointerEvents="none"
         />
-        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-          {t('profile.title')}
-        </Text>
-        <View style={styles.headerPlaceholder} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <IconButton
+            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+            onPress={handleGoBack}
+            size="md"
+            color={themeColors.text}
+          />
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+            {t('profile.title')}
+          </Text>
+          <View style={styles.headerPlaceholder} />
+        </View>
         {/* Personal Details */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>
           {t('profile.personalDetails')}
@@ -164,6 +213,80 @@ export default function EditProfileScreen() {
             value={currentProfile?.name || t('settings.personalDetails.notSet')}
             onPress={handleEditName}
           />
+          <Separator />
+          <DetailRow
+            label={t('settings.personalDetails.email')}
+            value={currentProfile?.email || t('settings.personalDetails.notSet')}
+          />
+        </Card>
+
+        {/* Security */}
+        <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>
+          {t('profile.security')}
+        </Text>
+        <Card>
+          {currentProfile?.signin_method === 'google' && (
+            <PressableScale style={styles.providerRow} onPress={handleManageGoogle}>
+              <Image
+                source={require('@/assets/icons/google.png')}
+                style={styles.providerLogo}
+                contentFit="contain"
+              />
+              <Text style={[styles.providerText, { color: themeColors.text }]}>
+                {t('profile.manageWithGoogle')}
+              </Text>
+              <ChevronRight size={20} color={themeColors.mutedText} />
+            </PressableScale>
+          )}
+          {currentProfile?.signin_method === 'apple' && (
+            <PressableScale style={styles.providerRow} onPress={handleManageApple}>
+              <Image
+                source={require('@/assets/icons/apple.png')}
+                style={[styles.providerLogo, { tintColor: themeColors.text }]}
+                contentFit="contain"
+              />
+              <Text style={[styles.providerText, { color: themeColors.text }]}>
+                {t('profile.manageWithApple')}
+              </Text>
+              <ChevronRight size={20} color={themeColors.mutedText} />
+            </PressableScale>
+          )}
+          {currentProfile?.signin_method === 'email' && (
+            <>
+              <PressableScale style={styles.providerRow} onPress={handleChangePassword}>
+                <PlatformIcon
+                  sf="lock"
+                  IconComponent={Lock}
+                  size={iconSizes.tabBarIcons}
+                  color={themeColors.text}
+                />
+                <Text style={[styles.providerText, { color: themeColors.text }]}>
+                  {t('profile.changePassword')}
+                </Text>
+                <ChevronRight size={20} color={themeColors.mutedText} />
+              </PressableScale>
+              <Separator />
+              <PressableScale style={styles.providerRow} onPress={handleChangeEmail}>
+                <PlatformIcon
+                  sf="envelope"
+                  IconComponent={Mail}
+                  size={iconSizes.tabBarIcons}
+                  color={themeColors.text}
+                />
+                <View style={styles.providerTextContainer}>
+                  <Text style={[styles.providerTextInContainer, { color: themeColors.text }]}>
+                    {t('profile.changeEmail')}
+                  </Text>
+                  {currentProfile?.email && (
+                    <Text style={[styles.providerSubtitle, { color: themeColors.mutedText }]}>
+                      {currentProfile.email}
+                    </Text>
+                  )}
+                </View>
+                <ChevronRight size={20} color={themeColors.mutedText} />
+              </PressableScale>
+            </>
+          )}
         </Card>
 
         {/* Company Details - Only for coach view */}
@@ -207,7 +330,7 @@ export default function EditProfileScreen() {
               <Separator />
               <DetailRow
                 label={t('settings.companyDetails.location')}
-                value={company?.location || t('settings.companyDetails.notSet')}
+                value={getLocationDisplay()}
                 onPress={handleEditLocation}
               />
               <Separator />
@@ -219,6 +342,25 @@ export default function EditProfileScreen() {
             </Card>
           </>
         )}
+
+        {/* Danger Zone */}
+        <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>
+          {t('profile.dangerZone')}
+        </Text>
+        <Card>
+          <PressableScale style={styles.providerRow} onPress={handleDeleteAccount}>
+            <PlatformIcon
+              sf="trash"
+              IconComponent={Trash2}
+              size={iconSizes.tabBarIcons}
+              color="#EF4444"
+            />
+            <Text style={[styles.providerText, { color: '#EF4444' }]}>
+              {t('profile.deleteAccount.title')}
+            </Text>
+            <ChevronRight size={20} color={themeColors.mutedText} />
+          </PressableScale>
+        </Card>
       </ScrollView>
     </View>
   );
@@ -228,15 +370,33 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  headerGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  scrollView: {
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    paddingVertical: 12,
+    paddingTop: 12,
+    marginBottom: 16,
+    height: 56,
   },
   headerTitle: {
     ...typography.h5,
+    flex: 1,
     textAlign: 'center',
   },
   headerPlaceholder: {
@@ -251,5 +411,30 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     marginBottom: 12,
     marginTop: 8,
+  },
+  providerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  providerLogo: {
+    width: iconSizes.tabBarIcons,
+    height: iconSizes.tabBarIcons,
+  },
+  providerTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  providerText: {
+    ...typography.p1,
+    flex: 1,
+    marginLeft: 12,
+  },
+  providerTextInContainer: {
+    ...typography.p1,
+  },
+  providerSubtitle: {
+    ...typography.p3,
+    marginTop: 2,
   },
 });

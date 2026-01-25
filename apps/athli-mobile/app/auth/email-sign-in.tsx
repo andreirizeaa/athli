@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, Keyboard, Alert } from 'react-native';
+import { StyleSheet, View, Text, Keyboard, Alert, TouchableWithoutFeedback, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Eye, EyeOff } from 'lucide-react-native';
 
@@ -137,6 +138,19 @@ export default function EmailSignInScreen() {
         }
     };
 
+    const handleForgotPassword = () => {
+        // Open the web app's forgot password page directly
+        const webAppUrl = process.env.EXPO_PUBLIC_WEB_APP_URL ||
+            Constants.expoConfig?.extra?.EXPO_PUBLIC_WEB_APP_URL ||
+            'http://localhost:3001';
+
+        const forgotPasswordUrl = email.trim()
+            ? `${webAppUrl}/auth/forgot-password?email=${encodeURIComponent(email.trim())}`
+            : `${webAppUrl}/auth/forgot-password`;
+
+        Linking.openURL(forgotPasswordUrl);
+    };
+
     const handleTermsOfServicePress = () => {
         console.log('Terms of Service pressed');
     };
@@ -146,10 +160,11 @@ export default function EmailSignInScreen() {
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top }]}>
-            <AuthLoadingOverlay visible={isLoading} />
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top }]}>
+                <AuthLoadingOverlay visible={isLoading} />
 
-            <View style={styles.header}>
+                <View style={styles.header}>
                 <IconButton
                     icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                     onPress={handleBackPress}
@@ -199,16 +214,24 @@ export default function EmailSignInScreen() {
                             </PressableOpacity>
                         }
                     />
+                    <PressableOpacity
+                        style={styles.forgotPasswordContainer}
+                        onPress={handleForgotPassword}
+                    >
+                        <Text style={[styles.forgotPasswordText, { color: themeColors.primary }]}>
+                            {t('auth.forgotPassword.linkText')}
+                        </Text>
+                    </PressableOpacity>
                 </View>
 
                 <PressableScale
                     style={[
                         styles.signInButton,
-                        { backgroundColor: themeColors.surfacePrimary },
+                        { backgroundColor: '#FFFFFF' },
                     ]}
                     onPress={handleSignIn}
                 >
-                    <Text style={[styles.signInButtonText, { color: themeColors.text }]}>
+                    <Text style={[styles.signInButtonText, { color: '#000000' }]}>
                         {t('auth.signIn')}
                     </Text>
                 </PressableScale>
@@ -233,6 +256,7 @@ export default function EmailSignInScreen() {
                 </View>
             </View>
         </View>
+        </TouchableWithoutFeedback>
     );
 }
 
@@ -291,5 +315,12 @@ const styles = StyleSheet.create({
         ...typography.p3,
         fontWeight: '600',
         textDecorationLine: 'underline',
+    },
+    forgotPasswordContainer: {
+        alignSelf: 'flex-end',
+    },
+    forgotPasswordText: {
+        ...typography.p3,
+        fontWeight: '600',
     },
 });

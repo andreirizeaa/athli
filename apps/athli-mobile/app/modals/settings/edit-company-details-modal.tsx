@@ -234,14 +234,29 @@ export default function EditCompanyDetailsModal() {
     t,
   ]);
 
-  // Location list
+  // Location list - selected country at top
   const filteredCountries = useMemo(() => {
-    if (!searchQuery.trim()) return [...COUNTRY_OPTIONS];
-    const query = searchQuery.toLowerCase();
-    return COUNTRY_OPTIONS.filter((country) =>
-      country.name.toLowerCase().includes(query)
-    );
-  }, [searchQuery]);
+    let countries = [...COUNTRY_OPTIONS];
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      countries = countries.filter((country) =>
+        country.name.toLowerCase().includes(query)
+      );
+    }
+
+    // Sort with selected country at top
+    if (location) {
+      countries.sort((a, b) => {
+        if (a.name === location) return -1;
+        if (b.name === location) return 1;
+        return 0;
+      });
+    }
+
+    return countries;
+  }, [searchQuery, location]);
 
   // Specialities list
   const filteredSpecialities = useMemo(() => {
@@ -473,7 +488,7 @@ export default function EditCompanyDetailsModal() {
         ref={listRef as any}
         data={filteredSpecialities}
         renderItem={renderSpecialityItem}
-        ItemSeparatorComponent={() => <Separator style={styles.separator} />}
+        ItemSeparatorComponent={Separator}
         ListHeaderComponent={
           <View style={[styles.listHeader, { paddingTop: headerHeight + 16 }]}>
             <SearchBar

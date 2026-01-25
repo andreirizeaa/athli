@@ -15,6 +15,7 @@ import { useThemePreference, useAppView } from '@/stores';
 import { typography } from '@/constants/typography';
 import { useTranslations, useClientDetailStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
+import { PlatformIcon } from '@/components/ui/platform-icon';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import {
     SegmentedControl,
@@ -149,7 +150,7 @@ export default function HabitDetailScreen() {
     }, [sortedLogs]);
 
     // Animated values
-    const animatedAverage = useAnimatedCounter(averageValue ?? 0, 1);
+    const animatedAverage = useAnimatedCounter(averageValue ?? 0, 0);
     const animatedCompletionRate = useAnimatedCounter(completionRate ?? 0, 0);
     const animatedDelta = useAnimatedCounter(delta?.value ?? 0, 1);
     const animatedStreak = useAnimatedCounter(streaks?.current_streak ?? 0, 0);
@@ -324,44 +325,35 @@ export default function HabitDetailScreen() {
 
             {/* Stats Row 1: Average & Delta */}
             <View style={styles.statsRow}>
-                {/* Average/Completion Rate Card */}
+                {/* Average Card */}
                 <FlipCard
                     frontContent={
-                        <Card variant="stat">
+                        <Card variant="stat" style={styles.statCardFront}>
                             <View style={[
                                 styles.statIconContainer,
-                                { backgroundColor: averageValue !== null
-                                    ? hexToRgba(themeColors.primary, 0.15)
-                                    : completionRateColors.bg
-                                }
+                                { backgroundColor: hexToRgba(themeColors.primary, 0.15) }
                             ]}>
-                                {averageValue !== null ? (
-                                    <Calculator {...({ size: 18, color: themeColors.primary } as any)} />
-                                ) : (
-                                    <Target {...({ size: 18, color: completionRateColors.text } as any)} />
+                                <Calculator {...({ size: 18, color: themeColors.primary } as any)} />
+                            </View>
+                            <View style={styles.statValueRow}>
+                                <Text style={[styles.statValue, { color: themeColors.text }]}>
+                                    {animatedAverage}
+                                </Text>
+                                {habit.unit && (
+                                    <Text style={[styles.statUnit, { color: themeColors.mutedText }]}>
+                                        {habit.unit}
+                                    </Text>
                                 )}
                             </View>
-                            <Text style={[
-                                styles.statValue,
-                                { color: averageValue !== null ? themeColors.text : completionRateColors.text }
-                            ]}>
-                                {averageValue !== null
-                                    ? `${animatedAverage}${habit.unit ? ` ${habit.unit}` : ''}`
-                                    : `${animatedCompletionRate}%`}
-                            </Text>
                             <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
-                                {averageValue !== null
-                                    ? t('clientDetail.habitDetail.average')
-                                    : t('clientDetail.habitDetail.completionRate')}
+                                {t('clientDetail.habitDetail.average')}
                             </Text>
                         </Card>
                     }
                     backContent={
                         <Card variant="stat" style={styles.statCardBack}>
                             <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
-                                {averageValue !== null
-                                    ? t('clientDetail.habitDetail.descriptions.average')
-                                    : t('clientDetail.habitDetail.descriptions.completionRate')}
+                                {t('clientDetail.habitDetail.descriptions.average')}
                             </Text>
                         </Card>
                     }
@@ -370,7 +362,7 @@ export default function HabitDetailScreen() {
                 {/* Delta Card */}
                 <FlipCard
                     frontContent={
-                        <Card variant="stat">
+                        <Card variant="stat" style={styles.statCardFront}>
                             <View style={[
                                 styles.statIconContainer,
                                 { backgroundColor: delta === null || delta.value === 0
@@ -421,7 +413,7 @@ export default function HabitDetailScreen() {
                 {/* Completion Rate Card */}
                 <FlipCard
                     frontContent={
-                        <Card variant="stat">
+                        <Card variant="stat" style={styles.statCardFront}>
                             <View style={[styles.statIconContainer, { backgroundColor: completionRateColors.bg }]}>
                                 <Target {...({ size: 18, color: completionRateColors.text } as any)} />
                             </View>
@@ -445,9 +437,14 @@ export default function HabitDetailScreen() {
                 {/* Current Streak Card */}
                 <FlipCard
                     frontContent={
-                        <Card variant="stat">
+                        <Card variant="stat" style={styles.statCardFront}>
                             <View style={[styles.statIconContainer, { backgroundColor: 'rgba(249, 115, 22, 0.15)' }]}>
-                                <Flame {...({ size: 18, color: '#f97316' } as any)} />
+                                <PlatformIcon
+                                    sf="flame.fill"
+                                    IconComponent={Flame}
+                                    size={18}
+                                    color="#f97316"
+                                />
                             </View>
                             <Text style={[styles.statValue, { color: themeColors.text }]}>
                                 {animatedStreak}
@@ -520,7 +517,11 @@ const styles = StyleSheet.create({
         paddingTop: 12,
         gap: 12,
     },
+    statCardFront: {
+        height: 140,
+    },
     statCardBack: {
+        height: 140,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -537,8 +538,16 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginBottom: 12,
     },
+    statValueRow: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        gap: 4,
+    },
     statValue: {
         ...typography.h2,
+    },
+    statUnit: {
+        ...typography.p2,
     },
     statLabel: {
         ...typography.p3,

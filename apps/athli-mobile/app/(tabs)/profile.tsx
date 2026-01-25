@@ -1,16 +1,21 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { StyleSheet, Text, View, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
+  ChevronRight,
   Cog,
   FileText,
+  Lock,
   LogOut,
+  Mail,
   MailPlus,
   Megaphone,
   RefreshCw,
   ShieldCheck,
   User,
 } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import { PressableScale } from 'pressto';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference, useClientProfileStore, useCoachProfileStore, useAppView, useTranslations } from '@/stores';
@@ -19,9 +24,6 @@ import { SettingsOption } from '@/components/ui/settings-option';
 import { Separator } from '@/components/ui/separator';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
-import { Image } from 'expo-image';
-import { PressableScale } from 'pressto';
-import { ChevronRight } from 'lucide-react-native';
 
 export default function ProfileTabScreen() {
   const router = useRouter();
@@ -80,6 +82,22 @@ export default function ProfileTabScreen() {
   const handleLogout = () => {
     router.push('/modals/auth/logout-confirmation-modal');
   };
+
+  const handleManageGoogle = useCallback(() => {
+    Linking.openURL('https://myaccount.google.com/security');
+  }, []);
+
+  const handleManageApple = useCallback(() => {
+    Linking.openURL('https://appleid.apple.com/account/manage');
+  }, []);
+
+  const handleChangeEmail = useCallback(() => {
+    router.push('/modals/settings/change-email-modal');
+  }, [router]);
+
+  const handleChangePassword = useCallback(() => {
+    router.push('/modals/settings/change-password-modal');
+  }, [router]);
 
   return (
     <ScreenWrapper contentContainerStyle={{ paddingBottom: 60 }}>
@@ -153,6 +171,75 @@ export default function ProfileTabScreen() {
             </View>
           </Card>
         </PressableScale>
+
+        {/* Security */}
+        <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>
+          {t('profile.security')}
+        </Text>
+        <Card>
+          {currentProfile?.signin_method === 'google' && (
+            <PressableScale style={styles.providerRow} onPress={handleManageGoogle}>
+              <Image
+                source={require('@/assets/icons/google.png')}
+                style={styles.providerLogo}
+                contentFit="contain"
+              />
+              <Text style={[styles.providerText, { color: themeColors.text }]}>
+                {t('profile.manageWithGoogle')}
+              </Text>
+              <ChevronRight size={20} color={themeColors.mutedText} />
+            </PressableScale>
+          )}
+          {currentProfile?.signin_method === 'apple' && (
+            <PressableScale style={styles.providerRow} onPress={handleManageApple}>
+              <Image
+                source={require('@/assets/icons/apple.png')}
+                style={[styles.providerLogo, { tintColor: themeColors.text }]}
+                contentFit="contain"
+              />
+              <Text style={[styles.providerText, { color: themeColors.text }]}>
+                {t('profile.manageWithApple')}
+              </Text>
+              <ChevronRight size={20} color={themeColors.mutedText} />
+            </PressableScale>
+          )}
+          {currentProfile?.signin_method === 'email' && (
+            <>
+              <PressableScale style={styles.providerRow} onPress={handleChangePassword}>
+                <PlatformIcon
+                  sf="lock"
+                  IconComponent={Lock}
+                  size={iconSizes.tabBarIcons}
+                  color={themeColors.text}
+                />
+                <Text style={[styles.providerText, { color: themeColors.text }]}>
+                  {t('profile.changePassword')}
+                </Text>
+                <ChevronRight size={20} color={themeColors.mutedText} />
+              </PressableScale>
+              <Separator />
+              <PressableScale style={styles.providerRow} onPress={handleChangeEmail}>
+                <PlatformIcon
+                  sf="envelope"
+                  IconComponent={Mail}
+                  size={iconSizes.tabBarIcons}
+                  color={themeColors.text}
+                />
+                <View style={styles.providerTextContainer}>
+                  <Text style={[styles.providerTextInContainer, { color: themeColors.text }]}>
+                    {t('profile.changeEmail')}
+                  </Text>
+                  {currentProfile?.email && (
+                    <Text style={[styles.providerSubtitle, { color: themeColors.mutedText }]}>
+                      {currentProfile.email}
+                    </Text>
+                  )}
+                </View>
+                <ChevronRight size={20} color={themeColors.mutedText} />
+              </PressableScale>
+            </>
+          )}
+        </Card>
 
         {/* Support */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.support')}</Text>
@@ -286,5 +373,30 @@ const styles = StyleSheet.create({
   optionTitle: {
     ...typography.p1,
     lineHeight: 22,
+  },
+  providerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  providerLogo: {
+    width: iconSizes.tabBarIcons,
+    height: iconSizes.tabBarIcons,
+  },
+  providerText: {
+    ...typography.p1,
+    flex: 1,
+    marginLeft: 12,
+  },
+  providerTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  providerTextInContainer: {
+    ...typography.p1,
+  },
+  providerSubtitle: {
+    ...typography.p3,
+    marginTop: 2,
   },
 });

@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,10 +29,13 @@ type Step = 'email' | 'social-provider' | 'otp' | 'password';
 export default function ForgotPasswordPage() {
   const { resetPasswordForEmail, verifyRecoveryOTP, resendRecoveryOTP, updatePassword } = useSupabaseAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const emailFromParams = searchParams.get('email') || '';
+
   const [step, setStep] = useState<Step>('email');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(emailFromParams);
   const [provider, setProvider] = useState<'google' | 'apple' | null>(null);
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -43,7 +46,7 @@ export default function ForgotPasswordPage() {
   const form = useForm<EmailFormValues>({
     resolver: zodResolver(emailSchema),
     defaultValues: {
-      email: '',
+      email: emailFromParams,
     },
   });
 

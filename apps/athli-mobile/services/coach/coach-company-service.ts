@@ -16,7 +16,9 @@ export interface CoachCompanyInfo {
 export async function fetchCompanyInfo(): Promise<CoachCompanyInfo | null> {
   try {
     const response = await axiosInstance.get('/settings/coach/company');
-    return response.data;
+    // Handle nested response structure: { success, message, data: { company: {...} } }
+    const result = response.data;
+    return result?.data?.company || result?.data || result;
   } catch (error: any) {
     if (error.response?.status === 404) {
       return null;
@@ -34,7 +36,9 @@ export async function updateCompanyInfo(
 ): Promise<CoachCompanyInfo> {
   try {
     const response = await axiosInstance.patch('/settings/coach/company', updates);
-    return response.data;
+    // Handle nested response structure: { success, message, data: { company: {...} } }
+    const result = response.data;
+    return result?.data?.company || result?.data || result;
   } catch (error) {
     console.error('Error updating company info:', error);
     throw error;
@@ -133,49 +137,131 @@ export const SPECIALITY_OPTIONS = [
 ] as const;
 
 /**
- * Country options for location selection
+ * Country options for location selection (comprehensive list matching web app)
+ * Sorted alphabetically by name
  */
-export const COUNTRY_OPTIONS = [
-  { name: 'United States', code: 'US', flag: '🇺🇸' },
-  { name: 'United Kingdom', code: 'GB', flag: '🇬🇧' },
-  { name: 'Canada', code: 'CA', flag: '🇨🇦' },
+export const COUNTRY_OPTIONS: CountryOption[] = [
+  { name: 'Afghanistan', code: 'AF', flag: '🇦🇫' },
+  { name: 'Albania', code: 'AL', flag: '🇦🇱' },
+  { name: 'Algeria', code: 'DZ', flag: '🇩🇿' },
+  { name: 'Andorra', code: 'AD', flag: '🇦🇩' },
+  { name: 'Angola', code: 'AO', flag: '🇦🇴' },
+  { name: 'Argentina', code: 'AR', flag: '🇦🇷' },
+  { name: 'Armenia', code: 'AM', flag: '🇦🇲' },
   { name: 'Australia', code: 'AU', flag: '🇦🇺' },
-  { name: 'Germany', code: 'DE', flag: '🇩🇪' },
-  { name: 'France', code: 'FR', flag: '🇫🇷' },
-  { name: 'Italy', code: 'IT', flag: '🇮🇹' },
-  { name: 'Spain', code: 'ES', flag: '🇪🇸' },
-  { name: 'Netherlands', code: 'NL', flag: '🇳🇱' },
-  { name: 'Belgium', code: 'BE', flag: '🇧🇪' },
-  { name: 'Switzerland', code: 'CH', flag: '🇨🇭' },
   { name: 'Austria', code: 'AT', flag: '🇦🇹' },
-  { name: 'Sweden', code: 'SE', flag: '🇸🇪' },
-  { name: 'Norway', code: 'NO', flag: '🇳🇴' },
+  { name: 'Azerbaijan', code: 'AZ', flag: '🇦🇿' },
+  { name: 'Bahrain', code: 'BH', flag: '🇧🇭' },
+  { name: 'Bangladesh', code: 'BD', flag: '🇧🇩' },
+  { name: 'Belarus', code: 'BY', flag: '🇧🇾' },
+  { name: 'Belgium', code: 'BE', flag: '🇧🇪' },
+  { name: 'Bolivia', code: 'BO', flag: '🇧🇴' },
+  { name: 'Bosnia and Herzegovina', code: 'BA', flag: '🇧🇦' },
+  { name: 'Brazil', code: 'BR', flag: '🇧🇷' },
+  { name: 'Bulgaria', code: 'BG', flag: '🇧🇬' },
+  { name: 'Cambodia', code: 'KH', flag: '🇰🇭' },
+  { name: 'Cameroon', code: 'CM', flag: '🇨🇲' },
+  { name: 'Canada', code: 'CA', flag: '🇨🇦' },
+  { name: 'Chile', code: 'CL', flag: '🇨🇱' },
+  { name: 'China', code: 'CN', flag: '🇨🇳' },
+  { name: 'Colombia', code: 'CO', flag: '🇨🇴' },
+  { name: 'Costa Rica', code: 'CR', flag: '🇨🇷' },
+  { name: 'Croatia', code: 'HR', flag: '🇭🇷' },
+  { name: 'Cuba', code: 'CU', flag: '🇨🇺' },
+  { name: 'Cyprus', code: 'CY', flag: '🇨🇾' },
+  { name: 'Czech Republic', code: 'CZ', flag: '🇨🇿' },
   { name: 'Denmark', code: 'DK', flag: '🇩🇰' },
+  { name: 'Dominican Republic', code: 'DO', flag: '🇩🇴' },
+  { name: 'Ecuador', code: 'EC', flag: '🇪🇨' },
+  { name: 'Egypt', code: 'EG', flag: '🇪🇬' },
+  { name: 'Estonia', code: 'EE', flag: '🇪🇪' },
+  { name: 'Ethiopia', code: 'ET', flag: '🇪🇹' },
   { name: 'Finland', code: 'FI', flag: '🇫🇮' },
+  { name: 'France', code: 'FR', flag: '🇫🇷' },
+  { name: 'Georgia', code: 'GE', flag: '🇬🇪' },
+  { name: 'Germany', code: 'DE', flag: '🇩🇪' },
+  { name: 'Ghana', code: 'GH', flag: '🇬🇭' },
+  { name: 'Greece', code: 'GR', flag: '🇬🇷' },
+  { name: 'Guatemala', code: 'GT', flag: '🇬🇹' },
+  { name: 'Hong Kong', code: 'HK', flag: '🇭🇰' },
+  { name: 'Hungary', code: 'HU', flag: '🇭🇺' },
+  { name: 'Iceland', code: 'IS', flag: '🇮🇸' },
+  { name: 'India', code: 'IN', flag: '🇮🇳' },
+  { name: 'Indonesia', code: 'ID', flag: '🇮🇩' },
+  { name: 'Iran', code: 'IR', flag: '🇮🇷' },
+  { name: 'Iraq', code: 'IQ', flag: '🇮🇶' },
+  { name: 'Ireland', code: 'IE', flag: '🇮🇪' },
+  { name: 'Israel', code: 'IL', flag: '🇮🇱' },
+  { name: 'Italy', code: 'IT', flag: '🇮🇹' },
+  { name: 'Jamaica', code: 'JM', flag: '🇯🇲' },
+  { name: 'Japan', code: 'JP', flag: '🇯🇵' },
+  { name: 'Jordan', code: 'JO', flag: '🇯🇴' },
+  { name: 'Kazakhstan', code: 'KZ', flag: '🇰🇿' },
+  { name: 'Kenya', code: 'KE', flag: '🇰🇪' },
+  { name: 'Kuwait', code: 'KW', flag: '🇰🇼' },
+  { name: 'Latvia', code: 'LV', flag: '🇱🇻' },
+  { name: 'Lebanon', code: 'LB', flag: '🇱🇧' },
+  { name: 'Lithuania', code: 'LT', flag: '🇱🇹' },
+  { name: 'Luxembourg', code: 'LU', flag: '🇱🇺' },
+  { name: 'Malaysia', code: 'MY', flag: '🇲🇾' },
+  { name: 'Malta', code: 'MT', flag: '🇲🇹' },
+  { name: 'Mexico', code: 'MX', flag: '🇲🇽' },
+  { name: 'Moldova', code: 'MD', flag: '🇲🇩' },
+  { name: 'Monaco', code: 'MC', flag: '🇲🇨' },
+  { name: 'Mongolia', code: 'MN', flag: '🇲🇳' },
+  { name: 'Montenegro', code: 'ME', flag: '🇲🇪' },
+  { name: 'Morocco', code: 'MA', flag: '🇲🇦' },
+  { name: 'Nepal', code: 'NP', flag: '🇳🇵' },
+  { name: 'Netherlands', code: 'NL', flag: '🇳🇱' },
+  { name: 'New Zealand', code: 'NZ', flag: '🇳🇿' },
+  { name: 'Nigeria', code: 'NG', flag: '🇳🇬' },
+  { name: 'North Macedonia', code: 'MK', flag: '🇲🇰' },
+  { name: 'Norway', code: 'NO', flag: '🇳🇴' },
+  { name: 'Oman', code: 'OM', flag: '🇴🇲' },
+  { name: 'Pakistan', code: 'PK', flag: '🇵🇰' },
+  { name: 'Panama', code: 'PA', flag: '🇵🇦' },
+  { name: 'Paraguay', code: 'PY', flag: '🇵🇾' },
+  { name: 'Peru', code: 'PE', flag: '🇵🇪' },
+  { name: 'Philippines', code: 'PH', flag: '🇵🇭' },
   { name: 'Poland', code: 'PL', flag: '🇵🇱' },
   { name: 'Portugal', code: 'PT', flag: '🇵🇹' },
-  { name: 'Ireland', code: 'IE', flag: '🇮🇪' },
-  { name: 'Greece', code: 'GR', flag: '🇬🇷' },
-  { name: 'Czech Republic', code: 'CZ', flag: '🇨🇿' },
+  { name: 'Puerto Rico', code: 'PR', flag: '🇵🇷' },
+  { name: 'Qatar', code: 'QA', flag: '🇶🇦' },
   { name: 'Romania', code: 'RO', flag: '🇷🇴' },
-  { name: 'Hungary', code: 'HU', flag: '🇭🇺' },
-  { name: 'New Zealand', code: 'NZ', flag: '🇳🇿' },
-  { name: 'South Africa', code: 'ZA', flag: '🇿🇦' },
-  { name: 'Brazil', code: 'BR', flag: '🇧🇷' },
-  { name: 'Mexico', code: 'MX', flag: '🇲🇽' },
-  { name: 'Argentina', code: 'AR', flag: '🇦🇷' },
-  { name: 'Chile', code: 'CL', flag: '🇨🇱' },
-  { name: 'Japan', code: 'JP', flag: '🇯🇵' },
-  { name: 'South Korea', code: 'KR', flag: '🇰🇷' },
-  { name: 'China', code: 'CN', flag: '🇨🇳' },
-  { name: 'India', code: 'IN', flag: '🇮🇳' },
-  { name: 'Singapore', code: 'SG', flag: '🇸🇬' },
-  { name: 'Hong Kong', code: 'HK', flag: '🇭🇰' },
-  { name: 'United Arab Emirates', code: 'AE', flag: '🇦🇪' },
-  { name: 'Saudi Arabia', code: 'SA', flag: '🇸🇦' },
-  { name: 'Israel', code: 'IL', flag: '🇮🇱' },
-  { name: 'Turkey', code: 'TR', flag: '🇹🇷' },
   { name: 'Russia', code: 'RU', flag: '🇷🇺' },
-] as const;
+  { name: 'Saudi Arabia', code: 'SA', flag: '🇸🇦' },
+  { name: 'Serbia', code: 'RS', flag: '🇷🇸' },
+  { name: 'Singapore', code: 'SG', flag: '🇸🇬' },
+  { name: 'Slovakia', code: 'SK', flag: '🇸🇰' },
+  { name: 'Slovenia', code: 'SI', flag: '🇸🇮' },
+  { name: 'South Africa', code: 'ZA', flag: '🇿🇦' },
+  { name: 'South Korea', code: 'KR', flag: '🇰🇷' },
+  { name: 'Spain', code: 'ES', flag: '🇪🇸' },
+  { name: 'Sri Lanka', code: 'LK', flag: '🇱🇰' },
+  { name: 'Sweden', code: 'SE', flag: '🇸🇪' },
+  { name: 'Switzerland', code: 'CH', flag: '🇨🇭' },
+  { name: 'Taiwan', code: 'TW', flag: '🇹🇼' },
+  { name: 'Thailand', code: 'TH', flag: '🇹🇭' },
+  { name: 'Tunisia', code: 'TN', flag: '🇹🇳' },
+  { name: 'Turkey', code: 'TR', flag: '🇹🇷' },
+  { name: 'Ukraine', code: 'UA', flag: '🇺🇦' },
+  { name: 'United Arab Emirates', code: 'AE', flag: '🇦🇪' },
+  { name: 'United Kingdom', code: 'GB', flag: '🇬🇧' },
+  { name: 'United States', code: 'US', flag: '🇺🇸' },
+  { name: 'Uruguay', code: 'UY', flag: '🇺🇾' },
+  { name: 'Uzbekistan', code: 'UZ', flag: '🇺🇿' },
+  { name: 'Venezuela', code: 'VE', flag: '🇻🇪' },
+  { name: 'Vietnam', code: 'VN', flag: '🇻🇳' },
+];
 
-export type CountryOption = (typeof COUNTRY_OPTIONS)[number];
+export type CountryOption = { name: string; code: string; flag: string };
+
+/**
+ * Find a country by name or code
+ */
+export function findCountry(value: string | undefined): CountryOption | undefined {
+  if (!value) return undefined;
+  return COUNTRY_OPTIONS.find(
+    (c) => c.name === value || c.code === value || c.code.toLowerCase() === value.toLowerCase()
+  );
+}

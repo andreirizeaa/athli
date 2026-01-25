@@ -359,12 +359,12 @@ export default function FormBuilderScreen() {
         <View style={styles.bottomBarContent}>
           <View style={styles.buttonWrapper}>
             <PressableScale
-              style={[styles.actionButton, { backgroundColor: themeColors.surfacePrimary }]}
+              style={[styles.actionButton, { backgroundColor: themeColors.primary, opacity: questions.length < 2 ? 0.5 : 1 }]}
               onPress={handleReorder}
               enabled={questions.length >= 2}
             >
-              <Repeat {...({ size: 18, color: questions.length < 2 ? themeColors.mutedText : themeColors.text, style: styles.buttonIcon } as any)} />
-              <Text style={[styles.actionButtonText, { color: questions.length < 2 ? themeColors.mutedText : themeColors.text }]}>
+              <Repeat {...({ size: 18, color: themeColors.primaryForeground, style: styles.buttonIcon } as any)} />
+              <Text style={[styles.actionButtonText, { color: themeColors.primaryForeground }]}>
                 {t('library.formBuilder.reorder')}
               </Text>
             </PressableScale>
@@ -374,12 +374,12 @@ export default function FormBuilderScreen() {
             <PressableScale
               style={[
                 styles.actionButton,
-                { backgroundColor: themeColors.surfacePrimary }
+                { backgroundColor: themeColors.primary }
               ]}
               onPress={handleAddQuestion}
             >
-              <Plus {...({ size: 18, color: themeColors.text, style: styles.buttonIcon } as any)} />
-              <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
+              <Plus {...({ size: 18, color: themeColors.primaryForeground, style: styles.buttonIcon } as any)} />
+              <Text style={[styles.actionButtonText, { color: themeColors.primaryForeground }]}>
                 {t('library.formBuilder.addQuestion')}
               </Text>
             </PressableScale>

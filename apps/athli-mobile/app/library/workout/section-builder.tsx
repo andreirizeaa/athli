@@ -852,7 +852,7 @@ export default function SectionBuilderScreen() {
                                 <View style={[
                                     styles.supersetConnector,
                                     { borderColor: themeColors.border },
-                                    isLinkedToNext ? styles.linkedConnector : styles.unlinkedConnector
+                                    isLinkedToNext ? [styles.linkedConnector, { backgroundColor: themeColors.cardPrimary, borderColor: themeColors.cardSecondary, borderLeftWidth: 0.5, borderRightWidth: 0.5 }] : styles.unlinkedConnector
                                 ]}>
                                     <View style={[
                                         styles.supersetButtonContainer,
@@ -864,7 +864,7 @@ export default function SectionBuilderScreen() {
                                             style={[
                                                 styles.supersetButton,
                                                 {
-                                                    backgroundColor: isLinkedToNext ? themeColors.backgroundSecondary : themeColors.backgroundTertiary,
+                                                    backgroundColor: isLinkedToNext ? themeColors.cardPrimary : themeColors.backgroundTertiary,
                                                     borderColor: themeColors.border,
                                                     paddingVertical: 4,
                                                     marginHorizontal: !isLinkedToNext ? 12 : 0,
@@ -903,27 +903,27 @@ export default function SectionBuilderScreen() {
                 }
             ]}>
                 <View style={styles.bottomBarContent}>
-                    <View style={[styles.countCircle, { backgroundColor: themeColors.surfacePrimary }]}>
-                        <Text style={[styles.countText, { color: themeColors.text }]}>{totalExercises}</Text>
+                    <View style={[styles.countCircle, { backgroundColor: themeColors.primary }]}>
+                        <Text style={[styles.countText, { color: themeColors.primaryForeground }]}>{totalExercises}</Text>
                     </View>
 
                     <View style={styles.buttonWrapper}>
                         <PressableScale
-                            style={[styles.actionButton, { backgroundColor: themeColors.surfacePrimary }]}
+                            style={[styles.actionButton, { backgroundColor: themeColors.primary }]}
                             onPress={handleReorder}
                         >
-                            <Repeat {...({ size: 18, color: themeColors.text, style: styles.buttonIcon } as any)} />
-                            <Text style={[styles.actionButtonText, { color: themeColors.text }]}>{t('library.workout.reorder')}</Text>
+                            <Repeat {...({ size: 18, color: themeColors.primaryForeground, style: styles.buttonIcon } as any)} />
+                            <Text style={[styles.actionButtonText, { color: themeColors.primaryForeground }]}>{t('library.workout.reorder')}</Text>
                         </PressableScale>
                     </View>
 
                     <View style={styles.buttonWrapper}>
                         <PressableScale
-                            style={[styles.actionButton, { backgroundColor: themeColors.surfacePrimary }]}
+                            style={[styles.actionButton, { backgroundColor: themeColors.primary }]}
                             onPress={handleAddExercise}
                         >
-                            <Plus {...({ size: 18, color: themeColors.text, style: styles.buttonIcon } as any)} />
-                            <Text style={[styles.actionButtonText, { color: themeColors.text }]}>{t('library.workout.add')}</Text>
+                            <Plus {...({ size: 18, color: themeColors.primaryForeground, style: styles.buttonIcon } as any)} />
+                            <Text style={[styles.actionButtonText, { color: themeColors.primaryForeground }]}>{t('library.workout.add')}</Text>
                         </PressableScale>
                     </View>
                 </View>

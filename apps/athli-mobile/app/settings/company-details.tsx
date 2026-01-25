@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -12,6 +12,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { Separator } from '@/components/ui/separator';
 import { DetailRow } from '@/components/ui/detail-row';
 import { PlatformIcon } from '@/components/ui/platform-icon';
+import { findCountry } from '@/services/coach/coach-company-service';
 
 export default function CompanyDetailsScreen() {
   const router = useRouter();
@@ -71,6 +72,19 @@ export default function CompanyDetailsScreen() {
     const count = company?.specialities?.length || 0;
     if (count === 0) return t('settings.companyDetails.noneSelected');
     return `${count} ${t('settings.companyDetails.selected')}`;
+  };
+
+  // Get country with flag for display
+  const locationCountry = useMemo(() => {
+    return findCountry(company?.location);
+  }, [company?.location]);
+
+  const getLocationDisplay = () => {
+    if (!company?.location) return t('settings.companyDetails.notSet');
+    if (locationCountry) {
+      return `${locationCountry.flag} ${locationCountry.name}`;
+    }
+    return company.location;
   };
 
   return (
@@ -135,7 +149,7 @@ export default function CompanyDetailsScreen() {
           <Separator />
           <DetailRow
             label={t('settings.companyDetails.location')}
-            value={company?.location || t('settings.companyDetails.notSet')}
+            value={getLocationDisplay()}
             onPress={handleEditLocation}
           />
           <Separator />

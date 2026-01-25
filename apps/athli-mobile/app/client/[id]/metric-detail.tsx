@@ -284,7 +284,7 @@ export default function MetricDetailScreen() {
                 {/* Average Card */}
                 <FlipCard
                     frontContent={
-                        <Card variant="stat">
+                        <Card variant="stat" style={styles.statCardFront}>
                             <View style={[styles.statIconContainer, { backgroundColor: hexToRgba(themeColors.primary, 0.15) }]}>
                                 <Calculator {...({ size: 18, color: themeColors.primary } as any)} />
                             </View>
@@ -308,7 +308,7 @@ export default function MetricDetailScreen() {
                 {/* Delta Card */}
                 <FlipCard
                     frontContent={
-                        <Card variant="stat">
+                        <Card variant="stat" style={styles.statCardFront}>
                             <View style={[
                                 styles.statIconContainer,
                                 { backgroundColor: movement === null || movement.percentage === 0
@@ -397,7 +397,11 @@ const styles = StyleSheet.create({
         paddingTop: 12,
         gap: 12,
     },
+    statCardFront: {
+        height: 140,
+    },
     statCardBack: {
+        height: 140,
         alignItems: 'center',
         justifyContent: 'center',
     },
