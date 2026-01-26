@@ -3,7 +3,7 @@
 import React from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { Headset, Lightbulb, PanelLeftClose, PanelLeftOpen, Sparkles } from 'lucide-react';
+import { Gift, Headset, Lightbulb, PanelLeftClose, PanelLeftOpen, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -110,6 +110,23 @@ export function AppHeader({
               </div>
             </PopoverContent>
           </Popover>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                asChild
+                aria-label={t('sidebar.links.referAndEarn')}
+              >
+                <Link href="/refer-and-earn">
+                  <Gift className="size-4" />
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t('sidebar.links.referAndEarn')}
+            </TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
