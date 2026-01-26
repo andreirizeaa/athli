@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, StyleSheet, Text, Animated, InteractionManager } from 'react-native';
 import { PressableOpacity } from 'pressto';
+import SquircleView from 'react-native-fast-squircle';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
@@ -9,6 +10,9 @@ import { haptics } from '@/utils/haptics';
 // Constants for layout
 const SEGMENT_PADDING = 4;
 const SEGMENT_GAP = 2;
+
+// Create animated SquircleView for the sliding indicator
+const AnimatedSquircleView = Animated.createAnimatedComponent(SquircleView);
 
 export type TimeRange = '90d' | '6m' | '1y' | 'all';
 export type PhotoView = 'all' | 'front' | 'back' | 'side';
@@ -115,11 +119,13 @@ export const SegmentedControl = React.memo(function SegmentedControl<T extends s
 
     return (
         <View style={[styles.wrapper, noPadding && styles.wrapperNoPadding]}>
-            <View
+            <SquircleView
+                cornerSmoothing={1}
                 style={[styles.container, { backgroundColor: backgroundColor ?? themeColors.surfacePrimary }]}
                 onLayout={(e) => setContainerW(e.nativeEvent.layout.width)}
             >
-                <Animated.View
+                <AnimatedSquircleView
+                    cornerSmoothing={1}
                     style={[
                         styles.activeBackground,
                         {
@@ -152,7 +158,7 @@ export const SegmentedControl = React.memo(function SegmentedControl<T extends s
                         </PressableOpacity>
                     );
                 })}
-            </View>
+            </SquircleView>
         </View>
     );
 });

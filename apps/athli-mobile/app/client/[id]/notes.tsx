@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Pressable } from 'react-native';
+import SquircleView from 'react-native-fast-squircle';
 
 import { Dialog } from '@/components/ui/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -14,6 +15,7 @@ import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SearchBar } from '@/components/ui/search-bar';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
+import { SkeletonList } from '@/components/ui/skeleton-list';
 import { deleteClientNote } from '@/services/client/client-notes-service';
 
 // Simple fuzzy search - checks if all characters appear in order
@@ -149,14 +151,14 @@ export default function ClientNotesScreen() {
       >
         <PressableScale onPress={() => handleNotePress(item.id)}>
           <View style={[styles.noteItem, { backgroundColor: themeColors.backgroundPrimary }]}>
-            <View style={[styles.noteIconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+            <SquircleView cornerSmoothing={1} style={[styles.noteIconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
               <PlatformIcon
                 sf="note.text"
                 IconComponent={Notebook}
                 size={24}
                 color={themeColors.text}
               />
-            </View>
+            </SquircleView>
             <View style={styles.noteContent}>
               <Text style={[styles.noteTitle, { color: themeColors.text }]} numberOfLines={1}>
                 {item.title}
@@ -233,9 +235,7 @@ export default function ClientNotesScreen() {
         >
           {/* Loading state */}
           {isLoadingNotes && notes.length === 0 ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={themeColors.primary} />
-            </View>
+            <SkeletonList />
           ) : notes.length === 0 ? (
             /* Empty state */
             <View style={styles.emptyContainer}>

@@ -4,6 +4,7 @@ import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Send } from 'lucide-react-native';
+import SquircleView from 'react-native-fast-squircle';
 
 import { useQuery } from '@tanstack/react-query';
 import { FlashList } from '@shopify/flash-list';
@@ -45,7 +46,7 @@ const ClientListItem = React.memo(function ClientListItem({
       >
         <View style={styles.rowContent}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatarCircle}>
+            <SquircleView cornerSmoothing={1} style={styles.avatarCircle}>
               {client.avatarUrl ? (
                 <Image
                   source={{ uri: client.avatarUrl }}
@@ -63,7 +64,7 @@ const ClientListItem = React.memo(function ClientListItem({
                   ]}
                 />
               )}
-            </View>
+            </SquircleView>
           </View>
           <View style={styles.clientInfo}>
             <Text
@@ -261,15 +262,14 @@ const styles = StyleSheet.create({
     height: 54,
     borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: '#f0f0f0',
   },
   avatarImage: {
     width: 54,
     height: 54,
-    borderRadius: 8,
   },
   avatarPlaceholder: {
-    backgroundColor: '#e0e0e0',
+    width: 54,
+    height: 54,
   },
   clientInfo: {
     flex: 1,

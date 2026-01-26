@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, StyleSheet, Text, Platform, Keyboard, TouchableWithoutFeedback, ActionSheetIOS } from 'react-native';
+import { View, StyleSheet, Text, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
@@ -331,26 +331,10 @@ export default function EditClientDetailsModal() {
   // Current image to display (selected or original)
   const currentImage = selectedImage || originalValues?.avatarUrl || client?.avatarUrl;
 
-  // Show action sheet for profile picture options
+  // Show dialog for profile picture options
   const handleEditProfilePicture = useCallback(() => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: [t('general.cancel'), t('clients.editClientModal.chooseFromLibrary'), t('clients.editClientModal.takePhoto')],
-          cancelButtonIndex: 0,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) {
-            pickImage(false);
-          } else if (buttonIndex === 2) {
-            pickImage(true);
-          }
-        }
-      );
-    } else {
-      setShowProfilePictureDialog(true);
-    }
-  }, [t, pickImage]);
+    setShowProfilePictureDialog(true);
+  }, []);
 
   const categoryOptions = useMemo(() => [
     { value: 'online' as const, label: t('clients.addClientModal.online') },
@@ -515,10 +499,11 @@ export default function EditClientDetailsModal() {
         visible={showProfilePictureDialog}
         onClose={() => setShowProfilePictureDialog(false)}
         title={t('clients.editClientModal.profilePicture')}
+        buttonLayout="vertical"
         buttons={[
-          { label: t('general.cancel'), onPress: () => setShowProfilePictureDialog(false), variant: 'secondary' },
           { label: t('clients.editClientModal.chooseFromLibrary'), onPress: () => { setShowProfilePictureDialog(false); pickImage(false); }, variant: 'primary' },
-          { label: t('clients.editClientModal.takePhoto'), onPress: () => { setShowProfilePictureDialog(false); pickImage(true); }, variant: 'primary' }
+          { label: t('clients.editClientModal.takePhoto'), onPress: () => { setShowProfilePictureDialog(false); pickImage(true); }, variant: 'primary' },
+          { label: t('general.cancel'), onPress: () => setShowProfilePictureDialog(false), variant: 'secondary' },
         ]}
       />
     </View>

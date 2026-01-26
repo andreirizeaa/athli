@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -208,6 +215,24 @@ export default function ClientProfileScreen() {
     },
   ];
 
+  // Skeleton animation
+  const skeletonOpacity = useSharedValue(0.3);
+
+  useEffect(() => {
+    skeletonOpacity.value = withRepeat(
+      withTiming(1, {
+        duration: 1000,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1,
+      true
+    );
+  }, []);
+
+  const skeletonAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: skeletonOpacity.value,
+  }));
+
   // Loading state - show while client basic info is loading
   if (isLoadingClient && !client) {
     return (
@@ -224,11 +249,66 @@ export default function ClientProfileScreen() {
           </Text>
           <View style={styles.headerPlaceholder} />
         </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={themeColors.primary} />
-          <Text style={[styles.loadingText, { color: themeColors.mutedText }]}>
-            {t('general.loading')}
-          </Text>
+
+        {/* Profile Card Skeleton */}
+        <Card variant="profile">
+          <View style={styles.skeletonProfileContent}>
+            <Animated.View
+              style={[
+                styles.skeletonAvatarLarge,
+                { backgroundColor: themeColors.border },
+                skeletonAnimatedStyle,
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.skeletonName,
+                { backgroundColor: themeColors.border },
+                skeletonAnimatedStyle,
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.skeletonEditButton,
+                { backgroundColor: themeColors.border },
+                skeletonAnimatedStyle,
+              ]}
+            />
+          </View>
+        </Card>
+
+        {/* Menu Items Skeleton */}
+        <View style={styles.menuContainer}>
+          {Array.from({ length: 11 }).map((_, index) => (
+            <View key={index}>
+              <View style={styles.menuItem}>
+                <View style={styles.menuItemLeft}>
+                  <Animated.View
+                    style={[
+                      styles.skeletonIcon,
+                      { backgroundColor: themeColors.border },
+                      skeletonAnimatedStyle,
+                    ]}
+                  />
+                  <Animated.View
+                    style={[
+                      styles.skeletonMenuTitle,
+                      { backgroundColor: themeColors.border },
+                      skeletonAnimatedStyle,
+                    ]}
+                  />
+                </View>
+                <Animated.View
+                  style={[
+                    styles.skeletonChevron,
+                    { backgroundColor: themeColors.border },
+                    skeletonAnimatedStyle,
+                  ]}
+                />
+              </View>
+              <Separator />
+            </View>
+          ))}
         </View>
       </ScreenWrapper>
     );
@@ -377,16 +457,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    gap: 16,
-  },
-  loadingText: {
-    ...typography.p2,
-  },
   errorContainer: {
     flex: 1,
     alignItems: 'center',
@@ -459,5 +529,42 @@ const styles = StyleSheet.create({
   menuItemTitle: {
     ...typography.p1,
     fontWeight: '500',
+  },
+  // Skeleton styles
+  skeletonProfileContent: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  skeletonAvatarLarge: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 16,
+  },
+  skeletonName: {
+    width: 120,
+    height: 20,
+    borderRadius: 4,
+    marginBottom: 16,
+  },
+  skeletonEditButton: {
+    width: 100,
+    height: 44,
+    borderRadius: 24,
+  },
+  skeletonIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+  },
+  skeletonMenuTitle: {
+    width: '50%',
+    height: 16,
+    borderRadius: 4,
+  },
+  skeletonChevron: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
   },
 });
