@@ -1,8 +1,9 @@
 import React, { useRef, useCallback, useState, useMemo } from 'react';
-import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus, Activity, ClipboardCheck, BarChart3, ChevronRight } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
+import SquircleView from 'react-native-fast-squircle';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
@@ -208,14 +209,14 @@ export default function MetricsScreen() {
                   >
                     <PressableScale onPress={() => handleMetricPress(metric.assignment_id || metric.id)}>
                       <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
-                        <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                        <SquircleView cornerSmoothing={1} style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
                           <PlatformIcon
                             sf="chart.bar.fill"
                             IconComponent={Activity}
                             size={24}
                             color={themeColors.text}
                           />
-                        </View>
+                        </SquircleView>
                         <View style={styles.textContent}>
                           <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
                             {metric.name}

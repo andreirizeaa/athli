@@ -1111,8 +1111,9 @@ Focus on proper form and progressive overload.`;
                 exerciseData.sets = exerciseData.sets.map((s: any) => ({
                   ...s,
                   type: s.type || 'normal',
-                  reps: getMetricValue(s.reps),
-                  weight: getMetricValue(s.weight),
+                  // Handle both direct reps/weight fields and trackableField1/trackableField2 format
+                  reps: getMetricValue(s.reps) || getMetricValue(s.trackableField1),
+                  weight: getMetricValue(s.weight) || getMetricValue(s.trackableField2),
                   rest: s.rest !== null && s.rest !== undefined ? s.rest.toString() : (s.restSec !== null && s.restSec !== undefined ? s.restSec.toString() : ''), // Handle both rest and restSec if present
                   distance: getMetricValue(s.distance),
                   duration: s.duration !== null && s.duration !== undefined ? getMetricValue(s.duration) : getMetricValue(s.durationSec),
@@ -2588,7 +2589,7 @@ Focus on proper form and progressive overload.`;
                     }}>
                       Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={isSaving || !isDirty} className="gap-2">
+                    <Button onClick={handleSave} disabled={isSaving} className="gap-2">
                       {isSaving ? <Loader2 className="animate-spin size-4" /> : <Check className="size-4" />}
                       Save
                     </Button>

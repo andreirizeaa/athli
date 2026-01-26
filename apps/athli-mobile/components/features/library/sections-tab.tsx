@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ChevronRight, Layers, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableScale } from 'pressto';
+import SquircleView from 'react-native-fast-squircle';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { FlashList } from '@shopify/flash-list';
@@ -241,14 +242,14 @@ export const SectionsTab = () => {
               onPress={() => handleSectionPress(item)}
             >
               <View style={[styles.rowContent, { backgroundColor: 'transparent' }]}>
-                <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                <SquircleView cornerSmoothing={1} style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
                   <PlatformIcon
                     sf="square.stack.3d.up.fill"
                     IconComponent={Layers}
                     size={24}
                     color={themeColors.text}
                   />
-                </View>
+                </SquircleView>
                 <View style={styles.textContent}>
                   <Text style={[styles.sectionName, { color: themeColors.text }]} numberOfLines={1}>
                     {item.program}

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import SquircleView from 'react-native-fast-squircle';
@@ -11,10 +11,13 @@ import { haptics } from '@/utils/haptics';
 
 const WEEK_HEIGHT = 90;
 
+type WorkoutDayStatus = 'all_not_started' | 'has_in_progress' | 'all_completed';
+
 interface SwipeableCalendarProps {
   onDateSelect?: (date: Date) => void;
   onSwipe?: (month: number, year: number) => void;
   selectedDate: Date;
+  workoutStatusByDate?: Record<string, WorkoutDayStatus>;
 }
 
 interface DayData {
@@ -91,6 +94,14 @@ const generateMonthWeeks = (year: number, month: number): Date[] => {
   return weeks;
 };
 
+// Format date as DD-MM-YYYY for status lookup (matches date-formatters.ts)
+const formatDateDDMMYYYY = (date: Date): string => {
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
 // Component for rendering a single week
 interface WeekPageProps {
   monday: Date;
@@ -101,6 +112,7 @@ interface WeekPageProps {
   themeColors: any;
   isLightMode: boolean;
   pillBackgroundColor: string;
+  workoutStatusByDate?: Record<string, WorkoutDayStatus>;
 }
 
 const WeekPage = React.memo(({
@@ -112,6 +124,7 @@ const WeekPage = React.memo(({
   themeColors,
   isLightMode,
   pillBackgroundColor,
+  workoutStatusByDate,
 }: WeekPageProps) => {
   const today = normalizeDate(new Date());
   const todayTime = today.getTime();
@@ -157,6 +170,35 @@ const WeekPage = React.memo(({
     return baseStyle;
   };
 
+  // Get border color for day circle based on workout status (past dates and today)
+  const getDayBorderColor = (day: DayData): string => {
+    if (day.isFuture) return themeColors.mutedText;
+
+    const dateKey = formatDateDDMMYYYY(day.date);
+    const status = workoutStatusByDate?.[dateKey];
+
+    switch (status) {
+      case 'all_not_started':
+        return day.isToday ? themeColors.mutedText : '#E85C4A'; // Red only for past, muted for today
+      case 'has_in_progress':
+        return '#F59E0B';
+      case 'all_completed':
+        return '#22C55E';
+      default:
+        return themeColors.mutedText;
+    }
+  };
+
+  // Get border style: solid for future/today or past with workouts, dashed for past without workouts
+  const getDayBorderStyle = (day: DayData): 'solid' | 'dashed' => {
+    if (day.isFuture || day.isToday) return 'solid';
+
+    const dateKey = formatDateDDMMYYYY(day.date);
+    const hasWorkouts = workoutStatusByDate?.[dateKey] !== undefined;
+
+    return hasWorkouts ? 'solid' : 'dashed';
+  };
+
   return (
     <View style={styles.weekContent}>
       {weekDays.map((day, i) => (
@@ -190,9 +232,9 @@ const WeekPage = React.memo(({
               style={[
                 styles.dayCircle,
                 {
-                  borderColor: themeColors.mutedText,
-                  borderStyle: day.isFuture || day.isToday ? 'solid' : 'dashed',
-                  opacity: day.isCurrentMonth 
+                  borderColor: getDayBorderColor(day),
+                  borderStyle: getDayBorderStyle(day),
+                  opacity: day.isCurrentMonth
                     ? (day.isActive ? 1 : (day.isFuture ? 0.3 : 0.5))
                     : 0.2,
                 },
@@ -221,6 +263,7 @@ export const SwipeableCalendar = ({
   onDateSelect,
   onSwipe,
   selectedDate,
+  workoutStatusByDate,
 }: SwipeableCalendarProps) => {
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
@@ -273,12 +316,25 @@ export const SwipeableCalendar = ({
     onDateSelect?.(day.date);
   }, [onDateSelect]);
 
+  // Pager ref for programmatic navigation
+  const pagerRef = useRef<PagerView>(null);
+
+  // Track last programmatic navigation to avoid feedback loops
+  const lastProgrammaticNavTimestamp = useRef<number>(0);
+  const PROGRAMMATIC_NAV_IGNORE_DURATION = 500;
+
   // Handle week swipe - just for haptic feedback
   const handlePageSelected = useCallback((event: PagerViewOnPageSelectedEvent) => {
     const weekIndex = event.nativeEvent.position;
     const weekMonday = weeksArray[weekIndex];
 
     if (!weekMonday) return;
+
+    // Ignore events from programmatic navigation
+    const timeSinceLastProgrammaticNav = Date.now() - lastProgrammaticNavTimestamp.current;
+    if (timeSinceLastProgrammaticNav < PROGRAMMATIC_NAV_IGNORE_DURATION) {
+      return;
+    }
 
     // User swiped - provide haptic feedback
     haptics.selection();
@@ -289,12 +345,23 @@ export const SwipeableCalendar = ({
     onSwipe?.(midWeek.getMonth(), midWeek.getFullYear());
   }, [weeksArray, onSwipe]);
 
+  // Sync pager to selected week when selectedDate changes externally
+  useEffect(() => {
+    if (pagerRef.current && weeksArray.length > 0) {
+      requestAnimationFrame(() => {
+        lastProgrammaticNavTimestamp.current = Date.now();
+        pagerRef.current?.setPageWithoutAnimation(selectedWeekIndex);
+      });
+    }
+  }, [selectedWeekIndex, weeksArray.length]);
+
   // Pill background color
   const pillBackgroundColor = isLightMode ? '#FFFFFF' : themeColors.surfacePrimary;
 
   return (
     <View style={styles.container}>
       <PagerView
+        ref={pagerRef}
         key={`${currentYear}-${currentMonth}`}
         style={styles.pager}
         initialPage={selectedWeekIndex}
@@ -312,6 +379,7 @@ export const SwipeableCalendar = ({
               themeColors={themeColors}
               isLightMode={isLightMode}
               pillBackgroundColor={pillBackgroundColor}
+              workoutStatusByDate={workoutStatusByDate}
             />
           </View>
         ))}

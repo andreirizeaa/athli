@@ -45,6 +45,7 @@ export default function ProfileTabScreen() {
   const profilePictureUrl = currentProfile?.profile_picture_url;
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showDeletionDialog, setShowDeletionDialog] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Log client data when on profile screen
   useEffect(() => {
@@ -91,12 +92,14 @@ export default function ProfileTabScreen() {
   };
 
   const handleLogoutConfirm = async () => {
+    setIsLoggingOut(true);
     try {
       await signOut();
       setShowLogoutDialog(false);
       router.replace('/welcome');
     } catch (error) {
       setShowLogoutDialog(false);
+      setIsLoggingOut(false);
     }
   };
 
@@ -364,6 +367,7 @@ export default function ProfileTabScreen() {
           label: t('profile.logout'),
           onPress: handleLogoutConfirm,
           variant: 'destructive',
+          loading: isLoggingOut,
         },
       ]}
     />

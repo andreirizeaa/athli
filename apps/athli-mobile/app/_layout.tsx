@@ -5,7 +5,7 @@ import { Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Platform, View as RNView, StyleSheet, Image as RNImage } from 'react-native';
+import { Platform, View as RNView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import 'react-native-reanimated';
 import { PressablesConfig } from 'pressto';
@@ -47,18 +47,16 @@ SplashScreen.setOptions({
   fade: true,
 });
 
-// Background images to prefetch
+// Background images to prefetch (using expo-image for proper caching)
 const darkBackground = require('../assets/backgrounds/dark.png');
 const lightBackground = require('../assets/backgrounds/light.png');
 
-// Prefetch background images to prevent flash on screen load
+// Prefetch background images using expo-image to prevent flash on screen load
 const prefetchBackgroundImages = async () => {
   try {
-    const darkSource = RNImage.resolveAssetSource(darkBackground);
-    const lightSource = RNImage.resolveAssetSource(lightBackground);
     await Promise.all([
-      RNImage.prefetch(darkSource.uri),
-      RNImage.prefetch(lightSource.uri),
+      Image.prefetch(darkBackground),
+      Image.prefetch(lightBackground),
     ]);
     console.log('[RootLayout] Background images prefetched');
   } catch (error) {
@@ -118,6 +116,7 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const [isAppReady, setIsAppReady] = useState(false);
+  const isSessionReady = useAuthSessionStore((state) => state.isSessionReady);
   const setCoachProfile = useCoachProfileStore((state) => state.setProfile);
   const setClientProfile = useClientProfileStore((state) => state.setProfile);
   const clearCoachProfile = useCoachProfileStore((state) => state.clearProfile);
@@ -1188,6 +1187,26 @@ function RootLayoutNav() {
               }),
             }}
           />
+          <Stack.Screen
+            name="modals/training/workout-session-modal"
+            options={{
+              presentation: 'card',
+              headerShown: false,
+              animation: 'slide_from_bottom',
+              animationDuration: 200,
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="modals/training/workout-review-modal"
+            options={{
+              presentation: 'card',
+              headerShown: false,
+              animation: 'slide_from_bottom',
+              animationDuration: 200,
+              gestureEnabled: false,
+            }}
+          />
           {/* Profile is now a tab, so profile/profile route is no longer needed */}
           {/* <Stack.Screen
           name="profile/profile"
@@ -1276,7 +1295,7 @@ function RootLayoutNav() {
       </ThemeProvider>
 
       {/* Manual Splash Screen Overlay */}
-      {!isAppReady && (
+      {!isSessionReady && (
         <RNView style={splashStyles.container}>
           <Image
             source={

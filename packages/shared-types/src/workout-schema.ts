@@ -183,10 +183,14 @@ export type WorkoutSectionPayload =
 // ============================================================================
 
 /**
- * Pre-workout user inputs
+ * Pre-workout user inputs (1-5 scale)
  */
 export type WorkoutPre = {
-  readiness: number | null;
+  sleep: number | null;     // 1-5 scale
+  mood: number | null;      // 1-5 scale
+  energy: number | null;    // 1-5 scale
+  stress: number | null;    // 1-5 scale
+  soreness: number | null;  // 1-5 scale
 };
 
 /**
@@ -273,7 +277,13 @@ export type WorkoutPayload = WorkoutData & {
 // ============================================================================
 
 export const DEFAULT_EXECUTION_FIELDS: Pick<WorkoutData, 'pre' | 'post' | 'completedSummary'> = {
-  pre: { readiness: null },
+  pre: {
+    sleep: null,
+    mood: null,
+    energy: null,
+    stress: null,
+    soreness: null
+  },
   post: {
     rating: null,
     intensity: null,

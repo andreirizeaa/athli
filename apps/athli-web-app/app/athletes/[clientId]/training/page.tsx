@@ -1183,13 +1183,13 @@ const ClientTrainingCalendarPage = () => {
   };
 
   // Render status icon for workout
-  const renderWorkoutStatusIcon = (status: 'not_started' | 'in_progress' | 'completed') => {
+  const renderWorkoutStatusIcon = (status: 'not_started' | 'in_progress' | 'completed', isPast: boolean = false) => {
     switch (status) {
       case 'not_started':
         return (
           <Tooltip>
             <TooltipTrigger asChild>
-              <CircleX className="size-4 text-muted-foreground" />
+              <CircleX className={cn("size-4", isPast ? "text-red-500" : "text-muted-foreground")} />
             </TooltipTrigger>
             <TooltipContent>
               <p>{t('athletes.trainingCalendar.notStarted')}</p>
@@ -1222,7 +1222,7 @@ const ClientTrainingCalendarPage = () => {
         return (
           <Tooltip>
             <TooltipTrigger asChild>
-              <CircleX className="size-4 text-muted-foreground" />
+              <CircleX className={cn("size-4", isPast ? "text-red-500" : "text-muted-foreground")} />
             </TooltipTrigger>
             <TooltipContent>
               <p>{t('athletes.trainingCalendar.notStarted')}</p>
@@ -2592,6 +2592,7 @@ const ClientTrainingCalendarPage = () => {
                       const isHoveredForCopy = isCopyMode && hoveredCopyDay === dateKey && !pastedDays.includes(dateKey);
                       const isPastedDay = pastedDays.includes(dateKey);
                       const isFutureDay = isTomorrowOrLater(date);
+                      const isPastDay = !isFutureDay && !isToday(date);
                       const isDragOver = dragOverDay === dateKey;
                       const isSourceDay = draggedWorkout?.sourceDateKey === dateKey;
 
@@ -2747,7 +2748,8 @@ const ClientTrainingCalendarPage = () => {
                                               // Status-based border colors
                                               status === 'in_progress' && "border-amber-500",
                                               status === 'completed' && "border-green-500",
-                                              status === 'not_started' && "border-border"
+                                              status === 'not_started' && isPastDay && "border-red-500",
+                                              status === 'not_started' && !isPastDay && "border-border"
                                             )}
                                           >
                                             {/* Loading overlay for duplicate/delete operations */}
@@ -2755,7 +2757,7 @@ const ClientTrainingCalendarPage = () => {
                                             <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30 group/card-header">
                                               <div className="flex-1 min-w-0 flex items-center gap-1.5">
                                                 <div className="flex-shrink-0">
-                                                  {renderWorkoutStatusIcon(status)}
+                                                  {renderWorkoutStatusIcon(status, isPastDay)}
                                                 </div>
                                                 <span
                                                   className="text-[11px] font-medium block truncate"
@@ -3374,7 +3376,11 @@ const ClientTrainingCalendarPage = () => {
           duration: 0,
           intensity: 0,
           volume: 0,
-          readiness: fetchedInProgressWorkoutData?.workout_data?.pre?.readiness || fetchedInProgressWorkoutData?.pre?.readiness || inProgressSummaryWorkout?.workout.pre?.readiness || 0,
+          readiness: (() => {
+            const pre = fetchedInProgressWorkoutData?.workout_data?.pre || fetchedInProgressWorkoutData?.pre || inProgressSummaryWorkout?.workout.pre || {};
+            const values = [pre.sleep, pre.mood, pre.energy, pre.stress, pre.soreness].filter((v): v is number => v !== null && v !== undefined);
+            return values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length * 2) : 0;
+          })(),
           rating: 0
         }}
       />
@@ -3399,7 +3405,11 @@ const ClientTrainingCalendarPage = () => {
           duration: fetchedCompletedWorkoutData?.workout_data?.completedSummary?.totalDurationMin || fetchedCompletedWorkoutData?.completedSummary?.totalDurationMin || completedSummaryWorkout?.workout.completedSummary?.totalDurationMin || 0,
           intensity: fetchedCompletedWorkoutData?.workout_data?.post?.intensity || fetchedCompletedWorkoutData?.post?.intensity || completedSummaryWorkout?.workout.post?.intensity || 0,
           volume: fetchedCompletedWorkoutData?.workout_data?.completedSummary?.totalWeightLifted || fetchedCompletedWorkoutData?.completedSummary?.totalWeightLifted || completedSummaryWorkout?.workout.completedSummary?.totalWeightLifted || 0,
-          readiness: fetchedCompletedWorkoutData?.workout_data?.pre?.readiness || fetchedCompletedWorkoutData?.pre?.readiness || completedSummaryWorkout?.workout.pre?.readiness || 0,
+          readiness: (() => {
+            const pre = fetchedCompletedWorkoutData?.workout_data?.pre || fetchedCompletedWorkoutData?.pre || completedSummaryWorkout?.workout.pre || {};
+            const values = [pre.sleep, pre.mood, pre.energy, pre.stress, pre.soreness].filter((v): v is number => v !== null && v !== undefined);
+            return values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length * 2) : 0;
+          })(),
           rating: fetchedCompletedWorkoutData?.workout_data?.post?.rating || fetchedCompletedWorkoutData?.post?.rating || completedSummaryWorkout?.workout.post?.rating || 0
         }}
       />

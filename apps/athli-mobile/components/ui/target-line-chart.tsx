@@ -1,9 +1,9 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, Text, Dimensions } from 'react-native';
 import { CartesianChart, Line, Area } from 'victory-native';
 import { Line as SkiaLine, vec, DashPathEffect, useFont, Group, Skia, LinearGradient } from '@shopify/react-native-skia';
 import { hexToRgba } from '@/utils/colorUtils';
-import { useSharedValue, withTiming, withDelay, useDerivedValue } from 'react-native-reanimated';
+import { useSharedValue, useDerivedValue } from 'react-native-reanimated';
 import { Flame } from 'lucide-react-native';
 
 import { useThemePreference, useTranslations } from '@/stores';
@@ -174,6 +174,7 @@ export const TargetLineChart = ({ data, targetValue, unit = '', name, streak, re
                         },
                     }}
                     frame={{ lineWidth: 0 }}
+                    gestureLongPressDelay={3000}
                 >
                     {({ points, chartBounds, yScale }) => {
                         // Calculate the y position for the reference line at y=0

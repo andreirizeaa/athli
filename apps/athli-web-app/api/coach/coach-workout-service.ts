@@ -218,7 +218,7 @@ export const getWorkoutById = async (workoutId: string): Promise<Workout & { wor
   const workoutDataItems = w.workout_data?.items || w.items || [];
   const workoutData = {
     items: workoutDataItems,
-    pre: w.workout_data?.pre || w.pre || { readiness: null },
+    pre: w.workout_data?.pre || w.pre || { sleep: null, mood: null, energy: null, stress: null, soreness: null },
     post: w.workout_data?.post || w.post || { rating: null, intensity: null, sessionComments: null },
     completedSummary: w.workout_data?.completedSummary || w.completedSummary || {
       status: 'not_started',

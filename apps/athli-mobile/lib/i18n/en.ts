@@ -8,6 +8,8 @@ export const en = {
     close: 'Close',
     confirm: 'Confirm',
     continue: 'Continue',
+    back: 'Back',
+    next: 'Next',
     ok: 'OK',
     loading: 'Loading',
     loadingMore: 'Loading more...',
@@ -111,6 +113,24 @@ export const en = {
     athlete: {
       noWorkouts: 'Rest day!',
       noWorkoutsDescription: 'No workouts scheduled - take it easy today',
+      startWorkout: 'Start workout',
+      resumeWorkout: 'Resume workout',
+      reviewWorkout: 'Review workout',
+    },
+    readiness: {
+      title: 'Readiness',
+      sleep: 'How was your sleep?',
+      mood: "How's your mood?",
+      energy: 'Energy level?',
+      stress: 'Stress level?',
+      soreness: 'How sore are you?',
+      labels: {
+        sleep: ['Restless', 'Poor', 'Fair', 'Rested', 'Refreshed'],
+        mood: ['Down', 'Low', 'Neutral', 'Good', 'Great'],
+        energy: ['Drained', 'Tired', 'Okay', 'Energized', 'Pumped'],
+        stress: ['Maxed', 'Stressed', 'Managing', 'Calm', 'Relaxed'],
+        soreness: ['Wrecked', 'Sore', 'Tight', 'Mild', 'Fresh'],
+      },
     },
     addOptions: {
       addFromLibrary: 'Add from library',

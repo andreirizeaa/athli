@@ -13,6 +13,7 @@
   },
   "scripts": {
     "dev": "turbo run dev --parallel",
+    "dev:data": "turbo run dev:data --parallel --filter=api --filter=app",
     "build": "turbo run build",
     "start": "turbo run start",
     "lint": "turbo run lint",

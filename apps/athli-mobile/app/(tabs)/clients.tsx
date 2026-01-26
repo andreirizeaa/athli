@@ -1,9 +1,10 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { StyleSheet, Text, View, Share } from 'react-native';
+import { StyleSheet, Text, View, Share, ActivityIndicator } from 'react-native';
 import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Send } from 'lucide-react-native';
+import SquircleView from 'react-native-fast-squircle';
 
 import { useQuery } from '@tanstack/react-query';
 import { FlashList } from '@shopify/flash-list';
@@ -18,7 +19,6 @@ import { IconButton } from '@/components/ui/icon-button';
 import { SearchBar } from '@/components/ui/search-bar';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { EmptyState } from '@/components/ui/empty-state';
-import { SkeletonList } from '@/components/ui/skeleton-list';
 
 // Memoized list item component for better performance
 type ClientListItemProps = {
@@ -45,7 +45,7 @@ const ClientListItem = React.memo(function ClientListItem({
       >
         <View style={styles.rowContent}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatarCircle}>
+            <SquircleView cornerSmoothing={1} style={styles.avatarCircle}>
               {client.avatarUrl ? (
                 <Image
                   source={{ uri: client.avatarUrl }}
@@ -63,7 +63,7 @@ const ClientListItem = React.memo(function ClientListItem({
                   ]}
                 />
               )}
-            </View>
+            </SquircleView>
           </View>
           <View style={styles.clientInfo}>
             <Text
@@ -199,10 +199,15 @@ export default function ClientsScreen() {
         />
       </View>
 
+      {/* Loading Overlay */}
+      {isLoading && clients.length === 0 && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={themeColors.primary} />
+        </View>
+      )}
+
       {/* Client List */}
-      {isLoading && clients.length === 0 ? (
-        <SkeletonList itemCount={8} />
-      ) : (
+      {!(isLoading && clients.length === 0) && (
         <FlashList
           data={filteredClients}
           renderItem={({ item: client, index }) => (
@@ -261,15 +266,14 @@ const styles = StyleSheet.create({
     height: 54,
     borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: '#f0f0f0',
   },
   avatarImage: {
     width: 54,
     height: 54,
-    borderRadius: 8,
   },
   avatarPlaceholder: {
-    backgroundColor: '#e0e0e0',
+    width: 54,
+    height: 54,
   },
   clientInfo: {
     flex: 1,
@@ -310,6 +314,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 40,
+  },
+  loadingOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingText: {
     ...typography.p2,

@@ -200,7 +200,7 @@ export default function TabLayout() {
 
   const handleNativeTabsAddPress = () => {
     if (appView === 'coach') {
-      // Check for library first, then clients/chats
+      // Check for library first, then clients/chats/settings
       if (pathname.includes('/library')) {
         router.push(getLibraryModalRoute() as any);
       } else if (pathname.includes('/clients')) {
@@ -212,6 +212,11 @@ export default function TabLayout() {
         router.push({
           pathname: '/add-modal-content',
           params: { route: 'chats' },
+        });
+      } else if (pathname.includes('/settings')) {
+        router.push({
+          pathname: '/add-modal-content',
+          params: { route: 'clients' },
         });
       }
     } else if (appView === 'athlete') {
@@ -371,6 +376,11 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
         });
       } else if (activeRouteName === 'library') {
         router.push(getLibraryModalRoute() as any);
+      } else if (activeRouteName === 'settings') {
+        router.push({
+          pathname: '/add-modal-content',
+          params: { route: 'clients' },
+        });
       }
     } else if (appView === 'athlete') {
       // Show training overlay if on training tab

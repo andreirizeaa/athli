@@ -1,10 +1,9 @@
 import * as React from 'react';
-import { useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { CartesianChart, Line, Area, useChartPressState } from 'victory-native';
-import { Circle, useFont, LinearGradient, vec, Group, Skia } from '@shopify/react-native-skia';
-import { useSharedValue, withTiming, withDelay, useDerivedValue } from 'react-native-reanimated';
-import type { SharedValue } from 'react-native-reanimated';
+import { CartesianChart, Line, Area } from 'victory-native';
+import { useFont, LinearGradient, vec, Group, Skia } from '@shopify/react-native-skia';
+import { useSharedValue, useDerivedValue } from 'react-native-reanimated';
 import { TrendingUp, TrendingDown } from 'lucide-react-native';
 import { hexToRgba } from '@/utils/colorUtils';
 
@@ -33,10 +32,6 @@ type ChartDataPoint = {
     date: string;
 };
 
-const ToolTip = ({ x, y, color }: { x: SharedValue<number>; y: SharedValue<number>; color: string }) => {
-    return <Circle cx={x} cy={y} r={8} color={color} />;
-};
-
 const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
     const day = date.getDate();
@@ -50,7 +45,6 @@ export const ValueLineChart = ({ data, name, delta, renderFooter }: ValueLineCha
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const font = useFont(require('../../assets/fonts/SpaceMono-Regular.ttf'), 12);
-    const { state, isActive } = useChartPressState({ x: 0, y: { y: 0 } });
 
     const screenWidth = Dimensions.get('window').width;
     const chartWidth = screenWidth - 64;
@@ -171,40 +165,31 @@ export const ValueLineChart = ({ data, name, delta, renderFooter }: ValueLineCha
                         x: [0, chartData.length - 1],
                         y: [minValue, maxValue],
                     }}
-                    chartPressState={state}
+                    gestureLongPressDelay={3000}
                 >
                     {({ points, chartBounds }) => (
-                        <>
-                            <Group clip={clipRect}>
-                                <Area
-                                    points={points.y}
-                                    y0={chartBounds.bottom}
-                                    curveType="monotoneX"
-                                >
-                                    <LinearGradient
-                                        start={vec(0, chartBounds.top)}
-                                        end={vec(0, chartBounds.bottom)}
-                                        colors={[
-                                            hexToRgba(themeColors.primary, 0.4),
-                                            hexToRgba(themeColors.primary, 0),
-                                        ]}
-                                    />
-                                </Area>
-                                <Line
-                                    points={points.y}
-                                    color={themeColors.primary}
-                                    strokeWidth={3}
-                                    curveType="monotoneX"
+                        <Group clip={clipRect}>
+                            <Area
+                                points={points.y}
+                                y0={chartBounds.bottom}
+                                curveType="monotoneX"
+                            >
+                                <LinearGradient
+                                    start={vec(0, chartBounds.top)}
+                                    end={vec(0, chartBounds.bottom)}
+                                    colors={[
+                                        hexToRgba(themeColors.primary, 0.4),
+                                        hexToRgba(themeColors.primary, 0),
+                                    ]}
                                 />
-                            </Group>
-                            {isActive && (
-                                <ToolTip
-                                    x={state.x.position}
-                                    y={state.y.y.position}
-                                    color={themeColors.primary}
-                                />
-                            )}
-                        </>
+                            </Area>
+                            <Line
+                                points={points.y}
+                                color={themeColors.primary}
+                                strokeWidth={3}
+                                curveType="monotoneX"
+                            />
+                        </Group>
                     )}
                 </CartesianChart>
             </View>

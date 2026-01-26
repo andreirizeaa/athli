@@ -57,7 +57,10 @@
       "Bash(npm show:*)",
       "WebFetch(domain:shopify.github.io)",
       "Bash(xargs ls:*)",
-      "Bash(npx expo typescript:*)"
+      "Bash(npx expo typescript:*)",
+      "Bash(git log:*)",
+      "Bash(git grep:*)",
+      "Bash(pnpm build:*)"
     ]
   }
 }

@@ -4,6 +4,7 @@ import { FileText, File, Play, UserPlus, Trash2, Pencil } from 'lucide-react-nat
 import { useRouter, useFocusEffect } from 'expo-router';
 import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
+import SquircleView from 'react-native-fast-squircle';
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { FlashList } from '@shopify/flash-list';
@@ -270,14 +271,14 @@ export const FilesTab = () => {
     // Fallback icon for pdf and other types - match client files styling
     const isPdf = fileType === 'pdf';
     return (
-      <View style={[styles.fileIconContainer, { backgroundColor: `${themeColors.primary}15` }]}>
+      <SquircleView cornerSmoothing={1} style={[styles.fileIconContainer, { backgroundColor: `${themeColors.primary}15` }]}>
         <PlatformIcon
           sf="doc.text"
           IconComponent={isPdf ? FileText : File}
           size={24}
           color={themeColors.primary}
         />
-      </View>
+      </SquircleView>
     );
   };
 

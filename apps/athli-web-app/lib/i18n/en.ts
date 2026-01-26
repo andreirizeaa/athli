@@ -642,6 +642,9 @@ export const enMessages = {
     settings: {
       label: 'Settings',
     },
+    featureRequests: {
+      label: 'Feature Requests',
+    },
     helpAndSupport: {
       label: 'Help and support',
     },
