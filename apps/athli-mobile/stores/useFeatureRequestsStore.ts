@@ -82,7 +82,7 @@ export const useFeatureRequestsStore = create<FeatureRequestsStore>(
 
     setIsLoadingMore: (isLoadingMore) => set({ isLoadingMore }),
 
-    setSortBy: (sortBy) => set({ sortBy, page: 0, requests: [], hasMore: true }),
+    setSortBy: (sortBy) => set({ sortBy }),
 
     setSearchQuery: (searchQuery) =>
       set({ searchQuery, page: 0, requests: [], hasMore: true }),
