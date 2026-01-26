@@ -22,7 +22,6 @@ import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { SearchBar } from '@/components/ui/search-bar';
 import { Card } from '@/components/ui/card';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { SkeletonList } from '@/components/ui/skeleton-list';
 import { haptics } from '@/utils/haptics';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 
@@ -272,11 +271,13 @@ export default function FeatureRequestsScreen() {
   const ListEmpty = useMemo(
     () =>
       isLoading ? (
-        <SkeletonList itemCount={6} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={themeColors.primary} />
+        </View>
       ) : (
         renderEmpty()
       ),
-    [isLoading, renderEmpty]
+    [isLoading, themeColors.primary, renderEmpty]
   );
 
   const ListFooter = useMemo(
@@ -499,6 +500,12 @@ const styles = StyleSheet.create({
   filterContainer: {
     marginTop: 12,
     marginBottom: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
   },
   emptyContainer: {
     justifyContent: 'center',

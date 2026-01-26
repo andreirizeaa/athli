@@ -1,5 +1,5 @@
 import React, { useRef, useCallback, useState, useMemo } from 'react';
-import { StyleSheet, Text, View, ScrollView, Pressable } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus, ClipboardCheck, CheckCircle, ChevronRight } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
@@ -13,7 +13,6 @@ import { DropdownMenuWrapper } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { SearchBar } from '@/components/ui/search-bar';
-import { SkeletonList } from '@/components/ui/skeleton-list';
 import { deleteClientHabits } from '@/services/client/client-habit-service';
 import { haptics } from '@/utils/haptics';
 
@@ -165,7 +164,9 @@ export default function ClientHabitsScreen() {
       >
         {/* Loading state */}
         {isLoadingHabits && habits.length === 0 ? (
-          <SkeletonList />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={themeColors.primary} />
+          </View>
         ) : filteredHabits.length === 0 ? (
           /* Empty state */
           <View style={styles.emptyContainer}>

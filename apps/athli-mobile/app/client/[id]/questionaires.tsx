@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus, HelpCircle, ChevronRight, ClipboardList } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
@@ -10,7 +10,6 @@ import { useThemePreference, useTranslations, useClientDetailStore } from '@/sto
 import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { PlatformIcon } from '@/components/ui/platform-icon';
-import { SkeletonList } from '@/components/ui/skeleton-list';
 
 export default function ClientQuestionairesScreen() {
   const router = useRouter();
@@ -64,7 +63,9 @@ export default function ClientQuestionairesScreen() {
 
       {/* Loading state */}
       {isLoadingForms && questionnaires.length === 0 ? (
-        <SkeletonList />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={themeColors.primary} />
+        </View>
       ) : questionnaires.length === 0 ? (
         /* Empty state */
         <View style={styles.emptyContainer}>

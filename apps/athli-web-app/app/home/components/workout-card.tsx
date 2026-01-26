@@ -100,7 +100,10 @@ export const WorkoutCard = ({
             minutes: completedSummary.totalDurationMin || 0,
             volume: completedSummary.totalWeightLifted || 0,
             intensity: post.intensity || 0,
-            readiness: pre.readiness || 0,
+            readiness: (() => {
+              const values = [pre.sleep, pre.mood, pre.energy, pre.stress, pre.soreness].filter((v): v is number => v !== null && v !== undefined);
+              return values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length * 2) : 0; // Scale 1-5 to 1-10
+            })(),
             rating: post.rating || 0,
         };
     }, [workout.workout_data]);

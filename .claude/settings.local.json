@@ -59,7 +59,8 @@
       "Bash(xargs ls:*)",
       "Bash(npx expo typescript:*)",
       "Bash(git log:*)",
-      "Bash(git grep:*)"
+      "Bash(git grep:*)",
+      "Bash(pnpm build:*)"
     ]
   }
 }

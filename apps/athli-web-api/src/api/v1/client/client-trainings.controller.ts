@@ -735,18 +735,45 @@ export const clientTrainingsController = {
         }
 
         const sourceWorkouts = ensureObjectData(sourceEntry.training_data);
-        const workoutToDuplicate = sourceWorkouts[sourceWorkoutId];
+        let workoutToDuplicate = sourceWorkouts[sourceWorkoutId];
+        let actualSourceKey = sourceWorkoutId;
+
+        // Fallback 1: scan values for exact template ID match
+        if (!workoutToDuplicate) {
+            const foundEntry = Object.entries(sourceWorkouts).find(([key, w]: [string, any]) => w.id === sourceWorkoutId);
+            if (foundEntry) {
+                actualSourceKey = foundEntry[0];
+                workoutToDuplicate = foundEntry[1];
+            }
+        }
+
+        // Fallback 2: extract UUID from compound optimistic IDs (uuid__date__ts or uuid-date-ts)
+        if (!workoutToDuplicate) {
+            // Extract first segment before __ or before date pattern (YYYY-MM-DD)
+            const uuidMatch = sourceWorkoutId.match(/^([a-f0-9-]{36})/i) ||
+                              sourceWorkoutId.match(/^(.+?)(?:__|(?=-\d{4}-\d{2}-\d{2}))/);
+            if (uuidMatch) {
+                const extractedId = uuidMatch[1];
+                const foundEntry = Object.entries(sourceWorkouts).find(
+                    ([key, w]: [string, any]) => w.id === extractedId
+                );
+                if (foundEntry) {
+                    actualSourceKey = foundEntry[0];
+                    workoutToDuplicate = foundEntry[1];
+                }
+            }
+        }
 
         if (!workoutToDuplicate) {
             return res.status(404).json({ success: false, message: 'Workout not found in source date' });
         }
 
-        // 2. Create new workout 
+        // 2. Create new workout
         // We use the same Template ID (workoutToDuplicate.id), but generate new Key in target list.
         const duplicatedWorkout = normalizeWorkoutData({
             ...workoutToDuplicate,
             // id: ... preserve? Yes.
-            duplicated_from: sourceWorkoutId,
+            duplicated_from: actualSourceKey,
             duplicated_at: new Date().toISOString(),
             assigned_by: userId,
             assigned_at: new Date().toISOString()

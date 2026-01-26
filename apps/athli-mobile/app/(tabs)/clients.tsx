@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { StyleSheet, Text, View, Share } from 'react-native';
+import { StyleSheet, Text, View, Share, ActivityIndicator } from 'react-native';
 import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -19,7 +19,6 @@ import { IconButton } from '@/components/ui/icon-button';
 import { SearchBar } from '@/components/ui/search-bar';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { EmptyState } from '@/components/ui/empty-state';
-import { SkeletonList } from '@/components/ui/skeleton-list';
 
 // Memoized list item component for better performance
 type ClientListItemProps = {
@@ -200,10 +199,15 @@ export default function ClientsScreen() {
         />
       </View>
 
+      {/* Loading Overlay */}
+      {isLoading && clients.length === 0 && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={themeColors.primary} />
+        </View>
+      )}
+
       {/* Client List */}
-      {isLoading && clients.length === 0 ? (
-        <SkeletonList itemCount={8} />
-      ) : (
+      {!(isLoading && clients.length === 0) && (
         <FlashList
           data={filteredClients}
           renderItem={({ item: client, index }) => (
@@ -310,6 +314,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 40,
+  },
+  loadingOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingText: {
     ...typography.p2,
