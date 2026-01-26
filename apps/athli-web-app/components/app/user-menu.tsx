@@ -4,7 +4,7 @@ import React from 'react';
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
-import { Check, Laptop, LogOut, Moon, Settings, Sun } from 'lucide-react';
+import { Check, Laptop, Lightbulb, LogOut, Moon, Settings, Sun } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -251,6 +251,12 @@ export function UserMenu({
             </DropdownMenuRadioGroup>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+        <DropdownMenuItem className="cursor-pointer px-3 py-2" asChild>
+          <Link href="/features">
+            <Lightbulb className="mr-2 size-4" />
+            <span>{t('sidebar.featureRequests.label') || 'Feature Requests'}</span>
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem className="cursor-pointer px-3 py-2 rounded-b-none" asChild>
           <Link href="/settings">
             <Settings className="mr-2 size-4" />
