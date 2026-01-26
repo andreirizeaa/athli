@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Archive, MailCheck, Send, CheckCircle, User } from 'lucide-react-native';
+import SquircleView from 'react-native-fast-squircle';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference, useAuthSessionStore } from '@/stores';
@@ -207,17 +208,18 @@ export const ChatListItem = ({
                 </View>
               )}
               <View style={styles.avatarContainer}>
-                {chat.other_user_avatar ? (
-                  <Image source={{ uri: chat.other_user_avatar }} style={styles.avatar} />
-                ) : (
-                  <View
-                    style={[
-                      styles.avatar,
-                      styles.avatarPlaceholder,
-                      { backgroundColor: themeColors.border },
-                    ]}
-                  />
-                )}
+                <SquircleView cornerSmoothing={1} style={styles.avatar}>
+                  {chat.other_user_avatar ? (
+                    <Image source={{ uri: chat.other_user_avatar }} style={styles.avatarImage} />
+                  ) : (
+                    <View
+                      style={[
+                        styles.avatarPlaceholder,
+                        { backgroundColor: themeColors.border },
+                      ]}
+                    />
+                  )}
+                </SquircleView>
               </View>
               <View style={styles.messageContainer}>
                 <View style={styles.messageHeader}>
@@ -364,8 +366,15 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 8,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 54,
+    height: 54,
   },
   avatarPlaceholder: {
+    width: 54,
+    height: 54,
     backgroundColor: '#e0e0e0',
   },
   messageContainer: {

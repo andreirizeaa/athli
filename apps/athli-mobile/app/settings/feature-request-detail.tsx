@@ -1,7 +1,14 @@
 import React, { useEffect, useCallback, useState, useMemo } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { PressableScale } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
@@ -575,8 +582,19 @@ export default function FeatureRequestDetailScreen() {
           </Text>
           <View style={{ width: 44 }} />
         </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={themeColors.primary} />
+        <View style={styles.content}>
+          <SkeletonRequestCard themeColors={themeColors} />
+          <View style={styles.repliesHeaderRow}>
+            <SkeletonBox
+              width={80}
+              height={20}
+              borderRadius={10}
+              themeColors={themeColors}
+            />
+          </View>
+          <SkeletonReplyCard themeColors={themeColors} />
+          <SkeletonReplyCard themeColors={themeColors} />
+          <SkeletonReplyCard themeColors={themeColors} />
         </View>
       </ScreenWrapper>
     );
@@ -696,6 +714,161 @@ export default function FeatureRequestDetailScreen() {
     </>
   );
 }
+
+// Skeleton Components
+interface SkeletonBoxProps {
+  width: number | string;
+  height: number;
+  borderRadius: number;
+  themeColors: any;
+  style?: any;
+}
+
+const SkeletonBox = React.memo(function SkeletonBox({
+  width,
+  height,
+  borderRadius,
+  themeColors,
+  style,
+}: SkeletonBoxProps) {
+  const opacity = useSharedValue(0.4);
+
+  useEffect(() => {
+    opacity.value = withRepeat(
+      withTiming(1, {
+        duration: 1000,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        {
+          width,
+          height,
+          borderRadius,
+          backgroundColor: themeColors.border,
+        },
+        animatedStyle,
+        style,
+      ]}
+    />
+  );
+});
+
+const SkeletonRequestCard = React.memo(function SkeletonRequestCard({
+  themeColors,
+}: {
+  themeColors: any;
+}) {
+  return (
+    <Card style={styles.card}>
+      <View style={styles.cardRow}>
+        {/* Left content section */}
+        <View style={styles.cardContent}>
+          {/* User row skeleton */}
+          <View style={styles.userRow}>
+            <SkeletonBox width={28} height={28} borderRadius={14} themeColors={themeColors} />
+            <SkeletonBox
+              width={100}
+              height={14}
+              borderRadius={7}
+              themeColors={themeColors}
+              style={{ marginLeft: 8 }}
+            />
+          </View>
+
+          {/* Title skeleton */}
+          <SkeletonBox
+            width="90%"
+            height={18}
+            borderRadius={9}
+            themeColors={themeColors}
+            style={{ marginBottom: 8 }}
+          />
+
+          {/* Description skeleton */}
+          <SkeletonBox
+            width="100%"
+            height={14}
+            borderRadius={7}
+            themeColors={themeColors}
+            style={{ marginBottom: 6 }}
+          />
+          <SkeletonBox
+            width="75%"
+            height={14}
+            borderRadius={7}
+            themeColors={themeColors}
+            style={{ marginBottom: 12 }}
+          />
+
+          {/* Bottom row skeleton */}
+          <View style={styles.bottomRow}>
+            <SkeletonBox width={50} height={26} borderRadius={10} themeColors={themeColors} />
+            <SkeletonBox width={40} height={26} borderRadius={10} themeColors={themeColors} />
+            <SkeletonBox width={70} height={26} borderRadius={10} themeColors={themeColors} />
+          </View>
+        </View>
+
+        {/* Right upvote section skeleton */}
+        <SkeletonBox width={70} height={70} borderRadius={16} themeColors={themeColors} />
+      </View>
+    </Card>
+  );
+});
+
+const SkeletonReplyCard = React.memo(function SkeletonReplyCard({
+  themeColors,
+}: {
+  themeColors: any;
+}) {
+  return (
+    <Card style={styles.skeletonReplyCard}>
+      {/* User row skeleton */}
+      <View style={styles.replyUserRow}>
+        <SkeletonBox width={24} height={24} borderRadius={12} themeColors={themeColors} />
+        <SkeletonBox
+          width={80}
+          height={12}
+          borderRadius={6}
+          themeColors={themeColors}
+          style={{ marginLeft: 8 }}
+        />
+      </View>
+
+      {/* Message skeleton */}
+      <SkeletonBox
+        width="100%"
+        height={14}
+        borderRadius={7}
+        themeColors={themeColors}
+        style={{ marginBottom: 6 }}
+      />
+      <SkeletonBox
+        width="60%"
+        height={14}
+        borderRadius={7}
+        themeColors={themeColors}
+        style={{ marginBottom: 12 }}
+      />
+
+      {/* Bottom row skeleton */}
+      <View style={styles.replyBottomRow}>
+        <SkeletonBox width={45} height={22} borderRadius={8} themeColors={themeColors} />
+        <SkeletonBox width={70} height={22} borderRadius={8} themeColors={themeColors} />
+      </View>
+    </Card>
+  );
+});
 
 const styles = StyleSheet.create({
   screen: {
@@ -879,6 +1052,9 @@ const styles = StyleSheet.create({
   replyCard: {
     marginBottom: 12,
     marginHorizontal: 16,
+  },
+  skeletonReplyCard: {
+    marginBottom: 12,
   },
   replyUserRow: {
     flexDirection: 'row',

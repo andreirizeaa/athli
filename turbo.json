@@ -9,6 +9,10 @@
       "cache": false,
       "persistent": true
     },
+    "dev:data": {
+      "cache": false,
+      "persistent": true
+    },
     "build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**", "build/**"],

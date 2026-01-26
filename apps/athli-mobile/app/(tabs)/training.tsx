@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from 'react-native';
-import { PressableOpacity, PressableScale } from 'pressto';
+import { PressableScale } from 'pressto';
 import { useRouter, useFocusEffect } from 'expo-router';
-import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
 import { Storage } from '@/lib/storage';
-import { ChevronDown, CircleX, CircleDashed, CircleCheck, Dumbbell } from 'lucide-react-native';
-import { haptics } from '@/utils/haptics';
+import { ChevronDown, X, Ellipsis, Check, Dumbbell } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
 
+import { haptics } from '@/utils/haptics';
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
@@ -18,6 +19,7 @@ import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { Card } from '@/components/ui/card';
 import { ExerciseListPreview } from '@/components/features/training/exercise-list-preview';
 import { getTrainingCalendarRange, TrainingCalendarSchema } from '@/services/client/client-service';
+import { FilledButton } from '@/components/ui/buttons/filled-button';
 
 const SELECTED_DATE_KEY = '@select_date_modal_selected_date';
 
@@ -27,9 +29,13 @@ type WorkoutDayPageProps = {
   workouts: any[];
   isLoading: boolean;
   onWorkoutPress: (workout: any) => void;
+  onWorkoutButtonPress: (workout: any) => void;
   themeColors: any;
   t: (key: string) => string;
-  renderStatusIcon: (status: string | undefined) => React.ReactNode;
+  renderStatusIcon: (status: string | undefined, isPast: boolean) => React.ReactNode;
+  paddingBottom: number;
+  isToday: boolean;
+  isPast: boolean;
 };
 
 // Get Monday of the week containing the given date
@@ -52,34 +58,40 @@ const getSundayOfWeek = (date: Date): Date => {
 // Generate days array for a specific month (including partial weeks at edges)
 const generateMonthDays = (year: number, month: number): Date[] => {
   const days: Date[] = [];
-  
-  // First day of the month
+
   const firstOfMonth = new Date(year, month, 1);
   firstOfMonth.setHours(0, 0, 0, 0);
-  
-  // Last day of the month
+
   const lastOfMonth = new Date(year, month + 1, 0);
   lastOfMonth.setHours(0, 0, 0, 0);
-  
-  // Get Monday of the week containing the first day
+
   const startMonday = getMondayOfWeek(firstOfMonth);
-  
-  // Get Sunday of the week containing the last day
   const endSunday = getSundayOfWeek(lastOfMonth);
-  
-  // Generate all days from startMonday to endSunday
+
   let current = new Date(startMonday);
   while (current.getTime() <= endSunday.getTime()) {
     days.push(new Date(current));
     current.setDate(current.getDate() + 1);
   }
-  
+
   return days;
+};
+
+// Helper to get button label based on workout status
+const getWorkoutButtonLabel = (status: string | undefined, t: (key: string) => string): string => {
+  switch (status) {
+    case 'completed':
+      return t('training.athlete.reviewWorkout');
+    case 'in_progress':
+      return t('training.athlete.resumeWorkout');
+    default:
+      return t('training.athlete.startWorkout');
+  }
 };
 
 // Memoized component for each day's workout content
 const WorkoutDayPage = React.memo(
-  ({ date, workouts, isLoading, onWorkoutPress, themeColors, t, renderStatusIcon }: WorkoutDayPageProps) => {
+  ({ date, workouts, isLoading, onWorkoutPress, onWorkoutButtonPress, themeColors, t, renderStatusIcon, paddingBottom, isToday, isPast }: WorkoutDayPageProps) => {
     if (isLoading) {
       return (
         <View style={pageStyles.loadingContainer}>
@@ -105,18 +117,15 @@ const WorkoutDayPage = React.memo(
     return (
       <ScrollView
         style={pageStyles.workoutList}
-        contentContainerStyle={pageStyles.workoutListContent}
+        contentContainerStyle={[pageStyles.workoutListContent, { paddingBottom }]}
         showsVerticalScrollIndicator={false}
-        keyboardDismissMode="on-drag"
       >
         {workouts.map((workout, index) => (
           <PressableScale key={workout.id || index} onPress={() => onWorkoutPress(workout)}>
             <Card style={pageStyles.workoutCard}>
               <View style={pageStyles.workoutHeader}>
                 <View style={pageStyles.workoutHeaderLeft}>
-                  <View style={pageStyles.statusIconContainer}>
-                    {renderStatusIcon(workout.completedSummary?.status)}
-                  </View>
+                  {renderStatusIcon(workout.completedSummary?.status, isPast)}
                   <View style={pageStyles.workoutInfo}>
                     <Text style={[pageStyles.workoutName, { color: themeColors.text }]} numberOfLines={1}>
                       {workout.workout}
@@ -124,6 +133,16 @@ const WorkoutDayPage = React.memo(
                   </View>
                 </View>
               </View>
+              {isToday && (
+                <View style={pageStyles.buttonContainer}>
+                  <FilledButton
+                    label={getWorkoutButtonLabel(workout.completedSummary?.status, t)}
+                    onPress={() => onWorkoutButtonPress(workout)}
+                    style={pageStyles.workoutButton}
+                    textStyle={pageStyles.workoutButtonText}
+                  />
+                </View>
+              )}
               {workout.totalExercises > 0 && (
                 <>
                   <View style={[pageStyles.divider, { backgroundColor: themeColors.border }]} />
@@ -176,7 +195,6 @@ const pageStyles = StyleSheet.create({
   workoutListContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 40,
     gap: 12,
   },
   workoutCard: {
@@ -196,9 +214,10 @@ const pageStyles = StyleSheet.create({
     flex: 1,
     gap: 12,
   },
-  statusIconContainer: {
-    width: 32,
-    height: 32,
+  statusIconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -212,12 +231,23 @@ const pageStyles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginHorizontal: 16,
   },
   exerciseListContainer: {
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 14,
+  },
+  buttonContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 0,
+    paddingBottom: 16,
+  },
+  workoutButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  workoutButtonText: {
+    fontWeight: '700',
   },
 });
 
@@ -225,18 +255,12 @@ export default function TrainingScreen() {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const insets = useSafeAreaInsets();
 
   // Get profile data from store
   const profile = useClientProfileStore((state) => state.profile);
   const clientId = profile?.client_id;
   const coachId = profile?.coach_id;
-
-  // Pager ref
-  const pagerRef = useRef<PagerView>(null);
-
-  // Timestamp of last programmatic navigation
-  const lastProgrammaticNavTimestamp = useRef<number>(0);
-  const PROGRAMMATIC_NAV_IGNORE_DURATION = 500;
 
   // Training data state
   const [trainingCalendar, setTrainingCalendar] = useState<TrainingCalendarSchema>({});
@@ -245,6 +269,16 @@ export default function TrainingScreen() {
     startDate: string;
     endDate: string;
   } | null>(null);
+
+  // Pager ref
+  const pagerRef = useRef<PagerView>(null);
+
+  // Track if initial mount to avoid refetching on first focus
+  const hasInitiallyLoaded = useRef(false);
+
+  // Timestamp of last programmatic navigation
+  const lastProgrammaticNavTimestamp = useRef<number>(0);
+  const PROGRAMMATIC_NAV_IGNORE_DURATION = 500;
 
   // Selected date - source of truth for which month to display
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
@@ -270,7 +304,7 @@ export default function TrainingScreen() {
         return i;
       }
     }
-    // If not found (shouldn't happen), default to first day of month
+    // If not found, default to first day of month
     const firstOfMonth = new Date(currentYear, currentMonth, 1);
     firstOfMonth.setHours(0, 0, 0, 0);
     const firstOfMonthTime = firstOfMonth.getTime();
@@ -284,7 +318,7 @@ export default function TrainingScreen() {
 
   // Fetch training data for current month
   const fetchTrainingDataForMonth = useCallback(
-    async (year: number, month: number) => {
+    async (year: number, month: number, forceRefresh = false) => {
       if (!clientId || !coachId) return;
 
       // Calculate the date range for this month (with buffer for partial weeks)
@@ -296,8 +330,8 @@ export default function TrainingScreen() {
       const startDateStr = formatDateYYYYMMDD(startDate);
       const endDateStr = formatDateYYYYMMDD(endDate);
 
-      // Check if already loaded
-      if (loadedTrainingRange) {
+      // Check if already loaded (skip if force refresh)
+      if (!forceRefresh && loadedTrainingRange) {
         if (startDateStr >= loadedTrainingRange.startDate && endDateStr <= loadedTrainingRange.endDate) {
           return; // Already loaded
         }
@@ -307,9 +341,9 @@ export default function TrainingScreen() {
       try {
         const calendar = await getTrainingCalendarRange(clientId, coachId, startDateStr, endDateStr);
 
-        setTrainingCalendar((prev) => ({ ...prev, ...calendar }));
+        setTrainingCalendar((prev) => (forceRefresh ? calendar : { ...prev, ...calendar }));
         setLoadedTrainingRange((prev) => {
-          if (!prev) {
+          if (!prev || forceRefresh) {
             return { startDate: startDateStr, endDate: endDateStr };
           }
           return {
@@ -330,6 +364,7 @@ export default function TrainingScreen() {
   useEffect(() => {
     if (clientId && coachId) {
       fetchTrainingDataForMonth(currentYear, currentMonth);
+      hasInitiallyLoaded.current = true;
     }
   }, [clientId, coachId, currentYear, currentMonth, fetchTrainingDataForMonth]);
 
@@ -360,7 +395,28 @@ export default function TrainingScreen() {
         }
       };
       checkSelectedDate();
-    }, [])
+
+      // Refetch training data on subsequent focuses (not initial mount)
+      if (hasInitiallyLoaded.current && clientId && coachId) {
+        const refetchData = async () => {
+          const firstOfMonth = new Date(currentYear, currentMonth, 1);
+          const lastOfMonth = new Date(currentYear, currentMonth + 1, 0);
+          const startDate = getMondayOfWeek(firstOfMonth);
+          const endDate = getSundayOfWeek(lastOfMonth);
+          const startDateStr = formatDateYYYYMMDD(startDate);
+          const endDateStr = formatDateYYYYMMDD(endDate);
+
+          try {
+            const calendar = await getTrainingCalendarRange(clientId, coachId, startDateStr, endDateStr);
+            setTrainingCalendar(calendar);
+            setLoadedTrainingRange({ startDate: startDateStr, endDate: endDateStr });
+          } catch (error) {
+            console.error('Failed to refetch training data:', error);
+          }
+        };
+        refetchData();
+      }
+    }, [clientId, coachId, currentYear, currentMonth])
   );
 
   // Handle date selection from calendar
@@ -386,7 +442,7 @@ export default function TrainingScreen() {
     // User swiped - provide haptic feedback
     haptics.selection();
 
-    // Update selected date (this won't change the month since we're within the same month's range)
+    // Update selected date
     setSelectedDate(pageDate);
   }, [daysArray]);
 
@@ -426,22 +482,83 @@ export default function TrainingScreen() {
     return `${monthName} ${yearShort}`;
   }, [currentMonth, currentYear, t]);
 
+  // Compute workout status by date for calendar coloring
+  const workoutStatusByDate = useMemo(() => {
+    const statusMap: Record<string, 'all_not_started' | 'has_in_progress' | 'all_completed'> = {};
+
+    Object.entries(trainingCalendar).forEach(([dateKey, workoutsObj]) => {
+      if (!workoutsObj) return;
+      const workouts = Object.values(workoutsObj);
+      if (workouts.length === 0) return;
+
+      const statuses = workouts.map((w: any) => w.completedSummary?.status);
+
+      if (statuses.some((s) => s === 'in_progress')) {
+        statusMap[dateKey] = 'has_in_progress';
+      } else if (statuses.every((s) => s === 'completed')) {
+        statusMap[dateKey] = 'all_completed';
+      } else {
+        statusMap[dateKey] = 'all_not_started';
+      }
+    });
+
+    return statusMap;
+  }, [trainingCalendar]);
+
   // Dummy handler for workout press
   const handleWorkoutPress = useCallback((workout: any) => {
     console.log('Workout pressed:', workout.id);
   }, []);
 
-  // Render status icon based on workout status
-  const renderStatusIcon = useCallback((status: string | undefined) => {
-    switch (status) {
-      case 'completed':
-        return <CircleCheck {...({ size: 20, color: '#22C55E' } as any)} />;
-      case 'in_progress':
-        return <CircleDashed {...({ size: 20, color: '#F59E0B' } as any)} />;
-      default:
-        return <CircleX {...({ size: 20, color: themeColors.mutedText } as any)} />;
+  // Handler for workout button press (Start/Resume/Review)
+  const handleWorkoutButtonPress = useCallback((workout: any, dateStr: string) => {
+    if (!clientId || !coachId) return;
+
+    const status = workout.completedSummary?.status;
+    const params = {
+      workoutId: workout.id,
+      date: dateStr,
+      clientId,
+      coachId,
+      workoutPayload: JSON.stringify(workout),
+    };
+
+    if (status === 'completed') {
+      router.push({
+        pathname: '/modals/training/workout-review-modal',
+        params,
+      });
+    } else {
+      router.push({
+        pathname: '/modals/training/workout-session-modal',
+        params,
+      });
     }
-  }, [themeColors.mutedText]);
+  }, [clientId, coachId, router]);
+
+  // Render status icon based on workout status (styled like IconButton md with border)
+  const renderStatusIcon = useCallback((status: string | undefined, isPast: boolean) => {
+    const iconSize = 18;
+    const getIconAndColor = () => {
+      switch (status) {
+        case 'completed':
+          return { icon: <Check {...({ size: iconSize, strokeWidth: 2, color: '#22C55E' } as any)} />, borderColor: '#22C55E' };
+        case 'in_progress':
+          return { icon: <Ellipsis {...({ size: iconSize, strokeWidth: 2, color: '#F59E0B' } as any)} />, borderColor: '#F59E0B' };
+        default: {
+          // Use red for not_started on past dates, muted otherwise
+          const notStartedColor = isPast ? '#E85C4A' : themeColors.mutedText;
+          return { icon: <X {...({ size: iconSize, strokeWidth: 2, color: notStartedColor } as any)} />, borderColor: notStartedColor };
+        }
+      }
+    };
+    const { icon, borderColor } = getIconAndColor();
+    return (
+      <View style={[pageStyles.statusIconButton, { backgroundColor: themeColors.surfacePrimary, borderColor, borderWidth: 1.5 }]}>
+        {icon}
+      </View>
+    );
+  }, [themeColors.surfacePrimary, themeColors.mutedText]);
 
   // Key for pager - changes when month changes to rebuild
   const pagerKey = `${currentYear}-${currentMonth}`;
@@ -468,6 +585,7 @@ export default function TrainingScreen() {
             selectedDate={selectedDate}
             onDateSelect={handleDateSelect}
             onSwipe={handleCalendarSwipe}
+            workoutStatusByDate={workoutStatusByDate}
           />
         </View>
 
@@ -490,10 +608,13 @@ export default function TrainingScreen() {
                   templateId: w.id,
                 }))
               : [];
+            const isCurrentPageLoading = isLoadingTraining && selectedDate.getTime() === date.getTime();
 
-            // Only show loading indicator on the currently selected date
-            const isCurrentPageLoading =
-              isLoadingTraining && selectedDate.getTime() === date.getTime();
+            // Check if this date is today or past
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const isToday = date.getTime() === today.getTime();
+            const isPast = date.getTime() < today.getTime();
 
             return (
               <View key={`day-${dateKey}`} style={styles.pageContainer} collapsable={false}>
@@ -502,9 +623,13 @@ export default function TrainingScreen() {
                   workouts={dayWorkouts}
                   isLoading={isCurrentPageLoading}
                   onWorkoutPress={handleWorkoutPress}
+                  onWorkoutButtonPress={(workout) => handleWorkoutButtonPress(workout, formatDateYYYYMMDD(date))}
                   themeColors={themeColors}
                   t={t}
                   renderStatusIcon={renderStatusIcon}
+                  paddingBottom={insets.bottom + 120}
+                  isToday={isToday}
+                  isPast={isPast}
                 />
               </View>
             );
@@ -518,7 +643,6 @@ export default function TrainingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 16,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -527,6 +651,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     width: '100%',
     paddingHorizontal: 16,
+    paddingTop: 16,
   },
   headerBottomRow: {
     width: '100%',

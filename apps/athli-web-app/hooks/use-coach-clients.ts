@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getClients, archiveUser, deleteClient, type Athlete } from '@/api/coach/coach-client-service';
-import { toast } from 'sonner';
+import { showErrorToast } from '@/lib/toast-utils';
 
 export function useCoachClients(options?: { enabled?: boolean }) {
     const queryClient = useQueryClient();
@@ -27,7 +27,7 @@ export function useCoachClients(options?: { enabled?: boolean }) {
             queryClient.invalidateQueries({ queryKey: ['conversations'] });
         },
         onError: (error: Error) => {
-            toast.error(error.message || 'Failed to archive client');
+            showErrorToast(error, 'Failed to archive client');
         }
     });
 
@@ -41,7 +41,7 @@ export function useCoachClients(options?: { enabled?: boolean }) {
             queryClient.invalidateQueries({ queryKey: ['conversations'] });
         },
         onError: (error: Error) => {
-            toast.error(error.message || 'Failed to delete client');
+            showErrorToast(error, 'Failed to delete client');
         }
     });
 

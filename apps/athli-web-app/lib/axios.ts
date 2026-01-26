@@ -1,10 +1,25 @@
 import axios from 'axios';
 import { createClient } from '@/supabase/client';
+import { authEvents } from '@/lib/auth-events';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '') || 'http://localhost:3002';
 const API_VERSION = process.env.NEXT_PUBLIC_API_VERSION?.replace(/^\/+|\/+$/g, '') || 'api/v1';
 
 export const API_URL = `${API_BASE_URL}/${API_VERSION}`;
+
+/**
+ * Custom error class for session expired errors
+ * Used to identify 401 errors that are handled by the session expired dialog
+ * The message is intentionally empty to prevent toast messages from showing it
+ */
+export class SessionExpiredError extends Error {
+    public readonly isSessionExpired = true;
+    
+    constructor() {
+        super(''); // Empty message to prevent toasts from showing anything
+        this.name = 'SessionExpiredError';
+    }
+}
 
 const axiosInstance = axios.create({
     baseURL: API_URL,
@@ -34,11 +49,19 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
     (response) => response,
     (error) => {
-        // Handle 401 Unauthorized globally if needed (e.g., redirect to login)
+        // Handle 401 Unauthorized globally - show session expired dialog
         if (error.response?.status === 401) {
-            console.warn('Unauthorized access - redirecting or handling session expiry');
-            // Potential logic: window.location.href = '/login'; 
-            // Note: Be careful with direct redirects in interceptors as it might loop or disrupt UX.
+            const errorData = error.response?.data;
+            const isUnauthorized = errorData?.error?.code === 'UNAUTHORIZED' || 
+                                   errorData?.code === 'UNAUTHORIZED' ||
+                                   errorData?.message?.includes('Unauthorized');
+            
+            if (isUnauthorized) {
+                // Emit event to show session expired dialog
+                authEvents.emitSessionExpired();
+                // Throw a SessionExpiredError so consuming code can identify and suppress toasts
+                return Promise.reject(new SessionExpiredError());
+            }
         }
         return Promise.reject(error);
     }

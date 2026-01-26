@@ -104,6 +104,7 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
           value={name}
           onChangeText={setName}
           placeholder={t('clients.addClientModal.namePlaceholder')}
+          required
         />
 
         <InputBox
@@ -113,6 +114,7 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
           placeholder={t('clients.addClientModal.emailPlaceholder')}
           keyboardType="email-address"
           autoCapitalize="none"
+          required
         />
 
         <SelectInput
@@ -121,6 +123,7 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
           onChange={setCategory}
           options={categoryOptions}
           placeholder={t('clients.editClientModal.typePlaceholder')}
+          required
         />
 
         <Dialog

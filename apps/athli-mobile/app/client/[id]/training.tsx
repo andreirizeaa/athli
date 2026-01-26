@@ -1,8 +1,15 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, ScrollView, ActivityIndicator, InteractionManager } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, InteractionManager } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 
 import { Dialog } from '@/components/ui/dialog';
-import { PressableOpacity, PressableScale } from 'pressto';
+import { PressableScale } from 'pressto';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
@@ -38,12 +45,13 @@ type WorkoutDayPageProps = {
   workouts: TrainingCalendarItem[];
   isLoading: boolean;
   isFutureOrToday: boolean;
+  isPast: boolean;
   onWorkoutPress: (workout: TrainingCalendarItem) => void;
   onDeleteWorkout: (workout: TrainingCalendarItem) => void;
   onAddWorkout: () => void;
   themeColors: any;
   t: (key: string) => string;
-  renderStatusIcon: (status: string | undefined) => React.ReactNode;
+  renderStatusIcon: (status: string | undefined, isPast: boolean) => React.ReactNode;
 };
 
 // Get Monday of the week containing the given date
@@ -66,28 +74,28 @@ const getSundayOfWeek = (date: Date): Date => {
 // Generate days array for a specific month (including partial weeks at edges)
 const generateMonthDays = (year: number, month: number): Date[] => {
   const days: Date[] = [];
-  
+
   // First day of the month
   const firstOfMonth = new Date(year, month, 1);
   firstOfMonth.setHours(0, 0, 0, 0);
-  
+
   // Last day of the month
   const lastOfMonth = new Date(year, month + 1, 0);
   lastOfMonth.setHours(0, 0, 0, 0);
-  
+
   // Get Monday of the week containing the first day
   const startMonday = getMondayOfWeek(firstOfMonth);
-  
+
   // Get Sunday of the week containing the last day
   const endSunday = getSundayOfWeek(lastOfMonth);
-  
+
   // Generate all days from startMonday to endSunday
   let current = new Date(startMonday);
   while (current.getTime() <= endSunday.getTime()) {
     days.push(new Date(current));
     current.setDate(current.getDate() + 1);
   }
-  
+
   return days;
 };
 
@@ -98,6 +106,7 @@ const WorkoutDayPage = React.memo(
     workouts,
     isLoading,
     isFutureOrToday,
+    isPast,
     onWorkoutPress,
     onDeleteWorkout,
     onAddWorkout,
@@ -106,11 +115,7 @@ const WorkoutDayPage = React.memo(
     renderStatusIcon,
   }: WorkoutDayPageProps) => {
     if (isLoading) {
-      return (
-        <View style={pageStyles.loadingContainer}>
-          <ActivityIndicator size="large" color={themeColors.primary} />
-        </View>
-      );
+      return <WorkoutCardSkeleton themeColors={themeColors} />;
     }
 
     if (!workouts || workouts.length === 0) {
@@ -147,7 +152,7 @@ const WorkoutDayPage = React.memo(
               <View style={pageStyles.workoutHeader}>
                 <View style={pageStyles.workoutHeaderLeft}>
                   <View style={pageStyles.statusIconContainer}>
-                    {renderStatusIcon(workout.completedSummary?.status)}
+                    {renderStatusIcon(workout.completedSummary?.status, isPast)}
                   </View>
                   <View style={pageStyles.workoutInfo}>
                     <Text style={[pageStyles.workoutName, { color: themeColors.text }]} numberOfLines={1}>
@@ -192,12 +197,6 @@ const WorkoutDayPage = React.memo(
 
 // Styles for WorkoutDayPage
 const pageStyles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
@@ -258,7 +257,6 @@ const pageStyles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginHorizontal: 16,
   },
   exerciseListContainer: {
     paddingHorizontal: 16,
@@ -273,12 +271,225 @@ const pageStyles = StyleSheet.create({
   },
 });
 
+// Skeleton for workout card content (used when loading day content)
+type WorkoutCardSkeletonProps = {
+  themeColors: any;
+};
+
+const WorkoutCardSkeleton = React.memo(({ themeColors }: WorkoutCardSkeletonProps) => {
+  const opacity = useSharedValue(0.3);
+
+  useEffect(() => {
+    opacity.value = withRepeat(
+      withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return (
+    <View style={skeletonStyles.workoutCardContainer}>
+      <Card style={skeletonStyles.workoutCard}>
+        {/* Header: status icon + title */}
+        <View style={skeletonStyles.cardHeader}>
+          <Animated.View
+            style={[
+              skeletonStyles.statusIcon,
+              { backgroundColor: themeColors.border },
+              animatedStyle,
+            ]}
+          />
+          <Animated.View
+            style={[
+              skeletonStyles.workoutTitle,
+              { backgroundColor: themeColors.border },
+              animatedStyle,
+            ]}
+          />
+        </View>
+
+        {/* Divider */}
+        <View style={[skeletonStyles.divider, { backgroundColor: themeColors.border }]} />
+
+        {/* Exercise rows */}
+        <View style={skeletonStyles.exerciseList}>
+          {Array.from({ length: 5 }).map((_, index) => (
+            <View key={index} style={skeletonStyles.exerciseRow}>
+              <Animated.View
+                style={[
+                  skeletonStyles.exerciseNumber,
+                  { backgroundColor: themeColors.border },
+                  animatedStyle,
+                ]}
+              />
+              <Animated.View
+                style={[
+                  skeletonStyles.exerciseName,
+                  { backgroundColor: themeColors.border, width: `${50 + (index % 3) * 15}%` },
+                  animatedStyle,
+                ]}
+              />
+            </View>
+          ))}
+        </View>
+      </Card>
+    </View>
+  );
+});
+
+// Full training skeleton (calendar + workout card)
+type TrainingSkeletonProps = {
+  themeColors: any;
+};
+
+const TrainingSkeleton = React.memo(({ themeColors }: TrainingSkeletonProps) => {
+  const opacity = useSharedValue(0.3);
+
+  useEffect(() => {
+    opacity.value = withRepeat(
+      withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return (
+    <View style={skeletonStyles.container}>
+      {/* Calendar skeleton - single card bar */}
+      <View style={skeletonStyles.calendarRow}>
+        <Card style={skeletonStyles.calendarCard} />
+      </View>
+
+      {/* Workout card skeleton */}
+      <View style={skeletonStyles.workoutCardContainer}>
+        <Card style={skeletonStyles.workoutCard}>
+          {/* Header: status icon + title */}
+          <View style={skeletonStyles.cardHeader}>
+            <Animated.View
+              style={[
+                skeletonStyles.statusIcon,
+                { backgroundColor: themeColors.border },
+                animatedStyle,
+              ]}
+            />
+            <Animated.View
+              style={[
+                skeletonStyles.workoutTitle,
+                { backgroundColor: themeColors.border },
+                animatedStyle,
+              ]}
+            />
+          </View>
+
+          {/* Divider */}
+          <View style={[skeletonStyles.divider, { backgroundColor: themeColors.border }]} />
+
+          {/* Exercise rows */}
+          <View style={skeletonStyles.exerciseList}>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <View key={index} style={skeletonStyles.exerciseRow}>
+                <Animated.View
+                  style={[
+                    skeletonStyles.exerciseNumber,
+                    { backgroundColor: themeColors.border },
+                    animatedStyle,
+                  ]}
+                />
+                <Animated.View
+                  style={[
+                    skeletonStyles.exerciseName,
+                    { backgroundColor: themeColors.border, width: `${50 + (index % 3) * 15}%` },
+                    animatedStyle,
+                  ]}
+                />
+              </View>
+            ))}
+          </View>
+        </Card>
+      </View>
+    </View>
+  );
+});
+
+const skeletonStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  calendarRow: {
+    paddingHorizontal: 16,
+    marginTop: 4,
+    height: 90,
+    justifyContent: 'center',
+  },
+  calendarCard: {
+    width: '100%',
+    height: 76,
+    marginBottom: 0,
+  },
+  workoutCardContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  workoutCard: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    marginBottom: 0,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
+  },
+  statusIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  workoutTitle: {
+    flex: 1,
+    height: 20,
+    borderRadius: 4,
+    maxWidth: '50%',
+  },
+  divider: {
+    height: 1,
+    opacity: 0.3,
+  },
+  exerciseList: {
+    padding: 16,
+    gap: 12,
+  },
+  exerciseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  exerciseNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+  },
+  exerciseName: {
+    height: 16,
+    borderRadius: 4,
+  },
+});
+
 const SELECTED_DATE_KEY = '@select_date_modal_selected_date_client';
 
 export default function ClientTrainingScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { primaryColor, colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const iconColor = themeColors.text;
 
@@ -465,6 +676,29 @@ export default function ClientTrainingScreen() {
     return `${monthName} ${yearShort}`;
   }, [currentMonth, currentYear, t]);
 
+  // Compute workout status by date for calendar coloring
+  const workoutStatusByDate = useMemo(() => {
+    const statusMap: Record<string, 'all_not_started' | 'has_in_progress' | 'all_completed'> = {};
+
+    Object.entries(trainingCalendar).forEach(([dateKey, workoutsObj]) => {
+      if (!workoutsObj) return;
+      const workouts = Object.values(workoutsObj);
+      if (workouts.length === 0) return;
+
+      const statuses = workouts.map((w: any) => w.completedSummary?.status);
+
+      if (statuses.some((s) => s === 'in_progress')) {
+        statusMap[dateKey] = 'has_in_progress';
+      } else if (statuses.every((s) => s === 'completed')) {
+        statusMap[dateKey] = 'all_completed';
+      } else {
+        statusMap[dateKey] = 'all_not_started';
+      }
+    });
+
+    return statusMap;
+  }, [trainingCalendar]);
+
   const handleBackPress = useCallback(() => {
     router.back();
   }, [router]);
@@ -535,14 +769,17 @@ export default function ClientTrainingScreen() {
   }, [workoutToDelete, deleteMutation]);
 
   // Render status icon based on workout status
-  const renderStatusIcon = useCallback((status: string | undefined) => {
+  const renderStatusIcon = useCallback((status: string | undefined, isPast: boolean) => {
     switch (status) {
       case 'completed':
         return <CircleCheck {...({ size: 20, color: '#22C55E' } as any)} />;
       case 'in_progress':
         return <CircleDashed {...({ size: 20, color: '#F59E0B' } as any)} />;
-      default:
-        return <CircleX {...({ size: 20, color: themeColors.mutedText } as any)} />;
+      default: {
+        // Use red for not_started on past dates, muted otherwise
+        const notStartedColor = isPast ? '#E85C4A' : themeColors.mutedText;
+        return <CircleX {...({ size: 20, color: notStartedColor } as any)} />;
+      }
     }
   }, [themeColors.mutedText]);
 
@@ -586,6 +823,7 @@ export default function ClientTrainingScreen() {
               selectedDate={selectedDate}
               onDateSelect={handleDateSelect}
               onSwipe={handleCalendarSwipe}
+              workoutStatusByDate={workoutStatusByDate}
             />
           </View>
 
@@ -609,6 +847,7 @@ export default function ClientTrainingScreen() {
                   }))
                 : [];
               const isFutureOrToday = date.getTime() >= todayTimestamp;
+              const isPast = date.getTime() < todayTimestamp;
               const isCurrentPageLoading = isLoadingTraining && selectedDate.getTime() === date.getTime();
 
               return (
@@ -618,6 +857,7 @@ export default function ClientTrainingScreen() {
                     workouts={dayWorkouts}
                     isLoading={isCurrentPageLoading}
                     isFutureOrToday={isFutureOrToday}
+                    isPast={isPast}
                     onWorkoutPress={handleWorkoutPress}
                     onDeleteWorkout={handleDeleteWorkout}
                     onAddWorkout={handleAddWorkout}
@@ -631,9 +871,7 @@ export default function ClientTrainingScreen() {
           </PagerView>
         </>
       ) : (
-        <View style={[styles.loadingContainer, { backgroundColor: themeColors.backgroundPrimary }]}>
-          <ActivityIndicator size="large" color={primaryColor} />
-        </View>
+        <TrainingSkeleton themeColors={themeColors} />
       )}
 
       <Dialog
@@ -712,10 +950,5 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 44,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

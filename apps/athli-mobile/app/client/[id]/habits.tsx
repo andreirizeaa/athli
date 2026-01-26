@@ -1,8 +1,9 @@
 import React, { useRef, useCallback, useState, useMemo } from 'react';
-import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus, ClipboardCheck, CheckCircle, ChevronRight } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
+import SquircleView from 'react-native-fast-squircle';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
@@ -201,14 +202,14 @@ export default function ClientHabitsScreen() {
                   >
                     <PressableScale onPress={() => handleHabitPress(habit.assignment_id || habit.id)}>
                       <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
-                        <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                        <SquircleView cornerSmoothing={1} style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
                           <PlatformIcon
                             sf="checkmark.circle.fill"
                             IconComponent={CheckCircle}
                             size={24}
                             color={themeColors.text}
                           />
-                        </View>
+                        </SquircleView>
                         <View style={styles.textContent}>
                           <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
                             {habit.name}

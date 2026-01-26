@@ -1162,7 +1162,11 @@ export const ProgramBuilder = ({
         rating: payload.post?.rating || null,
       },
       pre: {
-        readiness: payload.pre?.readiness || null,
+        sleep: payload.pre?.sleep || null,
+        mood: payload.pre?.mood || null,
+        energy: payload.pre?.energy || null,
+        stress: payload.pre?.stress || null,
+        soreness: payload.pre?.soreness || null,
       }
     };
 
@@ -1221,7 +1225,11 @@ export const ProgramBuilder = ({
             rating: payload.post?.rating || null,
           },
           pre: {
-            readiness: payload.pre?.readiness || null,
+            sleep: payload.pre?.sleep || null,
+            mood: payload.pre?.mood || null,
+            energy: payload.pre?.energy || null,
+            stress: payload.pre?.stress || null,
+            soreness: payload.pre?.soreness || null,
           }
         };
 
@@ -1349,7 +1357,7 @@ export const ProgramBuilder = ({
       difficulty: workout.difficulty || 'intermediate',
       equipment: Array.isArray(workout.equipment) ? workout.equipment : (workout.equipment ? [workout.equipment] : []),
       totalExercises: workout.totalExercises || 0,
-      pre: workout.pre || (workout as any).workout_data?.pre || { readiness: null },
+      pre: workout.pre || (workout as any).workout_data?.pre || { sleep: null, mood: null, energy: null, stress: null, soreness: null },
       post: workout.post || (workout as any).workout_data?.post || { rating: null, intensity: null, sessionComments: '' },
       completedSummary: workout.completedSummary || (workout as any).workout_data?.completedSummary || (workout as any).workout_data?.meta || { status: 'not_started', startedAt: null, completedAt: null, totalDurationMin: null, totalWeightLifted: null },
     });

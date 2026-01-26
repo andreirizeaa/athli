@@ -1,13 +1,14 @@
-import { StyleSheet, View, Text, Platform, Image, ImageBackground } from 'react-native';
+import { StyleSheet, View, Text, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { PressableScale, PressableOpacity } from 'pressto';
+import { PressableOpacity } from 'pressto';
 import { Ionicons } from '@expo/vector-icons';
 
-import SquircleView from 'react-native-fast-squircle';
-
 import { Dialog } from '@/components/ui/dialog';
+import { FilledButton } from '@/components/ui/buttons/filled-button';
+import { OutlinedButton } from '@/components/ui/buttons/outlined-button';
 import { typography } from '@/constants/typography';
 import { useTranslations, useCoachProfileStore, useClientProfileStore, useAppView, useThemePreference, useColorScheme } from '@/stores';
 import { AuthLoadingOverlay } from '@/components/auth/auth-loading-overlay';
@@ -106,11 +107,14 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <ImageBackground
-      source={backgroundImage}
-      style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}
-      resizeMode="cover"
-    >
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <Image
+        source={backgroundImage}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        priority="high"
+        cachePolicy="memory-disk"
+      />
       <AuthLoadingOverlay visible={isLoading} />
 
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -122,59 +126,55 @@ export default function WelcomeScreen() {
           </Text>
           <View style={styles.buttonContainer}>
             {Platform.OS === 'ios' && (
-              <PressableScale
-                style={styles.buttonWrapper}
+              <FilledButton
+                label={t('auth.continueWithApple')}
                 onPress={handleAppleSignIn}
-                enabled={!isLoading}
-              >
-                <SquircleView style={[styles.filledButton, { backgroundColor: themeColors.text }]} cornerSmoothing={1}>
-                  <View style={styles.buttonIconLeft}>
-                    <Image
-                      source={require('@/assets/icons/apple.png')}
-                      style={[styles.icon, { tintColor: themeColors.backgroundPrimary }]}
-                      resizeMode="contain"
-                    />
-                  </View>
-                  <Text style={[styles.filledButtonText, { color: themeColors.backgroundPrimary }]}>
-                    {t('auth.continueWithApple')}
-                  </Text>
-                </SquircleView>
-              </PressableScale>
+                disabled={isLoading}
+                backgroundColor={themeColors.text}
+                textColor={themeColors.backgroundPrimary}
+                size="lg"
+                icon={
+                  <Image
+                    source={require('@/assets/icons/apple.png')}
+                    style={styles.icon}
+                    tintColor={themeColors.backgroundPrimary}
+                    contentFit="contain"
+                  />
+                }
+                style={styles.authButton}
+                textStyle={styles.authButtonText}
+              />
             )}
 
-            <PressableScale
-              style={styles.buttonWrapper}
+            <FilledButton
+              label={t('auth.continueWithGoogle')}
               onPress={handleGoogleSignIn}
-              enabled={!isLoading}
-            >
-              <SquircleView style={[styles.filledButton, { backgroundColor: themeColors.text }]} cornerSmoothing={1}>
-                <View style={styles.buttonIconLeft}>
-                  <Image
-                    source={require('@/assets/icons/google.png')}
-                    style={styles.icon}
-                    resizeMode="contain"
-                  />
-                </View>
-                <Text style={[styles.filledButtonText, { color: themeColors.backgroundPrimary }]}>
-                  {t('auth.continueWithGoogle')}
-                </Text>
-              </SquircleView>
-            </PressableScale>
+              disabled={isLoading}
+              backgroundColor={themeColors.text}
+              textColor={themeColors.backgroundPrimary}
+              size="lg"
+              icon={
+                <Image
+                  source={require('@/assets/icons/google.png')}
+                  style={styles.icon}
+                  contentFit="contain"
+                />
+              }
+              style={styles.authButton}
+              textStyle={styles.authButtonText}
+            />
 
-            <PressableScale
-              style={styles.buttonWrapper}
+            <OutlinedButton
+              label={t('auth.continueWithEmail')}
               onPress={handleEmailSignIn}
-              enabled={!isLoading}
-            >
-              <SquircleView style={[styles.outlinedButton, { borderColor: themeColors.text }]} cornerSmoothing={1}>
-                <View style={styles.buttonIconLeft}>
-                  <Ionicons name="mail-outline" size={24} color={themeColors.text} />
-                </View>
-                <Text style={[styles.outlinedButtonText, { color: themeColors.text }]}>
-                  {t('auth.continueWithEmail')}
-                </Text>
-              </SquircleView>
-            </PressableScale>
+              disabled={isLoading}
+              borderColor={themeColors.text}
+              textColor={themeColors.text}
+              size="lg"
+              icon={<Ionicons name="mail-outline" size={24} color={themeColors.text} />}
+              style={styles.authButton}
+              textStyle={styles.authButtonText}
+            />
           </View>
 
           <View style={styles.termsContainer}>
@@ -212,7 +212,7 @@ export default function WelcomeScreen() {
           },
         ]}
       />
-    </ImageBackground>
+    </View>
   );
 }
 
@@ -242,41 +242,12 @@ const styles = StyleSheet.create({
   buttonContainer: {
     gap: 12,
   },
-  buttonWrapper: {
-    height: 55,
+  authButton: {
     borderRadius: 28,
   },
-  filledButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 28,
-  },
-  filledButtonText: {
+  authButtonText: {
     ...typography.h6,
     fontWeight: '700',
-  },
-  outlinedButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 28,
-    borderWidth: 1,
-    backgroundColor: 'transparent',
-  },
-  outlinedButtonText: {
-    ...typography.h6,
-    fontWeight: '700',
-  },
-  buttonIconLeft: {
-    position: 'absolute',
-    left: 20,
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   icon: {
     width: 24,
