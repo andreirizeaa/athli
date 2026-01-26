@@ -1187,6 +1187,26 @@ function RootLayoutNav() {
               }),
             }}
           />
+          <Stack.Screen
+            name="modals/training/workout-session-modal"
+            options={{
+              presentation: 'card',
+              headerShown: false,
+              animation: 'slide_from_bottom',
+              animationDuration: 200,
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="modals/training/workout-review-modal"
+            options={{
+              presentation: 'card',
+              headerShown: false,
+              animation: 'slide_from_bottom',
+              animationDuration: 200,
+              gestureEnabled: false,
+            }}
+          />
           {/* Profile is now a tab, so profile/profile route is no longer needed */}
           {/* <Stack.Screen
           name="profile/profile"

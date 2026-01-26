@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
   },
   exerciseName: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '500',
     flex: 1,
   },
   connectorLine: {

@@ -96,7 +96,7 @@ export const assignWorkout = async (data: AssignWorkoutData): Promise<void> => {
     headers['x-coach-id'] = data.coachId;
   }
 
-  const { clientId, coachId, ...payload } = data;
+  const { clientId, ...payload } = data;  // Keep coachId in payload
 
   await apiFetch('/client/trainings/assign-workout', {
     method: 'POST',
