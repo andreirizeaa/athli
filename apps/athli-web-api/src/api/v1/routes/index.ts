@@ -10,6 +10,7 @@ import { coachClientRouter } from '../client/routes/coach-clients.routes';
 import { exercisesRouter } from '../exercises/exercises.routes';
 import { settingsRouter } from '../settings/settings.routes';
 import searchRouter from '../search';
+import { featureRequestsRouter } from '../feature-requests/feature-requests.routes';
 
 export const v1Router = Router();
 
@@ -26,3 +27,4 @@ v1Router.use('/coach', coachRouter);
 v1Router.use('/exercises', exercisesRouter);
 v1Router.use('/settings', settingsRouter);
 v1Router.use('/search', searchRouter);
+v1Router.use('/feature-requests', featureRequestsRouter);
