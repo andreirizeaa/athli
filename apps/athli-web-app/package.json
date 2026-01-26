@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "next dev -p 3001",
+    "dev:data": "NEXT_PUBLIC_API_URL=http://172.20.10.2:3002 next dev -p 3001 -H 0.0.0.0",
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "eslint .",
