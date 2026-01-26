@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Dumbbell, Play, UserPlus, Trash2 } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
+import SquircleView from 'react-native-fast-squircle';
 
 import { Image } from 'expo-image';
 import { FlashList } from '@shopify/flash-list';
@@ -307,14 +308,14 @@ export const ExercisesTab = () => {
                       </View>
                     </View>
                   ) : (
-                    <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                    <SquircleView cornerSmoothing={1} style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
                       <PlatformIcon
                         sf="figure.strengthtraining.traditional"
                         IconComponent={Dumbbell}
                         size={24}
                         color={themeColors.text}
                       />
-                    </View>
+                    </SquircleView>
                   )}
                 </PressableScale>
 

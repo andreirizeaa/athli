@@ -1,4 +1,5 @@
-import { StyleSheet, View, Text, Platform, Image, ImageBackground } from 'react-native';
+import { StyleSheet, View, Text, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -106,11 +107,14 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <ImageBackground
-      source={backgroundImage}
-      style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}
-      resizeMode="cover"
-    >
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <Image
+        source={backgroundImage}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        priority="high"
+        cachePolicy="memory-disk"
+      />
       <AuthLoadingOverlay visible={isLoading} />
 
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -131,8 +135,9 @@ export default function WelcomeScreen() {
                   <View style={styles.buttonIconLeft}>
                     <Image
                       source={require('@/assets/icons/apple.png')}
-                      style={[styles.icon, { tintColor: themeColors.backgroundPrimary }]}
-                      resizeMode="contain"
+                      style={styles.icon}
+                      tintColor={themeColors.backgroundPrimary}
+                      contentFit="contain"
                     />
                   </View>
                   <Text style={[styles.filledButtonText, { color: themeColors.backgroundPrimary }]}>
@@ -152,7 +157,7 @@ export default function WelcomeScreen() {
                   <Image
                     source={require('@/assets/icons/google.png')}
                     style={styles.icon}
-                    resizeMode="contain"
+                    contentFit="contain"
                   />
                 </View>
                 <Text style={[styles.filledButtonText, { color: themeColors.backgroundPrimary }]}>
@@ -212,7 +217,7 @@ export default function WelcomeScreen() {
           },
         ]}
       />
-    </ImageBackground>
+    </View>
   );
 }
 

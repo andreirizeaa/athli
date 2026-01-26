@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, Keyboard, TouchableWithoutFeedback, Linking, ImageBackground } from 'react-native';
+import { StyleSheet, View, Text, Keyboard, TouchableWithoutFeedback, Linking } from 'react-native';
+import { Image } from 'expo-image';
 
 import { Dialog } from '@/components/ui/dialog';
 import { useRouter } from 'expo-router';
@@ -163,11 +164,14 @@ export default function EmailSignInScreen() {
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <ImageBackground
-                source={backgroundImage}
-                style={[styles.container, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top }]}
-                resizeMode="cover"
-            >
+            <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top }]}>
+                <Image
+                    source={backgroundImage}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="cover"
+                    priority="high"
+                    cachePolicy="memory-disk"
+                />
                 <AuthLoadingOverlay visible={isLoading} />
 
                 <View style={styles.header}>
@@ -253,7 +257,7 @@ export default function EmailSignInScreen() {
                         },
                     ]}
                 />
-            </ImageBackground>
+            </View>
         </TouchableWithoutFeedback>
     );
 }

@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from 'react-native';
-import { PressableOpacity, PressableScale } from 'pressto';
+import { PressableScale } from 'pressto';
 import { useRouter, useFocusEffect } from 'expo-router';
-import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
 import { Storage } from '@/lib/storage';
 import { ChevronDown, CircleX, CircleDashed, CircleCheck, Dumbbell } from 'lucide-react-native';
-import { haptics } from '@/utils/haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
 
+import { haptics } from '@/utils/haptics';
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
@@ -30,6 +31,7 @@ type WorkoutDayPageProps = {
   themeColors: any;
   t: (key: string) => string;
   renderStatusIcon: (status: string | undefined) => React.ReactNode;
+  paddingBottom: number;
 };
 
 // Get Monday of the week containing the given date
@@ -52,34 +54,28 @@ const getSundayOfWeek = (date: Date): Date => {
 // Generate days array for a specific month (including partial weeks at edges)
 const generateMonthDays = (year: number, month: number): Date[] => {
   const days: Date[] = [];
-  
-  // First day of the month
+
   const firstOfMonth = new Date(year, month, 1);
   firstOfMonth.setHours(0, 0, 0, 0);
-  
-  // Last day of the month
+
   const lastOfMonth = new Date(year, month + 1, 0);
   lastOfMonth.setHours(0, 0, 0, 0);
-  
-  // Get Monday of the week containing the first day
+
   const startMonday = getMondayOfWeek(firstOfMonth);
-  
-  // Get Sunday of the week containing the last day
   const endSunday = getSundayOfWeek(lastOfMonth);
-  
-  // Generate all days from startMonday to endSunday
+
   let current = new Date(startMonday);
   while (current.getTime() <= endSunday.getTime()) {
     days.push(new Date(current));
     current.setDate(current.getDate() + 1);
   }
-  
+
   return days;
 };
 
 // Memoized component for each day's workout content
 const WorkoutDayPage = React.memo(
-  ({ date, workouts, isLoading, onWorkoutPress, themeColors, t, renderStatusIcon }: WorkoutDayPageProps) => {
+  ({ date, workouts, isLoading, onWorkoutPress, themeColors, t, renderStatusIcon, paddingBottom }: WorkoutDayPageProps) => {
     if (isLoading) {
       return (
         <View style={pageStyles.loadingContainer}>
@@ -105,9 +101,8 @@ const WorkoutDayPage = React.memo(
     return (
       <ScrollView
         style={pageStyles.workoutList}
-        contentContainerStyle={pageStyles.workoutListContent}
+        contentContainerStyle={[pageStyles.workoutListContent, { paddingBottom }]}
         showsVerticalScrollIndicator={false}
-        keyboardDismissMode="on-drag"
       >
         {workouts.map((workout, index) => (
           <PressableScale key={workout.id || index} onPress={() => onWorkoutPress(workout)}>
@@ -176,7 +171,6 @@ const pageStyles = StyleSheet.create({
   workoutListContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 40,
     gap: 12,
   },
   workoutCard: {
@@ -225,18 +219,12 @@ export default function TrainingScreen() {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const insets = useSafeAreaInsets();
 
   // Get profile data from store
   const profile = useClientProfileStore((state) => state.profile);
   const clientId = profile?.client_id;
   const coachId = profile?.coach_id;
-
-  // Pager ref
-  const pagerRef = useRef<PagerView>(null);
-
-  // Timestamp of last programmatic navigation
-  const lastProgrammaticNavTimestamp = useRef<number>(0);
-  const PROGRAMMATIC_NAV_IGNORE_DURATION = 500;
 
   // Training data state
   const [trainingCalendar, setTrainingCalendar] = useState<TrainingCalendarSchema>({});
@@ -245,6 +233,13 @@ export default function TrainingScreen() {
     startDate: string;
     endDate: string;
   } | null>(null);
+
+  // Pager ref
+  const pagerRef = useRef<PagerView>(null);
+
+  // Timestamp of last programmatic navigation
+  const lastProgrammaticNavTimestamp = useRef<number>(0);
+  const PROGRAMMATIC_NAV_IGNORE_DURATION = 500;
 
   // Selected date - source of truth for which month to display
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
@@ -270,7 +265,7 @@ export default function TrainingScreen() {
         return i;
       }
     }
-    // If not found (shouldn't happen), default to first day of month
+    // If not found, default to first day of month
     const firstOfMonth = new Date(currentYear, currentMonth, 1);
     firstOfMonth.setHours(0, 0, 0, 0);
     const firstOfMonthTime = firstOfMonth.getTime();
@@ -386,7 +381,7 @@ export default function TrainingScreen() {
     // User swiped - provide haptic feedback
     haptics.selection();
 
-    // Update selected date (this won't change the month since we're within the same month's range)
+    // Update selected date
     setSelectedDate(pageDate);
   }, [daysArray]);
 
@@ -490,10 +485,7 @@ export default function TrainingScreen() {
                   templateId: w.id,
                 }))
               : [];
-
-            // Only show loading indicator on the currently selected date
-            const isCurrentPageLoading =
-              isLoadingTraining && selectedDate.getTime() === date.getTime();
+            const isCurrentPageLoading = isLoadingTraining && selectedDate.getTime() === date.getTime();
 
             return (
               <View key={`day-${dateKey}`} style={styles.pageContainer} collapsable={false}>
@@ -505,6 +497,7 @@ export default function TrainingScreen() {
                   themeColors={themeColors}
                   t={t}
                   renderStatusIcon={renderStatusIcon}
+                  paddingBottom={insets.bottom + 120}
                 />
               </View>
             );
@@ -518,7 +511,6 @@ export default function TrainingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 16,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -527,6 +519,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     width: '100%',
     paddingHorizontal: 16,
+    paddingTop: 16,
   },
   headerBottomRow: {
     width: '100%',
