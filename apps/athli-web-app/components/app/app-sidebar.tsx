@@ -21,7 +21,6 @@ import {
   ClipboardCheck,
   BarChart3,
   Rocket,
-  Gift,
   WandSparkles,
 } from 'lucide-react';
 import {
@@ -310,18 +309,6 @@ export function AppSidebar() {
               <Link href="/settings">
                 <Settings className="shrink-0" />
                 {!isCollapsed && <span>{t('sidebar.settings.label') || 'Settings'}</span>}
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              isActive={activePath === '/refer-and-earn'}
-              className="text-sm"
-            >
-              <Link href="/refer-and-earn">
-                <Gift className="shrink-0" />
-                {!isCollapsed && <span>{t('sidebar.links.referAndEarn')}</span>}
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
