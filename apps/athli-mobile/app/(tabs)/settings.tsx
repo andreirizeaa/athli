@@ -73,6 +73,7 @@ export default function SettingsScreen() {
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     const storedTime = Storage.getItem(LAST_SYNC_KEY);
@@ -155,12 +156,14 @@ export default function SettingsScreen() {
   };
 
   const handleLogoutConfirm = async () => {
+    setIsLoggingOut(true);
     try {
       await signOut();
       setShowLogoutDialog(false);
       router.replace('/welcome');
     } catch (error) {
       setShowLogoutDialog(false);
+      setIsLoggingOut(false);
     }
   };
 
@@ -309,6 +312,7 @@ export default function SettingsScreen() {
           label: t('profile.logout'),
           onPress: handleLogoutConfirm,
           variant: 'destructive',
+          loading: isLoggingOut,
         },
       ]}
     />

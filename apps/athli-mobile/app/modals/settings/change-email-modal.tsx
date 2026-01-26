@@ -163,17 +163,17 @@ export default function ChangeEmailModal() {
         <PressableScale
           style={[
             styles.primaryButton,
-            { backgroundColor: '#FFFFFF' },
+            { backgroundColor: themeColors.primary },
           ]}
           onPress={isUpdating ? undefined : handleUpdateEmail}
         >
           {isUpdating ? (
-            <ActivityIndicator size="small" color="#000000" />
+            <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
             <Text
               style={[
                 styles.primaryButtonText,
-                { color: '#000000' },
+                { color: '#FFFFFF' },
               ]}
             >
               {t('profile.emailChange.updateEmail')}

@@ -273,17 +273,18 @@ export default function FeaturesPage() {
   return (
     <div className="h-full w-full flex">
       {/* Left Sidebar - Feature Request List */}
-      <div className="w-[320px] border-r bg-background flex flex-col">
+      <div className="w-[400px] border-r bg-background flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Feature Requests</h2>
-            <Button size="sm" onClick={() => setIsAddRequestOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" />
-              New
-            </Button>
-          </div>
+        <div className="px-4 my-2 flex items-center justify-between">
+          <h2 className="text-[22px] font-semibold">Feature Requests</h2>
+          <Button size="sm" onClick={() => setIsAddRequestOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            New
+          </Button>
+        </div>
 
+        {/* Search & Filters */}
+        <div className="px-4 pb-3 space-y-3 border-b">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -329,18 +330,25 @@ export default function FeaturesPage() {
               {searchQuery ? 'No requests found' : 'No feature requests yet'}
             </div>
           ) : (
-            <div className="p-2 space-y-1">
+            <div>
               {filteredRequests.map((request) => (
-                <button
+                <div
                   key={request.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => loadRequestDetails(request.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      loadRequestDetails(request.id);
+                    }
+                  }}
                   className={cn(
-                    'w-full text-left p-3 rounded-lg transition-colors hover:bg-accent',
+                    'w-full text-left px-4 py-3 border-b transition-colors hover:bg-accent cursor-pointer',
                     selectedRequest?.id === request.id && 'bg-accent'
                   )}
                 >
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 items-start">
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       {/* User row */}
@@ -359,20 +367,36 @@ export default function FeaturesPage() {
                       </div>
 
                       {/* Title */}
-                      <p className="text-sm font-medium line-clamp-2 mb-1">
+                      <p className="text-sm font-medium line-clamp-2">
                         {request.title}
                       </p>
 
-                      {/* Status + Meta */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {getStatusBadge(request.status)}
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <MessageCircle className="h-3 w-3" />
+                      {/* Description preview */}
+                      {request.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                          {request.description}
+                        </p>
+                      )}
+
+                      {/* Status pill (if exists) */}
+                      {request.status && (
+                        <div className="mt-2">
+                          {getStatusBadge(request.status)}
+                        </div>
+                      )}
+
+                      {/* Meta pills row */}
+                      <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                        <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-medium border-primary/50 text-primary">
+                          {request.userType === 'coach' ? 'Coach' : 'Client'}
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-medium border-primary/50 text-primary flex items-center gap-1">
+                          <MessageCircle className="h-2.5 w-2.5" />
                           {request.replyCount}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-medium border-primary/50 text-primary">
                           {formatDate(request.createdAt)}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
 
@@ -381,17 +405,17 @@ export default function FeaturesPage() {
                       type="button"
                       onClick={(e) => handleUpvote(request, e)}
                       className={cn(
-                        'flex flex-col items-center justify-center px-2 py-1 rounded-md border min-w-[50px]',
+                        'flex flex-col items-center px-3 py-1 rounded-md border shrink-0',
                         request.hasUpvoted
                           ? 'border-primary bg-primary/5 text-primary'
-                          : 'border-border hover:border-primary/50'
+                          : 'border-muted-foreground/40 hover:border-primary/50'
                       )}
                     >
                       <ChevronUp className={cn('h-4 w-4', request.hasUpvoted && 'stroke-[3px]')} />
                       <span className="text-xs font-medium">{request.upvoteCount}</span>
                     </button>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           )}
@@ -403,7 +427,7 @@ export default function FeaturesPage() {
         {selectedRequest ? (
           <>
             {/* Detail Header */}
-            <div className="p-4 border-b flex items-center justify-between">
+            <div className="px-4 py-2 border-b flex items-center justify-between">
               <h2 className="text-lg font-semibold truncate">{selectedRequest.title}</h2>
               <div className="flex items-center gap-2">
                 {canDeleteRequest && (
@@ -426,7 +450,7 @@ export default function FeaturesPage() {
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {/* Request Card */}
               <Card>
-                <CardContent className="p-4">
+                <CardContent className="px-4">
                   <div className="flex gap-4">
                     {/* Content */}
                     <div className="flex-1">
@@ -443,33 +467,39 @@ export default function FeaturesPage() {
                         <span className="text-sm font-medium">
                           {selectedRequest.userName}
                         </span>
-                        <Badge variant="outline" className="text-xs">
-                          {selectedRequest.userType === 'coach' ? 'Coach' : 'Client'}
-                        </Badge>
                       </div>
 
                       {/* Title */}
-                      <h3 className="text-base font-semibold mb-2">
+                      <h3 className="text-base font-semibold">
                         {selectedRequest.title}
                       </h3>
 
                       {/* Description */}
                       {selectedRequest.description && (
-                        <p className="text-sm text-muted-foreground mb-3 whitespace-pre-wrap">
+                        <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">
                           {selectedRequest.description}
                         </p>
                       )}
 
-                      {/* Status + Meta */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {getStatusBadge(selectedRequest.status)}
-                        <Badge variant="outline" className="text-xs">
-                          <MessageCircle className="h-3 w-3 mr-1" />
+                      {/* Status pill (if exists) */}
+                      {selectedRequest.status && (
+                        <div className="mt-3">
+                          {getStatusBadge(selectedRequest.status)}
+                        </div>
+                      )}
+
+                      {/* Meta pills row */}
+                      <div className="flex items-center gap-1.5 flex-wrap mt-3">
+                        <Badge variant="outline" className="text-xs px-2 py-0 font-medium border-primary/50 text-primary">
+                          {selectedRequest.userType === 'coach' ? 'Coach' : 'Client'}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs px-2 py-0 font-medium border-primary/50 text-primary flex items-center gap-1">
+                          <MessageCircle className="h-3 w-3" />
                           {selectedRequest.replyCount}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
+                        <Badge variant="outline" className="text-xs px-2 py-0 font-medium border-primary/50 text-primary">
                           {formatDate(selectedRequest.createdAt)}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
 
@@ -527,7 +557,7 @@ export default function FeaturesPage() {
                 ) : (
                   sortedReplies.map((reply) => (
                     <Card key={reply.id}>
-                      <CardContent className="p-4">
+                      <CardContent className="px-4">
                         {/* User row */}
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
@@ -540,12 +570,6 @@ export default function FeaturesPage() {
                               </AvatarFallback>
                             </Avatar>
                             <span className="text-sm font-medium">{reply.userName}</span>
-                            <Badge variant="outline" className="text-xs">
-                              {reply.userType === 'coach' ? 'Coach' : 'Client'}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDate(reply.createdAt)}
-                            </span>
                           </div>
                           {reply.userId === user?.id && (
                             <Button
@@ -559,6 +583,15 @@ export default function FeaturesPage() {
                           )}
                         </div>
                         <p className="text-sm whitespace-pre-wrap">{reply.message}</p>
+                        {/* Meta pills row */}
+                        <div className="flex items-center gap-1.5 flex-wrap mt-3">
+                          <Badge variant="outline" className="text-xs px-2 py-0 font-medium border-primary/50 text-primary">
+                            {reply.userType === 'coach' ? 'Coach' : 'Client'}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs px-2 py-0 font-medium border-primary/50 text-primary">
+                            {formatDate(reply.createdAt)}
+                          </Badge>
+                        </div>
                       </CardContent>
                     </Card>
                   ))

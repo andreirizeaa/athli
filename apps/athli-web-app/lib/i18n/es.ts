@@ -528,6 +528,9 @@ export const esMessages = {
     settings: {
       label: 'Configuración',
     },
+    featureRequests: {
+      label: 'Solicitudes de funciones',
+    },
     helpAndSupport: {
       label: 'Ayuda y soporte',
     },

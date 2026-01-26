@@ -1,14 +1,7 @@
-import React, { useEffect, useCallback, useMemo } from 'react';
+import React, { useEffect, useCallback, useMemo, useRef } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
 import { PressableScale } from 'pressto';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Plus, MessageCircle, ChevronUp, User } from 'lucide-react-native';
@@ -29,6 +22,7 @@ import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { SearchBar } from '@/components/ui/search-bar';
 import { Card } from '@/components/ui/card';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { SkeletonList } from '@/components/ui/skeleton-list';
 import { haptics } from '@/utils/haptics';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 
@@ -73,6 +67,14 @@ export default function FeatureRequestsScreen() {
   const setSearchQuery = useFeatureRequestsStore((state) => state.setSearchQuery);
   const incrementPage = useFeatureRequestsStore((state) => state.incrementPage);
   const updateRequestUpvote = useFeatureRequestsStore((state) => state.updateRequestUpvote);
+
+  // List ref for scrolling
+  const listRef = useRef<FlashList<FeatureRequest>>(null);
+
+  // Scroll to top when sort changes
+  useEffect(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [sortBy]);
 
   // Filter segments for SegmentedControl
   const filterSegments = useMemo(
@@ -270,14 +272,11 @@ export default function FeatureRequestsScreen() {
   const ListEmpty = useMemo(
     () =>
       isLoading ? (
-        <View style={styles.contentContainer}>
-          <SkeletonCard themeColors={themeColors} />
-          <SkeletonCard themeColors={themeColors} />
-        </View>
+        <SkeletonList itemCount={6} />
       ) : (
         renderEmpty()
       ),
-    [isLoading, themeColors, renderEmpty]
+    [isLoading, renderEmpty]
   );
 
   const ListFooter = useMemo(
@@ -301,6 +300,7 @@ export default function FeatureRequestsScreen() {
         cachePolicy="memory-disk"
       />
       <FlashList
+        ref={listRef}
         data={sortedRequests}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
@@ -329,6 +329,7 @@ const formatDate = (dateString: string) => {
   return date.toLocaleDateString(undefined, {
     day: 'numeric',
     month: 'short',
+    year: 'numeric',
   });
 };
 
@@ -474,107 +475,6 @@ const FeatureRequestCard = React.memo(function FeatureRequestCard({
   );
 });
 
-// Skeleton Card Component
-const SkeletonCard = React.memo(function SkeletonCard({ themeColors }: { themeColors: any }) {
-  const opacity = useSharedValue(0.4);
-
-  useEffect(() => {
-    opacity.value = withRepeat(
-      withTiming(1, {
-        duration: 1000,
-        easing: Easing.inOut(Easing.ease),
-      }),
-      -1,
-      true
-    );
-  }, []);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
-  const skeletonColor = themeColors.border;
-
-  return (
-    <Card style={styles.card}>
-      <View style={styles.cardRow}>
-        {/* Left content section */}
-        <View style={styles.cardContent}>
-          {/* User row skeleton */}
-          <View style={styles.userRow}>
-            <Animated.View
-              style={[
-                styles.skeletonAvatar,
-                { backgroundColor: skeletonColor },
-                animatedStyle,
-              ]}
-            />
-            <Animated.View
-              style={[
-                styles.skeletonUserName,
-                { backgroundColor: skeletonColor },
-                animatedStyle,
-              ]}
-            />
-          </View>
-
-          {/* Title skeleton */}
-          <Animated.View
-            style={[
-              styles.skeletonTitle,
-              { backgroundColor: skeletonColor },
-              animatedStyle,
-            ]}
-          />
-
-          {/* Description skeleton */}
-          <Animated.View
-            style={[
-              styles.skeletonDescription,
-              { backgroundColor: skeletonColor },
-              animatedStyle,
-            ]}
-          />
-
-          {/* Bottom row skeleton */}
-          <View style={styles.bottomRow}>
-            <Animated.View
-              style={[
-                styles.skeletonPill,
-                { backgroundColor: skeletonColor },
-                animatedStyle,
-              ]}
-            />
-            <Animated.View
-              style={[
-                styles.skeletonPill,
-                { backgroundColor: skeletonColor },
-                animatedStyle,
-              ]}
-            />
-            <Animated.View
-              style={[
-                styles.skeletonPill,
-                { backgroundColor: skeletonColor },
-                animatedStyle,
-              ]}
-            />
-          </View>
-        </View>
-
-        {/* Right upvote section skeleton */}
-        <Animated.View
-          style={[
-            styles.skeletonUpvote,
-            { backgroundColor: skeletonColor },
-            animatedStyle,
-          ]}
-        />
-      </View>
-    </Card>
-  );
-});
-
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -599,10 +499,6 @@ const styles = StyleSheet.create({
   filterContainer: {
     marginTop: 12,
     marginBottom: 16,
-  },
-  contentContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
   },
   emptyContainer: {
     justifyContent: 'center',
@@ -715,39 +611,5 @@ const styles = StyleSheet.create({
   upvoteCount: {
     ...typography.p2,
     marginTop: 2,
-  },
-  // Skeleton styles
-  skeletonAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
-  skeletonUserName: {
-    height: 14,
-    width: 80,
-    borderRadius: 7,
-    marginLeft: 8,
-  },
-  skeletonTitle: {
-    height: 18,
-    width: '85%',
-    borderRadius: 9,
-    marginBottom: 8,
-  },
-  skeletonDescription: {
-    height: 14,
-    width: '60%',
-    borderRadius: 7,
-    marginBottom: 8,
-  },
-  skeletonPill: {
-    height: 26,
-    width: 50,
-    borderRadius: 10,
-  },
-  skeletonUpvote: {
-    width: 70,
-    height: 70,
-    borderRadius: 16,
   },
 });
