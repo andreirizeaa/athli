@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, StyleSheet, Text, Platform, Keyboard, TouchableWithoutFeedback, Alert, ActionSheetIOS } from 'react-native';
+import { View, StyleSheet, Text, Platform, Keyboard, TouchableWithoutFeedback, ActionSheetIOS } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
@@ -27,6 +27,7 @@ import {
 import { COUNTRIES } from '@/components/ui/form-inputs/countries-data';
 import { getClients, updateClient, type Client, type UpdateClientData } from '@/services/client-service';
 import { hexToRgba } from '@/utils/colorUtils';
+import { Dialog } from '@/components/ui/dialog';
 
 // Helper to find country by name
 const findCountryByName = (name: string): Country | null => {
@@ -94,6 +95,12 @@ export default function EditClientDetailsModal() {
   const [isLoading, setIsLoading] = useState(true);
   const [originalValues, setOriginalValues] = useState<OriginalValues | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+  const [showPermissionErrorDialog, setShowPermissionErrorDialog] = useState(false);
+  const [permissionErrorMessage, setPermissionErrorMessage] = useState('');
+  const [showProfilePictureDialog, setShowProfilePictureDialog] = useState(false);
   const queryClient = useQueryClient();
 
   // TanStack Query mutation for updating client
@@ -114,12 +121,9 @@ export default function EditClientDetailsModal() {
       // Error haptic feedback
       haptics.error();
 
-      // Show error alert
-      Alert.alert(
-        t('general.error'),
-        error.message || t('clients.editClientModal.errorUpdating'),
-        [{ text: t('general.ok') }]
-      );
+      // Show error dialog
+      setErrorMessage(error.message || t('clients.editClientModal.errorUpdating'));
+      setShowErrorDialog(true);
     },
   });
 
@@ -252,27 +256,13 @@ export default function EditClientDetailsModal() {
   }, [router]);
 
   const handleCloseWithConfirmation = useCallback(() => {
-    // Only show discard alert if there are valid saveable changes
+    // Only show discard dialog if there are valid saveable changes
     if (canComplete) {
-      Alert.alert(
-        t('clients.editClientModal.discardChangesTitle'),
-        t('clients.editClientModal.discardChangesMessage'),
-        [
-          {
-            text: t('general.cancel'),
-            style: 'cancel',
-          },
-          {
-            text: t('clients.editClientModal.discardChanges'),
-            style: 'destructive',
-            onPress: handleClose,
-          },
-        ]
-      );
+      setShowDiscardDialog(true);
     } else {
       handleClose();
     }
-  }, [canComplete, handleClose, t]);
+  }, [canComplete, handleClose]);
 
   // Image picker function
   const pickImage = useCallback(
@@ -283,10 +273,8 @@ export default function EditClientDetailsModal() {
         if (useCamera) {
           const { status } = await ImagePicker.requestCameraPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
-              t('general.error'),
-              t('clients.editClientModal.cameraPermissionRequired')
-            );
+            setPermissionErrorMessage(t('clients.editClientModal.cameraPermissionRequired'));
+            setShowPermissionErrorDialog(true);
             return;
           }
           result = await ImagePicker.launchCameraAsync({
@@ -297,10 +285,8 @@ export default function EditClientDetailsModal() {
         } else {
           const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
-              t('general.error'),
-              t('clients.editClientModal.galleryPermissionRequired')
-            );
+            setPermissionErrorMessage(t('clients.editClientModal.galleryPermissionRequired'));
+            setShowPermissionErrorDialog(true);
             return;
           }
           result = await ImagePicker.launchImageLibraryAsync({
@@ -362,15 +348,7 @@ export default function EditClientDetailsModal() {
         }
       );
     } else {
-      Alert.alert(
-        t('clients.editClientModal.profilePicture'),
-        undefined,
-        [
-          { text: t('general.cancel'), style: 'cancel' },
-          { text: t('clients.editClientModal.chooseFromLibrary'), onPress: () => pickImage(false) },
-          { text: t('clients.editClientModal.takePhoto'), onPress: () => pickImage(true) },
-        ]
-      );
+      setShowProfilePictureDialog(true);
     }
   }, [t, pickImage]);
 
@@ -472,6 +450,7 @@ export default function EditClientDetailsModal() {
               onChange={setDateOfBirth}
               placeholder={t('clients.editClientModal.dateOfBirthPlaceholder')}
               allowFuture={false}
+              mode="birthdate"
             />
 
             {/* Height input temporarily hidden
@@ -502,6 +481,46 @@ export default function EditClientDetailsModal() {
           </KeyboardAwareScrollView>
         </View>
       </TouchableWithoutFeedback>
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
+
+      <Dialog
+        visible={showDiscardDialog}
+        onClose={() => setShowDiscardDialog(false)}
+        title={t('clients.editClientModal.discardChangesTitle')}
+        message={t('clients.editClientModal.discardChangesMessage')}
+        buttons={[
+          { label: t('general.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+          { label: t('clients.editClientModal.discardChanges'), onPress: handleClose, variant: 'destructive' }
+        ]}
+      />
+
+      <Dialog
+        visible={showPermissionErrorDialog}
+        onClose={() => setShowPermissionErrorDialog(false)}
+        title={t('general.error')}
+        message={permissionErrorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowPermissionErrorDialog(false), variant: 'primary' }]}
+      />
+
+      <Dialog
+        visible={showProfilePictureDialog}
+        onClose={() => setShowProfilePictureDialog(false)}
+        title={t('clients.editClientModal.profilePicture')}
+        buttons={[
+          { label: t('general.cancel'), onPress: () => setShowProfilePictureDialog(false), variant: 'secondary' },
+          { label: t('clients.editClientModal.chooseFromLibrary'), onPress: () => { setShowProfilePictureDialog(false); pickImage(false); }, variant: 'primary' },
+          { label: t('clients.editClientModal.takePhoto'), onPress: () => { setShowProfilePictureDialog(false); pickImage(true); }, variant: 'primary' }
+        ]}
+      />
     </View>
   );
 }

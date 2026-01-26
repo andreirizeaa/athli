@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useMemo } from 'react';
-import { Platform, StyleSheet, Text, View, Alert } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -20,6 +20,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { getAllFiles, getFileUrl, getFileTypeFromMime, type CoachFile } from '@/services/coach/coach-file-service';
 import { addFilesToClient } from '@/services/client/client-file-service';
 import { haptics } from '@/utils/haptics';
+import { Dialog } from '@/components/ui/dialog';
 
 export default function AssignFileToClientModal() {
     const router = useRouter();
@@ -37,6 +38,7 @@ export default function AssignFileToClientModal() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
     const [isSaving, setIsSaving] = useState(false);
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
 
     // Use same queryKey as library tabs - reads from existing cache, no new API call
     const { data: files = [] } = useQuery({
@@ -126,10 +128,7 @@ export default function AssignFileToClientModal() {
         } catch (error) {
             console.error('[AssignFileModal] Error:', error);
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                t('general.errorSaving')
-            );
+            setShowErrorDialog(true);
         } finally {
             setIsSaving(false);
         }
@@ -258,6 +257,15 @@ export default function AssignFileToClientModal() {
                     />
                 </View>
             </View>
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={t('general.errorSaving')}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
 
             {/* Content */}
             <View style={styles.content}>

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, Keyboard, Alert, TouchableWithoutFeedback, Linking } from 'react-native';
+import { StyleSheet, View, Text, Keyboard, TouchableWithoutFeedback, Linking, ImageBackground } from 'react-native';
+
+import { Dialog } from '@/components/ui/dialog';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,9 +9,10 @@ import { ChevronLeft, Eye, EyeOff } from 'lucide-react-native';
 
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { PressableOpacity, PressableScale } from 'pressto';
+import SquircleView from 'react-native-fast-squircle';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference, useTranslations, useCoachProfileStore, useClientProfileStore, useAppView } from '@/stores';
+import { useThemePreference, useColorScheme, useTranslations, useCoachProfileStore, useClientProfileStore, useAppView } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, type InputBoxRef } from '@/components/ui/form-inputs/input-box';
 import { AuthLoadingOverlay } from '@/components/auth/auth-loading-overlay';
@@ -20,13 +23,21 @@ export default function EmailSignInScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { colors: themeColors } = useThemePreference();
+    const colorScheme = useColorScheme();
+    const isDark = colorScheme === 'dark';
     const { t } = useTranslations();
     const { setAppView } = useAppView();
+
+    const backgroundImage = isDark
+        ? require('@/assets/backgrounds/dark.png')
+        : require('@/assets/backgrounds/light.png');
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [errorDialog, setErrorDialog] = useState({ title: '', message: '' });
 
     const emailRef = useRef<InputBoxRef>(null);
     const passwordRef = useRef<InputBoxRef>(null);
@@ -73,56 +84,55 @@ export default function EmailSignInScreen() {
         }
 
         if (error.message === 'NO_PROFILE_FOUND') {
-            Alert.alert(
-                t('auth.noAccountFound'),
-                t('auth.noAccountFoundMessage'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorDialog({
+                title: t('auth.noAccountFound'),
+                message: t('auth.noAccountFoundMessage'),
+            });
         } else {
-            Alert.alert(
-                t('auth.signInError'),
-                error.message || t('auth.signInErrorMessage'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorDialog({
+                title: t('auth.signInError'),
+                message: error.message || t('auth.signInErrorMessage'),
+            });
         }
+        setShowErrorDialog(true);
     };
 
     const handleSignIn = async () => {
         Keyboard.dismiss();
 
         if (!email.trim() && !password.trim()) {
-            Alert.alert(
-                t('auth.signInError'),
-                t('auth.enterEmailAndPassword'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorDialog({
+                title: t('auth.signInError'),
+                message: t('auth.enterEmailAndPassword'),
+            });
+            setShowErrorDialog(true);
             return;
         }
 
         if (!email.trim()) {
-            Alert.alert(
-                t('auth.signInError'),
-                t('auth.enterEmail'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorDialog({
+                title: t('auth.signInError'),
+                message: t('auth.enterEmail'),
+            });
+            setShowErrorDialog(true);
             return;
         }
 
         if (!isValidEmail(email)) {
-            Alert.alert(
-                t('auth.signInError'),
-                t('auth.invalidEmail'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorDialog({
+                title: t('auth.signInError'),
+                message: t('auth.invalidEmail'),
+            });
+            setShowErrorDialog(true);
             return;
         }
 
         if (!password.trim()) {
-            Alert.alert(
-                t('auth.signInError'),
-                t('auth.enterPassword'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorDialog({
+                title: t('auth.signInError'),
+                message: t('auth.enterPassword'),
+            });
+            setShowErrorDialog(true);
             return;
         }
 
@@ -153,82 +163,97 @@ export default function EmailSignInScreen() {
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top }]}>
+            <ImageBackground
+                source={backgroundImage}
+                style={[styles.container, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top }]}
+                resizeMode="cover"
+            >
                 <AuthLoadingOverlay visible={isLoading} />
 
                 <View style={styles.header}>
-                <IconButton
-                    icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-                    onPress={handleBackPress}
-                    size="md"
-                    color={themeColors.text}
-                />
-                <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('auth.signIn')}</Text>
-                <View style={styles.headerRightPlaceholder} />
-            </View>
-
-            <View style={styles.content}>
-                <View style={styles.form}>
-                    <InputBox
-                        ref={emailRef}
-                        label={t('auth.email')}
-                        value={email}
-                        onChangeText={setEmail}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        returnKeyType="next"
-                        onSubmitEditing={() => {
-                            if (isValidEmail(email)) {
-                                passwordRef.current?.focus();
-                            }
-                        }}
+                    <IconButton
+                        icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+                        onPress={handleBackPress}
+                        size="md"
+                        color={themeColors.text}
                     />
-                    <InputBox
-                        ref={passwordRef}
-                        label={t('auth.password')}
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry={!showPassword}
-                        editable={true}
-                        returnKeyType="go"
-                        onSubmitEditing={handleSignIn}
-                        rightIcon={
-                            <PressableOpacity
-                                onPress={() => setShowPassword(!showPassword)}
-                                hitSlop={8}
-                            >
-                                {showPassword ? (
-                                    <PlatformIcon sf="eye.slash" IconComponent={EyeOff} size={20} color={themeColors.text} />
-                                ) : (
-                                    <PlatformIcon sf="eye" IconComponent={Eye} size={20} color={themeColors.text} />
-                                )}
-                            </PressableOpacity>
-                        }
-                    />
-                    <PressableOpacity
-                        style={styles.forgotPasswordContainer}
-                        onPress={handleForgotPassword}
-                    >
-                        <Text style={[styles.forgotPasswordText, { color: themeColors.primary }]}>
-                            {t('auth.forgotPassword.linkText')}
-                        </Text>
-                    </PressableOpacity>
+                    <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('auth.signIn')}</Text>
+                    <View style={styles.headerRightPlaceholder} />
                 </View>
 
-                <PressableScale
-                    style={[
-                        styles.signInButton,
-                        { backgroundColor: '#FFFFFF' },
+                <View style={styles.content}>
+                    <View style={styles.form}>
+                        <InputBox
+                            ref={emailRef}
+                            label={t('auth.email')}
+                            value={email}
+                            onChangeText={setEmail}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            returnKeyType="next"
+                            onSubmitEditing={() => {
+                                if (isValidEmail(email)) {
+                                    passwordRef.current?.focus();
+                                }
+                            }}
+                        />
+                        <InputBox
+                            ref={passwordRef}
+                            label={t('auth.password')}
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry={!showPassword}
+                            editable={true}
+                            returnKeyType="go"
+                            onSubmitEditing={handleSignIn}
+                            rightIcon={
+                                <PressableOpacity
+                                    onPress={() => setShowPassword(!showPassword)}
+                                    hitSlop={8}
+                                >
+                                    {showPassword ? (
+                                        <PlatformIcon sf="eye.slash" IconComponent={EyeOff} size={20} color={themeColors.text} />
+                                    ) : (
+                                        <PlatformIcon sf="eye" IconComponent={Eye} size={20} color={themeColors.text} />
+                                    )}
+                                </PressableOpacity>
+                            }
+                        />
+                        <PressableOpacity
+                            style={styles.forgotPasswordContainer}
+                            onPress={handleForgotPassword}
+                        >
+                            <Text style={[styles.forgotPasswordText, { color: themeColors.primary }]}>
+                                {t('auth.forgotPassword.linkText')}
+                            </Text>
+                        </PressableOpacity>
+                    </View>
+
+                    <PressableScale onPress={handleSignIn}>
+                        <SquircleView cornerSmoothing={1} style={[styles.signInButton, { backgroundColor: themeColors.text }]}>
+                            <Text style={[styles.signInButtonText, { color: themeColors.backgroundPrimary }]}>
+                                {t('auth.signIn')}
+                            </Text>
+                        </SquircleView>
+                    </PressableScale>
+                </View>
+
+                <Dialog
+                    visible={showErrorDialog}
+                    onClose={() => setShowErrorDialog(false)}
+                    title={errorDialog.title}
+                    message={errorDialog.message}
+                    showCloseIcon={false}
+                    buttons={[
+                        {
+                            label: t('general.ok'),
+                            onPress: () => setShowErrorDialog(false),
+                            variant: 'primary',
+                        },
                     ]}
-                    onPress={handleSignIn}
-                >
-                    <Text style={[styles.signInButtonText, { color: '#000000' }]}>
-                        {t('auth.signIn')}
-                    </Text>
-                </PressableScale>
-            </View>
-        </View>
+                />
+            </ImageBackground>
         </TouchableWithoutFeedback>
     );
 }

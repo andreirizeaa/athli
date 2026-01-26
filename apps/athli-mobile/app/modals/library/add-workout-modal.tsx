@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Platform, StyleSheet, Text, View, Keyboard, TouchableWithoutFeedback, Alert } from 'react-native';
+import { Platform, StyleSheet, Text, View, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +20,7 @@ import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useClientDetailStore, useModalCallbacks } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
+import { Dialog } from '@/components/ui/dialog';
 import { InputBox, TextAreaInput, SelectInput } from '@/components/ui/form-inputs';
 import { hexToRgba } from '@/utils/colorUtils';
 import { createWorkout, updateWorkoutDetails } from '@/services/coach/coach-workout-service';
@@ -72,6 +73,11 @@ export default function AddWorkoutModal() {
     const [description, setDescription] = useState(params.description || '');
     const [workoutType, setWorkoutType] = useState<WorkoutType | null>((params.type as WorkoutType) || null);
     const [difficulty, setDifficulty] = useState<DifficultyLevel | null>((params.difficulty as DifficultyLevel) || null);
+
+    // Dialog state
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
     // TanStack Query
     const queryClient = useQueryClient();
@@ -149,11 +155,8 @@ export default function AddWorkoutModal() {
         },
         onError: (error: Error) => {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                error.message || t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(error.message || t('general.errorSaving'));
+            setShowErrorDialog(true);
         },
     });
 
@@ -216,25 +219,11 @@ export default function AddWorkoutModal() {
     const handleCloseWithConfirmation = useCallback(() => {
         // Only show discard alert if there are changes and form is valid for save
         if (hasChanges) {
-            Alert.alert(
-                t('library.addWorkout.discardChangesTitle'),
-                t('library.addWorkout.discardChangesMessage'),
-                [
-                    {
-                        text: t('general.cancel'),
-                        style: 'cancel',
-                    },
-                    {
-                        text: t('library.addWorkout.discardChanges'),
-                        style: 'destructive',
-                        onPress: handleClose,
-                    },
-                ]
-            );
+            setShowDiscardDialog(true);
         } else {
             handleClose();
         }
-    }, [hasChanges, handleClose, t]);
+    }, [hasChanges, handleClose]);
 
     const handleSave = useCallback(() => {
         if (!canComplete) return;
@@ -340,6 +329,26 @@ export default function AddWorkoutModal() {
                     </KeyboardAwareScrollView>
                 </View>
             </TouchableWithoutFeedback>
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={errorMessage}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
+
+            <Dialog
+                visible={showDiscardDialog}
+                onClose={() => setShowDiscardDialog(false)}
+                title={t('library.addWorkout.discardChangesTitle')}
+                message={t('library.addWorkout.discardChangesMessage')}
+                buttons={[
+                    { label: t('general.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+                    { label: t('library.addWorkout.discardChanges'), onPress: handleClose, variant: 'destructive' },
+                ]}
+            />
         </View>
     );
 }

@@ -92,7 +92,7 @@ const NativeTabsAthleteView = ({ primaryColor }: NativeTabsCoachViewProps) => {
     <View style={{ flex: 1 }}>
       <NativeTabs tintColor={primaryColor}>
         <NativeTabs.Trigger name="home">
-          <Icon sf="house.fill" />
+          <Icon sf="house.fill"/>
           <Label>Home</Label>
         </NativeTabs.Trigger>
 

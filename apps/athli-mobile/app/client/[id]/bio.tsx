@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Alert } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { Dialog } from '@/components/ui/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Check } from 'lucide-react-native';
 
@@ -27,6 +29,7 @@ export default function ClientBioScreen() {
   // Local state for editing
   const [editingBio, setEditingBio] = useState(bio);
   const [isSaving, setIsSaving] = useState(false);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   // Sync local state when store bio changes
   useEffect(() => {
@@ -38,21 +41,7 @@ export default function ClientBioScreen() {
   const handleBackPress = () => {
     haptics.medium();
     if (hasChanges) {
-      Alert.alert(
-        t('common.discardChanges'),
-        t('common.discardChangesMessage'),
-        [
-          {
-            text: t('common.cancel'),
-            style: 'cancel',
-          },
-          {
-            text: t('common.discard'),
-            style: 'destructive',
-            onPress: () => router.back(),
-          },
-        ]
-      );
+      setShowDiscardDialog(true);
     } else {
       router.back();
     }
@@ -76,7 +65,7 @@ export default function ClientBioScreen() {
   };
 
   return (
-    <ScreenWrapper scrollable={false}>
+    <ScreenWrapper scrollable={false} useImageBackground={false}>
       <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton
           icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
@@ -107,6 +96,28 @@ export default function ClientBioScreen() {
           minHeight={250}
         />
       </View>
+
+      <Dialog
+        visible={showDiscardDialog}
+        onClose={() => setShowDiscardDialog(false)}
+        title={t('common.discardChanges')}
+        message={t('common.discardChangesMessage')}
+        buttons={[
+          {
+            label: t('common.cancel'),
+            onPress: () => setShowDiscardDialog(false),
+            variant: 'secondary',
+          },
+          {
+            label: t('common.discard'),
+            onPress: () => {
+              setShowDiscardDialog(false);
+              router.back();
+            },
+            variant: 'destructive',
+          },
+        ]}
+      />
     </ScreenWrapper>
   );
 }

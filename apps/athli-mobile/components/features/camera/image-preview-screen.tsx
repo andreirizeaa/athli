@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Pressable, View, Text, ScrollView, Image as RNImage, Alert, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { StyleSheet, Pressable, View, Text, ScrollView, Image as RNImage, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { Dialog } from '@/components/ui/dialog';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -109,6 +110,10 @@ const ImagePreviewScreen = () => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  // Dialog state
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const pagerRef = useRef<PagerView>(null);
   const isProgrammaticChange = useRef(false);
 
@@ -154,7 +159,8 @@ const ImagePreviewScreen = () => {
     try {
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) {
-        Alert.alert('Error', 'Sharing is not available on this device');
+        setErrorMessage('Sharing is not available on this device');
+        setShowErrorDialog(true);
         return;
       }
 
@@ -165,7 +171,8 @@ const ImagePreviewScreen = () => {
       });
     } catch (error) {
       console.error('Error sharing image:', error);
-      Alert.alert('Error', 'Failed to share image');
+      setErrorMessage('Failed to share image');
+      setShowErrorDialog(true);
     }
   };
 
@@ -175,7 +182,8 @@ const ImagePreviewScreen = () => {
         // Single image - use expo-sharing
         const isAvailable = await Sharing.isAvailableAsync();
         if (!isAvailable) {
-          Alert.alert('Error', 'Sharing is not available on this device');
+          setErrorMessage('Sharing is not available on this device');
+          setShowErrorDialog(true);
           return;
         }
         await Sharing.shareAsync(images[0].uri, {
@@ -191,26 +199,28 @@ const ImagePreviewScreen = () => {
           type: 'image/jpeg',
         }).catch((shareError: any) => {
           // Check if user cancelled
-          const errorMessage = shareError?.message || shareError?.toString() || '';
+          const errMsg = shareError?.message || shareError?.toString() || '';
           const errorCode = shareError?.code || '';
-          console.log('Share error:', errorMessage, errorCode);
+          console.log('Share error:', errMsg, errorCode);
 
-          if (errorMessage.includes('User did not share') ||
-            errorMessage.includes('User cancelled') ||
-            errorMessage.includes('cancelled') ||
+          if (errMsg.includes('User did not share') ||
+            errMsg.includes('User cancelled') ||
+            errMsg.includes('cancelled') ||
             errorCode === 'E_USER_CANCELLED' ||
             errorCode === 'User did not share') {
             // User cancelled - silently ignore
             return;
           }
-          // Real error - show alert
+          // Real error - show dialog
           console.error('Error sharing images:', shareError);
-          Alert.alert('Error', 'Failed to share images. Please try again.');
+          setErrorMessage('Failed to share images. Please try again.');
+          setShowErrorDialog(true);
         });
       }
     } catch (error: any) {
       console.error('Error in handleDownloadAll:', error);
-      Alert.alert('Error', 'Failed to download images');
+      setErrorMessage('Failed to download images');
+      setShowErrorDialog(true);
     }
   };
 
@@ -257,7 +267,8 @@ const ImagePreviewScreen = () => {
         // Single image - use expo-sharing
         const isAvailable = await Sharing.isAvailableAsync();
         if (!isAvailable) {
-          Alert.alert('Error', 'Sharing is not available on this device');
+          setErrorMessage('Sharing is not available on this device');
+          setShowErrorDialog(true);
           return;
         }
         await Sharing.shareAsync(selectedImages[0].uri, {
@@ -273,24 +284,26 @@ const ImagePreviewScreen = () => {
           type: 'image/jpeg',
         }).catch((shareError: any) => {
           // Check if user cancelled
-          const errorMessage = shareError?.message || shareError?.toString() || '';
+          const errMsg = shareError?.message || shareError?.toString() || '';
           const errorCode = shareError?.code || '';
-          if (errorMessage.includes('User did not share') ||
-            errorMessage.includes('User cancelled') ||
-            errorMessage.includes('cancelled') ||
+          if (errMsg.includes('User did not share') ||
+            errMsg.includes('User cancelled') ||
+            errMsg.includes('cancelled') ||
             errorCode === 'E_USER_CANCELLED' ||
             errorCode === 'User did not share') {
             // User cancelled - silently ignore
             return;
           }
-          // Real error - show alert
+          // Real error - show dialog
           console.error('Error sharing images:', shareError);
-          Alert.alert('Error', 'Failed to share images. Please try again.');
+          setErrorMessage('Failed to share images. Please try again.');
+          setShowErrorDialog(true);
         });
       }
     } catch (error: any) {
       console.error('Error in handleDownloadSelected:', error);
-      Alert.alert('Error', 'Failed to share images');
+      setErrorMessage('Failed to share images');
+      setShowErrorDialog(true);
     }
   };
 
@@ -379,7 +392,8 @@ const ImagePreviewScreen = () => {
   const handleAddMore = async () => {
     // Check if we've reached the limit
     if (images.length >= MAX_MEDIA_FILES) {
-      Alert.alert('Limit reached', `You can only add up to ${MAX_MEDIA_FILES} photos per message.`);
+      setErrorMessage(`You can only add up to ${MAX_MEDIA_FILES} photos per message.`);
+      setShowErrorDialog(true);
       return;
     }
 
@@ -387,7 +401,8 @@ const ImagePreviewScreen = () => {
       // Request camera permissions
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission required', 'Please grant permission to use the camera.');
+        setErrorMessage('Please grant permission to use the camera.');
+        setShowErrorDialog(true);
         return;
       }
 
@@ -436,7 +451,8 @@ const ImagePreviewScreen = () => {
       }
     } catch (error) {
       console.error('Error adding more from camera:', error);
-      Alert.alert('Error', 'Failed to capture media');
+      setErrorMessage('Failed to capture media');
+      setShowErrorDialog(true);
     }
   };
 
@@ -447,7 +463,8 @@ const ImagePreviewScreen = () => {
     }
 
     if (images.length === 0) {
-      Alert.alert('Error', 'Please select at least one image');
+      setErrorMessage('Please select at least one image');
+      setShowErrorDialog(true);
       return;
     }
 
@@ -735,6 +752,15 @@ const ImagePreviewScreen = () => {
           onDeleteImage={handleDeletePress}
           onAddMore={handleAddMore}
           maxImages={MAX_MEDIA_FILES}
+        />
+
+        <Dialog
+          visible={showErrorDialog}
+          onClose={() => setShowErrorDialog(false)}
+          title="Error"
+          message={errorMessage}
+          showCloseIcon={false}
+          buttons={[{ label: 'OK', onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
         />
       </View>
     </TouchableWithoutFeedback>

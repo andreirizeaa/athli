@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
-import { User, Pencil } from 'lucide-react-native';
+import { User, Pencil, type LucideIcon } from 'lucide-react-native';
 import { Image } from 'expo-image';
 
 import { typography } from '@/constants/typography';
@@ -15,7 +15,7 @@ type ProfilePictureInputProps = {
   onPress: () => void;
   fallbackIcon?: {
     sf: string;
-    IconComponent: React.ComponentType<any>;
+    IconComponent: LucideIcon;
   };
 };
 

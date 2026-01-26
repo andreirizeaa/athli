@@ -79,13 +79,14 @@ export const TargetLineChart = ({ data, targetValue, unit = '', name, streak, re
     const middleDate = chartData.length > 2 ? formatShortDate(chartData[middleIndex].date) : '';
     const endDate = chartData.length > 0 ? formatShortDate(chartData[chartData.length - 1].date) : '';
 
-    // Line drawing animation
-    const animationProgress = useSharedValue(0);
+    // Line drawing animation (disabled for performance)
+    const animationProgress = useSharedValue(1);
 
-    useEffect(() => {
-        animationProgress.value = 0;
-        animationProgress.value = withDelay(200, withTiming(1, { duration: 800 }));
-    }, [chartData]);
+    // Animation disabled - set to 1 immediately for instant display
+    // useEffect(() => {
+    //     animationProgress.value = 0;
+    //     animationProgress.value = withDelay(200, withTiming(1, { duration: 800 }));
+    // }, [chartData]);
 
     const clipRect = useDerivedValue(() => {
         const width = chartWidth * animationProgress.value;

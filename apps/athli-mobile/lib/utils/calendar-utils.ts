@@ -108,3 +108,47 @@ export const getWeekMonthYear = (week: Date[]): { month: number; year: number } 
     year: middleDate.getFullYear(),
   };
 };
+
+// Generate weeks within a specific date range (minDate to maxDate)
+export const generateWeeksInRange = (minDate: Date, maxDate: Date): Date[][] => {
+  const weeks: Date[][] = [];
+
+  // Get the Monday of the week containing minDate
+  const getMonday = (date: Date): Date => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff));
+  };
+
+  // Get the Sunday of the week containing maxDate
+  const getSunday = (date: Date): Date => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    const day = d.getDay();
+    const diff = d.getDate() + (day === 0 ? 0 : 7 - day);
+    return new Date(d.setDate(diff));
+  };
+
+  const startMonday = getMonday(minDate);
+  const endSunday = getSunday(maxDate);
+
+  let currentMonday = new Date(startMonday);
+
+  while (currentMonday <= endSunday) {
+    const week: Date[] = [];
+    for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+      const date = new Date(currentMonday);
+      date.setDate(currentMonday.getDate() + dayIndex);
+      date.setHours(0, 0, 0, 0);
+      week.push(date);
+    }
+    weeks.push(week);
+
+    // Move to next Monday
+    currentMonday.setDate(currentMonday.getDate() + 7);
+  }
+
+  return weeks;
+};

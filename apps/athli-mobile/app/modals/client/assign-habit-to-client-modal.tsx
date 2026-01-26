@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useMemo } from 'react';
-import { Platform, StyleSheet, Text, View, Alert } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -19,6 +19,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { getAllHabits, type Habit } from '@/services/coach/coach-habit-service';
 import { assignHabit } from '@/services/client/client-habit-service';
 import { haptics } from '@/utils/haptics';
+import { Dialog } from '@/components/ui/dialog';
 import { HABIT_UNIT_OPTIONS, HABIT_PERIOD_OPTIONS } from '@athli/shared-types';
 
 export default function AssignHabitToClientModal() {
@@ -37,6 +38,7 @@ export default function AssignHabitToClientModal() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedHabitIds, setSelectedHabitIds] = useState<Set<string>>(new Set());
     const [isSaving, setIsSaving] = useState(false);
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
 
     // Use same queryKey as library tabs - reads from existing cache, no new API call
     const { data: habits = [] } = useQuery({
@@ -82,10 +84,7 @@ export default function AssignHabitToClientModal() {
             handleClose();
         } catch (error) {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                t('general.errorSaving')
-            );
+            setShowErrorDialog(true);
         } finally {
             setIsSaving(false);
         }
@@ -166,6 +165,15 @@ export default function AssignHabitToClientModal() {
                     />
                 </View>
             </View>
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={t('general.errorSaving')}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
 
             {/* Content */}
             <View style={styles.content}>

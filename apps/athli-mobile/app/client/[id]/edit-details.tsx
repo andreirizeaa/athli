@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, StyleSheet, Text, Alert } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
+
+import { Dialog } from '@/components/ui/dialog';
 import { X, Check } from 'lucide-react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -86,6 +88,9 @@ export default function EditClientDetailsScreen() {
   const [phoneNumber, setPhoneNumber] = useState<PhoneNumber | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [originalValues, setOriginalValues] = useState<OriginalValues | null>(null);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
   const queryClient = useQueryClient();
 
   // TanStack Query mutation for updating client
@@ -106,12 +111,9 @@ export default function EditClientDetailsScreen() {
       // Error haptic feedback
       haptics.error();
 
-      // Show error alert
-      Alert.alert(
-        t('general.error'),
-        error.message || t('clients.editClientModal.errorUpdating'),
-        [{ text: t('general.ok') }]
-      );
+      // Show error dialog
+      setErrorMessage(error.message || t('clients.editClientModal.errorUpdating'));
+      setShowErrorDialog(true);
     },
   });
 
@@ -238,27 +240,13 @@ export default function EditClientDetailsScreen() {
   }, [router]);
 
   const handleCloseWithConfirmation = useCallback(() => {
-    // Only show discard alert if there are valid saveable changes
+    // Only show discard dialog if there are valid saveable changes
     if (canComplete) {
-      Alert.alert(
-        t('clients.editClientModal.discardChangesTitle'),
-        t('clients.editClientModal.discardChangesMessage'),
-        [
-          {
-            text: t('general.cancel'),
-            style: 'cancel',
-          },
-          {
-            text: t('clients.editClientModal.discardChanges'),
-            style: 'destructive',
-            onPress: handleClose,
-          },
-        ]
-      );
+      setShowDiscardDialog(true);
     } else {
       handleClose();
     }
-  }, [canComplete, handleClose, t]);
+  }, [canComplete, handleClose]);
 
   const handleSave = () => {
     if (!canComplete || !client) return;
@@ -288,7 +276,7 @@ export default function EditClientDetailsScreen() {
 
   if (isLoading) {
     return (
-      <ScreenWrapper scrollable={false}>
+      <ScreenWrapper scrollable={false} useImageBackground={false}>
         <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
           <IconButton
             icon={{ sf: 'xmark', IconComponent: X }}
@@ -306,7 +294,7 @@ export default function EditClientDetailsScreen() {
   }
 
   return (
-    <ScreenWrapper scrollable={true}>
+    <ScreenWrapper scrollable={true} useImageBackground={false}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton
@@ -388,6 +376,43 @@ export default function EditClientDetailsScreen() {
           modalTitle={t('clients.editClientModal.countryModalTitle')}
         />
       </View>
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[
+          {
+            label: t('general.ok'),
+            onPress: () => setShowErrorDialog(false),
+            variant: 'primary',
+          },
+        ]}
+      />
+
+      <Dialog
+        visible={showDiscardDialog}
+        onClose={() => setShowDiscardDialog(false)}
+        title={t('clients.editClientModal.discardChangesTitle')}
+        message={t('clients.editClientModal.discardChangesMessage')}
+        buttons={[
+          {
+            label: t('general.cancel'),
+            onPress: () => setShowDiscardDialog(false),
+            variant: 'secondary',
+          },
+          {
+            label: t('clients.editClientModal.discardChanges'),
+            onPress: () => {
+              setShowDiscardDialog(false);
+              handleClose();
+            },
+            variant: 'destructive',
+          },
+        ]}
+      />
     </ScreenWrapper>
   );
 }

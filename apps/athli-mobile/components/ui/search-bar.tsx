@@ -1,11 +1,12 @@
 import React, { useRef } from 'react';
-import { StyleSheet, TextInput, View, type TextInput as TextInputType } from 'react-native';
+import { StyleSheet, TextInput, View, type TextInput as TextInputType, type ViewStyle, type StyleProp } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { Search, X } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
-import { useColorScheme, useThemePreference } from '@/stores';
+import { useThemePreference } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
+import { Card } from '@/components/ui/card';
 
 type SearchBarProps = {
   value: string;
@@ -15,7 +16,7 @@ type SearchBarProps = {
   onRightIconPress?: () => void;
   onFocus?: () => void;
   onBlur?: () => void;
-  style?: object;
+  style?: StyleProp<ViewStyle>;
 };
 
 export const SearchBar = ({
@@ -38,15 +39,7 @@ export const SearchBar = ({
   };
 
   return (
-    <View
-      style={[
-        styles.searchContainer,
-        {
-          backgroundColor: themeColors.surfacePrimary,
-        },
-        style,
-      ]}
-    >
+    <Card style={[styles.searchContainer, style]}>
       <View style={styles.searchIcon}>
         <PlatformIcon
           sf="magnifyingglass"
@@ -89,7 +82,7 @@ export const SearchBar = ({
           {rightIcon}
         </PressableOpacity>
       )}
-    </View>
+    </Card>
   );
 };
 
@@ -102,6 +95,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     minHeight: 42,
     height: 42,
+    marginBottom: 0,
   },
   searchIcon: {
     marginRight: 8,

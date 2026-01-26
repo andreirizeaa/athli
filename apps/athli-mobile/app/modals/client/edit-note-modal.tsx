@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
-import { Platform, StyleSheet, Text, View, KeyboardAvoidingView, Alert } from 'react-native';
+import { Platform, StyleSheet, Text, View, KeyboardAvoidingView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +14,7 @@ import { InputBox, TextAreaInput } from '@/components/ui/form-inputs';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { hexToRgba } from '@/utils/colorUtils';
 import { updateClientNote, deleteClientNote } from '@/services/client/client-notes-service';
+import { Dialog } from '@/components/ui/dialog';
 
 export default function EditNoteModal() {
     const router = useRouter();
@@ -36,6 +37,9 @@ export default function EditNoteModal() {
     const [body, setBody] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     // Initialize form with existing note data
     useEffect(() => {
@@ -82,53 +86,39 @@ export default function EditNoteModal() {
             handleClose();
         } catch (error) {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(t('general.errorSaving'));
+            setShowErrorDialog(true);
         } finally {
             setIsSubmitting(false);
         }
     }, [canSave, clientId, coachId, noteId, title, body, refreshSection, handleClose, t, isEmpty]);
 
-    const handleDelete = useCallback(() => {
-        Alert.alert(
-            t('general.delete'),
-            t('clientDetail.notes.deleteConfirmation'),
-            [
-                { text: t('general.cancel'), style: 'cancel' },
-                {
-                    text: t('general.delete'),
-                    style: 'destructive',
-                    onPress: async () => {
-                        if (!clientId || !coachId || !noteId) return;
+    const handleDeleteConfirm = useCallback(async () => {
+        if (!clientId || !coachId || !noteId) return;
 
-                        setIsDeleting(true);
-                        try {
-                            await deleteClientNote({
-                                noteId,
-                                contactId: clientId,
-                                coachId,
-                            });
-                            haptics.success();
-                            await refreshSection('notes');
-                            handleClose();
-                        } catch (error) {
-                            haptics.error();
-                            Alert.alert(
-                                t('general.error'),
-                                t('general.errorDeleting'),
-                                [{ text: t('general.ok') }]
-                            );
-                        } finally {
-                            setIsDeleting(false);
-                        }
-                    },
-                },
-            ]
-        );
+        setShowDeleteDialog(false);
+        setIsDeleting(true);
+        try {
+            await deleteClientNote({
+                noteId,
+                contactId: clientId,
+                coachId,
+            });
+            haptics.success();
+            await refreshSection('notes');
+            handleClose();
+        } catch (error) {
+            haptics.error();
+            setErrorMessage(t('general.errorDeleting'));
+            setShowErrorDialog(true);
+        } finally {
+            setIsDeleting(false);
+        }
     }, [clientId, coachId, noteId, refreshSection, handleClose, t]);
+
+    const handleDelete = useCallback(() => {
+        setShowDeleteDialog(true);
+    }, []);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -214,6 +204,26 @@ export default function EditNoteModal() {
                     />
                 </View>
             </KeyboardAwareScrollView>
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={errorMessage}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
+
+            <Dialog
+                visible={showDeleteDialog}
+                onClose={() => setShowDeleteDialog(false)}
+                title={t('general.delete')}
+                message={t('clientDetail.notes.deleteConfirmation')}
+                buttons={[
+                    { label: t('general.cancel'), onPress: () => setShowDeleteDialog(false), variant: 'secondary' },
+                    { label: t('general.delete'), onPress: handleDeleteConfirm, variant: 'destructive' }
+                ]}
+            />
         </KeyboardAvoidingView>
     );
 }

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, Platform, Alert, Keyboard, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Platform, Keyboard, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { X, Eye, EyeOff } from 'lucide-react-native';
@@ -14,6 +14,7 @@ import { InputBox, type InputBoxRef } from '@/components/ui/form-inputs/input-bo
 import { haptics } from '@/utils/haptics';
 import { supabase } from '@/lib/supabase';
 import { signOut } from '@/services/auth/supabase-auth';
+import { Dialog } from '@/components/ui/dialog';
 
 export default function ChangePasswordModal() {
   const router = useRouter();
@@ -27,6 +28,9 @@ export default function ChangePasswordModal() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const newPasswordRef = useRef<InputBoxRef>(null);
   const confirmPasswordRef = useRef<InputBoxRef>(null);
@@ -93,36 +97,25 @@ export default function ChangePasswordModal() {
       }
 
       haptics.success();
-
-      Alert.alert(
-        t('profile.passwordChange.successTitle'),
-        t('profile.passwordChange.successMessage'),
-        [
-          {
-            text: t('general.ok'),
-            onPress: async () => {
-              try {
-                await signOut();
-                router.dismissAll();
-              } catch (error) {
-                console.error('[ChangePassword] Error signing out:', error);
-                router.dismissAll();
-              }
-            },
-          },
-        ],
-        { cancelable: false }
-      );
+      setShowSuccessDialog(true);
     } catch (error: any) {
       setIsUpdating(false);
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('profile.passwordChange.updateFailed'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('profile.passwordChange.updateFailed'));
+      setShowErrorDialog(true);
     }
   }, [newPassword, confirmPassword, t, router]);
+
+  const handleSuccessDialogClose = useCallback(async () => {
+    setShowSuccessDialog(false);
+    try {
+      await signOut();
+      router.dismissAll();
+    } catch (error) {
+      console.error('[ChangePassword] Error signing out:', error);
+      router.dismissAll();
+    }
+  }, [router]);
 
   const formatLabelWithAsterisk = (label: string) => (
     <Text>
@@ -222,8 +215,7 @@ export default function ChangePasswordModal() {
             styles.primaryButton,
             { backgroundColor: '#FFFFFF' },
           ]}
-          onPress={handleUpdatePassword}
-          disabled={isUpdating}
+          onPress={isUpdating ? undefined : handleUpdatePassword}
         >
           {isUpdating ? (
             <ActivityIndicator size="small" color="#000000" />
@@ -239,6 +231,24 @@ export default function ChangePasswordModal() {
           )}
         </PressableScale>
       </View>
+
+      <Dialog
+        visible={showSuccessDialog}
+        onClose={handleSuccessDialogClose}
+        title={t('profile.passwordChange.successTitle')}
+        message={t('profile.passwordChange.successMessage')}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: handleSuccessDialogClose, variant: 'primary' }]}
+      />
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
     </View>
   );
 }

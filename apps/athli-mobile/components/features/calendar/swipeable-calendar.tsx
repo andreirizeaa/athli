@@ -1,22 +1,20 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { PressableOpacity } from 'pressto';
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import SquircleView from 'react-native-fast-squircle';
+import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
 
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { typography } from '@/constants/typography';
-import { generateWeeks, getWeekIndexForDate, getWeekMonthYear } from '@/lib/utils/calendar-utils';
+import { haptics } from '@/utils/haptics';
 
-const { width: RAW_W } = Dimensions.get('window');
-const SCREEN_WIDTH = Math.round(RAW_W);
-const ITEM_WIDTH = SCREEN_WIDTH; // page width
-const WEEK_HEIGHT = 80;
+const WEEK_HEIGHT = 90;
 
 interface SwipeableCalendarProps {
   onDateSelect?: (date: Date) => void;
   onSwipe?: (month: number, year: number) => void;
-  initialSelectedDate?: Date;
+  selectedDate: Date;
 }
 
 interface DayData {
@@ -26,321 +24,298 @@ interface DayData {
   isToday: boolean;
   isActive: boolean;
   isFuture: boolean;
+  isCurrentMonth: boolean;
 }
-
-// Memoized WeekPage Component with lazy rendering
-const WeekPage = React.memo(
-  function WeekPage({
-    days,
-    onPressDay,
-    shouldRender,
-    themeColors,
-    primaryColor,
-  }: {
-    days: DayData[];
-    onPressDay: (d: DayData) => void;
-    shouldRender: boolean;
-    themeColors: any;
-    primaryColor: string;
-  }) {
-    return (
-      <View style={styles.weekPage} renderToHardwareTextureAndroid shouldRasterizeIOS>
-        <View style={styles.weekContent}>
-          {days.map((day, i) => (
-            <PressableOpacity
-              key={`${day.date.toISOString()}-${i}`}
-              style={styles.dayContainer}
-              onPress={() => onPressDay(day)}
-            >
-              <View
-                style={[
-                  styles.dayWrapper,
-                ]}
-              >
-                {/* Day acronym above the circle */}
-                <Text
-                  style={[
-                    styles.dayAcronym,
-                    { color: day.isActive ? themeColors.text : themeColors.mutedText },
-                    day.isActive && { fontWeight: '700' },
-                  ]}
-                >
-                  {day.dayName}
-                </Text>
-
-                <View
-                  style={[
-                    styles.dayCircle,
-                    day.isActive && { backgroundColor: primaryColor },
-                    day.isToday && !day.isActive && {
-                      borderWidth: 1.5,
-                      borderColor: primaryColor,
-                    },
-                  ]}
-                >
-                  {/* Day number inside the circle */}
-                  <Text
-                    style={[
-                      styles.dayNumber,
-                      day.isActive
-                        ? { color: themeColors.primaryForeground }
-                        : { color: themeColors.mutedText },
-                    ]}
-                  >
-                    {day.dayNumber}
-                  </Text>
-                </View>
-              </View>
-            </PressableOpacity>
-          ))}
-        </View>
-      </View>
-    );
-  },
-  (a, b) =>
-    a.shouldRender === b.shouldRender &&
-    a.days.length === b.days.length &&
-    a.days.every(
-      (day, i) =>
-        day.date.toISOString() === b.days[i]?.date.toISOString() &&
-        day.isActive === b.days[i]?.isActive
-    )
-);
 
 // Normalize date to start of day for comparison
 const normalizeDate = (date: Date): Date => {
   const normalized = new Date(date);
   normalized.setHours(0, 0, 0, 0);
-  normalized.setMinutes(0, 0, 0);
-  normalized.setSeconds(0, 0);
-  normalized.setMilliseconds(0);
   return normalized;
 };
+
+// Get Monday of the week containing the given date
+const getMondayOfWeek = (date: Date): Date => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.setDate(diff));
+};
+
+// Get Sunday of the week containing the given date
+const getSundayOfWeek = (date: Date): Date => {
+  const monday = getMondayOfWeek(date);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  return sunday;
+};
+
+// Generate the 7 days of a week starting from Monday
+const getWeekDays = (monday: Date): Date[] => {
+  const days: Date[] = [];
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + i);
+    date.setHours(0, 0, 0, 0);
+    days.push(date);
+  }
+  return days;
+};
+
+// Generate weeks for a specific month (including partial weeks at edges)
+const generateMonthWeeks = (year: number, month: number): Date[] => {
+  const weeks: Date[] = [];
+  
+  // First day of the month
+  const firstOfMonth = new Date(year, month, 1);
+  firstOfMonth.setHours(0, 0, 0, 0);
+  
+  // Last day of the month
+  const lastOfMonth = new Date(year, month + 1, 0);
+  lastOfMonth.setHours(0, 0, 0, 0);
+  
+  // Get Monday of the week containing the first day
+  const startMonday = getMondayOfWeek(firstOfMonth);
+  
+  // Get Sunday of the week containing the last day
+  const endSunday = getSundayOfWeek(lastOfMonth);
+  
+  // Generate all weeks
+  let current = new Date(startMonday);
+  while (current.getTime() <= endSunday.getTime()) {
+    weeks.push(new Date(current));
+    current.setDate(current.getDate() + 7);
+  }
+  
+  return weeks;
+};
+
+// Component for rendering a single week
+interface WeekPageProps {
+  monday: Date;
+  selectedDate: Date;
+  currentMonth: number;
+  dayAcronyms: string[];
+  onDatePress: (day: DayData) => void;
+  themeColors: any;
+  isLightMode: boolean;
+  pillBackgroundColor: string;
+}
+
+const WeekPage = React.memo(({
+  monday,
+  selectedDate,
+  currentMonth,
+  dayAcronyms,
+  onDatePress,
+  themeColors,
+  isLightMode,
+  pillBackgroundColor,
+}: WeekPageProps) => {
+  const today = normalizeDate(new Date());
+  const todayTime = today.getTime();
+  const selectedTime = selectedDate.getTime();
+  const days = getWeekDays(monday);
+
+  const weekDays: DayData[] = days.map((date, i) => {
+    const dateTime = date.getTime();
+    const isCurrentMonth = date.getMonth() === currentMonth;
+
+    return {
+      date,
+      dayName: dayAcronyms[i],
+      dayNumber: date.getDate().toString(),
+      isToday: dateTime === todayTime,
+      isActive: dateTime === selectedTime,
+      isFuture: dateTime > todayTime,
+      isCurrentMonth,
+    };
+  });
+
+  // Get pill style based on state
+  const getActivePillStyle = (isActive: boolean, isToday: boolean) => {
+    if (!isActive && !isToday) return {};
+
+    const baseStyle: any = {
+      backgroundColor: pillBackgroundColor,
+      ...(isLightMode && {
+        borderColor: themeColors.cardSecondary,
+        borderWidth: 0.5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 3,
+      }),
+    };
+
+    if (isToday && !isActive) {
+      baseStyle.opacity = 0.5;
+    }
+
+    return baseStyle;
+  };
+
+  return (
+    <View style={styles.weekContent}>
+      {weekDays.map((day, i) => (
+        <PressableOpacity
+          key={`${day.date.getTime()}-${i}`}
+          style={styles.dayContainer}
+          onPress={() => onDatePress(day)}
+        >
+          <SquircleView
+            style={[
+              styles.dayPill,
+              getActivePillStyle(day.isActive, day.isToday),
+            ]}
+            cornerSmoothing={1}
+          >
+            <Text
+              style={[
+                styles.dayAcronym,
+                {
+                  color: day.isActive ? themeColors.text : themeColors.mutedText,
+                  opacity: day.isCurrentMonth 
+                    ? (day.isActive ? 1 : (day.isFuture ? 0.3 : 0.7))
+                    : 0.2,
+                  fontWeight: day.isActive ? '600' : '500',
+                },
+              ]}
+            >
+              {day.dayName}
+            </Text>
+            <View
+              style={[
+                styles.dayCircle,
+                {
+                  borderColor: themeColors.mutedText,
+                  borderStyle: day.isFuture || day.isToday ? 'solid' : 'dashed',
+                  opacity: day.isCurrentMonth 
+                    ? (day.isActive ? 1 : (day.isFuture ? 0.3 : 0.5))
+                    : 0.2,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.dayNumber,
+                  day.isActive
+                    ? { color: themeColors.text, fontWeight: '600' }
+                    : { color: day.isFuture ? themeColors.mutedText : themeColors.text },
+                  !day.isCurrentMonth && { opacity: 0.3 },
+                ]}
+              >
+                {day.dayNumber}
+              </Text>
+            </View>
+          </SquircleView>
+        </PressableOpacity>
+      ))}
+    </View>
+  );
+});
 
 export const SwipeableCalendar = ({
   onDateSelect,
   onSwipe,
-  initialSelectedDate,
+  selectedDate,
 }: SwipeableCalendarProps) => {
-  const { primaryColor, colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useThemePreference();
+  const colorScheme = useColorScheme();
+  const isLightMode = colorScheme === 'light';
   const { t } = useTranslations();
 
-  // Normalize initial date
-  const normalizedInitialDate = useMemo(() => {
-    if (initialSelectedDate) {
-      return normalizeDate(initialSelectedDate);
-    }
-    return normalizeDate(new Date());
-  }, [initialSelectedDate]);
+  // Normalize the selected date
+  const normalizedSelectedDate = useMemo(() => {
+    return normalizeDate(selectedDate);
+  }, [selectedDate]);
 
-  const [selectedDate, setSelectedDate] = useState<Date>(normalizedInitialDate);
-  const listRef = useRef<FlashListRef<DayData[]> | null>(null);
-  const hasMounted = useRef(false);
+  // Get the current month/year from selected date
+  const currentMonth = normalizedSelectedDate.getMonth();
+  const currentYear = normalizedSelectedDate.getFullYear();
 
-  // Generate weeks once
-  const weeks = useMemo(() => generateWeeks(), []);
+  // Generate weeks for the current month
+  const weeksArray = useMemo(() => {
+    return generateMonthWeeks(currentYear, currentMonth);
+  }, [currentYear, currentMonth]);
 
-  // Seed initial index from selected date
-  const initialIndexRef = useRef<number>(0);
-  if (initialIndexRef.current === 0 && weeks.length) {
-    initialIndexRef.current = getWeekIndexForDate(normalizedInitialDate, weeks);
-  }
-
-  const [currentWeekIndex, setCurrentWeekIndex] = useState(initialIndexRef.current);
-  const [localIndex, setLocalIndex] = useState(initialIndexRef.current);
-
-  // Update selected date when initialSelectedDate changes from parent
-  useEffect(() => {
-    if (initialSelectedDate) {
-      const normalized = normalizeDate(initialSelectedDate);
-      const currentNormalized = normalizeDate(selectedDate);
-      if (normalized.getTime() !== currentNormalized.getTime()) {
-        setSelectedDate(normalized);
-        // Trigger scroll to the new date
-        const idx = Math.max(0, Math.min(weeks.length - 1, getWeekIndexForDate(normalized, weeks)));
-        setCurrentWeekIndex(idx);
-        setLocalIndex(idx);
-        if (listRef.current && hasMounted.current) {
-          setTimeout(() => {
-            listRef.current?.scrollToIndex({ index: idx, animated: true });
-          }, 100);
-        }
+  // Find the index of the week containing the selected date
+  const selectedWeekIndex = useMemo(() => {
+    const selectedMonday = getMondayOfWeek(normalizedSelectedDate);
+    const selectedMondayTime = selectedMonday.getTime();
+    
+    for (let i = 0; i < weeksArray.length; i++) {
+      if (weeksArray[i].getTime() === selectedMondayTime) {
+        return i;
       }
     }
-  }, [initialSelectedDate, selectedDate, weeks]);
+    
+    return 0;
+  }, [normalizedSelectedDate, weeksArray]);
 
-  const dayAcronyms = [
-    t('calendar.days.monday'),
-    t('calendar.days.tuesday'),
-    t('calendar.days.wednesday'),
-    t('calendar.days.thursday'),
-    t('calendar.days.friday'),
-    t('calendar.days.saturday'),
-    t('calendar.days.sunday'),
-  ].map((d) => d?.trim()?.[0] ?? '');
+  // Get day name abbreviations
+  const dayAcronyms = useMemo(() => {
+    return [
+      t('calendar.days.monday'),
+      t('calendar.days.tuesday'),
+      t('calendar.days.wednesday'),
+      t('calendar.days.thursday'),
+      t('calendar.days.friday'),
+      t('calendar.days.saturday'),
+      t('calendar.days.sunday'),
+    ].map((d) => d?.trim()?.slice(0, 3) ?? '');
+  }, [t]);
 
-  const generateWeekData = useCallback(
-    (weekDates: Date[]): DayData[] => {
-      const today = normalizeDate(new Date());
+  // Handle day press - notify parent
+  const handleDatePress = useCallback((day: DayData) => {
+    onDateSelect?.(day.date);
+  }, [onDateSelect]);
 
-      return weekDates.map((date, i) => {
-        const dateCopy = normalizeDate(date);
-        const selectedNormalized = normalizeDate(selectedDate);
+  // Handle week swipe - just for haptic feedback
+  const handlePageSelected = useCallback((event: PagerViewOnPageSelectedEvent) => {
+    const weekIndex = event.nativeEvent.position;
+    const weekMonday = weeksArray[weekIndex];
 
-        const isToday = dateCopy.getTime() === today.getTime();
-        const isSelected = dateCopy.getTime() === selectedNormalized.getTime();
-        const isFuture = dateCopy.getTime() > today.getTime();
+    if (!weekMonday) return;
 
-        return {
-          date: dateCopy,
-          dayName: dayAcronyms[i],
-          dayNumber: dateCopy.getDate().toString(),
-          isToday,
-          isActive: isSelected,
-          isFuture,
-        };
-      });
-    },
-    [selectedDate, dayAcronyms]
-  );
+    // User swiped - provide haptic feedback
+    haptics.selection();
 
-  const weeksData: DayData[][] = useMemo(
-    () => weeks.map((dates) => generateWeekData(dates)),
-    [weeks, generateWeekData]
-  );
+    // Notify parent of month/year (for display purposes)
+    const midWeek = new Date(weekMonday);
+    midWeek.setDate(weekMonday.getDate() + 3);
+    onSwipe?.(midWeek.getMonth(), midWeek.getFullYear());
+  }, [weeksArray, onSwipe]);
 
-  // When the selected date changes, compute the week index and scroll
-  useEffect(() => {
-    if (!hasMounted.current) {
-      hasMounted.current = true;
-    }
-
-    const normalized = normalizeDate(selectedDate);
-    const idx = Math.max(0, Math.min(weeks.length - 1, getWeekIndexForDate(normalized, weeks)));
-
-    // Update indices if they changed
-    setCurrentWeekIndex((prevIdx) => {
-      if (prevIdx !== idx) {
-        // Scroll to the correct week when index changes
-        if (listRef.current) {
-          setTimeout(() => {
-            listRef.current?.scrollToIndex({ index: idx, animated: hasMounted.current });
-          }, hasMounted.current ? 100 : 200);
-        }
-      }
-      return idx;
-    });
-    setLocalIndex((prevIdx) => (prevIdx !== idx ? idx : prevIdx));
-  }, [selectedDate, weeks.length]);
-
-  // Initialize title on mount
-  useEffect(() => {
-    if (weeks.length > 0 && initialIndexRef.current < weeks.length) {
-      const week = weeks[initialIndexRef.current];
-      if (week) {
-        const { month, year } = getWeekMonthYear(week);
-        onSwipe?.(month, year);
-      }
-    }
-  }, [weeks, onSwipe]);
-
-  const handleDatePress = (day: DayData) => {
-    const normalized = normalizeDate(day.date);
-    setSelectedDate(normalized);
-    onDateSelect?.(normalized);
-  };
-
-  // Always render all weeks to ensure all dates are clickable
-  // The FlashList will handle virtualization efficiently
-  const shouldRenderIndex = useCallback(
-    () => true, // Always render - FlashList handles optimization
-    []
-  );
-
-  // Follow finger smoothly — local only
-  const onScroll = useCallback(
-    (e: any) => {
-      const x = e?.nativeEvent?.contentOffset?.x || 0;
-      const idx = Math.max(
-        0,
-        Math.min(Math.floor((x + ITEM_WIDTH / 2) / ITEM_WIDTH), weeks.length - 1)
-      );
-      if (idx !== localIndex) {
-        setLocalIndex(idx);
-        // Update title as user swipes
-        const week = weeks[idx];
-        if (week) {
-          const { month, year } = getWeekMonthYear(week);
-          onSwipe?.(month, year);
-        }
-      }
-    },
-    [localIndex, weeks, onSwipe]
-  );
-
-  // Commit page on settle
-  const onMomentumScrollEnd = useCallback(
-    (e: any) => {
-      const x = e?.nativeEvent?.contentOffset?.x ?? 0;
-      const idx = Math.max(0, Math.min(Math.round(x / ITEM_WIDTH), weeks.length - 1));
-      if (idx !== currentWeekIndex) {
-        setCurrentWeekIndex(idx);
-        const week = weeks[idx];
-        if (week) {
-          const { month, year } = getWeekMonthYear(week);
-          onSwipe?.(month, year);
-        }
-      }
-      if (idx !== localIndex) setLocalIndex(idx);
-    },
-    [weeks.length, currentWeekIndex, localIndex, onSwipe, weeks]
-  );
-
-  const renderItem = useCallback(
-    ({ item, index }: { item: DayData[]; index: number }) => (
-      <View style={styles.renderItemContainer}>
-        <WeekPage
-          days={item}
-          onPressDay={handleDatePress}
-          shouldRender={shouldRenderIndex(index)}
-          themeColors={themeColors}
-          primaryColor={primaryColor}
-        />
-      </View>
-    ),
-    [shouldRenderIndex, themeColors, primaryColor]
-  );
+  // Pill background color
+  const pillBackgroundColor = isLightMode ? '#FFFFFF' : themeColors.surfacePrimary;
 
   return (
     <View style={styles.container}>
-      <FlashList
-        ref={listRef}
-        data={weeksData}
-        horizontal
-        style={styles.list}
-        showsHorizontalScrollIndicator={false}
-        pagingEnabled
-        snapToInterval={ITEM_WIDTH}
-        snapToAlignment="start"
-        decelerationRate="fast"
-        disableIntervalMomentum
-        contentInsetAdjustmentBehavior="never"
-        overrideItemLayout={(layout, index) => {
-          // @ts-ignore - FlashList overrideItemLayout types may be outdated
-          layout.size = ITEM_WIDTH;
-          // @ts-ignore
-          layout.offset = ITEM_WIDTH * index;
-        }}
-        keyExtractor={(_, i) => `week-${i}`}
-        renderItem={renderItem}
-        removeClippedSubviews
-        nestedScrollEnabled
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        onMomentumScrollEnd={onMomentumScrollEnd}
-        extraData={{ selectedDate, localIndex }}
-        initialScrollIndex={initialIndexRef.current}
-      />
+      <PagerView
+        key={`${currentYear}-${currentMonth}`}
+        style={styles.pager}
+        initialPage={selectedWeekIndex}
+        onPageSelected={handlePageSelected}
+        offscreenPageLimit={1}
+      >
+        {weeksArray.map((monday) => (
+          <View key={`week-${monday.getTime()}`} style={styles.weekPage} collapsable={false}>
+            <WeekPage
+              monday={monday}
+              selectedDate={normalizedSelectedDate}
+              currentMonth={currentMonth}
+              dayAcronyms={dayAcronyms}
+              onDatePress={handleDatePress}
+              themeColors={themeColors}
+              isLightMode={isLightMode}
+              pillBackgroundColor={pillBackgroundColor}
+            />
+          </View>
+        ))}
+      </PagerView>
     </View>
   );
 };
@@ -350,58 +325,47 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     marginTop: 4,
     width: '100%',
-  },
-  list: {
     height: WEEK_HEIGHT,
   },
-  renderItemContainer: {
-    width: ITEM_WIDTH,
-    height: WEEK_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+  pager: {
+    flex: 1,
   },
   weekPage: {
-    width: '100%',
-    height: WEEK_HEIGHT,
-    justifyContent: 'flex-start',
-    alignItems: 'stretch',
-    paddingTop: 0,
-    paddingHorizontal: 0,
-    marginHorizontal: 0,
+    flex: 1,
+    justifyContent: 'center',
   },
   weekContent: {
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 0,
-    marginHorizontal: 0,
+    paddingHorizontal: 16,
   },
   dayContainer: {
     alignItems: 'center',
     flex: 1,
-    minWidth: 0, // Allow flex items to shrink
-    overflow: 'visible',
-    paddingHorizontal: 0,
-    marginHorizontal: 0,
-  },
-  dayWrapper: {
-    alignItems: 'center',
-    paddingTop: 6,
-    paddingBottom: 2,
+    minWidth: 0,
   },
   dayAcronym: {
-    ...typography.h8,
+    ...typography.p3,
     marginBottom: 8,
   },
   dayCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 17,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+  },
+  dayPill: {
+    width: 48,
+    height: 76,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'transparent',
+    paddingVertical: 10,
   },
   dayNumber: {
     ...typography.h6,

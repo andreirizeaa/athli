@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, Platform, Alert, Keyboard, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Platform, Keyboard, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { X } from 'lucide-react-native';
@@ -18,6 +18,7 @@ import { InputBox, type InputBoxRef } from '@/components/ui/form-inputs/input-bo
 import { haptics } from '@/utils/haptics';
 import { supabase } from '@/lib/supabase';
 import { signOut } from '@/services/auth/supabase-auth';
+import { Dialog } from '@/components/ui/dialog';
 
 export default function ChangeEmailModal() {
   const router = useRouter();
@@ -34,6 +35,9 @@ export default function ChangeEmailModal() {
   const [newEmail, setNewEmail] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const emailRef = useRef<InputBoxRef>(null);
 
@@ -84,39 +88,28 @@ export default function ChangeEmailModal() {
       }
 
       haptics.success();
-
-      Alert.alert(
-        t('profile.emailChange.confirmationSentTitle'),
-        t('profile.emailChange.confirmationSentMessage'),
-        [
-          {
-            text: t('general.ok'),
-            onPress: () => {
-              // Small delay to ensure alert is dismissed before signing out
-              setTimeout(async () => {
-                try {
-                  await signOut();
-                  router.dismissAll();
-                } catch (error) {
-                  console.error('[ChangeEmail] Error signing out:', error);
-                  router.dismissAll();
-                }
-              }, 100);
-            },
-          },
-        ],
-        { cancelable: false }
-      );
+      setShowSuccessDialog(true);
     } catch (error: any) {
       setIsUpdating(false);
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('profile.emailChange.updateFailed'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('profile.emailChange.updateFailed'));
+      setShowErrorDialog(true);
     }
   }, [newEmail, currentEmail, t, router]);
+
+  const handleSuccessDialogClose = useCallback(async () => {
+    setShowSuccessDialog(false);
+    // Small delay to ensure dialog is dismissed before signing out
+    setTimeout(async () => {
+      try {
+        await signOut();
+        router.dismissAll();
+      } catch (error) {
+        console.error('[ChangeEmail] Error signing out:', error);
+        router.dismissAll();
+      }
+    }, 100);
+  }, [router]);
 
   return (
     <View
@@ -172,8 +165,7 @@ export default function ChangeEmailModal() {
             styles.primaryButton,
             { backgroundColor: '#FFFFFF' },
           ]}
-          onPress={handleUpdateEmail}
-          disabled={isUpdating}
+          onPress={isUpdating ? undefined : handleUpdateEmail}
         >
           {isUpdating ? (
             <ActivityIndicator size="small" color="#000000" />
@@ -189,6 +181,24 @@ export default function ChangeEmailModal() {
           )}
         </PressableScale>
       </View>
+
+      <Dialog
+        visible={showSuccessDialog}
+        onClose={handleSuccessDialogClose}
+        title={t('profile.emailChange.confirmationSentTitle')}
+        message={t('profile.emailChange.confirmationSentMessage')}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: handleSuccessDialogClose, variant: 'primary' }]}
+      />
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
     </View>
   );
 }

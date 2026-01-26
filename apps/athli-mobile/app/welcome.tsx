@@ -1,12 +1,15 @@
-import { StyleSheet, View, Text, Platform, Image, Alert, ImageBackground } from 'react-native';
+import { StyleSheet, View, Text, Platform, Image, ImageBackground } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PressableScale, PressableOpacity } from 'pressto';
 import { Ionicons } from '@expo/vector-icons';
 
+import SquircleView from 'react-native-fast-squircle';
+
+import { Dialog } from '@/components/ui/dialog';
 import { typography } from '@/constants/typography';
-import { useTranslations, useThemePreference, useCoachProfileStore, useClientProfileStore, useAppView } from '@/stores';
+import { useTranslations, useCoachProfileStore, useClientProfileStore, useAppView, useThemePreference, useColorScheme } from '@/stores';
 import { AuthLoadingOverlay } from '@/components/auth/auth-loading-overlay';
 import { authenticateUser } from '@/services/auth/supabase-auth';
 import { haptics } from '@/utils/haptics';
@@ -14,12 +17,20 @@ import type { CoachProfile, ClientProfile } from '@/types/profile';
 
 export default function WelcomeScreen() {
   const { t } = useTranslations();
-  const { colors: themeColors } = useThemePreference();
   const router = useRouter();
   const { setAppView } = useAppView();
+  const { colors: themeColors } = useThemePreference();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const [isLoading, setIsLoading] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorDialog, setErrorDialog] = useState({ title: '', message: '' });
   const setCoachProfile = useCoachProfileStore((state) => state.setProfile);
   const setClientProfile = useClientProfileStore((state) => state.setProfile);
+
+  const backgroundImage = isDark
+    ? require('@/assets/backgrounds/dark.png')
+    : require('@/assets/backgrounds/light.png');
 
   const handleAuthSuccess = (profileType: 'coach' | 'client', profile: CoachProfile | ClientProfile) => {
     if (profileType === 'coach') {
@@ -42,18 +53,17 @@ export default function WelcomeScreen() {
     }
 
     if (error.message === 'NO_PROFILE_FOUND') {
-      Alert.alert(
-        t('auth.noAccountFound'),
-        t('auth.noAccountFoundMessage'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorDialog({
+        title: t('auth.noAccountFound'),
+        message: t('auth.noAccountFoundMessage'),
+      });
     } else {
-      Alert.alert(
-        t('auth.signInError'),
-        error.message || t('auth.signInErrorMessage'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorDialog({
+        title: t('auth.signInError'),
+        message: error.message || t('auth.signInErrorMessage'),
+      });
     }
+    setShowErrorDialog(true);
   };
 
   const handleGoogleSignIn = async () => {
@@ -97,8 +107,8 @@ export default function WelcomeScreen() {
 
   return (
     <ImageBackground
-      source={require('@/assets/backgrounds/dark.png')}
-      style={styles.container}
+      source={backgroundImage}
+      style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}
       resizeMode="cover"
     >
       <AuthLoadingOverlay visible={isLoading} />
@@ -107,80 +117,101 @@ export default function WelcomeScreen() {
         <View style={styles.spacer} />
 
         <View style={styles.footer}>
-          <Text style={styles.motto}>
+          <Text style={[styles.motto, { color: themeColors.text }]}>
             ELEVATE YOUR{'\n'}POTENTIAL.
           </Text>
           <View style={styles.buttonContainer}>
             {Platform.OS === 'ios' && (
               <PressableScale
-                style={styles.filledButton}
+                style={styles.buttonWrapper}
                 onPress={handleAppleSignIn}
                 enabled={!isLoading}
               >
-                <View style={styles.buttonIconLeft}>
-                  <Image
-                    source={require('@/assets/icons/apple.png')}
-                    style={[styles.icon, { tintColor: '#000000' }]}
-                    resizeMode="contain"
-                  />
-                </View>
-                <Text style={styles.filledButtonText}>
-                  {t('auth.continueWithApple')}
-                </Text>
+                <SquircleView style={[styles.filledButton, { backgroundColor: themeColors.text }]} cornerSmoothing={1}>
+                  <View style={styles.buttonIconLeft}>
+                    <Image
+                      source={require('@/assets/icons/apple.png')}
+                      style={[styles.icon, { tintColor: themeColors.backgroundPrimary }]}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  <Text style={[styles.filledButtonText, { color: themeColors.backgroundPrimary }]}>
+                    {t('auth.continueWithApple')}
+                  </Text>
+                </SquircleView>
               </PressableScale>
             )}
 
             <PressableScale
-              style={styles.filledButton}
+              style={styles.buttonWrapper}
               onPress={handleGoogleSignIn}
               enabled={!isLoading}
             >
-              <View style={styles.buttonIconLeft}>
-                <Image
-                  source={require('@/assets/icons/google.png')}
-                  style={styles.icon}
-                  resizeMode="contain"
-                />
-              </View>
-              <Text style={styles.filledButtonText}>
-                {t('auth.continueWithGoogle')}
-              </Text>
+              <SquircleView style={[styles.filledButton, { backgroundColor: themeColors.text }]} cornerSmoothing={1}>
+                <View style={styles.buttonIconLeft}>
+                  <Image
+                    source={require('@/assets/icons/google.png')}
+                    style={styles.icon}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={[styles.filledButtonText, { color: themeColors.backgroundPrimary }]}>
+                  {t('auth.continueWithGoogle')}
+                </Text>
+              </SquircleView>
             </PressableScale>
 
             <PressableScale
-              style={styles.outlinedButton}
+              style={styles.buttonWrapper}
               onPress={handleEmailSignIn}
               enabled={!isLoading}
             >
-              <View style={styles.buttonIconLeft}>
-                <Ionicons name="mail-outline" size={24} color="#FFFFFF" />
-              </View>
-              <Text style={styles.outlinedButtonText}>
-                {t('auth.continueWithEmail')}
-              </Text>
+              <SquircleView style={[styles.outlinedButton, { borderColor: themeColors.text }]} cornerSmoothing={1}>
+                <View style={styles.buttonIconLeft}>
+                  <Ionicons name="mail-outline" size={24} color={themeColors.text} />
+                </View>
+                <Text style={[styles.outlinedButtonText, { color: themeColors.text }]}>
+                  {t('auth.continueWithEmail')}
+                </Text>
+              </SquircleView>
             </PressableScale>
           </View>
 
           <View style={styles.termsContainer}>
-            <Text style={styles.termsText}>
+            <Text style={[styles.termsText, { color: themeColors.mutedText }]}>
               {t('auth.termsAgreement')}{' '}
             </Text>
             <PressableOpacity onPress={handleTermsOfServicePress}>
-              <Text style={styles.termsLink}>
+              <Text style={[styles.termsLink, { color: themeColors.text }]}>
                 {t('auth.termsOfUse')}
               </Text>
             </PressableOpacity>
-            <Text style={styles.termsText}>
+            <Text style={[styles.termsText, { color: themeColors.mutedText }]}>
               {' '}{t('auth.and')}{' '}
             </Text>
             <PressableOpacity onPress={handlePrivacyPolicyPress}>
-              <Text style={styles.termsLink}>
+              <Text style={[styles.termsLink, { color: themeColors.text }]}>
                 {t('auth.privacyPolicy')}
               </Text>
             </PressableOpacity>
           </View>
         </View>
       </SafeAreaView>
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={errorDialog.title}
+        message={errorDialog.message}
+        showCloseIcon={false}
+        buttons={[
+          {
+            label: t('general.ok'),
+            onPress: () => setShowErrorDialog(false),
+            variant: 'primary',
+          },
+        ]}
+      />
     </ImageBackground>
   );
 }
@@ -188,7 +219,6 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   safeArea: {
     flex: 1,
@@ -201,7 +231,6 @@ const styles = StyleSheet.create({
     ...typography.h1,
     fontSize: 56,
     lineHeight: 60,
-    color: '#FFFFFF',
     textTransform: 'uppercase',
     letterSpacing: -1.5,
     textAlign: 'center',
@@ -213,33 +242,33 @@ const styles = StyleSheet.create({
   buttonContainer: {
     gap: 12,
   },
+  buttonWrapper: {
+    height: 55,
+    borderRadius: 28,
+  },
   filledButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 55,
     borderRadius: 28,
-    backgroundColor: '#FFFFFF',
   },
   filledButtonText: {
     ...typography.h6,
     fontWeight: '700',
-    color: '#000000',
   },
   outlinedButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 55,
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: '#FFFFFF',
     backgroundColor: 'transparent',
   },
   outlinedButtonText: {
     ...typography.h6,
     fontWeight: '700',
-    color: '#FFFFFF',
   },
   buttonIconLeft: {
     position: 'absolute',
@@ -263,13 +292,11 @@ const styles = StyleSheet.create({
   },
   termsText: {
     ...typography.p3,
-    color: 'rgba(255, 255, 255, 0.6)',
     textAlign: 'center',
   },
   termsLink: {
     ...typography.p3,
     fontWeight: '600',
-    color: '#FFFFFF',
     textDecorationLine: 'underline',
   },
 });
