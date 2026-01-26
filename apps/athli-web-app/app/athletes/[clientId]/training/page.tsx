@@ -3376,7 +3376,11 @@ const ClientTrainingCalendarPage = () => {
           duration: 0,
           intensity: 0,
           volume: 0,
-          readiness: fetchedInProgressWorkoutData?.workout_data?.pre?.readiness || fetchedInProgressWorkoutData?.pre?.readiness || inProgressSummaryWorkout?.workout.pre?.readiness || 0,
+          readiness: (() => {
+            const pre = fetchedInProgressWorkoutData?.workout_data?.pre || fetchedInProgressWorkoutData?.pre || inProgressSummaryWorkout?.workout.pre || {};
+            const values = [pre.sleep, pre.mood, pre.energy, pre.stress, pre.soreness].filter((v): v is number => v !== null && v !== undefined);
+            return values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length * 2) : 0;
+          })(),
           rating: 0
         }}
       />
@@ -3401,7 +3405,11 @@ const ClientTrainingCalendarPage = () => {
           duration: fetchedCompletedWorkoutData?.workout_data?.completedSummary?.totalDurationMin || fetchedCompletedWorkoutData?.completedSummary?.totalDurationMin || completedSummaryWorkout?.workout.completedSummary?.totalDurationMin || 0,
           intensity: fetchedCompletedWorkoutData?.workout_data?.post?.intensity || fetchedCompletedWorkoutData?.post?.intensity || completedSummaryWorkout?.workout.post?.intensity || 0,
           volume: fetchedCompletedWorkoutData?.workout_data?.completedSummary?.totalWeightLifted || fetchedCompletedWorkoutData?.completedSummary?.totalWeightLifted || completedSummaryWorkout?.workout.completedSummary?.totalWeightLifted || 0,
-          readiness: fetchedCompletedWorkoutData?.workout_data?.pre?.readiness || fetchedCompletedWorkoutData?.pre?.readiness || completedSummaryWorkout?.workout.pre?.readiness || 0,
+          readiness: (() => {
+            const pre = fetchedCompletedWorkoutData?.workout_data?.pre || fetchedCompletedWorkoutData?.pre || completedSummaryWorkout?.workout.pre || {};
+            const values = [pre.sleep, pre.mood, pre.energy, pre.stress, pre.soreness].filter((v): v is number => v !== null && v !== undefined);
+            return values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length * 2) : 0;
+          })(),
           rating: fetchedCompletedWorkoutData?.workout_data?.post?.rating || fetchedCompletedWorkoutData?.post?.rating || completedSummaryWorkout?.workout.post?.rating || 0
         }}
       />

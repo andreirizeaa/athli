@@ -27,7 +27,7 @@ const mapWorkoutResponse = (workout: any) => {
 
         // Extracted complex objects from workout_data
         items: workout_data?.items || [],
-        pre: workout_data?.pre || { readiness: null },
+        pre: workout_data?.pre || { sleep: null, mood: null, energy: null, stress: null, soreness: null },
         post: workout_data?.post || { rating: null, intensity: null, sessionComments: '' },
         completedSummary: workout_data?.completedSummary || workout_data?.meta || { status: 'not_started', startedAt: null, completedAt: null, totalDurationMin: null, totalWeightLifted: null },
     };
@@ -87,7 +87,11 @@ export const coachWorkoutsController = {
 
             // Execution tracking (grouped)
             pre: workout_data.pre || {
-                readiness: workout_data.readiness ?? null,
+                sleep: workout_data.sleep ?? null,
+                mood: workout_data.mood ?? null,
+                energy: workout_data.energy ?? null,
+                stress: workout_data.stress ?? null,
+                soreness: workout_data.soreness ?? null,
             },
             post: workout_data.post || {
                 rating: workout_data.rating ?? null,
@@ -103,7 +107,7 @@ export const coachWorkoutsController = {
             },
         } : {
             items: [],
-            pre: { readiness: null },
+            pre: { sleep: null, mood: null, energy: null, stress: null, soreness: null },
             post: { rating: null, intensity: null, sessionComments: '' },
             completedSummary: { status: 'not_started', startedAt: null, completedAt: null, totalDurationMin: null, totalWeightLifted: null }
         };
@@ -177,7 +181,11 @@ export const coachWorkoutsController = {
 
             // Nested execution fields
             pre: workout_data.pre || {
-                readiness: workout_data.readiness ?? null,
+                sleep: workout_data.sleep ?? null,
+                mood: workout_data.mood ?? null,
+                energy: workout_data.energy ?? null,
+                stress: workout_data.stress ?? null,
+                soreness: workout_data.soreness ?? null,
             },
             post: workout_data.post || {
                 rating: workout_data.rating ?? null,

@@ -1,9 +1,8 @@
 import { Redirect, useRouter } from 'expo-router';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useThemePreference } from '@/stores';
 import { useEffect, useRef } from 'react';
-import { SkeletonList } from '@/components/ui/skeleton-list';
 
 export default function Index() {
   const { isAuthenticated, isReady } = useAuth();
@@ -36,11 +35,11 @@ export default function Index() {
     return () => clearTimeout(timer);
   }, [isReady, isAuthenticated, router]);
 
-  // Show skeleton loading
-  console.log('🔵 [Index] Showing skeleton loading');
+  // Show loading spinner
+  console.log('🔵 [Index] Showing loading spinner');
   return (
     <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
-      <SkeletonList />
+      <ActivityIndicator size="large" color={themeColors.primary} />
     </View>
   );
 }
@@ -48,5 +47,7 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

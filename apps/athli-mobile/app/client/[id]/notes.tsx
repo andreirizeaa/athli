@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { StyleSheet, Text, View, ScrollView, Pressable } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import SquircleView from 'react-native-fast-squircle';
 
 import { Dialog } from '@/components/ui/dialog';
@@ -15,7 +15,6 @@ import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SearchBar } from '@/components/ui/search-bar';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { SkeletonList } from '@/components/ui/skeleton-list';
 import { deleteClientNote } from '@/services/client/client-notes-service';
 
 // Simple fuzzy search - checks if all characters appear in order
@@ -235,7 +234,9 @@ export default function ClientNotesScreen() {
         >
           {/* Loading state */}
           {isLoadingNotes && notes.length === 0 ? (
-            <SkeletonList />
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={themeColors.primary} />
+            </View>
           ) : notes.length === 0 ? (
             /* Empty state */
             <View style={styles.emptyContainer}>
