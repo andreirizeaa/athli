@@ -1183,13 +1183,13 @@ const ClientTrainingCalendarPage = () => {
   };
 
   // Render status icon for workout
-  const renderWorkoutStatusIcon = (status: 'not_started' | 'in_progress' | 'completed') => {
+  const renderWorkoutStatusIcon = (status: 'not_started' | 'in_progress' | 'completed', isPast: boolean = false) => {
     switch (status) {
       case 'not_started':
         return (
           <Tooltip>
             <TooltipTrigger asChild>
-              <CircleX className="size-4 text-muted-foreground" />
+              <CircleX className={cn("size-4", isPast ? "text-red-500" : "text-muted-foreground")} />
             </TooltipTrigger>
             <TooltipContent>
               <p>{t('athletes.trainingCalendar.notStarted')}</p>
@@ -1222,7 +1222,7 @@ const ClientTrainingCalendarPage = () => {
         return (
           <Tooltip>
             <TooltipTrigger asChild>
-              <CircleX className="size-4 text-muted-foreground" />
+              <CircleX className={cn("size-4", isPast ? "text-red-500" : "text-muted-foreground")} />
             </TooltipTrigger>
             <TooltipContent>
               <p>{t('athletes.trainingCalendar.notStarted')}</p>
@@ -2592,6 +2592,7 @@ const ClientTrainingCalendarPage = () => {
                       const isHoveredForCopy = isCopyMode && hoveredCopyDay === dateKey && !pastedDays.includes(dateKey);
                       const isPastedDay = pastedDays.includes(dateKey);
                       const isFutureDay = isTomorrowOrLater(date);
+                      const isPastDay = !isFutureDay && !isToday(date);
                       const isDragOver = dragOverDay === dateKey;
                       const isSourceDay = draggedWorkout?.sourceDateKey === dateKey;
 
@@ -2747,7 +2748,8 @@ const ClientTrainingCalendarPage = () => {
                                               // Status-based border colors
                                               status === 'in_progress' && "border-amber-500",
                                               status === 'completed' && "border-green-500",
-                                              status === 'not_started' && "border-border"
+                                              status === 'not_started' && isPastDay && "border-red-500",
+                                              status === 'not_started' && !isPastDay && "border-border"
                                             )}
                                           >
                                             {/* Loading overlay for duplicate/delete operations */}
@@ -2755,7 +2757,7 @@ const ClientTrainingCalendarPage = () => {
                                             <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30 group/card-header">
                                               <div className="flex-1 min-w-0 flex items-center gap-1.5">
                                                 <div className="flex-shrink-0">
-                                                  {renderWorkoutStatusIcon(status)}
+                                                  {renderWorkoutStatusIcon(status, isPastDay)}
                                                 </div>
                                                 <span
                                                   className="text-[11px] font-medium block truncate"

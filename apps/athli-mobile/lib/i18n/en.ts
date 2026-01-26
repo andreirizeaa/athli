@@ -111,6 +111,9 @@ export const en = {
     athlete: {
       noWorkouts: 'Rest day!',
       noWorkoutsDescription: 'No workouts scheduled - take it easy today',
+      startWorkout: 'Start workout',
+      resumeWorkout: 'Resume workout',
+      reviewWorkout: 'Review workout',
     },
     addOptions: {
       addFromLibrary: 'Add from library',

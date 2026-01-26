@@ -45,12 +45,13 @@ type WorkoutDayPageProps = {
   workouts: TrainingCalendarItem[];
   isLoading: boolean;
   isFutureOrToday: boolean;
+  isPast: boolean;
   onWorkoutPress: (workout: TrainingCalendarItem) => void;
   onDeleteWorkout: (workout: TrainingCalendarItem) => void;
   onAddWorkout: () => void;
   themeColors: any;
   t: (key: string) => string;
-  renderStatusIcon: (status: string | undefined) => React.ReactNode;
+  renderStatusIcon: (status: string | undefined, isPast: boolean) => React.ReactNode;
 };
 
 // Get Monday of the week containing the given date
@@ -105,6 +106,7 @@ const WorkoutDayPage = React.memo(
     workouts,
     isLoading,
     isFutureOrToday,
+    isPast,
     onWorkoutPress,
     onDeleteWorkout,
     onAddWorkout,
@@ -150,7 +152,7 @@ const WorkoutDayPage = React.memo(
               <View style={pageStyles.workoutHeader}>
                 <View style={pageStyles.workoutHeaderLeft}>
                   <View style={pageStyles.statusIconContainer}>
-                    {renderStatusIcon(workout.completedSummary?.status)}
+                    {renderStatusIcon(workout.completedSummary?.status, isPast)}
                   </View>
                   <View style={pageStyles.workoutInfo}>
                     <Text style={[pageStyles.workoutName, { color: themeColors.text }]} numberOfLines={1}>
@@ -255,7 +257,6 @@ const pageStyles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginHorizontal: 16,
   },
   exerciseListContainer: {
     paddingHorizontal: 16,
@@ -461,7 +462,6 @@ const skeletonStyles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginHorizontal: 16,
     opacity: 0.3,
   },
   exerciseList: {
@@ -676,6 +676,29 @@ export default function ClientTrainingScreen() {
     return `${monthName} ${yearShort}`;
   }, [currentMonth, currentYear, t]);
 
+  // Compute workout status by date for calendar coloring
+  const workoutStatusByDate = useMemo(() => {
+    const statusMap: Record<string, 'all_not_started' | 'has_in_progress' | 'all_completed'> = {};
+
+    Object.entries(trainingCalendar).forEach(([dateKey, workoutsObj]) => {
+      if (!workoutsObj) return;
+      const workouts = Object.values(workoutsObj);
+      if (workouts.length === 0) return;
+
+      const statuses = workouts.map((w: any) => w.completedSummary?.status);
+
+      if (statuses.some((s) => s === 'in_progress')) {
+        statusMap[dateKey] = 'has_in_progress';
+      } else if (statuses.every((s) => s === 'completed')) {
+        statusMap[dateKey] = 'all_completed';
+      } else {
+        statusMap[dateKey] = 'all_not_started';
+      }
+    });
+
+    return statusMap;
+  }, [trainingCalendar]);
+
   const handleBackPress = useCallback(() => {
     router.back();
   }, [router]);
@@ -746,14 +769,17 @@ export default function ClientTrainingScreen() {
   }, [workoutToDelete, deleteMutation]);
 
   // Render status icon based on workout status
-  const renderStatusIcon = useCallback((status: string | undefined) => {
+  const renderStatusIcon = useCallback((status: string | undefined, isPast: boolean) => {
     switch (status) {
       case 'completed':
         return <CircleCheck {...({ size: 20, color: '#22C55E' } as any)} />;
       case 'in_progress':
         return <CircleDashed {...({ size: 20, color: '#F59E0B' } as any)} />;
-      default:
-        return <CircleX {...({ size: 20, color: themeColors.mutedText } as any)} />;
+      default: {
+        // Use red for not_started on past dates, muted otherwise
+        const notStartedColor = isPast ? '#E85C4A' : themeColors.mutedText;
+        return <CircleX {...({ size: 20, color: notStartedColor } as any)} />;
+      }
     }
   }, [themeColors.mutedText]);
 
@@ -797,6 +823,7 @@ export default function ClientTrainingScreen() {
               selectedDate={selectedDate}
               onDateSelect={handleDateSelect}
               onSwipe={handleCalendarSwipe}
+              workoutStatusByDate={workoutStatusByDate}
             />
           </View>
 
@@ -820,6 +847,7 @@ export default function ClientTrainingScreen() {
                   }))
                 : [];
               const isFutureOrToday = date.getTime() >= todayTimestamp;
+              const isPast = date.getTime() < todayTimestamp;
               const isCurrentPageLoading = isLoadingTraining && selectedDate.getTime() === date.getTime();
 
               return (
@@ -829,6 +857,7 @@ export default function ClientTrainingScreen() {
                     workouts={dayWorkouts}
                     isLoading={isCurrentPageLoading}
                     isFutureOrToday={isFutureOrToday}
+                    isPast={isPast}
                     onWorkoutPress={handleWorkoutPress}
                     onDeleteWorkout={handleDeleteWorkout}
                     onAddWorkout={handleAddWorkout}
