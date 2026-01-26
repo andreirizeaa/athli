@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Platform, StyleSheet, Text, View, Alert, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { Platform, StyleSheet, Text, View, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,6 +22,7 @@ import { Card } from '@/components/ui/card';
 import { uploadFile, updateFile } from '@/services/coach/coach-file-service';
 import { uploadClientFile, updateClientFile } from '@/services/client/client-file-service';
 import { hexToRgba } from '@/utils/colorUtils';
+import { Dialog } from '@/components/ui/dialog';
 
 type SelectedFile = {
     uri: string;
@@ -103,6 +104,9 @@ export default function AddFileModal() {
     }, [params.type]);
 
     const [fileName, setFileName] = useState(params.name || '');
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
     const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(() => {
         if (isEditing && initialFileType) {
             return {
@@ -124,11 +128,8 @@ export default function AddFileModal() {
         },
         onError: (error: Error) => {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                error.message || t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(error.message || t('general.errorSaving'));
+            setShowErrorDialog(true);
         },
     });
 
@@ -148,11 +149,8 @@ export default function AddFileModal() {
         onError: (error: Error) => {
             console.error('[AddFileModal] uploadClientFile error:', error);
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                error.message || t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(error.message || t('general.errorSaving'));
+            setShowErrorDialog(true);
         },
     });
 
@@ -166,11 +164,8 @@ export default function AddFileModal() {
         },
         onError: (error: Error) => {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                error.message || t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(error.message || t('general.errorSaving'));
+            setShowErrorDialog(true);
         },
     });
 
@@ -184,11 +179,8 @@ export default function AddFileModal() {
         },
         onError: (error: Error) => {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                error.message || t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(error.message || t('general.errorSaving'));
+            setShowErrorDialog(true);
         },
     });
 
@@ -228,25 +220,11 @@ export default function AddFileModal() {
 
     const handleCloseWithConfirmation = useCallback(() => {
         if (hasChanges) {
-            Alert.alert(
-                t('files.addFile.discardChangesTitle'),
-                t('files.addFile.discardChangesMessage'),
-                [
-                    {
-                        text: t('general.cancel'),
-                        style: 'cancel',
-                    },
-                    {
-                        text: t('files.addFile.discardChanges'),
-                        style: 'destructive',
-                        onPress: handleClose,
-                    },
-                ]
-            );
+            setShowDiscardDialog(true);
         } else {
             handleClose();
         }
-    }, [hasChanges, handleClose, t]);
+    }, [hasChanges, handleClose]);
 
     const handleSave = useCallback(() => {
         if (!canComplete) return;
@@ -307,7 +285,8 @@ export default function AddFileModal() {
         try {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== 'granted') {
-                Alert.alert(t('files.addFile.errors.permissionRequired'));
+                setErrorMessage(t('files.addFile.errors.permissionRequired'));
+                setShowErrorDialog(true);
                 return;
             }
 
@@ -331,7 +310,8 @@ export default function AddFileModal() {
             }
         } catch (error) {
             console.error('Error picking photo:', error);
-            Alert.alert(t('files.addFile.errors.pickFailed'));
+            setErrorMessage(t('files.addFile.errors.pickFailed'));
+            setShowErrorDialog(true);
         }
     };
 
@@ -339,7 +319,8 @@ export default function AddFileModal() {
         try {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== 'granted') {
-                Alert.alert(t('files.addFile.errors.permissionRequired'));
+                setErrorMessage(t('files.addFile.errors.permissionRequired'));
+                setShowErrorDialog(true);
                 return;
             }
 
@@ -363,7 +344,8 @@ export default function AddFileModal() {
             }
         } catch (error) {
             console.error('Error picking video:', error);
-            Alert.alert(t('files.addFile.errors.pickFailed'));
+            setErrorMessage(t('files.addFile.errors.pickFailed'));
+            setShowErrorDialog(true);
         }
     };
 
@@ -387,7 +369,8 @@ export default function AddFileModal() {
             }
         } catch (error) {
             console.error('Error picking document:', error);
-            Alert.alert(t('files.addFile.errors.pickFailed'));
+            setErrorMessage(t('files.addFile.errors.pickFailed'));
+            setShowErrorDialog(true);
         }
     };
 
@@ -590,6 +573,26 @@ export default function AddFileModal() {
                     </KeyboardAwareScrollView>
                 </View>
             </TouchableWithoutFeedback>
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={errorMessage}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
+
+            <Dialog
+                visible={showDiscardDialog}
+                onClose={() => setShowDiscardDialog(false)}
+                title={t('files.addFile.discardChangesTitle')}
+                message={t('files.addFile.discardChangesMessage')}
+                buttons={[
+                    { label: t('general.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+                    { label: t('files.addFile.discardChanges'), onPress: handleClose, variant: 'destructive' },
+                ]}
+            />
         </View>
     );
 }

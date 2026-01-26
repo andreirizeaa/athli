@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo } from 'react';
-import { StyleSheet, Text, View, Alert } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Dumbbell, Play, UserPlus, Trash2 } from 'lucide-react-native';
@@ -19,6 +19,7 @@ import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dro
 import { useLibraryTab } from '@/stores';
 import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Dialog } from '@/components/ui/dialog';
 import { EXERCISE_CATEGORY_OPTIONS, EQUIPMENT_OPTIONS } from '@athli/shared-types';
 
 export const ExercisesTab = () => {
@@ -29,6 +30,10 @@ export const ExercisesTab = () => {
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
+
+  // Dialog state
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Fetch exercises directly with TanStack Query
   const { data: exercises = [], refetch } = useQuery({
@@ -92,11 +97,8 @@ export const ExercisesTab = () => {
         queryClient.setQueryData(['exercises'], context.previousExercises);
       }
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorDeleting'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorDeleting'));
+      setShowErrorDialog(true);
     },
     onSettled: () => {
       // Refetch to ensure server state
@@ -116,11 +118,8 @@ export const ExercisesTab = () => {
     },
     onError: (error: Error) => {
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorDuplicating'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorDuplicating'));
+      setShowErrorDialog(true);
     },
   });
 
@@ -133,11 +132,8 @@ export const ExercisesTab = () => {
     },
     onError: (error: Error) => {
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorUpdating'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorUpdating'));
+      setShowErrorDialog(true);
     },
   });
 
@@ -150,11 +146,8 @@ export const ExercisesTab = () => {
     },
     onError: (error: Error) => {
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorUpdating'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorUpdating'));
+      setShowErrorDialog(true);
     },
   });
 
@@ -380,20 +373,31 @@ export const ExercisesTab = () => {
   }, [filteredExercises.length, themeColors, t, deleteMutation, registerOpenRow, handleThumbnailPress, handleExercisePress, handleAssign, handleLongPress]);
 
   return (
-    <FlashList
-      data={filteredExercises}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={{ paddingBottom: 40 }}
-      ListHeaderComponent={ListHeaderComponent}
-      refreshControl={refreshControl}
-      showsVerticalScrollIndicator={false}
-      ListEmptyComponent={
-        <EmptyState
-          message={t('library.empty.exercises')}
-        />
-      }
-    />
+    <>
+      <FlashList
+        data={filteredExercises}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        ListHeaderComponent={ListHeaderComponent}
+        refreshControl={refreshControl}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <EmptyState
+            message={t('library.empty.exercises')}
+          />
+        }
+      />
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
+    </>
   );
 };
 

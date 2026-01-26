@@ -1,5 +1,6 @@
-import React from 'react';
-import { StyleSheet, Text, View, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { Dialog } from '@/components/ui/dialog';
 import { GripVertical, Trash2 } from 'lucide-react-native';
 import { PressableOpacity, PressableScale } from 'pressto';
 
@@ -36,24 +37,17 @@ export const QuestionCard = ({ question, index, isReorderMode, onDelete, onPress
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
 
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
   const formatLabel = FORMAT_LABELS[question.format] || question.format;
 
+  const handleDeleteConfirm = () => {
+    setShowDeleteDialog(false);
+    onDelete();
+  };
+
   const handleDelete = () => {
-    Alert.alert(
-      t('library.formBuilder.deleteQuestion'),
-      t('library.formBuilder.deleteQuestionMessage'),
-      [
-        {
-          text: t('general.cancel'),
-          style: 'cancel',
-        },
-        {
-          text: t('general.delete'),
-          style: 'destructive',
-          onPress: onDelete,
-        },
-      ]
-    );
+    setShowDeleteDialog(true);
   };
 
   const cardContent = (
@@ -86,16 +80,37 @@ export const QuestionCard = ({ question, index, isReorderMode, onDelete, onPress
     </Card>
   );
 
+  const deleteDialog = (
+    <Dialog
+      visible={showDeleteDialog}
+      onClose={() => setShowDeleteDialog(false)}
+      title={t('library.formBuilder.deleteQuestion')}
+      message={t('library.formBuilder.deleteQuestionMessage')}
+      buttons={[
+        { label: t('general.cancel'), onPress: () => setShowDeleteDialog(false), variant: 'secondary' },
+        { label: t('general.delete'), onPress: handleDeleteConfirm, variant: 'destructive' }
+      ]}
+    />
+  );
+
   // Wrap in PressableScale when not in reorder mode and onPress is provided
   if (!isReorderMode && onPress) {
     return (
-      <PressableScale onPress={onPress}>
-        {cardContent}
-      </PressableScale>
+      <>
+        <PressableScale onPress={onPress}>
+          {cardContent}
+        </PressableScale>
+        {deleteDialog}
+      </>
     );
   }
 
-  return cardContent;
+  return (
+    <>
+      {cardContent}
+      {deleteDialog}
+    </>
+  );
 };
 
 const styles = StyleSheet.create({

@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
-import { View, ScrollView, StyleSheet, ViewStyle, ImageBackground } from 'react-native';
+import { View, ScrollView, StyleSheet, ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
@@ -17,6 +18,7 @@ type ScreenWrapperProps = {
   overlay?: ReactNode;
   hideStatusBarBlur?: boolean;
   scrollEnabled?: boolean;
+  useImageBackground?: boolean; // Set to false to use solid backgroundPrimary instead
 };
 
 export const ScreenWrapper = ({
@@ -29,48 +31,44 @@ export const ScreenWrapper = ({
   overlay,
   hideStatusBarBlur = false,
   scrollEnabled = true,
+  useImageBackground = true,
 }: ScreenWrapperProps) => {
   const insets = useSafeAreaInsets();
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
   const backgroundImage = colorScheme === 'dark' ? darkBackground : lightBackground;
 
-  if (scrollable) {
-    return (
-      <ImageBackground source={backgroundImage} style={styles.screen} resizeMode="cover">
-        <View
-          style={[
-            styles.safeArea,
-            {
-              paddingBottom: 0,
-              paddingLeft: insets.left,
-              paddingRight: insets.right,
-            },
-          ]}
-        >
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={[
-              { paddingBottom: insets.bottom },
-              contentContainerStyle,
-            ]}
-            showsVerticalScrollIndicator={showsVerticalScrollIndicator}
-            scrollEnabled={scrollEnabled}
-            keyboardDismissMode="on-drag"
-          >
-            <View style={{ height: insets.top }} />
-            {children}
-          </ScrollView>
-          {overlay}
-          {!hideStatusBarBlur && <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} />}
-        </View>
-      </ImageBackground>
-    );
-  }
+  const scrollableContent = (
+    <View
+      style={[
+        styles.safeArea,
+        {
+          paddingBottom: 0,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          { paddingBottom: insets.bottom },
+          contentContainerStyle,
+        ]}
+        showsVerticalScrollIndicator={showsVerticalScrollIndicator}
+        scrollEnabled={scrollEnabled}
+        keyboardDismissMode="on-drag"
+      >
+        <View style={{ height: insets.top }} />
+        {children}
+      </ScrollView>
+      {overlay}
+      {!hideStatusBarBlur && <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} />}
+    </View>
+  );
 
-  // Static layout (no ScrollView)
-  return (
-    <ImageBackground source={backgroundImage} style={styles.screen} resizeMode="cover">
+  const staticContent = (
+    <>
       <View
         style={[
           styles.container,
@@ -85,7 +83,29 @@ export const ScreenWrapper = ({
       </View>
       {overlay}
       {!hideStatusBarBlur && <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} />}
-    </ImageBackground>
+    </>
+  );
+
+  const content = scrollable ? scrollableContent : staticContent;
+
+  if (useImageBackground) {
+    return (
+      <View style={styles.screen}>
+        <Image
+          source={backgroundImage}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+        />
+        {content}
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+      {content}
+    </View>
   );
 };
 

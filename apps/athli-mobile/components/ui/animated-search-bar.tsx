@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { Search, X } from 'lucide-react-native';
+import SquircleView from 'react-native-fast-squircle';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
@@ -31,7 +32,8 @@ export const AnimatedSearchBar = ({
   };
 
   return (
-    <View
+    <SquircleView
+      cornerSmoothing={1}
       style={[
         styles.searchContainer,
         {
@@ -72,7 +74,7 @@ export const AnimatedSearchBar = ({
           />
         </PressableOpacity>
       )}
-    </View>
+    </SquircleView>
   );
 };
 

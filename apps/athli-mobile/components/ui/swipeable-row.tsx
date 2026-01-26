@@ -1,5 +1,6 @@
 import React, { useRef, useCallback, useState } from 'react';
-import { StyleSheet, View, Text, Alert, Animated as RNAnimated, ActivityIndicator, Modal } from 'react-native';
+import { StyleSheet, View, Text, Animated as RNAnimated, ActivityIndicator, Modal } from 'react-native';
+import { Dialog } from '@/components/ui/dialog';
 import { Swipeable } from 'react-native-gesture-handler';
 import { PressableOpacity } from 'pressto';
 import { Trash2 } from 'lucide-react-native';
@@ -30,39 +31,33 @@ export const SwipeableRow = ({
     const { t } = useTranslations();
     const swipeableRef = useRef<Swipeable>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     const handleDelete = useCallback(() => {
-        Alert.alert(
-            deleteConfirmTitle || t('general.delete'),
-            deleteConfirmMessage || t('library.deleteConfirmMessage'),
-            [
-                {
-                    text: t('general.cancel'),
-                    style: 'cancel',
-                    onPress: () => swipeableRef.current?.close(),
-                },
-                {
-                    text: t('general.delete'),
-                    style: 'destructive',
-                    onPress: async () => {
-                        swipeableRef.current?.close();
-                        console.log('[SwipeableRow] Setting isDeleting to true');
-                        setIsDeleting(true);
-                        try {
-                            console.log('[SwipeableRow] Calling onDelete');
-                            await onDelete();
-                            console.log('[SwipeableRow] onDelete completed');
-                        } catch (error) {
-                            console.error('[SwipeableRow] Delete error:', error);
-                        } finally {
-                            console.log('[SwipeableRow] Setting isDeleting to false');
-                            setIsDeleting(false);
-                        }
-                    },
-                },
-            ]
-        );
-    }, [onDelete, deleteConfirmTitle, deleteConfirmMessage, t]);
+        setShowDeleteDialog(true);
+    }, []);
+
+    const handleConfirmDelete = useCallback(async () => {
+        setShowDeleteDialog(false);
+        swipeableRef.current?.close();
+        console.log('[SwipeableRow] Setting isDeleting to true');
+        setIsDeleting(true);
+        try {
+            console.log('[SwipeableRow] Calling onDelete');
+            await onDelete();
+            console.log('[SwipeableRow] onDelete completed');
+        } catch (error) {
+            console.error('[SwipeableRow] Delete error:', error);
+        } finally {
+            console.log('[SwipeableRow] Setting isDeleting to false');
+            setIsDeleting(false);
+        }
+    }, [onDelete]);
+
+    const handleCancelDelete = useCallback(() => {
+        setShowDeleteDialog(false);
+        swipeableRef.current?.close();
+    }, []);
 
     const renderRightActions = useCallback(
         (
@@ -134,6 +129,17 @@ export const SwipeableRow = ({
                     )}
                 </View>
             </Swipeable>
+
+            <Dialog
+                visible={showDeleteDialog}
+                onClose={handleCancelDelete}
+                title={deleteConfirmTitle || t('general.delete')}
+                message={deleteConfirmMessage || t('library.deleteConfirmMessage')}
+                buttons={[
+                    { label: t('general.cancel'), onPress: handleCancelDelete, variant: 'secondary' },
+                    { label: t('general.delete'), onPress: handleConfirmDelete, variant: 'destructive' },
+                ]}
+            />
         </View>
     );
 };

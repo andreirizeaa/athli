@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { StyleSheet, Text, View, Platform, Keyboard, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Platform, Keyboard, ActivityIndicator } from 'react-native';
+import { Dialog } from '@/components/ui/dialog';
 import { ChevronLeft, Check, Repeat, Plus, Dumbbell, Layers, Link as LinkIcon, Pencil } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -113,6 +114,13 @@ export default function WorkoutDetailScreen() {
     const [emptySectionIds, setEmptySectionIds] = useState<string[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(false);
 
+    // Dialog states
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+    const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+
     // Mutation for creating workout
     const createMutation = useMutation({
         mutationFn: createWorkout,
@@ -125,11 +133,8 @@ export default function WorkoutDetailScreen() {
         },
         onError: (error: Error) => {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                error.message || t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(error.message || t('general.errorSaving'));
+            setShowErrorDialog(true);
         },
     });
 
@@ -145,11 +150,8 @@ export default function WorkoutDetailScreen() {
         },
         onError: (error: Error) => {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                error.message || t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(error.message || t('general.errorSaving'));
+            setShowErrorDialog(true);
         },
     });
 
@@ -186,11 +188,8 @@ export default function WorkoutDetailScreen() {
         },
         onError: (error: Error) => {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                error.message || t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(error.message || t('general.errorSaving'));
+            setShowErrorDialog(true);
         },
     });
 
@@ -200,19 +199,13 @@ export default function WorkoutDetailScreen() {
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['sections'] });
             haptics.success();
-            Alert.alert(
-                t('general.success'),
-                t('library.section.savedSuccessfully'),
-                [{ text: t('general.ok') }]
-            );
+            setSuccessMessage(t('library.section.savedSuccessfully'));
+            setShowSuccessDialog(true);
         },
         onError: (error: Error) => {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                error.message || t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(error.message || t('general.errorSaving'));
+            setShowErrorDialog(true);
         },
     });
 
@@ -549,11 +542,8 @@ export default function WorkoutDetailScreen() {
                     }
                 } catch (error) {
                     console.error('Failed to load workout data:', error);
-                    Alert.alert(
-                        t('general.error'),
-                        t('general.errorLoading'),
-                        [{ text: t('general.ok') }]
-                    );
+                    setErrorMessage(t('general.errorLoading'));
+                    setShowErrorDialog(true);
                 } finally {
                     setIsLoadingData(false);
                 }
@@ -715,27 +705,16 @@ export default function WorkoutDetailScreen() {
         });
     }, [setSectionSelectCallback]);
 
+    const handleDiscard = useCallback(() => {
+        setShowDiscardDialog(false);
+        if (router.canGoBack()) {
+            router.back();
+        }
+    }, [router]);
+
     const showDiscardAlert = useCallback(() => {
-        Alert.alert(
-            t('common.discardChanges'),
-            t('common.discardChangesMessage'),
-            [
-                {
-                    text: t('common.cancel'),
-                    style: 'cancel',
-                },
-                {
-                    text: t('common.discard'),
-                    style: 'destructive',
-                    onPress: () => {
-                        if (router.canGoBack()) {
-                            router.back();
-                        }
-                    },
-                },
-            ]
-        );
-    }, [router, t]);
+        setShowDiscardDialog(true);
+    }, []);
 
     // Disable swipe-to-go-back gesture when there are unsaved changes
     const navigation = useNavigation();
@@ -815,7 +794,8 @@ export default function WorkoutDetailScreen() {
         console.log('[WorkoutDetailScreen] coachId (resolved):', coachId);
 
         if (!workoutState.meta.name) {
-            Alert.alert(t('library.workout.error'), t('library.workout.nameRequired'));
+            setErrorMessage(t('library.workout.nameRequired'));
+            setShowErrorDialog(true);
             return;
         }
 
@@ -824,7 +804,8 @@ export default function WorkoutDetailScreen() {
         if (!validation.isValid) {
             setValidationErrors(validation.errors);
             setEmptySectionIds(validation.emptySectionIds);
-            Alert.alert(t('library.workout.error'), validation.errorMessage || t('library.workout.validationError'));
+            setErrorMessage(validation.errorMessage || t('library.workout.validationError'));
+            setShowErrorDialog(true);
             return;
         }
 
@@ -1423,6 +1404,35 @@ export default function WorkoutDetailScreen() {
                 })}
             </KeyboardAwareScrollView>
             {BottomBar}
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={errorMessage}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
+
+            <Dialog
+                visible={showSuccessDialog}
+                onClose={() => setShowSuccessDialog(false)}
+                title={t('general.success')}
+                message={successMessage}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowSuccessDialog(false), variant: 'primary' }]}
+            />
+
+            <Dialog
+                visible={showDiscardDialog}
+                onClose={() => setShowDiscardDialog(false)}
+                title={t('common.discardChanges')}
+                message={t('common.discardChangesMessage')}
+                buttons={[
+                    { label: t('common.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+                    { label: t('common.discard'), onPress: handleDiscard, variant: 'destructive' }
+                ]}
+            />
         </View>
     );
 }

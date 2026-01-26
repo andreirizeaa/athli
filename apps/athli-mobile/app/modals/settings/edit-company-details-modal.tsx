@@ -4,7 +4,6 @@ import {
   Text,
   View,
   Platform,
-  Alert,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,10 +26,12 @@ import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SearchBar } from '@/components/ui/search-bar';
+import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { InputBox } from '@/components/ui/form-inputs/input-box';
 import { haptics } from '@/utils/haptics';
 import { hexToRgba } from '@/utils/colorUtils';
+import { Dialog } from '@/components/ui/dialog';
 import {
   uploadCompanyLogo,
   SPECIALITY_OPTIONS,
@@ -70,6 +71,8 @@ export default function EditCompanyDetailsModal() {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const listRef = useRef<any>(null);
 
@@ -138,10 +141,8 @@ export default function EditCompanyDetailsModal() {
         if (useCamera) {
           const { status } = await ImagePicker.requestCameraPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
-              t('general.error'),
-              t('settings.companyDetails.cameraPermissionRequired')
-            );
+            setErrorMessage(t('settings.companyDetails.cameraPermissionRequired'));
+            setShowErrorDialog(true);
             return;
           }
           result = await ImagePicker.launchCameraAsync({
@@ -153,10 +154,8 @@ export default function EditCompanyDetailsModal() {
           const { status } =
             await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (status !== 'granted') {
-            Alert.alert(
-              t('general.error'),
-              t('settings.companyDetails.galleryPermissionRequired')
-            );
+            setErrorMessage(t('settings.companyDetails.galleryPermissionRequired'));
+            setShowErrorDialog(true);
             return;
           }
           result = await ImagePicker.launchImageLibraryAsync({
@@ -214,7 +213,8 @@ export default function EditCompanyDetailsModal() {
     } catch (error) {
       console.error('Failed to update company info:', error);
       haptics.error();
-      Alert.alert(t('general.error'), t('general.errorSaving'));
+      setErrorMessage(t('general.errorSaving'));
+      setShowErrorDialog(true);
     } finally {
       setIsSaving(false);
     }
@@ -304,34 +304,40 @@ export default function EditCompanyDetailsModal() {
       </View>
 
       <View style={styles.optionsContainer}>
-        <PressableScale
-          style={[styles.option, { backgroundColor: themeColors.surfacePrimary }]}
-          onPress={() => pickImage(false)}
-        >
-          <PlatformIcon
-            sf="photo"
-            IconComponent={ImageIcon}
-            size={iconSizes.tabBarIcons}
-            color={themeColors.text}
-          />
-          <Text style={[styles.optionText, { color: themeColors.text }]}>
-            {t('settings.companyDetails.chooseFromLibrary')}
-          </Text>
+        <PressableScale onPress={() => pickImage(false)}>
+          <Card>
+            <View style={styles.option}>
+              <View style={styles.optionIcon}>
+                <PlatformIcon
+                  sf="photo"
+                  IconComponent={ImageIcon}
+                  size={iconSizes.tabBarIcons}
+                  color={themeColors.text}
+                />
+              </View>
+              <Text style={[styles.optionText, { color: themeColors.text }]}>
+                {t('settings.companyDetails.chooseFromLibrary')}
+              </Text>
+            </View>
+          </Card>
         </PressableScale>
 
-        <PressableScale
-          style={[styles.option, { backgroundColor: themeColors.surfacePrimary }]}
-          onPress={() => pickImage(true)}
-        >
-          <PlatformIcon
-            sf="camera"
-            IconComponent={Camera}
-            size={iconSizes.tabBarIcons}
-            color={themeColors.text}
-          />
-          <Text style={[styles.optionText, { color: themeColors.text }]}>
-            {t('settings.companyDetails.takePhoto')}
-          </Text>
+        <PressableScale onPress={() => pickImage(true)}>
+          <Card>
+            <View style={styles.option}>
+              <View style={styles.optionIcon}>
+                <PlatformIcon
+                  sf="camera"
+                  IconComponent={Camera}
+                  size={iconSizes.tabBarIcons}
+                  color={themeColors.text}
+                />
+              </View>
+              <Text style={[styles.optionText, { color: themeColors.text }]}>
+                {t('settings.companyDetails.takePhoto')}
+              </Text>
+            </View>
+          </Card>
         </PressableScale>
       </View>
     </View>
@@ -580,6 +586,15 @@ export default function EditCompanyDetailsModal() {
             />
           </View>
         </View>
+
+        <Dialog
+          visible={showErrorDialog}
+          onClose={() => setShowErrorDialog(false)}
+          title={t('general.error')}
+          message={errorMessage}
+          showCloseIcon={false}
+          buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+        />
       </View>
     );
   }
@@ -618,6 +633,15 @@ export default function EditCompanyDetailsModal() {
       <View style={styles.content}>
         {renderContent()}
       </View>
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
     </View>
   );
 }
@@ -687,19 +711,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  optionsContainer: {
-    gap: 12,
-  },
+  optionsContainer: {},
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    gap: 12,
+    paddingVertical: 4,
+  },
+  optionIcon: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4,
   },
   optionText: {
     ...typography.p1,
+    flex: 1,
   },
   listContainer: {
     flex: 1,

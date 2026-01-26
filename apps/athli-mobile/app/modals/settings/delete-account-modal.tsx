@@ -28,11 +28,11 @@ export default function DeleteAccountModal() {
     <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary, paddingBottom: 200 }]}>
       <View style={styles.content}>
         <Text style={[styles.title, { color: themeColors.text }]}>
-          {t('profile.deleteAccount.title')}
+          {t('profile.deleteAccountModal.title')}
         </Text>
 
         <Text style={[styles.message, { color: themeColors.mutedText }]}>
-          {t('profile.deleteAccount.message')}
+          {t('profile.deleteAccountModal.message')}
         </Text>
 
         <View style={styles.buttonContainer}>
@@ -41,7 +41,7 @@ export default function DeleteAccountModal() {
             onPress={handleGoToDashboard}
           >
             <Text style={[styles.dashboardButtonText, { color: '#000000' }]}>
-              {t('profile.deleteAccount.goToDashboard')}
+              {t('profile.deleteAccountModal.goToDashboard')}
             </Text>
           </PressableScale>
 

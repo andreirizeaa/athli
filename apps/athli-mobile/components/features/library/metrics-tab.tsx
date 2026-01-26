@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo } from 'react';
-import { StyleSheet, Text, View, Alert } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { ChevronRight, Activity, UserPlus, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableScale } from 'pressto';
@@ -18,6 +18,7 @@ import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { getAllMetrics, deleteMetric, duplicateMetric } from '@/services/coach/coach-metric-service';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Dialog } from '@/components/ui/dialog';
 
 export const MetricsTab = () => {
   const { colors: themeColors } = useThemePreference();
@@ -27,6 +28,10 @@ export const MetricsTab = () => {
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
+
+  // Error dialog state
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Fetch metrics directly with TanStack Query
   const { data: metrics = [], refetch } = useQuery({
@@ -90,11 +95,8 @@ export const MetricsTab = () => {
         queryClient.setQueryData(['metrics'], context.previousMetrics);
       }
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorDeleting'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorDeleting'));
+      setShowErrorDialog(true);
     },
     onSettled: () => {
       // Refetch to ensure server state
@@ -114,11 +116,8 @@ export const MetricsTab = () => {
     },
     onError: (error: Error) => {
       haptics.error();
-      Alert.alert(
-        t('general.error'),
-        error.message || t('general.errorDuplicating'),
-        [{ text: t('general.ok') }]
-      );
+      setErrorMessage(error.message || t('general.errorDuplicating'));
+      setShowErrorDialog(true);
     },
   });
 
@@ -245,20 +244,31 @@ export const MetricsTab = () => {
   }, [filteredMetrics.length, themeColors, t, deleteMutation, registerOpenRow, handleMetricPress, handleAssign]);
 
   return (
-    <FlashList
-      data={filteredMetrics}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={{ paddingBottom: 40 }}
-      ListHeaderComponent={ListHeaderComponent}
-      refreshControl={refreshControl}
-      showsVerticalScrollIndicator={false}
-      ListEmptyComponent={
-        <EmptyState
-          message={t('library.empty.metrics')}
-        />
-      }
-    />
+    <>
+      <FlashList
+        data={filteredMetrics}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        ListHeaderComponent={ListHeaderComponent}
+        refreshControl={refreshControl}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <EmptyState
+            message={t('library.empty.metrics')}
+          />
+        }
+      />
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
+    </>
   );
 };
 

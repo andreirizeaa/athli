@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View, Alert, InteractionManager } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, StyleSheet, Text, View, InteractionManager } from 'react-native';
+import { Dialog } from '@/components/ui/dialog';
 import { PressableOpacity } from 'pressto';
 import { Image, Video, FileText, Camera } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -44,6 +45,10 @@ export const AttachmentPickerRow = ({
   // Maximum number of media files allowed per message
   const MAX_MEDIA_FILES = 4;
 
+  // Dialog state
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
   // WhatsApp-style colors for each attachment type
   const attachmentColors = {
     photos: '#7F66FF',   // Purple
@@ -69,7 +74,8 @@ export const AttachmentPickerRow = ({
       // Request permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission required', 'Please grant permission to access your photos.');
+        setErrorMessage('Please grant permission to access your photos.');
+        setShowErrorDialog(true);
         return;
       }
 
@@ -113,7 +119,8 @@ export const AttachmentPickerRow = ({
       }
     } catch (error) {
       console.error('Error picking photo:', error);
-      Alert.alert('Error', 'Failed to load photos. Please try again.');
+      setErrorMessage('Failed to load photos. Please try again.');
+      setShowErrorDialog(true);
     }
   };
 
@@ -122,7 +129,8 @@ export const AttachmentPickerRow = ({
       // Request permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission required', 'Please grant permission to access your videos.');
+        setErrorMessage('Please grant permission to access your videos.');
+        setShowErrorDialog(true);
         return;
       }
 
@@ -221,7 +229,8 @@ export const AttachmentPickerRow = ({
   const handleCameraPress = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(t('general.permissionRequired'), t('camera.permissionMessage'));
+      setErrorMessage(t('camera.permissionMessage'));
+      setShowErrorDialog(true);
       return;
     }
 
@@ -368,6 +377,15 @@ export const AttachmentPickerRow = ({
             </PressableOpacity>
           )}
         </View>
+
+        <Dialog
+          visible={showErrorDialog}
+          onClose={() => setShowErrorDialog(false)}
+          title={t('general.error')}
+          message={errorMessage}
+          showCloseIcon={false}
+          buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+        />
       </View>
     </Animated.View>
   );

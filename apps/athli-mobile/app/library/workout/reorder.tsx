@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Platform, Pressable, ScrollView, Alert } from 'react-native';
+import { StyleSheet, Text, View, Platform, Pressable, ScrollView } from 'react-native';
+import { Dialog } from '@/components/ui/dialog';
 import { ChevronLeft, ChevronDown, ChevronUp, GripVertical, Check } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -364,6 +365,9 @@ export default function ReorderScreen() {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const initialItemsRef = useRef<BuilderItem[]>([]);
 
+    // Dialog states
+    const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+
     // Initialize items from context (only once on mount)
     useEffect(() => {
         if (reorderItems && reorderItems.length > 0) {
@@ -491,27 +495,18 @@ export default function ReorderScreen() {
         router.back();
     }, [flatItems, triggerReorder, router]);
 
+    const handleDiscard = useCallback(() => {
+        setShowDiscardDialog(false);
+        router.back();
+    }, [router]);
+
     const handleBack = useCallback(() => {
         if (hasUnsavedChanges) {
-            Alert.alert(
-                t('common.discardChanges'),
-                t('common.discardChangesMessage'),
-                [
-                    {
-                        text: t('common.discard'),
-                        style: 'destructive',
-                        onPress: () => router.back(),
-                    },
-                    {
-                        text: t('common.cancel'),
-                        style: 'cancel',
-                    },
-                ]
-            );
+            setShowDiscardDialog(true);
         } else {
             router.back();
         }
-    }, [hasUnsavedChanges, router, t]);
+    }, [hasUnsavedChanges, router]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -592,6 +587,17 @@ export default function ReorderScreen() {
                             ))}
                     </View>
                 </ScrollView>
+
+                <Dialog
+                    visible={showDiscardDialog}
+                    onClose={() => setShowDiscardDialog(false)}
+                    title={t('common.discardChanges')}
+                    message={t('common.discardChangesMessage')}
+                    buttons={[
+                        { label: t('common.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+                        { label: t('common.discard'), onPress: handleDiscard, variant: 'destructive' }
+                    ]}
+                />
             </View>
         </GestureHandlerRootView>
     );

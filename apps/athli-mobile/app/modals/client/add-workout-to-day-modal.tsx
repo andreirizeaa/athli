@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useMemo } from 'react';
-import { Platform, StyleSheet, Text, View, Alert, ActivityIndicator } from 'react-native';
+import { Platform, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -22,6 +22,7 @@ import { getWorkouts } from '@/services/coach/coach-workout-service';
 import { assignWorkout } from '@/services/client/client-training-service';
 import { EmptyState } from '@/components/ui/empty-state';
 import type { Workout } from '@/stores/useLibraryStore';
+import { Dialog } from '@/components/ui/dialog';
 
 export default function AddWorkoutToDayModal() {
   const router = useRouter();
@@ -39,6 +40,8 @@ export default function AddWorkoutToDayModal() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedWorkoutIds, setSelectedWorkoutIds] = useState<Set<string>>(new Set());
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Fetch workouts
   const { data: workouts = [], isLoading } = useQuery({
@@ -90,9 +93,8 @@ export default function AddWorkoutToDayModal() {
     },
     onError: (error: Error) => {
       haptics.error();
-      Alert.alert(t('general.error'), error.message || t('general.errorSaving'), [
-        { text: t('general.ok') },
-      ]);
+      setErrorMessage(error.message || t('general.errorSaving'));
+      setShowErrorDialog(true);
     },
   });
 
@@ -249,6 +251,15 @@ export default function AddWorkoutToDayModal() {
           />
         )}
       </View>
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={errorMessage}
+        showCloseIcon={false}
+        buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
     </View>
   );
 }

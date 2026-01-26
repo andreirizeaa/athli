@@ -101,7 +101,7 @@ export default function ClientHabitsScreen() {
   };
 
   return (
-    <ScreenWrapper scrollable={false}>
+    <ScreenWrapper scrollable={false} useImageBackground={false}>
       <View style={styles.container}>
         <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton

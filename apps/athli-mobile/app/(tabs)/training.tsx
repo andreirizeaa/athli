@@ -16,13 +16,10 @@ import { SwipeableCalendar } from '@/components/features/calendar/swipeable-cale
 import { formatDateDDMMYYYY, formatDateYYYYMMDD } from '@/lib/utils/date-formatters';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { Card } from '@/components/ui/card';
+import { ExerciseListPreview } from '@/components/features/training/exercise-list-preview';
 import { getTrainingCalendarRange, TrainingCalendarSchema } from '@/services/client/client-service';
 
 const SELECTED_DATE_KEY = '@select_date_modal_selected_date';
-
-// Days pager configuration
-const DAYS_BACK = 365;
-const DAYS_FORWARD = 365;
 
 // WorkoutDayPage component types
 type WorkoutDayPageProps = {
@@ -33,6 +30,51 @@ type WorkoutDayPageProps = {
   themeColors: any;
   t: (key: string) => string;
   renderStatusIcon: (status: string | undefined) => React.ReactNode;
+};
+
+// Get Monday of the week containing the given date
+const getMondayOfWeek = (date: Date): Date => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.setDate(diff));
+};
+
+// Get Sunday of the week containing the given date
+const getSundayOfWeek = (date: Date): Date => {
+  const monday = getMondayOfWeek(date);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  return sunday;
+};
+
+// Generate days array for a specific month (including partial weeks at edges)
+const generateMonthDays = (year: number, month: number): Date[] => {
+  const days: Date[] = [];
+  
+  // First day of the month
+  const firstOfMonth = new Date(year, month, 1);
+  firstOfMonth.setHours(0, 0, 0, 0);
+  
+  // Last day of the month
+  const lastOfMonth = new Date(year, month + 1, 0);
+  lastOfMonth.setHours(0, 0, 0, 0);
+  
+  // Get Monday of the week containing the first day
+  const startMonday = getMondayOfWeek(firstOfMonth);
+  
+  // Get Sunday of the week containing the last day
+  const endSunday = getSundayOfWeek(lastOfMonth);
+  
+  // Generate all days from startMonday to endSunday
+  let current = new Date(startMonday);
+  while (current.getTime() <= endSunday.getTime()) {
+    days.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+  
+  return days;
 };
 
 // Memoized component for each day's workout content
@@ -79,13 +121,21 @@ const WorkoutDayPage = React.memo(
                     <Text style={[pageStyles.workoutName, { color: themeColors.text }]} numberOfLines={1}>
                       {workout.workout}
                     </Text>
-                    <Text style={[pageStyles.exerciseCount, { color: themeColors.mutedText }]}>
-                      {workout.totalExercises || 0}{' '}
-                      {(workout.totalExercises || 0) === 1 ? t('library.exercise') : t('library.exercises')}
-                    </Text>
                   </View>
                 </View>
               </View>
+              {workout.totalExercises > 0 && (
+                <>
+                  <View style={[pageStyles.divider, { backgroundColor: themeColors.border }]} />
+                  <View style={pageStyles.exerciseListContainer}>
+                    <ExerciseListPreview
+                      totalExercises={workout.totalExercises}
+                      supersetFlags={workout.supersetFlags}
+                      themeColors={themeColors}
+                    />
+                  </View>
+                </>
+              )}
             </Card>
           </PressableScale>
         ))}
@@ -107,7 +157,7 @@ const pageStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingHorizontal: 32,
-    paddingTop: 48,
+    paddingTop: 16,
     gap: 12,
   },
   emptyTitle: {
@@ -157,17 +207,23 @@ const pageStyles = StyleSheet.create({
     gap: 2,
   },
   workoutName: {
-    ...typography.p1,
+    ...typography.h5,
     fontWeight: '600',
   },
-  exerciseCount: {
-    ...typography.p3,
+  divider: {
+    height: 1,
+    marginHorizontal: 16,
+  },
+  exerciseListContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 14,
   },
 });
 
 export default function TrainingScreen() {
   const router = useRouter();
-  const { primaryColor, colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
 
   // Get profile data from store
@@ -175,9 +231,12 @@ export default function TrainingScreen() {
   const clientId = profile?.client_id;
   const coachId = profile?.coach_id;
 
-  // Pager refs
+  // Pager ref
   const pagerRef = useRef<PagerView>(null);
-  const isProgrammaticChange = useRef(false);
+
+  // Timestamp of last programmatic navigation
+  const lastProgrammaticNavTimestamp = useRef<number>(0);
+  const PROGRAMMATIC_NAV_IGNORE_DURATION = 500;
 
   // Training data state
   const [trainingCalendar, setTrainingCalendar] = useState<TrainingCalendarSchema>({});
@@ -187,72 +246,65 @@ export default function TrainingScreen() {
     endDate: string;
   } | null>(null);
 
-  const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
+  // Selected date - source of truth for which month to display
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return today;
   });
-  const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth());
-  const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
-  const [calendarKey, setCalendarKey] = useState(0);
 
-  // Generate days array (centered on today)
+  // Current month/year derived from selected date
+  const currentMonth = selectedDate.getMonth();
+  const currentYear = selectedDate.getFullYear();
+
+  // Generate days array for the current month (including partial weeks at edges)
   const daysArray = useMemo(() => {
-    const days: Date[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    return generateMonthDays(currentYear, currentMonth);
+  }, [currentYear, currentMonth]);
 
-    for (let i = -DAYS_BACK; i <= DAYS_FORWARD; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      days.push(date);
+  // Find the index of the selected date in the days array
+  const selectedDayIndex = useMemo(() => {
+    const selectedTime = selectedDate.getTime();
+    for (let i = 0; i < daysArray.length; i++) {
+      if (daysArray[i].getTime() === selectedTime) {
+        return i;
+      }
     }
-    return days;
-  }, []);
+    // If not found (shouldn't happen), default to first day of month
+    const firstOfMonth = new Date(currentYear, currentMonth, 1);
+    firstOfMonth.setHours(0, 0, 0, 0);
+    const firstOfMonthTime = firstOfMonth.getTime();
+    for (let i = 0; i < daysArray.length; i++) {
+      if (daysArray[i].getTime() === firstOfMonthTime) {
+        return i;
+      }
+    }
+    return 0;
+  }, [selectedDate, daysArray, currentYear, currentMonth]);
 
-  const initialDayIndex = DAYS_BACK; // Today's index
-
-  // Helper: Find day index for a date
-  const getDayIndexForDate = useCallback((date: Date): number => {
-    const targetDate = new Date(date);
-    targetDate.setHours(0, 0, 0, 0);
-    const targetTime = targetDate.getTime();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayTime = today.getTime();
-    const diffDays = Math.round((targetTime - todayTime) / (1000 * 60 * 60 * 24));
-    return DAYS_BACK + diffDays;
-  }, []);
-
-  // Check if a date is within the loaded range
-  const isDateInLoadedRange = useCallback(
-    (date: Date): boolean => {
-      if (!loadedTrainingRange) return false;
-      const dateStr = formatDateYYYYMMDD(date);
-      return dateStr >= loadedTrainingRange.startDate && dateStr <= loadedTrainingRange.endDate;
-    },
-    [loadedTrainingRange]
-  );
-
-  // Fetch training data for a specific date
-  const fetchTrainingDataForDate = useCallback(
-    async (date: Date) => {
+  // Fetch training data for current month
+  const fetchTrainingDataForMonth = useCallback(
+    async (year: number, month: number) => {
       if (!clientId || !coachId) return;
 
-      // If the date is already in range, no need to fetch
-      if (isDateInLoadedRange(date)) return;
+      // Calculate the date range for this month (with buffer for partial weeks)
+      const firstOfMonth = new Date(year, month, 1);
+      const lastOfMonth = new Date(year, month + 1, 0);
+      const startDate = getMondayOfWeek(firstOfMonth);
+      const endDate = getSundayOfWeek(lastOfMonth);
+
+      const startDateStr = formatDateYYYYMMDD(startDate);
+      const endDateStr = formatDateYYYYMMDD(endDate);
+
+      // Check if already loaded
+      if (loadedTrainingRange) {
+        if (startDateStr >= loadedTrainingRange.startDate && endDateStr <= loadedTrainingRange.endDate) {
+          return; // Already loaded
+        }
+      }
 
       setIsLoadingTraining(true);
       try {
-        // Fetch a range around the date (1 month before and after)
-        const startDate = new Date(date);
-        startDate.setMonth(startDate.getMonth() - 1);
-        const endDate = new Date(date);
-        endDate.setMonth(endDate.getMonth() + 1);
-
-        const startDateStr = formatDateYYYYMMDD(startDate);
-        const endDateStr = formatDateYYYYMMDD(endDate);
-
         const calendar = await getTrainingCalendarRange(clientId, coachId, startDateStr, endDateStr);
 
         setTrainingCalendar((prev) => ({ ...prev, ...calendar }));
@@ -271,79 +323,23 @@ export default function TrainingScreen() {
         setIsLoadingTraining(false);
       }
     },
-    [clientId, coachId, isDateInLoadedRange]
+    [clientId, coachId, loadedTrainingRange]
   );
 
-  // Extend training range when swiping calendar
-  const extendTrainingRange = useCallback(
-    async (date: Date) => {
-      if (!clientId || !coachId) return;
-
-      setIsLoadingTraining(true);
-      try {
-        const startDate = new Date(date);
-        startDate.setMonth(startDate.getMonth() - 1);
-        const endDate = new Date(date);
-        endDate.setMonth(endDate.getMonth() + 1);
-
-        const startDateStr = formatDateYYYYMMDD(startDate);
-        const endDateStr = formatDateYYYYMMDD(endDate);
-
-        const calendar = await getTrainingCalendarRange(clientId, coachId, startDateStr, endDateStr);
-
-        setTrainingCalendar((prev) => ({ ...prev, ...calendar }));
-        setLoadedTrainingRange((prev) => {
-          if (!prev) {
-            return { startDate: startDateStr, endDate: endDateStr };
-          }
-          return {
-            startDate: startDateStr < prev.startDate ? startDateStr : prev.startDate,
-            endDate: endDateStr > prev.endDate ? endDateStr : prev.endDate,
-          };
-        });
-      } catch (error) {
-        console.error('Failed to extend training range:', error);
-      } finally {
-        setIsLoadingTraining(false);
-      }
-    },
-    [clientId, coachId]
-  );
-
-  // Initial data load - fetch 60-day window (30 days back, 30 days forward)
+  // Initial data load for current month
   useEffect(() => {
-    if (clientId && coachId && !loadedTrainingRange) {
-      const today = new Date();
-      const startDate = new Date(today);
-      startDate.setDate(today.getDate() - 30);
-      const endDate = new Date(today);
-      endDate.setDate(today.getDate() + 30);
-
-      const startDateStr = formatDateYYYYMMDD(startDate);
-      const endDateStr = formatDateYYYYMMDD(endDate);
-
-      setIsLoadingTraining(true);
-      getTrainingCalendarRange(clientId, coachId, startDateStr, endDateStr)
-        .then((calendar) => {
-          setTrainingCalendar(calendar);
-          setLoadedTrainingRange({ startDate: startDateStr, endDate: endDateStr });
-        })
-        .catch((error) => {
-          console.error('Failed to fetch initial training data:', error);
-        })
-        .finally(() => {
-          setIsLoadingTraining(false);
-        });
+    if (clientId && coachId) {
+      fetchTrainingDataForMonth(currentYear, currentMonth);
     }
-  }, [clientId, coachId, loadedTrainingRange]);
+  }, [clientId, coachId, currentYear, currentMonth, fetchTrainingDataForMonth]);
 
-  const handleOpenDatePicker = () => {
-    const dateParam = selectedDate ? selectedDate.toISOString() : new Date().toISOString();
+  const handleOpenDatePicker = useCallback(() => {
+    const dateParam = selectedDate.toISOString();
     router.push({
       pathname: '/modals/calendar/select-date-modal',
       params: { selectedDate: dateParam, storageKey: SELECTED_DATE_KEY },
     });
-  };
+  }, [selectedDate, router]);
 
   // Listen for when we return from the modal and check if date was updated
   useFocusEffect(
@@ -355,23 +351,7 @@ export default function TrainingScreen() {
             const date = new Date(storedDate);
             if (!isNaN(date.getTime())) {
               date.setHours(0, 0, 0, 0);
-
-              isProgrammaticChange.current = true;
               setSelectedDate(date);
-              setCurrentMonth(date.getMonth());
-              setCurrentYear(date.getFullYear());
-
-              // Navigate pager to the selected day
-              const dayIndex = getDayIndexForDate(date);
-              if (dayIndex >= 0 && dayIndex < daysArray.length) {
-                pagerRef.current?.setPage(dayIndex);
-              }
-
-              // Fetch data for the selected date if needed
-              if (!isDateInLoadedRange(date)) {
-                fetchTrainingDataForDate(date);
-              }
-
               Storage.removeItem(SELECTED_DATE_KEY);
             }
           }
@@ -380,84 +360,50 @@ export default function TrainingScreen() {
         }
       };
       checkSelectedDate();
-    }, [getDayIndexForDate, daysArray.length, isDateInLoadedRange, fetchTrainingDataForDate])
+    }, [])
   );
 
-  const handleDateSelect = async (date: Date) => {
+  // Handle date selection from calendar
+  const handleDateSelect = useCallback((date: Date) => {
     const newDate = new Date(date);
     newDate.setHours(0, 0, 0, 0);
-
-    isProgrammaticChange.current = true;
     setSelectedDate(newDate);
-    setCurrentMonth(newDate.getMonth());
-    setCurrentYear(newDate.getFullYear());
+  }, []);
 
-    // Navigate pager to the selected day
-    const dayIndex = getDayIndexForDate(newDate);
-    if (dayIndex >= 0 && dayIndex < daysArray.length) {
-      pagerRef.current?.setPage(dayIndex);
-    }
-
-    // Fetch training data if not in loaded range
-    if (!isDateInLoadedRange(newDate)) {
-      await fetchTrainingDataForDate(newDate);
-    }
-  };
-
-  // Preload threshold for dynamic loading
-  const PRELOAD_THRESHOLD = 7;
-
-  // Handle pager page selected (pager → calendar sync)
-  const handlePageSelected = async (event: PagerViewOnPageSelectedEvent) => {
+  // Handle pager page selected
+  const handlePageSelected = useCallback((event: PagerViewOnPageSelectedEvent) => {
     const pageIndex = event.nativeEvent.position;
+    const pageDate = daysArray[pageIndex];
 
-    // Skip if programmatic (calendar tap already handled it)
-    if (isProgrammaticChange.current) {
-      isProgrammaticChange.current = false;
+    if (!pageDate) return;
+
+    // Ignore events from programmatic navigation
+    const timeSinceLastProgrammaticNav = Date.now() - lastProgrammaticNavTimestamp.current;
+    if (timeSinceLastProgrammaticNav < PROGRAMMATIC_NAV_IGNORE_DURATION) {
       return;
     }
 
     // User swiped - provide haptic feedback
     haptics.selection();
 
-    // Update selected date
-    const newDate = daysArray[pageIndex];
-    if (newDate) {
-      setSelectedDate(newDate);
-      setCurrentMonth(newDate.getMonth());
-      setCurrentYear(newDate.getFullYear());
+    // Update selected date (this won't change the month since we're within the same month's range)
+    setSelectedDate(pageDate);
+  }, [daysArray]);
 
-      // Check if near edge of loaded range for preloading
-      if (loadedTrainingRange) {
-        const startBoundary = new Date(loadedTrainingRange.startDate);
-        const endBoundary = new Date(loadedTrainingRange.endDate);
-
-        const daysToStart = Math.round(
-          (newDate.getTime() - startBoundary.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        const daysToEnd = Math.round(
-          (endBoundary.getTime() - newDate.getTime()) / (1000 * 60 * 60 * 24)
-        );
-
-        if (daysToStart < PRELOAD_THRESHOLD || daysToEnd < PRELOAD_THRESHOLD) {
-          await extendTrainingRange(newDate);
-        }
-      } else if (!isDateInLoadedRange(newDate)) {
-        await extendTrainingRange(newDate);
-      }
+  // Sync pager when selected date changes
+  useEffect(() => {
+    if (pagerRef.current && daysArray.length > 0) {
+      requestAnimationFrame(() => {
+        lastProgrammaticNavTimestamp.current = Date.now();
+        pagerRef.current?.setPageWithoutAnimation(selectedDayIndex);
+      });
     }
-  };
+  }, [selectedDayIndex, daysArray.length]);
 
-  const handleCalendarSwipe = async (month: number, year: number) => {
-    setCurrentMonth(month);
-    setCurrentYear(year);
-
-    // When swiping to a new month, check if middle of month is in range
-    const midMonthDate = new Date(year, month, 15);
-    if (!isDateInLoadedRange(midMonthDate)) {
-      await extendTrainingRange(midMonthDate);
-    }
-  };
+  const handleCalendarSwipe = useCallback((month: number, year: number) => {
+    // Calendar swipe is just for visual feedback, no action needed
+    // User must tap a day or use the modal to change dates
+  }, []);
 
   const displayText = useMemo(() => {
     const monthKeys = [
@@ -475,35 +421,30 @@ export default function TrainingScreen() {
       'december',
     ] as const;
 
-    if (selectedDate) {
-      const monthName = t(`calendar.months.${monthKeys[selectedDate.getMonth()]}`);
-      const yearShort = selectedDate.getFullYear().toString().slice(-2);
-      return `${monthName} ${yearShort}`;
-    }
-
     const monthName = t(`calendar.months.${monthKeys[currentMonth]}`);
     const yearShort = currentYear.toString().slice(-2);
     return `${monthName} ${yearShort}`;
-  }, [selectedDate, currentMonth, currentYear, t]);
+  }, [currentMonth, currentYear, t]);
 
-  // Dummy handler for workout press - will navigate to workout execution screen later
-  const handleWorkoutPress = (workout: any) => {
-    // TODO: Navigate to workout execution screen
+  // Dummy handler for workout press
+  const handleWorkoutPress = useCallback((workout: any) => {
     console.log('Workout pressed:', workout.id);
-  };
+  }, []);
 
   // Render status icon based on workout status
-  const renderStatusIcon = (status: string | undefined) => {
-    const completedSummaryStatus = status;
-    switch (completedSummaryStatus) {
+  const renderStatusIcon = useCallback((status: string | undefined) => {
+    switch (status) {
       case 'completed':
-        return <CircleCheck size={20} color="#22C55E" />;
+        return <CircleCheck {...({ size: 20, color: '#22C55E' } as any)} />;
       case 'in_progress':
-        return <CircleDashed size={20} color="#F59E0B" />;
+        return <CircleDashed {...({ size: 20, color: '#F59E0B' } as any)} />;
       default:
-        return <CircleX size={20} color={themeColors.mutedText} />;
+        return <CircleX {...({ size: 20, color: themeColors.mutedText } as any)} />;
     }
-  };
+  }, [themeColors.mutedText]);
+
+  // Key for pager - changes when month changes to rebuild
+  const pagerKey = `${currentYear}-${currentMonth}`;
 
   return (
     <ScreenWrapper scrollable={false}>
@@ -511,7 +452,7 @@ export default function TrainingScreen() {
         {/* Top row: Title on left, Date picker on right */}
         <View style={styles.headerTopRow}>
           <Text style={[styles.title, { color: themeColors.text }]}>{t('training.title')}</Text>
-          <PressableOpacity style={styles.dateButton} onPress={handleOpenDatePicker}>
+          <PressableScale style={styles.dateButton} onPress={handleOpenDatePicker}>
             <Text style={[styles.dateButtonText, { color: themeColors.text }]}>{displayText}</Text>
             <PlatformIcon
               sf="chevron.down"
@@ -519,31 +460,27 @@ export default function TrainingScreen() {
               size={iconSizes.navigationChevrons}
               color={themeColors.text}
             />
-          </PressableOpacity>
+          </PressableScale>
         </View>
         {/* Bottom row: Swipeable Calendar */}
         <View style={styles.headerBottomRow}>
           <SwipeableCalendar
-            key={calendarKey}
-            initialSelectedDate={selectedDate || undefined}
+            selectedDate={selectedDate}
             onDateSelect={handleDateSelect}
             onSwipe={handleCalendarSwipe}
           />
         </View>
 
-        <View style={styles.staticHeader}>
-          <View style={[styles.divider, { backgroundColor: themeColors.mutedText, opacity: 0.3 }]} />
-        </View>
-
         {/* Day Content Pager */}
         <PagerView
+          key={pagerKey}
           ref={pagerRef}
           style={styles.pagerContainer}
-          initialPage={initialDayIndex}
+          initialPage={selectedDayIndex}
           onPageSelected={handlePageSelected}
-          offscreenPageLimit={1}
+          offscreenPageLimit={2}
         >
-          {daysArray.map((date, index) => {
+          {daysArray.map((date) => {
             const dateKey = formatDateDDMMYYYY(date);
             const workoutsObj = trainingCalendar[dateKey];
             const dayWorkouts = workoutsObj
@@ -556,10 +493,10 @@ export default function TrainingScreen() {
 
             // Only show loading indicator on the currently selected date
             const isCurrentPageLoading =
-              isLoadingTraining && selectedDate?.getTime() === date.getTime();
+              isLoadingTraining && selectedDate.getTime() === date.getTime();
 
             return (
-              <View key={`day-${index}`} style={styles.pageContainer}>
+              <View key={`day-${dateKey}`} style={styles.pageContainer} collapsable={false}>
                 <WorkoutDayPage
                   date={date}
                   workouts={dayWorkouts}
@@ -594,15 +531,6 @@ const styles = StyleSheet.create({
   headerBottomRow: {
     width: '100%',
     alignSelf: 'stretch',
-  },
-  staticHeader: {
-    width: '100%',
-  },
-  divider: {
-    width: '100%',
-    height: 0.5,
-    alignSelf: 'stretch',
-    marginTop: 0,
   },
   dateButton: {
     flexDirection: 'row',

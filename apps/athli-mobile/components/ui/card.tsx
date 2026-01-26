@@ -1,16 +1,22 @@
 import React from 'react';
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { StyleSheet, type ViewStyle, type StyleProp } from 'react-native';
+import SquircleView from 'react-native-fast-squircle';
+import { type ThemeColors } from '@/constants/theme';
 import { useThemePreference, useColorScheme } from '@/stores';
 
 export interface CardProps {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   variant?: 'default' | 'chart' | 'form' | 'profile' | 'photo' | 'stat' | 'options';
+  themeColors?: ThemeColors;
+  forceDarkMode?: boolean;
 }
 
-export function Card({ children, style, variant = 'default' }: CardProps) {
-  const { colors: themeColors } = useThemePreference();
-  const colorScheme = useColorScheme();
+export function Card({ children, style, variant = 'default', themeColors: propThemeColors, forceDarkMode }: CardProps) {
+  const { colors: defaultThemeColors } = useThemePreference();
+  const systemColorScheme = useColorScheme();
+  const themeColors = propThemeColors ?? defaultThemeColors;
+  const colorScheme = forceDarkMode ? 'dark' : systemColorScheme;
 
   const isForm = variant === 'form';
   const isProfile = variant === 'profile';
@@ -19,7 +25,8 @@ export function Card({ children, style, variant = 'default' }: CardProps) {
   const isOptions = variant === 'options';
 
   return (
-    <View
+    <SquircleView
+      cornerSmoothing={1}
       style={[
         styles.card,
         variant === 'chart' && styles.chartLayout,
@@ -30,14 +37,16 @@ export function Card({ children, style, variant = 'default' }: CardProps) {
         isOptions && styles.optionsLayout,
         {
           backgroundColor: isForm || isOptions ? 'transparent' : themeColors.cardPrimary,
-          borderColor: themeColors.cardSecondary,
+          borderColor: themeColors.border,
+          borderWidth: isForm ? 1 : (colorScheme === 'dark' ? 0 : 0.5),
           shadowColor: colorScheme === 'light' ? '#000' : '#fff',
+          shadowOpacity: colorScheme === 'dark' ? 0 : 0.05,
+          elevation: colorScheme === 'dark' ? 0 : 3,
           ...((isForm || isPhoto || isOptions) && {
             shadowOpacity: 0,
             elevation: 0,
           }),
           ...(isOptions && {
-            backgroundColor: themeColors.surfacePrimary,
             borderWidth: 0,
           }),
         },
@@ -45,7 +54,7 @@ export function Card({ children, style, variant = 'default' }: CardProps) {
       ]}
     >
       {children}
-    </View>
+    </SquircleView>
   );
 }
 

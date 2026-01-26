@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PressableScale } from 'pressto';
-import { Image as ImageIcon, ChevronRight } from 'lucide-react-native';
+import { Image as ImageIcon, ChevronRight, Dumbbell } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference, useTranslations, useAuth, useClientDetailStore } from '@/stores';
@@ -177,6 +177,15 @@ export default function ProgressScreen() {
     });
   }, [clientProfile, router]);
 
+  const handleExerciseHistoryPress = useCallback(() => {
+    if (!clientProfile) return;
+    haptics.medium();
+    router.push({
+      pathname: '/client/[id]/exercise-history',
+      params: { id: clientProfile.client_id },
+    });
+  }, [clientProfile, router]);
+
   if (isLoading) {
     return (
       <ScreenWrapper scrollable={false}>
@@ -196,13 +205,40 @@ export default function ProgressScreen() {
 
         {hasNoData ? (
           <>
+            {/* Exercise History Card */}
+            <View style={styles.photosSection}>
+              <PressableScale onPress={handleExerciseHistoryPress}>
+                <Card>
+                  <View style={styles.photosCardRow}>
+                    <View style={styles.photosCardIcon}>
+                      <PlatformIcon
+                        sf="dumbbell.fill"
+                        IconComponent={Dumbbell}
+                        size={iconSizes.tabBarIcons}
+                        color={themeColors.text}
+                      />
+                    </View>
+                    <Text style={[styles.photosCardText, { color: themeColors.text }]}>
+                      {t('progress.exerciseHistory')}
+                    </Text>
+                    <PlatformIcon
+                      sf="chevron.right"
+                      IconComponent={ChevronRight}
+                      size={iconSizes.extraSmallIcons}
+                      color={themeColors.mutedText}
+                    />
+                  </View>
+                </Card>
+              </PressableScale>
+            </View>
+
             <View style={styles.fullEmptyState}>
               <Text style={[styles.fullEmptyText, { color: themeColors.mutedText }]}>
                 {t('progress.noData')}
               </Text>
             </View>
 
-            {/* Progress Photos Card - always visible */}
+            {/* Progress Photos Card */}
             <View style={[styles.photosSection, styles.lastSection]}>
               <PressableScale onPress={handlePhotosPress}>
                 <Card>
@@ -231,6 +267,33 @@ export default function ProgressScreen() {
           </>
         ) : (
           <>
+            {/* Exercise History Card */}
+            <View style={styles.photosSection}>
+              <PressableScale onPress={handleExerciseHistoryPress}>
+                <Card>
+                  <View style={styles.photosCardRow}>
+                    <View style={styles.photosCardIcon}>
+                      <PlatformIcon
+                        sf="dumbbell.fill"
+                        IconComponent={Dumbbell}
+                        size={iconSizes.tabBarIcons}
+                        color={themeColors.text}
+                      />
+                    </View>
+                    <Text style={[styles.photosCardText, { color: themeColors.text }]}>
+                      {t('progress.exerciseHistory')}
+                    </Text>
+                    <PlatformIcon
+                      sf="chevron.right"
+                      IconComponent={ChevronRight}
+                      size={iconSizes.extraSmallIcons}
+                      color={themeColors.mutedText}
+                    />
+                  </View>
+                </Card>
+              </PressableScale>
+            </View>
+
             {/* Metrics Section */}
             {metricsWithChartData.length > 0 && (
               <View style={styles.section}>

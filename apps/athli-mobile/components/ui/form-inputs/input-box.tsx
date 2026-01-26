@@ -2,11 +2,12 @@ import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import { StyleSheet, Text, TextInput, View, TextInputProps, StyleProp, ViewStyle, TextStyle } from 'react-native';
 
 import { typography } from '@/constants/typography';
+import { type ThemeColors } from '@/constants/theme';
 import { useThemePreference } from '@/stores';
 import { Card } from '@/components/ui/card';
 
 type InputBoxProps = {
-  label: string;
+  label: string | React.ReactNode;
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
@@ -17,6 +18,8 @@ type InputBoxProps = {
   inputRowStyle?: StyleProp<ViewStyle>;
   inputStyle?: StyleProp<TextStyle>;
   rightIcon?: React.ReactNode;
+  themeColors?: ThemeColors;
+  forceDarkMode?: boolean;
 } & Omit<TextInputProps, 'value' | 'onChangeText' | 'placeholder' | 'style'>;
 
 export type InputBoxRef = {
@@ -26,8 +29,9 @@ export type InputBoxRef = {
 };
 
 export const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
-  ({ label, value, onChangeText, placeholder, required, showCharacterCount, hideLabel, containerStyle, inputRowStyle, inputStyle, maxLength, rightIcon, ...textInputProps }, ref) => {
-    const { colors: themeColors } = useThemePreference();
+  ({ label, value, onChangeText, placeholder, required, showCharacterCount, hideLabel, containerStyle, inputRowStyle, inputStyle, maxLength, rightIcon, themeColors: propThemeColors, forceDarkMode, ...textInputProps }, ref) => {
+    const { colors: defaultThemeColors } = useThemePreference();
+    const themeColors = propThemeColors ?? defaultThemeColors;
     const inputRef = useRef<TextInput>(null);
 
     const handleClear = () => {
@@ -44,6 +48,8 @@ export const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     return (
       <Card
         variant="form"
+        themeColors={propThemeColors}
+        forceDarkMode={forceDarkMode}
         style={StyleSheet.flatten([
           hideLabel && { paddingTop: 12, paddingBottom: 12 },
           containerStyle,
@@ -73,6 +79,7 @@ export const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
             value={value}
             onChangeText={onChangeText}
             maxLength={maxLength}
+            keyboardAppearance={forceDarkMode ? 'dark' : undefined}
             {...textInputProps}
           />
           {rightIcon && <View style={styles.rightIconContainer}>{rightIcon}</View>}

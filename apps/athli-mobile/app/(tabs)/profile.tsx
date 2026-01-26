@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect } from 'react';
-import { StyleSheet, Text, View, Linking } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { StyleSheet, Text, View, Linking, InteractionManager } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   ChevronRight,
@@ -13,6 +13,7 @@ import {
   RefreshCw,
   ShieldCheck,
   User,
+  UserMinus,
 } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { PressableScale } from 'pressto';
@@ -20,10 +21,12 @@ import { PressableScale } from 'pressto';
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference, useClientProfileStore, useCoachProfileStore, useAppView, useTranslations } from '@/stores';
 import { Card } from '@/components/ui/card';
+import { Dialog } from '@/components/ui/dialog';
 import { SettingsOption } from '@/components/ui/settings-option';
 import { Separator } from '@/components/ui/separator';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { signOut } from '@/services/auth/supabase-auth';
 
 export default function ProfileTabScreen() {
   const router = useRouter();
@@ -40,6 +43,8 @@ export default function ProfileTabScreen() {
   const currentProfile = isAthleteView ? clientProfile : coachProfile;
   const profileName = currentProfile?.name || t('profile.enterYourName');
   const profilePictureUrl = currentProfile?.profile_picture_url;
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [showDeletionDialog, setShowDeletionDialog] = useState(false);
 
   // Log client data when on profile screen
   useEffect(() => {
@@ -80,7 +85,38 @@ export default function ProfileTabScreen() {
   };
 
   const handleLogout = () => {
-    router.push('/modals/auth/logout-confirmation-modal');
+    InteractionManager.runAfterInteractions(() => {
+      setShowLogoutDialog(true);
+    });
+  };
+
+  const handleLogoutConfirm = async () => {
+    try {
+      await signOut();
+      setShowLogoutDialog(false);
+      router.replace('/welcome');
+    } catch (error) {
+      setShowLogoutDialog(false);
+    }
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutDialog(false);
+  };
+
+  const handleRequestDeletion = () => {
+    InteractionManager.runAfterInteractions(() => {
+      setShowDeletionDialog(true);
+    });
+  };
+
+  const handleDeletionConfirm = () => {
+    // TODO: Implement deletion request to coach
+    setShowDeletionDialog(false);
+  };
+
+  const handleDeletionCancel = () => {
+    setShowDeletionDialog(false);
   };
 
   const handleManageGoogle = useCallback(() => {
@@ -100,6 +136,7 @@ export default function ProfileTabScreen() {
   }, [router]);
 
   return (
+    <>
     <ScreenWrapper contentContainerStyle={{ paddingBottom: 60 }}>
       <View style={styles.content}>
         <View style={styles.titleRow}>
@@ -187,7 +224,7 @@ export default function ProfileTabScreen() {
               <Text style={[styles.providerText, { color: themeColors.text }]}>
                 {t('profile.manageWithGoogle')}
               </Text>
-              <ChevronRight size={20} color={themeColors.mutedText} />
+              <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
             </PressableScale>
           )}
           {currentProfile?.signin_method === 'apple' && (
@@ -200,7 +237,7 @@ export default function ProfileTabScreen() {
               <Text style={[styles.providerText, { color: themeColors.text }]}>
                 {t('profile.manageWithApple')}
               </Text>
-              <ChevronRight size={20} color={themeColors.mutedText} />
+              <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
             </PressableScale>
           )}
           {currentProfile?.signin_method === 'email' && (
@@ -215,7 +252,7 @@ export default function ProfileTabScreen() {
                 <Text style={[styles.providerText, { color: themeColors.text }]}>
                   {t('profile.changePassword')}
                 </Text>
-                <ChevronRight size={20} color={themeColors.mutedText} />
+                <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
               </PressableScale>
               <Separator />
               <PressableScale style={styles.providerRow} onPress={handleChangeEmail}>
@@ -235,7 +272,7 @@ export default function ProfileTabScreen() {
                     </Text>
                   )}
                 </View>
-                <ChevronRight size={20} color={themeColors.mutedText} />
+                <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
               </PressableScale>
             </>
           )}
@@ -245,14 +282,15 @@ export default function ProfileTabScreen() {
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.support')}</Text>
         <Card>
           <SettingsOption
-            icon={<PlatformIcon sf="envelope" IconComponent={MailPlus} size={iconSize} color={iconColor} />}
-            title={t('profile.supportEmail')}
-            onPress={handleOpenSupportEmail}
+            icon={<PlatformIcon sf="megaphone" IconComponent={Megaphone} size={iconSize} color={iconColor} />}
+            title={t('profile.featureRequests')}
+            onPress={() => router.push('/settings/feature-requests')}
           />
           <Separator />
           <SettingsOption
-            icon={<PlatformIcon sf="megaphone" IconComponent={Megaphone} size={iconSize} color={iconColor} />}
-            title={t('profile.featureRequests')}
+            icon={<PlatformIcon sf="envelope" IconComponent={MailPlus} size={iconSize} color={iconColor} />}
+            title={t('profile.supportEmail')}
+            onPress={handleOpenSupportEmail}
           />
           <Separator />
           <SettingsOption
@@ -281,8 +319,8 @@ export default function ProfileTabScreen() {
 
         {/* Account Actions */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.accountActions')}</Text>
-        <PressableScale onPress={handleLogout}>
-          <Card>
+        <Card>
+          <PressableScale onPress={handleLogout}>
             <View style={styles.optionRow}>
               <View style={styles.optionIconContainer}>
                 <PlatformIcon sf="rectangle.portrait.and.arrow.right" IconComponent={LogOut} size={iconSize} color={iconColor} />
@@ -293,11 +331,61 @@ export default function ProfileTabScreen() {
                 </Text>
               </View>
             </View>
-          </Card>
-        </PressableScale>
+          </PressableScale>
+          <Separator />
+          <PressableScale onPress={handleRequestDeletion}>
+            <View style={styles.optionRow}>
+              <View style={styles.optionIconContainer}>
+                <PlatformIcon sf="person.badge.minus" IconComponent={UserMinus} size={iconSize} color={iconColor} />
+              </View>
+              <View style={styles.optionTextContainer}>
+                <Text style={[styles.optionTitle, { color: themeColors.text }]}>
+                  {t('profile.requestDeletion')}
+                </Text>
+              </View>
+            </View>
+          </PressableScale>
+        </Card>
         <View style={{ height: 60 }} />
       </View>
     </ScreenWrapper>
+    <Dialog
+      visible={showLogoutDialog}
+      onClose={handleLogoutCancel}
+      title={t('profile.logoutConfirmTitle')}
+      message={t('profile.logoutConfirmMessage')}
+      buttons={[
+        {
+          label: t('general.cancel'),
+          onPress: handleLogoutCancel,
+          variant: 'secondary',
+        },
+        {
+          label: t('profile.logout'),
+          onPress: handleLogoutConfirm,
+          variant: 'destructive',
+        },
+      ]}
+    />
+    <Dialog
+      visible={showDeletionDialog}
+      onClose={handleDeletionCancel}
+      title={t('profile.requestDeletionTitle')}
+      message={t('profile.requestDeletionMessage')}
+      buttons={[
+        {
+          label: t('general.cancel'),
+          onPress: handleDeletionCancel,
+          variant: 'secondary',
+        },
+        {
+          label: t('profile.requestDeletion'),
+          onPress: handleDeletionConfirm,
+          variant: 'destructive',
+        },
+      ]}
+    />
+    </>
   );
 }
 

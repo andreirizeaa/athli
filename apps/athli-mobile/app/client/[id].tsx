@@ -211,7 +211,7 @@ export default function ClientProfileScreen() {
   // Loading state - show while client basic info is loading
   if (isLoadingClient && !client) {
     return (
-      <ScreenWrapper>
+      <ScreenWrapper useImageBackground={false}>
         <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
           <IconButton
             icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
@@ -237,7 +237,7 @@ export default function ClientProfileScreen() {
   // Error state
   if (error || !client) {
     return (
-      <ScreenWrapper>
+      <ScreenWrapper useImageBackground={false}>
         <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
           <IconButton
             icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
@@ -260,7 +260,7 @@ export default function ClientProfileScreen() {
   }
 
   return (
-    <ScreenWrapper scrollable={true}>
+    <ScreenWrapper scrollable={true} useImageBackground={false}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton

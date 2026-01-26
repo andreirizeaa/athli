@@ -5,7 +5,7 @@ import { Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Platform, View as RNView, StyleSheet } from 'react-native';
+import { Platform, View as RNView, StyleSheet, Image as RNImage } from 'react-native';
 import { Image } from 'expo-image';
 import 'react-native-reanimated';
 import { PressablesConfig } from 'pressto';
@@ -47,6 +47,25 @@ SplashScreen.setOptions({
   fade: true,
 });
 
+// Background images to prefetch
+const darkBackground = require('../assets/backgrounds/dark.png');
+const lightBackground = require('../assets/backgrounds/light.png');
+
+// Prefetch background images to prevent flash on screen load
+const prefetchBackgroundImages = async () => {
+  try {
+    const darkSource = RNImage.resolveAssetSource(darkBackground);
+    const lightSource = RNImage.resolveAssetSource(lightBackground);
+    await Promise.all([
+      RNImage.prefetch(darkSource.uri),
+      RNImage.prefetch(lightSource.uri),
+    ]);
+    console.log('[RootLayout] Background images prefetched');
+  } catch (error) {
+    console.warn('[RootLayout] Failed to prefetch background images:', error);
+  }
+};
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
@@ -58,10 +77,13 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
-  // Hide the native splash screen immediately since we're using our own overlay
+  // Prefetch background images and hide splash screen when fonts are loaded
   useEffect(() => {
     if (loaded) {
-      SplashScreen.hideAsync();
+      // Prefetch backgrounds before showing UI to prevent flash
+      prefetchBackgroundImages().finally(() => {
+        SplashScreen.hideAsync();
+      });
     }
   }, [loaded]);
 
@@ -367,6 +389,14 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen name="settings/preferences" options={{ headerShown: false }} />
+          <Stack.Screen name="settings/feature-requests" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="settings/feature-request-detail"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
           <Stack.Screen
             name="client/[id]"
             options={{
@@ -391,6 +421,7 @@ function RootLayoutNav() {
           <Stack.Screen name="client/[id]/assistant" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/goals" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/injuries" options={{ headerShown: false }} />
+          <Stack.Screen name="client/[id]/exercise-history" options={{ headerShown: false }} />
           <Stack.Screen
             name="client/[id]/edit-details"
             options={{
@@ -717,21 +748,6 @@ function RootLayoutNav() {
               presentation: 'modal',
               headerShown: false,
               gestureEnabled: false,
-              ...(Platform.OS === 'android' && {
-                animation: 'slide_from_bottom',
-                gestureDirection: 'vertical',
-              }),
-            }}
-          />
-          <Stack.Screen
-            name="modals/auth/logout-confirmation-modal"
-            options={{
-              presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
-              headerShown: false,
-              ...(Platform.OS === 'ios' && {
-                sheetAllowedDetents: [0.35],
-                sheetGrabberVisible: true,
-              }),
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
                 gestureDirection: 'vertical',
@@ -1232,6 +1248,30 @@ function RootLayoutNav() {
           <Stack.Screen name="chats/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="chats/archived" options={{ headerShown: false }} />
           <Stack.Screen name="inbox/[id]" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="modals/feature-requests/add-feature-request-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/feature-requests/add-reply-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
         </Stack>
       </ThemeProvider>
 

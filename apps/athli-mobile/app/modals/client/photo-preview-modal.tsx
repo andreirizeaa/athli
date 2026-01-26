@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Platform, StyleSheet, View, Dimensions, StatusBar, Text, Alert } from 'react-native';
+import { Platform, StyleSheet, View, Dimensions, StatusBar, Text } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Share2, Trash2 } from 'lucide-react-native';
@@ -17,6 +17,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { haptics } from '@/utils/haptics';
 import { useClientDetailStore, useTranslations } from '@/stores';
 import { deleteClientPhotoAngle } from '@/services/client/client-photo-service';
+import { Dialog } from '@/components/ui/dialog';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -35,6 +36,8 @@ export default function PhotoPreviewModal() {
     const { url, photoId, clientId, date, angle } = params;
 
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
 
     const coachId = useClientDetailStore((state) => state.coachId);
     const refreshSection = useClientDetailStore((state) => state.refreshSection);
@@ -132,43 +135,33 @@ export default function PhotoPreviewModal() {
         }
     };
 
-    const handleDelete = async () => {
+    const handleDeleteConfirm = async () => {
         if (!photoId || !clientId || !coachId || !angle) return;
 
-        Alert.alert(
-            t('general.delete'),
-            t('clientDetail.photos.deleteConfirmation'),
-            [
-                {
-                    text: t('general.cancel'),
-                    style: 'cancel',
-                },
-                {
-                    text: t('general.delete'),
-                    style: 'destructive',
-                    onPress: async () => {
-                        setIsDeleting(true);
-                        try {
-                            await deleteClientPhotoAngle(
-                                clientId,
-                                coachId,
-                                photoId,
-                                angle as 'front' | 'back' | 'side'
-                            );
-                            haptics.success();
-                            await refreshSection('photos');
-                            handleClose();
-                        } catch (error) {
-                            console.error('[PhotoPreviewModal] Error deleting:', error);
-                            haptics.error();
-                            Alert.alert(t('general.error'), t('general.errorDeleting'));
-                        } finally {
-                            setIsDeleting(false);
-                        }
-                    },
-                },
-            ]
-        );
+        setShowDeleteDialog(false);
+        setIsDeleting(true);
+        try {
+            await deleteClientPhotoAngle(
+                clientId,
+                coachId,
+                photoId,
+                angle as 'front' | 'back' | 'side'
+            );
+            haptics.success();
+            await refreshSection('photos');
+            handleClose();
+        } catch (error) {
+            console.error('[PhotoPreviewModal] Error deleting:', error);
+            haptics.error();
+            setShowErrorDialog(true);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    const handleDelete = () => {
+        if (!photoId || !clientId || !coachId || !angle) return;
+        setShowDeleteDialog(true);
     };
 
     if (!url) {
@@ -234,6 +227,26 @@ export default function PhotoPreviewModal() {
                     </GestureDetector>
                 </View>
             </View>
+
+            <Dialog
+                visible={showDeleteDialog}
+                onClose={() => setShowDeleteDialog(false)}
+                title={t('general.delete')}
+                message={t('clientDetail.photos.deleteConfirmation')}
+                buttons={[
+                    { label: t('general.cancel'), onPress: () => setShowDeleteDialog(false), variant: 'secondary' },
+                    { label: t('general.delete'), onPress: handleDeleteConfirm, variant: 'destructive' }
+                ]}
+            />
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={t('general.errorDeleting')}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
         </GestureHandlerRootView>
     );
 }

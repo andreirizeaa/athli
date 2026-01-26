@@ -526,7 +526,7 @@ export const useSyncReadReceipt = ({
   // Track last synced message count to avoid redundant syncs
   const lastSyncedMessageCountRef = useRef<number>(0);
   // Debounce timer ref
-  const syncTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const syncReadReceipt = useCallback(async (force = false) => {
     if (!enabled || isSyncingRef.current) return;

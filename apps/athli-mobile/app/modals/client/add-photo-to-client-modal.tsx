@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
-import { Platform, StyleSheet, Text, View, Alert, Dimensions } from 'react-native';
+import { Platform, StyleSheet, Text, View, Dimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +17,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { SelectionInput } from '@/components/ui/form-inputs';
 import { hexToRgba } from '@/utils/colorUtils';
 import { addClientPhotos, checkExistingPhotos } from '@/services/client/client-photo-service';
+import { Dialog } from '@/components/ui/dialog';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const THUMBNAIL_SIZE = (SCREEN_WIDTH - 32 - 16 * 2) / 3;
@@ -37,6 +38,12 @@ export default function AddPhotoToClientModal() {
     const [sideUri, setSideUri] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [existingAngles, setExistingAngles] = useState<PhotoAngle[]>([]);
+    const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+    const [permissionMessage, setPermissionMessage] = useState('');
+    const [showSourceDialog, setShowSourceDialog] = useState(false);
+    const [currentAngle, setCurrentAngle] = useState<PhotoAngle | null>(null);
 
     const coachId = useClientDetailStore((state) => state.coachId);
     const refreshSection = useClientDetailStore((state) => state.refreshSection);
@@ -79,25 +86,11 @@ export default function AddPhotoToClientModal() {
 
     const handleCloseWithConfirmation = useCallback(() => {
         if (hasChanges) {
-            Alert.alert(
-                t('common.discardChanges'),
-                t('common.discardChangesMessage'),
-                [
-                    {
-                        text: t('common.cancel'),
-                        style: 'cancel',
-                    },
-                    {
-                        text: t('common.discard'),
-                        style: 'destructive',
-                        onPress: handleClose,
-                    },
-                ]
-            );
+            setShowDiscardDialog(true);
         } else {
             handleClose();
         }
-    }, [hasChanges, handleClose, t]);
+    }, [hasChanges, handleClose]);
 
     const handleSave = useCallback(async () => {
         if (!canSave || !clientId || !coachId) return;
@@ -117,7 +110,7 @@ export default function AddPhotoToClientModal() {
             handleClose();
         } catch (error) {
             haptics.error();
-            Alert.alert(t('general.error'), t('general.errorSaving'), [{ text: t('general.ok') }]);
+            setShowErrorDialog(true);
         } finally {
             setIsSaving(false);
         }
@@ -144,11 +137,8 @@ export default function AddPhotoToClientModal() {
             if (source === 'camera') {
                 const { status } = await ImagePicker.requestCameraPermissionsAsync();
                 if (status !== 'granted') {
-                    Alert.alert(
-                        t('general.permissionRequired'),
-                        t('general.cameraPermissionMessage'),
-                        [{ text: t('general.ok') }]
-                    );
+                    setPermissionMessage(t('general.cameraPermissionMessage'));
+                    setShowPermissionDialog(true);
                     return;
                 }
                 const result = await ImagePicker.launchCameraAsync({
@@ -160,11 +150,8 @@ export default function AddPhotoToClientModal() {
             } else {
                 const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
                 if (status !== 'granted') {
-                    Alert.alert(
-                        t('general.permissionRequired'),
-                        t('general.libraryPermissionMessage'),
-                        [{ text: t('general.ok') }]
-                    );
+                    setPermissionMessage(t('general.libraryPermissionMessage'));
+                    setShowPermissionDialog(true);
                     return;
                 }
                 const result = await ImagePicker.launchImageLibraryAsync({
@@ -188,22 +175,10 @@ export default function AddPhotoToClientModal() {
                 return;
             }
 
-            Alert.alert(t('clientDetail.addPhotoModal.selectSource'), undefined, [
-                {
-                    text: t('clientDetail.addPhotoModal.takePhoto'),
-                    onPress: () => pickImage(angle, 'camera'),
-                },
-                {
-                    text: t('clientDetail.addPhotoModal.chooseFromLibrary'),
-                    onPress: () => pickImage(angle, 'library'),
-                },
-                {
-                    text: t('general.cancel'),
-                    style: 'cancel',
-                },
-            ]);
+            setCurrentAngle(angle);
+            setShowSourceDialog(true);
         },
-        [t, pickImage]
+        []
     );
 
     const formatDate = (d: Date) => {
@@ -355,6 +330,47 @@ export default function AddPhotoToClientModal() {
                     </View>
                 </View>
             </KeyboardAwareScrollView>
+
+            <Dialog
+                visible={showDiscardDialog}
+                onClose={() => setShowDiscardDialog(false)}
+                title={t('common.discardChanges')}
+                message={t('common.discardChangesMessage')}
+                buttons={[
+                    { label: t('common.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+                    { label: t('common.discard'), onPress: () => { setShowDiscardDialog(false); handleClose(); }, variant: 'destructive' },
+                ]}
+            />
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={t('general.errorSaving')}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
+
+            <Dialog
+                visible={showPermissionDialog}
+                onClose={() => setShowPermissionDialog(false)}
+                title={t('general.permissionRequired')}
+                message={permissionMessage}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowPermissionDialog(false), variant: 'primary' }]}
+            />
+
+            <Dialog
+                visible={showSourceDialog}
+                onClose={() => setShowSourceDialog(false)}
+                title={t('clientDetail.addPhotoModal.selectSource')}
+                buttonLayout="vertical"
+                buttons={[
+                    { label: t('clientDetail.addPhotoModal.takePhoto'), onPress: () => { setShowSourceDialog(false); if (currentAngle) pickImage(currentAngle, 'camera'); }, variant: 'primary' },
+                    { label: t('clientDetail.addPhotoModal.chooseFromLibrary'), onPress: () => { setShowSourceDialog(false); if (currentAngle) pickImage(currentAngle, 'library'); }, variant: 'secondary' },
+                    { label: t('general.cancel'), onPress: () => setShowSourceDialog(false), variant: 'secondary' },
+                ]}
+            />
         </View>
     );
 }

@@ -1,15 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { View, StyleSheet, Text, Animated, InteractionManager } from 'react-native';
 import { PressableOpacity } from 'pressto';
-import Animated, {
-    useSharedValue,
-    useAnimatedStyle,
-    withTiming,
-} from 'react-native-reanimated';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { haptics } from '@/utils/haptics';
+
+// Constants for layout
+const SEGMENT_PADDING = 4;
+const SEGMENT_GAP = 2;
 
 export type TimeRange = '90d' | '6m' | '1y' | 'all';
 export type PhotoView = 'all' | 'front' | 'back' | 'side';
@@ -36,28 +35,83 @@ export const SegmentedControl = React.memo(function SegmentedControl<T extends s
 }: SegmentedControlProps<T>) {
     const { colors: themeColors } = useThemePreference();
 
-    const activeIndex = segments.findIndex((seg) => seg.value === value);
+    // Track the visual index separately from the actual value
+    // This allows the animation to complete before triggering expensive re-renders
+    const [visualIndex, setVisualIndex] = useState(() => 
+        segments.findIndex((seg) => seg.value === value)
+    );
 
     const [containerW, setContainerW] = useState(0);
-    const PADDING = 4;
-    const GAP = 2;
     const SEG_COUNT = segments.length;
 
-    const innerW = Math.max(0, containerW - PADDING * 2);
-    const segmentWidth = SEG_COUNT > 0 ? Math.floor((innerW - GAP * (SEG_COUNT - 1)) / SEG_COUNT) : 0;
+    const innerW = Math.max(0, containerW - SEGMENT_PADDING * 2);
+    const segmentWidth = SEG_COUNT > 0 ? Math.floor((innerW - SEGMENT_GAP * (SEG_COUNT - 1)) / SEG_COUNT) : 0;
 
-    const animatedIndex = useSharedValue(activeIndex);
+    // Calculate target position based on visual index
+    const targetX = SEGMENT_PADDING + visualIndex * (segmentWidth + SEGMENT_GAP);
+
+    // Use React Native's Animated API
+    const translateX = useRef(new Animated.Value(targetX)).current;
+    const widthAnim = useRef(new Animated.Value(segmentWidth)).current;
+
+    // Track if this is the first render
+    const isFirstRender = useRef(true);
+    const pendingOnChange = useRef<T | null>(null);
+
+    // Sync visual index with value prop when it changes externally
     useEffect(() => {
-        animatedIndex.value = withTiming(activeIndex, { duration: 200 });
-    }, [activeIndex, animatedIndex]);
+        const newIndex = segments.findIndex((seg) => seg.value === value);
+        if (newIndex !== visualIndex && pendingOnChange.current === null) {
+            setVisualIndex(newIndex);
+        }
+    }, [value, segments]);
 
-    const animatedBackgroundStyle = useAnimatedStyle(() => {
-        const translateX = PADDING + animatedIndex.value * (segmentWidth + GAP);
-        return {
-            transform: [{ translateX }],
-            width: segmentWidth,
-        };
+    // Animate when visual index changes
+    useEffect(() => {
+        const newTargetX = SEGMENT_PADDING + visualIndex * (segmentWidth + SEGMENT_GAP);
+
+        if (isFirstRender.current) {
+            // On first render, just set values without animation
+            translateX.setValue(newTargetX);
+            widthAnim.setValue(segmentWidth);
+            isFirstRender.current = false;
+        } else if (segmentWidth > 0) {
+            // Animate to new position
+            Animated.parallel([
+                Animated.timing(translateX, {
+                    toValue: newTargetX,
+                    duration: 200,
+                    useNativeDriver: true,
+                }),
+            ]).start(() => {
+                // After animation completes, trigger the actual onChange
+                if (pendingOnChange.current !== null) {
+                    const valueToSend = pendingOnChange.current;
+                    pendingOnChange.current = null;
+                    // Use InteractionManager to ensure animation is complete
+                    InteractionManager.runAfterInteractions(() => {
+                        onChange(valueToSend);
+                    });
+                }
+            });
+        }
+    }, [visualIndex, segmentWidth]);
+
+    // Update width separately (instant, no animation needed)
+    useEffect(() => {
+        if (segmentWidth > 0) {
+            widthAnim.setValue(segmentWidth);
+        }
     }, [segmentWidth]);
+
+    const handlePress = useCallback((segValue: T, segIndex: number, isActive: boolean) => {
+        if (!isActive) {
+            haptics.selection();
+            // Store the pending value and update visual index immediately
+            pendingOnChange.current = segValue;
+            setVisualIndex(segIndex);
+        }
+    }, []);
 
     return (
         <View style={[styles.wrapper, noPadding && styles.wrapperNoPadding]}>
@@ -68,22 +122,21 @@ export const SegmentedControl = React.memo(function SegmentedControl<T extends s
                 <Animated.View
                     style={[
                         styles.activeBackground,
-                        { backgroundColor: themeColors.backgroundPrimary },
-                        animatedBackgroundStyle,
+                        {
+                            backgroundColor: themeColors.backgroundPrimary,
+                            width: segmentWidth,
+                            transform: [{ translateX }],
+                        },
                     ]}
                 />
-                {segments.map((seg) => {
+                {segments.map((seg, index) => {
                     const active = value === seg.value;
+                    const visuallyActive = index === visualIndex;
                     return (
                         <PressableOpacity
                             key={seg.value}
                             style={[styles.segment, styles.segmentTouchable]}
-                            onPress={() => {
-                                if (!active) {
-                                    haptics.selection();
-                                    onChange(seg.value);
-                                }
-                            }}
+                            onPress={() => handlePress(seg.value, index, active)}
                             accessibilityRole="button"
                             accessibilityState={{ selected: active }}
                         >
@@ -91,7 +144,7 @@ export const SegmentedControl = React.memo(function SegmentedControl<T extends s
                                 style={[
                                     styles.segmentText,
                                     { color: themeColors.mutedText },
-                                    active && [styles.segmentTextActive, { color: themeColors.text }],
+                                    visuallyActive && [styles.segmentTextActive, { color: themeColors.text }],
                                 ]}
                             >
                                 {seg.label}
@@ -114,7 +167,7 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         borderRadius: 28,
-        padding: 1,
+        padding: 3,
         position: 'relative',
     },
     activeBackground: {

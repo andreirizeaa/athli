@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Platform, StyleSheet, Text, View, Keyboard, TouchableWithoutFeedback, Alert } from 'react-native';
+import { Platform, StyleSheet, Text, View, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +23,7 @@ import {
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
+import { Dialog } from '@/components/ui/dialog';
 import { InputBox, TextAreaInput, SelectInput } from '@/components/ui/form-inputs';
 import { hexToRgba } from '@/utils/colorUtils';
 import { createExercise, editExercise, getExerciseById } from '@/services/coach/coach-exercise-service';
@@ -87,6 +88,11 @@ export default function AddExerciseModal() {
         (params.modality && params.modality !== '' ? params.modality as Modality : null)
     );
 
+    // Dialog state
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+
     // TanStack Query
     const queryClient = useQueryClient();
 
@@ -119,11 +125,8 @@ export default function AddExerciseModal() {
         },
         onError: (error: Error) => {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                error.message || t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(error.message || t('general.errorSaving'));
+            setShowErrorDialog(true);
         },
     });
 
@@ -136,11 +139,8 @@ export default function AddExerciseModal() {
         },
         onError: (error: Error) => {
             haptics.error();
-            Alert.alert(
-                t('general.error'),
-                error.message || t('general.errorSaving'),
-                [{ text: t('general.ok') }]
-            );
+            setErrorMessage(error.message || t('general.errorSaving'));
+            setShowErrorDialog(true);
         },
     });
 
@@ -241,25 +241,11 @@ export default function AddExerciseModal() {
     const handleCloseWithConfirmation = useCallback(() => {
         // Only show discard alert if there are changes
         if (hasChanges) {
-            Alert.alert(
-                t('library.addExercise.discardChangesTitle'),
-                t('library.addExercise.discardChangesMessage'),
-                [
-                    {
-                        text: t('general.cancel'),
-                        style: 'cancel',
-                    },
-                    {
-                        text: t('library.addExercise.discardChanges'),
-                        style: 'destructive',
-                        onPress: handleClose,
-                    },
-                ]
-            );
+            setShowDiscardDialog(true);
         } else {
             handleClose();
         }
-    }, [hasChanges, handleClose, t]);
+    }, [hasChanges, handleClose]);
 
     const handleSave = useCallback(() => {
         if (!canComplete) return;
@@ -406,6 +392,26 @@ export default function AddExerciseModal() {
                     </KeyboardAwareScrollView>
                 </View>
             </TouchableWithoutFeedback>
+
+            <Dialog
+                visible={showErrorDialog}
+                onClose={() => setShowErrorDialog(false)}
+                title={t('general.error')}
+                message={errorMessage}
+                showCloseIcon={false}
+                buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+            />
+
+            <Dialog
+                visible={showDiscardDialog}
+                onClose={() => setShowDiscardDialog(false)}
+                title={t('library.addExercise.discardChangesTitle')}
+                message={t('library.addExercise.discardChangesMessage')}
+                buttons={[
+                    { label: t('general.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+                    { label: t('library.addExercise.discardChanges'), onPress: handleClose, variant: 'destructive' },
+                ]}
+            />
         </View>
     );
 }
