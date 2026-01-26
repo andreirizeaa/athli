@@ -1,12 +1,12 @@
 import React from 'react';
-import { StyleSheet, type ViewStyle } from 'react-native';
+import { StyleSheet, type ViewStyle, type StyleProp } from 'react-native';
 import SquircleView from 'react-native-fast-squircle';
 import { type ThemeColors } from '@/constants/theme';
 import { useThemePreference, useColorScheme } from '@/stores';
 
 export interface CardProps {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   variant?: 'default' | 'chart' | 'form' | 'profile' | 'photo' | 'stat' | 'options';
   themeColors?: ThemeColors;
   forceDarkMode?: boolean;

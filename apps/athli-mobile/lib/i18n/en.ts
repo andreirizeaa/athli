@@ -568,7 +568,7 @@ export const en = {
     personalDetails: 'Personal Details',
     preferences: 'Preferences',
     support: 'Support',
-    supportEmail: 'Support Email',
+    supportEmail: 'Chat with Us',
     featureRequests: 'Request a Feature',
     requestAFeature: 'Request a Feature',
     syncData: 'Sync Data',

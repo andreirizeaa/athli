@@ -84,13 +84,13 @@ export default function EditClientGoalModal() {
                     return {
                         goal: title.trim(),
                         target_date: date ? date.toISOString().split('T')[0] : null,
-                        details: body.trim() || null,
+                        details: body.trim() || undefined,
                     };
                 }
                 return {
                     goal: g.goal,
                     target_date: g.target_date,
-                    details: g.details || null,
+                    details: g.details || undefined,
                 };
             });
 
@@ -119,7 +119,7 @@ export default function EditClientGoalModal() {
                 .map(g => ({
                     goal: g.goal,
                     target_date: g.target_date,
-                    details: g.details || null,
+                    details: g.details || undefined,
                 }));
 
             await saveAthleteGoals(id, coachId, updatedGoals);

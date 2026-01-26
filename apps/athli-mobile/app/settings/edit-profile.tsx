@@ -231,7 +231,7 @@ export default function EditProfileScreen() {
               <Text style={[styles.providerText, { color: themeColors.text }]}>
                 {t('profile.manageWithGoogle')}
               </Text>
-              <ChevronRight size={20} color={themeColors.mutedText} />
+              <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
             </PressableScale>
           )}
           {currentProfile?.signin_method === 'apple' && (
@@ -244,7 +244,7 @@ export default function EditProfileScreen() {
               <Text style={[styles.providerText, { color: themeColors.text }]}>
                 {t('profile.manageWithApple')}
               </Text>
-              <ChevronRight size={20} color={themeColors.mutedText} />
+              <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
             </PressableScale>
           )}
           {currentProfile?.signin_method === 'email' && (
@@ -259,7 +259,7 @@ export default function EditProfileScreen() {
                 <Text style={[styles.providerText, { color: themeColors.text }]}>
                   {t('profile.changePassword')}
                 </Text>
-                <ChevronRight size={20} color={themeColors.mutedText} />
+                <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
               </PressableScale>
               <Separator />
               <PressableScale style={styles.providerRow} onPress={handleChangeEmail}>
@@ -279,7 +279,7 @@ export default function EditProfileScreen() {
                     </Text>
                   )}
                 </View>
-                <ChevronRight size={20} color={themeColors.mutedText} />
+                <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
               </PressableScale>
             </>
           )}

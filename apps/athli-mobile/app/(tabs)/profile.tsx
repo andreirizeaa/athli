@@ -224,7 +224,7 @@ export default function ProfileTabScreen() {
               <Text style={[styles.providerText, { color: themeColors.text }]}>
                 {t('profile.manageWithGoogle')}
               </Text>
-              <ChevronRight size={20} color={themeColors.mutedText} />
+              <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
             </PressableScale>
           )}
           {currentProfile?.signin_method === 'apple' && (
@@ -237,7 +237,7 @@ export default function ProfileTabScreen() {
               <Text style={[styles.providerText, { color: themeColors.text }]}>
                 {t('profile.manageWithApple')}
               </Text>
-              <ChevronRight size={20} color={themeColors.mutedText} />
+              <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
             </PressableScale>
           )}
           {currentProfile?.signin_method === 'email' && (
@@ -252,7 +252,7 @@ export default function ProfileTabScreen() {
                 <Text style={[styles.providerText, { color: themeColors.text }]}>
                   {t('profile.changePassword')}
                 </Text>
-                <ChevronRight size={20} color={themeColors.mutedText} />
+                <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
               </PressableScale>
               <Separator />
               <PressableScale style={styles.providerRow} onPress={handleChangeEmail}>
@@ -272,7 +272,7 @@ export default function ProfileTabScreen() {
                     </Text>
                   )}
                 </View>
-                <ChevronRight size={20} color={themeColors.mutedText} />
+                <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
               </PressableScale>
             </>
           )}
@@ -282,15 +282,15 @@ export default function ProfileTabScreen() {
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.support')}</Text>
         <Card>
           <SettingsOption
-            icon={<PlatformIcon sf="envelope" IconComponent={MailPlus} size={iconSize} color={iconColor} />}
-            title={t('profile.supportEmail')}
-            onPress={handleOpenSupportEmail}
-          />
-          <Separator />
-          <SettingsOption
             icon={<PlatformIcon sf="megaphone" IconComponent={Megaphone} size={iconSize} color={iconColor} />}
             title={t('profile.featureRequests')}
             onPress={() => router.push('/settings/feature-requests')}
+          />
+          <Separator />
+          <SettingsOption
+            icon={<PlatformIcon sf="envelope" IconComponent={MailPlus} size={iconSize} color={iconColor} />}
+            title={t('profile.supportEmail')}
+            onPress={handleOpenSupportEmail}
           />
           <Separator />
           <SettingsOption

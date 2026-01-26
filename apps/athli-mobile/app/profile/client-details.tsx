@@ -333,7 +333,7 @@ export default function ClientDetailsScreen() {
   }, [canSave, country, dateOfBirth, email, gender, height, name, phoneNumber, router, t, updateProfile, userId]);
 
   // Current image to display (selected or original)
-  const currentImage = selectedImage || profile?.profile_picture_url;
+  const currentImage = selectedImage || profile?.profile_picture_url || null;
 
   const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
   const gradientHeight = headerHeight + 12;

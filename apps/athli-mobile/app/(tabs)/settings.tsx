@@ -240,15 +240,15 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.support')}</Text>
         <Card>
           <SettingsOption
-            icon={<PlatformIcon sf="envelope" mdi="email" IconComponent={MailPlus} size={iconSize} color={iconColor} />}
-            title={t('profile.supportEmail')}
-            onPress={handleOpenSupportEmail}
-          />
-          <Separator />
-          <SettingsOption
             icon={<PlatformIcon sf="megaphone" mdi="campaign" IconComponent={Megaphone} size={iconSize} color={iconColor} />}
             title={t('profile.featureRequests')}
             onPress={() => router.push('/settings/feature-requests')}
+          />
+          <Separator />
+          <SettingsOption
+            icon={<PlatformIcon sf="envelope" mdi="email" IconComponent={MailPlus} size={iconSize} color={iconColor} />}
+            title={t('profile.supportEmail')}
+            onPress={handleOpenSupportEmail}
           />
           <Separator />
           <SettingsOption

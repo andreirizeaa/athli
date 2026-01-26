@@ -1,5 +1,7 @@
 import React, { useEffect, useCallback, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -20,14 +22,18 @@ import {
   useCoachProfileStore,
   useClientProfileStore,
   useAppView,
+  useColorScheme,
 } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { SearchBar } from '@/components/ui/search-bar';
 import { Card } from '@/components/ui/card';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { haptics } from '@/utils/haptics';
 import { PlatformIcon } from '@/components/ui/platform-icon';
+
+const darkBackground = require('@/assets/backgrounds/dark.png');
+const lightBackground = require('@/assets/backgrounds/light.png');
 import {
   getFeatureRequests,
   toggleUpvote,
@@ -40,6 +46,9 @@ export default function FeatureRequestsScreen() {
   const { t } = useTranslations();
   const iconColor = themeColors.text;
   const { appView } = useAppView();
+  const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme();
+  const backgroundImage = colorScheme === 'dark' ? darkBackground : lightBackground;
 
   // Get current user info
   const coachProfile = useCoachProfileStore((state) => state.profile);
@@ -81,14 +90,38 @@ export default function FeatureRequestsScreen() {
     if (!currentUserId) return;
     setIsLoading(true);
     try {
-      const result = await getFeatureRequests(0, sortBy, searchQuery, currentUserId);
+      const result = await getFeatureRequests(0, 'newest', searchQuery, currentUserId);
       setRequests(result.data);
     } catch (error) {
       console.error('Failed to load feature requests:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [currentUserId, sortBy, searchQuery, setIsLoading, setRequests]);
+  }, [currentUserId, searchQuery, setIsLoading, setRequests]);
+
+  // Sort and filter requests client-side
+  const sortedRequests = useMemo(() => {
+    let filtered = [...requests];
+
+    // Filter for "yours" option
+    if (sortBy === 'yours') {
+      filtered = filtered.filter((r) => r.userId === currentUserId);
+    }
+
+    // Sort based on selected option
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'oldest':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'popular':
+          return b.upvoteCount - a.upvoteCount;
+        case 'newest':
+        case 'yours':
+        default:
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
+  }, [requests, sortBy, currentUserId]);
 
   // Load more data
   const loadMore = useCallback(async () => {
@@ -96,7 +129,7 @@ export default function FeatureRequestsScreen() {
     setIsLoadingMore(true);
     try {
       const nextPage = page + 1;
-      const result = await getFeatureRequests(nextPage, sortBy, searchQuery, currentUserId);
+      const result = await getFeatureRequests(nextPage, 'newest', searchQuery, currentUserId);
       appendRequests(result.data, result.hasMore);
       incrementPage();
     } catch (error) {
@@ -109,7 +142,6 @@ export default function FeatureRequestsScreen() {
     isLoadingMore,
     hasMore,
     page,
-    sortBy,
     searchQuery,
     setIsLoadingMore,
     appendRequests,
@@ -176,75 +208,111 @@ export default function FeatureRequestsScreen() {
     [searchQuery, themeColors.mutedText, t]
   );
 
-  return (
-    <ScreenWrapper scrollable={true}>
-      {/* Header */}
-      <View style={styles.header}>
-        <IconButton
-          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-          onPress={handleGoBack}
-          size="md"
-          color={iconColor}
-        />
-        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-          {t('featureRequests.title')}
-        </Text>
-        <IconButton
-          icon={{ sf: 'plus', IconComponent: Plus }}
-          onPress={handleRequestFeature}
-          size="md"
-          color={iconColor}
-        />
-      </View>
+  const renderItem = useCallback(
+    ({ item }: { item: FeatureRequest }) => (
+      <FeatureRequestCard
+        request={item}
+        onPress={() => handleCardPress(item)}
+        onUpvotePress={() => handleUpvotePress(item)}
+        themeColors={themeColors}
+        t={t}
+      />
+    ),
+    [handleCardPress, handleUpvotePress, themeColors, t]
+  );
 
-      {/* Search and filters */}
-      <View style={styles.searchContainer}>
-        <SearchBar
-          value={searchQuery}
-          onChangeText={handleSearchChange}
-          placeholder={t('general.searchPlaceholder')}
-        />
-
-        <View style={styles.filterContainer}>
-          <SegmentedControl
-            segments={filterSegments}
-            value={sortBy}
-            onChange={setSortBy}
-            noPadding
+  const ListHeader = useMemo(
+    () => (
+      <>
+        {/* Spacer for status bar */}
+        <View style={{ height: insets.top }} />
+        {/* Header */}
+        <View style={styles.header}>
+          <IconButton
+            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+            onPress={handleGoBack}
+            size="md"
+            color={iconColor}
+          />
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+            {t('featureRequests.title')}
+          </Text>
+          <IconButton
+            icon={{ sf: 'plus', IconComponent: Plus }}
+            onPress={handleRequestFeature}
+            size="md"
+            color={iconColor}
           />
         </View>
-      </View>
 
-      {/* Content */}
-      <View style={styles.contentContainer}>
-        {isLoading && requests.length === 0 ? (
-          <>
-            <SkeletonCard themeColors={themeColors} />
-            <SkeletonCard themeColors={themeColors} />
-          </>
-        ) : requests.length === 0 ? (
-          renderEmpty()
-        ) : (
-          <>
-            {requests.map((item) => (
-              <FeatureRequestCard
-                key={item.id}
-                request={item}
-                onPress={() => handleCardPress(item)}
-                onUpvotePress={() => handleUpvotePress(item)}
-                themeColors={themeColors}
-                t={t}
-              />
-            ))}
-            {isLoadingMore && (
-              <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color={themeColors.primary} />
-              </View>
-            )}
-          </>
-        )}
-      </View>
-    </ScreenWrapper>
+        {/* Search and filters */}
+        <View style={styles.searchContainer}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={handleSearchChange}
+            placeholder={t('general.searchPlaceholder')}
+          />
+
+          <View style={styles.filterContainer}>
+            <SegmentedControl
+              segments={filterSegments}
+              value={sortBy}
+              onChange={(value) => setSortBy(value as SortOption)}
+              noPadding
+            />
+          </View>
+        </View>
+      </>
+    ),
+    [insets.top, iconColor, themeColors.text, t, searchQuery, handleSearchChange, filterSegments, sortBy, setSortBy]
+  );
+
+  const ListEmpty = useMemo(
+    () =>
+      isLoading ? (
+        <View style={styles.contentContainer}>
+          <SkeletonCard themeColors={themeColors} />
+          <SkeletonCard themeColors={themeColors} />
+        </View>
+      ) : (
+        renderEmpty()
+      ),
+    [isLoading, themeColors, renderEmpty]
+  );
+
+  const ListFooter = useMemo(
+    () =>
+      isLoadingMore ? (
+        <View style={styles.footerLoader}>
+          <ActivityIndicator size="small" color={themeColors.primary} />
+        </View>
+      ) : (
+        <View style={{ height: insets.bottom + 32 }} />
+      ),
+    [isLoadingMore, themeColors.primary, insets.bottom]
+  );
+
+  return (
+    <View style={styles.screen}>
+      <Image
+        source={backgroundImage}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+      />
+      <FlashList
+        data={sortedRequests}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        estimatedItemSize={150}
+        ListHeaderComponent={ListHeader}
+        ListEmptyComponent={ListEmpty}
+        ListFooterComponent={ListFooter}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+      />
+      <StatusBarBlur />
+    </View>
   );
 }
 
@@ -383,7 +451,7 @@ const FeatureRequestCard = React.memo(function FeatureRequestCard({
             >
               <ChevronUp
                 {...({
-                  size: 24,
+                  size: 18,
                   color: request.hasUpvoted ? themeColors.primary : themeColors.text,
                   strokeWidth: request.hasUpvoted ? 3 : 2,
                 } as any)}
@@ -509,6 +577,12 @@ const SkeletonCard = React.memo(function SkeletonCard({ themeColors }: { themeCo
 });
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 0,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -535,6 +609,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 60,
+    paddingHorizontal: 16,
   },
   emptyText: {
     ...typography.p2,
@@ -547,6 +622,7 @@ const styles = StyleSheet.create({
   // Card styles
   card: {
     marginBottom: 12,
+    marginHorizontal: 16,
   },
   cardRow: {
     flexDirection: 'row',
@@ -625,11 +701,11 @@ const styles = StyleSheet.create({
   rightSection: {
     width: 70,
     alignItems: 'center',
-    justifyContent: 'stretch',
+    justifyContent: 'flex-start',
   },
   upvoteButton: {
     width: 70,
-    flex: 1,
+    paddingVertical: 12,
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
