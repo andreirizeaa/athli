@@ -1,5 +1,7 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
@@ -21,14 +23,19 @@ import {
   useCoachProfileStore,
   useClientProfileStore,
   useAppView,
+  useColorScheme,
 } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { Dialog } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { haptics } from '@/utils/haptics';
+
+const darkBackground = require('@/assets/backgrounds/dark.png');
+const lightBackground = require('@/assets/backgrounds/light.png');
 import {
   getFeatureRequestById,
   getReplies,
@@ -45,6 +52,9 @@ export default function FeatureRequestDetailScreen() {
   const { t } = useTranslations();
   const iconColor = themeColors.text;
   const { appView } = useAppView();
+  const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme();
+  const backgroundImage = colorScheme === 'dark' ? darkBackground : lightBackground;
 
   // Get current user info
   const coachProfile = useCoachProfileStore((state) => state.profile);
@@ -224,22 +234,335 @@ export default function FeatureRequestDetailScreen() {
   );
 
   // Sort replies based on sortAscending state
-  const sortedReplies = [...replies].sort((a, b) => {
-    const dateA = new Date(a.createdAt).getTime();
-    const dateB = new Date(b.createdAt).getTime();
-    return sortAscending ? dateA - dateB : dateB - dateA;
-  });
+  const sortedReplies = useMemo(
+    () =>
+      [...replies].sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return sortAscending ? dateA - dateB : dateB - dateA;
+      }),
+    [replies, sortAscending]
+  );
 
   // Format reply count text
-  const getReplyCountText = () => {
+  const getReplyCountText = useCallback(() => {
     if (replies.length === 0) return t('featureRequests.noReplies');
     if (replies.length === 1) return `1 ${t('featureRequests.reply')}`;
     return `${replies.length} ${t('featureRequests.replies')}`;
-  };
+  }, [replies.length, t]);
 
+  // Derived state that depends on currentRequest
+  const statusColor = useMemo(
+    () =>
+      currentRequest?.status === 'in_progress'
+        ? { bg: 'rgba(245, 158, 11, 0.15)', text: '#D97706' }
+        : currentRequest?.status === 'completed'
+          ? { bg: 'rgba(34, 197, 94, 0.15)', text: '#16A34A' }
+          : null,
+    [currentRequest?.status]
+  );
+
+  const statusLabel = useMemo(
+    () =>
+      currentRequest?.status === 'in_progress'
+        ? t('featureRequests.status.inProgress')
+        : currentRequest?.status === 'completed'
+          ? t('featureRequests.status.completed')
+          : null,
+    [currentRequest?.status, t]
+  );
+
+  const userTypeLabel = useMemo(
+    () =>
+      currentRequest?.userType === 'coach'
+        ? t('featureRequests.userType.coach')
+        : t('featureRequests.userType.client'),
+    [currentRequest?.userType, t]
+  );
+
+  const renderReplyItem = useCallback(
+    ({ item: reply }: { item: FeatureRequestReply }) => (
+      <ContextMenuWrapper options={getReplyContextMenuOptions(reply)}>
+        <Card style={styles.replyCard}>
+          {/* User info row */}
+          <View style={styles.replyUserRow}>
+            {reply.profilePictureUrl ? (
+              <Image
+                source={{ uri: reply.profilePictureUrl }}
+                style={styles.replyAvatar}
+                contentFit="cover"
+                transition={200}
+              />
+            ) : (
+              <View
+                style={[
+                  styles.replyAvatarFallback,
+                  { backgroundColor: themeColors.primarySoft },
+                ]}
+              >
+                <PlatformIcon
+                  sf="person.fill"
+                  IconComponent={User}
+                  size={12}
+                  color={themeColors.primary}
+                />
+              </View>
+            )}
+            <Text
+              style={[styles.replyUserName, { color: themeColors.text }]}
+              numberOfLines={1}
+            >
+              {reply.userName}
+            </Text>
+          </View>
+
+          {/* Message */}
+          <Text style={[styles.replyMessage, { color: themeColors.text }]}>
+            {reply.message}
+          </Text>
+
+          {/* Bottom row with user type and date pills */}
+          <View style={styles.replyBottomRow}>
+            <View style={[styles.outlinedPill, { borderColor: themeColors.border }]}>
+              <Text style={[styles.outlinedPillText, { color: themeColors.mutedText }]}>
+                {reply.userType === 'coach'
+                  ? t('featureRequests.userType.coach')
+                  : t('featureRequests.userType.client')}
+              </Text>
+            </View>
+            <View style={[styles.outlinedPill, { borderColor: themeColors.border }]}>
+              <Text style={[styles.outlinedPillText, { color: themeColors.mutedText }]}>
+                {formatDate(reply.createdAt)}
+              </Text>
+            </View>
+          </View>
+        </Card>
+      </ContextMenuWrapper>
+    ),
+    [getReplyContextMenuOptions, themeColors, t, formatDate]
+  );
+
+  const ListHeader = useMemo(
+    () => {
+      if (!currentRequest) return null;
+
+      return (
+        <>
+          {/* Spacer for status bar */}
+          <View style={{ height: insets.top }} />
+          {/* Header */}
+          <View style={styles.header}>
+            <IconButton
+              icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+              onPress={handleGoBack}
+              size="md"
+              color={iconColor}
+            />
+            <Text
+              style={[
+                styles.headerTitle,
+                { color: themeColors.text },
+                canDeleteRequest && styles.headerTitleLeft,
+              ]}
+              numberOfLines={1}
+            >
+              {currentRequest.title}
+            </Text>
+            <View style={styles.headerRight}>
+              {canDeleteRequest && (
+                <IconButton
+                  icon={{ sf: 'trash', IconComponent: Trash2 }}
+                  onPress={() => setShowDeleteRequestDialog(true)}
+                  size="md"
+                  color={iconColor}
+                />
+              )}
+              <IconButton
+                icon={{ sf: 'bubble.right', IconComponent: MessageCircle }}
+                onPress={handleAddReply}
+                size="md"
+                color={iconColor}
+              />
+            </View>
+          </View>
+
+          <View style={styles.content}>
+            {/* Request Card */}
+            <Card style={styles.card}>
+              <View style={styles.cardRow}>
+                {/* Left content section */}
+                <View style={styles.cardContent}>
+                  {/* User info row */}
+                  <View style={styles.userRow}>
+                    {currentRequest.profilePictureUrl ? (
+                      <Image
+                        source={{ uri: currentRequest.profilePictureUrl }}
+                        style={styles.avatar}
+                        contentFit="cover"
+                        transition={200}
+                      />
+                    ) : (
+                      <View
+                        style={[styles.avatarFallback, { backgroundColor: themeColors.primarySoft }]}
+                      >
+                        <PlatformIcon
+                          sf="person.fill"
+                          IconComponent={User}
+                          size={16}
+                          color={themeColors.primary}
+                        />
+                      </View>
+                    )}
+                    <Text style={[styles.userName, { color: themeColors.text }]} numberOfLines={1}>
+                      {currentRequest.userName}
+                    </Text>
+                  </View>
+
+                  {/* Title */}
+                  <Text style={[styles.cardTitle, { color: themeColors.text }]}>
+                    {currentRequest.title}
+                  </Text>
+
+                  {/* Full description */}
+                  {currentRequest.description && (
+                    <Text style={[styles.cardDescription, { color: themeColors.mutedText }]}>
+                      {currentRequest.description}
+                    </Text>
+                  )}
+
+                  {/* Status pill above bottom row */}
+                  {statusLabel && statusColor && (
+                    <View style={[styles.statusPill, { backgroundColor: statusColor.bg }]}>
+                      <Text style={[styles.statusText, { color: statusColor.text }]}>{statusLabel}</Text>
+                    </View>
+                  )}
+
+                  {/* Bottom row */}
+                  <View style={styles.bottomRow}>
+                    {/* Outlined pills: user type, reply count, date */}
+                    <View style={[styles.outlinedPill, { borderColor: themeColors.border }]}>
+                      <Text style={[styles.outlinedPillText, { color: themeColors.mutedText }]}>
+                        {userTypeLabel}
+                      </Text>
+                    </View>
+                    <View style={[styles.outlinedPill, { borderColor: themeColors.border }]}>
+                      <PlatformIcon
+                        sf="bubble.right"
+                        IconComponent={MessageCircle}
+                        size={12}
+                        color={themeColors.mutedText}
+                      />
+                      <Text style={[styles.outlinedPillText, { color: themeColors.mutedText }]}>
+                        {currentRequest.replyCount}
+                      </Text>
+                    </View>
+                    <View style={[styles.outlinedPill, { borderColor: themeColors.border }]}>
+                      <Text style={[styles.outlinedPillText, { color: themeColors.mutedText }]}>
+                        {formatDate(currentRequest.createdAt)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Right section - upvote button */}
+                <View style={styles.rightSection}>
+                  <PressableScale
+                    style={[
+                      styles.upvoteButton,
+                      {
+                        borderColor: currentRequest.hasUpvoted ? themeColors.primary : themeColors.border,
+                        backgroundColor: 'transparent',
+                      },
+                    ]}
+                    onPress={handleUpvotePress}
+                  >
+                    <ChevronUp
+                      {...({
+                        size: 18,
+                        color: currentRequest.hasUpvoted ? themeColors.primary : themeColors.text,
+                        strokeWidth: currentRequest.hasUpvoted ? 3 : 2,
+                      } as any)}
+                    />
+                    <Text
+                      style={[
+                        styles.upvoteCount,
+                        {
+                          color: currentRequest.hasUpvoted
+                            ? themeColors.primary
+                            : themeColors.text,
+                          fontWeight: currentRequest.hasUpvoted ? '700' : '600',
+                        },
+                      ]}
+                    >
+                      {currentRequest.upvoteCount}
+                    </Text>
+                  </PressableScale>
+                </View>
+              </View>
+            </Card>
+
+            {/* Replies section header */}
+            <View style={styles.repliesHeaderRow}>
+              <Text style={[styles.repliesHeader, { color: themeColors.text }]}>
+                {getReplyCountText()}
+              </Text>
+              {replies.length > 0 && (
+                <PressableScale
+                  style={[styles.sortButton, { backgroundColor: themeColors.surfacePrimary }]}
+                  onPress={() => setSortAscending(!sortAscending)}
+                >
+                  <ArrowUpDown {...({ size: 16, color: themeColors.text } as any)} />
+                </PressableScale>
+              )}
+            </View>
+          </View>
+        </>
+      );
+    },
+    [
+      insets.top,
+      iconColor,
+      themeColors,
+      currentRequest,
+      canDeleteRequest,
+      statusLabel,
+      statusColor,
+      userTypeLabel,
+      replies.length,
+      sortAscending,
+      handleGoBack,
+      handleAddReply,
+      handleUpvotePress,
+      getReplyCountText,
+      formatDate,
+      t,
+    ]
+  );
+
+  const ListEmpty = useMemo(
+    () => (
+      <View style={styles.content}>
+        <PressableScale onPress={handleAddReply}>
+          <Card style={styles.emptyRepliesCard}>
+            <Text style={[styles.noRepliesText, { color: themeColors.mutedText }]}>
+              {t('featureRequests.noRepliesDescription')}
+            </Text>
+          </Card>
+        </PressableScale>
+      </View>
+    ),
+    [handleAddReply, themeColors.mutedText, t]
+  );
+
+  const ListFooter = useMemo(
+    () => <View style={{ height: insets.bottom + 32 }} />,
+    [insets.bottom]
+  );
+
+  // Loading state
   if (!currentRequest && isLoadingReplies) {
     return (
-      <ScreenWrapper scrollable={true}>
+      <ScreenWrapper>
         <View style={styles.header}>
           <IconButton
             icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
@@ -259,9 +582,10 @@ export default function FeatureRequestDetailScreen() {
     );
   }
 
+  // Empty state
   if (!currentRequest) {
     return (
-      <ScreenWrapper scrollable={true}>
+      <ScreenWrapper>
         <View style={styles.header}>
           <IconButton
             icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
@@ -283,270 +607,31 @@ export default function FeatureRequestDetailScreen() {
     );
   }
 
-  const statusColor =
-    currentRequest.status === 'in_progress'
-      ? { bg: 'rgba(245, 158, 11, 0.15)', text: '#D97706' }
-      : currentRequest.status === 'completed'
-        ? { bg: 'rgba(34, 197, 94, 0.15)', text: '#16A34A' }
-        : null;
-
-  const statusLabel =
-    currentRequest.status === 'in_progress'
-      ? t('featureRequests.status.inProgress')
-      : currentRequest.status === 'completed'
-        ? t('featureRequests.status.completed')
-        : null;
-
-  const userTypeLabel =
-    currentRequest.userType === 'coach'
-      ? t('featureRequests.userType.coach')
-      : t('featureRequests.userType.client');
-
   return (
-    <ScreenWrapper scrollable={true}>
-      {/* Header */}
-      <View style={styles.header}>
-        <IconButton
-          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-          onPress={handleGoBack}
-          size="md"
-          color={iconColor}
+    <>
+      <View style={styles.screen}>
+        <Image
+          source={backgroundImage}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          cachePolicy="memory-disk"
         />
-        <Text
-          style={[
-            styles.headerTitle,
-            { color: themeColors.text },
-            canDeleteRequest && styles.headerTitleLeft,
-          ]}
-          numberOfLines={1}
-        >
-          {currentRequest.title}
-        </Text>
-        <View style={styles.headerRight}>
-          {canDeleteRequest && (
-            <IconButton
-              icon={{ sf: 'trash', IconComponent: Trash2 }}
-              onPress={() => setShowDeleteRequestDialog(true)}
-              size="md"
-              color={iconColor}
-            />
-          )}
-          <IconButton
-            icon={{ sf: 'bubble.right', IconComponent: MessageCircle }}
-            onPress={handleAddReply}
-            size="md"
-            color={iconColor}
-          />
-        </View>
-      </View>
-
-      <View style={styles.content}>
-        {/* Request Card */}
-        <Card style={styles.card}>
-          <View style={styles.cardRow}>
-            {/* Left content section */}
-            <View style={styles.cardContent}>
-              {/* User info row */}
-              <View style={styles.userRow}>
-                {currentRequest.profilePictureUrl ? (
-                  <Image
-                    source={{ uri: currentRequest.profilePictureUrl }}
-                    style={styles.avatar}
-                    contentFit="cover"
-                    transition={200}
-                  />
-                ) : (
-                  <View
-                    style={[styles.avatarFallback, { backgroundColor: themeColors.primarySoft }]}
-                  >
-                    <PlatformIcon
-                      sf="person.fill"
-                      IconComponent={User}
-                      size={16}
-                      color={themeColors.primary}
-                    />
-                  </View>
-                )}
-                <Text style={[styles.userName, { color: themeColors.text }]} numberOfLines={1}>
-                  {currentRequest.userName}
-                </Text>
-              </View>
-
-              {/* Title */}
-              <Text style={[styles.cardTitle, { color: themeColors.text }]}>
-                {currentRequest.title}
-              </Text>
-
-              {/* Full description */}
-              {currentRequest.description && (
-                <Text style={[styles.cardDescription, { color: themeColors.mutedText }]}>
-                  {currentRequest.description}
-                </Text>
-              )}
-
-              {/* Status pill above bottom row */}
-              {statusLabel && statusColor && (
-                <View style={[styles.statusPill, { backgroundColor: statusColor.bg }]}>
-                  <Text style={[styles.statusText, { color: statusColor.text }]}>{statusLabel}</Text>
-                </View>
-              )}
-
-              {/* Bottom row */}
-              <View style={styles.bottomRow}>
-                {/* Outlined pills: user type, reply count, date */}
-                <View style={[styles.outlinedPill, { borderColor: themeColors.border }]}>
-                  <Text style={[styles.outlinedPillText, { color: themeColors.mutedText }]}>
-                    {userTypeLabel}
-                  </Text>
-                </View>
-                <View style={[styles.outlinedPill, { borderColor: themeColors.border }]}>
-                  <PlatformIcon
-                    sf="bubble.right"
-                    IconComponent={MessageCircle}
-                    size={12}
-                    color={themeColors.mutedText}
-                  />
-                  <Text style={[styles.outlinedPillText, { color: themeColors.mutedText }]}>
-                    {currentRequest.replyCount}
-                  </Text>
-                </View>
-                <View style={[styles.outlinedPill, { borderColor: themeColors.border }]}>
-                  <Text style={[styles.outlinedPillText, { color: themeColors.mutedText }]}>
-                    {formatDate(currentRequest.createdAt)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Right section - upvote button */}
-            <View style={styles.rightSection}>
-              <PressableScale
-                style={[
-                  styles.upvoteButton,
-                  {
-                    borderColor: currentRequest.hasUpvoted ? themeColors.primary : themeColors.border,
-                    backgroundColor: 'transparent',
-                  },
-                ]}
-                onPress={handleUpvotePress}
-              >
-                <ChevronUp
-                  {...({
-                    size: 24,
-                    color: currentRequest.hasUpvoted ? themeColors.primary : themeColors.text,
-                    strokeWidth: currentRequest.hasUpvoted ? 3 : 2,
-                  } as any)}
-                />
-                <Text
-                  style={[
-                    styles.upvoteCount,
-                    {
-                      color: currentRequest.hasUpvoted
-                        ? themeColors.primary
-                        : themeColors.text,
-                      fontWeight: currentRequest.hasUpvoted ? '700' : '600',
-                    },
-                  ]}
-                >
-                  {currentRequest.upvoteCount}
-                </Text>
-              </PressableScale>
-            </View>
-          </View>
-        </Card>
-
-        {/* Replies section */}
-        <View style={styles.repliesSection}>
-          <View style={styles.repliesHeaderRow}>
-            <Text style={[styles.repliesHeader, { color: themeColors.text }]}>
-              {getReplyCountText()}
-            </Text>
-            {replies.length > 0 && (
-              <PressableScale
-                style={[styles.sortButton, { backgroundColor: themeColors.surfacePrimary }]}
-                onPress={() => setSortAscending(!sortAscending)}
-              >
-                <ArrowUpDown {...({ size: 16, color: themeColors.text } as any)} />
-              </PressableScale>
-            )}
-          </View>
-
-          {replies.length === 0 ? (
-            <PressableScale onPress={handleAddReply}>
-              <Card style={styles.emptyRepliesCard}>
-                <Text style={[styles.noRepliesText, { color: themeColors.mutedText }]}>
-                  {t('featureRequests.noRepliesDescription')}
-                </Text>
-              </Card>
-            </PressableScale>
-          ) : (
-            sortedReplies.map((reply) => (
-              <ContextMenuWrapper
-                key={reply.id}
-                options={getReplyContextMenuOptions(reply)}
-              >
-                <Card style={styles.replyCard}>
-                  {/* User info row */}
-                  <View style={styles.replyUserRow}>
-                    {reply.profilePictureUrl ? (
-                      <Image
-                        source={{ uri: reply.profilePictureUrl }}
-                        style={styles.replyAvatar}
-                        contentFit="cover"
-                        transition={200}
-                      />
-                    ) : (
-                      <View
-                        style={[
-                          styles.replyAvatarFallback,
-                          { backgroundColor: themeColors.primarySoft },
-                        ]}
-                      >
-                        <PlatformIcon
-                          sf="person.fill"
-                          IconComponent={User}
-                          size={12}
-                          color={themeColors.primary}
-                        />
-                      </View>
-                    )}
-                    <Text
-                      style={[styles.replyUserName, { color: themeColors.text }]}
-                      numberOfLines={1}
-                    >
-                      {reply.userName}
-                    </Text>
-                  </View>
-
-                  {/* Message */}
-                  <Text style={[styles.replyMessage, { color: themeColors.text }]}>
-                    {reply.message}
-                  </Text>
-
-                  {/* Bottom row with user type and date pills */}
-                  <View style={styles.replyBottomRow}>
-                    <View style={[styles.outlinedPill, { borderColor: themeColors.border }]}>
-                      <Text style={[styles.outlinedPillText, { color: themeColors.mutedText }]}>
-                        {reply.userType === 'coach'
-                          ? t('featureRequests.userType.coach')
-                          : t('featureRequests.userType.client')}
-                      </Text>
-                    </View>
-                    <View style={[styles.outlinedPill, { borderColor: themeColors.border }]}>
-                      <Text style={[styles.outlinedPillText, { color: themeColors.mutedText }]}>
-                        {formatDate(reply.createdAt)}
-                      </Text>
-                    </View>
-                  </View>
-                </Card>
-              </ContextMenuWrapper>
-            ))
-          )}
-        </View>
+        <FlashList
+          data={sortedReplies}
+          renderItem={renderReplyItem}
+          keyExtractor={(item) => item.id}
+          estimatedItemSize={120}
+          ListHeaderComponent={ListHeader}
+          ListEmptyComponent={ListEmpty}
+          ListFooterComponent={ListFooter}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+        <StatusBarBlur />
       </View>
 
       {/* Delete Request Dialog */}
-        <Dialog
+      <Dialog
           visible={showDeleteRequestDialog}
           onClose={() => setShowDeleteRequestDialog(false)}
           title={t('featureRequests.deleteRequestDialog.title')}
@@ -609,11 +694,20 @@ export default function FeatureRequestDetailScreen() {
             },
           ]}
         />
-    </ScreenWrapper>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 0,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -737,11 +831,11 @@ const styles = StyleSheet.create({
   rightSection: {
     width: 70,
     alignItems: 'center',
-    justifyContent: 'stretch',
+    justifyContent: 'flex-start',
   },
   upvoteButton: {
     width: 70,
-    flex: 1,
+    paddingVertical: 12,
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
@@ -785,6 +879,7 @@ const styles = StyleSheet.create({
   },
   replyCard: {
     marginBottom: 12,
+    marginHorizontal: 16,
   },
   replyUserRow: {
     flexDirection: 'row',

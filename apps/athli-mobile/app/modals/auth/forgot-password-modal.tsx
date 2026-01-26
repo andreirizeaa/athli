@@ -154,8 +154,7 @@ export default function ForgotPasswordModal() {
             styles.primaryButton,
             { backgroundColor: '#FFFFFF' },
           ]}
-          onPress={handleSubmit}
-          disabled={isSubmitting}
+          onPress={isSubmitting ? undefined : handleSubmit}
         >
           {isSubmitting ? (
             <ActivityIndicator size="small" color="#000000" />

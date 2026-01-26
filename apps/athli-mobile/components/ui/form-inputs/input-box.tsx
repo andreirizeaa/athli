@@ -7,7 +7,7 @@ import { useThemePreference } from '@/stores';
 import { Card } from '@/components/ui/card';
 
 type InputBoxProps = {
-  label: string;
+  label: string | React.ReactNode;
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;

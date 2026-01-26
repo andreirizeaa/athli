@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { StyleSheet, TextInput, View, type TextInput as TextInputType } from 'react-native';
+import { StyleSheet, TextInput, View, type TextInput as TextInputType, type ViewStyle, type StyleProp } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { Search, X } from 'lucide-react-native';
 
@@ -16,7 +16,7 @@ type SearchBarProps = {
   onRightIconPress?: () => void;
   onFocus?: () => void;
   onBlur?: () => void;
-  style?: object;
+  style?: StyleProp<ViewStyle>;
 };
 
 export const SearchBar = ({

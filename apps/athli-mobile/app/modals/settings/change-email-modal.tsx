@@ -165,8 +165,7 @@ export default function ChangeEmailModal() {
             styles.primaryButton,
             { backgroundColor: '#FFFFFF' },
           ]}
-          onPress={handleUpdateEmail}
-          disabled={isUpdating}
+          onPress={isUpdating ? undefined : handleUpdateEmail}
         >
           {isUpdating ? (
             <ActivityIndicator size="small" color="#000000" />

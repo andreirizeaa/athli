@@ -104,7 +104,6 @@ export function Dialog({
                     key={index}
                     style={[styles.buttonWrapper, buttonLayout === 'horizontal' && styles.buttonHorizontal]}
                     onPress={button.loading ? undefined : button.onPress}
-                    disabled={button.loading}
                   >
                     <SquircleView
                       cornerSmoothing={1}

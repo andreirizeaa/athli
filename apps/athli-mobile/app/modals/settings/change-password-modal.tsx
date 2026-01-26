@@ -215,8 +215,7 @@ export default function ChangePasswordModal() {
             styles.primaryButton,
             { backgroundColor: '#FFFFFF' },
           ]}
-          onPress={handleUpdatePassword}
-          disabled={isUpdating}
+          onPress={isUpdating ? undefined : handleUpdatePassword}
         >
           {isUpdating ? (
             <ActivityIndicator size="small" color="#000000" />

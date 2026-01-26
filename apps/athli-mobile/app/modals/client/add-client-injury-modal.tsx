@@ -53,14 +53,14 @@ export default function AddClientInjuryModal() {
             const newInjury = {
                 injury: title.trim(),
                 date: date ? date.toISOString().split('T')[0] : null,
-                details: body.trim() || null,
+                details: body.trim() || undefined,
             };
 
             // Save all injuries including the new one
             const updatedInjuries = [...injuries.map(i => ({
                 injury: i.injury,
                 date: i.date,
-                details: i.details || null,
+                details: i.details || undefined,
             })), newInjury];
 
             await saveAthleteInjuries(id, coachId, updatedInjuries);

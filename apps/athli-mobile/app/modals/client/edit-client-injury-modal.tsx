@@ -84,13 +84,13 @@ export default function EditClientInjuryModal() {
                     return {
                         injury: title.trim(),
                         date: date ? date.toISOString().split('T')[0] : null,
-                        details: body.trim() || null,
+                        details: body.trim() || undefined,
                     };
                 }
                 return {
                     injury: i.injury,
                     date: i.date,
-                    details: i.details || null,
+                    details: i.details || undefined,
                 };
             });
 
@@ -119,7 +119,7 @@ export default function EditClientInjuryModal() {
                 .map(i => ({
                     injury: i.injury,
                     date: i.date,
-                    details: i.details || null,
+                    details: i.details || undefined,
                 }));
 
             await saveAthleteInjuries(id, coachId, updatedInjuries);

@@ -53,14 +53,14 @@ export default function AddClientGoalModal() {
             const newGoal = {
                 goal: title.trim(),
                 target_date: date ? date.toISOString().split('T')[0] : null,
-                details: body.trim() || null,
+                details: body.trim() || undefined,
             };
 
             // Save all goals including the new one
             const updatedGoals = [...goals.map(g => ({
                 goal: g.goal,
                 target_date: g.target_date,
-                details: g.details || null,
+                details: g.details || undefined,
             })), newGoal];
 
             await saveAthleteGoals(id, coachId, updatedGoals);

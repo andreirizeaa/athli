@@ -538,11 +538,11 @@ export default function ClientTrainingScreen() {
   const renderStatusIcon = useCallback((status: string | undefined) => {
     switch (status) {
       case 'completed':
-        return <CircleCheck size={20} color="#22C55E" />;
+        return <CircleCheck {...({ size: 20, color: '#22C55E' } as any)} />;
       case 'in_progress':
-        return <CircleDashed size={20} color="#F59E0B" />;
+        return <CircleDashed {...({ size: 20, color: '#F59E0B' } as any)} />;
       default:
-        return <CircleX size={20} color={themeColors.mutedText} />;
+        return <CircleX {...({ size: 20, color: themeColors.mutedText } as any)} />;
     }
   }, [themeColors.mutedText]);
 
