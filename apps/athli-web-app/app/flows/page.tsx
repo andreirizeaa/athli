@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
@@ -18,7 +18,6 @@ import { cn } from '@/lib/general/utils';
 import { AddFlowSidePanel } from '@/components/flows/add-flow-side-panel';
 import { type Flow, updateFlowStatus } from '@/api/coach/coach-flow-service';
 import { useCoachFlows } from '@/hooks/use-coach-flows';
-import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
@@ -32,6 +31,14 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
+// Define the fixed order for flows - outside component to avoid recreation
+const FLOW_ORDER = [
+  'New Client Sign Up',
+  'Missed Check-in',
+  'Check-in Completed',
+  'Missed Workout',
+  'Workout Finished'
+];
 
 const FlowsPage = () => {
   const t = useTranslations();
@@ -42,19 +49,11 @@ const FlowsPage = () => {
 
   const [optimisticFlows, setOptimisticFlows] = useState<Flow[]>([]);
 
-  // Define the fixed order for flows
-  const flowOrder = [
-    'New Client Sign Up',
-    'Missed Check-in',
-    'Check-in Completed',
-    'Missed Workout',
-    'Workout Finished'
-  ];
-
   // Update optimistic state when flows data changes, maintaining fixed order
   useEffect(() => {
     if (!flows || flows.length === 0) {
-      setOptimisticFlows([]);
+      // Only update if we currently have flows
+      setOptimisticFlows((prev) => (prev.length === 0 ? prev : []));
       return;
     }
 
@@ -62,8 +61,8 @@ const FlowsPage = () => {
       const nameA = a.name || '';
       const nameB = b.name || '';
 
-      const indexA = flowOrder.indexOf(nameA);
-      const indexB = flowOrder.indexOf(nameB);
+      const indexA = FLOW_ORDER.indexOf(nameA);
+      const indexB = FLOW_ORDER.indexOf(nameB);
 
       // If both flows are in the order array, sort by their position
       if (indexA !== -1 && indexB !== -1) {

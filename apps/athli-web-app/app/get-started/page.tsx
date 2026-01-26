@@ -483,6 +483,16 @@ const GetStartedPage = () => {
                   { icon: Workflow, label: 'Automations' },
                   { icon: CheckSquare, label: 'Todo' },
                   { icon: ClipboardCheck, label: 'Check-ins' },
+                  { icon: Users, label: 'Athletes' },
+                  { icon: MessageCircle, label: 'Inbox' },
+                  { icon: Dumbbell, label: 'Training' },
+                  { icon: ClipboardList, label: 'Forms' },
+                  { icon: BarChart3, label: 'Metrics' },
+                  { icon: Sprout, label: 'Habits' },
+                  { icon: File, label: 'Files' },
+                  { icon: Workflow, label: 'Automations' },
+                  { icon: CheckSquare, label: 'Todo' },
+                  { icon: ClipboardCheck, label: 'Check-ins' },
                 ].map((item, i) => (
                   <div
                     key={i}

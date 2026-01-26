@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "PORT=3002 ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev:data": "PORT=3002 CORS_ORIGIN=http://172.20.10.2:3001 ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc -p tsconfig.json",
     "start": "NODE_ENV=production node dist/server.js",
     "lint": "eslint \"src/**/*.ts\"",
