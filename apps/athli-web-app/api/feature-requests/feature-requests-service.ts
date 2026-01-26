@@ -1,15 +1,46 @@
-import { apiFetch } from '@/lib/api-client';
-import type {
-  FeatureRequest,
-  FeatureRequestReply,
-  SortOption,
-  CreateFeatureRequestData,
-  CreateReplyData,
-  UserType,
-} from '@/types/feature-requests';
+import { apiFetch } from '@/api/api-client';
 
-interface UserInfo {
+export type FeatureRequestStatus = null | 'in_progress' | 'completed';
+export type UserType = 'coach' | 'client';
+export type SortOption = 'newest' | 'oldest' | 'popular' | 'yours';
+
+export interface FeatureRequest {
+  id: string;
+  title: string;
+  description: string | null;
+  upvoteCount: number;
   userId: string;
+  userName: string;
+  userType: UserType;
+  profilePictureUrl: string | null;
+  status: FeatureRequestStatus;
+  createdAt: string;
+  replyCount: number;
+  hasUpvoted: boolean;
+}
+
+export interface FeatureRequestReply {
+  id: string;
+  featureRequestId: string;
+  userId: string;
+  userName: string;
+  userType: UserType;
+  profilePictureUrl: string | null;
+  message: string;
+  createdAt: string;
+}
+
+export interface CreateFeatureRequestData {
+  title: string;
+  description?: string;
+}
+
+export interface CreateReplyData {
+  featureRequestId: string;
+  message: string;
+}
+
+export interface UserInfo {
   userName: string;
   userType: UserType;
   profilePictureUrl: string | null;
@@ -57,15 +88,13 @@ interface CreateReplyResponse {
  * Get paginated list of feature requests
  */
 export async function getFeatureRequests(
-  page: number,
-  sortBy: SortOption,
-  searchQuery: string,
-  currentUserId: string
-): Promise<{ data: FeatureRequest[]; hasMore: boolean }> {
+  page: number = 0,
+  sortBy: SortOption = 'newest',
+  searchQuery: string = ''
+): Promise<{ requests: FeatureRequest[]; hasMore: boolean }> {
   const response = await apiFetch<GetFeatureRequestsResponse>(
     '/feature-requests',
     {
-      method: 'GET',
       params: {
         page,
         sortBy,
@@ -75,7 +104,7 @@ export async function getFeatureRequests(
   );
 
   return {
-    data: response.data.requests,
+    requests: response.data.requests,
     hasMore: response.data.hasMore,
   };
 }
@@ -84,15 +113,11 @@ export async function getFeatureRequests(
  * Get a single feature request by ID
  */
 export async function getFeatureRequestById(
-  id: string,
-  currentUserId: string
+  id: string
 ): Promise<FeatureRequest | null> {
   try {
     const response = await apiFetch<GetFeatureRequestByIdResponse>(
-      `/feature-requests/${id}`,
-      {
-        method: 'GET',
-      }
+      `/feature-requests/${id}`
     );
 
     return response.data.featureRequest;
@@ -115,13 +140,13 @@ export async function createFeatureRequest(
     '/feature-requests',
     {
       method: 'POST',
-      body: JSON.stringify({
+      body: {
         title: requestData.title,
         description: requestData.description,
         userName: user.userName,
         userType: user.userType,
         profilePictureUrl: user.profilePictureUrl,
-      }),
+      },
     }
   );
 
@@ -139,11 +164,9 @@ export async function deleteFeatureRequest(id: string): Promise<void> {
 
 /**
  * Toggle upvote on a feature request
- * Returns the new upvote state
  */
 export async function toggleUpvote(
-  featureRequestId: string,
-  userId: string
+  featureRequestId: string
 ): Promise<{ hasUpvoted: boolean; newCount: number }> {
   const response = await apiFetch<ToggleUpvoteResponse>(
     `/feature-requests/${featureRequestId}/upvote`,
@@ -165,10 +188,7 @@ export async function getReplies(
   featureRequestId: string
 ): Promise<FeatureRequestReply[]> {
   const response = await apiFetch<GetRepliesResponse>(
-    `/feature-requests/${featureRequestId}/replies`,
-    {
-      method: 'GET',
-    }
+    `/feature-requests/${featureRequestId}/replies`
   );
 
   return response.data.replies;
@@ -185,12 +205,12 @@ export async function createReply(
     `/feature-requests/${replyData.featureRequestId}/replies`,
     {
       method: 'POST',
-      body: JSON.stringify({
+      body: {
         message: replyData.message,
         userName: user.userName,
         userType: user.userType,
         profilePictureUrl: user.profilePictureUrl,
-      }),
+      },
     }
   );
 
