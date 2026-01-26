@@ -304,7 +304,6 @@ export default function FeatureRequestsScreen() {
         data={sortedRequests}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
-        estimatedItemSize={150}
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={ListEmpty}
         ListFooterComponent={ListFooter}
