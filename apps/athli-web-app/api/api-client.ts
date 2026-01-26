@@ -1,4 +1,4 @@
-import axiosInstance from '@/lib/axios';
+import axiosInstance, { SessionExpiredError } from '@/lib/axios';
 
 /**
  * URL and API configuration
@@ -22,6 +22,23 @@ export interface ApiRequestOptions extends Omit<RequestInit, 'body'> {
     params?: Record<string, any>;
     body?: RequestInit['body'] | Record<string, unknown>;
 }
+
+// Re-export SessionExpiredError for consumers to check against
+export { SessionExpiredError };
+
+/**
+ * Check if an error is a session expired error
+ */
+export const isSessionExpiredError = (error: unknown): boolean => {
+    if (error instanceof SessionExpiredError) {
+        return true;
+    }
+    if (error && typeof error === 'object') {
+        return (error as any).isSessionExpired === true || 
+               (error as any).name === 'SessionExpiredError';
+    }
+    return false;
+};
 
 /**
  * Unified API fetch utility using Axios
@@ -65,6 +82,11 @@ export async function apiFetch<T = any>(
 
         return response.data;
     } catch (error: any) {
+        // If it's a session expired error, re-throw it silently (dialog is already shown)
+        if (isSessionExpiredError(error)) {
+            throw error;
+        }
+        
         if (error.response && error.response.data) {
             // If the server returned an error message, throw that
             const serverError = error.response.data;

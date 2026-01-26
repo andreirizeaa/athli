@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { useTranslations } from 'next-intl';
-import { PanelLeftClose, PanelLeftOpen, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+import { Headset, Lightbulb, PanelLeftClose, PanelLeftOpen, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -25,7 +26,6 @@ export function AppHeader({
   const [isAiAssistantPopoverOpen, setIsAiAssistantPopoverOpen] = React.useState(false);
   const { state, isHovered, setOpen, setIsHovered, setJustClosed } = useSidebar();
 
-  const isCollapsed = state === 'collapsed' && !isHovered;
   const isHoverExpanded = state === 'collapsed' && isHovered;
 
   const handlePinMenu = () => {
@@ -110,6 +110,37 @@ export function AppHeader({
               </div>
             </PopoverContent>
           </Popover>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label={t('sidebar.helpAndSupport.label') || 'Help and support'}
+              >
+                <Headset className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t('sidebar.helpAndSupport.label') || 'Help and support'}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                asChild
+                aria-label={t('sidebar.featureRequests.label') || 'Feature Requests'}
+              >
+                <Link href="/features">
+                  <Lightbulb className="size-4" />
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t('sidebar.featureRequests.label') || 'Feature Requests'}
+            </TooltipContent>
+          </Tooltip>
           <UserMenu
             isThemeMounted={isThemeMounted}
             currentLanguage={currentLanguage}

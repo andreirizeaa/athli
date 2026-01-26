@@ -23,7 +23,6 @@ import {
   Rocket,
   Gift,
   WandSparkles,
-  Headset,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -302,14 +301,6 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="mt-auto pb-3">
         <SidebarMenu className="gap-0.5">
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              className="text-sm text-sidebar-foreground cursor-default hover:bg-transparent active:bg-transparent"
-            >
-              <Headset className="shrink-0" />
-              {!isCollapsed && <span>{t('sidebar.helpAndSupport.label') || 'Help and support'}</span>}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
