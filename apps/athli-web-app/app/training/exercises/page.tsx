@@ -61,7 +61,7 @@ import {
   EXERCISE_EQUIPMENT_OPTIONS,
   MODALITY_OPTIONS,
   MUSCLEWIKI_CATEGORY_OPTIONS,
-  MUSCLEWIKI_MUSCLE_GROUP_OPTIONS,
+  MUSCLEWIKI_MUSCLE_OPTIONS,
   MUSCLEWIKI_DIFFICULTY_OPTIONS,
   MUSCLEWIKI_FORCE_OPTIONS,
   MUSCLEWIKI_MECHANIC_OPTIONS,
@@ -628,7 +628,7 @@ const ExercisesPage = () => {
       id: 'muscleGroup',
       label: t('exercises.columns.muscleGroup'),
       icon: <User className="size-4" />,
-      options: MUSCLEWIKI_MUSCLE_GROUP_OPTIONS.map((group) => ({ value: group.value, label: group.label })),
+      options: MUSCLEWIKI_MUSCLE_OPTIONS.map((group) => ({ value: group.value, label: group.label })),
       getFilterValue: (row) => {
         const muscleGroups = (row as any).muscleGroups || (row as any).muscleGroup?.split(',').map((g: string) => g.trim()) || [];
         const groupsArray = Array.isArray(muscleGroups) ? muscleGroups : [];

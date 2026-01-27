@@ -204,97 +204,31 @@ export const MUSCLEWIKI_GENDER_OPTIONS = [
 
 export type MuscleWikiGender = typeof MUSCLEWIKI_GENDER_OPTIONS[number]['value'];
 
-// MuscleWiki Target Muscles (comprehensive list matching their API)
+// MuscleWiki Muscle Groups (for filtering via API)
+// These are the primary muscle groups used by the MuscleWiki /muscles endpoint
 export const MUSCLEWIKI_MUSCLE_OPTIONS = [
-    // Upper Body - Chest
     { value: 'Chest', label: 'Chest' },
-    { value: 'Pectoralis Major', label: 'Pectoralis Major' },
-    { value: 'Pectoralis Minor', label: 'Pectoralis Minor' },
-
-    // Upper Body - Back
     { value: 'Back', label: 'Back' },
-    { value: 'Lats', label: 'Latissimus Dorsi' },
-    { value: 'Traps', label: 'Trapezius' },
-    { value: 'Rhomboids', label: 'Rhomboids' },
-    { value: 'Lower Back', label: 'Lower Back' },
-    { value: 'Erector Spinae', label: 'Erector Spinae' },
-    { value: 'Teres Major', label: 'Teres Major' },
-    { value: 'Teres Minor', label: 'Teres Minor' },
-
-    // Upper Body - Shoulders
     { value: 'Shoulders', label: 'Shoulders' },
-    { value: 'Anterior Deltoid', label: 'Front Deltoid' },
-    { value: 'Lateral Deltoid', label: 'Side Deltoid' },
-    { value: 'Posterior Deltoid', label: 'Rear Deltoid' },
-    { value: 'Rotator Cuff', label: 'Rotator Cuff' },
-
-    // Upper Body - Arms
     { value: 'Biceps', label: 'Biceps' },
-    { value: 'Biceps Brachii', label: 'Biceps Brachii' },
-    { value: 'Brachialis', label: 'Brachialis' },
     { value: 'Triceps', label: 'Triceps' },
-    { value: 'Triceps Brachii', label: 'Triceps Brachii' },
     { value: 'Forearms', label: 'Forearms' },
-    { value: 'Wrist Flexors', label: 'Wrist Flexors' },
-    { value: 'Wrist Extensors', label: 'Wrist Extensors' },
-
-    // Core
-    { value: 'Core', label: 'Core' },
     { value: 'Abs', label: 'Abs' },
-    { value: 'Rectus Abdominis', label: 'Rectus Abdominis' },
     { value: 'Obliques', label: 'Obliques' },
-    { value: 'Transverse Abdominis', label: 'Transverse Abdominis' },
-    { value: 'Serratus Anterior', label: 'Serratus Anterior' },
-
-    // Lower Body - Quadriceps
     { value: 'Quadriceps', label: 'Quadriceps' },
-    { value: 'Rectus Femoris', label: 'Rectus Femoris' },
-    { value: 'Vastus Lateralis', label: 'Vastus Lateralis' },
-    { value: 'Vastus Medialis', label: 'Vastus Medialis' },
-
-    // Lower Body - Hamstrings & Glutes
     { value: 'Hamstrings', label: 'Hamstrings' },
     { value: 'Glutes', label: 'Glutes' },
-    { value: 'Gluteus Maximus', label: 'Gluteus Maximus' },
-    { value: 'Gluteus Medius', label: 'Gluteus Medius' },
-    { value: 'Gluteus Minimus', label: 'Gluteus Minimus' },
-
-    // Lower Body - Lower Legs
     { value: 'Calves', label: 'Calves' },
-    { value: 'Gastrocnemius', label: 'Gastrocnemius' },
-    { value: 'Soleus', label: 'Soleus' },
-    { value: 'Tibialis Anterior', label: 'Tibialis Anterior' },
-
-    // Lower Body - Hip
+    { value: 'Traps', label: 'Traps' },
+    { value: 'Lats', label: 'Lats' },
+    { value: 'Lower Back', label: 'Lower Back' },
     { value: 'Hip Flexors', label: 'Hip Flexors' },
     { value: 'Adductors', label: 'Adductors' },
     { value: 'Abductors', label: 'Abductors' },
-
-    // Neck
     { value: 'Neck', label: 'Neck' },
-    { value: 'Sternocleidomastoid', label: 'Sternocleidomastoid' },
 ] as const;
 
 export type MuscleWikiMuscle = typeof MUSCLEWIKI_MUSCLE_OPTIONS[number]['value'];
-
-// Simplified muscle groups for filtering (parent categories)
-export const MUSCLEWIKI_MUSCLE_GROUP_OPTIONS = [
-    { value: 'Chest', label: 'Chest' },
-    { value: 'Back', label: 'Back' },
-    { value: 'Shoulders', label: 'Shoulders' },
-    { value: 'Biceps', label: 'Biceps' },
-    { value: 'Triceps', label: 'Triceps' },
-    { value: 'Forearms', label: 'Forearms' },
-    { value: 'Core', label: 'Core' },
-    { value: 'Quadriceps', label: 'Quadriceps' },
-    { value: 'Hamstrings', label: 'Hamstrings' },
-    { value: 'Glutes', label: 'Glutes' },
-    { value: 'Calves', label: 'Calves' },
-    { value: 'Hip Flexors', label: 'Hip Flexors' },
-    { value: 'Neck', label: 'Neck' },
-] as const;
-
-export type MuscleWikiMuscleGroup = typeof MUSCLEWIKI_MUSCLE_GROUP_OPTIONS[number]['value'];
 
 // MuscleWiki Difficulty Levels (API uses lowercase)
 export const MUSCLEWIKI_DIFFICULTY_OPTIONS = [

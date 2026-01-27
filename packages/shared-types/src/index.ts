@@ -45,8 +45,8 @@ export {
   EXERCISE_CATEGORY_OPTIONS,
   // MuscleWiki-specific filter options
   MUSCLEWIKI_CATEGORY_OPTIONS,
+  MUSCLEWIKI_GENDER_OPTIONS,
   MUSCLEWIKI_MUSCLE_OPTIONS,
-  MUSCLEWIKI_MUSCLE_GROUP_OPTIONS,
   MUSCLEWIKI_DIFFICULTY_OPTIONS,
   MUSCLEWIKI_FORCE_OPTIONS,
   MUSCLEWIKI_MECHANIC_OPTIONS,
@@ -66,8 +66,8 @@ export {
   type OptionalColumn,
   // MuscleWiki types
   type MuscleWikiCategory,
+  type MuscleWikiGender,
   type MuscleWikiMuscle,
-  type MuscleWikiMuscleGroup,
   type MuscleWikiDifficulty,
   type MuscleWikiForce,
   type MuscleWikiMechanic,
