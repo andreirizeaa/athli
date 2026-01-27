@@ -64,6 +64,7 @@ export {
   type HeartRateZone,
   type ColumnValue,
   type OptionalColumn,
+  type ExerciseType,
   // MuscleWiki types
   type MuscleWikiCategory,
   type MuscleWikiGender,

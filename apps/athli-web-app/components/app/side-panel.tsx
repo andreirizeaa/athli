@@ -51,7 +51,12 @@ export const SidePanel = ({
         {children && (
           <div className={cn("flex-1 overflow-y-auto px-4 flex flex-col min-h-0", !footer && "mb-2")}>{children}</div>
         )}
-        {footer && <div className="px-4 pb-4 pt-1 mt-auto [&_button]:text-[14px]">{footer}</div>}
+        {footer && (
+          <>
+            <Separator />
+            <div className="px-4 pb-4 mt-auto [&_button]:text-[14px]">{footer}</div>
+          </>
+        )}
       </SheetContent>
     </Sheet>
   );

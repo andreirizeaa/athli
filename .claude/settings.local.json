@@ -60,7 +60,13 @@
       "Bash(npx expo typescript:*)",
       "Bash(git log:*)",
       "Bash(git grep:*)",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "Bash(python3:*)",
+      "Bash(xxd:*)",
+      "Bash(npx eslint:*)",
+      "Bash(node -e \"require\\('fs'\\).readFileSync\\('apps/athli-mobile/app/modals/library/add-exercise-modal.tsx', 'utf8'\\)\":*)",
+      "Bash(npx babel:*)",
+      "Bash(node -e:*)"
     ]
   }
 }

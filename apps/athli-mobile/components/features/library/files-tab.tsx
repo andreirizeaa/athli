@@ -208,8 +208,24 @@ export const FilesTab = () => {
       staleTime: 10 * 60 * 1000, // 10 minutes - signed URLs typically valid for 15-60 min
       refetchOnMount: false,
       refetchOnWindowFocus: false,
+      retry: false, // Don't retry on file not found
+      throwOnError: false, // Don't throw to error boundary
     })),
   });
+
+  // Handle file not found errors from thumbnail queries
+  React.useEffect(() => {
+    const failedQuery = thumbnailQueries.find(q => q.isError && q.error);
+    if (failedQuery?.error) {
+      const errorMsg = failedQuery.error instanceof Error ? failedQuery.error.message : 'Unknown error';
+      if (errorMsg.toLowerCase().includes('file not found') || errorMsg.toLowerCase().includes('not found')) {
+        setErrorMessage(t('library.fileNotFoundError') || 'File not found. It may have been deleted.');
+        setShowErrorDialog(true);
+        // Refetch files list to remove deleted files
+        refetch();
+      }
+    }
+  }, [thumbnailQueries, t, refetch]);
 
   // Create a map of file ID to thumbnail URL
   const thumbnailUrls = useMemo(() => {

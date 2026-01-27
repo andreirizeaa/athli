@@ -12,11 +12,13 @@
 
 import {
   searchExercises as searchMuscleWikiExercises,
+  quickSearchExercises as quickSearchMuscleWiki,
   getExerciseById as getMuscleWikiExerciseById,
   getExerciseVideos as getMuscleWikiVideos,
   getAllFilterOptions,
   type MuscleWikiExercise,
   type MuscleWikiSearchFilters,
+  type MuscleWikiSearchResult,
 } from '@/api/musclewiki/musclewiki-service';
 
 // ============================================================================
@@ -53,6 +55,8 @@ export type Exercise = {
   // Source tracking
   source: 'musclewiki' | 'custom';
   isCacheValid?: boolean;
+  // Raw thumbnail URL from cache (not proxied yet) - use with useExerciseThumbnails hook
+  rawThumbnailUrl?: string;
 };
 
 export type ExerciseFilters = {
@@ -86,13 +90,16 @@ export type ExerciseSearchResult = {
 
 /**
  * Transform MuscleWiki exercise to our unified format
+ * Note: imageUrl is set to placeholder - use rawThumbnailUrl with useExerciseThumbnails hook
  */
 const transformMuscleWikiExercise = (mwExercise: MuscleWikiExercise): Exercise => {
   return {
     exerciseId: mwExercise.musclewikiId || mwExercise.id,
     musclewikiId: mwExercise.musclewikiId,
     name: mwExercise.name,
-    imageUrl: mwExercise.thumbnailUrl || '/placeholder-exercise.png',
+    // Store raw thumbnail URL - will be bulk-loaded via useExerciseThumbnails hook
+    rawThumbnailUrl: mwExercise.thumbnailUrl,
+    imageUrl: '',
     equipments: mwExercise.category ? [mwExercise.category] : [],
     bodyParts: mwExercise.targetMuscles.slice(0, 1), // Primary body part
     exerciseType: 'weight_reps', // Default, could be inferred
@@ -155,21 +162,61 @@ const isFuzzyMatch = (text: string, query: string): boolean => {
 // PUBLIC API
 // ============================================================================
 
+export type ExerciseSearchPaginatedResult = {
+  exercises: Exercise[];
+  total: number;
+  hasMore: boolean;
+  limit: number;
+  offset: number;
+};
+
+export type QuickSearchResult = {
+  exercises: Exercise[];
+  total: number;
+};
+
 /**
- * Search exercises from MuscleWiki cache and custom exercises
+ * Quick search for exercises using MuscleWiki's /search endpoint
+ * Optimized for search bar autocomplete with relevance-scored results
+ * 
+ * @param query - Search term (minimum 2 characters)
+ * @param limit - Maximum results (default 10)
+ * @returns QuickSearchResult with exercises
+ */
+export const quickSearchExercises = async (
+  query: string,
+  limit: number = 10
+): Promise<QuickSearchResult> => {
+  if (!query || query.length < 2) {
+    return { exercises: [], total: 0 };
+  }
+
+  try {
+    const result = await quickSearchMuscleWiki(query, limit);
+    const exercises = result.exercises.map(transformMuscleWikiExercise);
+    return { exercises, total: result.total };
+  } catch (error) {
+    console.error('Failed to quick search exercises:', error);
+    return { exercises: [], total: 0 };
+  }
+};
+
+/**
+ * List/filter exercises from MuscleWiki cache
+ * Use this for browsing with filters, NOT for search bar autocomplete
  *
- * @param query - Search query string
+ * @param query - Search query string (passed to backend for filtering)
  * @param filters - Filter options
  * @param options - Additional options like pagination
- * @returns ExerciseSearchResult with exercises and metadata
+ * @returns ExerciseSearchPaginatedResult with exercises and metadata
  */
 export const searchExercises = async (
   query: string = '',
   filters?: ExerciseFilters,
   options?: { limit?: number; offset?: number }
-): Promise<Exercise[]> => {
+): Promise<ExerciseSearchPaginatedResult> => {
   const normalizedQuery = query.trim().toLowerCase();
-  const limit = options?.limit || 50;
+  const limit = options?.limit || 100;
   const offset = options?.offset || 0;
 
   // Build MuscleWiki filter params
@@ -192,11 +239,15 @@ export const searchExercises = async (
 
   // Fetch from MuscleWiki (cache-first approach happens inside the service)
   let muscleWikiResults: Exercise[] = [];
+  let total = 0;
+  let hasMore = false;
 
   if (!filters?.hideMuscleWiki) {
     try {
-      const mwExercises = await searchMuscleWikiExercises(mwFilters);
-      muscleWikiResults = mwExercises.map(transformMuscleWikiExercise);
+      const mwResult = await searchMuscleWikiExercises(mwFilters);
+      muscleWikiResults = mwResult.exercises.map(transformMuscleWikiExercise);
+      total = mwResult.total;
+      hasMore = mwResult.hasMore;
     } catch (error) {
       console.error('Failed to fetch MuscleWiki exercises:', error);
     }
@@ -241,7 +292,13 @@ export const searchExercises = async (
     }
   }
 
-  return results;
+  return {
+    exercises: results,
+    total,
+    hasMore,
+    limit,
+    offset,
+  };
 };
 
 /**

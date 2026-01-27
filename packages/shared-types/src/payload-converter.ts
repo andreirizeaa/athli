@@ -239,7 +239,7 @@ export interface GenericExerciseDataForBuilder {
 export const convertRegularExerciseToBuilderFormat = (
   exercise: RegularExercisePayload
 ): GenericExerciseDataForBuilder => {
-  const exerciseType = exercise.exerciseType || 'weight_reps';
+  const exerciseType = 'weight_reps';
   const column1Label = exercise.column1Label;
   const column2Label = exercise.column2Label;
 
@@ -266,7 +266,7 @@ export const convertRegularExerciseToBuilderFormat = (
 export const convertRoundExerciseToBuilderFormat = (
   exercise: RoundExercisePayload
 ): GenericExerciseDataForBuilder => {
-  const exerciseType = exercise.exerciseType || 'weight_reps';
+  const exerciseType = 'weight_reps';
 
   // Create a single set from trackable fields
   const set: GenericSetDataForBuilder = {
@@ -300,7 +300,7 @@ export const convertRoundExerciseToBuilderFormat = (
 export const convertCircuitExerciseToBuilderFormat = (
   exercise: CircuitExercisePayload
 ): GenericExerciseDataForBuilder => {
-  const exerciseType = exercise.exerciseType || 'weight_reps';
+  const exerciseType = 'weight_reps';
   const column1Label = exercise.column1Label;
   const column2Label = exercise.column2Label;
 

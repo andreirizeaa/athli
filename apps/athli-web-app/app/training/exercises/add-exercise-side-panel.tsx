@@ -21,11 +21,21 @@ import { cn } from '@/lib/general/utils';
 import { createExercise } from '@/api/coach/coach-exercise-service';
 import { toast } from 'sonner';
 import {
-  EXERCISE_CATEGORY_OPTIONS,
-  MUSCLE_GROUP_OPTIONS,
-  EXERCISE_EQUIPMENT_OPTIONS,
-  MODALITY_OPTIONS,
+  MUSCLEWIKI_CATEGORY_OPTIONS,
+  MUSCLEWIKI_MUSCLE_OPTIONS,
+  MUSCLEWIKI_DIFFICULTY_OPTIONS,
 } from '@athli/shared-types';
+
+// Check if URL is a Supabase storage URL (custom upload)
+const isSupabaseUrl = (url: string): boolean => {
+  if (!url.trim()) return false;
+  try {
+    const urlObj = new URL(url.trim());
+    return urlObj.hostname.includes('supabase.co');
+  } catch {
+    return false;
+  }
+};
 
 const extractVideoId = (url: string): { id: string; type: 'youtube' | 'vimeo' | null } => {
   if (!url.trim()) {
@@ -67,15 +77,13 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [category, setCategory] = useState<string>('');
   const [muscleGroups, setMuscleGroups] = useState<string[]>([]);
-  const [equipment, setEquipment] = useState<string>('');
-  const [modality, setModality] = useState<string>('');
+  const [difficulty, setDifficulty] = useState<string>('');
   const [exerciseNameError, setExerciseNameError] = useState<string | null>(null);
   const [videoLinkError, setVideoLinkError] = useState<string | null>(null);
   const [videoFileError, setVideoFileError] = useState<string | null>(null);
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const [muscleGroupsError, setMuscleGroupsError] = useState<string | null>(null);
-  const [equipmentError, setEquipmentError] = useState<string | null>(null);
-  const [modalityError, setModalityError] = useState<string | null>(null);
+  const [difficultyError, setDifficultyError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
@@ -91,15 +99,13 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
     setIsDragging(false);
     setCategory('');
     setMuscleGroups([]);
-    setEquipment('');
-    setModality('');
+    setDifficulty('');
     setExerciseNameError(null);
     setVideoLinkError(null);
     setVideoFileError(null);
     setCategoryError(null);
     setMuscleGroupsError(null);
-    setEquipmentError(null);
-    setModalityError(null);
+    setDifficultyError(null);
     setIsSaving(false);
     dragCounterRef.current = 0;
     if (fileInputRef.current) {
@@ -248,13 +254,18 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
 
     // Video validation - optional, but if provided must be valid
     if (videoLink.trim() && !videoFile) {
-      // Validate link only if provided and no file is selected
-      const { id, type } = extractVideoId(videoLink);
-      if (!id || !type) {
-        setVideoLinkError(t('exercises.addExercise.videoLinkInvalidError'));
-        hasError = true;
-      } else {
+      // Supabase URLs are valid (custom uploads)
+      if (isSupabaseUrl(videoLink)) {
         setVideoLinkError(null);
+      } else {
+        // Validate link only if provided and no file is selected
+        const { id, type } = extractVideoId(videoLink);
+        if (!id || !type) {
+          setVideoLinkError(t('exercises.addExercise.videoLinkInvalidError'));
+          hasError = true;
+        } else {
+          setVideoLinkError(null);
+        }
       }
     } else {
       setVideoLinkError(null);
@@ -319,8 +330,7 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
         videoFile: videoFile || undefined,
         category,
         muscleGroups,
-        equipment,
-        modality,
+        difficulty,
       };
 
       await createExercise(exerciseData);
@@ -629,7 +639,7 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
                 <SelectValue placeholder={t('general.select')} />
               </SelectTrigger>
               <SelectContent>
-                {EXERCISE_CATEGORY_OPTIONS.map((cat) => (
+                {MUSCLEWIKI_CATEGORY_OPTIONS.map((cat) => (
                   <SelectItem key={cat.value} value={cat.value}>
                     {cat.label}
                   </SelectItem>
@@ -644,7 +654,7 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
               {t('exercises.addExercise.muscleGroups')}
             </label>
             <MultiAsyncSelect
-              options={MUSCLE_GROUP_OPTIONS.map((group) => ({ label: group.label, value: group.value }))}
+              options={MUSCLEWIKI_MUSCLE_OPTIONS.map((group) => ({ label: group.label, value: group.value }))}
               value={muscleGroups}
               onValueChange={(values) => {
                 setMuscleGroups(values);
@@ -660,65 +670,34 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
           </div>
 
           <div className="flex flex-col gap-2">
-            <label htmlFor="equipment" className="text-sm font-medium">
-              {t('exercises.addExercise.equipment')}
+            <label htmlFor="difficulty" className="text-sm font-medium">
+              {t('exercises.addExercise.difficulty')}
             </label>
             <Select
-              value={equipment}
+              value={difficulty}
               onValueChange={(value) => {
-                setEquipment(value);
-                if (equipmentError) {
-                  setEquipmentError(null);
+                setDifficulty(value);
+                if (difficultyError) {
+                  setDifficultyError(null);
                 }
               }}
             >
               <SelectTrigger
-                id="equipment"
-                className={cn('w-full', equipmentError && 'border-destructive aria-invalid:border-destructive')}
-                aria-invalid={!!equipmentError}
+                id="difficulty"
+                className={cn('w-full', difficultyError && 'border-destructive aria-invalid:border-destructive')}
+                aria-invalid={!!difficultyError}
               >
                 <SelectValue placeholder={t('general.select')} />
               </SelectTrigger>
               <SelectContent>
-                {EXERCISE_EQUIPMENT_OPTIONS.map((eq) => (
-                  <SelectItem key={eq.value} value={eq.value}>
-                    {eq.label}
+                {MUSCLEWIKI_DIFFICULTY_OPTIONS.map((diff) => (
+                  <SelectItem key={diff.value} value={diff.value}>
+                    {diff.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {equipmentError && <p className="text-sm text-destructive">{equipmentError}</p>}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label htmlFor="modality" className="text-sm font-medium">
-              {t('exercises.addExercise.modality')}
-            </label>
-            <Select
-              value={modality}
-              onValueChange={(value) => {
-                setModality(value);
-                if (modalityError) {
-                  setModalityError(null);
-                }
-              }}
-            >
-              <SelectTrigger
-                id="modality"
-                className={cn('w-full', modalityError && 'border-destructive aria-invalid:border-destructive')}
-                aria-invalid={!!modalityError}
-              >
-                <SelectValue placeholder={t('general.select')} />
-              </SelectTrigger>
-              <SelectContent>
-                {MODALITY_OPTIONS.map((mod) => (
-                  <SelectItem key={mod.value} value={mod.value}>
-                    {mod.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {modalityError && <p className="text-sm text-destructive">{modalityError}</p>}
+            {difficultyError && <p className="text-sm text-destructive">{difficultyError}</p>}
           </div>
         </div>
       </div>

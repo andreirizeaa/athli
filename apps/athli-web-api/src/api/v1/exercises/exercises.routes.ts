@@ -6,6 +6,52 @@ export const exercisesRouter = Router();
 
 /**
  * @swagger
+ * /api/v1/exercises/search:
+ *   get:
+ *     summary: Quick search exercises using MuscleWiki's search endpoint
+ *     tags: [Exercises]
+ *     description: |
+ *       Optimized for search bar autocomplete. Uses MuscleWiki's relevance-scored search.
+ *       Minimum 2 characters required. Debounce on frontend recommended (300ms).
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *           minLength: 2
+ *         description: Search query (minimum 2 characters)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 50
+ *         description: Maximum results to return (1-50)
+ *     responses:
+ *       200:
+ *         description: Search results retrieved successfully
+ */
+exercisesRouter.get('/search', exercisesController.quickSearch);
+
+/**
+ * @swagger
+ * /api/v1/exercises/all:
+ *   get:
+ *     summary: Get ALL exercises from cache in a single request
+ *     tags: [Exercises]
+ *     description: |
+ *       Returns all 1700+ exercises with their cached thumbnail URLs.
+ *       Frontend should call this once on app load and cache the results.
+ *       Search/filter then happens in-memory for instant results.
+ *     responses:
+ *       200:
+ *         description: All exercises retrieved successfully
+ */
+exercisesRouter.get('/all', exercisesController.getAllExercises);
+
+/**
+ * @swagger
  * /api/v1/exercises/filters:
  *   get:
  *     summary: Get available filter options for exercises
@@ -46,6 +92,36 @@ exercisesRouter.get('/cache/status', exercisesController.getCacheStatus);
  *         description: Compliance report retrieved successfully
  */
 exercisesRouter.get('/compliance', exercisesController.getComplianceReport);
+
+/**
+ * @swagger
+ * /api/v1/exercises/cache/populate:
+ *   post:
+ *     summary: Populate exercise cache with all MuscleWiki exercises
+ *     tags: [Exercises]
+ *     description: |
+ *       Called by cron job to refresh the exercise cache.
+ *       Requires X-Service-Token header with valid service token.
+ *     parameters:
+ *       - in: header
+ *         name: X-Service-Token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Service authentication token
+ *       - in: query
+ *         name: batch_size
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *         description: Number of exercises to fetch per API call
+ *     responses:
+ *       200:
+ *         description: Cache population complete
+ *       401:
+ *         description: Unauthorized
+ */
+exercisesRouter.post('/cache/populate', exercisesController.populateCache);
 
 /**
  * @swagger
@@ -122,6 +198,113 @@ exercisesRouter.get('/compliance', exercisesController.getComplianceReport);
  *         description: Exercises retrieved successfully
  */
 exercisesRouter.get('/', exercisesController.searchExercises);
+
+/**
+ * @swagger
+ * /api/v1/exercises/images/bulk:
+ *   post:
+ *     summary: Bulk fetch MuscleWiki images with authentication
+ *     tags: [Exercises]
+ *     description: |
+ *       Fetches multiple images in a single request to avoid rate limiting.
+ *       Returns a map of filename -> base64 data URL.
+ *       Max 50 images per request.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - filenames
+ *             properties:
+ *               filenames:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 maxItems: 50
+ *                 description: Array of image filenames to fetch
+ *     responses:
+ *       200:
+ *         description: Bulk images retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 images:
+ *                   type: object
+ *                   additionalProperties:
+ *                     type: string
+ *                   description: Map of filename to base64 data URL
+ *       400:
+ *         description: Invalid request
+ */
+exercisesRouter.post('/images/bulk', exercisesController.proxyImagesBulk);
+
+/**
+ * @swagger
+ * /api/v1/exercises/images/{filename}:
+ *   get:
+ *     summary: Proxy MuscleWiki images with authentication
+ *     tags: [Exercises]
+ *     description: |
+ *       MuscleWiki images require RapidAPI authentication headers.
+ *       This endpoint proxies image requests with proper authentication.
+ *       Images are cached for 24 hours per MuscleWiki Terms of Use.
+ *     parameters:
+ *       - in: path
+ *         name: filename
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Image filename (e.g., og-male-Barbell-barbell-curl-front.jpg)
+ *     responses:
+ *       200:
+ *         description: Image data
+ *         content:
+ *           image/jpeg:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       400:
+ *         description: Invalid filename
+ *       404:
+ *         description: Image not found
+ */
+exercisesRouter.get('/images/:filename', exercisesController.proxyImage);
+
+/**
+ * @swagger
+ * /api/v1/exercises/videos/stream/{filename}:
+ *   get:
+ *     summary: Proxy MuscleWiki videos with authentication
+ *     tags: [Exercises]
+ *     description: |
+ *       MuscleWiki videos require RapidAPI authentication headers.
+ *       This endpoint proxies video requests with proper authentication.
+ *       Videos use transient caching only per MuscleWiki Terms of Use.
+ *     parameters:
+ *       - in: path
+ *         name: filename
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Video filename (e.g., Barbell-barbell-curl-male-front.mp4)
+ *     responses:
+ *       200:
+ *         description: Video data
+ *         content:
+ *           video/mp4:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       400:
+ *         description: Invalid filename
+ *       404:
+ *         description: Video not found
+ */
+exercisesRouter.get('/videos/stream/:filename', exercisesController.proxyVideo);
 
 /**
  * @swagger

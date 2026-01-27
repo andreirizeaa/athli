@@ -10,7 +10,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
@@ -19,7 +19,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useModalCallbacks } from '@/stores';
 import { ExerciseBuilderCard } from '@/components/features/workout/exercise-builder-card';
 import { SectionBuilderCard } from '@/components/features/workout/section-builder-card';
-import { hexToRgba } from '@/utils/colorUtils';
 import { Exercise } from '@/app/modals/workout/add-exercise-to-builder-modal';
 import {
     type BuilderWorkoutState,
@@ -42,9 +41,9 @@ import {
 import { createWorkout, editWorkout, getWorkoutById } from '@/services/coach/coach-workout-service';
 import { assignWorkout, getClientWorkoutInstance } from '@/services/client/client-training-service';
 import { useClientDetailStore } from '@/stores';
-import { getExerciseById } from '@/services/coach/coach-exercise-service';
+import { getExerciseById as getCoachExerciseById } from '@/services/coach/coach-exercise-service';
 import { createSection } from '@/services/coach/coach-section-service';
-import { MOCK_EXERCISES } from '@/app/modals/workout/add-exercise-to-builder-modal';
+import { getExerciseById as getMuscleWikiExerciseById } from '@/services/musclewiki-service';
 
 // Mock workout data - this would come from a service in production
 const MOCK_WORKOUTS: Record<string, { id: string; name: string; description: string; type: string; difficulty: string }> = {
@@ -88,6 +87,7 @@ export default function WorkoutDetailScreen() {
     // Determine if we're editing a client's workout instance vs a library workout
     const isClientWorkout = !!params.clientId && !!params.clientWorkoutDate;
     const { colors: themeColors } = useThemePreference();
+    const colorScheme = useColorScheme();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
 
@@ -307,13 +307,73 @@ export default function WorkoutDetailScreen() {
                             return typeMap[type] || 'R';
                         };
 
-                        // Helper to get exercise details from mock data
-                        const getExerciseFromMock = (exerciseId: string) => {
-                            const mockExercise = MOCK_EXERCISES.find(ex => ex.exerciseId === exerciseId);
+                        // Collect all unique exercise IDs from the workout data
+                        const collectExerciseIds = (items: any[]): string[] => {
+                            const ids = new Set<string>();
+                            items.forEach((item: any) => {
+                                if (item.itemType === 'exercise' && item.data?.prescribedExerciseId) {
+                                    ids.add(item.data.prescribedExerciseId);
+                                    (item.data.alternatives || []).forEach((altId: string) => ids.add(altId));
+                                } else if (item.itemType === 'section' && item.data?.exercises) {
+                                    // Handle different section exercise structures
+                                    const sectionExercises = item.data.exercises || [];
+                                    sectionExercises.forEach((groupOrEx: any) => {
+                                        // Could be exercise group (regular/circuits) or direct exercise (amrap/timed)
+                                        if (groupOrEx.prescribedExerciseId) {
+                                            ids.add(groupOrEx.prescribedExerciseId);
+                                            (groupOrEx.alternatives || []).forEach((altId: string) => ids.add(altId));
+                                        } else if (groupOrEx.exercises) {
+                                            groupOrEx.exercises.forEach((ex: any) => {
+                                                if (ex.prescribedExerciseId) {
+                                                    ids.add(ex.prescribedExerciseId);
+                                                    (ex.alternatives || []).forEach((altId: string) => ids.add(altId));
+                                                }
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+                            return Array.from(ids);
+                        };
+
+                        const exerciseIds = collectExerciseIds(workoutData.workout_data.items);
+                        
+                        // Pre-fetch all exercise details from MuscleWiki API
+                        const exerciseDetailsMap = new Map<string, { name: string; imageUrl: string; exerciseType: string }>();
+                        const fetchPromises = exerciseIds.map(async (id) => {
+                            try {
+                                const exercise = await getMuscleWikiExerciseById(id);
+                                if (exercise) {
+                                    exerciseDetailsMap.set(id, {
+                                        name: exercise.name,
+                                        imageUrl: exercise.imageUrl,
+                                        exerciseType: exercise.exerciseType,
+                                    });
+                                } else {
+                                    exerciseDetailsMap.set(id, {
+                                        name: id || 'Exercise',
+                                        imageUrl: '',
+                                        exerciseType: 'weight_reps',
+                                    });
+                                }
+                            } catch (err) {
+                                console.warn(`Failed to fetch exercise ${id}:`, err);
+                                exerciseDetailsMap.set(id, {
+                                    name: id || 'Exercise',
+                                    imageUrl: '',
+                                    exerciseType: 'weight_reps',
+                                });
+                            }
+                        });
+                        await Promise.all(fetchPromises);
+
+                        // Helper to get exercise details from pre-fetched map
+                        const getExerciseDetails = (exerciseId: string) => {
+                            const details = exerciseDetailsMap.get(exerciseId);
                             return {
-                                name: mockExercise?.name || exerciseId || 'Exercise',
-                                imageUrl: mockExercise?.imageUrl || 'https://via.placeholder.com/100',
-                                exerciseType: mockExercise?.exerciseType || 'weight_reps',
+                                name: details?.name || exerciseId || 'Exercise',
+                                imageUrl: details?.imageUrl || '',
+                                exerciseType: details?.exerciseType || 'weight_reps',
                             };
                         };
 
@@ -335,11 +395,11 @@ export default function WorkoutDetailScreen() {
 
                         // Helper to transform exercise data to builder format
                         const transformExercise = (data: any): BuilderExercise => {
-                            const exerciseDetails = getExerciseFromMock(data.prescribedExerciseId);
+                            const exerciseDetails = getExerciseDetails(data.prescribedExerciseId);
 
                             // Transform alternatives from IDs to exercise objects
                             const transformedAlternatives = (data.alternatives || []).map((altId: string) => {
-                                const altExercise = getExerciseFromMock(altId);
+                                const altExercise = getExerciseDetails(altId);
                                 return {
                                     id: altId,
                                     exerciseId: altId,
@@ -429,11 +489,11 @@ export default function WorkoutDetailScreen() {
                                 } else if (data.type === 'amrap' || data.type === 'timed') {
                                     // AMRAP/Timed sections have a flat array of exercises
                                     const allExercises = (data.exercises || []).map((ex: any) => {
-                                        const exerciseDetails = getExerciseFromMock(ex.prescribedExerciseId);
+                                        const exerciseDetails = getExerciseDetails(ex.prescribedExerciseId);
 
                                         // Transform alternatives from IDs to exercise objects
                                         const transformedAlternatives = (ex.alternatives || []).map((altId: string) => {
-                                            const altExercise = getExerciseFromMock(altId);
+                                            const altExercise = getExerciseDetails(altId);
                                             return {
                                                 id: altId,
                                                 exerciseId: altId,
@@ -1156,9 +1216,8 @@ export default function WorkoutDetailScreen() {
         <View style={[
             styles.bottomBarContainer,
             {
-                backgroundColor: themeColors.backgroundPrimary,
+                backgroundColor: themeColors.surfacePrimary,
                 paddingBottom: insets.bottom + 12,
-                borderTopColor: themeColors.border,
             }
         ]}>
             <View style={styles.bottomBarContent}>
@@ -1192,17 +1251,16 @@ export default function WorkoutDetailScreen() {
     const gradientHeight = headerHeight + 12;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
             {/* Fixed Header Gradient */}
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
-                    colors={[
-                        hexToRgba(themeColors.backgroundSecondary, 1),
-                        hexToRgba(themeColors.backgroundSecondary, 0.85),
-                        hexToRgba(themeColors.backgroundSecondary, 0.5),
-                        hexToRgba(themeColors.backgroundSecondary, 0),
-                    ]}
-                    locations={[0, 0.5, 0.8, 1]}
+                    colors={
+                        colorScheme === 'dark'
+                            ? ['rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.65)', 'rgba(0, 0, 0, 0.4)', 'rgba(0, 0, 0, 0.15)', 'rgba(0, 0, 0, 0.05)', 'rgba(0, 0, 0, 0)']
+                            : ['rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.65)', 'rgba(255, 255, 255, 0.4)', 'rgba(255, 255, 255, 0.15)', 'rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0)']
+                    }
+                    locations={[0, 0.2, 0.4, 0.65, 0.85, 1]}
                     style={[styles.headerGradient, { height: gradientHeight }]}
                     pointerEvents="none"
                 />
@@ -1510,7 +1568,9 @@ const styles = StyleSheet.create({
         ...typography.p2,
     },
     bottomBarContainer: {
-        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        marginTop: -24,
         // Top edge shadow
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -4 },

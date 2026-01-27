@@ -1,7 +1,10 @@
 import type { WorkoutProgramPayload, WorkoutItem, ExerciseGroupPayload, RegularExercisePayload } from '@/components/training/workout-schema';
 import type { WorkoutSchema, WorkoutSchemaItem, ExerciseWithSuperset, WorkoutSection } from '@/components/training/shared/types/workout-builder.types';
 import type { SetData } from '@/components/training/builder/exercise-card';
-import { searchExercises } from '@/api/exercise/exercise-search';
+import type { Exercise } from '@/hooks/use-all-exercises';
+
+// Type for the exercise lookup function (passed from hook)
+export type ExerciseLookupFn = (id: string) => Exercise | undefined;
 
 /**
  * Creates a fallback exercise object when exercise is not found in the database
@@ -23,6 +26,7 @@ const createFallbackExercise = (exerciseId: string, exerciseType?: string) => ({
     exerciseTips: [],
     variations: [],
     relatedExerciseIds: [],
+    source: 'musclewiki' as const,
 });
 
 const cleanExerciseId = (payload: any): string => {
@@ -34,8 +38,14 @@ const cleanExerciseId = (payload: any): string => {
 /**
  * Converts a payload format workout to builder format
  * Used when loading a workout from the backend
+ * 
+ * @param payload - The workout payload from the backend
+ * @param findExerciseById - Function to lookup exercise by ID from cached exercises
  */
-export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): WorkoutSchema => {
+export const convertPayloadToBuilderFormat = (
+    payload: WorkoutProgramPayload,
+    findExerciseById: ExerciseLookupFn
+): WorkoutSchema => {
     console.log('[PAYLOAD CONVERTER] Input payload:', JSON.stringify(payload, null, 2));
     const items: WorkoutSchemaItem[] = [];
 
@@ -243,7 +253,7 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
             exerciseGroup.exercises.forEach((exercisePayload) => {
                 // Find exercise details from the exercise database, or use fallback
                 const cleanedId = cleanExerciseId(exercisePayload);
-                const exerciseDetails = searchExercises('').find((e) => e.exerciseId === cleanedId)
+                const exerciseDetails = findExerciseById(cleanedId)
                     || createFallbackExercise(cleanedId, (exercisePayload as any).exerciseType);
 
                 // Get exercise type for set conversion
@@ -300,7 +310,7 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                         // Find exercise details from the exercise database, or use fallback
                         const cleanedId = cleanExerciseId(exercisePayload);
                         console.log('[PAYLOAD CONVERTER] Processing exercise with ID:', cleanedId);
-                        const exerciseDetails = searchExercises('').find((e) => e.exerciseId === cleanedId)
+                        const exerciseDetails = findExerciseById(cleanedId)
                             || createFallbackExercise(cleanedId, (exercisePayload as any).exerciseType);
 
                         // Get exercise type for set conversion
@@ -340,7 +350,7 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                     group.exercises.forEach((exercisePayload) => {
                         // Find exercise details from the exercise database, or use fallback
                         const cleanedId = cleanExerciseId(exercisePayload);
-                        const exerciseDetails = searchExercises('').find((e) => e.exerciseId === cleanedId)
+                        const exerciseDetails = findExerciseById(cleanedId)
                             || createFallbackExercise(cleanedId, (exercisePayload as any).exerciseType);
 
                         // Get exercise type for set conversion
@@ -373,7 +383,7 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                 sectionPayload.exercises.forEach((exercisePayload) => {
                     // Find exercise details from the exercise database, or use fallback
                     const cleanedId = cleanExerciseId(exercisePayload);
-                    const exerciseDetails = searchExercises('').find((e) => e.exerciseId === cleanedId)
+                    const exerciseDetails = findExerciseById(cleanedId)
                         || createFallbackExercise(cleanedId, (exercisePayload as any).exerciseType);
 
                     // Extract column labels

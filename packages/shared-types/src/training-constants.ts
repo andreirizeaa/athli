@@ -3,11 +3,10 @@
  * Shared across mobile and web applications
  */
 
-import type { SectionType as WorkoutSchemaSectionType, ExerciseType as WorkoutSchemaExerciseType } from './workout-schema';
+import type { SectionType as WorkoutSchemaSectionType } from './workout-schema';
 
 // Re-export types from workout-schema to avoid duplication
 export type SectionType = WorkoutSchemaSectionType;
-export type ExerciseType = WorkoutSchemaExerciseType;
 
 // Workout Types
 export const WORKOUT_TYPES = [
@@ -76,6 +75,8 @@ export const EXERCISE_TYPE_OPTIONS = [
     { value: 'reps', label: 'Reps Only' },
     { value: 'distance_duration', label: 'Distance & Duration' },
 ] as const;
+
+export type ExerciseType = typeof EXERCISE_TYPE_OPTIONS[number]['value'];
 
 // Muscle Group Options
 export const MUSCLE_GROUP_OPTIONS = [

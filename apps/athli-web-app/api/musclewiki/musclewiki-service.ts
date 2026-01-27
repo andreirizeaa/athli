@@ -28,9 +28,6 @@ export type MuscleWikiExercise = {
   tips: string[];
   thumbnailUrl?: string;
   maleVideoFrontUrl?: string;
-  maleVideoSideUrl?: string;
-  femaleVideoFrontUrl?: string;
-  femaleVideoSideUrl?: string;
   imageUrls: string[];
   isCacheValid: boolean;
   cachedAt: string;
@@ -59,15 +56,93 @@ export type MuscleWikiSearchFilters = {
 // PUBLIC API
 // ============================================================================
 
+export type MuscleWikiSearchResult = {
+  exercises: MuscleWikiExercise[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+};
+
+export type QuickSearchResult = {
+  exercises: MuscleWikiExercise[];
+  total: number;
+};
+
+export type AllExercisesResult = {
+  exercises: MuscleWikiExercise[];
+  total: number;
+};
+
 /**
- * Search exercises via backend API
+ * Get ALL exercises from cache in a single request
+ * Call this once on app load to populate the client-side cache
+ * Search/filter then happens in-memory for instant results
+ */
+export const getAllExercises = async (): Promise<AllExercisesResult> => {
+  try {
+    const response = await apiFetch<ApiResponse<AllExercisesResult>>(
+      '/exercises/all',
+      {
+        headers: {
+          'X-Request-Source': 'web_app',
+        },
+      }
+    );
+
+    return response.data || { exercises: [], total: 0 };
+  } catch (error) {
+    console.error('Failed to get all exercises:', error);
+    return { exercises: [], total: 0 };
+  }
+};
+
+/**
+ * Quick search exercises using MuscleWiki's /search endpoint
+ * Optimized for search bar autocomplete - uses relevance-scored search
+ * 
+ * @param query - Search term (minimum 2 characters)
+ * @param limit - Maximum results (default 10)
+ */
+export const quickSearchExercises = async (
+  query: string,
+  limit: number = 10
+): Promise<QuickSearchResult> => {
+  if (!query || query.length < 2) {
+    return { exercises: [], total: 0 };
+  }
+
+  const params = new URLSearchParams({
+    q: query,
+    limit: limit.toString(),
+  });
+
+  try {
+    const response = await apiFetch<ApiResponse<QuickSearchResult>>(
+      `/exercises/search?${params.toString()}`,
+      {
+        headers: {
+          'X-Request-Source': 'web_app',
+        },
+      }
+    );
+
+    return response.data || { exercises: [], total: 0 };
+  } catch (error) {
+    console.error('Failed to quick search exercises:', error);
+    return { exercises: [], total: 0 };
+  }
+};
+
+/**
+ * List/filter exercises via backend API (for browsing with filters)
  *
  * @param filters - Search filters including category, muscle, difficulty, etc.
  * @param filters.gender - Filter for male or female specific exercise demonstrations
  */
 export const searchExercises = async (
   filters: MuscleWikiSearchFilters = {}
-): Promise<MuscleWikiExercise[]> => {
+): Promise<MuscleWikiSearchResult> => {
   const params = new URLSearchParams();
 
   if (filters.searchTerm) params.set('q', filters.searchTerm);
@@ -85,16 +160,16 @@ export const searchExercises = async (
   const url = `/exercises${queryString ? `?${queryString}` : ''}`;
 
   try {
-    const response = await apiFetch<ApiResponse<{ exercises: MuscleWikiExercise[] }>>(url, {
+    const response = await apiFetch<ApiResponse<MuscleWikiSearchResult>>(url, {
       headers: {
         'X-Request-Source': 'web_app',
       },
     });
 
-    return response.data?.exercises || [];
+    return response.data || { exercises: [], total: 0, limit: 100, offset: 0, hasMore: false };
   } catch (error) {
     console.error('Failed to search exercises:', error);
-    return [];
+    return { exercises: [], total: 0, limit: 100, offset: 0, hasMore: false };
   }
 };
 
@@ -122,23 +197,30 @@ export const getExerciseById = async (
 };
 
 /**
+ * Convert a MuscleWiki video URL to our proxy URL
+ */
+const getProxiedVideoUrl = (videoUrl?: string): string | null => {
+  if (!videoUrl) return null;
+  // Extract filename from URL like: https://host/media/videos/branded/filename.mp4
+  const match = videoUrl.match(/\/branded\/([^/]+)$/);
+  if (match && match[1]) {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+    return `${apiUrl}/api/v1/exercises/videos/stream/${match[1]}`;
+  }
+  return null;
+};
+
+/**
  * Get exercise video URLs via backend API (lazy loading)
+ * Returns proxied URL that handles authentication
  */
 export const getExerciseVideos = async (
   musclewikiId: string
-): Promise<{
-  maleVideoFrontUrl?: string;
-  maleVideoSideUrl?: string;
-  femaleVideoFrontUrl?: string;
-  femaleVideoSideUrl?: string;
-} | null> => {
+): Promise<{ maleVideoFrontUrl?: string } | null> => {
   try {
     const response = await apiFetch<ApiResponse<{
       videos: {
         maleVideoFrontUrl?: string;
-        maleVideoSideUrl?: string;
-        femaleVideoFrontUrl?: string;
-        femaleVideoSideUrl?: string;
       }
     }>>(`/exercises/${musclewikiId}/videos`, {
       headers: {
@@ -146,10 +228,48 @@ export const getExerciseVideos = async (
       },
     });
 
-    return response.data?.videos || null;
+    const videos = response.data?.videos;
+    if (!videos) return null;
+
+    // Convert MuscleWiki video URL to proxy URL
+    return {
+      maleVideoFrontUrl: getProxiedVideoUrl(videos.maleVideoFrontUrl) || undefined,
+    };
   } catch (error) {
     console.error('Failed to get exercise videos:', error);
     return null;
+  }
+};
+
+/**
+ * Bulk fetch exercise thumbnail images
+ * Returns a map of filename -> base64 data URL
+ * Max 50 images per request
+ */
+export const fetchBulkThumbnails = async (
+  filenames: string[]
+): Promise<Record<string, string>> => {
+  if (!filenames.length) {
+    return {};
+  }
+
+  try {
+    const response = await apiFetch<ApiResponse<{ images: Record<string, string> }>>(
+      '/exercises/images/bulk',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-Source': 'web_app',
+        },
+        body: JSON.stringify({ filenames }),
+      }
+    );
+
+    return response.data?.images || {};
+  } catch (error) {
+    console.error('Failed to fetch bulk thumbnails:', error);
+    return {};
   }
 };
 

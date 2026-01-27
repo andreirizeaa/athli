@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, Switch, Platform } from 'react-native';
-import { Trash2, Plus, Ellipsis, Repeat, Info, ArrowUp, ArrowDown, Timer } from 'lucide-react-native';
+import React, { useMemo } from 'react';
+import { StyleSheet, Text, View, TextInput, Switch, Platform, ActivityIndicator } from 'react-native';
+import { Trash2, Plus, Ellipsis, Repeat, Info, ArrowUp, ArrowDown, Timer, Dumbbell } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { PressableScale } from 'pressto';
+import SquircleView from 'react-native-fast-squircle';
 
 import { useRouter } from 'expo-router';
 import { typography } from '@/constants/typography';
@@ -14,6 +15,7 @@ import { InputBox } from '@/components/ui/form-inputs';
 import { useModalCallbacks } from '@/stores';
 import { COLUMN_OPTIONS, HEART_RATE_ZONE_OPTIONS, type WorkoutExercise, type ExerciseSet } from './types';
 import { type ExerciseValidationError, hasSetError, hasTempoError } from './validation';
+import { useExerciseThumbnails, useSingleThumbnail } from '@/hooks/useExerciseThumbnails';
 
 type ExerciseBuilderCardProps = {
     exercise: WorkoutExercise;
@@ -81,6 +83,34 @@ export const ExerciseBuilderCard = ({
     const { colors: themeColors, preset } = useThemePreference();
     const router = useRouter();
     const { setExercisesSelectCallback } = useModalCallbacks();
+
+    // Check if this is a custom exercise (not from MuscleWiki)
+    const isCustomExercise = useMemo(() => {
+        if (exercise.imageUrl && (
+            exercise.imageUrl.includes('supabase.co') ||
+            exercise.imageUrl.startsWith('http') && !exercise.imageUrl.includes('musclewiki')
+        )) {
+            return true;
+        }
+        return false;
+    }, [exercise.imageUrl]);
+
+    // For MuscleWiki exercises with og_images URLs, we need to fetch the cached thumbnail
+    const rawThumbnailUrl = exercise.imageUrl?.includes('og_images') ? exercise.imageUrl : undefined;
+    const { thumbnailUrl: cachedThumbnailUrl, isLoading: isMainThumbnailLoading } = useSingleThumbnail(rawThumbnailUrl);
+    
+    // Use cached URL for MuscleWiki exercises, or original URL for custom exercises
+    const displayThumbnailUrl = isCustomExercise ? exercise.imageUrl : (cachedThumbnailUrl || exercise.imageUrl);
+
+    // Use bulk thumbnail loading for alternatives (they may have rawThumbnailUrl)
+    const alternativesForThumbnails = useMemo(() => {
+        return exercise.alternatives.filter(alt => alt !== null).map(alt => ({
+            rawThumbnailUrl: alt.imageUrl?.includes('og_images') ? alt.imageUrl : undefined,
+            ...alt,
+        }));
+    }, [exercise.alternatives]);
+
+    const { getThumbnailUrl: getAlternativeThumbnailUrl, isThumbnailLoading: isAltThumbnailLoading } = useExerciseThumbnails(alternativesForThumbnails);
 
     const handleOpenAlternatives = () => {
         setExercisesSelectCallback((exercises) => {
@@ -171,10 +201,14 @@ export const ExerciseBuilderCard = ({
             }));
     };
 
-    const handleThumbnailPress = (name: string) => {
+    const handleThumbnailPress = (exerciseData: { name: string; exerciseId?: string; isCustom?: boolean }) => {
         router.push({
             pathname: '/modals/workout/exercise-details-modal',
-            params: { name }
+            params: {
+                name: exerciseData.name,
+                exerciseId: exerciseData.exerciseId || '',
+                isCustom: exerciseData.isCustom ? 'true' : 'false',
+            }
         });
     };
 
@@ -206,7 +240,11 @@ export const ExerciseBuilderCard = ({
         {
             label: 'Information',
             icon: { sf: 'info.circle', IconComponent: Info },
-            onPress: () => handleThumbnailPress(exercise.name),
+            onPress: () => handleThumbnailPress({
+                name: exercise.name,
+                exerciseId: exercise.exerciseId,
+                isCustom: isCustomExercise,
+            }),
         },
         {
             label: 'Delete Exercise',
@@ -282,19 +320,48 @@ export const ExerciseBuilderCard = ({
         ]}>
             {/* Top Section: Thumbnail and Name */}
             <View style={styles.topSection}>
-                <PressableScale onPress={() => handleThumbnailPress(exercise.name)}>
-                    <Image
-                        source={{ uri: exercise.imageUrl }}
-                        style={[
-                            styles.thumbnail,
-                            isLinkedToPrev && { borderTopRightRadius: 20 }
-                        ]}
-                        contentFit="cover"
-                    />
+                <PressableScale onPress={() => handleThumbnailPress({
+                    name: exercise.name,
+                    exerciseId: exercise.exerciseId,
+                    isCustom: isCustomExercise,
+                })}>
+                    <View style={[
+                        styles.thumbnailContainer,
+                        isLinkedToPrev && { borderTopRightRadius: 20 }
+                    ]}>
+                        {isMainThumbnailLoading && !displayThumbnailUrl ? (
+                            <View style={[
+                                styles.thumbnailPlaceholder,
+                                { backgroundColor: themeColors.surfacePrimary, alignItems: 'center', justifyContent: 'center' }
+                            ]}>
+                                <ActivityIndicator size="small" color={themeColors.primary} />
+                            </View>
+                        ) : displayThumbnailUrl ? (
+                            <Image
+                                source={{ uri: displayThumbnailUrl }}
+                                style={[
+                                    styles.thumbnail,
+                                    isLinkedToPrev && { borderTopRightRadius: 20 }
+                                ]}
+                                contentFit="cover"
+                                transition={200}
+                            />
+                        ) : (
+                            <SquircleView
+                                cornerSmoothing={1}
+                                style={[
+                                    styles.thumbnailPlaceholder,
+                                    { backgroundColor: themeColors.surfacePrimary }
+                                ]}
+                            >
+                                <Dumbbell size={24} color={themeColors.mutedText} />
+                            </SquircleView>
+                        )}
+                    </View>
                 </PressableScale>
 
                 <View style={styles.nameContainer}>
-                    <Text style={[styles.exerciseNameText, { color: themeColors.text }]} numberOfLines={1}>
+                    <Text style={[styles.exerciseNameText, { color: themeColors.text }]}>
                         {exercise.name}
                     </Text>
                 </View>
@@ -545,31 +612,67 @@ export const ExerciseBuilderCard = ({
                             <Text style={[styles.alternativesLabel, { color: themeColors.mutedText }]}>
                                 Alternative Exercises
                             </Text>
-                            {validAlternatives.map((alt, index) => (
-                                <View key={alt.id || `alt-${index}`}>
-                                    <View style={styles.alternativeItem}>
-                                        <PressableScale onPress={() => handleThumbnailPress(alt.name)}>
-                                            <Image
-                                                source={{ uri: alt.imageUrl }}
-                                                style={styles.smallThumbnail}
-                                                contentFit="cover"
-                                            />
-                                        </PressableScale>
-                                        <Text style={[styles.alternativeName, { color: themeColors.text }]} numberOfLines={1}>
-                                            {alt.name}
-                                        </Text>
-                                        <PressableScale
-                                            onPress={() => handleDeleteAlternative(alt.id)}
-                                            style={styles.smallTrashCircle}
-                                        >
-                                            <Trash2 {...({ size: 12, color: RED_ERROR } as any)} />
-                                        </PressableScale>
+                            {validAlternatives.map((alt, index) => {
+                                // Determine if this alternative is a custom exercise
+                                const isAltCustom = alt.imageUrl && (
+                                    alt.imageUrl.includes('supabase.co') ||
+                                    (alt.imageUrl.startsWith('http') && !alt.imageUrl.includes('musclewiki'))
+                                );
+                                // Get the appropriate thumbnail URL
+                                const rawAltThumbnailUrl = alt.imageUrl?.includes('og_images') ? alt.imageUrl : undefined;
+                                const cachedAltThumbnail = rawAltThumbnailUrl ? getAlternativeThumbnailUrl(rawAltThumbnailUrl) : '';
+                                const displayAltThumbnailUrl = isAltCustom ? alt.imageUrl : (cachedAltThumbnail || alt.imageUrl);
+                                const isAltLoading = rawAltThumbnailUrl ? isAltThumbnailLoading(rawAltThumbnailUrl) : false;
+
+                                return (
+                                    <View key={alt.id || `alt-${index}`}>
+                                        <View style={styles.alternativeItem}>
+                                            <PressableScale onPress={() => handleThumbnailPress({
+                                                name: alt.name,
+                                                exerciseId: alt.id,
+                                                isCustom: isAltCustom,
+                                            })}>
+                                                <View style={styles.smallThumbnailContainer}>
+                                                    {isAltLoading && !displayAltThumbnailUrl ? (
+                                                        <View style={[
+                                                            styles.smallThumbnail,
+                                                            { backgroundColor: themeColors.surfacePrimary, alignItems: 'center', justifyContent: 'center' }
+                                                        ]}>
+                                                            <ActivityIndicator size="small" color={themeColors.primary} />
+                                                        </View>
+                                                    ) : displayAltThumbnailUrl ? (
+                                                        <Image
+                                                            source={{ uri: displayAltThumbnailUrl }}
+                                                            style={styles.smallThumbnail}
+                                                            contentFit="cover"
+                                                            transition={200}
+                                                        />
+                                                    ) : (
+                                                        <View style={[
+                                                            styles.smallThumbnail,
+                                                            { backgroundColor: themeColors.surfacePrimary, alignItems: 'center', justifyContent: 'center' }
+                                                        ]}>
+                                                            <Dumbbell size={12} color={themeColors.mutedText} />
+                                                        </View>
+                                                    )}
+                                                </View>
+                                            </PressableScale>
+                                            <Text style={[styles.alternativeName, { color: themeColors.text }]} numberOfLines={1}>
+                                                {alt.name}
+                                            </Text>
+                                            <PressableScale
+                                                onPress={() => handleDeleteAlternative(alt.id)}
+                                                style={styles.smallTrashCircle}
+                                            >
+                                                <Trash2 {...({ size: 12, color: RED_ERROR } as any)} />
+                                            </PressableScale>
+                                        </View>
+                                        {index < validAlternatives.length - 1 && (
+                                            <View style={[styles.itemDivider, { backgroundColor: themeColors.border }]} />
+                                        )}
                                     </View>
-                                    {index < validAlternatives.length - 1 && (
-                                        <View style={[styles.itemDivider, { backgroundColor: themeColors.border }]} />
-                                    )}
-                                </View>
-                            ))}
+                                );
+                            })}
                         </View>
                     );
                 })()}
@@ -590,10 +693,21 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingRight: 8,
     },
+    thumbnailContainer: {
+        width: 64,
+        height: 64,
+        overflow: 'hidden',
+    },
     thumbnail: {
         width: 64,
         height: 64,
         backgroundColor: '#f0f0f0',
+    },
+    thumbnailPlaceholder: {
+        width: 64,
+        height: 64,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     nameContainer: {
         flex: 1,
@@ -782,6 +896,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 6,
+    },
+    smallThumbnailContainer: {
+        width: 24,
+        height: 24,
+        borderRadius: 4,
+        overflow: 'hidden',
     },
     smallThumbnail: {
         width: 24,
