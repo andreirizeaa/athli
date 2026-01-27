@@ -60,6 +60,11 @@ import {
   MUSCLE_GROUP_OPTIONS,
   EXERCISE_EQUIPMENT_OPTIONS,
   MODALITY_OPTIONS,
+  MUSCLEWIKI_CATEGORY_OPTIONS,
+  MUSCLEWIKI_MUSCLE_GROUP_OPTIONS,
+  MUSCLEWIKI_DIFFICULTY_OPTIONS,
+  MUSCLEWIKI_FORCE_OPTIONS,
+  MUSCLEWIKI_MECHANIC_OPTIONS,
 } from '@athli/shared-types';
 
 type ColumnId = 'category' | 'muscleGroup' | 'modality' | 'equipment' | 'actions';
@@ -610,7 +615,7 @@ const ExercisesPage = () => {
 
   const columns: ColumnDefinition<Program>[] = useMemo(() => [...allColumns, actionsColumn], [allColumns, actionsColumn]);
 
-  // Create filter definitions
+  // Create filter definitions - includes MuscleWiki filters for equipment, muscles, difficulty, etc.
   const filters: FilterDefinition<Program>[] = useMemo(() => [
     {
       id: 'category',
@@ -623,13 +628,41 @@ const ExercisesPage = () => {
       id: 'muscleGroup',
       label: t('exercises.columns.muscleGroup'),
       icon: <User className="size-4" />,
-      options: MUSCLE_GROUP_OPTIONS.map((group) => ({ value: group.value, label: group.label })),
+      options: MUSCLEWIKI_MUSCLE_GROUP_OPTIONS.map((group) => ({ value: group.value, label: group.label })),
       getFilterValue: (row) => {
         const muscleGroups = (row as any).muscleGroups || (row as any).muscleGroup?.split(',').map((g: string) => g.trim()) || [];
         const groupsArray = Array.isArray(muscleGroups) ? muscleGroups : [];
         // Return comma-separated string for filtering - the filter will check if value is in this string
         return groupsArray.join(',');
       },
+    },
+    {
+      id: 'equipment',
+      label: t('general.equipment'),
+      icon: <Wrench className="size-4" />,
+      options: MUSCLEWIKI_CATEGORY_OPTIONS.map((eq) => ({ value: eq.value, label: eq.label })),
+      getFilterValue: (row) => (row as any).equipment || '',
+    },
+    {
+      id: 'difficulty',
+      label: t('exercises.columns.difficulty') || 'Difficulty',
+      icon: <Tag className="size-4" />,
+      options: MUSCLEWIKI_DIFFICULTY_OPTIONS.map((d) => ({ value: d.value, label: d.label })),
+      getFilterValue: (row) => (row as any).difficulty || '',
+    },
+    {
+      id: 'force',
+      label: t('exercises.columns.force') || 'Force',
+      icon: <Wrench className="size-4" />,
+      options: MUSCLEWIKI_FORCE_OPTIONS.map((f) => ({ value: f.value, label: f.label })),
+      getFilterValue: (row) => (row as any).force || '',
+    },
+    {
+      id: 'mechanic',
+      label: t('exercises.columns.mechanic') || 'Mechanic',
+      icon: <Wrench className="size-4" />,
+      options: MUSCLEWIKI_MECHANIC_OPTIONS.map((m) => ({ value: m.value, label: m.label })),
+      getFilterValue: (row) => (row as any).mechanic || '',
     },
     {
       id: 'modality',

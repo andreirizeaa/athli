@@ -167,6 +167,146 @@ export const MODALITY_OPTIONS = [
 
 export type Modality = typeof MODALITY_OPTIONS[number]['value'];
 
+// ============================================================================
+// MUSCLEWIKI FILTER OPTIONS
+// These are aligned with MuscleWiki API categories for seamless integration
+// ============================================================================
+
+// MuscleWiki Equipment Categories (maps to their 'category' field)
+export const MUSCLEWIKI_CATEGORY_OPTIONS = [
+    { value: 'Barbell', label: 'Barbell' },
+    { value: 'Dumbbell', label: 'Dumbbell' },
+    { value: 'Machine', label: 'Machine' },
+    { value: 'Cable', label: 'Cable' },
+    { value: 'Bodyweight', label: 'Bodyweight' },
+    { value: 'Kettlebell', label: 'Kettlebell' },
+    { value: 'Band', label: 'Resistance Band' },
+    { value: 'Smith Machine', label: 'Smith Machine' },
+    { value: 'Plate', label: 'Weight Plate' },
+    { value: 'Other', label: 'Other' },
+] as const;
+
+export type MuscleWikiCategory = typeof MUSCLEWIKI_CATEGORY_OPTIONS[number]['value'];
+
+// MuscleWiki Target Muscles (comprehensive list matching their API)
+export const MUSCLEWIKI_MUSCLE_OPTIONS = [
+    // Upper Body - Chest
+    { value: 'Chest', label: 'Chest' },
+    { value: 'Pectoralis Major', label: 'Pectoralis Major' },
+    { value: 'Pectoralis Minor', label: 'Pectoralis Minor' },
+
+    // Upper Body - Back
+    { value: 'Back', label: 'Back' },
+    { value: 'Lats', label: 'Latissimus Dorsi' },
+    { value: 'Traps', label: 'Trapezius' },
+    { value: 'Rhomboids', label: 'Rhomboids' },
+    { value: 'Lower Back', label: 'Lower Back' },
+    { value: 'Erector Spinae', label: 'Erector Spinae' },
+    { value: 'Teres Major', label: 'Teres Major' },
+    { value: 'Teres Minor', label: 'Teres Minor' },
+
+    // Upper Body - Shoulders
+    { value: 'Shoulders', label: 'Shoulders' },
+    { value: 'Anterior Deltoid', label: 'Front Deltoid' },
+    { value: 'Lateral Deltoid', label: 'Side Deltoid' },
+    { value: 'Posterior Deltoid', label: 'Rear Deltoid' },
+    { value: 'Rotator Cuff', label: 'Rotator Cuff' },
+
+    // Upper Body - Arms
+    { value: 'Biceps', label: 'Biceps' },
+    { value: 'Biceps Brachii', label: 'Biceps Brachii' },
+    { value: 'Brachialis', label: 'Brachialis' },
+    { value: 'Triceps', label: 'Triceps' },
+    { value: 'Triceps Brachii', label: 'Triceps Brachii' },
+    { value: 'Forearms', label: 'Forearms' },
+    { value: 'Wrist Flexors', label: 'Wrist Flexors' },
+    { value: 'Wrist Extensors', label: 'Wrist Extensors' },
+
+    // Core
+    { value: 'Core', label: 'Core' },
+    { value: 'Abs', label: 'Abs' },
+    { value: 'Rectus Abdominis', label: 'Rectus Abdominis' },
+    { value: 'Obliques', label: 'Obliques' },
+    { value: 'Transverse Abdominis', label: 'Transverse Abdominis' },
+    { value: 'Serratus Anterior', label: 'Serratus Anterior' },
+
+    // Lower Body - Quadriceps
+    { value: 'Quadriceps', label: 'Quadriceps' },
+    { value: 'Rectus Femoris', label: 'Rectus Femoris' },
+    { value: 'Vastus Lateralis', label: 'Vastus Lateralis' },
+    { value: 'Vastus Medialis', label: 'Vastus Medialis' },
+
+    // Lower Body - Hamstrings & Glutes
+    { value: 'Hamstrings', label: 'Hamstrings' },
+    { value: 'Glutes', label: 'Glutes' },
+    { value: 'Gluteus Maximus', label: 'Gluteus Maximus' },
+    { value: 'Gluteus Medius', label: 'Gluteus Medius' },
+    { value: 'Gluteus Minimus', label: 'Gluteus Minimus' },
+
+    // Lower Body - Lower Legs
+    { value: 'Calves', label: 'Calves' },
+    { value: 'Gastrocnemius', label: 'Gastrocnemius' },
+    { value: 'Soleus', label: 'Soleus' },
+    { value: 'Tibialis Anterior', label: 'Tibialis Anterior' },
+
+    // Lower Body - Hip
+    { value: 'Hip Flexors', label: 'Hip Flexors' },
+    { value: 'Adductors', label: 'Adductors' },
+    { value: 'Abductors', label: 'Abductors' },
+
+    // Neck
+    { value: 'Neck', label: 'Neck' },
+    { value: 'Sternocleidomastoid', label: 'Sternocleidomastoid' },
+] as const;
+
+export type MuscleWikiMuscle = typeof MUSCLEWIKI_MUSCLE_OPTIONS[number]['value'];
+
+// Simplified muscle groups for filtering (parent categories)
+export const MUSCLEWIKI_MUSCLE_GROUP_OPTIONS = [
+    { value: 'Chest', label: 'Chest' },
+    { value: 'Back', label: 'Back' },
+    { value: 'Shoulders', label: 'Shoulders' },
+    { value: 'Biceps', label: 'Biceps' },
+    { value: 'Triceps', label: 'Triceps' },
+    { value: 'Forearms', label: 'Forearms' },
+    { value: 'Core', label: 'Core' },
+    { value: 'Quadriceps', label: 'Quadriceps' },
+    { value: 'Hamstrings', label: 'Hamstrings' },
+    { value: 'Glutes', label: 'Glutes' },
+    { value: 'Calves', label: 'Calves' },
+    { value: 'Hip Flexors', label: 'Hip Flexors' },
+    { value: 'Neck', label: 'Neck' },
+] as const;
+
+export type MuscleWikiMuscleGroup = typeof MUSCLEWIKI_MUSCLE_GROUP_OPTIONS[number]['value'];
+
+// MuscleWiki Difficulty Levels
+export const MUSCLEWIKI_DIFFICULTY_OPTIONS = [
+    { value: 'Beginner', label: 'Beginner' },
+    { value: 'Intermediate', label: 'Intermediate' },
+    { value: 'Advanced', label: 'Advanced' },
+] as const;
+
+export type MuscleWikiDifficulty = typeof MUSCLEWIKI_DIFFICULTY_OPTIONS[number]['value'];
+
+// MuscleWiki Force Types
+export const MUSCLEWIKI_FORCE_OPTIONS = [
+    { value: 'Push', label: 'Push' },
+    { value: 'Pull', label: 'Pull' },
+    { value: 'Static', label: 'Static' },
+    { value: 'Dynamic', label: 'Dynamic' },
+] as const;
+
+export type MuscleWikiForce = typeof MUSCLEWIKI_FORCE_OPTIONS[number]['value'];
+
+// MuscleWiki Mechanic Types
+export const MUSCLEWIKI_MECHANIC_OPTIONS = [
+    { value: 'Compound', label: 'Compound' },
+    { value: 'Isolation', label: 'Isolation' },
+] as const;
+
+export type MuscleWikiMechanic = typeof MUSCLEWIKI_MECHANIC_OPTIONS[number]['value'];
+
 // Habit Unit Options
 export const HABIT_UNIT_OPTIONS = [
     { value: 'steps', label: 'Steps' },
