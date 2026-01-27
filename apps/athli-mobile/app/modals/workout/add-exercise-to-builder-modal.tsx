@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { StyleSheet, Text, View, Platform } from 'react-native';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { StyleSheet, Text, View, Platform, ActivityIndicator } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { X, Check } from 'lucide-react-native';
+import { X, Check, Filter, Play } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -13,253 +13,17 @@ import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { SearchBar } from '@/components/ui/search-bar';
-import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { hexToRgba } from '@/utils/colorUtils';
-import { useModalCallbacks } from '@/stores';
+import { useModalCallbacksStore } from '@/stores/useModalCallbacksStore';
+import { useAllExercises, type Exercise, type ExerciseFilters } from '@/hooks/useAllExercises';
+import { useExerciseThumbnails } from '@/hooks/useExerciseThumbnails';
+import { getYouTubeThumbnail, isYouTubeUrl } from '@/hooks/use-video-thumbnail';
+import { useQuery } from '@tanstack/react-query';
+import { getExercises as getCoachExercises } from '@/services/coach/coach-exercise-service';
 
-// Mock Exercise Data from exercise-search.ts
-export type Exercise = {
-    exerciseId: string;
-    name: string;
-    imageUrl: string;
-    equipments: string[];
-    bodyParts: string[];
-    exerciseType: string;
-    targetMuscles: string[];
-    secondaryMuscles: string[];
-    videoUrl: string;
-    keywords: string[];
-    overview: string;
-    instructions: string[];
-    exerciseTips: string[];
-    variations: string[];
-    relatedExerciseIds: string[];
-};
-
-export const MOCK_EXERCISES: Exercise[] = [
-    {
-        exerciseId: 'K6NnTv0',
-        name: 'Bench Press',
-        imageUrl: '/demo-img.png',
-        equipments: ['Barbell'],
-        bodyParts: ['Chest'],
-        exerciseType: 'weight_reps',
-        targetMuscles: ['Pectoralis Major Clavicular Head'],
-        secondaryMuscles: ['Deltoid Anterior', 'Pectoralis Major Clavicular Head', 'Triceps Brachii'],
-        videoUrl: '/demo-video.mp4',
-        keywords: [
-            'Chest workout with barbell',
-            'Barbell bench press exercise',
-            'Strength training for chest',
-            'Upper body workout with barbell',
-            'Barbell chest exercises',
-            'Bench press for chest muscles',
-            'Building chest muscles with bench press',
-            'Chest strengthening with barbell',
-            'Bench press workout routine',
-            'Barbell exercises for chest muscle growth',
-        ],
-        overview:
-            'The Bench Press is a classic strength training exercise that primarily targets the chest, shoulders, and triceps, contributing to upper body muscle development. It is suitable for anyone, from beginners to professional athletes, looking to improve their upper body strength and muscular endurance. Individuals may want to incorporate bench press into their routine for its effectiveness in enhancing physical performance, promoting bone health, and improving body composition.',
-        instructions: [
-            'Grip the barbell with your hands slightly wider than shoulder-width apart, palms facing your feet, and lift it off the rack, holding it straight over your chest with your arms fully extended.',
-            'Slowly lower the barbell down to your chest while keeping your elbows at a 90-degree angle.',
-            'Once the barbell touches your chest, push it back up to the starting position while keeping your back flat on the bench.',
-            'Repeat this process for the desired number of repetitions, always maintaining control of the barbell and ensuring your form is correct.',
-        ],
-        exerciseTips: [
-            'Avoid Arching Your Back: One common mistake is excessively arching the back during the lift. This can lead to lower back injuries. Your lower back should have a natural arch, but it should not be overly exaggerated. Your butt, shoulders, and head should maintain contact with the bench at all times.',
-            'Controlled Movement: Avoid the temptation to lift the barbell too quickly. A controlled, steady lift is more effective and reduces the risk of injury. Lower the bar to your mid-chest slowly, pause briefly, then push it back up without locking your elbows at the top.',
-            "Don't Lift Alone: Always have a spotter when lifting heavy weights to ensure safety.",
-        ],
-        variations: [
-            'Decline Bench Press: This variation is performed on a decline bench to target the lower part of the chest.',
-            'Close-Grip Bench Press: This variation focuses on the triceps and the inner part of the chest by placing the hands closer together on the bar.',
-            'Dumbbell Bench Press: This variation uses dumbbells instead of a barbell, allowing for a greater range of motion and individual arm movement.',
-            'Reverse-Grip Bench Press: This variation is performed by flipping your grip so that your palms face towards you, targeting the upper chest and triceps.',
-        ],
-        relatedExerciseIds: [
-            'U0uPZBq_main',
-            'QD32SbB',
-            'pdm4AfV',
-            'SebLXCG',
-            'T3JogV7',
-            'hiWPEs1',
-            'Y5ppDdt',
-            'C8OV7Pv',
-            'r3tQt3U',
-            'dCSgT7N',
-        ],
-    },
-    {
-        exerciseId: 'U0uPZBq_main',
-        name: 'Squat',
-        imageUrl: '/demo-img.png',
-        equipments: ['Barbell'],
-        bodyParts: ['Legs'],
-        exerciseType: 'weight_reps',
-        targetMuscles: ['Quadriceps'],
-        secondaryMuscles: ['Glutes', 'Hamstrings', 'Calves'],
-        videoUrl: '/demo-video.mp4',
-        keywords: [
-            'Leg workout with barbell',
-            'Barbell squat exercise',
-            'Strength training for legs',
-            'Lower body workout with barbell',
-            'Barbell leg exercises',
-            'Squat for leg muscles',
-            'Building leg muscles with squat',
-            'Leg strengthening with barbell',
-            'Squat workout routine',
-            'Barbell exercises for leg muscle growth',
-        ],
-        overview:
-            "The Squat is a fundamental compound exercise that targets the quadriceps, glutes, and hamstrings. It's essential for building lower body strength and improving functional movement patterns.",
-        instructions: [
-            'Stand with your feet shoulder-width apart, toes slightly pointed out.',
-            'Hold the barbell across your upper back, keeping your chest up and core engaged.',
-            'Lower your body by bending your knees and hips, as if sitting back into a chair.',
-            'Descend until your thighs are parallel to the floor, then drive through your heels to return to the starting position.',
-        ],
-        exerciseTips: [
-            'Keep your chest up and back straight throughout the movement.',
-            "Ensure your knees track over your toes and don't cave inward.",
-            'Drive through your heels, not your toes, when standing up.',
-        ],
-        variations: [
-            'Front Squat: Hold the barbell in front of your shoulders.',
-            'Goblet Squat: Hold a dumbbell or kettlebell at chest level.',
-            'Bulgarian Split Squat: Single-leg variation with rear foot elevated.',
-        ],
-        relatedExerciseIds: ['K6NnTv0', 'QD32SbB', 'pdm4AfV'],
-    },
-    {
-        exerciseId: 'QD32SbB',
-        name: 'Deadlift',
-        imageUrl: '/demo-img.png',
-        equipments: ['Barbell'],
-        bodyParts: ['Back'],
-        exerciseType: 'weight_reps',
-        targetMuscles: ['Erector Spinae'],
-        secondaryMuscles: ['Glutes', 'Hamstrings', 'Lats'],
-        videoUrl: '/demo-video.mp4',
-        keywords: [
-            'Back workout with barbell',
-            'Barbell deadlift exercise',
-            'Strength training for back',
-            'Posterior chain workout',
-            'Barbell back exercises',
-            'Deadlift for back muscles',
-            'Building back muscles with deadlift',
-            'Back strengthening with barbell',
-            'Deadlift workout routine',
-            'Barbell exercises for back muscle growth',
-        ],
-        overview:
-            "The Deadlift is a compound exercise that primarily targets the posterior chain, including the back, glutes, and hamstrings. It's one of the most effective exercises for building overall strength.",
-        instructions: [
-            'Stand with your feet hip-width apart, with the barbell over the middle of your feet.',
-            'Bend at the hips and knees to grip the bar, keeping your back straight and chest up.',
-            'Drive through your heels and extend your hips and knees to lift the bar.',
-            'Keep the bar close to your body as you stand up, then lower it back down with control.',
-        ],
-        exerciseTips: [
-            'Maintain a neutral spine throughout the movement.',
-            'Keep the bar close to your body - it should almost drag up your legs.',
-            'Engage your lats by pulling your shoulders back before lifting.',
-        ],
-        variations: [
-            'Romanian Deadlift: Focuses more on the hamstrings with less knee bend.',
-            'Sumo Deadlift: Wider stance targets inner thighs more.',
-            'Trap Bar Deadlift: Uses a hexagonal bar for a more upright position.',
-        ],
-        relatedExerciseIds: ['K6NnTv0', 'U0uPZBq_main', 'pdm4AfV'],
-    },
-    {
-        exerciseId: 'pdm4AfV',
-        name: 'Overhead Press',
-        imageUrl: '/demo-img.png',
-        equipments: ['Barbell'],
-        bodyParts: ['Shoulders'],
-        exerciseType: 'weight_reps',
-        targetMuscles: ['Deltoid Anterior'],
-        secondaryMuscles: ['Triceps Brachii', 'Core'],
-        videoUrl: '/demo-video.mp4',
-        keywords: [
-            'Shoulder workout with barbell',
-            'Barbell overhead press exercise',
-            'Strength training for shoulders',
-            'Upper body workout with barbell',
-            'Barbell shoulder exercises',
-            'Overhead press for shoulder muscles',
-            'Building shoulder muscles with press',
-            'Shoulder strengthening with barbell',
-            'Overhead press workout routine',
-            'Barbell exercises for shoulder muscle growth',
-        ],
-        overview:
-            "The Overhead Press is a compound exercise that targets the shoulders and triceps while also engaging the core for stability. It's excellent for building upper body strength and improving shoulder mobility.",
-        instructions: [
-            'Stand with your feet shoulder-width apart, holding the barbell at shoulder height.',
-            'Grip the bar slightly wider than shoulder-width, with your palms facing forward.',
-            'Press the bar straight up overhead, keeping your core tight and avoiding arching your back excessively.',
-            'Lower the bar back to shoulder height with control.',
-        ],
-        exerciseTips: [
-            'Keep your core engaged throughout the movement to protect your lower back.',
-            'Press the bar in a straight line, not forward or backward.',
-            "Don't use leg drive - this should be a strict press.",
-        ],
-        variations: [
-            'Push Press: Uses leg drive to help press the weight overhead.',
-            'Seated Overhead Press: Removes leg drive and focuses purely on upper body.',
-            'Dumbbell Overhead Press: Allows for independent arm movement.',
-        ],
-        relatedExerciseIds: ['K6NnTv0', 'U0uPZBq_main', 'QD32SbB'],
-    },
-    {
-        exerciseId: 'SebLXCG',
-        name: 'Pull Up',
-        imageUrl: '/demo-img.png',
-        equipments: ['Pull-up Bar'],
-        bodyParts: ['Back'],
-        exerciseType: 'reps',
-        targetMuscles: ['Latissimus Dorsi'],
-        secondaryMuscles: ['Biceps', 'Rhomboids', 'Rear Deltoids'],
-        videoUrl: '/demo-video.mp4',
-        keywords: [
-            'Back workout with bodyweight',
-            'Pull up exercise',
-            'Strength training for back',
-            'Bodyweight back exercises',
-            'Pull up for back muscles',
-            'Building back muscles with pull ups',
-            'Back strengthening with bodyweight',
-            'Pull up workout routine',
-            'Bodyweight exercises for back muscle growth',
-        ],
-        overview:
-            "The Pull Up is a bodyweight exercise that primarily targets the latissimus dorsi, biceps, and upper back. It's an excellent exercise for building upper body pulling strength.",
-        instructions: [
-            'Hang from a pull-up bar with your palms facing away from you, hands slightly wider than shoulder-width.',
-            'Pull your body up until your chin clears the bar.',
-            'Lower yourself back down with control until your arms are fully extended.',
-            'Repeat for the desired number of repetitions.',
-        ],
-        exerciseTips: [
-            'Keep your core engaged and avoid swinging your legs.',
-            'Focus on pulling with your back muscles, not just your arms.',
-            'Full range of motion is important - go all the way up and all the way down.',
-        ],
-        variations: [
-            'Chin Up: Palms face toward you, targets biceps more.',
-            'Wide Grip Pull Up: Wider grip emphasizes the lats more.',
-            'Assisted Pull Up: Use a resistance band or machine for assistance.',
-        ],
-        relatedExerciseIds: ['K6NnTv0', 'QD32SbB', 'T3JogV7'],
-    },
-];
+// Re-export Exercise type for use by other components
+export type { Exercise } from '@/hooks/useAllExercises';
 
 export default function AddExerciseToBuilderModal() {
     const router = useRouter();
@@ -269,16 +33,134 @@ export default function AddExerciseToBuilderModal() {
     const { multiple, title } = useLocalSearchParams<{ multiple?: string, title?: string }>();
     const isMultiple = multiple === 'true';
 
-    const { triggerExerciseSelect, triggerExercisesSelect } = useModalCallbacks();
+    const {
+        triggerExerciseSelect,
+        triggerExercisesSelect,
+        setFilterSelectCallback,
+    } = useModalCallbacksStore();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [filters, setFilters] = useState<ExerciseFilters>({});
+
+    // Load coach (custom) exercises
+    const { data: coachExercisesData = [], isLoading: isLoadingCoach } = useQuery({
+        queryKey: ['exercises'],
+        queryFn: getCoachExercises,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    // Transform coach exercises to match Exercise type
+    const transformedCoachExercises: Exercise[] = useMemo(() => {
+        return coachExercisesData.map((ex) => ({
+            exerciseId: ex.id,
+            name: ex.name,
+            imageUrl: '',
+            equipments: ex.category ? [ex.category] : [],
+            bodyParts: ex.muscle_group?.slice(0, 1) || [],
+            exerciseType: 'weight_reps',
+            targetMuscles: ex.muscle_group || [],
+            secondaryMuscles: [],
+            videoUrl: ex.video_link || '',
+            keywords: [ex.name, ex.category, ex.difficulty, ...(ex.muscle_group || [])].filter(Boolean) as string[],
+            overview: ex.description || '',
+            instructions: [],
+            exerciseTips: [],
+            variations: [],
+            relatedExerciseIds: [],
+            difficulty: ex.difficulty,
+            category: ex.category,
+            source: 'custom' as const,
+            rawThumbnailUrl: undefined,
+        }));
+    }, [coachExercisesData]);
+
+    // Use the new hook for loading all exercises with in-memory search/filter
+    const {
+        exercises: musclewikiExercises,
+        total,
+        totalCached,
+        isLoading: isLoadingMusclewiki,
+        isFetching,
+        isSearching,
+        hasMore,
+        loadMore,
+        error,
+    } = useAllExercises(searchQuery, filters);
+
+    // Filter coach exercises based on search and filters
+    const filteredCoachExercises = useMemo(() => {
+        let result = transformedCoachExercises;
+
+        // Apply search
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            result = result.filter((ex) =>
+                ex.name.toLowerCase().includes(query) ||
+                ex.category?.toLowerCase().includes(query) ||
+                ex.targetMuscles.some((m) => m.toLowerCase().includes(query))
+            );
+        }
+
+        // Apply filters
+        if (filters.categories?.length) {
+            result = result.filter(
+                (ex) => ex.category && filters.categories?.includes(ex.category)
+            );
+        }
+
+        if (filters.muscles?.length) {
+            result = result.filter((ex) =>
+                ex.targetMuscles.some((m) => filters.muscles?.includes(m))
+            );
+        }
+
+        if (filters.difficulties?.length) {
+            result = result.filter(
+                (ex) => ex.difficulty && filters.difficulties?.includes(ex.difficulty)
+            );
+        }
+
+        return result;
+    }, [transformedCoachExercises, searchQuery, filters]);
+
+    // Merge coach exercises at top, then MuscleWiki exercises
+    const exercises = useMemo(() => {
+        return [...filteredCoachExercises, ...musclewikiExercises];
+    }, [filteredCoachExercises, musclewikiExercises]);
+
+    const isLoading = isLoadingCoach || isLoadingMusclewiki;
+
+    // Use the thumbnails hook for progressive loading
+    const { getThumbnailUrl, isLoading: isThumbnailsLoading } = useExerciseThumbnails(exercises);
+
+    // Set up filter callback to receive selections from filter modal
+    useEffect(() => {
+        setFilterSelectCallback((newFilters) => {
+            setFilters({
+                muscles: newFilters.muscles,
+                categories: newFilters.categories,
+                difficulties: newFilters.difficulties,
+            });
+        });
+
+        return () => {
+            setFilterSelectCallback(() => {});
+        };
+    }, [setFilterSelectCallback]);
+
+    // Count active filters
+    const activeFilterCount = useMemo(() => {
+        return (filters.muscles?.length || 0) +
+            (filters.categories?.length || 0) +
+            (filters.difficulties?.length || 0);
+    }, [filters]);
 
     const handleClose = () => {
         router.back();
     };
 
-    const handleSelectExercise = (exercise: Exercise) => {
+    const handleSelectExercise = useCallback((exercise: Exercise) => {
         if (isMultiple) {
             setSelectedIds(prev =>
                 prev.includes(exercise.exerciseId)
@@ -286,39 +168,109 @@ export default function AddExerciseToBuilderModal() {
                     : [...prev, exercise.exerciseId]
             );
         } else {
-            triggerExerciseSelect(exercise);
+            // Get thumbnail URL for the exercise
+            // For custom exercises with YouTube videos, use YouTube thumbnail
+            let thumbnailUrl: string | undefined;
+            if (exercise.source === 'custom' && exercise.videoUrl && isYouTubeUrl(exercise.videoUrl)) {
+                thumbnailUrl = getYouTubeThumbnail(exercise.videoUrl) || undefined;
+            } else {
+                thumbnailUrl = getThumbnailUrl(exercise.rawThumbnailUrl);
+            }
+
+            // Transform to expected format
+            triggerExerciseSelect({
+                exerciseId: exercise.exerciseId,
+                name: exercise.name,
+                imageUrl: thumbnailUrl || exercise.imageUrl,
+                equipments: exercise.equipments,
+                bodyParts: exercise.bodyParts,
+                exerciseType: exercise.exerciseType,
+                targetMuscles: exercise.targetMuscles,
+                secondaryMuscles: exercise.secondaryMuscles,
+                videoUrl: exercise.videoUrl,
+                keywords: exercise.keywords,
+                overview: exercise.overview,
+                instructions: exercise.instructions,
+                exerciseTips: exercise.exerciseTips,
+                variations: exercise.variations,
+                relatedExerciseIds: exercise.relatedExerciseIds,
+            });
             router.back();
         }
-    };
+    }, [isMultiple, triggerExerciseSelect, getThumbnailUrl, router]);
 
-    const handleConfirmSelection = () => {
-        const selectedExercises = MOCK_EXERCISES.filter(ex => selectedIds.includes(ex.exerciseId));
+    const handleConfirmSelection = useCallback(() => {
+        const selectedExercises = exercises
+            .filter(ex => selectedIds.includes(ex.exerciseId))
+            .map(ex => {
+                // For custom exercises with YouTube videos, use YouTube thumbnail
+                let thumbnailUrl: string | undefined;
+                if (ex.source === 'custom' && ex.videoUrl && isYouTubeUrl(ex.videoUrl)) {
+                    thumbnailUrl = getYouTubeThumbnail(ex.videoUrl) || undefined;
+                } else {
+                    thumbnailUrl = getThumbnailUrl(ex.rawThumbnailUrl);
+                }
+                return {
+                    exerciseId: ex.exerciseId,
+                    name: ex.name,
+                    imageUrl: thumbnailUrl || ex.imageUrl,
+                    equipments: ex.equipments,
+                    bodyParts: ex.bodyParts,
+                    exerciseType: ex.exerciseType,
+                    targetMuscles: ex.targetMuscles,
+                    secondaryMuscles: ex.secondaryMuscles,
+                    videoUrl: ex.videoUrl,
+                    keywords: ex.keywords,
+                    overview: ex.overview,
+                    instructions: ex.instructions,
+                    exerciseTips: ex.exerciseTips,
+                    variations: ex.variations,
+                    relatedExerciseIds: ex.relatedExerciseIds,
+                };
+            });
         triggerExercisesSelect(selectedExercises);
         router.back();
-    };
+    }, [exercises, selectedIds, getThumbnailUrl, triggerExercisesSelect, router]);
 
-    const filteredExercises = useMemo(() => {
-        const query = searchQuery.toLowerCase().trim();
-        if (!query) return MOCK_EXERCISES;
+    const handleOpenFilterModal = useCallback(() => {
+        router.push({
+            pathname: '/modals/workout/exercise-filter-modal',
+            params: {
+                initialMuscles: filters.muscles?.join(',') || '',
+                initialCategories: filters.categories?.join(',') || '',
+                initialDifficulties: filters.difficulties?.join(',') || '',
+            },
+        });
+    }, [router, filters]);
 
-        return MOCK_EXERCISES.filter(ex =>
-            ex.name.toLowerCase().includes(query) ||
-            ex.bodyParts.some(bp => bp.toLowerCase().includes(query)) ||
-            ex.equipments.some(eq => eq.toLowerCase().includes(query))
-        );
-    }, [searchQuery]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
 
-    const renderExerciseItem = ({ item }: { item: Exercise }) => {
+    const renderExerciseItem = useCallback(({ item }: { item: Exercise }) => {
         const selectedIndex = selectedIds.indexOf(item.exerciseId);
         const isSelected = selectedIndex !== -1;
+
+        // For custom exercises, use YouTube thumbnail if available
+        // For MuscleWiki exercises, use the cached thumbnail system
+        let thumbnailUrl: string | undefined;
+        if (item.source === 'custom' && item.videoUrl) {
+            if (isYouTubeUrl(item.videoUrl)) {
+                thumbnailUrl = getYouTubeThumbnail(item.videoUrl) || undefined;
+            }
+            // For Supabase/other videos, thumbnailUrl stays undefined (shows placeholder)
+        } else {
+            thumbnailUrl = getThumbnailUrl(item.rawThumbnailUrl) || undefined;
+        }
 
         const handleThumbnailPress = () => {
             router.push({
                 pathname: '/modals/workout/exercise-details-modal',
-                params: { name: item.name }
+                params: {
+                    name: item.name,
+                    exerciseId: item.exerciseId,
+                    musclewikiId: item.musclewikiId,
+                }
             });
         };
 
@@ -328,15 +280,27 @@ export default function AddExerciseToBuilderModal() {
                 style={styles.exerciseItem}
             >
                 <PressableScale onPress={handleThumbnailPress}>
-                    <Image
-                        source={{ uri: item.imageUrl }}
-                        style={styles.thumbnail}
-                        contentFit="cover"
-                        transition={200}
-                    />
+                    <View style={styles.thumbnailContainer}>
+                        {thumbnailUrl ? (
+                            <Image
+                                source={{ uri: thumbnailUrl }}
+                                style={styles.thumbnail}
+                                contentFit="cover"
+                                transition={200}
+                            />
+                        ) : (
+                            <View style={[styles.thumbnail, styles.placeholderThumbnail, { backgroundColor: themeColors.surfaceSecondary }]}>
+                                <Play {...({ size: 16, color: themeColors.mutedText } as any)} />
+                            </View>
+                        )}
+                        {/* Play button overlay */}
+                        <View style={styles.playOverlay}>
+                            <Play {...({ size: 12, color: "#fff", fill: "#fff" } as any)} />
+                        </View>
+                    </View>
                 </PressableScale>
                 <View style={styles.infoContainer}>
-                    <Text style={[styles.exerciseName, { color: themeColors.text }]} numberOfLines={1}>
+                    <Text style={[styles.exerciseName, { color: themeColors.text }]}>
                         {item.name}
                     </Text>
                 </View>
@@ -355,7 +319,9 @@ export default function AddExerciseToBuilderModal() {
                 )}
             </PressableOpacity>
         );
-    };
+    }, [selectedIds, getThumbnailUrl, handleSelectExercise, isMultiple, themeColors, router]);
+
+    const hasActiveFilters = activeFilterCount > 0;
 
     return (
         <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
@@ -405,21 +371,88 @@ export default function AddExerciseToBuilderModal() {
 
             <View style={styles.content}>
                 <FlashList
-                    data={filteredExercises}
+                    data={exercises}
                     keyExtractor={(item) => item.exerciseId}
                     renderItem={renderExerciseItem}
                     ItemSeparatorComponent={() => <Separator style={styles.separator} />}
                     contentContainerStyle={[styles.listContent, { paddingTop: headerHeight + 16 }]}
                     ListHeaderComponent={
                         <View style={styles.searchContainer}>
-                            <SearchBar
-                                value={searchQuery}
-                                onChangeText={setSearchQuery}
-                                placeholder={t('general.searchPlaceholder')}
-                            />
+                            <View style={styles.searchRow}>
+                                <View style={styles.searchBarWrapper}>
+                                    <SearchBar
+                                        value={searchQuery}
+                                        onChangeText={setSearchQuery}
+                                        placeholder={t('general.searchPlaceholder')}
+                                    />
+                                </View>
+                                <View style={styles.filterButtonContainer}>
+                                    <IconButton
+                                        icon={{ sf: 'line.horizontal.3.decrease', IconComponent: Filter }}
+                                        onPress={handleOpenFilterModal}
+                                        size="md"
+                                        color={hasActiveFilters ? themeColors.primary : themeColors.text}
+                                    />
+                                    {activeFilterCount > 0 && (
+                                        <View style={[styles.filterBadge, { backgroundColor: themeColors.primary }]}>
+                                            <Text style={[styles.filterBadgeText, { color: themeColors.primaryForeground }]}>
+                                                {activeFilterCount}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
+                            </View>
+                            {/* Exercise count */}
+                            <View style={styles.countRow}>
+                                <Text style={[styles.countText, { color: themeColors.mutedText }]}>
+                                    {isLoading
+                                        ? t('general.loading')
+                                        : isSearching
+                                            ? 'Searching...'
+                                            : total > 0
+                                                ? `${exercises.length} of ${total} ${t('library.exercises')}`
+                                                : `${exercises.length} ${exercises.length === 1 ? t('library.exercise') : t('library.exercises')}`}
+                                </Text>
+                            </View>
                         </View>
                     }
-                    showsVerticalScrollIndicator={false}
+                    ListEmptyComponent={
+                        isLoading ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="large" color={themeColors.primary} />
+                            </View>
+                        ) : (
+                            <View style={styles.emptyContainer}>
+                                <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
+                                    {searchQuery || hasActiveFilters
+                                        ? 'No exercises found'
+                                        : 'No exercises available'}
+                                </Text>
+                            </View>
+                        )
+                    }
+                    ListFooterComponent={
+                        <>
+                            {(isSearching || isFetching) && exercises.length > 0 && (
+                                <View style={styles.loadingMoreContainer}>
+                                    <ActivityIndicator size="small" color={themeColors.primary} />
+                                    <Text style={[styles.loadingMoreText, { color: themeColors.mutedText }]}>
+                                        {t('general.loadingMore')}
+                                    </Text>
+                                </View>
+                            )}
+                            {exercises.length > 0 && (
+                                <View style={styles.attributionContainer}>
+                                    <Text style={[styles.attributionText, { color: themeColors.mutedText }]}>
+                                        {total > 0 ? `${exercises.length} of ${total} exercises • ` : ''}Powered by MuscleWiki
+                                    </Text>
+                                </View>
+                            )}
+                        </>
+                    }
+                    showsVerticalScrollIndicator={true}
+                    onEndReached={loadMore}
+                    onEndReachedThreshold={0.3}
                 />
             </View>
         </View>
@@ -462,6 +495,40 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingBottom: 16,
     },
+    searchRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    searchBarWrapper: {
+        flex: 1,
+    },
+    countRow: {
+        marginTop: 8,
+    },
+    countText: {
+        ...typography.p2,
+        fontSize: 13,
+    },
+    filterButtonContainer: {
+        position: 'relative',
+    },
+    filterBadge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 4,
+    },
+    filterBadgeText: {
+        ...typography.p2,
+        fontSize: 10,
+        fontWeight: '700',
+    },
     listContent: {
         paddingBottom: 40,
     },
@@ -470,16 +537,34 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 8,
     },
+    thumbnailContainer: {
+        position: 'relative',
+        marginLeft: 16,
+    },
     thumbnail: {
         width: 48,
         height: 48,
         borderRadius: 8,
-        backgroundColor: '#f0f0f0',
-        marginLeft: 16,
+    },
+    placeholderThumbnail: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    playOverlay: {
+        position: 'absolute',
+        bottom: 2,
+        right: 2,
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     infoContainer: {
         flex: 1,
         marginLeft: 12,
+        marginRight: 12,
         justifyContent: 'center',
     },
     exerciseName: {
@@ -493,7 +578,6 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         alignItems: 'center',
         justifyContent: 'center',
-        marginLeft: 12,
         marginRight: 16,
     },
     selectionNumber: {
@@ -502,7 +586,37 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     separator: {
-        marginLeft: 76, // 16 (padding) + 48 (thumb) + 12 (gap)
+        marginLeft: 76,
         marginRight: 16,
+    },
+    loadingContainer: {
+        paddingVertical: 40,
+        alignItems: 'center',
+    },
+    emptyContainer: {
+        paddingVertical: 40,
+        alignItems: 'center',
+    },
+    emptyText: {
+        ...typography.p1,
+    },
+    attributionContainer: {
+        paddingVertical: 16,
+        alignItems: 'center',
+    },
+    attributionText: {
+        ...typography.p2,
+        fontSize: 11,
+    },
+    loadingMoreContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        gap: 8,
+    },
+    loadingMoreText: {
+        ...typography.p2,
+        fontSize: 12,
     },
 });

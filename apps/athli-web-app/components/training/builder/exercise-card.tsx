@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { ArrowDown, ArrowUp, Ellipsis, Play, Plus, Trash2, X, Heart, Activity, Timer, Info } from 'lucide-react';
-import { Exercise, searchExercises } from '@/api/exercise/exercise-search';
+import { ArrowDown, ArrowUp, Dumbbell, Ellipsis, Play, Plus, Trash2, X, Heart, Activity, Timer, Info, Loader2 } from 'lucide-react';
+import { useAllExercises, type Exercise } from '@/hooks/use-all-exercises';
+import { useExerciseThumbnails, useSingleThumbnail } from '@/hooks/use-exercise-thumbnails';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -555,20 +556,11 @@ export const ExerciseCard = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isSelectOpen, setIsSelectOpen] = useState(false);
-  // Initialize alternatives from exercise prop if available, or load from exercise IDs
-  const [alternatives, setAlternatives] = useState<Exercise[]>(() => {
-    if (exercise.alternatives && exercise.alternatives.length > 0) {
-      // Load full exercise objects from IDs
-      return exercise.alternatives
-        .map((id) => searchExercises('').find((e) => e.exerciseId === id))
-        .filter((e): e is Exercise => e !== undefined);
-    }
-    return [];
-  });
+  // Initialize alternatives as empty - will be populated via useEffect once exercises are loaded
+  const [alternatives, setAlternatives] = useState<Exercise[]>([]);
   // Track if we've synced parent alternatives to local state
-  const hasSyncedParentAlternativesRef = useRef(
-    exercise.alternatives && exercise.alternatives.length > 0
-  );
+  // Initialize to false - the useEffect will handle syncing once cached exercises are loaded
+  const hasSyncedParentAlternativesRef = useRef(false);
   const [isAlternativesVisible, setIsAlternativesVisible] = useState(
     exercise.alternatives && exercise.alternatives.length > 0
   );
@@ -602,15 +594,25 @@ export const ExerciseCard = ({
       { setNumber: 3, type: 'normal', reps: '12', weight: '', rest: '90' },
     ];
   });
-  const [alternativeSearchResults, setAlternativeSearchResults] = useState<Exercise[]>([]);
+  const [alternativeSearchQuery, setAlternativeSearchQuery] = useState('');
+  
+  // Use the hook to get filtered exercises for alternatives search
+  const { exercises: alternativeSearchResults, isSearching: isAlternativesSearching } = useAllExercises(alternativeSearchQuery);
+  
+  // Filter out current exercise and already-selected alternatives
+  // Cap at 50 for dropdown performance and thumbnail bulk loading
+  const filteredAlternativeResults = useMemo(() => {
+    return alternativeSearchResults
+      .filter(
+        (e) =>
+          e.exerciseId !== exercise.exerciseId &&
+          !(exercise.alternatives || []).includes(e.exerciseId)
+      )
+      .slice(0, 50); // Cap at 50 for performance and bulk thumbnail loading
+  }, [alternativeSearchResults, exercise.exerciseId, exercise.alternatives]);
 
   const handleAlternativesSearch = (query: string = '') => {
-    const results = searchExercises(query).filter(
-      (e) =>
-        e.exerciseId !== exercise.exerciseId &&
-        !(exercise.alternatives || []).includes(e.exerciseId)
-    );
-    setAlternativeSearchResults(results);
+    setAlternativeSearchQuery(query);
   };
 
   // Pre-load alternatives search results
@@ -645,13 +647,58 @@ export const ExerciseCard = ({
   const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null);
 
 
+  // Get all exercises from cache (for ID lookups)
+  const { exercises: allCachedExercises } = useAllExercises('');
+  
+  // Use the all exercises hook for in-memory search (already cached from app load)
+  // Cap to 50 exercises for the dropdown
+  const { exercises: allSearchResults, isSearching: isExerciseSearching } = useAllExercises(searchQuery);
+  
+  // Limit results to 50 for the dropdown (searches against full 1700+ but only shows 50)
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) {
-      // Show first 10 exercises when search is open but no query
-      return searchExercises('').slice(0, 10);
-    }
-    return searchExercises(searchQuery);
-  }, [searchQuery]);
+    return allSearchResults.slice(0, 50);
+  }, [allSearchResults]);
+  
+  // Bulk load thumbnails for dropdown results (caps at 50)
+  const { getThumbnailUrl: getDropdownThumbnailUrl, isThumbnailLoading: isDropdownThumbnailLoading } = useExerciseThumbnails(
+    searchResults,
+    { enabled: isSelectOpen, maxVisible: 50 }
+  );
+  
+  // Bulk load thumbnails for alternative exercise results
+  const { getThumbnailUrl: getAlternativeThumbnailUrl, isThumbnailLoading: isAlternativeThumbnailLoading } = useExerciseThumbnails(
+    filteredAlternativeResults,
+    { enabled: isAlternativesVisible }
+  );
+  
+  // Bulk load thumbnails for selected alternatives
+  const { getThumbnailUrl: getSelectedAltThumbnailUrl } = useExerciseThumbnails(
+    alternatives,
+    { enabled: alternatives.length > 0 }
+  );
+  
+  // Helper to find exercise by ID from cached exercises
+  const findExerciseById = useMemo(() => {
+    const exerciseMap = new Map(allCachedExercises.map(e => [e.exerciseId, e]));
+    return (id: string) => exerciseMap.get(id);
+  }, [allCachedExercises]);
+
+  // Get rawThumbnailUrl from exercise prop, or look it up from cache if missing
+  // This handles the case where a workout is loaded before the exercise cache is ready
+  const exerciseRawThumbnailUrl = useMemo(() => {
+    // First try the exercise prop
+    const propUrl = (exercise as any).rawThumbnailUrl;
+    if (propUrl) return propUrl;
+
+    // If not present, look up from cached exercises using exerciseId
+    const cachedExercise = findExerciseById(exercise.exerciseId);
+    return cachedExercise?.rawThumbnailUrl || '';
+  }, [(exercise as any).rawThumbnailUrl, exercise.exerciseId, findExerciseById]);
+
+  // Single thumbnail for the main exercise (with automatic fetch and cache subscription)
+  const { thumbnailUrl: mainExerciseThumbnailUrl, isLoading: isMainThumbnailLoading } = useSingleThumbnail(
+    exerciseRawThumbnailUrl
+  );
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -794,21 +841,27 @@ export const ExerciseCard = ({
     // Only sync if:
     // 1. Parent has alternatives
     // 2. We haven't synced parent alternatives before
+    // 3. Cached exercises are loaded
     if (
       exercise.alternatives &&
       exercise.alternatives.length > 0 &&
-      !hasSyncedParentAlternativesRef.current
+      !hasSyncedParentAlternativesRef.current &&
+      allCachedExercises.length > 0
     ) {
-      // Load full exercise objects from IDs
+      // Load full exercise objects from IDs using cached exercises
+      // Filter out the current exercise ID to prevent self-reference
       const loadedAlternatives = exercise.alternatives
-        .map((id) => searchExercises('').find((e) => e.exerciseId === id))
+        .filter((id) => id !== exercise.exerciseId)
+        .map((id) => findExerciseById(id))
         .filter((e): e is Exercise => e !== undefined);
       console.log('[EXERCISE CARD] Syncing alternatives from parent:', exercise.alternatives, 'Loaded:', loadedAlternatives.map(e => ({ id: e.exerciseId, name: e.name })));
       setAlternatives(loadedAlternatives);
-      setIsAlternativesVisible(true);
+      if (loadedAlternatives.length > 0) {
+        setIsAlternativesVisible(true);
+      }
       hasSyncedParentAlternativesRef.current = true;
     }
-  }, [exercise.alternatives]);
+  }, [exercise.alternatives, exercise.exerciseId, allCachedExercises.length, findExerciseById]);
 
   useEffect(() => {
     if (isEmpty) {
@@ -819,9 +872,9 @@ export const ExerciseCard = ({
   }, [isEmpty]);
 
   const handleAlternativesChange = (selectedIds: string[]) => {
-    // Resolve full exercise objects
+    // Resolve full exercise objects from cached exercises
     const updatedAlternatives = selectedIds
-      .map((id) => searchExercises('').find((e) => e.exerciseId === id))
+      .map((id) => findExerciseById(id))
       .filter((e): e is Exercise => e !== undefined);
 
     setAlternatives(updatedAlternatives);
@@ -839,11 +892,15 @@ export const ExerciseCard = ({
 
   const renderExercisePill = (option: Option, onRemove: () => void) => {
     const exerciseOption = alternatives.find((a) => a.exerciseId === option.value);
+    // Get thumbnail from cache for selected alternatives
+    const thumbnailUrl = exerciseOption 
+      ? getSelectedAltThumbnailUrl(exerciseOption.rawThumbnailUrl)
+      : (option.imageUrl || '');
 
     return (
       <div className="flex items-center gap-1.5 bg-muted/40 rounded-md py-0.5 px-1.5 border border-border hover:border-foreground/20 transition-colors group/pill">
         <div
-          className="relative w-5 h-5 flex-shrink-0 rounded cursor-pointer group/thumbnail-pill"
+          className="relative w-5 h-5 flex-shrink-0 rounded cursor-pointer group/thumbnail-pill overflow-hidden bg-muted"
           onClick={() => exerciseOption && onVideoClick(exerciseOption)}
           role="button"
           tabIndex={0}
@@ -854,12 +911,17 @@ export const ExerciseCard = ({
             }
           }}
         >
-          <Image
-            src={option.imageUrl || '/demo-img.png'}
-            alt={option.label}
-            fill
-            className="object-cover rounded"
-          />
+          {thumbnailUrl ? (
+            <img
+              src={thumbnailUrl}
+              alt={option.label}
+              className="absolute inset-0 w-full h-full object-cover rounded"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-muted rounded">
+              <Dumbbell className="size-2.5 text-muted-foreground" />
+            </div>
+          )}
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/thumbnail-pill:bg-black/30 transition-colors rounded">
             <div className="opacity-0 group-hover/thumbnail-pill:opacity-100 transition-opacity bg-black/60 rounded-full p-0.5">
               <Play className="size-1.5 text-white fill-white" />
@@ -1226,7 +1288,7 @@ export const ExerciseCard = ({
         {/* Thumbnail with hover play button */}
         {exercise.name && (
           <div
-            className="relative w-9 h-9 flex-shrink-0 rounded-md cursor-pointer group/thumbnail border border-input overflow-hidden"
+            className="relative w-9 h-9 flex-shrink-0 rounded-md cursor-pointer group/thumbnail border border-input overflow-hidden bg-muted"
             onClick={() => onVideoClick(exercise as Exercise)}
             role="button"
             tabIndex={0}
@@ -1238,12 +1300,19 @@ export const ExerciseCard = ({
             }}
             aria-label={`Play video for ${exercise.name}`}
           >
-            <Image
-              src={exercise.imageUrl || '/demo-img.png'}
-              alt={exercise.name}
-              fill
-              className="object-cover"
-            />
+            {isMainThumbnailLoading ? (
+              <div className="absolute inset-0 flex items-center justify-center animate-pulse bg-muted" />
+            ) : !mainExerciseThumbnailUrl ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                <Dumbbell className="size-4 text-muted-foreground" />
+              </div>
+            ) : (
+              <img
+                src={mainExerciseThumbnailUrl}
+                alt={exercise.name}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            )}
             <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/thumbnail:bg-black/30 transition-colors">
               <div className="opacity-0 group-hover/thumbnail:opacity-100 transition-opacity bg-black/60 rounded-full p-1">
                 <Play className="size-2.5 text-white fill-white" />
@@ -1265,37 +1334,78 @@ export const ExerciseCard = ({
                 <span className="truncate">{exercise.name || 'Choose an exercise...'}</span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[400px] p-0" align="start">
-              <Command>
+            <PopoverContent
+              className="w-[400px] p-0"
+              align="start"
+              onWheel={(e) => {
+                // Allow wheel events to scroll the command list
+                const target = e.target as HTMLElement;
+                const commandList = target.closest('[data-slot="command-list"]') as HTMLElement;
+                if (commandList) {
+                  const { scrollTop, scrollHeight, clientHeight } = commandList;
+                  const isAtTop = scrollTop === 0;
+                  const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+                  // Only stop propagation if we can actually scroll
+                  if ((e.deltaY > 0 && !isAtBottom) || (e.deltaY < 0 && !isAtTop)) {
+                    e.stopPropagation();
+                  }
+                }
+              }}
+            >
+              <Command shouldFilter={false}>
                 <CommandInput
                   placeholder="Search exercises..."
                   value={searchQuery}
                   onValueChange={setSearchQuery}
                 />
                 <CommandList>
-                  <CommandEmpty>No exercise found.</CommandEmpty>
-                  <CommandGroup>
-                    {searchResults.slice(0, 20).map((result) => (
-                      <CommandItem
-                        key={result.exerciseId}
-                        value={result.name}
-                        onSelect={() => {
-                          handleExerciseSelect(result);
-                        }}
-                        className="flex items-center gap-2"
-                      >
-                        <div className="relative w-8 h-8 flex-shrink-0 rounded overflow-hidden">
-                          <Image
-                            src={result.imageUrl || '/demo-img.png'}
-                            alt={result.name}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                        <span className="flex-1">{result.name}</span>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
+                  {searchResults.length === 0 ? (
+                    isExerciseSearching ? (
+                      <div className="flex justify-center py-6 items-center">
+                        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : (
+                      <CommandEmpty>No exercise found.</CommandEmpty>
+                    )
+                  ) : (
+                    <CommandGroup>
+                      {searchResults.map((result) => {
+                        const thumbnailUrl = getDropdownThumbnailUrl(result.rawThumbnailUrl);
+                        const isThumbnailLoading = isDropdownThumbnailLoading(result.rawThumbnailUrl);
+                        return (
+                          <CommandItem
+                            key={result.exerciseId}
+                            value={result.name}
+                            onSelect={() => {
+                              handleExerciseSelect(result);
+                            }}
+                            className="flex items-center gap-2"
+                          >
+                            <div className="relative w-8 h-8 flex-shrink-0 rounded overflow-hidden bg-muted">
+                              {isThumbnailLoading ? (
+                                <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                                  <Loader2 className="size-3 animate-spin text-muted-foreground" />
+                                </div>
+                              ) : !thumbnailUrl ? (
+                                <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                                  <Dumbbell className="size-3.5 text-muted-foreground" />
+                                </div>
+                              ) : (
+                                <img
+                                  src={thumbnailUrl}
+                                  alt={result.name}
+                                  className="absolute inset-0 w-full h-full object-cover"
+                                  loading="lazy"
+                                />
+                              )}
+                            </div>
+                            <span className="flex-1">{result.name}</span>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  )}
                 </CommandList>
               </Command>
             </PopoverContent>
@@ -1629,11 +1739,11 @@ export const ExerciseCard = ({
                           return filtered.map((set, idx) => ({ ...set, setNumber: idx + 1 }));
                         });
                       }}
-                      className={`h-4 w-4 rounded-full bg-primary flex items-center justify-center shadow-sm hover:bg-primary/90 transition-opacity ${hoveredRowIndex === index ? 'opacity-100' : 'opacity-0'
+                      className={`h-5 w-5 rounded bg-primary flex items-center justify-center shadow-sm hover:bg-primary/90 transition-opacity ${hoveredRowIndex === index ? 'opacity-100' : 'opacity-0'
                         }`}
                       aria-label={`Remove set ${index + 1}`}
                     >
-                      <X className="h-2.5 w-2.5 text-primary-foreground" />
+                      <Trash2 className="h-3 w-3 text-primary-foreground" />
                     </button>
                   </div>
                 ))}
@@ -1655,11 +1765,11 @@ export const ExerciseCard = ({
                       type="button"
                       onMouseEnter={() => setHoveredRowIndex(index)}
                       onClick={() => handleAddSet(index)}
-                      className={`h-4 w-4 rounded-full bg-primary flex items-center justify-center shadow-sm hover:bg-primary/90 transition-opacity ${hoveredRowIndex === index ? 'opacity-100' : 'opacity-0'
+                      className={`h-5 w-5 rounded bg-primary flex items-center justify-center shadow-sm hover:bg-primary/90 transition-opacity ${hoveredRowIndex === index ? 'opacity-100' : 'opacity-0'
                         }`}
                       aria-label={`Add set after set ${index + 1}`}
                     >
-                      <Plus className="h-2.5 w-2.5 text-primary-foreground" />
+                      <Plus className="h-3 w-3 text-primary-foreground" />
                     </button>
                   </div>
                 ))}
@@ -1680,21 +1790,29 @@ export const ExerciseCard = ({
             </div>
             <MultiAsyncSelect
               async
+              loading={isAlternativesSearching}
               placeholder="Search for alternative exercises..."
               options={[
                 // Include pre-loaded alternatives first so they show in the pills
-                ...alternatives.map((e) => ({
-                  label: e.name,
-                  value: e.exerciseId,
-                  imageUrl: e.imageUrl,
-                })),
-                // Then include search results, filtering out duplicates
-                ...alternativeSearchResults
-                  .filter((e) => !alternatives.some(a => a.exerciseId === e.exerciseId))
+                // Filter out current exercise in case of legacy data
+                ...alternatives
+                  .filter((e) => e.exerciseId !== exercise.exerciseId)
                   .map((e) => ({
                     label: e.name,
                     value: e.exerciseId,
-                    imageUrl: e.imageUrl,
+                    imageUrl: getSelectedAltThumbnailUrl(e.rawThumbnailUrl),
+                    rawThumbnailUrl: e.rawThumbnailUrl,
+                  })),
+                // Then include search results (already filtered to exclude current exercise and selected alternatives)
+                // Cap to 50 exercises
+                ...filteredAlternativeResults
+                  .filter((e) => !alternatives.some(a => a.exerciseId === e.exerciseId))
+                  .slice(0, 50)
+                  .map((e) => ({
+                    label: e.name,
+                    value: e.exerciseId,
+                    imageUrl: getAlternativeThumbnailUrl(e.rawThumbnailUrl),
+                    rawThumbnailUrl: e.rawThumbnailUrl,
                   })),
               ]}
               value={exercise.alternatives || []}
@@ -1703,13 +1821,19 @@ export const ExerciseCard = ({
               renderPill={renderExercisePill}
               labelFunc={(option) => (
                 <div className="flex items-center gap-2">
-                  <div className="relative w-7 h-7 rounded overflow-hidden flex-shrink-0">
-                    <Image
-                      src={option.imageUrl || '/demo-img.png'}
-                      alt={option.label}
-                      fill
-                      className="object-cover"
-                    />
+                  <div className="relative w-7 h-7 rounded overflow-hidden flex-shrink-0 bg-muted">
+                    {option.imageUrl ? (
+                      <img
+                        src={option.imageUrl}
+                        alt={option.label}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                        <Dumbbell className="size-3.5 text-muted-foreground" />
+                      </div>
+                    )}
                   </div>
                   <span>{option.label}</span>
                 </div>

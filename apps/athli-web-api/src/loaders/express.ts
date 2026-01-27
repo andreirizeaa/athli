@@ -83,7 +83,7 @@ export function createExpressApp() {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id', 'x-coach-id'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id', 'x-coach-id', 'x-request-source'],
   };
   app.use(cors(corsOptions));
 

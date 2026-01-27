@@ -44,7 +44,7 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
     const { details, athlete, refreshSection } = useClientProfileContext();
     const updateDetailsMutation = useUpdateClientDetails();
 
-    const [formData, setFormData] = useState<AthleteDetails>({
+    const [formData, setFormData] = useState<Omit<AthleteDetails, 'category'> & { category: 'online' | 'in-person' | 'hybrid' | null }>({
         name: '',
         email: '',
         birthDate: null,
@@ -143,6 +143,7 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
                 clientId: athlete.id,
                 details: {
                     ...formData,
+                    category: formData.category || 'online',
                     avatarFile: uploadedFile
                 }
             });

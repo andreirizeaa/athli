@@ -651,7 +651,7 @@ const AthletesPage = () => {
               pixel: getColumnWidth('category', 'pixel'),
             },
             tooltip: t('athletes.columnTooltips.category'),
-            getSortValue: (row) => row.category,
+            getSortValue: (row) => row.category ?? '',
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
             renderCell: (row) => {

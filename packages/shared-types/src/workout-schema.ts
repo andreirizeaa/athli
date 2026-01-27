@@ -74,7 +74,6 @@ export type RoundExercisePayload = ExerciseIdPair & {
   trackableField1: TrackableField;
   trackableField2: TrackableField;
   restSec: number | null;
-  exerciseType: string;
   alternatives: string[];
   supersetId: string | null; // References the instance ID (id field) of another exercise in the superset
   column1Label: string;
@@ -94,7 +93,6 @@ export type RegularExercisePayload = ExerciseIdPair & {
   tempo: string | null;
   column1Label: string;
   column2Label: string;
-  exerciseType?: string; // Optional for backward compatibility
 };
 
 // ============================================================================
@@ -224,11 +222,6 @@ export type WorkoutDetails = {
 // ============================================================================
 // Workout Item and Payload Types
 // ============================================================================
-
-/**
- * Exercise type for set identification
- */
-export type ExerciseType = 'weight_reps' | 'reps' | 'distance_duration';
 
 /**
  * A workout item can be a top-level exercise or a section

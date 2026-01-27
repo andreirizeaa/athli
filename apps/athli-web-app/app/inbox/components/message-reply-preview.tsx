@@ -145,7 +145,7 @@ export function MessageReplyPreview({
                                     {item.type === 'image' && item.data && (
                                         <img
                                             src={item.data}
-                                            alt={item.name}
+                                            alt="attachment"
                                             className="w-full h-full object-cover"
                                         />
                                     )}

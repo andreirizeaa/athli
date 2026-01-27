@@ -43,6 +43,13 @@ export {
   COLUMN_OPTIONS,
   OPTIONAL_COLUMN_OPTIONS,
   EXERCISE_CATEGORY_OPTIONS,
+  // MuscleWiki-specific filter options
+  MUSCLEWIKI_CATEGORY_OPTIONS,
+  MUSCLEWIKI_GENDER_OPTIONS,
+  MUSCLEWIKI_MUSCLE_OPTIONS,
+  MUSCLEWIKI_DIFFICULTY_OPTIONS,
+  MUSCLEWIKI_FORCE_OPTIONS,
+  MUSCLEWIKI_MECHANIC_OPTIONS,
   type WorkoutType,
   type ProgramType,
   type DifficultyLevel,
@@ -57,6 +64,14 @@ export {
   type HeartRateZone,
   type ColumnValue,
   type OptionalColumn,
+  type ExerciseType,
+  // MuscleWiki types
+  type MuscleWikiCategory,
+  type MuscleWikiGender,
+  type MuscleWikiMuscle,
+  type MuscleWikiDifficulty,
+  type MuscleWikiForce,
+  type MuscleWikiMechanic,
 } from './training-constants';
 
 // ================================================

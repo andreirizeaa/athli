@@ -31,7 +31,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/general/utils';
 import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@athli/shared-types';
-import { searchExercises, type Exercise } from '@/api/exercise/exercise-search';
+import { useExerciseLookup, type Exercise } from '@/hooks/use-all-exercises';
 import { generateWorkoutFromPrompt, type GeneratedWorkout } from '@/api/exercise/generate-exercise';
 import { toast } from 'sonner';
 import { useExerciseDragDrop } from '@/components/training/hooks/use-exercise-drag-drop';
@@ -138,6 +138,9 @@ export const SectionBuilder = ({
   const t = useTranslations();
   const isSectionMode = true;
   const router = useRouter();
+  
+  // Get exercise lookup function from cached exercises
+  const { findExerciseById } = useExerciseLookup();
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -175,7 +178,7 @@ export const SectionBuilder = ({
     // Priority 1: Use initialData prop if provided
     if (initialData) {
       // Convert from backend payload format to builder format
-      const converted = convertPayloadToBuilderFormat(initialData);
+      const converted = convertPayloadToBuilderFormat(initialData, findExerciseById);
       return converted;
     }
 
@@ -187,6 +190,7 @@ export const SectionBuilder = ({
           id: `section_${Date.now()}`,
           type: sectionType,
           exercises: [],
+          name: meta?.name || '',
           ...(sectionType === 'amrap' && { roundDurationSec: undefined }),
           ...(sectionType === 'timed' && { targetRounds: undefined }),
           ...(sectionType === 'circuits' && { targetRounds: undefined }),
@@ -257,7 +261,7 @@ export const SectionBuilder = ({
       // Reset schema based on initialData when dialog opens
       if (initialData && (initialData.items?.length > 0)) {
         // Convert from backend payload format to builder format
-        const converted = convertPayloadToBuilderFormat(initialData);
+        const converted = convertPayloadToBuilderFormat(initialData, findExerciseById);
         initialSchema = converted;
         setWorkoutSchema(converted);
         hasInitializedWithDataRef.current = true;
@@ -270,6 +274,7 @@ export const SectionBuilder = ({
               id: `section_${Date.now()}`,
               type: sectionType,
               exercises: [],
+              name: meta?.name || '',
               ...(sectionType === 'amrap' && { roundDurationSec: undefined }),
               ...(sectionType === 'timed' && { targetRounds: undefined }),
               ...(sectionType === 'circuits' && { targetRounds: undefined }),
@@ -306,7 +311,7 @@ export const SectionBuilder = ({
     // 2. We haven't initialized with data yet
     // 3. initialData is now available with items
     if (open && !hasInitializedWithDataRef.current && initialData && initialData.items?.length > 0) {
-      const converted = convertPayloadToBuilderFormat(initialData);
+      const converted = convertPayloadToBuilderFormat(initialData, findExerciseById);
       setWorkoutSchema(converted);
       hasInitializedWithDataRef.current = true;
 
@@ -489,7 +494,7 @@ export const SectionBuilder = ({
             const supersetGroupId = `superset_${section.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
             group.exercises.forEach((ex: any) => {
-              const foundExercise = searchExercises('').find((e) => e.exerciseId === ex.id);
+              const foundExercise = findExerciseById(ex.id);
               const exercise = foundExercise || {
                 exerciseId: ex.id,
                 name: ex.name,
@@ -506,6 +511,7 @@ export const SectionBuilder = ({
                 exerciseTips: [],
                 variations: [],
                 relatedExerciseIds: [],
+                source: 'musclewiki' as const,
               };
 
               const sets: SetData[] = (ex.sets || []).map((set: any) => ({
@@ -522,7 +528,7 @@ export const SectionBuilder = ({
                 sectionId: section.id,
                 exercise: {
                   ...exercise,
-                  instanceId: `${ex.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                  instanceId: ex.id,
                   supersetGroupId,
                   sets,
                 },
@@ -530,7 +536,7 @@ export const SectionBuilder = ({
             });
           } else if (group.exercises && group.exercises.length > 0) {
             const ex = group.exercises[0];
-            const foundExercise = searchExercises('').find((e) => e.exerciseId === ex.id);
+            const foundExercise = findExerciseById(ex.id);
             const exercise = foundExercise || {
               exerciseId: ex.id,
               name: ex.name,
@@ -547,6 +553,7 @@ export const SectionBuilder = ({
               exerciseTips: [],
               variations: [],
               relatedExerciseIds: [],
+              source: 'musclewiki' as const,
             };
 
             const sets: SetData[] = (ex.sets || []).map((set: any) => ({
@@ -563,7 +570,7 @@ export const SectionBuilder = ({
               sectionId: section.id,
               exercise: {
                 ...exercise,
-                instanceId: `${ex.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                instanceId: ex.id,
                 supersetGroupId: null,
                 sets,
               },
@@ -572,7 +579,7 @@ export const SectionBuilder = ({
         });
       } else {
         section.exercises?.forEach((ex: any) => {
-          const foundExercise = searchExercises('').find((e) => e.exerciseId === ex.id);
+          const foundExercise = findExerciseById(ex.id);
           const exercise = foundExercise || {
             exerciseId: ex.id,
             name: ex.name,
@@ -589,6 +596,7 @@ export const SectionBuilder = ({
             exerciseTips: [],
             variations: [],
             relatedExerciseIds: [],
+            source: 'musclewiki' as const,
           };
 
           const sets: SetData[] = (ex.sets || []).map((set: any) => ({
@@ -778,7 +786,8 @@ Focus on proper form and progressive overload.`;
       exerciseRefs,
       contentScrollRef,
       setFocusedExerciseId,
-      setCollapsedSections
+      setCollapsedSections,
+      findExerciseById
     );
   };
 
@@ -933,8 +942,8 @@ Focus on proper form and progressive overload.`;
     setDraggedSection(section);
   };
 
-  const handleCreateSection = (name: string, type: SectionType) => {
-    setWorkoutSchema((prev) => selectSection(type, prev, { name: name }));
+  const handleCreateSection = (name: string, type: SectionType, config?: { roundDurationSec?: number; targetRounds?: number }) => {
+    setWorkoutSchema((prev) => selectSection(type, prev, { name, ...config }));
     setIsCreatingSection(false);
     markDirty();
   };
@@ -1060,7 +1069,7 @@ Focus on proper form and progressive overload.`;
             coreData.exercises = exercisesToProcess.map((ex: any) => {
               // Use prescribedExerciseId for looking up exercise details (fallback to id for legacy data)
               const exerciseId = ex.prescribedExerciseId || ex.id || ex.exerciseId;
-              const fullExercise = searchExercises('').find(e => e.exerciseId === exerciseId);
+              const fullExercise = findExerciseById(exerciseId);
               const exerciseData = fullExercise ? {
                 ...ex,
                 // Set exerciseId from prescribedExerciseId (or legacy id field)
@@ -1078,6 +1087,14 @@ Focus on proper form and progressive overload.`;
                 exerciseTips: fullExercise.exerciseTips,
                 variations: fullExercise.variations,
                 relatedExerciseIds: fullExercise.relatedExerciseIds,
+                // Required fields for Exercise type
+                exerciseType: fullExercise.exerciseType || 'weight_reps',
+                source: fullExercise.source || 'musclewiki',
+                rawThumbnailUrl: fullExercise.rawThumbnailUrl,
+                difficulty: fullExercise.difficulty,
+                force: fullExercise.force,
+                mechanic: fullExercise.mechanic,
+                category: fullExercise.category,
               } : {
                 ...ex,
                 exerciseId: exerciseId,
@@ -1095,6 +1112,8 @@ Focus on proper form and progressive overload.`;
                 exerciseTips: ex.exerciseTips || [],
                 variations: ex.variations || [],
                 relatedExerciseIds: ex.relatedExerciseIds || [],
+                // Required fields for Exercise type
+                source: 'musclewiki' as const,
               };
 
               // Ensure set type is preserved (referencing previous fix)
