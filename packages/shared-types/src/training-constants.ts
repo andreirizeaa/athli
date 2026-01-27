@@ -3,11 +3,10 @@
  * Shared across mobile and web applications
  */
 
-import type { SectionType as WorkoutSchemaSectionType, ExerciseType as WorkoutSchemaExerciseType } from './workout-schema';
+import type { SectionType as WorkoutSchemaSectionType } from './workout-schema';
 
 // Re-export types from workout-schema to avoid duplication
 export type SectionType = WorkoutSchemaSectionType;
-export type ExerciseType = WorkoutSchemaExerciseType;
 
 // Workout Types
 export const WORKOUT_TYPES = [
@@ -76,6 +75,8 @@ export const EXERCISE_TYPE_OPTIONS = [
     { value: 'reps', label: 'Reps Only' },
     { value: 'distance_duration', label: 'Distance & Duration' },
 ] as const;
+
+export type ExerciseType = typeof EXERCISE_TYPE_OPTIONS[number]['value'];
 
 // Muscle Group Options
 export const MUSCLE_GROUP_OPTIONS = [
@@ -166,6 +167,95 @@ export const MODALITY_OPTIONS = [
 ] as const;
 
 export type Modality = typeof MODALITY_OPTIONS[number]['value'];
+
+// ============================================================================
+// MUSCLEWIKI FILTER OPTIONS
+// These are aligned with MuscleWiki API categories for seamless integration
+// ============================================================================
+
+// MuscleWiki Equipment Categories (maps to their 'category' field)
+// Values are capitalized as returned by the MuscleWiki API
+export const MUSCLEWIKI_CATEGORY_OPTIONS = [
+    { value: 'Band', label: 'Band' },
+    { value: 'Barbell', label: 'Barbell' },
+    { value: 'Bodyweight', label: 'Bodyweight' },
+    { value: 'Bosu-Ball', label: 'Bosu Ball' },
+    { value: 'Cables', label: 'Cables' },
+    { value: 'Cardio', label: 'Cardio' },
+    { value: 'Dumbbells', label: 'Dumbbells' },
+    { value: 'Kettlebells', label: 'Kettlebells' },
+    { value: 'Machine', label: 'Machine' },
+    { value: 'Medicine-Ball', label: 'Medicine Ball' },
+    { value: 'Plate', label: 'Plate' },
+    { value: 'Recovery', label: 'Recovery' },
+    { value: 'Smith-Machine', label: 'Smith Machine' },
+    { value: 'Stretches', label: 'Stretches' },
+    { value: 'TRX', label: 'TRX' },
+    { value: 'Vitruvian', label: 'Vitruvian' },
+    { value: 'Yoga', label: 'Yoga' },
+] as const;
+
+export type MuscleWikiCategory = typeof MUSCLEWIKI_CATEGORY_OPTIONS[number]['value'];
+
+// MuscleWiki Gender Options (for filtering exercise videos)
+export const MUSCLEWIKI_GENDER_OPTIONS = [
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+] as const;
+
+export type MuscleWikiGender = typeof MUSCLEWIKI_GENDER_OPTIONS[number]['value'];
+
+// MuscleWiki Muscle Groups (for filtering via API)
+// These are the primary muscle groups used by the MuscleWiki /muscles endpoint
+export const MUSCLEWIKI_MUSCLE_OPTIONS = [
+    { value: 'Chest', label: 'Chest' },
+    { value: 'Back', label: 'Back' },
+    { value: 'Shoulders', label: 'Shoulders' },
+    { value: 'Biceps', label: 'Biceps' },
+    { value: 'Triceps', label: 'Triceps' },
+    { value: 'Forearms', label: 'Forearms' },
+    { value: 'Abs', label: 'Abs' },
+    { value: 'Obliques', label: 'Obliques' },
+    { value: 'Quadriceps', label: 'Quadriceps' },
+    { value: 'Hamstrings', label: 'Hamstrings' },
+    { value: 'Glutes', label: 'Glutes' },
+    { value: 'Calves', label: 'Calves' },
+    { value: 'Traps', label: 'Traps' },
+    { value: 'Lats', label: 'Lats' },
+    { value: 'Lower Back', label: 'Lower Back' },
+    { value: 'Hip Flexors', label: 'Hip Flexors' },
+    { value: 'Adductors', label: 'Adductors' },
+    { value: 'Abductors', label: 'Abductors' },
+    { value: 'Neck', label: 'Neck' },
+] as const;
+
+export type MuscleWikiMuscle = typeof MUSCLEWIKI_MUSCLE_OPTIONS[number]['value'];
+
+// MuscleWiki Difficulty Levels (capitalized as returned by API)
+export const MUSCLEWIKI_DIFFICULTY_OPTIONS = [
+    { value: 'Novice', label: 'Novice' },
+    { value: 'Intermediate', label: 'Intermediate' },
+    { value: 'Advanced', label: 'Advanced' },
+] as const;
+
+export type MuscleWikiDifficulty = typeof MUSCLEWIKI_DIFFICULTY_OPTIONS[number]['value'];
+
+// MuscleWiki Force Types (capitalized as returned by API)
+export const MUSCLEWIKI_FORCE_OPTIONS = [
+    { value: 'Push', label: 'Push' },
+    { value: 'Pull', label: 'Pull' },
+    { value: 'Static', label: 'Static' },
+] as const;
+
+export type MuscleWikiForce = typeof MUSCLEWIKI_FORCE_OPTIONS[number]['value'];
+
+// MuscleWiki Mechanic Types (capitalized as returned by API)
+export const MUSCLEWIKI_MECHANIC_OPTIONS = [
+    { value: 'Compound', label: 'Compound' },
+    { value: 'Isolation', label: 'Isolation' },
+] as const;
+
+export type MuscleWikiMechanic = typeof MUSCLEWIKI_MECHANIC_OPTIONS[number]['value'];
 
 // Habit Unit Options
 export const HABIT_UNIT_OPTIONS = [

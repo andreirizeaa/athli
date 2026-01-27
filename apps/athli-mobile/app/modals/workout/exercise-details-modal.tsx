@@ -1,20 +1,223 @@
-import React from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, Text, StyleSheet, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X } from 'lucide-react-native';
+import { X, Dumbbell, BarChart3, Zap, Settings2 } from 'lucide-react-native';
+import { useQuery } from '@tanstack/react-query';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { WebView } from 'react-native-webview';
 
 import { useThemePreference } from '@/stores';
+import { useTranslations } from '@/stores';
 import { typography } from '@/constants/typography';
 import { IconButton } from '@/components/ui/icon-button';
+import { Card } from '@/components/ui/card';
 import { hexToRgba } from '@/utils/colorUtils';
+import { getExerciseById, getExerciseVideos } from '@/services/musclewiki-service';
+import { getExerciseById as getCoachExerciseById } from '@/services/coach/coach-exercise-service';
+import { useExerciseLookup, type Exercise } from '@/hooks/useAllExercises';
+
+// Extract video ID from YouTube/Vimeo URLs
+const extractVideoId = (url: string): { id: string; type: 'youtube' | 'vimeo' | null } => {
+    if (!url?.trim()) {
+        return { id: '', type: null };
+    }
+
+    // YouTube patterns
+    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const youtubeMatch = url.match(youtubeRegex);
+    if (youtubeMatch) {
+        return { id: youtubeMatch[1], type: 'youtube' };
+    }
+
+    // Vimeo patterns
+    const vimeoRegex = /(?:vimeo\.com\/)(?:.*\/)?(\d+)/;
+    const vimeoMatch = url.match(vimeoRegex);
+    if (vimeoMatch) {
+        return { id: vimeoMatch[1], type: 'vimeo' };
+    }
+
+    return { id: '', type: null };
+};
+
+// Simple inline badge component
+const InfoBadge = ({
+    children,
+    icon: Icon,
+    themeColors,
+    variant = 'outline',
+}: {
+    children: React.ReactNode;
+    icon?: React.ComponentType<{ size: number; color: string }>;
+    themeColors: any;
+    variant?: 'outline' | 'secondary';
+}) => {
+    const isOutline = variant === 'outline';
+    return (
+        <View style={[
+            styles.badge,
+            isOutline
+                ? { borderColor: themeColors.primary, borderWidth: 1 }
+                : { backgroundColor: `${themeColors.mutedText}20` }
+        ]}>
+            {Icon && <Icon size={12} color={isOutline ? themeColors.primary : themeColors.mutedText} />}
+            <Text style={[
+                styles.badgeText,
+                { color: isOutline ? themeColors.primary : themeColors.mutedText }
+            ]}>
+                {children}
+            </Text>
+        </View>
+    );
+};
 
 export default function ExerciseDetailsModal() {
-    const { name } = useLocalSearchParams<{ name: string }>();
+    const { name, exerciseId, musclewikiId, isCustom } = useLocalSearchParams<{
+        name: string;
+        exerciseId?: string;
+        musclewikiId?: string;
+        isCustom?: string;
+    }>();
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { colors: themeColors } = useThemePreference();
+    const { t } = useTranslations();
+    const { findExerciseById } = useExerciseLookup();
+
+    const [videoUrl, setVideoUrl] = useState<string | null>(null);
+
+    // Check if this is a custom exercise
+    const isCustomExercise = isCustom === 'true';
+
+    // Try to find exercise from cache first
+    const cachedExercise = useMemo(() => {
+        if (exerciseId && !isCustomExercise) {
+            return findExerciseById(exerciseId);
+        }
+        return undefined;
+    }, [exerciseId, findExerciseById, isCustomExercise]);
+
+    // Fetch MuscleWiki exercise if not in cache
+    const { data: musclewikiExercise, isLoading: isLoadingMusclewiki } = useQuery({
+        queryKey: ['exercise', musclewikiId || exerciseId],
+        queryFn: () => getExerciseById(musclewikiId || exerciseId!),
+        enabled: !!(musclewikiId || exerciseId) && !cachedExercise && !isCustomExercise,
+        staleTime: 30 * 60 * 1000, // 30 minutes
+    });
+
+    // Fetch custom coach exercise if it's a custom exercise
+    const { data: coachExercise, isLoading: isLoadingCoach } = useQuery({
+        queryKey: ['coach-exercise', exerciseId],
+        queryFn: () => getCoachExerciseById(exerciseId!),
+        enabled: isCustomExercise && !!exerciseId,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+    });
+
+    // Get musclewiki ID for video fetch
+    const musclewikiIdForVideos = cachedExercise?.musclewikiId || musclewikiExercise?.musclewikiId || exerciseId;
+
+    // Fetch MuscleWiki video URLs
+    const { data: musclewikiVideos, isLoading: isLoadingVideos } = useQuery({
+        queryKey: ['exercise-videos', musclewikiIdForVideos],
+        queryFn: () => getExerciseVideos(musclewikiIdForVideos!),
+        enabled: !!musclewikiIdForVideos && !isCustomExercise,
+        staleTime: 30 * 60 * 1000, // 30 minutes
+    });
+
+    // Determine video URL based on source
+    useEffect(() => {
+        if (isCustomExercise && coachExercise?.video_link) {
+            setVideoUrl(coachExercise.video_link);
+        } else if (musclewikiVideos?.maleVideoFrontUrl) {
+            setVideoUrl(musclewikiVideos.maleVideoFrontUrl);
+        } else {
+            setVideoUrl(null);
+        }
+    }, [isCustomExercise, coachExercise, musclewikiVideos]);
+
+    // Detect YouTube/Vimeo for external video embedding
+    const videoInfo = videoUrl ? extractVideoId(videoUrl) : { id: '', type: null };
+    const isExternalVideo = Boolean(videoInfo.id && videoInfo.type);
+
+    // Video player for non-external videos
+    const videoSource = videoUrl && !isExternalVideo ? videoUrl : '';
+    const videoPlayer = useVideoPlayer(videoSource, (player) => {
+        player.loop = true;
+        player.muted = true; // Start muted to allow autoplay
+    });
+
+    // Auto-play video when source becomes available
+    useEffect(() => {
+        if (videoPlayer && videoSource) {
+            videoPlayer.play();
+        }
+    }, [videoPlayer, videoSource]);
+
+    // Transform coach exercise to unified format for display
+    const exercise: Exercise | null = useMemo(() => {
+        if (cachedExercise) {
+            return cachedExercise;
+        }
+
+        if (musclewikiExercise) {
+            return {
+                exerciseId: musclewikiExercise.musclewikiId || musclewikiExercise.id,
+                musclewikiId: musclewikiExercise.musclewikiId,
+                name: musclewikiExercise.name,
+                imageUrl: '',
+                rawThumbnailUrl: musclewikiExercise.thumbnailUrl,
+                equipments: musclewikiExercise.category ? [musclewikiExercise.category] : [],
+                bodyParts: musclewikiExercise.targetMuscles?.slice(0, 1) || [],
+                exerciseType: 'weight_reps',
+                targetMuscles: musclewikiExercise.targetMuscles || [],
+                secondaryMuscles: [
+                    ...(musclewikiExercise.synergistMuscles || []),
+                    ...(musclewikiExercise.stabilizerMuscles || []),
+                ],
+                videoUrl: '',
+                keywords: [],
+                overview: '',
+                instructions: musclewikiExercise.instructions || [],
+                exerciseTips: musclewikiExercise.tips || [],
+                variations: [],
+                relatedExerciseIds: [],
+                difficulty: musclewikiExercise.difficulty,
+                force: musclewikiExercise.force,
+                mechanic: musclewikiExercise.mechanic,
+                category: musclewikiExercise.category,
+                source: 'musclewiki',
+            };
+        }
+
+        if (coachExercise) {
+            return {
+                exerciseId: coachExercise.id,
+                name: coachExercise.name,
+                imageUrl: '',
+                equipments: [],
+                bodyParts: [],
+                exerciseType: 'weight_reps',
+                targetMuscles: coachExercise.muscle_group || [],
+                secondaryMuscles: [],
+                videoUrl: coachExercise.video_link || '',
+                keywords: [],
+                overview: coachExercise.description || '',
+                instructions: coachExercise.description ? [coachExercise.description] : [],
+                exerciseTips: [],
+                variations: [],
+                relatedExerciseIds: [],
+                difficulty: coachExercise.difficulty,
+                category: coachExercise.category,
+                source: 'custom',
+            };
+        }
+
+        return null;
+    }, [cachedExercise, musclewikiExercise, coachExercise]);
+
+    const isLoading = isLoadingMusclewiki || isLoadingCoach;
+    const hasVideo = !!videoUrl;
 
     const handleClose = () => {
         router.back();
@@ -52,11 +255,6 @@ export default function ExerciseDetailsModal() {
                         size="md"
                         color={themeColors.text}
                     />
-                    <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>
-                        {name || 'Exercise Details'}
-                    </Text>
-                    {/* Spacer to keep title centered, matching AddHabitModal's icon layout */}
-                    <View style={{ width: 44 }} />
                 </View>
             </View>
 
@@ -70,8 +268,223 @@ export default function ExerciseDetailsModal() {
                 showsVerticalScrollIndicator={false}
                 keyboardDismissMode="on-drag"
             >
-                {/* Visual placeholder or future content */}
-                <View style={{ height: 1000 }} />
+                {/* Title Section */}
+                <Text style={[styles.pageTitle, { color: themeColors.text }]}>
+                    {name || exercise?.name || t('library.exerciseDetails')}
+                </Text>
+
+                {isLoading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color={themeColors.primary} />
+                    </View>
+                ) : (
+                    <>
+                        {/* Video Section */}
+                        <View style={styles.videoSection}>
+                            <View style={[styles.videoContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                                {isLoadingVideos ? (
+                                    <View style={styles.videoPlaceholder}>
+                                        <ActivityIndicator size="large" color={themeColors.primary} />
+                                    </View>
+                                ) : hasVideo ? (
+                                    isExternalVideo && videoInfo.id && videoInfo.type ? (
+                                        <WebView
+                                            source={{
+                                                html: `
+                                                    <!DOCTYPE html>
+                                                    <html>
+                                                    <head>
+                                                        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                                                        <style>
+                                                            * { margin: 0; padding: 0; }
+                                                            html, body { height: 100%; overflow: hidden; background: #000; }
+                                                            iframe {
+                                                                position: absolute;
+                                                                top: 0;
+                                                                left: 0;
+                                                                width: 100%;
+                                                                height: 100%;
+                                                                border: none;
+                                                            }
+                                                        </style>
+                                                    </head>
+                                                    <body>
+                                                        <iframe
+                                                            src="${videoInfo.type === 'youtube'
+                                                                ? `https://www.youtube.com/embed/${videoInfo.id}?autoplay=0&playsinline=1&rel=0&modestbranding=1`
+                                                                : `https://player.vimeo.com/video/${videoInfo.id}?autoplay=0`
+                                                            }"
+                                                            frameborder="0"
+                                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                                            allowfullscreen
+                                                        ></iframe>
+                                                    </body>
+                                                    </html>
+                                                `
+                                            }}
+                                            style={styles.video}
+                                            allowsFullscreenVideo
+                                            allowsInlineMediaPlayback
+                                            mediaPlaybackRequiresUserAction={false}
+                                            javaScriptEnabled
+                                            domStorageEnabled
+                                        />
+                                    ) : (
+                                        <VideoView
+                                            player={videoPlayer}
+                                            style={styles.video}
+                                            allowsFullscreen
+                                            allowsPictureInPicture
+                                            nativeControls
+                                        />
+                                    )
+                                ) : (
+                                    <View style={styles.videoPlaceholder}>
+                                        <Text style={[styles.noVideoText, { color: themeColors.mutedText }]}>
+                                            {t('library.noVideoAvailable')}
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
+                            {/* Attribution for MuscleWiki */}
+                            {!isCustomExercise && (
+                                <Text style={[styles.attribution, { color: themeColors.mutedText }]}>
+                                    Powered by MuscleWiki
+                                </Text>
+                            )}
+                        </View>
+
+                        {/* Badges Section */}
+                        {exercise && (
+                            <View style={styles.badgesContainer}>
+                                {exercise.category && (
+                                    <InfoBadge
+                                        icon={Dumbbell}
+                                        themeColors={themeColors}
+                                    >
+                                        {exercise.category}
+                                    </InfoBadge>
+                                )}
+                                {exercise.difficulty && (
+                                    <InfoBadge
+                                        icon={BarChart3}
+                                        themeColors={themeColors}
+                                    >
+                                        {exercise.difficulty}
+                                    </InfoBadge>
+                                )}
+                                {exercise.force && (
+                                    <InfoBadge
+                                        icon={Zap}
+                                        themeColors={themeColors}
+                                    >
+                                        {exercise.force}
+                                    </InfoBadge>
+                                )}
+                                {exercise.mechanic && (
+                                    <InfoBadge
+                                        icon={Settings2}
+                                        themeColors={themeColors}
+                                    >
+                                        {exercise.mechanic}
+                                    </InfoBadge>
+                                )}
+                            </View>
+                        )}
+
+                        {/* Instructions Section */}
+                        {exercise?.instructions && exercise.instructions.length > 0 && (
+                            <Card style={styles.instructionsCard}>
+                                <View style={styles.instructionsHeader}>
+                                    <Text style={[styles.instructionsHeaderText, { color: themeColors.text }]}>
+                                        {t('library.instructions')}
+                                    </Text>
+                                </View>
+                                <View style={[styles.instructionsDivider, { backgroundColor: themeColors.border }]} />
+                                <View style={styles.instructionsContent}>
+                                    {exercise.instructions.map((step, index) => (
+                                        <View key={index} style={styles.instructionItem}>
+                                            <View style={[styles.stepNumber, { backgroundColor: `${themeColors.primary}20` }]}>
+                                                <Text style={[styles.stepNumberText, { color: themeColors.primary }]}>
+                                                    {index + 1}
+                                                </Text>
+                                            </View>
+                                            <Text style={[styles.instructionText, { color: themeColors.mutedText }]}>
+                                                {step}
+                                            </Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            </Card>
+                        )}
+
+                        {/* Muscles Section */}
+                        {exercise && (exercise.targetMuscles?.length > 0 || exercise.secondaryMuscles?.length > 0) && (
+                            <Card style={styles.instructionsCard}>
+                                <View style={styles.instructionsHeader}>
+                                    <Text style={[styles.instructionsHeaderText, { color: themeColors.text }]}>
+                                        {t('library.muscles')}
+                                    </Text>
+                                </View>
+                                <View style={[styles.instructionsDivider, { backgroundColor: themeColors.border }]} />
+                                <View style={styles.instructionsContent}>
+                                    {[...(exercise.targetMuscles || []), ...(exercise.secondaryMuscles || [])].map((muscle, index) => (
+                                        <View key={muscle} style={styles.instructionItem}>
+                                            <View style={[styles.stepNumber, { backgroundColor: `${themeColors.primary}20` }]}>
+                                                <Text style={[styles.stepNumberText, { color: themeColors.primary }]}>
+                                                    {index + 1}
+                                                </Text>
+                                            </View>
+                                            <Text style={[styles.instructionText, { color: themeColors.mutedText }]}>
+                                                {muscle}
+                                            </Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            </Card>
+                        )}
+
+                        {/* Tips Section */}
+                        {exercise?.exerciseTips && exercise.exerciseTips.length > 0 && (
+                            <View style={styles.section}>
+                                <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+                                    {t('library.tips')}
+                                </Text>
+                                <View style={styles.tipsList}>
+                                    {exercise.exerciseTips.map((tip, index) => (
+                                        <View key={index} style={styles.tipItem}>
+                                            <Text style={[styles.tipBullet, { color: themeColors.primary }]}>•</Text>
+                                            <Text style={[styles.tipText, { color: themeColors.mutedText }]}>
+                                                {tip}
+                                            </Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Overview/Description (for custom exercises) */}
+                        {exercise?.overview && (
+                            <View style={styles.section}>
+                                <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+                                    {t('library.description')}
+                                </Text>
+                                <Text style={[styles.overviewText, { color: themeColors.mutedText }]}>
+                                    {exercise.overview}
+                                </Text>
+                            </View>
+                        )}
+
+                        {/* Empty state */}
+                        {!exercise && !isLoading && (
+                            <View style={styles.emptyContainer}>
+                                <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
+                                    {t('library.exerciseNotFound')}
+                                </Text>
+                            </View>
+                        )}
+                    </>
+                )}
             </ScrollView>
         </View>
     );
@@ -97,14 +510,13 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingBottom: 12,
     },
-    title: {
-        ...typography.h6,
-        flex: 1,
-        textAlign: 'center',
+    pageTitle: {
+        ...typography.h4,
+        fontWeight: '700',
+        marginBottom: 20,
     },
     scrollView: {
         flex: 1,
@@ -112,5 +524,128 @@ const styles = StyleSheet.create({
     content: {
         paddingHorizontal: 16,
         paddingBottom: 32,
+    },
+    loadingContainer: {
+        paddingVertical: 60,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    videoSection: {
+        marginBottom: 20,
+    },
+    videoContainer: {
+        width: '100%',
+        aspectRatio: 16 / 9,
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    video: {
+        width: '100%',
+        height: '100%',
+    },
+    videoPlaceholder: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+    },
+    noVideoText: {
+        ...typography.p2,
+    },
+    attribution: {
+        ...typography.p4,
+        marginTop: 8,
+    },
+    badgesContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 20,
+    },
+    badge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+    },
+    badgeText: {
+        ...typography.p4,
+        fontWeight: '500',
+    },
+    section: {
+        marginBottom: 24,
+    },
+    sectionTitle: {
+        ...typography.h6,
+        fontWeight: '600',
+        marginBottom: 12,
+    },
+    instructionsCard: {
+        paddingHorizontal: 0,
+        paddingVertical: 0,
+        marginBottom: 24,
+    },
+    instructionsHeader: {
+        padding: 16,
+    },
+    instructionsHeaderText: {
+        ...typography.p1,
+        fontWeight: '600',
+    },
+    instructionsDivider: {
+        height: 1,
+    },
+    instructionsContent: {
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 14,
+        gap: 12,
+    },
+    instructionItem: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    stepNumber: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    stepNumberText: {
+        ...typography.p3,
+        fontWeight: '600',
+    },
+    instructionText: {
+        ...typography.p2,
+        flex: 1,
+        lineHeight: 22,
+    },
+    tipsList: {
+        gap: 8,
+    },
+    tipItem: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    tipBullet: {
+        ...typography.p2,
+    },
+    tipText: {
+        ...typography.p2,
+        flex: 1,
+    },
+    overviewText: {
+        ...typography.p2,
+        lineHeight: 22,
+    },
+    emptyContainer: {
+        paddingVertical: 40,
+        alignItems: 'center',
+    },
+    emptyText: {
+        ...typography.p1,
     },
 });

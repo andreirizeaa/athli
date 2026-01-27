@@ -1,11 +1,14 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { ChevronDown } from 'lucide-react-native';
+import { ChevronDown, Trash2 } from 'lucide-react-native';
+import { PressableOpacity } from 'pressto';
+import SquircleView from 'react-native-fast-squircle';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { Card } from '@/components/ui/card';
+import { haptics } from '@/utils/haptics';
 
 type SelectOption<T extends string> = {
   value: T;
@@ -16,11 +19,12 @@ type SelectOption<T extends string> = {
 type SelectInputProps<T extends string> = {
   label: string;
   value: T | null;
-  onChange: (value: T) => void;
+  onChange: (value: T | null) => void;
   options: SelectOption<T>[];
   placeholder?: string;
   required?: boolean;
   compact?: boolean;
+  clearable?: boolean;
 };
 
 export const SelectInput = <T extends string>({
@@ -31,11 +35,18 @@ export const SelectInput = <T extends string>({
   placeholder = 'Select...',
   required,
   compact,
+  clearable,
 }: SelectInputProps<T>) => {
   const { colors: themeColors } = useThemePreference();
 
   const selectedOption = options.find((opt) => opt.value === value);
   const displayValue = selectedOption?.label || placeholder;
+  const showClearButton = clearable && value !== null;
+
+  const handleClear = () => {
+    haptics.medium();
+    onChange(null);
+  };
 
   const menuOptions: DropdownMenuOption[] = options.map((option) => ({
     label: option.label,
@@ -61,29 +72,59 @@ export const SelectInput = <T extends string>({
     );
   }
 
-  return (
-    <DropdownMenuWrapper options={menuOptions}>
-      <Card variant="form">
-        {label.length > 0 && (
-          <View style={styles.labelRow}>
-            <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
-              {label}
-            </Text>
-            {required && <Text style={styles.requiredAsterisk}>*</Text>}
-          </View>
-        )}
-        <View style={styles.inputRow}>
-          <Text
+  const cardContent = (
+    <Card variant="form">
+      {label.length > 0 && (
+        <View style={styles.labelRow}>
+          <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
+            {label}
+          </Text>
+          {required && <Text style={styles.requiredAsterisk}>*</Text>}
+        </View>
+      )}
+      <View style={styles.inputRow}>
+        <Text
+          style={[
+            styles.inputBoxValue,
+            { color: value ? themeColors.text : themeColors.mutedText },
+          ]}
+        >
+          {displayValue}
+        </Text>
+        <ChevronDown {...({ size: 20, color: themeColors.mutedText } as any)} />
+      </View>
+    </Card>
+  );
+
+  if (showClearButton) {
+    return (
+      <View style={styles.clearableRow}>
+        <View style={styles.inputContainer}>
+          <DropdownMenuWrapper options={menuOptions}>
+            {cardContent}
+          </DropdownMenuWrapper>
+        </View>
+        <PressableOpacity onPress={handleClear}>
+          <SquircleView
+            cornerSmoothing={1}
             style={[
-              styles.inputBoxValue,
-              { color: value ? themeColors.text : themeColors.mutedText },
+              styles.clearButton,
+              {
+                backgroundColor: 'transparent',
+                borderColor: themeColors.border,
+              },
             ]}
           >
-            {displayValue}
-          </Text>
-          <ChevronDown {...({ size: 20, color: themeColors.mutedText } as any)} />
-        </View>
-      </Card>
+            <Trash2 size={20} color={themeColors.text} />
+          </SquircleView>
+        </PressableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <DropdownMenuWrapper options={menuOptions}>
+      {cardContent}
     </DropdownMenuWrapper>
   );
 };
@@ -118,6 +159,22 @@ const styles = StyleSheet.create({
   },
   compactValue: {
     ...typography.p1,
+  },
+  clearableRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  inputContainer: {
+    flex: 1,
+  },
+  clearButton: {
+    width: 52,
+    height: 70,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

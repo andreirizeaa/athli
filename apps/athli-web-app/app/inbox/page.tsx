@@ -49,7 +49,7 @@ import { useConversations } from '@/hooks/use-conversations';
 import { useInfiniteMessages } from '@/hooks/use-infinite-messages';
 import { useRealtimeConversations, useRealtimeMessages, useSyncReadReceipt, useMessageMerging, useRealtimeReadReceiptsForUser, useRealtimeReadReceipts } from '@/hooks/use-realtime-messaging';
 import { sendMessage as sendMessageAPI, markConversationAsRead, addReaction, removeReaction, deleteMessage as deleteMessageAPI } from '@/lib/messaging/messaging-api-client';
-import type { Conversation, OptimisticMessage } from '@athli/shared-types';
+import type { Conversation, OptimisticMessage, ReadReceipt } from '@athli/shared-types';
 import { createOptimisticMessage } from '@athli/shared-types';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ContactListItem } from './components/contact-list-item';
@@ -340,9 +340,9 @@ const InboxPage = () => {
 
   // Subscribe to read receipt updates for this conversation
   // This allows the sender to see when their messages are read in realtime
-  const { readReceipts } = useRealtimeReadReceipts({
+  const { readReceipts } =   useRealtimeReadReceipts({
     conversationId: selectedConversation?.id || '',
-    onReadReceiptUpdated: React.useCallback((receipt) => {
+    onReadReceiptUpdated: React.useCallback((receipt: ReadReceipt) => {
       console.log('[Inbox Detail] Read receipt updated:', receipt.user_id, 'at', receipt.last_read_at);
     }, []),
   });
@@ -693,17 +693,19 @@ const InboxPage = () => {
 
   // Convert conversations to Contact format for UI compatibility
   const contacts = React.useMemo<Contact[]>(() => {
-    return conversations.map((conv) => ({
-      id: conv.other_user_id,
-      name: conv.other_user_name || 'Unknown',
-      avatar: conv.other_user_avatar,
-      lastMessage: conv.last_message_preview || '',
-      timestamp: conv.last_message_at ? format(conv.last_message_at, 'HH:mm') : '',
-      unreadCount: conv.unread_count || 0,
-      isOnline: false, // TODO: Add online status tracking
-      lastMessageSenderId: conv.last_message_sender_id,
-      lastMessageIsRead: conv.last_message_is_read,
-    }));
+    return conversations
+      .filter((conv): conv is typeof conv & { other_user_id: string } => !!conv.other_user_id)
+      .map((conv) => ({
+        id: conv.other_user_id,
+        name: conv.other_user_name || 'Unknown',
+        avatar: conv.other_user_avatar ?? undefined,
+        lastMessage: conv.last_message_preview || '',
+        timestamp: conv.last_message_at ? format(conv.last_message_at, 'HH:mm') : '',
+        unreadCount: conv.unread_count || 0,
+        isOnline: false, // TODO: Add online status tracking
+        lastMessageSenderId: conv.last_message_sender_id,
+        lastMessageIsRead: conv.last_message_is_read,
+      }));
   }, [conversations]);
 
   // Derived state

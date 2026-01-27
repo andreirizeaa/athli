@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
-import { ArrowDown, ArrowUp, BrainCog, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Dumbbell, Ellipsis, FileText, Info, Link2, Link2Off, Loader2, NotebookPen, Plus, Repeat, Save, Sparkles, Timer, Trash2, X, Check } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Dumbbell, Ellipsis, FileText, Info, Link2, Link2Off, Loader2, NotebookPen, Plus, Repeat, Save, Sparkles, Timer, Trash2, X, Check } from 'lucide-react';
+import Lottie from 'lottie-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,7 +33,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/general/utils';
 import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@athli/shared-types';
-import { searchExercises, type Exercise } from '@/api/exercise/exercise-search';
+import { useExerciseLookup, type Exercise } from '@/hooks/use-all-exercises';
 import { generateWorkoutFromPrompt, type GeneratedWorkout } from '@/api/exercise/generate-exercise';
 import { toast } from 'sonner';
 import { useExerciseDragDrop } from '@/components/training/hooks/use-exercise-drag-drop';
@@ -142,6 +143,9 @@ export const WorkoutBuilder = ({
   const t = useTranslations();
   const isSectionMode = false;
   const router = useRouter();
+  
+  // Get exercise lookup function from cached exercises
+  const { findExerciseById } = useExerciseLookup();
   const queryClient = useQueryClient();
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -209,7 +213,7 @@ export const WorkoutBuilder = ({
           }
         } as WorkoutProgramPayload;
 
-        const converted = convertPayloadToBuilderFormat(payloadToConvert);
+        const converted = convertPayloadToBuilderFormat(payloadToConvert, findExerciseById);
         return converted;
       }
     }
@@ -246,6 +250,15 @@ export const WorkoutBuilder = ({
   const [isDraggingAiFile, setIsDraggingAiFile] = useState<boolean>(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [aiAnimationData, setAiAnimationData] = useState<object | null>(null);
+
+  // Load AI sphere animation
+  useEffect(() => {
+    fetch('/animations/ai-sphere-animation.json')
+      .then(res => res.json())
+      .then(data => setAiAnimationData(data))
+      .catch(err => console.error('Failed to load AI animation:', err));
+  }, []);
 
   // Scroll to creator when opened
   useEffect(() => {
@@ -326,7 +339,7 @@ export const WorkoutBuilder = ({
           }
         } as WorkoutProgramPayload;
 
-        const converted = convertPayloadToBuilderFormat(payloadToConvert);
+        const converted = convertPayloadToBuilderFormat(payloadToConvert, findExerciseById);
         initialSchema = converted;
         setWorkoutSchema(converted);
         hasInitializedWithDataRef.current = true;
@@ -393,7 +406,7 @@ export const WorkoutBuilder = ({
         }
       } as WorkoutProgramPayload;
 
-      const converted = convertPayloadToBuilderFormat(payloadToConvert);
+      const converted = convertPayloadToBuilderFormat(payloadToConvert, findExerciseById);
       setWorkoutSchema(converted);
       hasInitializedWithDataRef.current = true;
 
@@ -427,23 +440,6 @@ export const WorkoutBuilder = ({
 
     // Check if current state differs from initial state
     let isNowDirty = !isEqual(initialState.current, currentState);
-
-    // Special case for CREATE mode: If we don't have initial data (creating new workout),
-    // consider the form dirty if:
-    // 1. There's a title entered, OR
-    // 2. There are exercises/sections added, OR
-    // 3. There's a description
-    const isCreateMode = !hasInitializedWithDataRef.current;
-    if (isCreateMode) {
-      const hasContent =
-        workoutTitle.trim() !== '' ||
-        workoutSchema.items.length > 0 ||
-        description.trim() !== '';
-
-      if (hasContent) {
-        isNowDirty = true;
-      }
-    }
 
     // Additional check: If the workout has exercises/sections added, it's dirty
     // This handles cases where the isEqual comparison might fail due to dynamically generated IDs
@@ -570,7 +566,7 @@ export const WorkoutBuilder = ({
             const supersetGroupId = `superset_${section.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
             group.exercises.forEach((ex: any) => {
-              const foundExercise = searchExercises('').find((e) => e.exerciseId === ex.id);
+              const foundExercise = findExerciseById(ex.id);
               const exercise = foundExercise || {
                 exerciseId: ex.id,
                 name: ex.name,
@@ -587,6 +583,7 @@ export const WorkoutBuilder = ({
                 exerciseTips: [],
                 variations: [],
                 relatedExerciseIds: [],
+                source: 'musclewiki' as const,
               };
 
               const sets: SetData[] = (ex.sets || []).map((set: any) => ({
@@ -603,7 +600,7 @@ export const WorkoutBuilder = ({
                 sectionId: section.id,
                 exercise: {
                   ...exercise,
-                  instanceId: `${ex.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                  instanceId: ex.id,
                   supersetGroupId,
                   sets,
                 },
@@ -611,7 +608,7 @@ export const WorkoutBuilder = ({
             });
           } else if (group.exercises && group.exercises.length > 0) {
             const ex = group.exercises[0];
-            const foundExercise = searchExercises('').find((e) => e.exerciseId === ex.id);
+            const foundExercise = findExerciseById(ex.id);
             const exercise = foundExercise || {
               exerciseId: ex.id,
               name: ex.name,
@@ -628,6 +625,7 @@ export const WorkoutBuilder = ({
               exerciseTips: [],
               variations: [],
               relatedExerciseIds: [],
+              source: 'musclewiki' as const,
             };
 
             const sets: SetData[] = (ex.sets || []).map((set: any) => ({
@@ -644,7 +642,7 @@ export const WorkoutBuilder = ({
               sectionId: section.id,
               exercise: {
                 ...exercise,
-                instanceId: `${ex.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                instanceId: ex.id,
                 supersetGroupId: null,
                 sets,
               },
@@ -653,7 +651,7 @@ export const WorkoutBuilder = ({
         });
       } else {
         section.exercises?.forEach((ex: any) => {
-          const foundExercise = searchExercises('').find((e) => e.exerciseId === ex.id);
+          const foundExercise = findExerciseById(ex.id);
           const exercise = foundExercise || {
             exerciseId: ex.id,
             name: ex.name,
@@ -670,6 +668,7 @@ export const WorkoutBuilder = ({
             exerciseTips: [],
             variations: [],
             relatedExerciseIds: [],
+            source: 'musclewiki' as const,
           };
 
           const sets: SetData[] = (ex.sets || []).map((set: any) => ({
@@ -760,6 +759,29 @@ export const WorkoutBuilder = ({
   }, [onDirtyChange]);
 
   // AI Generation logic
+  // TODO: AI Workout Generation Integration
+  // The AI needs the following context to generate valid workouts:
+  //
+  // 1. EXERCISE DATABASE CONTEXT:
+  //    - Query the `musclewiki_exercise_cache` Supabase table for context 
+  //    - AI must understand available exercise names and their corresponding IDs
+  //    - Exercise IDs are CRITICAL - the AI must use exact IDs from the cache
+  //
+  // 2. PAYLOAD STRUCTURE:
+  //    - AI must return a payload matching `WorkoutProgramPayload` from @packages/shared-types/src/workout-schema.ts
+  //    - The payload should include a mix of:
+  //      * Top-level exercises (itemType: 'exercise')
+  //      * Sections (itemType: 'section') with types: 'regular', 'amrap', 'timed', 'circuits', 'auxiliary'
+  //      * Supersets within sections (exercises sharing the same supersetId)
+  //
+  // 3. REQUIRED FIELDS:
+  //    - Sets and exercises must include all neccesayr fields such as ids, setNumber, type, trackableField1, trackableField2, restSec
+  //    - Sections need: id, name, type, notes, and type-specific fields (durationSec for amrap, targetRounds for timed/circuits)
+  //
+  // 4. VALIDATION:
+  //    - All exercise IDs must exist in musclewiki_exercise_cache
+  //    - Payload must be parseable by convertPayloadToBuilderFormat() and processGeneratedWorkout()
+  //
   const handleAiGenerate = async () => {
     if (!aiPrompt.trim()) return;
 
@@ -859,7 +881,8 @@ Focus on proper form and progressive overload.`;
       exerciseRefs,
       contentScrollRef,
       setFocusedExerciseId,
-      setCollapsedSections
+      setCollapsedSections,
+      findExerciseById
     );
   };
 
@@ -1014,8 +1037,8 @@ Focus on proper form and progressive overload.`;
     setDraggedSection(section);
   };
 
-  const handleCreateSection = (name: string, type: SectionType) => {
-    setWorkoutSchema((prev) => selectSection(type, prev, { name: name }));
+  const handleCreateSection = (name: string, type: SectionType, config?: { roundDurationSec?: number; targetRounds?: number }) => {
+    setWorkoutSchema((prev) => selectSection(type, prev, { name, ...config }));
     setIsCreatingSection(false);
     markDirty();
   };
@@ -1059,11 +1082,11 @@ Focus on proper form and progressive overload.`;
           },
         ],
         sectionType: section.type,
-        duration: section.durationSec ? Math.round(section.durationSec / 60) : undefined,
+        duration: section.roundDurationSec ? Math.round(section.roundDurationSec / 60) : undefined,
         rounds: section.targetRounds,
       };
 
-      await createSection(sectionData);
+      await createSection(sectionData as unknown as Parameters<typeof createSection>[0]);
 
       // Invalidate sections query to refresh the library
       await queryClient.invalidateQueries({ queryKey: ['coach-sections'] });
@@ -1179,7 +1202,7 @@ Focus on proper form and progressive overload.`;
             coreData.exercises = exercisesToProcess.map((ex: any) => {
               // Use prescribedExerciseId for looking up exercise details (fallback to id for legacy data)
               const exerciseId = ex.prescribedExerciseId || ex.id || ex.exerciseId;
-              const fullExercise = searchExercises('').find(e => e.exerciseId === exerciseId);
+              const fullExercise = findExerciseById(exerciseId);
               const exerciseData = fullExercise ? {
                 ...ex,
                 // IMPORTANT: Set exerciseId from prescribedExerciseId (or legacy id field)
@@ -1198,6 +1221,14 @@ Focus on proper form and progressive overload.`;
                 exerciseTips: fullExercise.exerciseTips,
                 variations: fullExercise.variations,
                 relatedExerciseIds: fullExercise.relatedExerciseIds,
+                // Required fields for Exercise type
+                exerciseType: fullExercise.exerciseType || 'weight_reps',
+                source: fullExercise.source || 'musclewiki',
+                rawThumbnailUrl: fullExercise.rawThumbnailUrl,
+                difficulty: fullExercise.difficulty,
+                force: fullExercise.force,
+                mechanic: fullExercise.mechanic,
+                category: fullExercise.category,
               } : {
                 ...ex,
                 exerciseId: exerciseId,
@@ -1215,6 +1246,8 @@ Focus on proper form and progressive overload.`;
                 exerciseTips: ex.exerciseTips || [],
                 variations: ex.variations || [],
                 relatedExerciseIds: ex.relatedExerciseIds || [],
+                // Required fields for Exercise type
+                source: 'musclewiki' as const,
               };
 
               // Ensure set type is preserved (referencing previous fix)
@@ -2260,7 +2293,7 @@ Focus on proper form and progressive overload.`;
                       </div>
                     ) : (
                       <div
-                        className="flex flex-col h-full relative"
+                        className="flex flex-col px-4 h-full min-h-0 relative"
                         onDragEnter={(e) => {
                           if (selectedFile) return;
                           e.preventDefault();
@@ -2326,19 +2359,22 @@ Focus on proper form and progressive overload.`;
                           </div>
                         )}
                         <div className="flex-col items-center gap-4 flex-shrink-0 pb-4 flex relative z-0">
-                          <div className="relative flex items-center justify-center py-6 px-6">
-                            <div className="absolute inset-0 rounded-full bg-primary/10 blur-xl"></div>
-                            <div className="absolute inset-4 rounded-full bg-primary/20 blur-sm"></div>
-                            <div className="relative z-10 inline-flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground shadow-lg shadow-primary/10">
-                              <BrainCog className="h-10 w-10" />
-                            </div>
+                          <div className="relative flex items-center justify-center w-36 h-36 -mb-4">
+                            {aiAnimationData && (
+                              <Lottie
+                                className="w-full h-full"
+                                animationData={aiAnimationData}
+                                loop
+                                autoplay
+                              />
+                            )}
                           </div>
                           <h2 className="text-xl font-semibold text-center">{t('library.athliAiBuilder')}</h2>
                           <p className="text-sm text-foreground text-center max-w-md">
                             {t('library.dragDropPdf')}
                           </p>
                         </div>
-                        <div className="flex-1 overflow-y-auto flex flex-col px-4">
+                        <div className="flex-1 overflow-y-auto flex flex-col">
                           <div className="flex-1 flex flex-col min-h-0">
                             <div className="flex flex-col gap-2 flex-1 min-h-0">
                               <div className="flex items-center gap-2 mb-1">

@@ -32,6 +32,12 @@ export type ScheduleData = {
   specificDay?: number;
 };
 
+export type ExerciseFilterData = {
+  muscles?: string[];
+  categories?: string[];
+  difficulties?: string[];
+};
+
 type ModalCallbacksStore = {
   // Callbacks
   clientSelectCallback: ((client: Client) => void) | null;
@@ -53,6 +59,7 @@ type ModalCallbacksStore = {
   questionSelectCallback: ((question: Question) => void) | null;
   questionsReorderCallback: ((questions: Question[]) => void) | null;
   metadataUpdateCallback: ((metadata: { name: string; description: string; type: string; difficulty: string }) => void) | null;
+  filterSelectCallback: ((filters: ExerciseFilterData) => void) | null;
 
   // Stored data
   storedRepeatData: RepeatData | null;
@@ -60,6 +67,7 @@ type ModalCallbacksStore = {
   storedScheduleData: ScheduleData | null;
   storedReorderItems: BuilderItem[] | null;
   storedReorderQuestions: Question[] | null;
+  storedFilterData: ExerciseFilterData | null;
 
   // Actions - Set callbacks
   setClientSelectCallback: (callback: (client: Client) => void) => void;
@@ -81,6 +89,7 @@ type ModalCallbacksStore = {
   setQuestionSelectCallback: (callback: (question: Question) => void) => void;
   setQuestionsReorderCallback: (callback: (questions: Question[]) => void) => void;
   setMetadataUpdateCallback: (callback: (metadata: { name: string; description: string; type: string; difficulty: string }) => void) => void;
+  setFilterSelectCallback: (callback: (filters: ExerciseFilterData) => void) => void;
 
   // Actions - Trigger callbacks
   triggerClientSelect: (client: Client) => void;
@@ -102,6 +111,7 @@ type ModalCallbacksStore = {
   triggerQuestionSelect: (question: Question) => void;
   triggerQuestionsReorder: (questions: Question[]) => void;
   triggerMetadataUpdate: (metadata: { name: string; description: string; type: string; difficulty: string }) => void;
+  triggerFilterSelect: (filters: ExerciseFilterData) => void;
 
   // Actions - Data management
   getRepeatData: () => RepeatData | null;
@@ -114,6 +124,8 @@ type ModalCallbacksStore = {
   setReorderItems: (items: BuilderItem[] | null) => void;
   reorderQuestions: Question[] | null;
   setReorderQuestions: (questions: Question[] | null) => void;
+  getFilterData: () => ExerciseFilterData | null;
+  setFilterData: (data: ExerciseFilterData | null) => void;
 };
 
 export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => ({
@@ -137,6 +149,7 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
   questionSelectCallback: null,
   questionsReorderCallback: null,
   metadataUpdateCallback: null,
+  filterSelectCallback: null,
 
   storedRepeatData: null,
   storedHabitOptionsData: null,
@@ -144,6 +157,7 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
   storedReorderItems: null,
   storedReorderQuestions: null,
   reorderQuestions: null,
+  storedFilterData: null,
 
   // Set callback actions
   setClientSelectCallback: (callback) => set({ clientSelectCallback: callback }),
@@ -165,6 +179,7 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
   setQuestionSelectCallback: (callback) => set({ questionSelectCallback: callback }),
   setQuestionsReorderCallback: (callback) => set({ questionsReorderCallback: callback }),
   setMetadataUpdateCallback: (callback) => set({ metadataUpdateCallback: callback }),
+  setFilterSelectCallback: (callback) => set({ filterSelectCallback: callback }),
   setReorderQuestions: (questions) => set({ storedReorderQuestions: questions, reorderQuestions: questions }),
 
   // Trigger callback actions
@@ -282,6 +297,12 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
       metadataUpdateCallback(metadata);
     }
   },
+  triggerFilterSelect: (filters) => {
+    const { filterSelectCallback } = get();
+    if (filterSelectCallback) {
+      filterSelectCallback(filters);
+    }
+  },
 
   // Data management
   getRepeatData: () => get().storedRepeatData,
@@ -292,6 +313,8 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
   setScheduleData: (data) => set({ storedScheduleData: data }),
   getReorderItems: () => get().storedReorderItems,
   setReorderItems: (items) => set({ storedReorderItems: items }),
+  getFilterData: () => get().storedFilterData,
+  setFilterData: (data) => set({ storedFilterData: data }),
 }));
 
 // Backward compatibility aliases

@@ -10,7 +10,7 @@ import { Image } from 'expo-image';
 import 'react-native-reanimated';
 import { PressablesConfig } from 'pressto';
 
-import { useColorScheme, useThemePreference, useCoachProfileStore, useCoachCompanyStore, useClientProfileStore, useAuthSessionStore, useAppInitStore, useChatsStore, useAppView } from '@/stores';
+import { useColorScheme, useThemePreference, useCoachProfileStore, useCoachCompanyStore, useClientProfileStore, useAuthSessionStore, useAppInitStore, useChatsStore, useAppView, useAppViewStore } from '@/stores';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { useTranslationsStore } from '@/stores/useTranslationsStore';
 import { useUnitsStore } from '@/stores/useUnitsStore';
@@ -23,6 +23,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { restoreSession } from '@/services/auth/supabase-auth';
 import type { CoachProfile, ClientProfile } from '@/types/profile';
 import QueryProvider from '@/providers/query-provider';
+import { usePrefetchAllExercises } from '@/hooks/useAllExercises';
 import { ErrorBoundary as CustomErrorBoundary } from '@/components/ui/error-boundary';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
@@ -116,6 +117,7 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const [isAppReady, setIsAppReady] = useState(false);
+  const [coachLoaded, setCoachLoaded] = useState(false);
   const isSessionReady = useAuthSessionStore((state) => state.isSessionReady);
   const setCoachProfile = useCoachProfileStore((state) => state.setProfile);
   const setClientProfile = useClientProfileStore((state) => state.setProfile);
@@ -123,6 +125,9 @@ function RootLayoutNav() {
   const clearClientProfile = useClientProfileStore((state) => state.clearProfile);
   const { setAppView } = useAppView();
   const router = useRouter();
+
+  // Prefetch MuscleWiki exercises in background once coach is loaded
+  usePrefetchAllExercises({ enabled: coachLoaded });
 
   // Initialize stores synchronously before paint (useLayoutEffect runs after render but before paint)
   // Each store's initialize() is idempotent - it checks if already initialized
@@ -137,6 +142,15 @@ function RootLayoutNav() {
     useCoachProfileStore.getState().initialize();
     useCoachCompanyStore.getState().initialize();
     useClientProfileStore.getState().initialize();
+
+    // Set appView from cached profiles BEFORE first render to prevent tab flicker
+    const cachedCoachProfile = useCoachProfileStore.getState().profile;
+    const cachedClientProfile = useClientProfileStore.getState().profile;
+    if (cachedCoachProfile) {
+      useAppViewStore.getState().setAppView('coach');
+    } else if (cachedClientProfile) {
+      useAppViewStore.getState().setAppView('athlete');
+    }
   }, []);
 
   // Now we can safely use theme hooks after initialization
@@ -202,6 +216,9 @@ function RootLayoutNav() {
           useChatsStore.getState().prefetchTopMessages(10).catch((error) => {
             console.warn('[RootLayout] Message prefetch failed:', error);
           });
+
+          // STEP 4c: Mark coach profile loaded for exercise prefetch
+          setCoachLoaded(true);
         }
 
         // Small delay to ensure first frame is rendered
@@ -1145,6 +1162,18 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="modals/workout/add-exercise-to-builder-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/workout/exercise-filter-modal"
             options={{
               presentation: 'modal',
               headerShown: false,

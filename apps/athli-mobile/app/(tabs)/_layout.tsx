@@ -168,7 +168,7 @@ export default function TabLayout() {
     // On initial mount with NativeTabs, ensure we navigate to the correct initial route
     // This prevents add-modal from being shown on app load
     if (hasLiquidGlass) {
-      const initialRoute = '/home';
+      const initialRoute = appView === 'athlete' ? '/home' : '/clients';
       // Navigate to initial route if we're on index or any unexpected route (but not on a valid tab)
       if (
         pathname === '/' ||

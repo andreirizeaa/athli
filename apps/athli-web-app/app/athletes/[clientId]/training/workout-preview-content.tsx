@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Link2, Play, History, CircleCheck, CircleX } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/general/utils';
-import { searchExercises } from '@/api/exercise/exercise-search';
+import { useExerciseLookup } from '@/hooks/use-all-exercises';
 import { VideoModal } from '@/components/training/builder/video-modal';
 import {
     Table,
@@ -20,12 +20,6 @@ interface WorkoutPreviewContentProps {
     workoutData: any;
     onHistoryClick?: (exercise: any) => void;
 }
-
-// Helper function to get exercise by ID from mock data
-const getExerciseById = (exerciseId: string) => {
-    const allExercises = searchExercises('');
-    return allExercises.find(ex => ex.exerciseId === exerciseId);
-};
 
 // Helper function to render set values (weight/reps) showing differences between prescribed and completed
 const renderValue = (value: any) => {
@@ -89,6 +83,9 @@ export const WorkoutPreviewContent = ({ workoutData, onHistoryClick }: WorkoutPr
     const [isLoadingExercises, setIsLoadingExercises] = useState(false);
     const [selectedExercise, setSelectedExercise] = useState<any | null>(null);
     const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+    
+    // Get exercise lookup from cached exercises
+    const { findExerciseById } = useExerciseLookup();
 
     useEffect(() => {
         if (!workoutData) {
@@ -107,17 +104,17 @@ export const WorkoutPreviewContent = ({ workoutData, onHistoryClick }: WorkoutPr
                 const isSubstituted = exercise.performedExerciseId && exercise.prescribedExerciseId && exercise.performedExerciseId !== exercise.prescribedExerciseId;
 
                 if (targetExerciseId) {
-                    let exerciseDetails = getExerciseById(targetExerciseId);
+                    let exerciseDetails = findExerciseById(targetExerciseId);
 
                     // Fallback to prescribed ID if performed ID lookup fails (common if performed ID is an instance ID not in library)
                     if (!exerciseDetails && exercise.prescribedExerciseId && exercise.prescribedExerciseId !== targetExerciseId) {
-                        exerciseDetails = getExerciseById(exercise.prescribedExerciseId);
+                        exerciseDetails = findExerciseById(exercise.prescribedExerciseId);
                     }
 
                     // If substituted, get prescribed details for the name
                     let prescribedName = null;
                     if (isSubstituted) {
-                        const prescribedDetails = getExerciseById(exercise.prescribedExerciseId);
+                        const prescribedDetails = findExerciseById(exercise.prescribedExerciseId);
                         if (prescribedDetails) {
                             prescribedName = prescribedDetails.name;
                         }
@@ -211,7 +208,7 @@ export const WorkoutPreviewContent = ({ workoutData, onHistoryClick }: WorkoutPr
     }, [workoutData]);
 
     const handleThumbnailClick = (exercise: any) => {
-        const fullExercise = getExerciseById(exercise.exerciseId);
+        const fullExercise = findExerciseById(exercise.exerciseId);
         if (fullExercise) {
             setSelectedExercise(fullExercise);
             setIsVideoModalOpen(true);

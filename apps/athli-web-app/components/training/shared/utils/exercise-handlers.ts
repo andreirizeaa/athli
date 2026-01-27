@@ -110,6 +110,7 @@ export const handleAddTopLevelExercise = (
     exerciseTips: [],
     variations: [],
     relatedExerciseIds: [],
+    source: 'musclewiki',
     supersetGroupId: null,
     instanceId: `empty_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
   };
@@ -152,6 +153,7 @@ export const handleAddExercise = (
     exerciseTips: [],
     variations: [],
     relatedExerciseIds: [],
+    source: 'musclewiki',
     supersetGroupId: null,
     instanceId: `empty_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
   };

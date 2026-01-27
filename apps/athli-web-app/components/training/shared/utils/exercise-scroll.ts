@@ -1,6 +1,8 @@
-import type { Exercise } from '@/api/exercise/exercise-search';
-import { searchExercises } from '@/api/exercise/exercise-search';
+import type { Exercise } from '@/hooks/use-all-exercises';
 import type { MutableRefObject } from 'react';
+
+// Type for the exercise lookup function (passed from hook)
+export type ExerciseLookupFn = (id: string) => Exercise | undefined;
 
 type ScrollOptions = {
   /** Whether the section containing this exercise is currently collapsed */
@@ -70,7 +72,8 @@ export const handleExerciseClickById = (
   exerciseRefs: MutableRefObject<Map<string, HTMLDivElement>>,
   contentScrollRef: MutableRefObject<HTMLDivElement | null>,
   setFocusedExerciseId: (id: string | null) => void,
-  setCollapsedSections: (updater: (prev: Set<string>) => Set<string>) => void
+  setCollapsedSections: (updater: (prev: Set<string>) => Set<string>) => void,
+  findExerciseById?: ExerciseLookupFn
 ): void => {
   // Find which section contains this exercise
   const sectionContainingExercise = workoutSections.find((section) =>
@@ -94,8 +97,8 @@ export const handleExerciseClickById = (
     setFocusedExerciseId(null);
   }, 1000);
 
-  // Find the exercise by ID from the search results
-  const exercise = searchExercises('').find((e) => e.exerciseId === exerciseId);
+  // Find the exercise by ID from cached exercises (if lookup function provided)
+  const exercise = findExerciseById ? findExerciseById(exerciseId) : undefined;
 
   // If section was collapsed, wait for it to expand before scrolling
   const scrollToExercise = () => {

@@ -21,6 +21,7 @@ import { useCoachExercises } from '@/hooks/use-coach-exercises';
 import { useCoachTodo } from '@/hooks/use-coach-todo';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { useConversations } from '@/hooks/use-conversations';
+import { usePrefetchAllExercises } from '@/hooks/use-all-exercises';
 
 interface GlobalContextType {
     user: UserProfile | null;
@@ -78,6 +79,10 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
     const { isLoadingOwn: isOwnTodoLoading, isLoadingAuto: isAutoTodoLoading } = useCoachTodo({ enabled: shouldPrefetch });
     const { isLoading: isClientsLoading } = useCoachClients({ enabled: shouldPrefetch });
     const { isLoading: isConversationsLoading } = useConversations({ enabled: shouldPrefetch });
+    
+    // Prefetch all MuscleWiki exercises into React Query cache (1700+ exercises)
+    // This runs in the background and doesn't block the UI
+    usePrefetchAllExercises({ enabled: shouldPrefetch });
 
     const isLoading = isFilesLoading ||
         isHabitsLoading ||

@@ -46,6 +46,8 @@ import {
   Star,
   Trash2,
   Copy,
+  Dumbbell,
+  Loader2,
 } from 'lucide-react';
 
 import type { Program } from '@/components/app/app-shell';
@@ -55,20 +57,19 @@ import { toast } from 'sonner';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
 import { EditExerciseSidePanel } from './edit-exercise-side-panel';
 import { useTrainingData } from '../training-data-context';
+import { useVideoThumbnails } from '@/hooks/use-video-thumbnail';
 import {
-  EXERCISE_CATEGORY_OPTIONS,
-  MUSCLE_GROUP_OPTIONS,
-  EXERCISE_EQUIPMENT_OPTIONS,
-  MODALITY_OPTIONS,
+  MUSCLEWIKI_CATEGORY_OPTIONS,
+  MUSCLEWIKI_MUSCLE_OPTIONS,
+  MUSCLEWIKI_DIFFICULTY_OPTIONS,
 } from '@athli/shared-types';
 
-type ColumnId = 'category' | 'muscleGroup' | 'modality' | 'equipment' | 'actions';
+type ColumnId = 'category' | 'muscleGroup' | 'difficulty' | 'actions';
 
 const COLUMN_ORDER: ColumnId[] = [
   'category',
   'muscleGroup',
-  'modality',
-  'equipment',
+  'difficulty',
   'actions',
 ];
 const filteredColumnOrder = COLUMN_ORDER.filter((colId) => colId !== 'actions');
@@ -78,8 +79,7 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
   const widths: Record<ColumnId, { class: string; pixel: string }> = {
     category: { class: 'min-w-[140px]', pixel: '140px' },
     muscleGroup: { class: 'min-w-[150px]', pixel: '150px' },
-    modality: { class: 'min-w-[140px]', pixel: '140px' },
-    equipment: { class: 'min-w-[200px]', pixel: '200px' },
+    difficulty: { class: 'min-w-[140px]', pixel: '140px' },
     actions: { class: 'w-[100px]', pixel: '100px' },
   };
 
@@ -153,18 +153,36 @@ const ExercisesPage = () => {
       length: '', // Not used for exercises
       totalExercises: 0, // Not used for exercises
       totalWorkouts: 0,
-      difficulty: '',
-      equipment: ex.equipment || '',
+      difficulty: ex.difficulty || '',
+      equipment: '', // Removed - using category instead
       created: ex.created_at,
       category: ex.category || '',
       muscleGroup: (ex.muscle_group || []).join(', '), // Convert array to string for display
       muscleGroups: ex.muscle_group || [], // Keep array for filtering
-      modality: ex.modality || '',
+      modality: '', // Removed
       videoLink: ex.video_link || '',
       isFavourite: ex.isFavourite || false,
     }));
     setExercises(mappedExercises);
   }, [contextExercises]);
+
+  // Extract Supabase video URLs for thumbnail generation
+  const supabaseVideoUrls = useMemo(() => {
+    return exercises
+      .map((ex) => (ex as any).videoLink as string | undefined)
+      .filter((url): url is string => {
+        if (!url) return false;
+        try {
+          const urlObj = new URL(url.trim());
+          return urlObj.hostname.includes('supabase.co');
+        } catch {
+          return false;
+        }
+      });
+  }, [exercises]);
+
+  // Generate thumbnails for Supabase videos
+  const { getThumbnailUrl: getSupabaseThumbnail, isThumbnailLoading: isSupabaseThumbnailLoading } = useVideoThumbnails(supabaseVideoUrls);
 
   // Handle exerciseId from URL params (e.g., from search)
   useEffect(() => {
@@ -494,27 +512,27 @@ const ExercisesPage = () => {
               );
             },
           };
-        case 'modality':
+        case 'difficulty':
           return {
-            id: 'modality',
-            label: t('exercises.columns.modality'),
-            icon: <Wrench className="size-3" />,
+            id: 'difficulty',
+            label: t('exercises.columns.difficulty'),
+            icon: <Tag className="size-3" />,
             width: {
-              class: getColumnWidth('modality', 'class'),
-              pixel: getColumnWidth('modality', 'pixel'),
+              class: getColumnWidth('difficulty', 'class'),
+              pixel: getColumnWidth('difficulty', 'pixel'),
             },
-            tooltip: t('exercises.columnTooltips.modality'),
+            tooltip: t('exercises.columnTooltips.difficulty'),
             getSortValue: (row) => {
-              const modality = (row as any).modality || '';
-              return modality.toLowerCase();
+              const difficulty = (row as any).difficulty || '';
+              return difficulty.toLowerCase();
             },
             getSearchValue: (row) => {
-              const modality = (row as any).modality || '';
-              return `${row.program} ${modality}`;
+              const difficulty = (row as any).difficulty || '';
+              return `${row.program} ${difficulty}`;
             },
             renderCell: (row) => {
-              const modality = (row as any).modality;
-              if (isEmpty(modality)) {
+              const difficulty = (row as any).difficulty;
+              if (isEmpty(difficulty)) {
                 return (
                   <div className="flex items-center h-full min-w-0 w-full">
                     <span className="text-sm truncate block min-w-0 w-full">--</span>
@@ -523,53 +541,8 @@ const ExercisesPage = () => {
               }
               return (
                 <div className="flex items-center h-full">
-                  <span className="text-sm">{modality}</span>
+                  <span className="text-sm">{difficulty}</span>
                 </div>
-              );
-            },
-          };
-        case 'equipment':
-          return {
-            id: 'equipment',
-            label: t('general.equipment'),
-            icon: <Wrench className="size-3" />,
-            width: {
-              class: getColumnWidth('equipment', 'class'),
-              pixel: getColumnWidth('equipment', 'pixel'),
-            },
-            tooltip: t('exercises.columnTooltips.equipment'),
-            getSortValue: (row) => {
-              const equipment = (row as any).equipment || row.equipment || '';
-              return equipment.toLowerCase();
-            },
-            getSearchValue: (row) => {
-              const equipment = (row as any).equipment || row.equipment || '';
-              return `${row.program} ${equipment}`;
-            },
-            renderCell: (row) => {
-              const equipment = (row as any).equipment || row.equipment;
-              if (isEmpty(equipment)) {
-                return (
-                  <div className="flex items-center h-full min-w-0 w-full">
-                    <span className="text-sm truncate block min-w-0 w-full">--</span>
-                  </div>
-                );
-              }
-              return (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center h-full min-w-0 w-full">
-                      <span className="text-sm truncate block min-w-0 w-full">{equipment}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    className="max-w-[200px] break-words"
-                    side="top"
-                    align="start"
-                  >
-                    <p>{equipment}</p>
-                  </TooltipContent>
-                </Tooltip>
               );
             },
           };
@@ -610,20 +583,20 @@ const ExercisesPage = () => {
 
   const columns: ColumnDefinition<Program>[] = useMemo(() => [...allColumns, actionsColumn], [allColumns, actionsColumn]);
 
-  // Create filter definitions
+  // Create filter definitions - includes MuscleWiki filters for category, muscles, difficulty, etc.
   const filters: FilterDefinition<Program>[] = useMemo(() => [
     {
       id: 'category',
       label: t('exercises.columns.category'),
       icon: <Tag className="size-4" />,
-      options: EXERCISE_CATEGORY_OPTIONS.map((cat) => ({ value: cat.value, label: cat.label })),
+      options: MUSCLEWIKI_CATEGORY_OPTIONS.map((cat) => ({ value: cat.value, label: cat.label })),
       getFilterValue: (row) => (row as any).category || '',
     },
     {
       id: 'muscleGroup',
       label: t('exercises.columns.muscleGroup'),
       icon: <User className="size-4" />,
-      options: MUSCLE_GROUP_OPTIONS.map((group) => ({ value: group.value, label: group.label })),
+      options: MUSCLEWIKI_MUSCLE_OPTIONS.map((group) => ({ value: group.value, label: group.label })),
       getFilterValue: (row) => {
         const muscleGroups = (row as any).muscleGroups || (row as any).muscleGroup?.split(',').map((g: string) => g.trim()) || [];
         const groupsArray = Array.isArray(muscleGroups) ? muscleGroups : [];
@@ -632,11 +605,11 @@ const ExercisesPage = () => {
       },
     },
     {
-      id: 'modality',
-      label: t('exercises.columns.modality'),
-      icon: <Wrench className="size-4" />,
-      options: MODALITY_OPTIONS.map((mod) => ({ value: mod.value, label: mod.label })),
-      getFilterValue: (row) => (row as any).modality || '',
+      id: 'difficulty',
+      label: t('exercises.columns.difficulty'),
+      icon: <Tag className="size-4" />,
+      options: MUSCLEWIKI_DIFFICULTY_OPTIONS.map((d) => ({ value: d.value, label: d.label })),
+      getFilterValue: (row) => (row as any).difficulty || '',
     },
     {
       id: 'show',
@@ -650,13 +623,64 @@ const ExercisesPage = () => {
     },
   ], [t, starredExercises]);
 
+  // Helper to check if URL is a Supabase storage URL (custom upload)
+  const isSupabaseUrl = (url: string): boolean => {
+    if (!url?.trim()) return false;
+    try {
+      const urlObj = new URL(url.trim());
+      return urlObj.hostname.includes('supabase.co');
+    } catch {
+      return false;
+    }
+  };
+
+  // Helper to extract video thumbnail from video link
+  const getVideoThumbnail = (videoLink: string): string | null => {
+    if (!videoLink?.trim()) return null;
+    
+    // YouTube patterns
+    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const youtubeMatch = videoLink.match(youtubeRegex);
+    if (youtubeMatch) {
+      return `https://img.youtube.com/vi/${youtubeMatch[1]}/mqdefault.jpg`;
+    }
+    
+    return null;
+  };
+
   // Create first column renderer
   const renderFirstColumn = useCallback((exercise: Program, isSelected: boolean) => {
     const isStarred = starredExercises.has(exercise.id);
+    const videoLink = (exercise as any).videoLink || '';
+    const youtubeThumbnail = getVideoThumbnail(videoLink);
+    const hasCustomVideo = isSupabaseUrl(videoLink);
+    const supabaseThumbnail = hasCustomVideo ? getSupabaseThumbnail(videoLink) : null;
+    const isLoadingThumbnail = hasCustomVideo && isSupabaseThumbnailLoading(videoLink);
+    const thumbnailUrl = youtubeThumbnail || supabaseThumbnail;
+    
     return (
       <div className="flex items-center gap-3 h-full w-full">
         <div className="flex items-center justify-center h-full" data-no-row-link="true">
           <Checkbox checked={isSelected} onCheckedChange={() => handleToggleExercise(exercise.id)} />
+        </div>
+        {/* Thumbnail or placeholder */}
+        <div className="relative w-8 h-8 flex-shrink-0 rounded overflow-hidden bg-muted border border-border">
+          {isLoadingThumbnail ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Loader2 className="size-4 text-muted-foreground animate-spin" />
+            </div>
+          ) : thumbnailUrl ? (
+            <img
+              src={thumbnailUrl}
+              alt={exercise.program}
+              className="absolute inset-0 w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Dumbbell className="size-4 text-muted-foreground" />
+            </div>
+          )}
         </div>
         <span className="text-sm truncate flex-1 min-w-0">{exercise.program}</span>
         <div className="flex items-center justify-end flex-shrink-0 gap-1" data-no-row-link="true">
@@ -714,7 +738,7 @@ const ExercisesPage = () => {
         </div>
       </div>
     );
-  }, [starredExercises, handleToggleExercise, handleToggleStar, handleStarKeyDown, t]);
+  }, [starredExercises, handleToggleExercise, handleToggleStar, handleStarKeyDown, t, getSupabaseThumbnail, isSupabaseThumbnailLoading]);
 
   // Create first column header with sorting
   const renderFirstColumnHeader = useCallback(({

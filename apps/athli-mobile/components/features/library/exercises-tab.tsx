@@ -1,13 +1,21 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, Linking } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { ChevronRight, Dumbbell, Play, UserPlus, Trash2 } from 'lucide-react-native';
+import { ChevronRight, Dumbbell, UserPlus, Trash2, Play } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 import SquircleView from 'react-native-fast-squircle';
 
 import { Image } from 'expo-image';
 import { FlashList } from '@shopify/flash-list';
+
+import {
+  useVideoThumbnail,
+  isSupabaseUrl,
+  getYouTubeThumbnail,
+  isYouTubeUrl,
+  isVimeoUrl,
+} from '@/hooks/use-video-thumbnail';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
@@ -22,6 +30,108 @@ import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Dialog } from '@/components/ui/dialog';
 import { EXERCISE_CATEGORY_OPTIONS, EQUIPMENT_OPTIONS } from '@athli/shared-types';
+
+type ExerciseThumbnailProps = {
+  videoLink: string | null | undefined;
+  themeColors: { surfacePrimary: string; text: string; primary: string };
+  onPress: () => void;
+};
+
+const ExerciseThumbnail = ({ videoLink, themeColors, onPress }: ExerciseThumbnailProps) => {
+  const hasVideo = !!videoLink && videoLink.trim().length > 0;
+
+  // Check video platform
+  const isYouTube = isYouTubeUrl(videoLink);
+  const isVimeo = isVimeoUrl(videoLink);
+  const hasSupabaseVideo = isSupabaseUrl(videoLink);
+
+  // Get YouTube thumbnail directly
+  const youtubeThumbnail = getYouTubeThumbnail(videoLink);
+
+  // Generate thumbnail for Supabase videos
+  const { thumbnailUrl: supabaseThumbnail, isLoading } = useVideoThumbnail(videoLink, {
+    enabled: hasSupabaseVideo,
+  });
+
+  // Determine which thumbnail to use
+  const thumbnailUrl = youtubeThumbnail || supabaseThumbnail;
+  const isLoadingThumbnail = hasSupabaseVideo && isLoading;
+
+  return (
+    <PressableScale onPress={onPress} style={styles.thumbnailWrapper}>
+      {isLoadingThumbnail ? (
+        <SquircleView
+          cornerSmoothing={1}
+          style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}
+        >
+          <ActivityIndicator size="small" color={themeColors.text} />
+        </SquircleView>
+      ) : thumbnailUrl ? (
+        <View style={styles.videoThumbnailContainer}>
+          <Image
+            source={{ uri: thumbnailUrl }}
+            style={styles.thumbnailImage}
+            contentFit="cover"
+            transition={200}
+          />
+          {/* Play icon overlay */}
+          <View style={styles.playIconOverlay}>
+            <View style={styles.playIconCircle}>
+              <Play size={10} color="#fff" fill="#fff" />
+            </View>
+          </View>
+        </View>
+      ) : isYouTube ? (
+        // YouTube video but no thumbnail - show YouTube icon
+        <SquircleView
+          cornerSmoothing={1}
+          style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}
+        >
+          <Image
+            source={require('@/assets/icons/youtube.png')}
+            style={styles.platformIcon}
+            contentFit="contain"
+          />
+        </SquircleView>
+      ) : isVimeo ? (
+        // Vimeo video but no thumbnail - show Vimeo icon
+        <SquircleView
+          cornerSmoothing={1}
+          style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}
+        >
+          <Image
+            source={require('@/assets/icons/vimeo.png')}
+            style={styles.platformIcon}
+            contentFit="contain"
+          />
+        </SquircleView>
+      ) : hasVideo ? (
+        // Other video (e.g., Supabase without thumbnail) - show play button
+        <SquircleView
+          cornerSmoothing={1}
+          style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}
+        >
+          <View style={[styles.videoIndicator, { backgroundColor: themeColors.primary }]}>
+            <Play size={16} color="#fff" fill="#fff" />
+          </View>
+        </SquircleView>
+      ) : (
+        // No video link - show dumbbell
+        <SquircleView
+          cornerSmoothing={1}
+          style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}
+        >
+          <PlatformIcon
+            sf="figure.strengthtraining.traditional"
+            IconComponent={Dumbbell}
+            size={24}
+            color={themeColors.text}
+          />
+        </SquircleView>
+      )}
+    </PressableScale>
+  );
+};
 
 export const ExercisesTab = () => {
   const router = useRouter();
@@ -184,12 +294,18 @@ export const ExercisesTab = () => {
 
     closeOpenRow();
     if (exercise.video_link) {
+      // Open YouTube and Vimeo links externally
+      if (isYouTubeUrl(exercise.video_link) || isVimeoUrl(exercise.video_link)) {
+        Linking.openURL(exercise.video_link);
+        return;
+      }
+      // Use internal player for Supabase/custom videos
       router.push({
         pathname: '/modals/files/file-viewer-modal',
         params: {
           uri: exercise.video_link,
           filename: exercise.name,
-          mimeType: 'video/youtube',
+          mimeType: 'video/mp4',
         },
       });
     }
@@ -230,37 +346,9 @@ export const ExercisesTab = () => {
     return option?.label || value;
   };
 
-  // Helper to extract video thumbnail URL
-  const getVideoThumbnail = (videoLink: string | null | undefined): string | null => {
-    if (!videoLink) return null;
-
-    try {
-      const url = new URL(videoLink);
-      const hostname = url.hostname.toLowerCase();
-
-      // YouTube
-      if (hostname.includes('youtube.com')) {
-        const videoId = url.searchParams.get('v');
-        if (videoId) return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-      } else if (hostname.includes('youtu.be')) {
-        const videoId = url.pathname.slice(1);
-        if (videoId) return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-      }
-
-      // Vimeo - Note: Vimeo thumbnails require API call, using placeholder
-      if (hostname.includes('vimeo.com')) {
-        return null; // Can't easily get Vimeo thumbnail without API
-      }
-    } catch {
-      return null;
-    }
-
-    return null;
-  };
 
   const renderItem = useCallback(({ item: exercise, index }: { item: typeof filteredExercises[0]; index: number }) => {
     const isLastItem = index === filteredExercises.length - 1;
-    const thumbnailUrl = getVideoThumbnail(exercise.video_link);
     const categoryLabel = getCategoryLabel(exercise.category);
     const equipmentLabel = getEquipmentLabel(exercise.equipment);
     const hasCategory = Boolean(categoryLabel);
@@ -290,34 +378,12 @@ export const ExercisesTab = () => {
           <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
             <View style={styles.rowWrapper}>
               <View style={[styles.rowContent, { backgroundColor: 'transparent' }]}>
-                {/* Thumbnail - Separate Pressable */}
-                <PressableScale
+                {/* Thumbnail - Using ExerciseThumbnail component */}
+                <ExerciseThumbnail
+                  videoLink={exercise.video_link}
+                  themeColors={themeColors}
                   onPress={() => handleThumbnailPress(exercise)}
-                  style={styles.thumbnailWrapper}
-                >
-                  {thumbnailUrl ? (
-                    <View style={styles.videoThumbnailContainer}>
-                      <Image
-                        source={{ uri: thumbnailUrl }}
-                        style={styles.thumbnailImage}
-                        contentFit="cover"
-                        transition={200}
-                      />
-                      <View style={styles.playOverlay}>
-                        <Play {...({ color: "#FFFFFF", size: 16 } as any)} />
-                      </View>
-                    </View>
-                  ) : (
-                    <SquircleView cornerSmoothing={1} style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
-                      <PlatformIcon
-                        sf="figure.strengthtraining.traditional"
-                        IconComponent={Dumbbell}
-                        size={24}
-                        color={themeColors.text}
-                      />
-                    </SquircleView>
-                  )}
-                </PressableScale>
+                />
 
                 {/* Rest of row - Pressable for Edit */}
                 <PressableScale
@@ -430,15 +496,29 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  playOverlay: {
+  playIconOverlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    bottom: 4,
+    right: 4,
+  },
+  playIconCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  videoIndicator: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  platformIcon: {
+    width: 32,
+    height: 32,
   },
   iconContainer: {
     width: 58,

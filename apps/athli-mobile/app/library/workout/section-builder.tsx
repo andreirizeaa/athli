@@ -9,7 +9,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SectionTypeSelect } from '@/components/ui/form-inputs';
@@ -17,7 +17,6 @@ import { PressableScale } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useModalCallbacks } from '@/stores';
 import { ExerciseBuilderCard } from '@/components/features/workout/exercise-builder-card';
-import { hexToRgba } from '@/utils/colorUtils';
 import { type SectionType, SECTION_TYPES } from '@athli/shared-types';
 import { Exercise } from '@/app/modals/workout/add-exercise-to-builder-modal';
 import {
@@ -33,7 +32,7 @@ import {
     validateExercises,
 } from '@/components/features/workout/validation';
 import { createSection, updateSection, getSectionById } from '@/services/coach/coach-section-service';
-import { MOCK_EXERCISES } from '@/app/modals/workout/add-exercise-to-builder-modal';
+import { getExerciseById } from '@/services/musclewiki-service';
 
 type SectionBuilderState = {
     name: string;
@@ -90,6 +89,7 @@ export default function SectionBuilderScreen() {
     }>();
 
     const { colors: themeColors } = useThemePreference();
+    const colorScheme = useColorScheme();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
     const { triggerSectionSelect, setExercisesSelectCallback, setExerciseSelectCallback, setReorderCallback, setReorderItems } = useModalCallbacks();
@@ -189,19 +189,27 @@ export default function SectionBuilderScreen() {
                         }
                     });
 
-                    // Fetch exercise details from mock data
+                    // Fetch exercise details from MuscleWiki API
                     const exerciseDetailsMap = new Map<string, { name: string; imageUrl: string; exerciseType: string }>();
-                    Array.from(exerciseIds).forEach((id) => {
-                        const mockExercise = MOCK_EXERCISES.find(ex => ex.exerciseId === id);
-                        if (mockExercise) {
-                            exerciseDetailsMap.set(id, {
-                                name: mockExercise.name,
-                                imageUrl: mockExercise.imageUrl,
-                                exerciseType: mockExercise.exerciseType,
-                            });
-                        } else {
-                            // Fallback for exercises not in mock data
-                            console.warn(`Exercise ${id} not found in mock data`);
+                    const fetchPromises = Array.from(exerciseIds).map(async (id) => {
+                        try {
+                            const exercise = await getExerciseById(id);
+                            if (exercise) {
+                                exerciseDetailsMap.set(id, {
+                                    name: exercise.name,
+                                    imageUrl: exercise.imageUrl,
+                                    exerciseType: exercise.exerciseType,
+                                });
+                            } else {
+                                console.warn(`Exercise ${id} not found in API`);
+                                exerciseDetailsMap.set(id, {
+                                    name: 'Unknown Exercise',
+                                    imageUrl: '',
+                                    exerciseType: 'weight_reps',
+                                });
+                            }
+                        } catch (err) {
+                            console.warn(`Failed to fetch exercise ${id}:`, err);
                             exerciseDetailsMap.set(id, {
                                 name: 'Unknown Exercise',
                                 imageUrl: '',
@@ -209,6 +217,7 @@ export default function SectionBuilderScreen() {
                             });
                         }
                     });
+                    await Promise.all(fetchPromises);
 
                     // Map API data to section builder state with hydrated exercise data
                     const exercises: BuilderExercise[] = apiExercises.map((ex: any, idx: number) => {
@@ -218,12 +227,13 @@ export default function SectionBuilderScreen() {
                             exerciseType: 'weight_reps',
                         };
 
-                        // Hydrate alternatives array - convert IDs to objects with name and imageUrl
+                        // Hydrate alternatives array - use the details from our map if available
+                        // Note: alternatives are exercise IDs, we'll fetch their details from the map if they were loaded
                         const hydratedAlternatives = (ex.alternatives || []).map((altId: string) => {
-                            const altExercise = MOCK_EXERCISES.find(mockEx => mockEx.exerciseId === altId);
-                            return altExercise ? {
-                                name: altExercise.name,
-                                imageUrl: altExercise.imageUrl,
+                            const altDetails = exerciseDetailsMap.get(altId);
+                            return altDetails ? {
+                                name: altDetails.name,
+                                imageUrl: altDetails.imageUrl,
                             } : null;
                         }).filter(Boolean); // Remove null entries
 
@@ -681,16 +691,15 @@ export default function SectionBuilderScreen() {
     const totalExercises = state.exercises.length;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
-                    colors={[
-                        hexToRgba(themeColors.backgroundSecondary, 1),
-                        hexToRgba(themeColors.backgroundSecondary, 0.85),
-                        hexToRgba(themeColors.backgroundSecondary, 0.5),
-                        hexToRgba(themeColors.backgroundSecondary, 0),
-                    ]}
-                    locations={[0, 0.5, 0.8, 1]}
+                    colors={
+                        colorScheme === 'dark'
+                            ? ['rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.65)', 'rgba(0, 0, 0, 0.4)', 'rgba(0, 0, 0, 0.15)', 'rgba(0, 0, 0, 0.05)', 'rgba(0, 0, 0, 0)']
+                            : ['rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.65)', 'rgba(255, 255, 255, 0.4)', 'rgba(255, 255, 255, 0.15)', 'rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0)']
+                    }
+                    locations={[0, 0.2, 0.4, 0.65, 0.85, 1]}
                     style={[styles.headerGradient, { height: gradientHeight }]}
                     pointerEvents="none"
                 />
@@ -885,9 +894,8 @@ export default function SectionBuilderScreen() {
             <View style={[
                 styles.bottomBarContainer,
                 {
-                    backgroundColor: themeColors.backgroundPrimary,
+                    backgroundColor: themeColors.surfacePrimary,
                     paddingBottom: insets.bottom + 12,
-                    borderTopColor: themeColors.border,
                 }
             ]}>
                 <View style={styles.bottomBarContent}>
@@ -1012,7 +1020,9 @@ const styles = StyleSheet.create({
         ...typography.p2,
     },
     bottomBarContainer: {
-        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        marginTop: -24,
         // Top edge shadow
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -4 },
