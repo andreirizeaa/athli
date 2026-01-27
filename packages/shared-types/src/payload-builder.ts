@@ -17,9 +17,9 @@ import type {
   RoundExercisePayload,
   CircuitExerciseGroupPayload,
   CircuitExercisePayload,
-  ExerciseType,
 } from './workout-schema';
 import { DEFAULT_EXECUTION_FIELDS, createTrackableField } from './workout-schema';
+import type { ExerciseType } from './training-constants';
 
 // ============================================================================
 // Helper Types and Functions
@@ -216,7 +216,6 @@ export const buildRegularExercisePayload = (
     id: exercise.id, // Instance ID
     prescribedExerciseId: exercise.exerciseId,
     performedExerciseId: null,
-    exerciseType: exercise.exerciseType,
     sets: (exercise.sets || []).map((set) =>
       mapSetDataToPayload(exercise.exerciseType, set, col1Label, col2Label, parserType)
     ),
@@ -249,7 +248,6 @@ export const buildRoundExercisePayload = (
     id: exercise.id, // Instance ID
     prescribedExerciseId: exercise.exerciseId,
     performedExerciseId: null,
-    exerciseType: exercise.exerciseType,
     notes: exercise.notes || null,
     completed: false,
     eachSide: exercise.eachSide || false,
@@ -286,7 +284,6 @@ export const buildCircuitExercisePayload = (
     id: exercise.id, // Instance ID
     prescribedExerciseId: exercise.exerciseId,
     performedExerciseId: null,
-    exerciseType: exercise.exerciseType,
     set: mapSetDataToPayload(exercise.exerciseType, firstSet, col1Label, col2Label, parserType),
     alternatives: exercise.alternatives || [],
     supersetId: exercise.supersetGroupId || null,

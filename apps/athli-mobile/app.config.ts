@@ -9,7 +9,7 @@ dotenv.config({ path: path.resolve(__dirname, ".env.local") });
 // EAS project configuration
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID || "";
 const PROJECT_SLUG = "athli-mobile";
-const OWNER = "andreirizea";
+const OWNER = "athli";
 
 // App production config
 const APP_NAME = "Athli";

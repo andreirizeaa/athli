@@ -10,8 +10,7 @@ export type Exercise = {
   description?: string;
   category?: string;
   muscle_group?: string[];
-  equipment?: string;
-  modality?: string;
+  difficulty?: string;
   video_link?: string;
   starred: boolean;
   isFavourite: boolean;
@@ -28,8 +27,7 @@ export type ExercisePayload = {
   description?: string;
   category?: string;
   muscle_group?: string[];
-  equipment?: string;
-  modality?: string;
+  difficulty?: string;
   video_link?: string;
   // Field aliases from UI
   instructions?: string;
@@ -43,8 +41,7 @@ const mapToBackend = (payload: ExercisePayload) => {
     description: payload.description || payload.instructions,
     category: payload.category,
     muscle_group: payload.muscle_group || payload.muscleGroups,
-    equipment: payload.equipment,
-    modality: payload.modality,
+    difficulty: payload.difficulty,
     video_link: payload.video_link || payload.videoLink,
   };
 };
@@ -160,6 +157,34 @@ export const editExercise = async (
  */
 export const getExerciseById = async (exerciseId: string): Promise<Exercise> => {
   const response = await apiFetch<ApiResponse<{ exercise: Exercise }>>(`/coach/training/exercises/${exerciseId}`);
+  console.log('[coach-exercise-service] getExerciseById raw response:', JSON.stringify(response, null, 2));
   if (!response.data) throw new Error('No exercise returned');
   return response.data.exercise;
+};
+
+/**
+ * Upload exercise video directly to storage (without coach_files table)
+ * Returns a signed URL to the uploaded video
+ */
+export type VideoFile = {
+  uri: string;
+  name: string;
+  mimeType: string;
+};
+
+export const uploadExerciseVideo = async (videoFile: VideoFile): Promise<string> => {
+  const formData = new FormData();
+  formData.append('file', {
+    uri: videoFile.uri,
+    name: videoFile.name,
+    type: videoFile.mimeType,
+  } as any);
+
+  const response = await apiFetch<ApiResponse<{ url: string }>>('/coach/training/exercises/upload-video', {
+    method: 'POST',
+    body: formData as any,
+  });
+
+  if (!response.data?.url) throw new Error('No URL returned from upload');
+  return response.data.url;
 };

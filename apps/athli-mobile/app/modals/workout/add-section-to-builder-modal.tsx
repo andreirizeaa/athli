@@ -30,7 +30,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { hexToRgba } from '@/utils/colorUtils';
 import { type BuilderSection } from '@/components/features/workout/workout-schema';
 import { getSections, getSectionById } from '@/services/coach/coach-section-service';
-import { MOCK_EXERCISES } from '@/app/modals/workout/add-exercise-to-builder-modal';
+import { getExerciseById as getMuscleWikiExerciseById } from '@/services/musclewiki-service';
 
 type TabKey = 'saved' | 'new';
 
@@ -178,10 +178,64 @@ export default function AddSectionToBuilderModal() {
             const data = sectionItem.data;
             const sectionType = data.type as SectionType;
 
-            // Helper to get exercise details from MOCK_EXERCISES
+            // Collect all unique exercise IDs from section data
+            const collectExerciseIds = (sectionData: any): string[] => {
+                const ids = new Set<string>();
+                const exercises = sectionData.exercises || [];
+                exercises.forEach((exOrGroup: any) => {
+                    // Handle direct exercise (amrap/timed)
+                    if (exOrGroup.prescribedExerciseId) {
+                        ids.add(exOrGroup.prescribedExerciseId);
+                        (exOrGroup.alternatives || []).forEach((altId: string) => ids.add(altId));
+                    }
+                    // Handle exercise group (regular/circuits)
+                    if (exOrGroup.exercises) {
+                        exOrGroup.exercises.forEach((ex: any) => {
+                            if (ex.prescribedExerciseId) {
+                                ids.add(ex.prescribedExerciseId);
+                                (ex.alternatives || []).forEach((altId: string) => ids.add(altId));
+                            }
+                        });
+                    }
+                });
+                return Array.from(ids);
+            };
+
+            const exerciseIds = collectExerciseIds(data);
+            
+            // Pre-fetch all exercise details from MuscleWiki API
+            const exerciseDetailsMap = new Map<string, { name: string; imageUrl: string; exerciseType: string }>();
+            const fetchPromises = exerciseIds.map(async (id) => {
+                try {
+                    const exercise = await getMuscleWikiExerciseById(id);
+                    if (exercise) {
+                        exerciseDetailsMap.set(id, {
+                            name: exercise.name,
+                            imageUrl: exercise.imageUrl,
+                            exerciseType: exercise.exerciseType,
+                        });
+                    } else {
+                        exerciseDetailsMap.set(id, {
+                            name: 'Unknown Exercise',
+                            imageUrl: '',
+                            exerciseType: 'weight_reps',
+                        });
+                    }
+                } catch (err) {
+                    console.warn(`Failed to fetch exercise ${id}:`, err);
+                    exerciseDetailsMap.set(id, {
+                        name: 'Unknown Exercise',
+                        imageUrl: '',
+                        exerciseType: 'weight_reps',
+                    });
+                }
+            });
+            await Promise.all(fetchPromises);
+
+            // Helper to get exercise details from pre-fetched map
             const getExerciseDetails = (exerciseId: string) => {
-                const exercise = MOCK_EXERCISES.find(ex => ex.exerciseId === exerciseId);
-                return exercise || {
+                const details = exerciseDetailsMap.get(exerciseId);
+                return details || {
                     name: 'Unknown Exercise',
                     imageUrl: '',
                     exerciseType: 'weight_reps',

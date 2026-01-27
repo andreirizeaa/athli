@@ -2044,9 +2044,9 @@ const ClientTrainingCalendarPage = () => {
       name: selectedExercise.name,
       description: selectedExercise.description || '',
       type: selectedExercise.category || '',
-      difficulty: 'Intermediate',
+      difficulty: selectedExercise.difficulty || 'Intermediate',
       totalExercises: 1,
-      equipment: selectedExercise.equipment || [],
+      equipment: selectedExercise.category ? [selectedExercise.category] : [],
       created: formatDate(new Date()),
       isFavourite: false,
       items: [
@@ -2062,7 +2062,7 @@ const ClientTrainingCalendarPage = () => {
                 exercise_id: selectedExercise.id,
                 workout: selectedExercise.name,
                 description: selectedExercise.description || '',
-                equipment: selectedExercise.equipment ? [selectedExercise.equipment] : [],
+                equipment: selectedExercise.category ? [selectedExercise.category] : [],
                 videoLink: selectedExercise.video_link,
                 blocks: [
                   {

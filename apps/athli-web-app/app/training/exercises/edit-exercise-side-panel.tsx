@@ -17,16 +17,26 @@ import {
 import { MultiAsyncSelect } from '@/components/ui/multi-async-select';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Spinner } from '@/components/ui/spinner';
-import { X, Upload, Check, Loader2, Trash2 } from 'lucide-react';
+import { X, Upload, Check, Loader2, Trash2, Video } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
-import { editExercise, type Exercise } from '@/api/coach/coach-exercise-service';
+import { editExercise, getExerciseVideoUrl, type Exercise } from '@/api/coach/coach-exercise-service';
 import { toast } from 'sonner';
 import {
-  EXERCISE_CATEGORY_OPTIONS,
-  MUSCLE_GROUP_OPTIONS,
-  EXERCISE_EQUIPMENT_OPTIONS,
-  MODALITY_OPTIONS,
+  MUSCLEWIKI_CATEGORY_OPTIONS,
+  MUSCLEWIKI_MUSCLE_OPTIONS,
+  MUSCLEWIKI_DIFFICULTY_OPTIONS,
 } from '@athli/shared-types';
+
+// Check if URL is a Supabase storage URL (custom upload)
+const isSupabaseUrl = (url: string): boolean => {
+  if (!url.trim()) return false;
+  try {
+    const urlObj = new URL(url.trim());
+    return urlObj.hostname.includes('supabase.co');
+  } catch {
+    return false;
+  }
+};
 
 const extractVideoId = (url: string): { id: string; type: 'youtube' | 'vimeo' | null } => {
   if (!url.trim()) {
@@ -63,6 +73,8 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
   const [exerciseName, setExerciseName] = useState<string>('');
   const [exerciseInstructions, setExerciseInstructions] = useState<string>('');
   const [videoLink, setVideoLink] = useState<string>('');
+  const [signedVideoUrl, setSignedVideoUrl] = useState<string | null>(null);
+  const [isLoadingSignedUrl, setIsLoadingSignedUrl] = useState<boolean>(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [vimeoThumbnail, setVimeoThumbnail] = useState<string | null>(null);
@@ -70,14 +82,12 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [category, setCategory] = useState<string>('');
   const [muscleGroups, setMuscleGroups] = useState<string[]>([]);
-  const [equipment, setEquipment] = useState<string>('');
-  const [modality, setModality] = useState<string>('');
+  const [difficulty, setDifficulty] = useState<string>('');
   const [exerciseNameError, setExerciseNameError] = useState<string | null>(null);
   const [videoLinkError, setVideoLinkError] = useState<string | null>(null);
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const [muscleGroupsError, setMuscleGroupsError] = useState<string | null>(null);
-  const [equipmentError, setEquipmentError] = useState<string | null>(null);
-  const [modalityError, setModalityError] = useState<string | null>(null);
+  const [difficultyError, setDifficultyError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
@@ -87,8 +97,7 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
     videoLink: string;
     category: string;
     muscleGroups: string[];
-    equipment: string;
-    modality: string;
+    difficulty: string;
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
@@ -101,10 +110,10 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
       setVideoLink(exercise.video_link || '');
       setVideoFile(null);
       setVideoPreview(null);
+      setSignedVideoUrl(null);
       setCategory(exercise.category || '');
       setMuscleGroups(exercise.muscle_group || []);
-      setEquipment(exercise.equipment || '');
-      setModality(exercise.modality || '');
+      setDifficulty(exercise.difficulty || '');
 
       // Store original data for change detection
       setOriginalExerciseData({
@@ -113,9 +122,25 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
         videoLink: exercise.video_link || '',
         category: exercise.category || '',
         muscleGroups: exercise.muscle_group || [],
-        equipment: exercise.equipment || '',
-        modality: exercise.modality || '',
+        difficulty: exercise.difficulty || '',
       });
+
+      // Fetch fresh signed URL for Supabase videos
+      if (exercise.video_link && isSupabaseUrl(exercise.video_link)) {
+        setIsLoadingSignedUrl(true);
+        getExerciseVideoUrl(exercise.id)
+          .then((url) => {
+            if (url) {
+              setSignedVideoUrl(url);
+            }
+          })
+          .catch((err) => {
+            console.error('Failed to get signed video URL:', err);
+          })
+          .finally(() => {
+            setIsLoadingSignedUrl(false);
+          });
+      }
     }
   }, [exercise, open]);
 
@@ -232,8 +257,7 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
       !!videoFile || // File upload counts as change
       category !== originalExerciseData.category ||
       JSON.stringify([...muscleGroups].sort()) !== JSON.stringify([...originalExerciseData.muscleGroups].sort()) ||
-      equipment !== originalExerciseData.equipment ||
-      modality !== originalExerciseData.modality
+      difficulty !== originalExerciseData.difficulty
     );
   };
 
@@ -241,6 +265,8 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
     setExerciseName('');
     setExerciseInstructions('');
     setVideoLink('');
+    setSignedVideoUrl(null);
+    setIsLoadingSignedUrl(false);
     setVideoFile(null);
     setVideoPreview(null);
     setVimeoThumbnail(null);
@@ -248,14 +274,12 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
     setIsDragging(false);
     setCategory('');
     setMuscleGroups([]);
-    setEquipment('');
-    setModality('');
+    setDifficulty('');
     setExerciseNameError(null);
     setVideoLinkError(null);
     setCategoryError(null);
     setMuscleGroupsError(null);
-    setEquipmentError(null);
-    setModalityError(null);
+    setDifficultyError(null);
     setIsSaving(false);
     setOriginalExerciseData(null);
     dragCounterRef.current = 0;
@@ -282,13 +306,18 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
 
     // Video validation - optional, but if provided must be valid
     if (videoLink.trim() && !videoFile) {
-      // Validate link only if provided and no file is selected
-      const { id, type } = extractVideoId(videoLink);
-      if (!id || !type) {
-        setVideoLinkError(t('exercises.addExercise.videoLinkInvalidError'));
-        hasError = true;
-      } else {
+      // Supabase URLs are valid (custom uploads)
+      if (isSupabaseUrl(videoLink)) {
         setVideoLinkError(null);
+      } else {
+        // Validate link only if provided and no file is selected
+        const { id, type } = extractVideoId(videoLink);
+        if (!id || !type) {
+          setVideoLinkError(t('exercises.addExercise.videoLinkInvalidError'));
+          hasError = true;
+        } else {
+          setVideoLinkError(null);
+        }
       }
     } else {
       setVideoLinkError(null);
@@ -340,8 +369,7 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
         videoFile: videoFile || undefined,
         category,
         muscleGroups,
-        equipment,
-        modality,
+        difficulty,
       };
 
       await editExercise(exercise.id, exerciseData);
@@ -469,8 +497,42 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
                 {t('exercises.addExercise.video')}
               </label>
 
-              {/* Video Link Input - shown when no file is selected */}
-              {!videoFile && (
+              {/* Existing Custom Upload (Supabase URL) - shown when video link is a Supabase URL */}
+              {!videoFile && isSupabaseUrl(videoLink) && (
+                <div className="flex flex-col gap-3">
+                  {/* Input bar showing "Custom upload" with trash icon */}
+                  <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30">
+                    <Video className="size-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-sm font-medium flex-1">{t('exercises.addExercise.customUpload')}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVideoLink('');
+                        setSignedVideoUrl(null);
+                      }}
+                      className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      aria-label={t('exercises.addExercise.clearVideoLink')}
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                  {/* Video preview below */}
+                  {isLoadingSignedUrl ? (
+                    <div className="w-full aspect-video rounded-md border border-border bg-muted flex items-center justify-center">
+                      <Spinner className="h-6 w-6" />
+                    </div>
+                  ) : (
+                    <video
+                      src={signedVideoUrl || videoLink}
+                      className="w-full rounded-md border border-border"
+                      controls
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Video Link Input - shown when no file is selected and not a Supabase URL */}
+              {!videoFile && !isSupabaseUrl(videoLink) && (
                 <div className="relative">
                   <Input
                     id="video-link"
@@ -504,7 +566,7 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
               )}
 
               {/* Video Link Preview */}
-              {!videoFile && (() => {
+              {!videoFile && !isSupabaseUrl(videoLink) && (() => {
                 const { id, type } = extractVideoId(videoLink);
                 if (id && type === 'youtube') {
                   return (
@@ -571,8 +633,8 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
                 return null;
               })()}
 
-              {/* OR divider - shown when neither link nor file is selected */}
-              {!videoLink.trim() && !videoFile && (
+              {/* OR divider - shown when neither link nor file is selected and not a Supabase URL */}
+              {!videoLink.trim() && !videoFile && !isSupabaseUrl(videoLink) && (
                 <div className="flex items-center gap-2 my-2">
                   <div className="flex-1 h-px bg-border" />
                   <span className="text-sm text-muted-foreground">OR</span>
@@ -580,8 +642,8 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
                 </div>
               )}
 
-              {/* Video File Upload Area - shown when no link is entered */}
-              {!videoLink.trim() && (
+              {/* Video File Upload Area - shown when no link is entered and not a Supabase URL */}
+              {!videoLink.trim() && !isSupabaseUrl(videoLink) && (
                 <div
                   className={cn(
                     'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors',
@@ -668,7 +730,7 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
                   <SelectValue placeholder={t('general.select')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {EXERCISE_CATEGORY_OPTIONS.map((cat) => (
+                  {MUSCLEWIKI_CATEGORY_OPTIONS.map((cat) => (
                     <SelectItem key={cat.value} value={cat.value}>
                       {cat.label}
                     </SelectItem>
@@ -683,7 +745,7 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
                 {t('exercises.addExercise.muscleGroups')}
               </label>
               <MultiAsyncSelect
-                options={MUSCLE_GROUP_OPTIONS.map((group) => ({ label: group.label, value: group.value }))}
+                options={MUSCLEWIKI_MUSCLE_OPTIONS.map((group) => ({ label: group.label, value: group.value }))}
                 value={muscleGroups}
                 onValueChange={(values) => {
                   setMuscleGroups(values);
@@ -699,65 +761,34 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
             </div>
 
             <div className="flex flex-col gap-2">
-              <label htmlFor="equipment" className="text-sm font-medium">
-                {t('exercises.addExercise.equipment')}
+              <label htmlFor="difficulty" className="text-sm font-medium">
+                {t('exercises.addExercise.difficulty')}
               </label>
               <Select
-                value={equipment}
+                value={difficulty}
                 onValueChange={(value) => {
-                  setEquipment(value);
-                  if (equipmentError) {
-                    setEquipmentError(null);
+                  setDifficulty(value);
+                  if (difficultyError) {
+                    setDifficultyError(null);
                   }
                 }}
               >
                 <SelectTrigger
-                  id="equipment"
-                  className={cn('w-full', equipmentError && 'border-destructive aria-invalid:border-destructive')}
-                  aria-invalid={!!equipmentError}
+                  id="difficulty"
+                  className={cn('w-full', difficultyError && 'border-destructive aria-invalid:border-destructive')}
+                  aria-invalid={!!difficultyError}
                 >
                   <SelectValue placeholder={t('general.select')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {EXERCISE_EQUIPMENT_OPTIONS.map((eq) => (
-                    <SelectItem key={eq.value} value={eq.value}>
-                      {eq.label}
+                  {MUSCLEWIKI_DIFFICULTY_OPTIONS.map((diff) => (
+                    <SelectItem key={diff.value} value={diff.value}>
+                      {diff.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {equipmentError && <p className="text-sm text-destructive">{equipmentError}</p>}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label htmlFor="modality" className="text-sm font-medium">
-                {t('exercises.addExercise.modality')}
-              </label>
-              <Select
-                value={modality}
-                onValueChange={(value) => {
-                  setModality(value);
-                  if (modalityError) {
-                    setModalityError(null);
-                  }
-                }}
-              >
-                <SelectTrigger
-                  id="modality"
-                  className={cn('w-full', modalityError && 'border-destructive aria-invalid:border-destructive')}
-                  aria-invalid={!!modalityError}
-                >
-                  <SelectValue placeholder={t('general.select')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {MODALITY_OPTIONS.map((mod) => (
-                    <SelectItem key={mod.value} value={mod.value}>
-                      {mod.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {modalityError && <p className="text-sm text-destructive">{modalityError}</p>}
+              {difficultyError && <p className="text-sm text-destructive">{difficultyError}</p>}
             </div>
           </div>
         </div>

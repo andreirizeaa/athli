@@ -1,7 +1,16 @@
 import { Router } from 'express';
+import multer from 'multer';
 
 import { coachExercisesController } from '../../coach-exercises.controller';
 import { supabaseAuthenticate } from '../../../../../middlewares/supabase-auth';
+
+// Configure multer for memory storage (exercise videos)
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB limit
+    },
+});
 
 export const coachExerciseRouter = Router();
 
@@ -130,3 +139,5 @@ coachExerciseRouter.get('/:id', supabaseAuthenticate, coachExercisesController.g
 coachExerciseRouter.delete('/:id', supabaseAuthenticate, coachExercisesController.deleteExercise);
 coachExerciseRouter.post('/:id/duplicate', supabaseAuthenticate, coachExercisesController.duplicateExercise);
 coachExerciseRouter.patch('/:id/toggle-favorite', supabaseAuthenticate, coachExercisesController.toggleFavorite);
+coachExerciseRouter.get('/:id/video-url', supabaseAuthenticate, coachExercisesController.getExerciseVideoUrl);
+coachExerciseRouter.post('/upload-video', supabaseAuthenticate, upload.single('file'), coachExercisesController.uploadExerciseVideo);

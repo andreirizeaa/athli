@@ -15,14 +15,15 @@ import { IconButton } from '@/components/ui/icon-button';
 import { SearchBar } from '@/components/ui/search-bar';
 import { Separator } from '@/components/ui/separator';
 import { hexToRgba } from '@/utils/colorUtils';
-import { useModalCallbacks } from '@/stores';
-import {
-    searchExercises,
-    getExerciseVideos,
-    getAllFilterOptions,
-    type Exercise,
-    type ExerciseFilters,
-} from '@/services/musclewiki-service';
+import { useModalCallbacksStore } from '@/stores/useModalCallbacksStore';
+import { useAllExercises, type Exercise, type ExerciseFilters } from '@/hooks/useAllExercises';
+import { useExerciseThumbnails } from '@/hooks/useExerciseThumbnails';
+import { getYouTubeThumbnail, isYouTubeUrl } from '@/hooks/use-video-thumbnail';
+import { useQuery } from '@tanstack/react-query';
+import { getExercises as getCoachExercises } from '@/services/coach/coach-exercise-service';
+
+// Re-export Exercise type for use by other components
+export type { Exercise } from '@/hooks/useAllExercises';
 
 export default function AddExerciseToBuilderModal() {
     const router = useRouter();
@@ -32,73 +33,134 @@ export default function AddExerciseToBuilderModal() {
     const { multiple, title } = useLocalSearchParams<{ multiple?: string, title?: string }>();
     const isMultiple = multiple === 'true';
 
-    const { triggerExerciseSelect, triggerExercisesSelect } = useModalCallbacks();
+    const {
+        triggerExerciseSelect,
+        triggerExercisesSelect,
+        setFilterSelectCallback,
+    } = useModalCallbacksStore();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const [exercises, setExercises] = useState<Exercise[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
     const [filters, setFilters] = useState<ExerciseFilters>({});
-    const [showFilters, setShowFilters] = useState(false);
-    const [filterOptions, setFilterOptions] = useState<{
-        categories: { value: string; label: string }[];
-        muscles: { value: string; label: string }[];
-        difficulties: { value: string; label: string }[];
-    }>({
-        categories: [],
-        muscles: [],
-        difficulties: [],
+
+    // Load coach (custom) exercises
+    const { data: coachExercisesData = [], isLoading: isLoadingCoach } = useQuery({
+        queryKey: ['exercises'],
+        queryFn: getCoachExercises,
+        staleTime: 5 * 60 * 1000,
     });
 
-    // Load exercises from MuscleWiki cache
-    const loadExercises = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const searchFilters: ExerciseFilters = {
-                ...filters,
-                searchTerm: searchQuery || undefined,
-                limit: 100,
-            };
-            const results = await searchExercises(searchFilters);
-            setExercises(results);
-        } catch (error) {
-            console.error('Failed to load exercises:', error);
-        } finally {
-            setIsLoading(false);
+    // Transform coach exercises to match Exercise type
+    const transformedCoachExercises: Exercise[] = useMemo(() => {
+        return coachExercisesData.map((ex) => ({
+            exerciseId: ex.id,
+            name: ex.name,
+            imageUrl: '',
+            equipments: ex.category ? [ex.category] : [],
+            bodyParts: ex.muscle_group?.slice(0, 1) || [],
+            exerciseType: 'weight_reps',
+            targetMuscles: ex.muscle_group || [],
+            secondaryMuscles: [],
+            videoUrl: ex.video_link || '',
+            keywords: [ex.name, ex.category, ex.difficulty, ...(ex.muscle_group || [])].filter(Boolean) as string[],
+            overview: ex.description || '',
+            instructions: [],
+            exerciseTips: [],
+            variations: [],
+            relatedExerciseIds: [],
+            difficulty: ex.difficulty,
+            category: ex.category,
+            source: 'custom' as const,
+            rawThumbnailUrl: undefined,
+        }));
+    }, [coachExercisesData]);
+
+    // Use the new hook for loading all exercises with in-memory search/filter
+    const {
+        exercises: musclewikiExercises,
+        total,
+        totalCached,
+        isLoading: isLoadingMusclewiki,
+        isFetching,
+        isSearching,
+        hasMore,
+        loadMore,
+        error,
+    } = useAllExercises(searchQuery, filters);
+
+    // Filter coach exercises based on search and filters
+    const filteredCoachExercises = useMemo(() => {
+        let result = transformedCoachExercises;
+
+        // Apply search
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            result = result.filter((ex) =>
+                ex.name.toLowerCase().includes(query) ||
+                ex.category?.toLowerCase().includes(query) ||
+                ex.targetMuscles.some((m) => m.toLowerCase().includes(query))
+            );
         }
-    }, [searchQuery, filters]);
 
-    // Load filter options on mount
+        // Apply filters
+        if (filters.categories?.length) {
+            result = result.filter(
+                (ex) => ex.category && filters.categories?.includes(ex.category)
+            );
+        }
+
+        if (filters.muscles?.length) {
+            result = result.filter((ex) =>
+                ex.targetMuscles.some((m) => filters.muscles?.includes(m))
+            );
+        }
+
+        if (filters.difficulties?.length) {
+            result = result.filter(
+                (ex) => ex.difficulty && filters.difficulties?.includes(ex.difficulty)
+            );
+        }
+
+        return result;
+    }, [transformedCoachExercises, searchQuery, filters]);
+
+    // Merge coach exercises at top, then MuscleWiki exercises
+    const exercises = useMemo(() => {
+        return [...filteredCoachExercises, ...musclewikiExercises];
+    }, [filteredCoachExercises, musclewikiExercises]);
+
+    const isLoading = isLoadingCoach || isLoadingMusclewiki;
+
+    // Use the thumbnails hook for progressive loading
+    const { getThumbnailUrl, isLoading: isThumbnailsLoading } = useExerciseThumbnails(exercises);
+
+    // Set up filter callback to receive selections from filter modal
     useEffect(() => {
-        const loadFilterOptions = async () => {
-            try {
-                const options = await getAllFilterOptions();
-                setFilterOptions({
-                    categories: options.categories,
-                    muscles: options.muscles,
-                    difficulties: options.difficulties,
-                });
-            } catch (error) {
-                console.error('Failed to load filter options:', error);
-            }
+        setFilterSelectCallback((newFilters) => {
+            setFilters({
+                muscles: newFilters.muscles,
+                categories: newFilters.categories,
+                difficulties: newFilters.difficulties,
+            });
+        });
+
+        return () => {
+            setFilterSelectCallback(() => {});
         };
-        loadFilterOptions();
-    }, []);
+    }, [setFilterSelectCallback]);
 
-    // Reload exercises when search or filters change
-    useEffect(() => {
-        const debounceTimer = setTimeout(() => {
-            loadExercises();
-        }, 300); // Debounce search
-
-        return () => clearTimeout(debounceTimer);
-    }, [loadExercises]);
+    // Count active filters
+    const activeFilterCount = useMemo(() => {
+        return (filters.muscles?.length || 0) +
+            (filters.categories?.length || 0) +
+            (filters.difficulties?.length || 0);
+    }, [filters]);
 
     const handleClose = () => {
         router.back();
     };
 
-    const handleSelectExercise = (exercise: Exercise) => {
+    const handleSelectExercise = useCallback((exercise: Exercise) => {
         if (isMultiple) {
             setSelectedIds(prev =>
                 prev.includes(exercise.exerciseId)
@@ -106,11 +168,20 @@ export default function AddExerciseToBuilderModal() {
                     : [...prev, exercise.exerciseId]
             );
         } else {
+            // Get thumbnail URL for the exercise
+            // For custom exercises with YouTube videos, use YouTube thumbnail
+            let thumbnailUrl: string | undefined;
+            if (exercise.source === 'custom' && exercise.videoUrl && isYouTubeUrl(exercise.videoUrl)) {
+                thumbnailUrl = getYouTubeThumbnail(exercise.videoUrl) || undefined;
+            } else {
+                thumbnailUrl = getThumbnailUrl(exercise.rawThumbnailUrl);
+            }
+
             // Transform to expected format
             triggerExerciseSelect({
                 exerciseId: exercise.exerciseId,
                 name: exercise.name,
-                imageUrl: exercise.imageUrl,
+                imageUrl: thumbnailUrl || exercise.imageUrl,
                 equipments: exercise.equipments,
                 bodyParts: exercise.bodyParts,
                 exerciseType: exercise.exerciseType,
@@ -126,38 +197,71 @@ export default function AddExerciseToBuilderModal() {
             });
             router.back();
         }
-    };
+    }, [isMultiple, triggerExerciseSelect, getThumbnailUrl, router]);
 
-    const handleConfirmSelection = () => {
+    const handleConfirmSelection = useCallback(() => {
         const selectedExercises = exercises
             .filter(ex => selectedIds.includes(ex.exerciseId))
-            .map(ex => ({
-                exerciseId: ex.exerciseId,
-                name: ex.name,
-                imageUrl: ex.imageUrl,
-                equipments: ex.equipments,
-                bodyParts: ex.bodyParts,
-                exerciseType: ex.exerciseType,
-                targetMuscles: ex.targetMuscles,
-                secondaryMuscles: ex.secondaryMuscles,
-                videoUrl: ex.videoUrl,
-                keywords: ex.keywords,
-                overview: ex.overview,
-                instructions: ex.instructions,
-                exerciseTips: ex.exerciseTips,
-                variations: ex.variations,
-                relatedExerciseIds: ex.relatedExerciseIds,
-            }));
+            .map(ex => {
+                // For custom exercises with YouTube videos, use YouTube thumbnail
+                let thumbnailUrl: string | undefined;
+                if (ex.source === 'custom' && ex.videoUrl && isYouTubeUrl(ex.videoUrl)) {
+                    thumbnailUrl = getYouTubeThumbnail(ex.videoUrl) || undefined;
+                } else {
+                    thumbnailUrl = getThumbnailUrl(ex.rawThumbnailUrl);
+                }
+                return {
+                    exerciseId: ex.exerciseId,
+                    name: ex.name,
+                    imageUrl: thumbnailUrl || ex.imageUrl,
+                    equipments: ex.equipments,
+                    bodyParts: ex.bodyParts,
+                    exerciseType: ex.exerciseType,
+                    targetMuscles: ex.targetMuscles,
+                    secondaryMuscles: ex.secondaryMuscles,
+                    videoUrl: ex.videoUrl,
+                    keywords: ex.keywords,
+                    overview: ex.overview,
+                    instructions: ex.instructions,
+                    exerciseTips: ex.exerciseTips,
+                    variations: ex.variations,
+                    relatedExerciseIds: ex.relatedExerciseIds,
+                };
+            });
         triggerExercisesSelect(selectedExercises);
         router.back();
-    };
+    }, [exercises, selectedIds, getThumbnailUrl, triggerExercisesSelect, router]);
+
+    const handleOpenFilterModal = useCallback(() => {
+        router.push({
+            pathname: '/modals/workout/exercise-filter-modal',
+            params: {
+                initialMuscles: filters.muscles?.join(',') || '',
+                initialCategories: filters.categories?.join(',') || '',
+                initialDifficulties: filters.difficulties?.join(',') || '',
+            },
+        });
+    }, [router, filters]);
+
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
 
-    const renderExerciseItem = ({ item }: { item: Exercise }) => {
+    const renderExerciseItem = useCallback(({ item }: { item: Exercise }) => {
         const selectedIndex = selectedIds.indexOf(item.exerciseId);
         const isSelected = selectedIndex !== -1;
+
+        // For custom exercises, use YouTube thumbnail if available
+        // For MuscleWiki exercises, use the cached thumbnail system
+        let thumbnailUrl: string | undefined;
+        if (item.source === 'custom' && item.videoUrl) {
+            if (isYouTubeUrl(item.videoUrl)) {
+                thumbnailUrl = getYouTubeThumbnail(item.videoUrl) || undefined;
+            }
+            // For Supabase/other videos, thumbnailUrl stays undefined (shows placeholder)
+        } else {
+            thumbnailUrl = getThumbnailUrl(item.rawThumbnailUrl) || undefined;
+        }
 
         const handleThumbnailPress = () => {
             router.push({
@@ -177,34 +281,28 @@ export default function AddExerciseToBuilderModal() {
             >
                 <PressableScale onPress={handleThumbnailPress}>
                     <View style={styles.thumbnailContainer}>
-                        {item.imageUrl ? (
+                        {thumbnailUrl ? (
                             <Image
-                                source={{ uri: item.imageUrl }}
+                                source={{ uri: thumbnailUrl }}
                                 style={styles.thumbnail}
                                 contentFit="cover"
                                 transition={200}
                             />
                         ) : (
-                            <View style={[styles.thumbnail, styles.placeholderThumbnail, { backgroundColor: themeColors.muted }]}>
-                                <Play size={16} color={themeColors.mutedForeground} />
+                            <View style={[styles.thumbnail, styles.placeholderThumbnail, { backgroundColor: themeColors.surfaceSecondary }]}>
+                                <Play {...({ size: 16, color: themeColors.mutedText } as any)} />
                             </View>
                         )}
                         {/* Play button overlay */}
                         <View style={styles.playOverlay}>
-                            <Play size={12} color="#fff" fill="#fff" />
+                            <Play {...({ size: 12, color: "#fff", fill: "#fff" } as any)} />
                         </View>
                     </View>
                 </PressableScale>
                 <View style={styles.infoContainer}>
-                    <Text style={[styles.exerciseName, { color: themeColors.text }]} numberOfLines={1}>
+                    <Text style={[styles.exerciseName, { color: themeColors.text }]}>
                         {item.name}
                     </Text>
-                    {item.targetMuscles.length > 0 && (
-                        <Text style={[styles.exerciseMeta, { color: themeColors.mutedForeground }]} numberOfLines={1}>
-                            {item.targetMuscles.slice(0, 2).join(', ')}
-                            {item.category && ` • ${item.category}`}
-                        </Text>
-                    )}
                 </View>
                 {isMultiple && (
                     <View style={[
@@ -221,24 +319,9 @@ export default function AddExerciseToBuilderModal() {
                 )}
             </PressableOpacity>
         );
-    };
+    }, [selectedIds, getThumbnailUrl, handleSelectExercise, isMultiple, themeColors, router]);
 
-    const renderFilterChip = (label: string, value: string | undefined, onClear: () => void) => {
-        if (!value) return null;
-        return (
-            <PressableOpacity
-                onPress={onClear}
-                style={[styles.filterChip, { backgroundColor: themeColors.primary }]}
-            >
-                <Text style={[styles.filterChipText, { color: themeColors.primaryForeground }]}>
-                    {label}: {value}
-                </Text>
-                <X size={12} color={themeColors.primaryForeground} />
-            </PressableOpacity>
-        );
-    };
-
-    const hasActiveFilters = filters.category || filters.muscle || filters.difficulty;
+    const hasActiveFilters = activeFilterCount > 0;
 
     return (
         <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
@@ -303,133 +386,34 @@ export default function AddExerciseToBuilderModal() {
                                         placeholder={t('general.searchPlaceholder')}
                                     />
                                 </View>
-                                <IconButton
-                                    icon={{ sf: 'line.horizontal.3.decrease', IconComponent: Filter }}
-                                    onPress={() => setShowFilters(!showFilters)}
-                                    size="md"
-                                    color={hasActiveFilters ? themeColors.primary : themeColors.text}
-                                />
+                                <View style={styles.filterButtonContainer}>
+                                    <IconButton
+                                        icon={{ sf: 'line.horizontal.3.decrease', IconComponent: Filter }}
+                                        onPress={handleOpenFilterModal}
+                                        size="md"
+                                        color={hasActiveFilters ? themeColors.primary : themeColors.text}
+                                    />
+                                    {activeFilterCount > 0 && (
+                                        <View style={[styles.filterBadge, { backgroundColor: themeColors.primary }]}>
+                                            <Text style={[styles.filterBadgeText, { color: themeColors.primaryForeground }]}>
+                                                {activeFilterCount}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
                             </View>
-                            {/* Active Filters Display */}
-                            {hasActiveFilters && (
-                                <View style={styles.activeFilters}>
-                                    {renderFilterChip('Category', filters.category, () =>
-                                        setFilters(prev => ({ ...prev, category: undefined }))
-                                    )}
-                                    {renderFilterChip('Muscle', filters.muscle, () =>
-                                        setFilters(prev => ({ ...prev, muscle: undefined }))
-                                    )}
-                                    {renderFilterChip('Difficulty', filters.difficulty, () =>
-                                        setFilters(prev => ({ ...prev, difficulty: undefined }))
-                                    )}
-                                </View>
-                            )}
-                            {/* Filter Panel */}
-                            {showFilters && (
-                                <View style={[styles.filterPanel, { backgroundColor: themeColors.card }]}>
-                                    <Text style={[styles.filterSectionTitle, { color: themeColors.text }]}>
-                                        Equipment
-                                    </Text>
-                                    <View style={styles.filterOptions}>
-                                        {filterOptions.categories.map(cat => (
-                                            <PressableOpacity
-                                                key={cat.value}
-                                                onPress={() => setFilters(prev => ({
-                                                    ...prev,
-                                                    category: prev.category === cat.value ? undefined : cat.value
-                                                }))}
-                                                style={[
-                                                    styles.filterOption,
-                                                    {
-                                                        backgroundColor: filters.category === cat.value
-                                                            ? themeColors.primary
-                                                            : themeColors.muted
-                                                    }
-                                                ]}
-                                            >
-                                                <Text style={[
-                                                    styles.filterOptionText,
-                                                    {
-                                                        color: filters.category === cat.value
-                                                            ? themeColors.primaryForeground
-                                                            : themeColors.text
-                                                    }
-                                                ]}>
-                                                    {cat.label}
-                                                </Text>
-                                            </PressableOpacity>
-                                        ))}
-                                    </View>
-
-                                    <Text style={[styles.filterSectionTitle, { color: themeColors.text }]}>
-                                        Muscle Group
-                                    </Text>
-                                    <View style={styles.filterOptions}>
-                                        {filterOptions.muscles.slice(0, 10).map(muscle => (
-                                            <PressableOpacity
-                                                key={muscle.value}
-                                                onPress={() => setFilters(prev => ({
-                                                    ...prev,
-                                                    muscle: prev.muscle === muscle.value ? undefined : muscle.value
-                                                }))}
-                                                style={[
-                                                    styles.filterOption,
-                                                    {
-                                                        backgroundColor: filters.muscle === muscle.value
-                                                            ? themeColors.primary
-                                                            : themeColors.muted
-                                                    }
-                                                ]}
-                                            >
-                                                <Text style={[
-                                                    styles.filterOptionText,
-                                                    {
-                                                        color: filters.muscle === muscle.value
-                                                            ? themeColors.primaryForeground
-                                                            : themeColors.text
-                                                    }
-                                                ]}>
-                                                    {muscle.label}
-                                                </Text>
-                                            </PressableOpacity>
-                                        ))}
-                                    </View>
-
-                                    <Text style={[styles.filterSectionTitle, { color: themeColors.text }]}>
-                                        Difficulty
-                                    </Text>
-                                    <View style={styles.filterOptions}>
-                                        {filterOptions.difficulties.map(diff => (
-                                            <PressableOpacity
-                                                key={diff.value}
-                                                onPress={() => setFilters(prev => ({
-                                                    ...prev,
-                                                    difficulty: prev.difficulty === diff.value ? undefined : diff.value
-                                                }))}
-                                                style={[
-                                                    styles.filterOption,
-                                                    {
-                                                        backgroundColor: filters.difficulty === diff.value
-                                                            ? themeColors.primary
-                                                            : themeColors.muted
-                                                    }
-                                                ]}
-                                            >
-                                                <Text style={[
-                                                    styles.filterOptionText,
-                                                    {
-                                                        color: filters.difficulty === diff.value
-                                                            ? themeColors.primaryForeground
-                                                            : themeColors.text
-                                                    }
-                                                ]}>
-                                                    {diff.label}
-                                                </Text>
-                                            </PressableOpacity>
-                                        ))}
-                                    </View>
-                                </View>
-                            )}
+                            {/* Exercise count */}
+                            <View style={styles.countRow}>
+                                <Text style={[styles.countText, { color: themeColors.mutedText }]}>
+                                    {isLoading
+                                        ? t('general.loading')
+                                        : isSearching
+                                            ? 'Searching...'
+                                            : total > 0
+                                                ? `${exercises.length} of ${total} ${t('library.exercises')}`
+                                                : `${exercises.length} ${exercises.length === 1 ? t('library.exercise') : t('library.exercises')}`}
+                                </Text>
+                            </View>
                         </View>
                     }
                     ListEmptyComponent={
@@ -439,7 +423,7 @@ export default function AddExerciseToBuilderModal() {
                             </View>
                         ) : (
                             <View style={styles.emptyContainer}>
-                                <Text style={[styles.emptyText, { color: themeColors.mutedForeground }]}>
+                                <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
                                     {searchQuery || hasActiveFilters
                                         ? 'No exercises found'
                                         : 'No exercises available'}
@@ -448,16 +432,27 @@ export default function AddExerciseToBuilderModal() {
                         )
                     }
                     ListFooterComponent={
-                        exercises.length > 0 ? (
-                            <View style={styles.attributionContainer}>
-                                <Text style={[styles.attributionText, { color: themeColors.mutedForeground }]}>
-                                    Powered by MuscleWiki
-                                </Text>
-                            </View>
-                        ) : null
+                        <>
+                            {(isSearching || isFetching) && exercises.length > 0 && (
+                                <View style={styles.loadingMoreContainer}>
+                                    <ActivityIndicator size="small" color={themeColors.primary} />
+                                    <Text style={[styles.loadingMoreText, { color: themeColors.mutedText }]}>
+                                        {t('general.loadingMore')}
+                                    </Text>
+                                </View>
+                            )}
+                            {exercises.length > 0 && (
+                                <View style={styles.attributionContainer}>
+                                    <Text style={[styles.attributionText, { color: themeColors.mutedText }]}>
+                                        {total > 0 ? `${exercises.length} of ${total} exercises • ` : ''}Powered by MuscleWiki
+                                    </Text>
+                                </View>
+                            )}
+                        </>
                     }
-                    showsVerticalScrollIndicator={false}
-                    estimatedItemSize={64}
+                    showsVerticalScrollIndicator={true}
+                    onEndReached={loadMore}
+                    onEndReachedThreshold={0.3}
                 />
             </View>
         </View>
@@ -508,48 +503,31 @@ const styles = StyleSheet.create({
     searchBarWrapper: {
         flex: 1,
     },
-    activeFilters: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-        marginTop: 12,
+    countRow: {
+        marginTop: 8,
     },
-    filterChip: {
-        flexDirection: 'row',
+    countText: {
+        ...typography.p2,
+        fontSize: 13,
+    },
+    filterButtonContainer: {
+        position: 'relative',
+    },
+    filterBadge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
         alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
-        gap: 4,
+        justifyContent: 'center',
+        paddingHorizontal: 4,
     },
-    filterChipText: {
+    filterBadgeText: {
         ...typography.p2,
-        fontSize: 12,
-    },
-    filterPanel: {
-        marginTop: 12,
-        padding: 16,
-        borderRadius: 12,
-    },
-    filterSectionTitle: {
-        ...typography.p2,
-        fontWeight: '600',
-        marginBottom: 8,
-        marginTop: 12,
-    },
-    filterOptions: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-    },
-    filterOption: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
-    },
-    filterOptionText: {
-        ...typography.p2,
-        fontSize: 12,
+        fontSize: 10,
+        fontWeight: '700',
     },
     listContent: {
         paddingBottom: 40,
@@ -586,16 +564,12 @@ const styles = StyleSheet.create({
     infoContainer: {
         flex: 1,
         marginLeft: 12,
+        marginRight: 12,
         justifyContent: 'center',
     },
     exerciseName: {
         ...typography.p1,
         fontWeight: '600',
-    },
-    exerciseMeta: {
-        ...typography.p2,
-        fontSize: 12,
-        marginTop: 2,
     },
     checkbox: {
         width: 26,
@@ -604,7 +578,6 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         alignItems: 'center',
         justifyContent: 'center',
-        marginLeft: 12,
         marginRight: 16,
     },
     selectionNumber: {
@@ -634,5 +607,16 @@ const styles = StyleSheet.create({
     attributionText: {
         ...typography.p2,
         fontSize: 11,
+    },
+    loadingMoreContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        gap: 8,
+    },
+    loadingMoreText: {
+        ...typography.p2,
+        fontSize: 12,
     },
 });

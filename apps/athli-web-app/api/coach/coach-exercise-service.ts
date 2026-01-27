@@ -10,8 +10,7 @@ export type Exercise = {
   description?: string;
   category?: string;
   muscle_group?: string[];
-  equipment?: string;
-  modality?: string;
+  difficulty?: string;
   video_link?: string;
   starred: boolean;
   isFavourite: boolean;
@@ -28,8 +27,7 @@ export type ExercisePayload = {
   description?: string;
   category?: string;
   muscle_group?: string[];
-  equipment?: string;
-  modality?: string;
+  difficulty?: string;
   video_link?: string;
   // Field aliases from UI
   instructions?: string;
@@ -43,8 +41,7 @@ const mapToBackend = (payload: ExercisePayload) => {
     description: payload.description || payload.instructions,
     category: payload.category,
     muscle_group: payload.muscle_group || payload.muscleGroups,
-    equipment: payload.equipment,
-    modality: payload.modality,
+    difficulty: payload.difficulty,
     video_link: payload.video_link || payload.videoLink,
   };
 };
@@ -160,4 +157,30 @@ export const getExerciseById = async (exerciseId: string): Promise<Exercise> => 
   const response = await apiFetch<ApiResponse<{ exercise: Exercise }>>(`/coach/training/exercises/${exerciseId}`);
   if (!response.data) throw new Error('No exercise returned');
   return response.data.exercise;
+};
+
+/**
+ * Extract file path from a Supabase signed URL
+ */
+const extractFilePathFromSupabaseUrl = (url: string): string | null => {
+  try {
+    const urlObj = new URL(url);
+    // URL format: /storage/v1/object/sign/{bucket}/{path}?token=...
+    const pathMatch = urlObj.pathname.match(/\/storage\/v1\/object\/sign\/(.+)/);
+    if (pathMatch) {
+      return pathMatch[1]; // e.g., "coach_files/uuid/file.mp4"
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Get a fresh signed URL for an exercise video
+ * This is needed because signed URLs expire
+ */
+export const getExerciseVideoUrl = async (exerciseId: string): Promise<string | null> => {
+  const response = await apiFetch<ApiResponse<{ url: string }>>(`/coach/training/exercises/${exerciseId}/video-url`);
+  return response.data?.url || null;
 };

@@ -78,6 +78,14 @@ export type ExerciseFilters = {
   offset?: number;
 };
 
+export type ExerciseSearchResult = {
+  exercises: Exercise[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+};
+
 // ============================================================================
 // HELPERS
 // ============================================================================
@@ -120,14 +128,62 @@ const transformExercise = (mwExercise: MuscleWikiExercise): Exercise => {
 // PUBLIC API
 // ============================================================================
 
+export type QuickSearchResult = {
+  exercises: Exercise[];
+  total: number;
+};
+
 /**
- * Search exercises via backend API
+ * Quick search exercises using MuscleWiki's /search endpoint
+ * Optimized for search bar autocomplete - uses relevance-scored search
+ * 
+ * @param query - Search term (minimum 2 characters)
+ * @param limit - Maximum results (default 10)
+ */
+export const quickSearchExercises = async (
+  query: string,
+  limit: number = 10
+): Promise<QuickSearchResult> => {
+  if (!query || query.length < 2) {
+    return { exercises: [], total: 0 };
+  }
+
+  const params = new URLSearchParams({
+    q: query,
+    limit: limit.toString(),
+  });
+
+  try {
+    const response = await apiFetch<ApiResponse<{
+      exercises: MuscleWikiExercise[];
+      total: number;
+    }>>(`/exercises/search?${params.toString()}`, {
+      headers: {
+        'X-Request-Source': 'mobile_app',
+      },
+    });
+
+    const data = response.data;
+    const exercises = data?.exercises?.map(transformExercise) || [];
+
+    return {
+      exercises,
+      total: data?.total || exercises.length,
+    };
+  } catch (error) {
+    console.error('Failed to quick search exercises:', error);
+    return { exercises: [], total: 0 };
+  }
+};
+
+/**
+ * List/filter exercises via backend API
  *
  * @param filters - Search filters including category, muscle, difficulty, etc.
  * @param filters.gender - Filter for male or female specific exercise demonstrations
  *                         Pass this based on the client's gender for personalized videos
  */
-export const searchExercises = async (filters: ExerciseFilters = {}): Promise<Exercise[]> => {
+export const searchExercises = async (filters: ExerciseFilters = {}): Promise<ExerciseSearchResult> => {
   const params = new URLSearchParams();
 
   if (filters.searchTerm) params.set('q', filters.searchTerm);
@@ -138,24 +194,38 @@ export const searchExercises = async (filters: ExerciseFilters = {}): Promise<Ex
   if (filters.mechanic) params.set('mechanic', filters.mechanic);
   if (filters.grips) params.set('grips', filters.grips);
   if (filters.gender) params.set('gender', filters.gender);
-  if (filters.limit) params.set('limit', filters.limit.toString());
-  if (filters.offset) params.set('offset', filters.offset.toString());
+  if (filters.limit) params.set('limit', (filters.limit || 100).toString());
+  if (filters.offset) params.set('offset', (filters.offset || 0).toString());
 
   const queryString = params.toString();
   const url = `/exercises${queryString ? `?${queryString}` : ''}`;
 
   try {
-    const response = await apiFetch<ApiResponse<{ exercises: MuscleWikiExercise[] }>>(url, {
+    const response = await apiFetch<ApiResponse<{
+      exercises: MuscleWikiExercise[];
+      total: number;
+      limit: number;
+      offset: number;
+      hasMore: boolean;
+    }>>(url, {
       headers: {
         'X-Request-Source': 'mobile_app',
       },
     });
 
-    const exercises = response.data?.exercises || [];
-    return exercises.map(transformExercise);
+    const data = response.data;
+    const exercises = data?.exercises || [];
+
+    return {
+      exercises: exercises.map(transformExercise),
+      total: data?.total || exercises.length,
+      limit: data?.limit || 100,
+      offset: data?.offset || 0,
+      hasMore: data?.hasMore ?? false,
+    };
   } catch (error) {
     console.error('Failed to search exercises:', error);
-    return [];
+    return { exercises: [], total: 0, limit: 100, offset: 0, hasMore: false };
   }
 };
 
@@ -234,6 +304,61 @@ export const getFilterOptions = async (
       return allFilters.mechanics;
     default:
       return [];
+  }
+};
+
+/**
+ * Get ALL exercises from cache in a single request
+ * Call this once on app load to populate the client-side cache
+ * Search/filter then happens in-memory for instant results
+ */
+export const getAllExercises = async (): Promise<{ exercises: MuscleWikiExercise[], total: number }> => {
+  try {
+    const response = await apiFetch<ApiResponse<{
+      exercises: MuscleWikiExercise[];
+      total: number;
+    }>>('/exercises/all', {
+      headers: {
+        'X-Request-Source': 'mobile_app',
+      },
+    });
+
+    return response.data || { exercises: [], total: 0 };
+  } catch (error) {
+    console.error('Failed to get all exercises:', error);
+    return { exercises: [], total: 0 };
+  }
+};
+
+/**
+ * Bulk fetch exercise thumbnail images
+ * Returns a map of filename -> base64 data URL
+ * Max 50 images per request
+ */
+export const fetchBulkThumbnails = async (
+  filenames: string[]
+): Promise<Record<string, string>> => {
+  if (!filenames.length) {
+    return {};
+  }
+
+  try {
+    const response = await apiFetch<ApiResponse<{ images: Record<string, string> }>>(
+      '/exercises/images/bulk',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-Source': 'mobile_app',
+        },
+        body: JSON.stringify({ filenames }),
+      }
+    );
+
+    return response.data?.images || {};
+  } catch (error) {
+    console.error('Failed to fetch bulk thumbnails:', error);
+    return {};
   }
 };
 
