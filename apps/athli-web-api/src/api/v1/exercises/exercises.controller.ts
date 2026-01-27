@@ -19,11 +19,15 @@ export const exercisesController = {
     try {
       const {
         q: searchTerm,
+        search,
         category,
         difficulty,
         muscle,
+        muscles,
         force,
         mechanic,
+        grips,
+        gender,
         limit = '50',
         offset = '0',
       } = req.query;
@@ -31,14 +35,18 @@ export const exercisesController = {
       const userId = (req as any).userId;
       const requestSource = req.headers['x-request-source'] as string || 'web_app';
 
+      // Support both 'q' and 'search' for search term
+      // Support both 'muscle' and 'muscles' for muscle filter
       const exercises = await muscleWikiService.searchExercises(
         {
-          searchTerm: searchTerm as string,
+          searchTerm: (searchTerm || search) as string,
           category: category as string,
           difficulty: difficulty as string,
-          muscle: muscle as string,
+          muscle: (muscle || muscles) as string,
           force: force as string,
           mechanic: mechanic as string,
+          grips: grips as string,
+          gender: gender as 'male' | 'female',
           limit: parseInt(limit as string, 10),
           offset: parseInt(offset as string, 10),
         },

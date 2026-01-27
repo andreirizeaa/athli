@@ -58,38 +58,59 @@ exercisesRouter.get('/compliance', exercisesController.getComplianceReport);
  *         name: q
  *         schema:
  *           type: string
- *         description: Search term
+ *         description: Search term (alias for 'search')
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search in exercise names and steps (min 2 characters)
  *       - in: query
  *         name: category
  *         schema:
  *           type: string
- *         description: Equipment category (Barbell, Dumbbell, etc.)
+ *           enum: [band, barbell, bodyweight, bosu-ball, cables, cardio, dumbbells, kettlebells, machine, medicine-ball, plate, recovery, smith-machine, stretches, trx, vitruvian, yoga]
+ *         description: Equipment category
  *       - in: query
  *         name: difficulty
  *         schema:
  *           type: string
- *         description: Difficulty level (Beginner, Intermediate, Advanced)
+ *           enum: [novice, intermediate, advanced]
+ *         description: Difficulty level
  *       - in: query
  *         name: muscle
  *         schema:
  *           type: string
- *         description: Target muscle group
+ *         description: Target muscle group (e.g., Biceps, Chest)
  *       - in: query
  *         name: force
  *         schema:
  *           type: string
- *         description: Force type (Push, Pull, Static)
+ *           enum: [push, pull, static]
+ *         description: Force type
  *       - in: query
  *         name: mechanic
  *         schema:
  *           type: string
- *         description: Mechanic type (Compound, Isolation)
+ *           enum: [compound, isolation]
+ *         description: Mechanic type
+ *       - in: query
+ *         name: grips
+ *         schema:
+ *           type: string
+ *         description: Filter by grip types (e.g., Overhand, Underhand)
+ *       - in: query
+ *         name: gender
+ *         schema:
+ *           type: string
+ *           enum: [male, female]
+ *         description: Filter videos by gender for personalized exercise demonstrations
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           default: 50
- *         description: Number of results to return
+ *           maximum: 100
+ *         description: Number of results to return (1-100)
  *       - in: query
  *         name: offset
  *         schema:

@@ -65,7 +65,9 @@ export type MuscleWikiSearchFilters = {
   muscle?: string;
   force?: string;
   mechanic?: string;
+  grips?: string;
   searchTerm?: string;
+  gender?: 'male' | 'female';
   limit?: number;
   offset?: number;
 };
@@ -217,7 +219,11 @@ class MuscleWikiService {
       category,
       difficulty,
       muscle,
+      force,
+      mechanic,
+      grips,
       searchTerm,
+      gender,
       limit = 50,
       offset = 0,
     } = filters;
@@ -231,6 +237,8 @@ class MuscleWikiService {
     if (category) query = query.eq('category', category);
     if (difficulty) query = query.eq('difficulty', difficulty);
     if (muscle) query = query.contains('target_muscles', [muscle]);
+    if (force) query = query.eq('force', force);
+    if (mechanic) query = query.eq('mechanic', mechanic);
     if (searchTerm) query = query.ilike('name', `%${searchTerm}%`);
 
     query = query.order('name').range(offset, offset + limit - 1);
@@ -266,8 +274,14 @@ class MuscleWikiService {
       const queryParams: Record<string, string> = {};
       if (category) queryParams.category = category;
       if (difficulty) queryParams.difficulty = difficulty;
-      if (muscle) queryParams.muscle = muscle;
+      if (muscle) queryParams.muscles = muscle; // API uses 'muscles' not 'muscle'
+      if (force) queryParams.force = force;
+      if (mechanic) queryParams.mechanic = mechanic;
+      if (grips) queryParams.grips = grips;
       if (searchTerm) queryParams.search = searchTerm;
+      if (gender) queryParams.gender = gender;
+      if (limit) queryParams.limit = limit.toString();
+      if (offset) queryParams.offset = offset.toString();
 
       const queryString = new URLSearchParams(queryParams).toString();
       const url = `${MUSCLEWIKI_API_BASE_URL}/exercises${queryString ? `?${queryString}` : ''}`;
@@ -706,14 +720,26 @@ class MuscleWikiService {
   private getDefaultFilterOptions(
     filterType: 'category' | 'muscle' | 'difficulty' | 'force' | 'mechanic'
   ): MuscleWikiFilterOption[] {
+    // These match the MuscleWiki API exactly (lowercase values)
     const defaults: Record<string, MuscleWikiFilterOption[]> = {
       category: [
-        { value: 'Barbell', label: 'Barbell', type: 'category' },
-        { value: 'Dumbbell', label: 'Dumbbell', type: 'category' },
-        { value: 'Machine', label: 'Machine', type: 'category' },
-        { value: 'Cable', label: 'Cable', type: 'category' },
-        { value: 'Bodyweight', label: 'Bodyweight', type: 'category' },
-        { value: 'Kettlebell', label: 'Kettlebell', type: 'category' },
+        { value: 'band', label: 'Band', type: 'category' },
+        { value: 'barbell', label: 'Barbell', type: 'category' },
+        { value: 'bodyweight', label: 'Bodyweight', type: 'category' },
+        { value: 'bosu-ball', label: 'Bosu Ball', type: 'category' },
+        { value: 'cables', label: 'Cables', type: 'category' },
+        { value: 'cardio', label: 'Cardio', type: 'category' },
+        { value: 'dumbbells', label: 'Dumbbells', type: 'category' },
+        { value: 'kettlebells', label: 'Kettlebells', type: 'category' },
+        { value: 'machine', label: 'Machine', type: 'category' },
+        { value: 'medicine-ball', label: 'Medicine Ball', type: 'category' },
+        { value: 'plate', label: 'Plate', type: 'category' },
+        { value: 'recovery', label: 'Recovery', type: 'category' },
+        { value: 'smith-machine', label: 'Smith Machine', type: 'category' },
+        { value: 'stretches', label: 'Stretches', type: 'category' },
+        { value: 'trx', label: 'TRX', type: 'category' },
+        { value: 'vitruvian', label: 'Vitruvian', type: 'category' },
+        { value: 'yoga', label: 'Yoga', type: 'category' },
       ],
       muscle: [
         { value: 'Chest', label: 'Chest', type: 'muscle' },
@@ -721,25 +747,29 @@ class MuscleWikiService {
         { value: 'Shoulders', label: 'Shoulders', type: 'muscle' },
         { value: 'Biceps', label: 'Biceps', type: 'muscle' },
         { value: 'Triceps', label: 'Triceps', type: 'muscle' },
+        { value: 'Forearms', label: 'Forearms', type: 'muscle' },
         { value: 'Quadriceps', label: 'Quadriceps', type: 'muscle' },
         { value: 'Hamstrings', label: 'Hamstrings', type: 'muscle' },
         { value: 'Glutes', label: 'Glutes', type: 'muscle' },
-        { value: 'Core', label: 'Core', type: 'muscle' },
         { value: 'Calves', label: 'Calves', type: 'muscle' },
+        { value: 'Abs', label: 'Abs', type: 'muscle' },
+        { value: 'Lower Back', label: 'Lower Back', type: 'muscle' },
+        { value: 'Traps', label: 'Traps', type: 'muscle' },
+        { value: 'Lats', label: 'Lats', type: 'muscle' },
       ],
       difficulty: [
-        { value: 'Beginner', label: 'Beginner', type: 'difficulty' },
-        { value: 'Intermediate', label: 'Intermediate', type: 'difficulty' },
-        { value: 'Advanced', label: 'Advanced', type: 'difficulty' },
+        { value: 'novice', label: 'Novice', type: 'difficulty' },
+        { value: 'intermediate', label: 'Intermediate', type: 'difficulty' },
+        { value: 'advanced', label: 'Advanced', type: 'difficulty' },
       ],
       force: [
-        { value: 'Push', label: 'Push', type: 'force' },
-        { value: 'Pull', label: 'Pull', type: 'force' },
-        { value: 'Static', label: 'Static', type: 'force' },
+        { value: 'push', label: 'Push', type: 'force' },
+        { value: 'pull', label: 'Pull', type: 'force' },
+        { value: 'static', label: 'Static', type: 'force' },
       ],
       mechanic: [
-        { value: 'Compound', label: 'Compound', type: 'mechanic' },
-        { value: 'Isolation', label: 'Isolation', type: 'mechanic' },
+        { value: 'compound', label: 'Compound', type: 'mechanic' },
+        { value: 'isolation', label: 'Isolation', type: 'mechanic' },
       ],
     };
 
