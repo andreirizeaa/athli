@@ -94,7 +94,7 @@ export const getConversations = async ({
     if (profilesError) throw profilesError;
 
     // Transform and compute fields
-    const result: Conversation[] = await Promise.all(
+    const result = await Promise.all(
       conversations.map(async (conv) => {
         const isCoach = conv.coach_id === coachId;
         const otherUserId = isCoach ? conv.client_id : conv.coach_id;
@@ -132,7 +132,7 @@ export const getConversations = async ({
     );
 
     // Filter out nulls (archived conversations when includeArchived=false)
-    return result.filter((conv) => conv !== null) as Conversation[];
+    return result.filter((conv): conv is Conversation => conv !== null);
   } catch (error) {
     console.error('[MessagingService] Error getting conversations:', error);
     throw error;

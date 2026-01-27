@@ -1,11 +1,9 @@
 'use client';
 
-import React from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { Gift, Headset, Lightbulb, PanelLeftClose, PanelLeftOpen, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSidebar } from '@/components/ui/sidebar';
 import { SearchComponent } from './search';
@@ -23,7 +21,6 @@ export function AppHeader({
   setCurrentLanguage,
 }: AppHeaderProps) {
   const t = useTranslations();
-  const [isAiAssistantPopoverOpen, setIsAiAssistantPopoverOpen] = React.useState(false);
   const { state, isHovered, setOpen, setIsHovered, setJustClosed } = useSidebar();
 
   const isHoverExpanded = state === 'collapsed' && isHovered;
@@ -91,25 +88,6 @@ export function AppHeader({
           <SearchComponent />
         </div>
         <div className="flex items-center gap-2">
-          <Popover open={isAiAssistantPopoverOpen} onOpenChange={setIsAiAssistantPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90"
-                aria-label={t('sidebar.search.aiAssistantAria')}
-              >
-                <Sparkles className="size-4" />
-                {t('sidebar.search.aiAssistant')}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-4" align="end" sideOffset={8}>
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-muted-foreground" />
-                <p className="text-sm text-foreground">
-                  {t('sidebar.search.aiAssistantComingSoon')}
-                </p>
-              </div>
-            </PopoverContent>
-          </Popover>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -158,6 +136,16 @@ export function AppHeader({
               {t('sidebar.featureRequests.label') || 'Feature Requests'}
             </TooltipContent>
           </Tooltip>
+          <Button
+            className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90"
+            aria-label={t('sidebar.search.aiAssistantAria')}
+            asChild
+          >
+            <Link href="/assistant">
+              <Sparkles className="size-4" />
+              {t('sidebar.search.aiAssistant')}
+            </Link>
+          </Button>
           <UserMenu
             isThemeMounted={isThemeMounted}
             currentLanguage={currentLanguage}

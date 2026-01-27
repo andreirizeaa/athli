@@ -86,7 +86,7 @@ export const AddProgramSidePanel = ({
 
         for (let i = 0; i < schema.length; i += 7) {
             const weekNum = Math.floor(i / 7) + 1;
-            const weekDays = schema.slice(i, i + 7).map((day, idx) => ({
+            const weekDays = schema.slice(i, i + 7).map((day: { day?: number; workouts?: any[] }, idx: number) => ({
                 ...day,
                 day: day.day || (i + idx + 1)
             }));

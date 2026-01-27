@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
-import { ArrowDown, ArrowUp, BrainCog, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Dumbbell, Ellipsis, FileText, Info, Link2, Link2Off, Loader2, NotebookPen, Plus, Repeat, Save, Sparkles, Timer, Trash2, X, Check } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Dumbbell, Ellipsis, FileText, Info, Link2, Link2Off, Loader2, NotebookPen, Plus, Repeat, Save, Sparkles, Timer, Trash2, X, Check } from 'lucide-react';
+import Lottie from 'lottie-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -249,6 +250,15 @@ export const WorkoutBuilder = ({
   const [isDraggingAiFile, setIsDraggingAiFile] = useState<boolean>(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [aiAnimationData, setAiAnimationData] = useState<object | null>(null);
+
+  // Load AI sphere animation
+  useEffect(() => {
+    fetch('/animations/ai-sphere-animation.json')
+      .then(res => res.json())
+      .then(data => setAiAnimationData(data))
+      .catch(err => console.error('Failed to load AI animation:', err));
+  }, []);
 
   // Scroll to creator when opened
   useEffect(() => {
@@ -749,6 +759,29 @@ export const WorkoutBuilder = ({
   }, [onDirtyChange]);
 
   // AI Generation logic
+  // TODO: AI Workout Generation Integration
+  // The AI needs the following context to generate valid workouts:
+  //
+  // 1. EXERCISE DATABASE CONTEXT:
+  //    - Query the `musclewiki_exercise_cache` Supabase table for context 
+  //    - AI must understand available exercise names and their corresponding IDs
+  //    - Exercise IDs are CRITICAL - the AI must use exact IDs from the cache
+  //
+  // 2. PAYLOAD STRUCTURE:
+  //    - AI must return a payload matching `WorkoutProgramPayload` from @packages/shared-types/src/workout-schema.ts
+  //    - The payload should include a mix of:
+  //      * Top-level exercises (itemType: 'exercise')
+  //      * Sections (itemType: 'section') with types: 'regular', 'amrap', 'timed', 'circuits', 'auxiliary'
+  //      * Supersets within sections (exercises sharing the same supersetId)
+  //
+  // 3. REQUIRED FIELDS:
+  //    - Sets and exercises must include all neccesayr fields such as ids, setNumber, type, trackableField1, trackableField2, restSec
+  //    - Sections need: id, name, type, notes, and type-specific fields (durationSec for amrap, targetRounds for timed/circuits)
+  //
+  // 4. VALIDATION:
+  //    - All exercise IDs must exist in musclewiki_exercise_cache
+  //    - Payload must be parseable by convertPayloadToBuilderFormat() and processGeneratedWorkout()
+  //
   const handleAiGenerate = async () => {
     if (!aiPrompt.trim()) return;
 
@@ -1049,11 +1082,11 @@ Focus on proper form and progressive overload.`;
           },
         ],
         sectionType: section.type,
-        duration: section.durationSec ? Math.round(section.durationSec / 60) : undefined,
+        duration: section.roundDurationSec ? Math.round(section.roundDurationSec / 60) : undefined,
         rounds: section.targetRounds,
       };
 
-      await createSection(sectionData);
+      await createSection(sectionData as unknown as Parameters<typeof createSection>[0]);
 
       // Invalidate sections query to refresh the library
       await queryClient.invalidateQueries({ queryKey: ['coach-sections'] });
@@ -2260,7 +2293,7 @@ Focus on proper form and progressive overload.`;
                       </div>
                     ) : (
                       <div
-                        className="flex flex-col h-full relative"
+                        className="flex flex-col px-4 h-full min-h-0 relative"
                         onDragEnter={(e) => {
                           if (selectedFile) return;
                           e.preventDefault();
@@ -2326,19 +2359,22 @@ Focus on proper form and progressive overload.`;
                           </div>
                         )}
                         <div className="flex-col items-center gap-4 flex-shrink-0 pb-4 flex relative z-0">
-                          <div className="relative flex items-center justify-center py-6 px-6">
-                            <div className="absolute inset-0 rounded-full bg-primary/10 blur-xl"></div>
-                            <div className="absolute inset-4 rounded-full bg-primary/20 blur-sm"></div>
-                            <div className="relative z-10 inline-flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground shadow-lg shadow-primary/10">
-                              <BrainCog className="h-10 w-10" />
-                            </div>
+                          <div className="relative flex items-center justify-center w-36 h-36 -mb-4">
+                            {aiAnimationData && (
+                              <Lottie
+                                className="w-full h-full"
+                                animationData={aiAnimationData}
+                                loop
+                                autoplay
+                              />
+                            )}
                           </div>
                           <h2 className="text-xl font-semibold text-center">{t('library.athliAiBuilder')}</h2>
                           <p className="text-sm text-foreground text-center max-w-md">
                             {t('library.dragDropPdf')}
                           </p>
                         </div>
-                        <div className="flex-1 overflow-y-auto flex flex-col px-4">
+                        <div className="flex-1 overflow-y-auto flex flex-col">
                           <div className="flex-1 flex flex-col min-h-0">
                             <div className="flex flex-col gap-2 flex-1 min-h-0">
                               <div className="flex items-center gap-2 mb-1">
