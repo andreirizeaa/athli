@@ -1,14 +1,11 @@
 /**
  * MuscleWiki Service for Mobile App
  *
- * This service provides exercise data from MuscleWiki API with caching.
- * It uses a cache-first approach to minimize API calls.
- *
- * The caching is handled by the Supabase backend - this service reads
- * from the cached data.
+ * This service calls the athli-web-api backend for all exercise data.
+ * All MuscleWiki API interactions are handled by the backend with caching.
  */
 
-import { supabase } from './auth/supabase-auth';
+import { apiFetch, type ApiResponse } from '@/lib/api-client';
 
 // ============================================================================
 // TYPES
@@ -82,36 +79,36 @@ export type ExerciseFilters = {
 // ============================================================================
 
 /**
- * Transform cached exercise data to our app format
+ * Transform MuscleWiki exercise from API to app format
  */
-const transformCachedExercise = (row: any): Exercise => {
+const transformExercise = (mwExercise: MuscleWikiExercise): Exercise => {
   return {
-    exerciseId: row.musclewiki_id || row.id,
-    musclewikiId: row.musclewiki_id,
-    name: row.name,
-    imageUrl: row.thumbnail_url || '',
-    equipments: row.category ? [row.category] : [],
-    bodyParts: (row.target_muscles || []).slice(0, 1),
+    exerciseId: mwExercise.musclewikiId || mwExercise.id,
+    musclewikiId: mwExercise.musclewikiId,
+    name: mwExercise.name,
+    imageUrl: mwExercise.thumbnailUrl || '',
+    equipments: mwExercise.category ? [mwExercise.category] : [],
+    bodyParts: mwExercise.targetMuscles.slice(0, 1),
     exerciseType: 'weight_reps',
-    targetMuscles: row.target_muscles || [],
-    secondaryMuscles: [...(row.synergist_muscles || []), ...(row.stabilizer_muscles || [])],
-    videoUrl: row.male_video_front_url || '',
-    keywords: [row.name, row.category, row.difficulty, ...(row.target_muscles || [])].filter(Boolean),
+    targetMuscles: mwExercise.targetMuscles,
+    secondaryMuscles: [...mwExercise.synergistMuscles, ...mwExercise.stabilizerMuscles],
+    videoUrl: mwExercise.maleVideoFrontUrl || '',
+    keywords: [mwExercise.name, mwExercise.category, mwExercise.difficulty, ...mwExercise.targetMuscles].filter(Boolean) as string[],
     overview: '',
-    instructions: row.instructions || [],
-    exerciseTips: row.tips || [],
+    instructions: mwExercise.instructions,
+    exerciseTips: mwExercise.tips,
     variations: [],
     relatedExerciseIds: [],
-    difficulty: row.difficulty,
-    force: row.force,
-    mechanic: row.mechanic,
-    category: row.category,
-    maleVideoFrontUrl: row.male_video_front_url,
-    maleVideoSideUrl: row.male_video_side_url,
-    femaleVideoFrontUrl: row.female_video_front_url,
-    femaleVideoSideUrl: row.female_video_side_url,
+    difficulty: mwExercise.difficulty,
+    force: mwExercise.force,
+    mechanic: mwExercise.mechanic,
+    category: mwExercise.category,
+    maleVideoFrontUrl: mwExercise.maleVideoFrontUrl,
+    maleVideoSideUrl: mwExercise.maleVideoSideUrl,
+    femaleVideoFrontUrl: mwExercise.femaleVideoFrontUrl,
+    femaleVideoSideUrl: mwExercise.femaleVideoSideUrl,
     source: 'musclewiki',
-    isCacheValid: new Date(row.cache_expires_at) > new Date(),
+    isCacheValid: mwExercise.isCacheValid,
   };
 };
 
@@ -120,92 +117,60 @@ const transformCachedExercise = (row: any): Exercise => {
 // ============================================================================
 
 /**
- * Search exercises from MuscleWiki cache
- *
- * @param filters - Search and filter options
- * @returns Array of exercises
+ * Search exercises via backend API
  */
 export const searchExercises = async (filters: ExerciseFilters = {}): Promise<Exercise[]> => {
-  const { category, difficulty, muscle, searchTerm, limit = 50, offset = 0 } = filters;
+  const params = new URLSearchParams();
 
-  let query = supabase
-    .from('musclewiki_exercise_cache')
-    .select('*')
-    .gt('cache_expires_at', new Date().toISOString());
+  if (filters.searchTerm) params.set('q', filters.searchTerm);
+  if (filters.category) params.set('category', filters.category);
+  if (filters.difficulty) params.set('difficulty', filters.difficulty);
+  if (filters.muscle) params.set('muscle', filters.muscle);
+  if (filters.limit) params.set('limit', filters.limit.toString());
+  if (filters.offset) params.set('offset', filters.offset.toString());
 
-  if (category) {
-    query = query.eq('category', category);
-  }
-  if (difficulty) {
-    query = query.eq('difficulty', difficulty);
-  }
-  if (muscle) {
-    query = query.contains('target_muscles', [muscle]);
-  }
-  if (searchTerm) {
-    query = query.ilike('name', `%${searchTerm}%`);
-  }
+  const queryString = params.toString();
+  const url = `/exercises${queryString ? `?${queryString}` : ''}`;
 
-  query = query.order('name').range(offset, offset + limit - 1);
+  try {
+    const response = await apiFetch<ApiResponse<{ exercises: MuscleWikiExercise[] }>>(url, {
+      headers: {
+        'X-Request-Source': 'mobile_app',
+      },
+    });
 
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Failed to fetch exercises:', error);
+    const exercises = response.data?.exercises || [];
+    return exercises.map(transformExercise);
+  } catch (error) {
+    console.error('Failed to search exercises:', error);
     return [];
   }
-
-  // Log cache hit
-  try {
-    await supabase.rpc('log_musclewiki_api_call', {
-      p_endpoint: '/exercises (mobile cache)',
-      p_cache_hit: true,
-      p_exercises_returned: data?.length || 0,
-      p_request_source: 'mobile_app',
-    });
-  } catch (logError) {
-    console.warn('Failed to log API call:', logError);
-  }
-
-  return (data || []).map(transformCachedExercise);
 };
 
 /**
- * Get a single exercise by ID
- *
- * @param musclewikiId - The MuscleWiki exercise ID
- * @returns Exercise or null
+ * Get a single exercise by ID via backend API
  */
 export const getExerciseById = async (musclewikiId: string): Promise<Exercise | null> => {
-  // Record access for analytics
   try {
-    await supabase.rpc('record_musclewiki_exercise_access', {
-      p_musclewiki_id: musclewikiId,
-    });
+    const response = await apiFetch<ApiResponse<{ exercise: MuscleWikiExercise }>>(
+      `/exercises/${musclewikiId}`,
+      {
+        headers: {
+          'X-Request-Source': 'mobile_app',
+        },
+      }
+    );
+
+    const exercise = response.data?.exercise;
+    return exercise ? transformExercise(exercise) : null;
   } catch (error) {
-    console.warn('Failed to record access:', error);
-  }
-
-  const { data, error } = await supabase
-    .from('musclewiki_exercise_cache')
-    .select('*')
-    .eq('musclewiki_id', musclewikiId)
-    .single();
-
-  if (error || !data) {
-    console.error('Failed to fetch exercise:', error);
+    console.error('Failed to get exercise:', error);
     return null;
   }
-
-  return transformCachedExercise(data);
 };
 
 /**
- * Get exercise video URLs
- * Called when user clicks to watch a video
- *
- * @param musclewikiId - The MuscleWiki exercise ID
- * @returns Video URLs or null
+ * Get exercise video URLs via backend API (lazy loading)
  */
 export const getExerciseVideos = async (
   musclewikiId: string
@@ -215,52 +180,53 @@ export const getExerciseVideos = async (
   femaleVideoFrontUrl?: string;
   femaleVideoSideUrl?: string;
 } | null> => {
-  const { data, error } = await supabase
-    .from('musclewiki_exercise_cache')
-    .select('male_video_front_url, male_video_side_url, female_video_front_url, female_video_side_url')
-    .eq('musclewiki_id', musclewikiId)
-    .single();
+  try {
+    const response = await apiFetch<ApiResponse<{
+      videos: {
+        maleVideoFrontUrl?: string;
+        maleVideoSideUrl?: string;
+        femaleVideoFrontUrl?: string;
+        femaleVideoSideUrl?: string;
+      }
+    }>>(`/exercises/${musclewikiId}/videos`, {
+      headers: {
+        'X-Request-Source': 'mobile_app',
+      },
+    });
 
-  if (error || !data) {
+    return response.data?.videos || null;
+  } catch (error) {
+    console.error('Failed to get exercise videos:', error);
     return null;
   }
-
-  return {
-    maleVideoFrontUrl: data.male_video_front_url,
-    maleVideoSideUrl: data.male_video_side_url,
-    femaleVideoFrontUrl: data.female_video_front_url,
-    femaleVideoSideUrl: data.female_video_side_url,
-  };
 };
 
 /**
- * Get available filter options from cache
- *
- * @param filterType - The type of filter (category, muscle, difficulty, etc.)
- * @returns Array of filter options
+ * Get available filter options via backend API
  */
 export const getFilterOptions = async (
   filterType: 'category' | 'muscle' | 'difficulty' | 'force' | 'mechanic'
 ): Promise<{ value: string; label: string }[]> => {
-  const { data, error } = await supabase
-    .from('musclewiki_filter_cache')
-    .select('filter_value, display_label')
-    .eq('filter_type', filterType)
-    .gt('cache_expires_at', new Date().toISOString())
-    .order('sort_order');
+  const allFilters = await getAllFilterOptions();
 
-  if (error || !data) {
-    return getDefaultFilterOptions(filterType);
+  switch (filterType) {
+    case 'category':
+      return allFilters.categories;
+    case 'muscle':
+      return allFilters.muscles;
+    case 'difficulty':
+      return allFilters.difficulties;
+    case 'force':
+      return allFilters.forces;
+    case 'mechanic':
+      return allFilters.mechanics;
+    default:
+      return [];
   }
-
-  return data.map((row) => ({
-    value: row.filter_value,
-    label: row.display_label,
-  }));
 };
 
 /**
- * Get all filter options at once
+ * Get all filter options via backend API
  */
 export const getAllFilterOptions = async (): Promise<{
   categories: { value: string; label: string }[];
@@ -269,60 +235,62 @@ export const getAllFilterOptions = async (): Promise<{
   forces: { value: string; label: string }[];
   mechanics: { value: string; label: string }[];
 }> => {
-  const [categories, muscles, difficulties, forces, mechanics] = await Promise.all([
-    getFilterOptions('category'),
-    getFilterOptions('muscle'),
-    getFilterOptions('difficulty'),
-    getFilterOptions('force'),
-    getFilterOptions('mechanic'),
-  ]);
+  try {
+    const response = await apiFetch<ApiResponse<{
+      filters: {
+        categories: { value: string; label: string }[];
+        muscles: { value: string; label: string }[];
+        difficulties: { value: string; label: string }[];
+        forces: { value: string; label: string }[];
+        mechanics: { value: string; label: string }[];
+      }
+    }>>('/exercises/filters');
 
-  return { categories, muscles, difficulties, forces, mechanics };
-};
-
-// ============================================================================
-// FALLBACK OPTIONS
-// ============================================================================
-
-const getDefaultFilterOptions = (
-  filterType: 'category' | 'muscle' | 'difficulty' | 'force' | 'mechanic'
-): { value: string; label: string }[] => {
-  const defaults: Record<string, { value: string; label: string }[]> = {
-    category: [
-      { value: 'Barbell', label: 'Barbell' },
-      { value: 'Dumbbell', label: 'Dumbbell' },
-      { value: 'Machine', label: 'Machine' },
-      { value: 'Cable', label: 'Cable' },
-      { value: 'Bodyweight', label: 'Bodyweight' },
-      { value: 'Kettlebell', label: 'Kettlebell' },
-    ],
-    muscle: [
-      { value: 'Chest', label: 'Chest' },
-      { value: 'Back', label: 'Back' },
-      { value: 'Shoulders', label: 'Shoulders' },
-      { value: 'Biceps', label: 'Biceps' },
-      { value: 'Triceps', label: 'Triceps' },
-      { value: 'Quadriceps', label: 'Quadriceps' },
-      { value: 'Hamstrings', label: 'Hamstrings' },
-      { value: 'Glutes', label: 'Glutes' },
-      { value: 'Core', label: 'Core' },
-      { value: 'Calves', label: 'Calves' },
-    ],
-    difficulty: [
-      { value: 'Beginner', label: 'Beginner' },
-      { value: 'Intermediate', label: 'Intermediate' },
-      { value: 'Advanced', label: 'Advanced' },
-    ],
-    force: [
-      { value: 'Push', label: 'Push' },
-      { value: 'Pull', label: 'Pull' },
-      { value: 'Static', label: 'Static' },
-    ],
-    mechanic: [
-      { value: 'Compound', label: 'Compound' },
-      { value: 'Isolation', label: 'Isolation' },
-    ],
-  };
-
-  return defaults[filterType] || [];
+    return response.data?.filters || {
+      categories: [],
+      muscles: [],
+      difficulties: [],
+      forces: [],
+      mechanics: [],
+    };
+  } catch (error) {
+    console.error('Failed to get filter options:', error);
+    // Return defaults on error
+    return {
+      categories: [
+        { value: 'Barbell', label: 'Barbell' },
+        { value: 'Dumbbell', label: 'Dumbbell' },
+        { value: 'Machine', label: 'Machine' },
+        { value: 'Cable', label: 'Cable' },
+        { value: 'Bodyweight', label: 'Bodyweight' },
+        { value: 'Kettlebell', label: 'Kettlebell' },
+      ],
+      muscles: [
+        { value: 'Chest', label: 'Chest' },
+        { value: 'Back', label: 'Back' },
+        { value: 'Shoulders', label: 'Shoulders' },
+        { value: 'Biceps', label: 'Biceps' },
+        { value: 'Triceps', label: 'Triceps' },
+        { value: 'Quadriceps', label: 'Quadriceps' },
+        { value: 'Hamstrings', label: 'Hamstrings' },
+        { value: 'Glutes', label: 'Glutes' },
+        { value: 'Core', label: 'Core' },
+        { value: 'Calves', label: 'Calves' },
+      ],
+      difficulties: [
+        { value: 'Beginner', label: 'Beginner' },
+        { value: 'Intermediate', label: 'Intermediate' },
+        { value: 'Advanced', label: 'Advanced' },
+      ],
+      forces: [
+        { value: 'Push', label: 'Push' },
+        { value: 'Pull', label: 'Pull' },
+        { value: 'Static', label: 'Static' },
+      ],
+      mechanics: [
+        { value: 'Compound', label: 'Compound' },
+        { value: 'Isolation', label: 'Isolation' },
+      ],
+    };
+  }
 };
