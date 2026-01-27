@@ -1,10 +1,24 @@
 -- Migration: Create MuscleWiki exercise cache tables
--- Purpose: Cache MuscleWiki API data to minimize API calls and comply with their caching policy
--- This provides audit logging to prove compliance with API terms of service
-
+-- Purpose: Cache MuscleWiki API data to minimize API calls and comply with their API Terms
+--
+-- COMPLIANCE WITH MUSCLEWIKI API TERMS OF USE:
+--
+-- Section 2 - Media Content Restrictions:
+--   - NO downloading/storing video files
+--   - NO storing video URLs persistently
+--   - Videos must be streamed directly from MuscleWiki (fetched fresh each time)
+--
+-- Section 3 - Caching Rules:
+--   - Metadata (text only): May be cached for up to 30 days
+--   - Thumbnails & bodymap images: May be cached for up to 24 hours
+--   - Videos: Transient caching only (NO persistent storage)
+--
+-- Section 8 - Attribution:
+--   - Must display "Powered by MuscleWiki" when showing exercise data
+--
 -- ============================================================================
 -- MUSCLEWIKI EXERCISE CACHE TABLE
--- Stores cached exercise data from MuscleWiki API
+-- Stores cached exercise METADATA ONLY (no video URLs per Terms Section 2)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS public.musclewiki_exercise_cache (
   id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -17,9 +31,9 @@ CREATE TABLE IF NOT EXISTS public.musclewiki_exercise_cache (
   name_alternative TEXT,
   slug TEXT,
 
-  -- Categorization
+  -- Categorization (values are capitalized as returned by API)
   category TEXT,                    -- e.g., 'Barbell', 'Dumbbell', 'Machine', 'Cable', 'Bodyweight'
-  difficulty TEXT,                  -- e.g., 'Beginner', 'Intermediate', 'Advanced'
+  difficulty TEXT,                  -- e.g., 'Novice', 'Intermediate', 'Advanced'
   force TEXT,                       -- e.g., 'Push', 'Pull', 'Static'
   mechanic TEXT,                    -- e.g., 'Compound', 'Isolation'
 
@@ -28,24 +42,14 @@ CREATE TABLE IF NOT EXISTS public.musclewiki_exercise_cache (
   synergist_muscles JSONB DEFAULT '[]'::jsonb,        -- Secondary/synergist muscles
   stabilizer_muscles JSONB DEFAULT '[]'::jsonb,       -- Stabilizer muscles
 
-  -- Content
+  -- Content (text only - compliant with Terms)
   instructions JSONB DEFAULT '[]'::jsonb,             -- Array of instruction steps
   tips JSONB DEFAULT '[]'::jsonb,                     -- Array of tips
 
-  -- Media URLs (stored but not the actual files - we link to MuscleWiki's CDN)
-  thumbnail_url TEXT,
-  male_video_front_url TEXT,
-  male_video_side_url TEXT,
-  female_video_front_url TEXT,
-  female_video_side_url TEXT,
+  -- NOTE: NO video URLs stored here per MuscleWiki Terms Section 2 & 3
+  -- NOTE: NO thumbnail_url here - thumbnails have separate 24h cache
 
-  -- Image URLs
-  image_urls JSONB DEFAULT '[]'::jsonb,
-
-  -- Full raw response from API (for reference)
-  raw_data JSONB,
-
-  -- Cache management
+  -- Cache management (7 day TTL, within 30 day limit per Terms)
   cached_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   cache_expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + INTERVAL '7 days'),
   last_accessed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -68,6 +72,31 @@ CREATE INDEX idx_mwec_target_muscles ON public.musclewiki_exercise_cache USING g
 CREATE INDEX idx_mwec_name_search ON public.musclewiki_exercise_cache USING gin(to_tsvector('english', name));
 
 -- ============================================================================
+-- MUSCLEWIKI THUMBNAIL CACHE TABLE
+-- Separate cache for thumbnails with STRICT 24-hour TTL per Terms Section 3
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.musclewiki_thumbnail_cache (
+  id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- Reference to exercise
+  musclewiki_id TEXT NOT NULL,
+
+  -- Thumbnail URL from MuscleWiki CDN (NOT the actual image data)
+  thumbnail_url TEXT NOT NULL,
+
+  -- Cache management - STRICT 24 HOUR TTL per MuscleWiki Terms Section 3
+  cached_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  cache_expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + INTERVAL '24 hours'),
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  CONSTRAINT uq_mwtc_musclewiki_id UNIQUE (musclewiki_id)
+);
+
+CREATE INDEX idx_mwtc_musclewiki_id ON public.musclewiki_thumbnail_cache(musclewiki_id);
+CREATE INDEX idx_mwtc_cache_expires ON public.musclewiki_thumbnail_cache(cache_expires_at);
+
+-- ============================================================================
 -- MUSCLEWIKI FILTER OPTIONS CACHE
 -- Caches the available filter options from MuscleWiki API
 -- ============================================================================
@@ -79,7 +108,7 @@ CREATE TABLE IF NOT EXISTS public.musclewiki_filter_cache (
   display_label TEXT NOT NULL,
   sort_order INTEGER DEFAULT 0,
 
-  -- Cache management
+  -- Cache management (30 day TTL - max allowed per Terms)
   cached_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   cache_expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + INTERVAL '30 days'),
 
@@ -93,7 +122,7 @@ CREATE INDEX idx_mwfc_filter_type ON public.musclewiki_filter_cache(filter_type)
 
 -- ============================================================================
 -- MUSCLEWIKI API AUDIT LOG
--- Tracks all API calls made to MuscleWiki for compliance and monitoring
+-- Tracks all API calls for compliance monitoring and proving Terms adherence
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS public.musclewiki_api_audit_log (
   id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -119,20 +148,19 @@ CREATE TABLE IF NOT EXISTS public.musclewiki_api_audit_log (
   -- Timing
   request_duration_ms INTEGER,            -- How long the API call took
 
-  -- Compliance
+  -- Compliance tracking
   rate_limit_remaining INTEGER,           -- Rate limit remaining from response headers
   rate_limit_reset_at TIMESTAMPTZ,        -- When rate limit resets
+  content_type TEXT,                      -- 'metadata', 'thumbnail', 'video'
+  compliance_note TEXT,                   -- Any compliance-related notes
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Indexes for audit log
 CREATE INDEX idx_mwaal_created_at ON public.musclewiki_api_audit_log(created_at DESC);
 CREATE INDEX idx_mwaal_endpoint ON public.musclewiki_api_audit_log(endpoint);
 CREATE INDEX idx_mwaal_cache_hit ON public.musclewiki_api_audit_log(cache_hit);
-
--- Partition hint: Consider partitioning by month if this table grows large
--- For now, we'll add a retention policy
+CREATE INDEX idx_mwaal_content_type ON public.musclewiki_api_audit_log(content_type);
 
 -- ============================================================================
 -- MUSCLEWIKI SYNC METADATA
@@ -224,7 +252,6 @@ RETURNS TABLE (
   category TEXT,
   difficulty TEXT,
   target_muscles JSONB,
-  thumbnail_url TEXT,
   is_cache_valid BOOLEAN
 )
 LANGUAGE plpgsql
@@ -240,7 +267,6 @@ BEGIN
     mwec.category,
     mwec.difficulty,
     mwec.target_muscles,
-    mwec.thumbnail_url,
     (mwec.cache_expires_at > now()) as is_cache_valid
   FROM public.musclewiki_exercise_cache mwec
   WHERE
@@ -250,6 +276,73 @@ BEGIN
   ORDER BY mwec.name ASC
   LIMIT p_limit
   OFFSET p_offset;
+END;
+$$;
+
+-- Function to get thumbnail URL (only if within 24-hour cache window)
+CREATE OR REPLACE FUNCTION public.get_musclewiki_thumbnail(p_musclewiki_id TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_thumbnail_url TEXT;
+BEGIN
+  -- Only return thumbnail if within 24-hour cache window per Terms
+  SELECT thumbnail_url INTO v_thumbnail_url
+  FROM public.musclewiki_thumbnail_cache
+  WHERE musclewiki_id = p_musclewiki_id
+    AND cache_expires_at > now();  -- MUST check expiry for compliance
+
+  RETURN v_thumbnail_url;
+END;
+$$;
+
+-- Function to cache thumbnail with strict 24h TTL
+CREATE OR REPLACE FUNCTION public.cache_musclewiki_thumbnail(
+  p_musclewiki_id TEXT,
+  p_thumbnail_url TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.musclewiki_thumbnail_cache (
+    musclewiki_id,
+    thumbnail_url,
+    cached_at,
+    cache_expires_at
+  ) VALUES (
+    p_musclewiki_id,
+    p_thumbnail_url,
+    now(),
+    now() + INTERVAL '24 hours'  -- Strict 24h TTL per MuscleWiki Terms
+  )
+  ON CONFLICT (musclewiki_id) DO UPDATE SET
+    thumbnail_url = EXCLUDED.thumbnail_url,
+    cached_at = now(),
+    cache_expires_at = now() + INTERVAL '24 hours';
+END;
+$$;
+
+-- Function to clean expired thumbnails (should run frequently)
+CREATE OR REPLACE FUNCTION public.cleanup_expired_musclewiki_thumbnails()
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_deleted_count INTEGER;
+BEGIN
+  DELETE FROM public.musclewiki_thumbnail_cache
+  WHERE cache_expires_at < now();
+
+  GET DIAGNOSTICS v_deleted_count = ROW_COUNT;
+  RETURN v_deleted_count;
 END;
 $$;
 
@@ -395,6 +488,13 @@ CREATE POLICY musclewiki_exercise_cache_select ON public.musclewiki_exercise_cac
   FOR SELECT
   USING (true);  -- Anyone can read cached exercises
 
+-- Thumbnail cache: Same as exercise cache
+ALTER TABLE public.musclewiki_thumbnail_cache ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY musclewiki_thumbnail_cache_select ON public.musclewiki_thumbnail_cache
+  FOR SELECT
+  USING (true);
+
 -- Filter cache: Same as exercise cache
 ALTER TABLE public.musclewiki_filter_cache ENABLE ROW LEVEL SECURITY;
 
@@ -431,20 +531,49 @@ SELECT
     (SUM(CASE WHEN cache_hit THEN 1.0 ELSE 0.0 END) / NULLIF(COUNT(*), 0)) * 100,
     2
   ) as cache_hit_percentage,
+  -- Content type breakdown for compliance verification
+  SUM(CASE WHEN content_type = 'metadata' THEN 1 ELSE 0 END) as metadata_requests,
+  SUM(CASE WHEN content_type = 'thumbnail' THEN 1 ELSE 0 END) as thumbnail_requests,
+  SUM(CASE WHEN content_type = 'video' THEN 1 ELSE 0 END) as video_requests,
   MIN(rate_limit_remaining) as min_rate_limit_remaining,
   ROUND(AVG(request_duration_ms)::NUMERIC, 2) as avg_response_ms
 FROM public.musclewiki_api_audit_log
 GROUP BY DATE_TRUNC('day', created_at)
 ORDER BY report_date DESC;
 
--- Grant access to views
 GRANT SELECT ON public.musclewiki_compliance_report TO authenticated;
 
 -- ============================================================================
--- COMMENTS
+-- COMMENTS (for documentation and compliance)
 -- ============================================================================
-COMMENT ON TABLE public.musclewiki_exercise_cache IS 'Cache for MuscleWiki API exercise data. Exercises are cached for 7 days by default to minimize API calls.';
-COMMENT ON TABLE public.musclewiki_filter_cache IS 'Cache for MuscleWiki API filter options (categories, muscles, etc.). Cached for 30 days.';
-COMMENT ON TABLE public.musclewiki_api_audit_log IS 'Audit log for all MuscleWiki API interactions. Used for compliance monitoring and proving adherence to API terms.';
-COMMENT ON TABLE public.musclewiki_sync_metadata IS 'Metadata for tracking sync operations and API usage statistics.';
-COMMENT ON VIEW public.musclewiki_compliance_report IS 'Daily aggregated report showing API usage and cache efficiency for compliance purposes.';
+COMMENT ON TABLE public.musclewiki_exercise_cache IS
+'Cache for MuscleWiki API exercise METADATA ONLY (text).
+Cached for up to 7 days (within 30 day limit per MuscleWiki Terms Section 3).
+NO video URLs stored per Terms Section 2.1. Thumbnails in separate table.';
+
+COMMENT ON TABLE public.musclewiki_thumbnail_cache IS
+'Separate cache for MuscleWiki thumbnails with STRICT 24-hour TTL.
+Per MuscleWiki API Terms Section 3: Thumbnails may only be cached for 24 hours.
+URLs point to MuscleWiki CDN - we do NOT store the actual image files.';
+
+COMMENT ON TABLE public.musclewiki_filter_cache IS
+'Cache for MuscleWiki API filter options (categories, muscles, etc.).
+Cached for 30 days (max allowed per Terms Section 3).';
+
+COMMENT ON TABLE public.musclewiki_api_audit_log IS
+'Audit log for all MuscleWiki API interactions.
+Used to prove compliance with MuscleWiki API Terms of Use.
+Tracks cache hits/misses, content types, and rate limits.';
+
+COMMENT ON TABLE public.musclewiki_sync_metadata IS
+'Metadata for tracking sync operations and API usage statistics.';
+
+COMMENT ON VIEW public.musclewiki_compliance_report IS
+'Daily aggregated report showing API usage, cache efficiency, and content type
+breakdown for compliance verification with MuscleWiki API Terms.';
+
+COMMENT ON FUNCTION public.get_musclewiki_thumbnail IS
+'Get thumbnail URL only if within 24-hour cache window per MuscleWiki Terms.';
+
+COMMENT ON FUNCTION public.cache_musclewiki_thumbnail IS
+'Cache thumbnail URL with strict 24-hour TTL per MuscleWiki Terms Section 3.';
