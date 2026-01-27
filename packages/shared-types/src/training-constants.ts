@@ -173,25 +173,25 @@ export type Modality = typeof MODALITY_OPTIONS[number]['value'];
 // ============================================================================
 
 // MuscleWiki Equipment Categories (maps to their 'category' field)
-// These are the exact 18 categories from MuscleWiki API
+// Values are capitalized as returned by the MuscleWiki API
 export const MUSCLEWIKI_CATEGORY_OPTIONS = [
-    { value: 'band', label: 'Band' },
-    { value: 'barbell', label: 'Barbell' },
-    { value: 'bodyweight', label: 'Bodyweight' },
-    { value: 'bosu-ball', label: 'Bosu Ball' },
-    { value: 'cables', label: 'Cables' },
-    { value: 'cardio', label: 'Cardio' },
-    { value: 'dumbbells', label: 'Dumbbells' },
-    { value: 'kettlebells', label: 'Kettlebells' },
-    { value: 'machine', label: 'Machine' },
-    { value: 'medicine-ball', label: 'Medicine Ball' },
-    { value: 'plate', label: 'Plate' },
-    { value: 'recovery', label: 'Recovery' },
-    { value: 'smith-machine', label: 'Smith Machine' },
-    { value: 'stretches', label: 'Stretches' },
-    { value: 'trx', label: 'TRX' },
-    { value: 'vitruvian', label: 'Vitruvian' },
-    { value: 'yoga', label: 'Yoga' },
+    { value: 'Band', label: 'Band' },
+    { value: 'Barbell', label: 'Barbell' },
+    { value: 'Bodyweight', label: 'Bodyweight' },
+    { value: 'Bosu-Ball', label: 'Bosu Ball' },
+    { value: 'Cables', label: 'Cables' },
+    { value: 'Cardio', label: 'Cardio' },
+    { value: 'Dumbbells', label: 'Dumbbells' },
+    { value: 'Kettlebells', label: 'Kettlebells' },
+    { value: 'Machine', label: 'Machine' },
+    { value: 'Medicine-Ball', label: 'Medicine Ball' },
+    { value: 'Plate', label: 'Plate' },
+    { value: 'Recovery', label: 'Recovery' },
+    { value: 'Smith-Machine', label: 'Smith Machine' },
+    { value: 'Stretches', label: 'Stretches' },
+    { value: 'TRX', label: 'TRX' },
+    { value: 'Vitruvian', label: 'Vitruvian' },
+    { value: 'Yoga', label: 'Yoga' },
 ] as const;
 
 export type MuscleWikiCategory = typeof MUSCLEWIKI_CATEGORY_OPTIONS[number]['value'];
@@ -230,28 +230,28 @@ export const MUSCLEWIKI_MUSCLE_OPTIONS = [
 
 export type MuscleWikiMuscle = typeof MUSCLEWIKI_MUSCLE_OPTIONS[number]['value'];
 
-// MuscleWiki Difficulty Levels (API uses lowercase)
+// MuscleWiki Difficulty Levels (capitalized as returned by API)
 export const MUSCLEWIKI_DIFFICULTY_OPTIONS = [
-    { value: 'novice', label: 'Novice' },
-    { value: 'intermediate', label: 'Intermediate' },
-    { value: 'advanced', label: 'Advanced' },
+    { value: 'Novice', label: 'Novice' },
+    { value: 'Intermediate', label: 'Intermediate' },
+    { value: 'Advanced', label: 'Advanced' },
 ] as const;
 
 export type MuscleWikiDifficulty = typeof MUSCLEWIKI_DIFFICULTY_OPTIONS[number]['value'];
 
-// MuscleWiki Force Types (API uses lowercase)
+// MuscleWiki Force Types (capitalized as returned by API)
 export const MUSCLEWIKI_FORCE_OPTIONS = [
-    { value: 'push', label: 'Push' },
-    { value: 'pull', label: 'Pull' },
-    { value: 'static', label: 'Static' },
+    { value: 'Push', label: 'Push' },
+    { value: 'Pull', label: 'Pull' },
+    { value: 'Static', label: 'Static' },
 ] as const;
 
 export type MuscleWikiForce = typeof MUSCLEWIKI_FORCE_OPTIONS[number]['value'];
 
-// MuscleWiki Mechanic Types (API uses lowercase)
+// MuscleWiki Mechanic Types (capitalized as returned by API)
 export const MUSCLEWIKI_MECHANIC_OPTIONS = [
-    { value: 'compound', label: 'Compound' },
-    { value: 'isolation', label: 'Isolation' },
+    { value: 'Compound', label: 'Compound' },
+    { value: 'Isolation', label: 'Isolation' },
 ] as const;
 
 export type MuscleWikiMechanic = typeof MUSCLEWIKI_MECHANIC_OPTIONS[number]['value'];
