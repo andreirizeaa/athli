@@ -447,6 +447,15 @@ export default function AddExerciseToBuilderModal() {
                             </View>
                         )
                     }
+                    ListFooterComponent={
+                        exercises.length > 0 ? (
+                            <View style={styles.attributionContainer}>
+                                <Text style={[styles.attributionText, { color: themeColors.mutedForeground }]}>
+                                    Powered by MuscleWiki
+                                </Text>
+                            </View>
+                        ) : null
+                    }
                     showsVerticalScrollIndicator={false}
                     estimatedItemSize={64}
                 />
@@ -617,5 +626,13 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         ...typography.p1,
+    },
+    attributionContainer: {
+        paddingVertical: 16,
+        alignItems: 'center',
+    },
+    attributionText: {
+        ...typography.p2,
+        fontSize: 11,
     },
 });

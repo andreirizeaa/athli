@@ -1,8 +1,23 @@
 /**
  * MuscleWiki Service
  *
- * This service handles all MuscleWiki API interactions with a strict cache-first approach.
- * All API calls are logged for compliance auditing.
+ * This service handles all MuscleWiki API interactions with STRICT compliance
+ * to the MuscleWiki API Terms of Use.
+ *
+ * COMPLIANCE REQUIREMENTS (MuscleWiki API Terms):
+ *
+ * Section 3 - Caching Rules:
+ *   - Metadata (text only): May be cached for up to 30 days
+ *   - Thumbnails & bodymap images: May be cached for up to 24 hours
+ *   - Videos: Transient caching only (NO persistent storage)
+ *
+ * Section 2 - Media Content Restrictions:
+ *   - NO downloading/storing video files
+ *   - NO storing video URLs persistently
+ *   - Videos must be streamed directly from MuscleWiki
+ *
+ * Section 8 - Attribution:
+ *   - Must display "Powered by MuscleWiki" in UI
  *
  * Environment Variables Required:
  * - MUSCLEWIKI_API_KEY: RapidAPI key for MuscleWiki
@@ -31,12 +46,9 @@ export type MuscleWikiExercise = {
   stabilizerMuscles: string[];
   instructions: string[];
   tips: string[];
+  // Thumbnail fetched separately with 24h cache
   thumbnailUrl?: string;
-  maleVideoFrontUrl?: string;
-  maleVideoSideUrl?: string;
-  femaleVideoFrontUrl?: string;
-  femaleVideoSideUrl?: string;
-  imageUrls: string[];
+  // Videos NOT stored - fetched fresh each time per Terms Section 3
   isCacheValid: boolean;
   cachedAt: string;
 };
@@ -72,23 +84,25 @@ type ApiAuditLogParams = {
   requestDurationMs?: number;
   rateLimitRemaining?: number;
   rateLimitResetAt?: string;
+  contentType?: 'metadata' | 'thumbnail' | 'video';
+  complianceNote?: string;
 };
 
 // ============================================================================
-// CONFIGURATION
+// CONFIGURATION - Compliant with MuscleWiki Terms Section 3
 // ============================================================================
 
 const MUSCLEWIKI_API_BASE_URL = 'https://musclewiki-api.p.rapidapi.com';
-const CACHE_DURATION_DAYS = 7;
-const FILTER_CACHE_DURATION_DAYS = 30;
+
+// Per MuscleWiki Terms Section 3:
+const METADATA_CACHE_DAYS = 7;      // Max allowed: 30 days
+const THUMBNAIL_CACHE_HOURS = 24;   // Max allowed: 24 hours
+// Videos: NO caching allowed - transient only
 
 // ============================================================================
 // INTERNAL HELPERS
 // ============================================================================
 
-/**
- * Get MuscleWiki API headers from environment variables
- */
 const getApiHeaders = (): HeadersInit => {
   const apiKey = process.env.MUSCLEWIKI_API_KEY;
   const apiHost = process.env.MUSCLEWIKI_API_HOST || 'musclewiki-api.p.rapidapi.com';
@@ -104,9 +118,6 @@ const getApiHeaders = (): HeadersInit => {
   };
 };
 
-/**
- * Log an API call to the audit table
- */
 const logApiCall = async (params: ApiAuditLogParams): Promise<void> => {
   try {
     const supabase = getSupabaseClient();
@@ -132,6 +143,7 @@ const logApiCall = async (params: ApiAuditLogParams): Promise<void> => {
 
 /**
  * Transform raw API response to our exercise format
+ * NOTE: Video URLs are NOT extracted/stored per Terms Section 2 & 3
  */
 const transformApiExercise = (raw: any): Partial<MuscleWikiExercise> => {
   return {
@@ -158,18 +170,10 @@ const transformApiExercise = (raw: any): Partial<MuscleWikiExercise> => {
     tips: Array.isArray(raw.tips)
       ? raw.tips
       : raw.tips?.split('\n').filter(Boolean) || [],
-    thumbnailUrl: raw.thumbnail_url || raw.image_url || raw.og_image,
-    maleVideoFrontUrl: raw.male_video_front_url || raw.video_url_male_front,
-    maleVideoSideUrl: raw.male_video_side_url || raw.video_url_male_side,
-    femaleVideoFrontUrl: raw.female_video_front_url || raw.video_url_female_front,
-    femaleVideoSideUrl: raw.female_video_side_url || raw.video_url_female_side,
-    imageUrls: raw.images || raw.image_urls || [],
+    // NOTE: Video URLs intentionally NOT stored per MuscleWiki Terms
   };
 };
 
-/**
- * Transform database row to our exercise format
- */
 const transformCachedExercise = (row: any): MuscleWikiExercise => {
   return {
     id: row.id,
@@ -186,12 +190,8 @@ const transformCachedExercise = (row: any): MuscleWikiExercise => {
     stabilizerMuscles: row.stabilizer_muscles || [],
     instructions: row.instructions || [],
     tips: row.tips || [],
-    thumbnailUrl: row.thumbnail_url,
-    maleVideoFrontUrl: row.male_video_front_url,
-    maleVideoSideUrl: row.male_video_side_url,
-    femaleVideoFrontUrl: row.female_video_front_url,
-    femaleVideoSideUrl: row.female_video_side_url,
-    imageUrls: row.image_urls || [],
+    // Thumbnail fetched separately
+    thumbnailUrl: undefined,
     isCacheValid: new Date(row.cache_expires_at) > new Date(),
     cachedAt: row.cached_at,
   };
@@ -203,7 +203,7 @@ const transformCachedExercise = (row: any): MuscleWikiExercise => {
 
 class MuscleWikiService {
   /**
-   * Search exercises with cache-first approach
+   * Search exercises - caches METADATA ONLY (up to 30 days per Terms)
    */
   async searchExercises(
     filters: MuscleWikiSearchFilters = {},
@@ -222,60 +222,46 @@ class MuscleWikiService {
       offset = 0,
     } = filters;
 
-    // Step 1: Try to get from cache
+    // Try metadata cache first
     let query = supabase
       .from('musclewiki_exercise_cache')
       .select('*')
       .gt('cache_expires_at', new Date().toISOString());
 
-    if (category) {
-      query = query.eq('category', category);
-    }
-    if (difficulty) {
-      query = query.eq('difficulty', difficulty);
-    }
-    if (muscle) {
-      query = query.contains('target_muscles', [muscle]);
-    }
-    if (searchTerm) {
-      query = query.ilike('name', `%${searchTerm}%`);
-    }
+    if (category) query = query.eq('category', category);
+    if (difficulty) query = query.eq('difficulty', difficulty);
+    if (muscle) query = query.contains('target_muscles', [muscle]);
+    if (searchTerm) query = query.ilike('name', `%${searchTerm}%`);
 
     query = query.order('name').range(offset, offset + limit - 1);
 
     const { data: cachedData, error: cacheError } = await query;
 
     if (!cacheError && cachedData && cachedData.length > 0) {
-      // Cache hit - log and return
       await logApiCall({
-        endpoint: '/exercises (cache)',
+        endpoint: '/exercises (metadata cache)',
         cacheHit: true,
         exercisesReturned: cachedData.length,
         requestDurationMs: Date.now() - startTime,
         requestSource,
         userId,
+        contentType: 'metadata',
+        complianceNote: 'Metadata served from cache (within 30 day limit)',
       });
 
-      return cachedData.map(transformCachedExercise);
+      // Transform and fetch thumbnails separately (24h cache)
+      const exercises = cachedData.map(transformCachedExercise);
+      await this.attachThumbnails(exercises);
+      return exercises;
     }
 
-    // Step 2: Cache miss - check if we should fetch from API
+    // Cache miss - fetch from API
     const apiKey = process.env.MUSCLEWIKI_API_KEY;
     if (!apiKey) {
-      logger.warn('MUSCLEWIKI_API_KEY not configured, returning empty results');
-      await logApiCall({
-        endpoint: '/exercises',
-        cacheHit: false,
-        cacheMissReason: 'api_key_not_configured',
-        exercisesReturned: 0,
-        requestDurationMs: Date.now() - startTime,
-        requestSource,
-        userId,
-      });
+      logger.warn('MUSCLEWIKI_API_KEY not configured');
       return [];
     }
 
-    // Step 3: Fetch from MuscleWiki API
     try {
       const queryParams: Record<string, string> = {};
       if (category) queryParams.category = category;
@@ -286,105 +272,83 @@ class MuscleWikiService {
       const queryString = new URLSearchParams(queryParams).toString();
       const url = `${MUSCLEWIKI_API_BASE_URL}/exercises${queryString ? `?${queryString}` : ''}`;
 
-      logger.info({ url, queryParams }, 'Fetching from MuscleWiki API');
-
       const response = await fetch(url, {
         method: 'GET',
         headers: getApiHeaders(),
       });
 
       const responseData = await response.json();
-      const exercises = Array.isArray(responseData)
+      const rawExercises = Array.isArray(responseData)
         ? responseData
         : responseData.exercises || responseData.data || [];
 
-      // Log the API call
       await logApiCall({
         endpoint: '/exercises',
         queryParams,
         responseStatus: response.status,
         responseSizeBytes: JSON.stringify(responseData).length,
-        exercisesReturned: exercises.length,
+        exercisesReturned: rawExercises.length,
         cacheHit: false,
         cacheMissReason: cachedData?.length === 0 ? 'not_cached' : 'expired',
         requestDurationMs: Date.now() - startTime,
         rateLimitRemaining: parseInt(response.headers.get('x-ratelimit-remaining') || '0', 10),
         requestSource,
         userId,
+        contentType: 'metadata',
       });
 
-      // Step 4: Cache the results
-      if (exercises.length > 0) {
-        const cacheExpiry = new Date();
-        cacheExpiry.setDate(cacheExpiry.getDate() + CACHE_DURATION_DAYS);
+      // Cache METADATA ONLY (no video URLs) per Terms Section 3
+      const cacheExpiry = new Date();
+      cacheExpiry.setDate(cacheExpiry.getDate() + METADATA_CACHE_DAYS);
 
-        for (const exercise of exercises) {
-          const transformed = transformApiExercise(exercise);
-          await supabase.from('musclewiki_exercise_cache').upsert(
-            {
-              musclewiki_id: transformed.musclewikiId,
-              name: transformed.name,
-              name_alternative: transformed.nameAlternative,
-              slug: transformed.slug,
-              category: transformed.category,
-              difficulty: transformed.difficulty,
-              force: transformed.force,
-              mechanic: transformed.mechanic,
-              target_muscles: transformed.targetMuscles,
-              synergist_muscles: transformed.synergistMuscles,
-              stabilizer_muscles: transformed.stabilizerMuscles,
-              instructions: transformed.instructions,
-              tips: transformed.tips,
-              thumbnail_url: transformed.thumbnailUrl,
-              male_video_front_url: transformed.maleVideoFrontUrl,
-              male_video_side_url: transformed.maleVideoSideUrl,
-              female_video_front_url: transformed.femaleVideoFrontUrl,
-              female_video_side_url: transformed.femaleVideoSideUrl,
-              image_urls: transformed.imageUrls,
-              raw_data: exercise,
-              cached_at: new Date().toISOString(),
-              cache_expires_at: cacheExpiry.toISOString(),
-            },
-            { onConflict: 'musclewiki_id' }
-          );
+      for (const exercise of rawExercises) {
+        const transformed = transformApiExercise(exercise);
+        await supabase.from('musclewiki_exercise_cache').upsert(
+          {
+            musclewiki_id: transformed.musclewikiId,
+            name: transformed.name,
+            name_alternative: transformed.nameAlternative,
+            slug: transformed.slug,
+            category: transformed.category,
+            difficulty: transformed.difficulty,
+            force: transformed.force,
+            mechanic: transformed.mechanic,
+            target_muscles: transformed.targetMuscles,
+            synergist_muscles: transformed.synergistMuscles,
+            stabilizer_muscles: transformed.stabilizerMuscles,
+            instructions: transformed.instructions,
+            tips: transformed.tips,
+            // NO video URLs stored per Terms
+            cached_at: new Date().toISOString(),
+            cache_expires_at: cacheExpiry.toISOString(),
+          },
+          { onConflict: 'musclewiki_id' }
+        );
+
+        // Cache thumbnail separately with 24h TTL
+        const thumbnailUrl = exercise.thumbnail_url || exercise.image_url || exercise.og_image;
+        if (thumbnailUrl) {
+          await this.cacheThumbnail(transformed.musclewikiId!, thumbnailUrl);
         }
       }
 
-      // Return transformed exercises
-      return exercises.slice(offset, offset + limit).map((ex: any) => ({
+      const exercises = rawExercises.slice(offset, offset + limit).map((ex: any) => ({
         id: '',
         ...transformApiExercise(ex),
         isCacheValid: true,
         cachedAt: new Date().toISOString(),
       })) as MuscleWikiExercise[];
+
+      await this.attachThumbnails(exercises);
+      return exercises;
     } catch (error) {
       logger.error({ error }, 'Failed to fetch from MuscleWiki API');
-      await logApiCall({
-        endpoint: '/exercises',
-        cacheHit: false,
-        cacheMissReason: 'api_error',
-        requestDurationMs: Date.now() - startTime,
-        requestSource,
-        userId,
-      });
-
-      // Return stale cache if available
-      const { data: staleData } = await supabase
-        .from('musclewiki_exercise_cache')
-        .select('*')
-        .order('name')
-        .range(offset, offset + limit - 1);
-
-      if (staleData) {
-        return staleData.map(transformCachedExercise);
-      }
-
       return [];
     }
   }
 
   /**
-   * Get a single exercise by MuscleWiki ID
+   * Get single exercise by ID
    */
   async getExerciseById(
     musclewikiId: string,
@@ -394,12 +358,10 @@ class MuscleWikiService {
     const supabase = getSupabaseClient();
     const startTime = Date.now();
 
-    // Record access for analytics
     await supabase.rpc('record_musclewiki_exercise_access', {
       p_musclewiki_id: musclewikiId,
     });
 
-    // Try cache first
     const { data: cached, error } = await supabase
       .from('musclewiki_exercise_cache')
       .select('*')
@@ -411,18 +373,20 @@ class MuscleWikiService {
 
       if (exercise.isCacheValid) {
         await logApiCall({
-          endpoint: `/exercises/${musclewikiId} (cache)`,
+          endpoint: `/exercises/${musclewikiId} (metadata cache)`,
           cacheHit: true,
           exercisesReturned: 1,
           requestDurationMs: Date.now() - startTime,
           requestSource,
           userId,
+          contentType: 'metadata',
         });
+        await this.attachThumbnails([exercise]);
         return exercise;
       }
     }
 
-    // Cache miss or expired - fetch from API if key available
+    // Fetch from API
     const apiKey = process.env.MUSCLEWIKI_API_KEY;
     if (!apiKey) {
       return cached ? transformCachedExercise(cached) : null;
@@ -450,12 +414,13 @@ class MuscleWikiService {
         requestDurationMs: Date.now() - startTime,
         requestSource,
         userId,
+        contentType: 'metadata',
       });
 
-      // Update cache
+      // Cache metadata
       const transformed = transformApiExercise(data);
       const cacheExpiry = new Date();
-      cacheExpiry.setDate(cacheExpiry.getDate() + CACHE_DURATION_DAYS);
+      cacheExpiry.setDate(cacheExpiry.getDate() + METADATA_CACHE_DAYS);
 
       await supabase.from('musclewiki_exercise_cache').upsert(
         {
@@ -472,25 +437,27 @@ class MuscleWikiService {
           stabilizer_muscles: transformed.stabilizerMuscles,
           instructions: transformed.instructions,
           tips: transformed.tips,
-          thumbnail_url: transformed.thumbnailUrl,
-          male_video_front_url: transformed.maleVideoFrontUrl,
-          male_video_side_url: transformed.maleVideoSideUrl,
-          female_video_front_url: transformed.femaleVideoFrontUrl,
-          female_video_side_url: transformed.femaleVideoSideUrl,
-          image_urls: transformed.imageUrls,
-          raw_data: data,
           cached_at: new Date().toISOString(),
           cache_expires_at: cacheExpiry.toISOString(),
         },
         { onConflict: 'musclewiki_id' }
       );
 
-      return {
+      // Cache thumbnail with 24h TTL
+      const thumbnailUrl = data.thumbnail_url || data.image_url || data.og_image;
+      if (thumbnailUrl) {
+        await this.cacheThumbnail(transformed.musclewikiId!, thumbnailUrl);
+      }
+
+      const exercise = {
         id: '',
         ...transformed,
+        thumbnailUrl,
         isCacheValid: true,
         cachedAt: new Date().toISOString(),
       } as MuscleWikiExercise;
+
+      return exercise;
     } catch (error) {
       logger.error({ error, musclewikiId }, 'Failed to fetch exercise from API');
       return cached ? transformCachedExercise(cached) : null;
@@ -498,7 +465,9 @@ class MuscleWikiService {
   }
 
   /**
-   * Get exercise video URLs - called only when user wants to watch
+   * Get exercise video URLs - ALWAYS fetched fresh from API
+   * Per MuscleWiki Terms Section 3: Videos require transient caching only
+   * We do NOT store video URLs in our database
    */
   async getExerciseVideos(
     musclewikiId: string,
@@ -510,26 +479,102 @@ class MuscleWikiService {
     femaleVideoFrontUrl?: string;
     femaleVideoSideUrl?: string;
   } | null> {
-    const exercise = await this.getExerciseById(musclewikiId, requestSource, userId);
-    if (!exercise) return null;
+    const startTime = Date.now();
 
-    return {
-      maleVideoFrontUrl: exercise.maleVideoFrontUrl,
-      maleVideoSideUrl: exercise.maleVideoSideUrl,
-      femaleVideoFrontUrl: exercise.femaleVideoFrontUrl,
-      femaleVideoSideUrl: exercise.femaleVideoSideUrl,
-    };
+    // COMPLIANCE: Always fetch fresh from API - no caching of video URLs
+    const apiKey = process.env.MUSCLEWIKI_API_KEY;
+    if (!apiKey) {
+      logger.warn('MUSCLEWIKI_API_KEY not configured for video fetch');
+      return null;
+    }
+
+    try {
+      const url = `${MUSCLEWIKI_API_BASE_URL}/exercises/${musclewikiId}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: getApiHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API responded with ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      await logApiCall({
+        endpoint: `/exercises/${musclewikiId}/videos`,
+        responseStatus: response.status,
+        cacheHit: false,
+        cacheMissReason: 'video_no_cache_per_terms',
+        requestDurationMs: Date.now() - startTime,
+        requestSource,
+        userId,
+        contentType: 'video',
+        complianceNote: 'Video URLs fetched fresh per MuscleWiki Terms Section 3 (transient only)',
+      });
+
+      // Return video URLs directly - NOT stored
+      return {
+        maleVideoFrontUrl: data.male_video_front_url || data.video_url_male_front,
+        maleVideoSideUrl: data.male_video_side_url || data.video_url_male_side,
+        femaleVideoFrontUrl: data.female_video_front_url || data.video_url_female_front,
+        femaleVideoSideUrl: data.female_video_side_url || data.video_url_female_side,
+      };
+    } catch (error) {
+      logger.error({ error, musclewikiId }, 'Failed to fetch video URLs');
+      return null;
+    }
   }
 
   /**
-   * Get available filter options (cached)
+   * Cache thumbnail URL with strict 24-hour TTL per Terms Section 3
+   */
+  private async cacheThumbnail(musclewikiId: string, thumbnailUrl: string): Promise<void> {
+    try {
+      const supabase = getSupabaseClient();
+      await supabase.rpc('cache_musclewiki_thumbnail', {
+        p_musclewiki_id: musclewikiId,
+        p_thumbnail_url: thumbnailUrl,
+      });
+    } catch (error) {
+      logger.warn({ error, musclewikiId }, 'Failed to cache thumbnail');
+    }
+  }
+
+  /**
+   * Get thumbnail from 24-hour cache
+   */
+  private async getThumbnail(musclewikiId: string): Promise<string | null> {
+    try {
+      const supabase = getSupabaseClient();
+      const { data } = await supabase.rpc('get_musclewiki_thumbnail', {
+        p_musclewiki_id: musclewikiId,
+      });
+      return data || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Attach thumbnails to exercises from 24h cache
+   */
+  private async attachThumbnails(exercises: MuscleWikiExercise[]): Promise<void> {
+    for (const exercise of exercises) {
+      if (exercise.musclewikiId) {
+        exercise.thumbnailUrl = await this.getThumbnail(exercise.musclewikiId) || undefined;
+      }
+    }
+  }
+
+  /**
+   * Get filter options (metadata - 30 day cache allowed)
    */
   async getFilterOptions(
     filterType: 'category' | 'muscle' | 'difficulty' | 'force' | 'mechanic'
   ): Promise<MuscleWikiFilterOption[]> {
     const supabase = getSupabaseClient();
 
-    // Try cache first
     const { data: cached } = await supabase
       .from('musclewiki_filter_cache')
       .select('*')
@@ -538,11 +583,6 @@ class MuscleWikiService {
       .order('sort_order');
 
     if (cached && cached.length > 0) {
-      await logApiCall({
-        endpoint: `/filters/${filterType} (cache)`,
-        cacheHit: true,
-      });
-
       return cached.map((row) => ({
         value: row.filter_value,
         label: row.display_label,
@@ -550,7 +590,6 @@ class MuscleWikiService {
       }));
     }
 
-    // Fetch from API if key available
     const apiKey = process.env.MUSCLEWIKI_API_KEY;
     if (!apiKey) {
       return this.getDefaultFilterOptions(filterType);
@@ -568,16 +607,9 @@ class MuscleWikiService {
       const data = await response.json();
       const options = Array.isArray(data) ? data : data.data || [];
 
-      await logApiCall({
-        endpoint,
-        responseStatus: response.status,
-        cacheHit: false,
-        cacheMissReason: 'not_cached',
-      });
-
-      // Cache the results
+      // Cache for 30 days (max allowed per Terms)
       const cacheExpiry = new Date();
-      cacheExpiry.setDate(cacheExpiry.getDate() + FILTER_CACHE_DURATION_DAYS);
+      cacheExpiry.setDate(cacheExpiry.getDate() + 30);
 
       for (let i = 0; i < options.length; i++) {
         const option = options[i];
@@ -608,9 +640,6 @@ class MuscleWikiService {
     }
   }
 
-  /**
-   * Get all filter options at once
-   */
   async getAllFilterOptions(): Promise<{
     categories: MuscleWikiFilterOption[];
     muscles: MuscleWikiFilterOption[];
@@ -629,9 +658,6 @@ class MuscleWikiService {
     return { categories, muscles, difficulties, forces, mechanics };
   }
 
-  /**
-   * Get compliance report for API usage
-   */
   async getComplianceReport(days: number = 30): Promise<{
     totalApiCalls: number;
     cacheHits: number;
@@ -655,9 +681,6 @@ class MuscleWikiService {
     };
   }
 
-  /**
-   * Get cache status
-   */
   async getCacheStatus(): Promise<{
     totalCached: number;
     validCached: number;
@@ -680,9 +703,6 @@ class MuscleWikiService {
     };
   }
 
-  /**
-   * Default filter options (fallback)
-   */
   private getDefaultFilterOptions(
     filterType: 'category' | 'muscle' | 'difficulty' | 'force' | 'mechanic'
   ): MuscleWikiFilterOption[] {
@@ -694,8 +714,6 @@ class MuscleWikiService {
         { value: 'Cable', label: 'Cable', type: 'category' },
         { value: 'Bodyweight', label: 'Bodyweight', type: 'category' },
         { value: 'Kettlebell', label: 'Kettlebell', type: 'category' },
-        { value: 'Band', label: 'Resistance Band', type: 'category' },
-        { value: 'Other', label: 'Other', type: 'category' },
       ],
       muscle: [
         { value: 'Chest', label: 'Chest', type: 'muscle' },
@@ -703,13 +721,11 @@ class MuscleWikiService {
         { value: 'Shoulders', label: 'Shoulders', type: 'muscle' },
         { value: 'Biceps', label: 'Biceps', type: 'muscle' },
         { value: 'Triceps', label: 'Triceps', type: 'muscle' },
-        { value: 'Forearms', label: 'Forearms', type: 'muscle' },
-        { value: 'Core', label: 'Core', type: 'muscle' },
         { value: 'Quadriceps', label: 'Quadriceps', type: 'muscle' },
         { value: 'Hamstrings', label: 'Hamstrings', type: 'muscle' },
         { value: 'Glutes', label: 'Glutes', type: 'muscle' },
+        { value: 'Core', label: 'Core', type: 'muscle' },
         { value: 'Calves', label: 'Calves', type: 'muscle' },
-        { value: 'Hip Flexors', label: 'Hip Flexors', type: 'muscle' },
       ],
       difficulty: [
         { value: 'Beginner', label: 'Beginner', type: 'difficulty' },
@@ -731,5 +747,4 @@ class MuscleWikiService {
   }
 }
 
-// Export singleton instance
 export const muscleWikiService = new MuscleWikiService();

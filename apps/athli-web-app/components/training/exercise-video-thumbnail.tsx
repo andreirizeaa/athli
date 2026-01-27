@@ -246,6 +246,21 @@ export function ExerciseVideoThumbnail({
               </div>
             </div>
           )}
+
+          {/* Attribution - Required by MuscleWiki API Terms Section 8 */}
+          <div className="px-4 py-2 border-t bg-muted/50 text-center">
+            <span className="text-xs text-muted-foreground">
+              Powered by{' '}
+              <a
+                href="https://musclewiki.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                MuscleWiki
+              </a>
+            </span>
+          </div>
         </DialogContent>
       </Dialog>
     </>
