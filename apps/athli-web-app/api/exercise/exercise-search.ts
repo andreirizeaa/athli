@@ -122,9 +122,9 @@ const transformMuscleWikiExercise = (mwExercise: MuscleWikiExercise): Exercise =
     mechanic: mwExercise.mechanic,
     category: mwExercise.category,
     maleVideoFrontUrl: mwExercise.maleVideoFrontUrl,
-    maleVideoSideUrl: mwExercise.maleVideoSideUrl,
-    femaleVideoFrontUrl: mwExercise.femaleVideoFrontUrl,
-    femaleVideoSideUrl: mwExercise.femaleVideoSideUrl,
+    maleVideoSideUrl: (mwExercise as { maleVideoSideUrl?: string }).maleVideoSideUrl,
+    femaleVideoFrontUrl: (mwExercise as { femaleVideoFrontUrl?: string }).femaleVideoFrontUrl,
+    femaleVideoSideUrl: (mwExercise as { femaleVideoSideUrl?: string }).femaleVideoSideUrl,
     source: 'musclewiki',
     isCacheValid: mwExercise.isCacheValid,
   };
