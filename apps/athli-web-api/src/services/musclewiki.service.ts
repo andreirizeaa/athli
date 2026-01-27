@@ -21,7 +21,7 @@
  *
  * Environment Variables Required:
  * - MUSCLEWIKI_API_KEY: RapidAPI key for MuscleWiki
- * - MUSCLEWIKI_API_HOST: API host (default: musclewiki-api.p.rapidapi.com)
+ * - MUSCLEWIKI_API_HOST: RapidAPI host for MuscleWiki
  */
 
 import { getSupabaseClient } from './supabase.service';
@@ -107,10 +107,14 @@ const THUMBNAIL_CACHE_HOURS = 24;   // Max allowed: 24 hours
 
 const getApiHeaders = (): HeadersInit => {
   const apiKey = process.env.MUSCLEWIKI_API_KEY;
-  const apiHost = process.env.MUSCLEWIKI_API_HOST || 'musclewiki-api.p.rapidapi.com';
+  const apiHost = process.env.MUSCLEWIKI_API_HOST;
 
   if (!apiKey) {
     throw new Error('MUSCLEWIKI_API_KEY environment variable is not set');
+  }
+
+  if (!apiHost) {
+    throw new Error('MUSCLEWIKI_API_HOST environment variable is not set');
   }
 
   return {
