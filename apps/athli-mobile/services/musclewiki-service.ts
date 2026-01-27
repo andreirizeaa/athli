@@ -69,7 +69,11 @@ export type ExerciseFilters = {
   category?: string;
   difficulty?: string;
   muscle?: string;
+  force?: string;
+  mechanic?: string;
+  grips?: string;
   searchTerm?: string;
+  gender?: 'male' | 'female';
   limit?: number;
   offset?: number;
 };
@@ -118,6 +122,10 @@ const transformExercise = (mwExercise: MuscleWikiExercise): Exercise => {
 
 /**
  * Search exercises via backend API
+ *
+ * @param filters - Search filters including category, muscle, difficulty, etc.
+ * @param filters.gender - Filter for male or female specific exercise demonstrations
+ *                         Pass this based on the client's gender for personalized videos
  */
 export const searchExercises = async (filters: ExerciseFilters = {}): Promise<Exercise[]> => {
   const params = new URLSearchParams();
@@ -126,6 +134,10 @@ export const searchExercises = async (filters: ExerciseFilters = {}): Promise<Ex
   if (filters.category) params.set('category', filters.category);
   if (filters.difficulty) params.set('difficulty', filters.difficulty);
   if (filters.muscle) params.set('muscle', filters.muscle);
+  if (filters.force) params.set('force', filters.force);
+  if (filters.mechanic) params.set('mechanic', filters.mechanic);
+  if (filters.grips) params.set('grips', filters.grips);
+  if (filters.gender) params.set('gender', filters.gender);
   if (filters.limit) params.set('limit', filters.limit.toString());
   if (filters.offset) params.set('offset', filters.offset.toString());
 
@@ -255,15 +267,26 @@ export const getAllFilterOptions = async (): Promise<{
     };
   } catch (error) {
     console.error('Failed to get filter options:', error);
-    // Return defaults on error
+    // Return defaults on error - values match MuscleWiki API (lowercase)
     return {
       categories: [
-        { value: 'Barbell', label: 'Barbell' },
-        { value: 'Dumbbell', label: 'Dumbbell' },
-        { value: 'Machine', label: 'Machine' },
-        { value: 'Cable', label: 'Cable' },
-        { value: 'Bodyweight', label: 'Bodyweight' },
-        { value: 'Kettlebell', label: 'Kettlebell' },
+        { value: 'band', label: 'Band' },
+        { value: 'barbell', label: 'Barbell' },
+        { value: 'bodyweight', label: 'Bodyweight' },
+        { value: 'bosu-ball', label: 'Bosu Ball' },
+        { value: 'cables', label: 'Cables' },
+        { value: 'cardio', label: 'Cardio' },
+        { value: 'dumbbells', label: 'Dumbbells' },
+        { value: 'kettlebells', label: 'Kettlebells' },
+        { value: 'machine', label: 'Machine' },
+        { value: 'medicine-ball', label: 'Medicine Ball' },
+        { value: 'plate', label: 'Plate' },
+        { value: 'recovery', label: 'Recovery' },
+        { value: 'smith-machine', label: 'Smith Machine' },
+        { value: 'stretches', label: 'Stretches' },
+        { value: 'trx', label: 'TRX' },
+        { value: 'vitruvian', label: 'Vitruvian' },
+        { value: 'yoga', label: 'Yoga' },
       ],
       muscles: [
         { value: 'Chest', label: 'Chest' },
@@ -271,25 +294,29 @@ export const getAllFilterOptions = async (): Promise<{
         { value: 'Shoulders', label: 'Shoulders' },
         { value: 'Biceps', label: 'Biceps' },
         { value: 'Triceps', label: 'Triceps' },
+        { value: 'Forearms', label: 'Forearms' },
         { value: 'Quadriceps', label: 'Quadriceps' },
         { value: 'Hamstrings', label: 'Hamstrings' },
         { value: 'Glutes', label: 'Glutes' },
-        { value: 'Core', label: 'Core' },
         { value: 'Calves', label: 'Calves' },
+        { value: 'Abs', label: 'Abs' },
+        { value: 'Lower Back', label: 'Lower Back' },
+        { value: 'Traps', label: 'Traps' },
+        { value: 'Lats', label: 'Lats' },
       ],
       difficulties: [
-        { value: 'Beginner', label: 'Beginner' },
-        { value: 'Intermediate', label: 'Intermediate' },
-        { value: 'Advanced', label: 'Advanced' },
+        { value: 'novice', label: 'Novice' },
+        { value: 'intermediate', label: 'Intermediate' },
+        { value: 'advanced', label: 'Advanced' },
       ],
       forces: [
-        { value: 'Push', label: 'Push' },
-        { value: 'Pull', label: 'Pull' },
-        { value: 'Static', label: 'Static' },
+        { value: 'push', label: 'Push' },
+        { value: 'pull', label: 'Pull' },
+        { value: 'static', label: 'Static' },
       ],
       mechanics: [
-        { value: 'Compound', label: 'Compound' },
-        { value: 'Isolation', label: 'Isolation' },
+        { value: 'compound', label: 'Compound' },
+        { value: 'isolation', label: 'Isolation' },
       ],
     };
   }

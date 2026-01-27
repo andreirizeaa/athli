@@ -48,7 +48,9 @@ export type MuscleWikiSearchFilters = {
   muscle?: string;
   force?: string;
   mechanic?: string;
+  grips?: string;
   searchTerm?: string;
+  gender?: 'male' | 'female';
   limit?: number;
   offset?: number;
 };
@@ -59,6 +61,9 @@ export type MuscleWikiSearchFilters = {
 
 /**
  * Search exercises via backend API
+ *
+ * @param filters - Search filters including category, muscle, difficulty, etc.
+ * @param filters.gender - Filter for male or female specific exercise demonstrations
  */
 export const searchExercises = async (
   filters: MuscleWikiSearchFilters = {}
@@ -71,6 +76,8 @@ export const searchExercises = async (
   if (filters.muscle) params.set('muscle', filters.muscle);
   if (filters.force) params.set('force', filters.force);
   if (filters.mechanic) params.set('mechanic', filters.mechanic);
+  if (filters.grips) params.set('grips', filters.grips);
+  if (filters.gender) params.set('gender', filters.gender);
   if (filters.limit) params.set('limit', filters.limit.toString());
   if (filters.offset) params.set('offset', filters.offset.toString());
 
