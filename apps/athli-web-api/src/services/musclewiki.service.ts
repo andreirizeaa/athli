@@ -720,26 +720,26 @@ class MuscleWikiService {
   private getDefaultFilterOptions(
     filterType: 'category' | 'muscle' | 'difficulty' | 'force' | 'mechanic'
   ): MuscleWikiFilterOption[] {
-    // These match the MuscleWiki API exactly (lowercase values)
+    // Values are capitalized as returned by the MuscleWiki API
     const defaults: Record<string, MuscleWikiFilterOption[]> = {
       category: [
-        { value: 'band', label: 'Band', type: 'category' },
-        { value: 'barbell', label: 'Barbell', type: 'category' },
-        { value: 'bodyweight', label: 'Bodyweight', type: 'category' },
-        { value: 'bosu-ball', label: 'Bosu Ball', type: 'category' },
-        { value: 'cables', label: 'Cables', type: 'category' },
-        { value: 'cardio', label: 'Cardio', type: 'category' },
-        { value: 'dumbbells', label: 'Dumbbells', type: 'category' },
-        { value: 'kettlebells', label: 'Kettlebells', type: 'category' },
-        { value: 'machine', label: 'Machine', type: 'category' },
-        { value: 'medicine-ball', label: 'Medicine Ball', type: 'category' },
-        { value: 'plate', label: 'Plate', type: 'category' },
-        { value: 'recovery', label: 'Recovery', type: 'category' },
-        { value: 'smith-machine', label: 'Smith Machine', type: 'category' },
-        { value: 'stretches', label: 'Stretches', type: 'category' },
-        { value: 'trx', label: 'TRX', type: 'category' },
-        { value: 'vitruvian', label: 'Vitruvian', type: 'category' },
-        { value: 'yoga', label: 'Yoga', type: 'category' },
+        { value: 'Band', label: 'Band', type: 'category' },
+        { value: 'Barbell', label: 'Barbell', type: 'category' },
+        { value: 'Bodyweight', label: 'Bodyweight', type: 'category' },
+        { value: 'Bosu-Ball', label: 'Bosu Ball', type: 'category' },
+        { value: 'Cables', label: 'Cables', type: 'category' },
+        { value: 'Cardio', label: 'Cardio', type: 'category' },
+        { value: 'Dumbbells', label: 'Dumbbells', type: 'category' },
+        { value: 'Kettlebells', label: 'Kettlebells', type: 'category' },
+        { value: 'Machine', label: 'Machine', type: 'category' },
+        { value: 'Medicine-Ball', label: 'Medicine Ball', type: 'category' },
+        { value: 'Plate', label: 'Plate', type: 'category' },
+        { value: 'Recovery', label: 'Recovery', type: 'category' },
+        { value: 'Smith-Machine', label: 'Smith Machine', type: 'category' },
+        { value: 'Stretches', label: 'Stretches', type: 'category' },
+        { value: 'TRX', label: 'TRX', type: 'category' },
+        { value: 'Vitruvian', label: 'Vitruvian', type: 'category' },
+        { value: 'Yoga', label: 'Yoga', type: 'category' },
       ],
       muscle: [
         { value: 'Chest', label: 'Chest', type: 'muscle' },
@@ -758,18 +758,18 @@ class MuscleWikiService {
         { value: 'Lats', label: 'Lats', type: 'muscle' },
       ],
       difficulty: [
-        { value: 'novice', label: 'Novice', type: 'difficulty' },
-        { value: 'intermediate', label: 'Intermediate', type: 'difficulty' },
-        { value: 'advanced', label: 'Advanced', type: 'difficulty' },
+        { value: 'Novice', label: 'Novice', type: 'difficulty' },
+        { value: 'Intermediate', label: 'Intermediate', type: 'difficulty' },
+        { value: 'Advanced', label: 'Advanced', type: 'difficulty' },
       ],
       force: [
-        { value: 'push', label: 'Push', type: 'force' },
-        { value: 'pull', label: 'Pull', type: 'force' },
-        { value: 'static', label: 'Static', type: 'force' },
+        { value: 'Push', label: 'Push', type: 'force' },
+        { value: 'Pull', label: 'Pull', type: 'force' },
+        { value: 'Static', label: 'Static', type: 'force' },
       ],
       mechanic: [
-        { value: 'compound', label: 'Compound', type: 'mechanic' },
-        { value: 'isolation', label: 'Isolation', type: 'mechanic' },
+        { value: 'Compound', label: 'Compound', type: 'mechanic' },
+        { value: 'Isolation', label: 'Isolation', type: 'mechanic' },
       ],
     };
 
