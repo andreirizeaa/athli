@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { X } from 'lucide-react-native';
+import { X, Pause, Play } from 'lucide-react-native';
 
 import { useThemePreference } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
@@ -8,11 +8,15 @@ import { IconButton } from '@/components/ui/icon-button';
 type WorkoutSessionHeaderProps = {
   progressPercent: number;
   onClose: () => void;
+  isPaused: boolean;
+  onTogglePause: () => void;
 };
 
 export const WorkoutSessionHeader = ({
   progressPercent,
   onClose,
+  isPaused,
+  onTogglePause,
 }: WorkoutSessionHeaderProps) => {
   const { colors: themeColors } = useThemePreference();
 
@@ -42,6 +46,15 @@ export const WorkoutSessionHeader = ({
           />
         </View>
       </View>
+      <IconButton
+        icon={{
+          sf: isPaused ? 'play' : 'pause',
+          IconComponent: isPaused ? Play : Pause,
+        }}
+        onPress={onTogglePause}
+        size="md"
+        color={themeColors.text}
+      />
     </View>
   );
 };
