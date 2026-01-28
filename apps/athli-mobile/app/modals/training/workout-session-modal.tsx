@@ -12,7 +12,8 @@ import {
   WorkoutSessionBottomNav,
   WorkoutSessionPageTitle,
 } from '@/components/features/training/workout-session';
-import { WorkoutPre, WorkoutPayload, DEFAULT_EXECUTION_FIELDS } from '@athli/shared-types';
+import { WorkoutPre, WorkoutPayload, WorkoutMeta, DEFAULT_EXECUTION_FIELDS } from '@athli/shared-types';
+import { useWorkoutTimer } from '@/hooks/useWorkoutTimer';
 
 // Constants
 const BOTTOM_NAV_HEIGHT = 80;
@@ -35,6 +36,8 @@ export default function WorkoutSessionModal() {
   const [currentStep, setCurrentStep] = useState(1);
   const [hasUpdatedStatus, setHasUpdatedStatus] = useState(false);
 
+  const { formattedTime, isPaused } = useWorkoutTimer(workoutData?.completedSummary ?? null);
+
   // Parse workout on mount
   useEffect(() => {
     if (params.workoutPayload) {
@@ -50,20 +53,45 @@ export default function WorkoutSessionModal() {
     }
   }, [params.workoutPayload]);
 
-  // Update workout status to in_progress on mount
+  // Update workout status to in_progress on mount (or resume if paused)
   useEffect(() => {
     const updateStatus = async () => {
       if (hasUpdatedStatus) return;
       if (!params.clientId || !params.date || !workoutData) return;
 
       try {
-        const updatedPayload = {
-          ...workoutData,
-          completedSummary: {
+        const currentStatus = workoutData.completedSummary.status;
+        const isPaused = !!workoutData.completedSummary.pausedAt;
+
+        let updatedSummary: WorkoutMeta;
+
+        if (currentStatus === 'in_progress' && isPaused) {
+          // Resume from pause - calculate paused duration and clear pausedAt
+          const pauseStart = new Date(workoutData.completedSummary.pausedAt!).getTime();
+          const pausedDuration = Date.now() - pauseStart;
+          updatedSummary = {
+            ...workoutData.completedSummary,
+            pausedAt: null,
+            totalPausedMs: (workoutData.completedSummary.totalPausedMs || 0) + pausedDuration,
+          };
+        } else if (currentStatus !== 'in_progress') {
+          // Starting fresh - set status and startedAt
+          updatedSummary = {
             ...workoutData.completedSummary,
             status: 'in_progress' as const,
             startedAt: new Date().toISOString(),
-          },
+            pausedAt: null,
+            totalPausedMs: 0,
+          };
+        } else {
+          // Already in progress and not paused - no changes needed
+          setHasUpdatedStatus(true);
+          return;
+        }
+
+        const updatedPayload = {
+          ...workoutData,
+          completedSummary: updatedSummary,
         };
 
         await assignWorkout({
@@ -124,6 +152,46 @@ export default function WorkoutSessionModal() {
     }
   };
 
+  // Pause toggle handler
+  const handleTogglePause = async () => {
+    if (!workoutData) return;
+
+    const currentlyPaused = !!workoutData.completedSummary.pausedAt;
+    let updatedSummary: WorkoutMeta;
+
+    if (currentlyPaused) {
+      // Resume - calculate paused duration and add to total
+      const pauseStart = new Date(workoutData.completedSummary.pausedAt!).getTime();
+      const pausedDuration = Date.now() - pauseStart;
+      updatedSummary = {
+        ...workoutData.completedSummary,
+        pausedAt: null,
+        totalPausedMs: (workoutData.completedSummary.totalPausedMs || 0) + pausedDuration,
+      };
+    } else {
+      // Pause - record current timestamp
+      updatedSummary = {
+        ...workoutData.completedSummary,
+        pausedAt: new Date().toISOString(),
+      };
+    }
+
+    const updated = { ...workoutData, completedSummary: updatedSummary };
+    setWorkoutData(updated);
+
+    try {
+      await assignWorkout({
+        workoutId: params.workoutId,
+        clientId: params.clientId,
+        ...(params.coachId && { coachId: params.coachId }),
+        date: params.date,
+        workoutPayload: updated,
+      });
+    } catch (error) {
+      console.error('Failed to toggle pause:', error);
+    }
+  };
+
   // Progress calculation
   const totalSteps = (workoutData?.totalExercises ?? 0) + 2;
   const progressPercent = (currentStep / totalSteps) * 100;
@@ -159,7 +227,7 @@ export default function WorkoutSessionModal() {
     <WorkoutSessionBottomNav
       canGoBack={canGoBack}
       canGoNext={canGoNext}
-      timerDisplay="0:00"
+      timerDisplay={formattedTime}
       bottomInset={insets.bottom}
       onPrevious={handlePrevious}
       onNext={handleNext}
@@ -178,6 +246,8 @@ export default function WorkoutSessionModal() {
       <WorkoutSessionHeader
         progressPercent={progressPercent}
         onClose={handleClose}
+        isPaused={isPaused}
+        onTogglePause={handleTogglePause}
       />
 
       <WorkoutSessionPageTitle title={getPageTitle()} />
