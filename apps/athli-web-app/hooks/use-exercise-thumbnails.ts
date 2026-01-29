@@ -79,7 +79,9 @@ const fetchAndCacheThumbnails = async (filenames: string[]): Promise<void> => {
     (f) => !globalThumbnailCache.has(f) && !pendingFetches.has(f)
   );
 
-  if (toFetch.length === 0) return;
+  if (toFetch.length === 0) {
+    return;
+  }
 
   // Mark as pending
   toFetch.forEach((f) => pendingFetches.add(f));
@@ -176,14 +178,18 @@ export const useExerciseThumbnails = <T extends ExerciseWithThumbnail>(
 
   // Fetch thumbnails when exercises change
   useEffect(() => {
-    if (!enabled || filenames.length === 0) return;
+    if (!enabled || filenames.length === 0) {
+      return;
+    }
 
     // Check if we have new filenames to fetch
     const newFilenames = filenames.filter(
       (f) => !lastFetchedRef.current.has(f) && !globalThumbnailCache.has(f)
     );
 
-    if (newFilenames.length === 0) return;
+    if (newFilenames.length === 0) {
+      return;
+    }
 
     // Clear existing debounce timer
     if (debounceTimerRef.current) {
@@ -193,12 +199,12 @@ export const useExerciseThumbnails = <T extends ExerciseWithThumbnail>(
     // Debounce to batch rapid changes
     debounceTimerRef.current = setTimeout(async () => {
       setIsLoading(true);
-      
+
       // Mark as fetched
       newFilenames.forEach((f) => lastFetchedRef.current.add(f));
-      
+
       await fetchAndCacheThumbnails(newFilenames);
-      
+
       setIsLoading(false);
     }, 100);
 
