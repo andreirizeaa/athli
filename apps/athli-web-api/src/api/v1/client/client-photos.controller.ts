@@ -198,7 +198,8 @@ export const clientPhotosController = {
     deletePhotoAngle: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const { id, angle } = req.params;
+        const { id } = req.params;
+        const angle = String(req.params.angle);
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });

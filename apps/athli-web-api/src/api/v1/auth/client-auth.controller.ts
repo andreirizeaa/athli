@@ -88,7 +88,7 @@ export class ClientAuthController {
      * Get coach info by invite code (for displaying on invite page)
      */
     getCoachByInviteCode = asyncHandler(async (req: Request, res: Response) => {
-        const { code } = req.params;
+        const code = String(req.params.code);
         const supabase = getSupabaseClient();
 
         // Use the full view to get name and profile picture from user_profiles

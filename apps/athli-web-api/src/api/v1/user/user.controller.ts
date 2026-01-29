@@ -72,7 +72,7 @@ export class UserController {
    * Get user by ID (public endpoint, no authentication required)
    */
   fetchUser = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const user = await userService.getUserById(id);
 

@@ -116,9 +116,10 @@ export const exercisesController = {
    */
   getExerciseById: async (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       const userId = (req as any).userId;
-      const requestSource = req.headers['x-request-source'] as string || 'web_app';
+      const requestSourceHeader = req.headers['x-request-source'];
+      const requestSource = (Array.isArray(requestSourceHeader) ? requestSourceHeader[0] : requestSourceHeader) || 'web_app';
 
       const exercise = await muscleWikiService.getExerciseById(id, requestSource, userId);
 
@@ -142,9 +143,10 @@ export const exercisesController = {
    */
   getExerciseVideos: async (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       const userId = (req as any).userId;
-      const requestSource = req.headers['x-request-source'] as string || 'web_app';
+      const requestSourceHeader = req.headers['x-request-source'];
+      const requestSource = (Array.isArray(requestSourceHeader) ? requestSourceHeader[0] : requestSourceHeader) || 'web_app';
 
       const videos = await muscleWikiService.getExerciseVideos(id, requestSource, userId);
 

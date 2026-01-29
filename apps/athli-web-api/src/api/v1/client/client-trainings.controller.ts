@@ -598,8 +598,9 @@ export const clientTrainingsController = {
      * Delete a workout from specific date
      */
     deleteWorkout: async (req: Request, res: Response) => {
-        const { clientId, workoutId } = req.params;
-        const { date } = req.query; // Date is usually query param here
+        const { clientId } = req.params;
+        const workoutId = String(req.params.workoutId);
+        const date = req.query.date ? String(req.query.date) : undefined; // Date is usually query param here
 
         if (!clientId || !workoutId || !date) {
             return res.status(400).json({ success: false, message: 'clientId, workoutId and date are required' });
