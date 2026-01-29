@@ -1743,8 +1743,10 @@ Focus on proper form and progressive overload.`;
 
           </CardHeader>
           {!isCollapsed && (
-            <div className="overflow-hidden transition-all duration-300 ease-in-out" style={{ maxHeight: '10000px', opacity: 1 }}>
-              <CardContent
+            <>
+              <Separator />
+              <div className="overflow-hidden transition-all duration-300 ease-in-out" style={{ maxHeight: '10000px', opacity: 1 }}>
+                <CardContent
                 ref={(el) => registerSectionRef(section.id, el)}
                 data-workout-section
                 className="flex-1 flex flex-col px-3 pt-0.5 pb-0"
@@ -1851,16 +1853,16 @@ Focus on proper form and progressive overload.`;
                             key={exercise.instanceId}
                             ref={(el) => {
                               if (el) {
-                                exerciseRefs.current.set(exercise.exerciseId, el);
+                                exerciseRefs.current.set(exercise.instanceId, el);
                               } else {
-                                exerciseRefs.current.delete(exercise.exerciseId);
+                                exerciseRefs.current.delete(exercise.instanceId);
                               }
                             }}
                             className={wrapperClasses}
                           >
                             <div
                               data-exercise-card
-                              className={cn(focusedExerciseId === exercise.exerciseId && "[&>div]:!border-primary [&>div]:!border [&>div]:animate-pulse")}
+                              className={cn(focusedExerciseId === exercise.instanceId && "[&>div]:outline [&>div]:outline-1 [&>div]:rounded-lg [&>div]:animate-border-flash")}
                             >
                               <ExerciseCard
                                 key={`${exercise.instanceId}-${exercise.sets?.length || 0}`}
@@ -2030,7 +2032,8 @@ Focus on proper form and progressive overload.`;
                   )}
                 </div>
               </CardContent>
-            </div>
+              </div>
+            </>
           )}
         </Card>
       </div>
@@ -2064,9 +2067,9 @@ Focus on proper form and progressive overload.`;
         data-top-level-item
         ref={(el) => {
           if (el) {
-            exerciseRefs.current.set(exercise.exerciseId, el);
+            exerciseRefs.current.set(exercise.instanceId, el);
           } else {
-            exerciseRefs.current.delete(exercise.exerciseId);
+            exerciseRefs.current.delete(exercise.instanceId);
           }
         }}
         className={cn(
@@ -2077,7 +2080,7 @@ Focus on proper form and progressive overload.`;
       >
         <div
           data-exercise-card
-          className={cn(focusedExerciseId === exercise.exerciseId && "[&>div]:!border-primary [&>div]:!border [&>div]:animate-pulse")}
+          className={cn(focusedExerciseId === exercise.instanceId && "[&>div]:outline [&>div]:outline-1 [&>div]:rounded-lg [&>div]:animate-border-flash")}
         >
           <ExerciseCard
             key={`${exercise.instanceId}-${exercise.sets?.length || 0}`}
@@ -2652,6 +2655,7 @@ Focus on proper form and progressive overload.`;
                           )}
                         </div>
                       </div>
+                      <Separator />
                       <div
                         ref={(el) => {
                           contentScrollRef.current = el;
@@ -2839,20 +2843,32 @@ Focus on proper form and progressive overload.`;
                     </div>
 
                   </div>
-                  <div className="flex-shrink-0 border-t p-2 flex items-center justify-end gap-2 bg-background">
-                    <Button variant="outline" onClick={() => {
-                      if (isDirty) {
-                        setShowCloseConfirm(true);
-                      } else {
-                        onOpenChange(false);
-                      }
-                    }}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleSave} disabled={isSaving} className="gap-2">
-                      {isSaving ? <Loader2 className="animate-spin size-4" /> : <Check className="size-4" />}
-                      Save
-                    </Button>
+                  <div className="flex-shrink-0 border-t p-2 flex items-center justify-between gap-2 bg-background">
+                    <Badge variant="outline" className="text-primary border-primary px-3 py-1">
+                      {(() => {
+                        const count = workoutSchema.items.reduce((total, item) => {
+                          if (item.itemType === 'exercise') return total + 1;
+                          if (item.itemType === 'section') return total + (item.section.exercises?.length || 0);
+                          return total;
+                        }, 0);
+                        return `${count} ${count === 1 ? 'exercise' : 'exercises'}`;
+                      })()}
+                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" onClick={() => {
+                        if (isDirty) {
+                          setShowCloseConfirm(true);
+                        } else {
+                          onOpenChange(false);
+                        }
+                      }}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+                        {isSaving ? <Loader2 className="animate-spin size-4" /> : <Check className="size-4" />}
+                        Save
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>

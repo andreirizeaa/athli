@@ -226,17 +226,17 @@ const OverviewTopLevelExerciseRow = ({
 
   return (
     <div ref={setNodeRef} style={style} className="relative">
-      <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-xs shadow-sm hover:border-primary transition-colors">
-        <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
-        <span className="text-xs flex-1 min-w-0 truncate">{exercise.name || 'Untitled exercise'}</span>
-        {onExerciseClick && exercise?.exerciseId && (
+      <div className="flex items-start gap-2 rounded-md border bg-background px-3 py-1.5 text-xs shadow-sm hover:border-primary transition-colors">
+        <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0 mt-1" />
+        <span className="text-xs flex-1 break-words">{exercise.name || 'Untitled exercise'}</span>
+        {onExerciseClick && exercise?.instanceId && (
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onExerciseClick(exercise.exerciseId);
+                  onExerciseClick(exercise.instanceId);
                 }}
                 className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-accent transition-colors flex-shrink-0"
               >
@@ -300,20 +300,20 @@ const OverviewExerciseRow = ({
       <div
         {...listeners}
         className={cn(
-          'flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-xs select-none cursor-grab active:cursor-grabbing hover:border-primary transition-colors'
+          'flex items-start gap-2 rounded-md border bg-background px-3 py-2 text-xs select-none cursor-grab active:cursor-grabbing hover:border-primary transition-colors'
         )}
       >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
-          <span className="text-xs flex-1 min-w-0">{exercise.name || 'Untitled exercise'}</span>
-          {onExerciseClick && exercise?.exerciseId && (
+        <div className="flex items-start gap-2 flex-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0 mt-1" />
+          <span className="text-xs flex-1 break-words">{exercise.name || 'Untitled exercise'}</span>
+          {onExerciseClick && exercise?.instanceId && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onExerciseClick(exercise.exerciseId);
+                    onExerciseClick(exercise.instanceId);
                   }}
                   onMouseDown={(e) => e.stopPropagation()}
                   className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
@@ -441,7 +441,7 @@ const OverviewSupersetRow = ({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onExerciseClick(exercises[0].exerciseId);
+                      onExerciseClick(exercises[0].instanceId);
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
                     className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-accent transition-colors flex-shrink-0"
@@ -554,14 +554,14 @@ const OverviewTopLevelSupersetRow = ({
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {onExerciseClick && exercises?.[0]?.exerciseId && (
+            {onExerciseClick && exercises?.[0]?.instanceId && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onExerciseClick(exercises[0].exerciseId);
+                      onExerciseClick(exercises[0].instanceId);
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
                     className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-accent transition-colors flex-shrink-0"

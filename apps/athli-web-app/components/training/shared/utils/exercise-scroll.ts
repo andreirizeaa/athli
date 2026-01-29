@@ -63,21 +63,21 @@ export const handleExerciseClick = (
  * @param setCollapsedSections - Callback to update collapsed sections
  */
 export const handleExerciseClickById = (
-  exerciseId: string,
+  instanceId: string,
   workoutSections: Array<{
     id: string;
-    exercises?: Array<{ exerciseId: string }>;
+    exercises?: Array<{ instanceId: string }>;
   }>,
   collapsedSections: Set<string>,
   exerciseRefs: MutableRefObject<Map<string, HTMLDivElement>>,
   contentScrollRef: MutableRefObject<HTMLDivElement | null>,
   setFocusedExerciseId: (id: string | null) => void,
   setCollapsedSections: (updater: (prev: Set<string>) => Set<string>) => void,
-  findExerciseById?: ExerciseLookupFn
+  _findExerciseById?: ExerciseLookupFn
 ): void => {
   // Find which section contains this exercise
   const sectionContainingExercise = workoutSections.find((section) =>
-    section.exercises?.some((ex) => ex.exerciseId === exerciseId)
+    section.exercises?.some((ex) => ex.instanceId === instanceId)
   );
 
   // If the section is collapsed, expand it
@@ -91,48 +91,27 @@ export const handleExerciseClickById = (
   }
 
   // Flash the border by setting focused exercise ID
-  setFocusedExerciseId(exerciseId);
-  // Clear the flash after animation (1 second)
+  setFocusedExerciseId(instanceId);
+  // Clear the flash after animation (1.5 seconds)
   setTimeout(() => {
     setFocusedExerciseId(null);
-  }, 1000);
-
-  // Find the exercise by ID from cached exercises (if lookup function provided)
-  const exercise = findExerciseById ? findExerciseById(exerciseId) : undefined;
+  }, 1500);
 
   // If section was collapsed, wait for it to expand before scrolling
   const scrollToExercise = () => {
-    if (exercise) {
-      const exerciseRef = exerciseRefs.current.get(exercise.exerciseId);
-      if (exerciseRef && contentScrollRef.current) {
-        const scrollContainer = contentScrollRef.current;
-        const containerRect = scrollContainer.getBoundingClientRect();
-        const exerciseRect = exerciseRef.getBoundingClientRect();
-        const scrollTop = scrollContainer.scrollTop;
-        const exerciseTop = exerciseRect.top - containerRect.top + scrollTop;
+    const exerciseRef = exerciseRefs.current.get(instanceId);
+    if (exerciseRef && contentScrollRef.current) {
+      const scrollContainer = contentScrollRef.current;
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const exerciseRect = exerciseRef.getBoundingClientRect();
+      const scrollTop = scrollContainer.scrollTop;
+      const exerciseTop = exerciseRect.top - containerRect.top + scrollTop;
 
-        const targetScroll = exerciseTop - containerRect.height / 2 + exerciseRect.height / 2;
-        scrollContainer.scrollTo({
-          top: Math.max(0, targetScroll),
-          behavior: 'smooth',
-        });
-      }
-    } else {
-      // If exercise not found, try to scroll using just the ID
-      const exerciseRef = exerciseRefs.current.get(exerciseId);
-      if (exerciseRef && contentScrollRef.current) {
-        const scrollContainer = contentScrollRef.current;
-        const containerRect = scrollContainer.getBoundingClientRect();
-        const exerciseRect = exerciseRef.getBoundingClientRect();
-        const scrollTop = scrollContainer.scrollTop;
-        const exerciseTop = exerciseRect.top - containerRect.top + scrollTop;
-
-        const targetScroll = exerciseTop - containerRect.height / 2 + exerciseRect.height / 2;
-        scrollContainer.scrollTo({
-          top: Math.max(0, targetScroll),
-          behavior: 'smooth',
-        });
-      }
+      const targetScroll = exerciseTop - containerRect.height / 2 + exerciseRect.height / 2;
+      scrollContainer.scrollTo({
+        top: Math.max(0, targetScroll),
+        behavior: 'smooth',
+      });
     }
   };
 

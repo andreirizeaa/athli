@@ -3,7 +3,7 @@
  * This ensures workouts created on mobile can be opened on web and vice versa
  */
 
-import { SectionType } from '@athli/shared-types';
+import { SectionType, getDefaultColumnsForCategory } from '@athli/shared-types';
 
 // ============================================================================
 // Core Types (Re-export from shared package)
@@ -74,12 +74,19 @@ export type BuilderWorkoutState = {
 // Helper Functions (Mobile-specific)
 // ============================================================================
 
-export const getDefaultColumns = (exerciseType: string) => {
+export const getDefaultColumns = (exerciseType: string, category?: string) => {
+    // First try category-based defaults from shared package
+    if (category) {
+        const categoryDefaults = getDefaultColumnsForCategory(category);
+        return { column1Type: categoryDefaults.column1, column2Type: categoryDefaults.column2 };
+    }
+
+    // Fall back to exercise type-based defaults
     switch (exerciseType) {
         case 'weight_reps':
             return { column1Type: 'Reps', column2Type: 'kg' };
         case 'reps':
-            return { column1Type: 'Reps', column2Type: 'kg' };
+            return { column1Type: 'Reps', column2Type: 'Optional' };
         case 'distance_duration':
             return { column1Type: 'km', column2Type: 'minutes' };
         default:
