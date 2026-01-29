@@ -1004,21 +1004,37 @@ class MuscleWikiService {
     totalCached: number;
     validCached: number;
     expiredCached: number;
+    thumbnails: {
+      total: number;
+      valid: number;
+      expired: number;
+    };
   }> {
     const supabase = getSupabaseClient();
+    const now = new Date().toISOString();
 
-    const [totalResult, validResult] = await Promise.all([
+    const [totalResult, validResult, thumbnailTotalResult, thumbnailValidResult] = await Promise.all([
       supabase.from('musclewiki_exercise_cache').select('id', { count: 'exact', head: true }),
       supabase
         .from('musclewiki_exercise_cache')
         .select('id', { count: 'exact', head: true })
-        .gt('cache_expires_at', new Date().toISOString()),
+        .gt('cache_expires_at', now),
+      supabase.from('musclewiki_thumbnail_cache').select('id', { count: 'exact', head: true }),
+      supabase
+        .from('musclewiki_thumbnail_cache')
+        .select('id', { count: 'exact', head: true })
+        .gt('cache_expires_at', now),
     ]);
 
     return {
       totalCached: totalResult.count || 0,
       validCached: validResult.count || 0,
       expiredCached: (totalResult.count || 0) - (validResult.count || 0),
+      thumbnails: {
+        total: thumbnailTotalResult.count || 0,
+        valid: thumbnailValidResult.count || 0,
+        expired: (thumbnailTotalResult.count || 0) - (thumbnailValidResult.count || 0),
+      },
     };
   }
 

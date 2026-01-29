@@ -356,8 +356,8 @@ export default function ClientPhotosScreen() {
     );
   };
 
-  // Calculate bottom bar height for scroll padding
-  const bottomBarHeight = 48 + 12 + 12 + insets.bottom; // button height + paddingTop + paddingBottom + safe area
+  // Calculate bottom bar height for scroll padding (button height + paddingVertical*2 + safe area)
+  const bottomBarHeight = 48 + 24 + insets.bottom;
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
@@ -443,15 +443,9 @@ export default function ClientPhotosScreen() {
       </ScrollView>
 
       {/* Bottom bar with Sort and Compare buttons */}
-      <View style={[
-        styles.bottomBarContainer,
-        {
-          backgroundColor: themeColors.backgroundPrimary,
-          paddingBottom: insets.bottom + 12,
-          borderTopColor: themeColors.border,
-        }
-      ]}>
-        <View style={styles.bottomBarContent}>
+      <View style={styles.bottomBarWrapper}>
+        <View style={[styles.bottomBarDivider, { backgroundColor: themeColors.border }]} />
+        <View style={[styles.bottomBarContainer, { backgroundColor: themeColors.surfacePrimary }]}>
           <PressableScale
             style={[styles.sortButton, { backgroundColor: themeColors.primary }]}
             onPress={() => setSortAscending(!sortAscending)}
@@ -468,6 +462,7 @@ export default function ClientPhotosScreen() {
             </Text>
           </PressableScale>
         </View>
+        <View style={[styles.safeAreaFill, { height: insets.bottom, backgroundColor: themeColors.surfacePrimary }]} />
       </View>
 
       <Dialog
@@ -631,20 +626,28 @@ const styles = StyleSheet.create({
   emptyLabel: {
     ...typography.p3,
   },
-  bottomBarContainer: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 10,
+  bottomBarWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
-  bottomBarContent: {
+  bottomBarDivider: {
+    height: 1,
+  },
+  bottomBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 12,
+    justifyContent: 'center',
     paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -24,
     gap: 12,
+  },
+  safeAreaFill: {
+    width: '100%',
   },
   sortButton: {
     width: 48,

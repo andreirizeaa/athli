@@ -20,15 +20,43 @@ import { Card } from '@/components/ui/card';
 import { ExerciseListPreview } from '@/components/features/training/exercise-list-preview';
 import { getTrainingCalendarRange, TrainingCalendarSchema } from '@/services/client/client-service';
 import { FilledButton } from '@/components/ui/buttons/filled-button';
+import { useWorkoutTimer } from '@/hooks/useWorkoutTimer';
+import { WorkoutMeta } from '@athli/shared-types';
 
 const SELECTED_DATE_KEY = '@select_date_modal_selected_date';
 
+// Timer display component for in-progress workouts
+type WorkoutTimerProps = {
+  completedSummary: WorkoutMeta;
+  color: string;
+};
+
+const WorkoutTimer = ({ completedSummary, color }: WorkoutTimerProps) => {
+  const { formattedTime } = useWorkoutTimer(completedSummary);
+  return (
+    <View style={[timerStyles.container, { borderColor: color }]}>
+      <Text style={[timerStyles.timer, { color }]}>{formattedTime}</Text>
+    </View>
+  );
+};
+
+const timerStyles = StyleSheet.create({
+  container: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  timer: {
+    ...typography.p3,
+    fontVariant: ['tabular-nums'],
+  },
+});
+
 // WorkoutDayPage component types
 type WorkoutDayPageProps = {
-  date: Date;
   workouts: any[];
   isLoading: boolean;
-  onWorkoutPress: (workout: any) => void;
   onWorkoutButtonPress: (workout: any) => void;
   themeColors: any;
   t: (key: string) => string;
@@ -91,7 +119,7 @@ const getWorkoutButtonLabel = (status: string | undefined, t: (key: string) => s
 
 // Memoized component for each day's workout content
 const WorkoutDayPage = React.memo(
-  ({ date, workouts, isLoading, onWorkoutPress, onWorkoutButtonPress, themeColors, t, renderStatusIcon, paddingBottom, isToday, isPast }: WorkoutDayPageProps) => {
+  ({ workouts, isLoading, onWorkoutButtonPress, themeColors, t, renderStatusIcon, paddingBottom, isToday, isPast }: WorkoutDayPageProps) => {
     if (isLoading) {
       return (
         <View style={pageStyles.loadingContainer}>
@@ -121,8 +149,7 @@ const WorkoutDayPage = React.memo(
         showsVerticalScrollIndicator={false}
       >
         {workouts.map((workout, index) => (
-          <PressableScale key={workout.id || index} onPress={() => onWorkoutPress(workout)}>
-            <Card style={pageStyles.workoutCard}>
+          <Card key={workout.id || index} style={pageStyles.workoutCard}>
               <View style={pageStyles.workoutHeader}>
                 <View style={pageStyles.workoutHeaderLeft}>
                   {renderStatusIcon(workout.completedSummary?.status, isPast)}
@@ -132,6 +159,12 @@ const WorkoutDayPage = React.memo(
                     </Text>
                   </View>
                 </View>
+                {workout.completedSummary?.status === 'in_progress' && workout.completedSummary && (
+                  <WorkoutTimer
+                    completedSummary={workout.completedSummary}
+                    color={themeColors.mutedText}
+                  />
+                )}
               </View>
               {isToday && (
                 <View style={pageStyles.buttonContainer}>
@@ -156,7 +189,6 @@ const WorkoutDayPage = React.memo(
                 </>
               )}
             </Card>
-          </PressableScale>
         ))}
       </ScrollView>
     );
@@ -505,11 +537,6 @@ export default function TrainingScreen() {
     return statusMap;
   }, [trainingCalendar]);
 
-  // Dummy handler for workout press
-  const handleWorkoutPress = useCallback((workout: any) => {
-    console.log('Workout pressed:', workout.id);
-  }, []);
-
   // Handler for workout button press (Start/Resume/Review)
   const handleWorkoutButtonPress = useCallback((workout: any, dateStr: string) => {
     if (!clientId || !coachId) return;
@@ -619,10 +646,8 @@ export default function TrainingScreen() {
             return (
               <View key={`day-${dateKey}`} style={styles.pageContainer} collapsable={false}>
                 <WorkoutDayPage
-                  date={date}
                   workouts={dayWorkouts}
                   isLoading={isCurrentPageLoading}
-                  onWorkoutPress={handleWorkoutPress}
                   onWorkoutButtonPress={(workout) => handleWorkoutButtonPress(workout, formatDateYYYYMMDD(date))}
                   themeColors={themeColors}
                   t={t}

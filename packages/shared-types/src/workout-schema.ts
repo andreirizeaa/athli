@@ -209,6 +209,8 @@ export type WorkoutMeta = {
   completedAt: string | null;
   totalDurationMin: number | null;
   totalWeightLifted: number | null;
+  pausedAt: string | null;
+  totalPausedMs: number;
 };
 
 export type WorkoutDetails = {
@@ -288,6 +290,8 @@ export const DEFAULT_EXECUTION_FIELDS: Pick<WorkoutData, 'pre' | 'post' | 'compl
     completedAt: null,
     totalDurationMin: null,
     totalWeightLifted: null,
+    pausedAt: null,
+    totalPausedMs: 0,
   },
 };
 
