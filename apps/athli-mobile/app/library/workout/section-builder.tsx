@@ -532,11 +532,14 @@ export default function SectionBuilderScreen() {
                 name: exercise.name,
                 imageUrl: exercise.imageUrl,
                 exerciseType: exercise.exerciseType,
-                sets: [{ id: Math.random().toString(), setNumber: 1, column1: '', column2: '', type: 'R' as const }],
+                sets: [
+                    { id: Math.random().toString(), setNumber: 1, column1: '', column2: '', type: 'R' as const },
+                    { id: Math.random().toString(), setNumber: 2, column1: '', column2: '', type: 'R' as const },
+                ],
                 alternatives: [],
                 tempo: '',
                 eachSide: false,
-                ...getDefaultColumns(exercise.exerciseType),
+                ...getDefaultColumns(exercise.exerciseType, exercise.category),
                 equipments: exercise.equipments,
                 bodyParts: exercise.bodyParts,
             }));
@@ -580,7 +583,7 @@ export default function SectionBuilderScreen() {
                     name: newExercise.name,
                     imageUrl: newExercise.imageUrl,
                     exerciseType: newExercise.exerciseType,
-                    ...getDefaultColumns(newExercise.exerciseType),
+                    ...getDefaultColumns(newExercise.exerciseType, newExercise.category),
                 };
 
                 return { ...prev, exercises: newExercises };
