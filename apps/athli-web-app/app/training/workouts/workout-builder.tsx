@@ -2213,7 +2213,7 @@ Focus on proper form and progressive overload.`;
           <div className="flex-1 min-h-0 overflow-hidden">
             <div className="flex h-full max-h-full overflow-hidden min-h-0 bg-transparent gap-3">
               <div className="flex h-full overflow-hidden rounded-xl border bg-background shadow-sm flex-1 transition-all duration-500 ease-in-out">
-                <div className="flex-[2] h-full flex flex-col min-h-0 border-r py-4 bg-muted/30">
+                <div className="w-[40%] shrink-0 h-full flex flex-col min-h-0 border-r py-4 bg-muted/30">
                   {/* Main Builder Toggle */}
                   <div className="flex-shrink-0 px-4">
                     <ButtonGroup className="w-full">
@@ -2244,7 +2244,7 @@ Focus on proper form and progressive overload.`;
 
                   <div className="flex-1 overflow-hidden flex flex-col pt-4">
                     {activeBuilder === 'manual' ? (
-                      <div className="flex flex-col px-4 h-full min-h-0">
+                      <div className="flex flex-col px-4 h-full min-h-0 w-full">
                         <Tabs
                           value={builderMode}
                           onValueChange={(value) => {
@@ -2293,7 +2293,7 @@ Focus on proper form and progressive overload.`;
                       </div>
                     ) : (
                       <div
-                        className="flex flex-col px-4 h-full min-h-0 relative"
+                        className="flex flex-col px-4 h-full min-h-0 w-full relative"
                         onDragEnter={(e) => {
                           if (selectedFile) return;
                           e.preventDefault();
@@ -2358,7 +2358,7 @@ Focus on proper form and progressive overload.`;
                             </div>
                           </div>
                         )}
-                        <div className="flex-col items-center gap-4 flex-shrink-0 pb-4 flex relative z-0">
+                        <div className="flex-col items-center gap-4 flex-shrink-0 pb-4 flex relative z-0 w-full">
                           <div className="relative flex items-center justify-center w-36 h-36 -mb-4">
                             {aiAnimationData && (
                               <Lottie
@@ -2374,9 +2374,9 @@ Focus on proper form and progressive overload.`;
                             {t('library.dragDropPdf')}
                           </p>
                         </div>
-                        <div className="flex-1 overflow-y-auto flex flex-col">
-                          <div className="flex-1 flex flex-col min-h-0">
-                            <div className="flex flex-col gap-2 flex-1 min-h-0">
+                        <div className="flex-1 overflow-y-auto flex flex-col w-full">
+                          <div className="flex-1 flex flex-col min-h-0 w-full">
+                            <div className="flex flex-col gap-2 flex-1 min-h-0 w-full">
                               <div className="flex items-center gap-2 mb-1">
                                 <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground">
                                   <Sparkles className="h-4 w-4" />
@@ -2479,7 +2479,7 @@ Focus on proper form and progressive overload.`;
                     )}
                   </div>
                 </div>
-                <div className="flex-[3] flex flex-col h-full min-h-0">
+                <div className="w-[60%] flex flex-col h-full min-h-0">
                   <div className="flex-1 flex min-h-0">
                     <div className="flex-1 h-full flex flex-col min-h-0 relative">
                       {isLoadingAiWorkout && (
