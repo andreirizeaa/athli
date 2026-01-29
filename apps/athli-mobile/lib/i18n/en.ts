@@ -46,6 +46,7 @@ export const en = {
     you: 'You',
     daily: 'Daily',
     weekly: 'Weekly',
+    notes: 'Notes',
   },
   exerciseFilter: {
     title: 'Filters',
@@ -142,6 +143,42 @@ export const en = {
         energy: ['Drained', 'Tired', 'Okay', 'Energized', 'Pumped'],
         stress: ['Maxed', 'Stressed', 'Managing', 'Calm', 'Relaxed'],
         soreness: ['Wrecked', 'Sore', 'Tight', 'Mild', 'Fresh'],
+      },
+    },
+    session: {
+      set: 'SET',
+      setTypes: {
+        warmUp: {
+          title: 'Warm Up Set',
+          description: 'A lighter set performed before your working sets to prepare your muscles and joints for the heavier loads ahead.',
+        },
+        regular: {
+          title: 'Regular Set',
+          description: 'A standard working set performed with your target weight for the prescribed number of reps.',
+        },
+        failure: {
+          title: 'Failure Set',
+          description: 'A set performed until you cannot complete another rep with proper form. This maximises muscle fatigue and stimulates growth.',
+        },
+        dropset: {
+          title: 'Drop Set',
+          description: 'After reaching failure, immediately reduce the weight and continue performing reps. This extends the set beyond normal failure.',
+        },
+      },
+      eachSide: 'Perform on each side',
+      selectAlternative: 'Select Alternative',
+      tempo: {
+        label: 'Tempo',
+        title: 'Tempo',
+        description: 'Tempo controls the speed of each phase of the movement.',
+        eccentric: 'Eccentric',
+        eccentricDesc: '{{value}} seconds lowering the weight',
+        pause1: 'Pause',
+        pause1Desc: '{{value}} seconds pause at the bottom',
+        concentric: 'Concentric',
+        concentricDesc: '{{value}} seconds lifting the weight',
+        pause2: 'Pause',
+        pause2Desc: '{{value}} seconds pause at the top',
       },
     },
     addOptions: {
