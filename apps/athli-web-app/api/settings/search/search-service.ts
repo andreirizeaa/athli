@@ -7,6 +7,10 @@ export type SearchResults = {
     workouts: any[];
     programs: any[];
     exercises: any[];
+    sections: any[];
+    todosYourList: any[];
+    todosAthliAssistant: any[];
+    conversations: any[];
 };
 
 export const globalSearch = async (query: string): Promise<SearchResults> => {

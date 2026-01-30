@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { X, Dumbbell, Target, Zap, Settings2, BarChart3, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { X, Dumbbell, Target, Zap, Settings2, BarChart3, Loader2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -12,8 +12,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { getExerciseVideos } from '@/api/exercise/exercise-search';
 import type { Exercise } from '@/api/exercise/exercise-search';
+import { useSingleThumbnail } from '@/hooks/use-exercise-thumbnails';
+import { VideoPlayerDialog } from './video-player-dialog';
 
 type VideoModalProps = {
   open: boolean;
@@ -22,24 +23,21 @@ type VideoModalProps = {
 };
 
 export const VideoModal = ({ open, onOpenChange, exercise }: VideoModalProps) => {
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+  const [isVideoPlayerOpen, setIsVideoPlayerOpen] = useState(false);
 
-  // Fetch male front video URL when modal opens
-  useEffect(() => {
-    if (open && exercise?.musclewikiId) {
-      setIsLoadingVideo(true);
-      getExerciseVideos(exercise.musclewikiId)
-        .then((videos) => {
-          setVideoUrl(videos?.maleVideoFrontUrl || null);
-        })
-        .finally(() => setIsLoadingVideo(false));
-    } else {
-      setVideoUrl(null);
-    }
-  }, [open, exercise?.musclewikiId]);
+  // Get thumbnail URL for the exercise
+  const { thumbnailUrl, isLoading: isThumbnailLoading } = useSingleThumbnail(
+    exercise?.rawThumbnailUrl
+  );
 
   return (
+    <>
+      <VideoPlayerDialog
+        open={isVideoPlayerOpen}
+        onOpenChange={setIsVideoPlayerOpen}
+        exerciseName={exercise?.name}
+        musclewikiId={exercise?.musclewikiId}
+      />
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[90vw] max-w-[1400px] sm:max-w-[1400px] h-[85vh] flex flex-col p-0" showCloseButton={false}>
         <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4 border-b">
@@ -84,32 +82,40 @@ export const VideoModal = ({ open, onOpenChange, exercise }: VideoModalProps) =>
         {exercise && (
           <div className="flex-1 overflow-hidden">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 h-full">
-              {/* Video Section */}
+              {/* Video Thumbnail Section */}
               <div className="p-6 flex flex-col">
-                <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden">
-                  {isLoadingVideo ? (
+                <button
+                  type="button"
+                  onClick={() => setIsVideoPlayerOpen(true)}
+                  className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden group cursor-pointer"
+                >
+                  {isThumbnailLoading ? (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
-                  ) : videoUrl ? (
-                    <video
-                      key={videoUrl}
-                      src={videoUrl}
-                      controls
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      className="w-full h-full object-contain"
-                    >
-                      Your browser does not support the video tag.
-                    </video>
+                  ) : thumbnailUrl ? (
+                    <>
+                      <img
+                        src={thumbnailUrl}
+                        alt={exercise?.name}
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Play button overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
+                        <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center">
+                          <Play className="h-6 w-6 text-white fill-white" />
+                        </div>
+                      </div>
+                    </>
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-                      No video available
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                      <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center">
+                        <Play className="h-6 w-6 text-white fill-white" />
+                      </div>
+                      <span className="text-sm">Tap to play video</span>
                     </div>
                   )}
-                </div>
+                </button>
 
                 {/* Attribution */}
                 <p className="text-xs text-muted-foreground mt-3">
@@ -204,5 +210,6 @@ export const VideoModal = ({ open, onOpenChange, exercise }: VideoModalProps) =>
         )}
       </DialogContent>
     </Dialog>
+    </>
   );
 };

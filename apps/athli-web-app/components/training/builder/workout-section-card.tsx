@@ -27,7 +27,7 @@ type ExerciseWithSuperset = Exercise & {
 
 type Section = {
   id: string;
-  type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
+  type: 'regular' | 'amrap' | 'timed' | 'tabata' | 'hiit' | 'emom' | 'auxiliary';
   exercises?: ExerciseWithSuperset[];
   roundDurationSec?: number;
   targetRounds?: number;
@@ -41,7 +41,7 @@ type SectionValidationErrors = Record<string, {
 
 type WorkoutValidationErrors = Record<string, Record<string, Record<string, string>>>;
 
-const getSectionDescription = (type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary'): string => {
+const getSectionDescription = (type: 'regular' | 'amrap' | 'timed' | 'tabata' | 'hiit' | 'emom' | 'auxiliary'): string => {
   switch (type) {
     case 'regular':
       return 'Exercise for exercise. Follow the sets and reps specified.';
@@ -49,8 +49,12 @@ const getSectionDescription = (type: 'regular' | 'amrap' | 'timed' | 'circuits' 
       return 'Track the total amount of rounds completed in the allocated time.';
     case 'timed':
       return 'Track total duration until completion of assigned rounds.';
-    case 'circuits':
-      return 'Complete all exercises in the circuit for the specified number of rounds. One set per exercise.';
+    case 'tabata':
+      return 'High-intensity intervals with 20s work and 10s rest for 8 rounds.';
+    case 'hiit':
+      return 'High-intensity interval training with customizable work/rest periods.';
+    case 'emom':
+      return 'Every Minute On the Minute - complete exercises within each minute interval.';
     case 'auxiliary':
       return 'Warm up, cool down, or mobility exercises. Follow the sets and reps specified.';
     default:
@@ -214,7 +218,7 @@ export const WorkoutSectionCard = ({
                   </Select>
                 </div>
               )}
-              {(section.type === 'amrap' || section.type === 'timed' || section.type === 'circuits') && (
+              {(section.type === 'amrap' || section.type === 'timed') && (
                 <div className="flex items-center gap-2 text-xs">
                   <span className="font-medium">
                     {section.type === 'amrap' ? 'Time (s)' : 'Rounds'}

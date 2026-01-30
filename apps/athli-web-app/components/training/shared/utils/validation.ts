@@ -8,22 +8,30 @@ import type {
   ExerciseWithSuperset,
   ExerciseValidationError,
 } from '@/components/training/shared/types/workout-builder.types';
+import { getDefaultColumnsForCategory } from '@athli/shared-types';
 
 /**
- * Gets default column labels based on exercise type
- * This must match the logic in exercise-card.tsx getDefaultColumnLabels
+ * Gets default column labels based on exercise type and category
+ * Uses shared package's category-based defaults
  */
-const getDefaultColumnLabels = (exerciseType?: string): { column1: string; column2: string } => {
+const getDefaultColumnLabels = (exerciseType?: string, category?: string): { column1: string; column2: string } => {
+  // First try category-based defaults from shared package
+  if (category) {
+    const categoryDefaults = getDefaultColumnsForCategory(category);
+    return { column1: categoryDefaults.column1, column2: categoryDefaults.column2 };
+  }
+
+  // Fall back to exercise type-based defaults
   if (exerciseType === 'weight_reps') {
     return { column1: 'Reps', column2: 'kg' };
   }
   if (exerciseType === 'reps') {
-    return { column1: 'Reps', column2: 'None' };
+    return { column1: 'Reps', column2: 'Optional' };
   }
   if (exerciseType === 'distance_duration') {
     return { column1: 'km', column2: 'minutes' };
   }
-  return { column1: 'Reps', column2: 'None' };
+  return { column1: 'Reps', column2: 'Optional' };
 };
 
 /**
@@ -31,7 +39,7 @@ const getDefaultColumnLabels = (exerciseType?: string): { column1: string; colum
  * This must match the logic in exercise-card.tsx getFieldName
  */
 const getFieldNameFromLabel = (columnLabel: string | undefined): 'reps' | 'weight' | 'distance' | 'duration' | 'optional' | null => {
-  if (!columnLabel || columnLabel === 'None') return null;
+  if (!columnLabel || columnLabel === 'None' || columnLabel === '(Optional)') return null;
   if (columnLabel === 'Reps') return 'reps';
   if (columnLabel === 'kg' || columnLabel === 'lbs') return 'weight';
   if (columnLabel === 'km' || columnLabel === 'm' || columnLabel === 'yards' || columnLabel === 'miles' || columnLabel === 'feet') return 'distance';
@@ -76,7 +84,8 @@ export const recomputeExerciseValidation = (
   eachSide?: boolean,
   column1Label?: string,
   column2Label?: string,
-  tempo?: string
+  tempo?: string,
+  category?: string
 ): ValidationErrors => {
   // Do not show validation until the user has attempted to save at least once
   if (!hasAttemptedSave) {
@@ -87,7 +96,7 @@ export const recomputeExerciseValidation = (
   const exerciseErrors: ExerciseValidationError = {};
 
   // Get default column labels if not provided
-  const defaults = getDefaultColumnLabels(exerciseType);
+  const defaults = getDefaultColumnLabels(exerciseType, category);
   const effectiveColumn1Label = column1Label || defaults.column1;
   const effectiveColumn2Label = column2Label || defaults.column2;
 
@@ -195,7 +204,7 @@ const validateExercise = (
   const sets = exercise.sets || [];
 
   // Get column labels (use defaults if not explicitly set)
-  const defaults = getDefaultColumnLabels(exercise.exerciseType);
+  const defaults = getDefaultColumnLabels(exercise.exerciseType, exercise.category);
   const column1Label = exercise.column1Label || defaults.column1;
   const column2Label = exercise.column2Label || defaults.column2;
 
@@ -276,17 +285,8 @@ export const validateWorkoutSchema = (
         }
       }
 
-      if (section.type === 'timed') {
-        if (!section.targetRounds || section.targetRounds <= 0) {
-          sectionErrors.missingConfig = true;
-        }
-      }
-
-      if (section.type === 'circuits') {
-        if (!section.targetRounds || section.targetRounds <= 0) {
-          sectionErrors.missingConfig = true;
-        }
-      }
+      // Tabata and HIIT have defaults, so no missing config validation needed
+      // EMOM has defaults, so no missing config validation needed
 
       if (section.type === 'auxiliary') {
         if (!section.category) {

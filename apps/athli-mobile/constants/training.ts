@@ -30,10 +30,19 @@ export const SECTION_TYPES = [
     { value: 'regular', label: 'Regular', description: 'Standard strength training with sets, reps, and rest periods' },
     { value: 'amrap', label: 'AMRAP', description: 'As Many Rounds/Reps As Possible within a time limit' },
     { value: 'timed', label: 'Timed', description: 'Work and rest intervals with specified durations' },
-    { value: 'circuits', label: 'Circuits', description: 'Multiple exercises performed in sequence with minimal rest' },
+    { value: 'tabata', label: 'Tabata', description: 'High-intensity intervals: 20s work, 10s rest, 8 rounds' },
+    { value: 'hiit', label: 'HIIT', description: 'High-intensity interval training with customizable work/rest' },
+    { value: 'emom', label: 'EMOM', description: 'Every Minute On the Minute with set duration' },
 ] as const;
 
 export type SectionType = typeof SECTION_TYPES[number]['value'];
+
+// Default configuration values for interval-based section types
+export const SECTION_TYPE_DEFAULTS = {
+    tabata: { workSec: 20, restSec: 10, rounds: 8 },
+    hiit: { workSec: 40, restSec: 20, rounds: 10 },
+    emom: { intervalSec: 60, durationMin: 10 },
+} as const;
 
 // Exercise Category Types
 export const EXERCISE_CATEGORY_OPTIONS = [

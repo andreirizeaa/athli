@@ -212,7 +212,17 @@ const SectionsPage = () => {
     }
   };
 
-  const handleCreateSection = async (data: { title: string; description: string; sectionType: SectionType }) => {
+  const handleCreateSection = async (data: {
+    title: string;
+    description: string;
+    sectionType: SectionType;
+    roundDurationSec?: number;
+    workSec?: number;
+    restSec?: number;
+    rounds?: number;
+    intervalSec?: number;
+    durationMin?: number;
+  }) => {
     try {
       await createSection({
         id: null,
@@ -224,6 +234,13 @@ const SectionsPage = () => {
         equipment: [],
         totalExercises: 0,
         items: [],
+        // Pass all config values
+        ...(data.roundDurationSec && { roundDurationSec: data.roundDurationSec }),
+        ...(data.workSec && { workSec: data.workSec }),
+        ...(data.restSec && { restSec: data.restSec }),
+        ...(data.rounds && { rounds: data.rounds }),
+        ...(data.intervalSec && { intervalSec: data.intervalSec }),
+        ...(data.durationMin && { durationMin: data.durationMin }),
         ...DEFAULT_EXECUTION_FIELDS,
       });
 
@@ -693,7 +710,7 @@ const SectionsPage = () => {
         <SectionBuilder
           open={isSectionBuilderOpen}
           onOpenChange={setIsSectionBuilderOpen}
-          sectionType={selectedSectionForBuilder.sectionType as 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary'}
+          sectionType={selectedSectionForBuilder.sectionType as 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary'}
           initialData={selectedSectionData}
           isLoadingInitialData={isLoadingSectionData}
           meta={{

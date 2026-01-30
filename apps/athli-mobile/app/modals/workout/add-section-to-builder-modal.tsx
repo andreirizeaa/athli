@@ -55,6 +55,12 @@ export default function AddSectionToBuilderModal() {
     const [duration, setDuration] = useState('');
     const [rounds, setRounds] = useState('');
     const [notes, setNotes] = useState('');
+    // Tabata/HIIT fields
+    const [workSec, setWorkSec] = useState('');
+    const [restSec, setRestSec] = useState('');
+    // EMOM fields
+    const [intervalSec, setIntervalSec] = useState('');
+    const [durationMin, setDurationMin] = useState('');
 
     // Search state for Saved tab
     const [searchQuery, setSearchQuery] = useState('');
@@ -107,8 +113,28 @@ export default function AddSectionToBuilderModal() {
             formValid = formValid && rounds.trim().length > 0 && !isNaN(roundsNum) && roundsNum > 0;
         }
 
+        // Tabata/HIIT validation
+        if (sectionType === 'tabata' || sectionType === 'hiit') {
+            const workSecNum = parseInt(workSec);
+            const restSecNum = parseInt(restSec);
+            const roundsNum = parseInt(rounds);
+            formValid = formValid &&
+                workSec.trim().length > 0 && !isNaN(workSecNum) && workSecNum > 0 &&
+                restSec.trim().length > 0 && !isNaN(restSecNum) && restSecNum >= 0 &&
+                rounds.trim().length > 0 && !isNaN(roundsNum) && roundsNum > 0;
+        }
+
+        // EMOM validation
+        if (sectionType === 'emom') {
+            const intervalSecNum = parseInt(intervalSec);
+            const durationMinNum = parseInt(durationMin);
+            formValid = formValid &&
+                intervalSec.trim().length > 0 && !isNaN(intervalSecNum) && intervalSecNum > 0 &&
+                durationMin.trim().length > 0 && !isNaN(durationMinNum) && durationMinNum > 0;
+        }
+
         return formValid;
-    }, [sectionName, sectionType, duration, rounds]);
+    }, [sectionName, sectionType, duration, rounds, workSec, restSec, intervalSec, durationMin]);
 
     const animateUnderline = (tabKey: TabKey) => {
         const layout = tabLayoutsRef.current[tabKey];
@@ -188,7 +214,7 @@ export default function AddSectionToBuilderModal() {
                         ids.add(exOrGroup.prescribedExerciseId);
                         (exOrGroup.alternatives || []).forEach((altId: string) => ids.add(altId));
                     }
-                    // Handle exercise group (regular/circuits)
+                    // Handle exercise group (regular/tabata/hiit/emom)
                     if (exOrGroup.exercises) {
                         exOrGroup.exercises.forEach((ex: any) => {
                             if (ex.prescribedExerciseId) {
@@ -306,8 +332,8 @@ export default function AddSectionToBuilderModal() {
                         setRestSec: ex.restSec || undefined,
                     };
                 });
-            } else if (sectionType === 'circuits') {
-                // Circuits: exercise groups with single set
+            } else if (sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'emom') {
+                // Tabata/HIIT/EMOM: exercise groups with single set
                 let exerciseIndex = 0;
                 exercises = (data.exercises || []).flatMap((group: any) =>
                     (group.exercises || []).map((ex: any) => {
@@ -420,9 +446,17 @@ export default function AddSectionToBuilderModal() {
                 name: data.name,
                 sectionType: sectionType,
                 duration: sectionType === 'amrap' && data.durationSec ? String(Math.round(data.durationSec / 60)) : undefined,
-                rounds: (sectionType === 'timed' || sectionType === 'circuits') && data.targetRounds ? String(data.targetRounds) : undefined,
+                rounds: sectionType === 'timed' && data.targetRounds ? String(data.targetRounds) : (
+                    (sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'circuits') && data.rounds ? String(data.rounds) : undefined
+                ),
                 notes: data.notes || undefined,
                 exercises: fixedExercises,
+                // Tabata/HIIT fields
+                workSec: (sectionType === 'tabata' || sectionType === 'hiit') && data.workSec ? String(data.workSec) : undefined,
+                restSec: (sectionType === 'tabata' || sectionType === 'hiit') && data.restSec !== undefined ? String(data.restSec) : undefined,
+                // EMOM fields
+                intervalSec: sectionType === 'emom' && data.intervalSec ? String(data.intervalSec) : undefined,
+                durationMin: sectionType === 'emom' && data.durationMin ? String(data.durationMin) : undefined,
             };
 
             triggerSectionSelect(section);
@@ -447,11 +481,17 @@ export default function AddSectionToBuilderModal() {
             rounds: rounds || undefined,
             notes: notes || undefined,
             exercises: [],
+            // Tabata/HIIT fields
+            workSec: workSec || undefined,
+            restSec: restSec || undefined,
+            // EMOM fields
+            intervalSec: intervalSec || undefined,
+            durationMin: durationMin || undefined,
         };
 
         triggerSectionSelect(section);
         router.dismiss();
-    }, [sectionName, sectionType, duration, rounds, notes, triggerSectionSelect, router]);
+    }, [sectionName, sectionType, duration, rounds, notes, workSec, restSec, intervalSec, durationMin, triggerSectionSelect, router]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
 
@@ -463,8 +503,14 @@ export default function AddSectionToBuilderModal() {
         if (section.sectionType === 'amrap' && section.duration) {
             return `${Math.round(section.duration / 60)}m`;
         }
-        if ((section.sectionType === 'timed' || section.sectionType === 'circuits') && section.rounds) {
+        if (section.sectionType === 'timed' && section.rounds) {
             return `${section.rounds} ${section.rounds === 1 ? 'round' : 'rounds'}`;
+        }
+        if ((section.sectionType === 'tabata' || section.sectionType === 'hiit') && section.rounds) {
+            return `${section.rounds} ${section.rounds === 1 ? 'round' : 'rounds'}`;
+        }
+        if (section.sectionType === 'emom' && section.durationMin) {
+            return `${section.durationMin}m`;
         }
         return null;
     };
@@ -647,12 +693,44 @@ export default function AddSectionToBuilderModal() {
 
                         <SectionTypeSelect
                             sectionType={sectionType}
-                            onSectionTypeChange={setSectionType}
+                            onSectionTypeChange={(newType) => {
+                                setSectionType(newType);
+                                // Set default values based on section type
+                                if (newType === 'tabata') {
+                                    setWorkSec('20');
+                                    setRestSec('10');
+                                    setRounds('8');
+                                } else if (newType === 'hiit') {
+                                    setWorkSec('40');
+                                    setRestSec('20');
+                                    setRounds('10');
+                                } else if (newType === 'emom') {
+                                    setIntervalSec('60');
+                                    setDurationMin('10');
+                                } else if (newType === 'circuits') {
+                                    setRounds('3');
+                                }
+                            }}
                             duration={duration}
                             onDurationChange={setDuration}
                             rounds={rounds}
                             onRoundsChange={setRounds}
-                            metadataErrors={{ durationError: false, roundsError: false }}
+                            workSec={workSec}
+                            onWorkSecChange={setWorkSec}
+                            restSec={restSec}
+                            onRestSecChange={setRestSec}
+                            intervalSec={intervalSec}
+                            onIntervalSecChange={setIntervalSec}
+                            durationMin={durationMin}
+                            onDurationMinChange={setDurationMin}
+                            metadataErrors={{
+                                durationError: false,
+                                roundsError: false,
+                                workSecError: false,
+                                restSecError: false,
+                                intervalSecError: false,
+                                durationMinError: false,
+                            }}
                             required
                         />
 

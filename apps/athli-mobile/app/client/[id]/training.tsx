@@ -35,8 +35,66 @@ import { formatDateDDMMYYYY, formatDateYYYYMMDD } from '@/lib/utils/date-formatt
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { FilledButton } from '@/components/ui/buttons';
 import { Card } from '@/components/ui/card';
-import { ExerciseListPreview } from '@/components/features/training/exercise-list-preview';
+import { ExerciseListPreview, ExercisePreviewItem } from '@/components/features/training/exercise-list-preview';
 import type { TrainingCalendarItem } from '@/services/client/client-service';
+import { WorkoutItem } from '@athli/shared-types';
+
+// Helper to extract exercise preview items from workout data
+const extractExercisePreviewItems = (workoutData: { items?: WorkoutItem[] } | undefined): ExercisePreviewItem[] => {
+  if (!workoutData?.items) return [];
+
+  // First pass: collect all exercises with their superset IDs
+  const tempExercises: { exerciseId: string; supersetId: string | null }[] = [];
+
+  workoutData.items.forEach((item) => {
+    if (item.itemType === 'exercise') {
+      tempExercises.push({
+        exerciseId: item.data.prescribedExerciseId,
+        supersetId: item.data.supersetId || null,
+      });
+    } else if (item.itemType === 'section') {
+      const section = item.data;
+      if (section.type === 'regular' || section.type === 'auxiliary') {
+        section.exercises.forEach((group) => {
+          group.exercises.forEach((ex) => {
+            tempExercises.push({
+              exerciseId: ex.prescribedExerciseId,
+              supersetId: group.isSuperset && group.exercises.length > 1 ? (ex.supersetId || `group-${group.exercises[0].prescribedExerciseId}`) : null,
+            });
+          });
+        });
+      } else if (section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom') {
+        section.exercises.forEach((group) => {
+          group.exercises.forEach((ex) => {
+            tempExercises.push({
+              exerciseId: ex.prescribedExerciseId,
+              supersetId: group.isSuperset && group.exercises.length > 1 ? (ex.supersetId || `group-${group.exercises[0].prescribedExerciseId}`) : null,
+            });
+          });
+        });
+      } else if (section.type === 'amrap' || section.type === 'timed') {
+        section.exercises.forEach((ex) => {
+          tempExercises.push({
+            exerciseId: ex.prescribedExerciseId,
+            supersetId: null,
+          });
+        });
+      }
+    }
+  });
+
+  // Second pass: determine isLinkedToNext based on matching superset IDs
+  const exercises: ExercisePreviewItem[] = tempExercises.map((ex, index) => {
+    const nextEx = index < tempExercises.length - 1 ? tempExercises[index + 1] : null;
+    const isLinkedToNext = ex.supersetId !== null && nextEx !== null && ex.supersetId === nextEx.supersetId;
+    return {
+      exerciseId: ex.exerciseId,
+      isLinkedToNext,
+    };
+  });
+
+  return exercises;
+};
 
 
 // WorkoutDayPage component types
@@ -173,8 +231,7 @@ const WorkoutDayPage = React.memo(
                   <View style={[pageStyles.divider, { backgroundColor: themeColors.border }]} />
                   <View style={pageStyles.exerciseListContainer}>
                     <ExerciseListPreview
-                      totalExercises={workout.totalExercises}
-                      supersetFlags={workout.supersetFlags}
+                      exercises={extractExercisePreviewItems(workout)}
                       themeColors={themeColors}
                     />
                   </View>
@@ -717,6 +774,7 @@ export default function ClientTrainingScreen() {
         clientId: id,
         clientWorkoutDate: formatDateYYYYMMDD(selectedDate),
         coachId: coachId,
+        workoutPayload: JSON.stringify(workout),
       },
     });
   }, [selectedDate, id, coachId, router]);

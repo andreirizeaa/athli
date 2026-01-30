@@ -329,13 +329,18 @@ export const convertCircuitExerciseToBuilderFormat = (
 export interface GenericSectionDataForBuilder {
   id: string;
   name: string;
-  type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
+  type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary';
   exercises: GenericExerciseDataForBuilder[][];  // Grouped by superset
   notes: string;
   // For AMRAP
   durationSec?: number;
-  // For Timed/Circuits
-  targetRounds?: number;
+  // For Tabata/HIIT
+  workSec?: number;
+  restSec?: number;
+  rounds?: number;
+  // For EMOM
+  intervalSec?: number;
+  durationMin?: number;
   // For Auxiliary
   category?: 'warmup' | 'cooldown' | 'mobility';
 }
@@ -374,20 +379,7 @@ export const convertSectionToBuilderFormat = (
     };
   }
 
-  if (section.type === 'timed') {
-    const exercises = section.exercises.map((ex) => [convertRoundExerciseToBuilderFormat(ex)]);
-
-    return {
-      id: section.id,
-      name: section.name,
-      type: 'timed',
-      exercises,
-      notes: section.notes || '',
-      targetRounds: section.targetRounds,
-    };
-  }
-
-  if (section.type === 'circuits') {
+  if (section.type === 'tabata') {
     const exercises = section.exercises.map((group) =>
       group.exercises.map((ex) => convertCircuitExerciseToBuilderFormat(ex))
     );
@@ -395,10 +387,45 @@ export const convertSectionToBuilderFormat = (
     return {
       id: section.id,
       name: section.name,
-      type: 'circuits',
+      type: 'tabata',
       exercises,
       notes: section.notes || '',
-      targetRounds: section.targetRounds,
+      workSec: section.workSec,
+      restSec: section.restSec,
+      rounds: section.rounds,
+    };
+  }
+
+  if (section.type === 'hiit') {
+    const exercises = section.exercises.map((group) =>
+      group.exercises.map((ex) => convertCircuitExerciseToBuilderFormat(ex))
+    );
+
+    return {
+      id: section.id,
+      name: section.name,
+      type: 'hiit',
+      exercises,
+      notes: section.notes || '',
+      workSec: section.workSec,
+      restSec: section.restSec,
+      rounds: section.rounds,
+    };
+  }
+
+  if (section.type === 'emom') {
+    const exercises = section.exercises.map((group) =>
+      group.exercises.map((ex) => convertCircuitExerciseToBuilderFormat(ex))
+    );
+
+    return {
+      id: section.id,
+      name: section.name,
+      type: 'emom',
+      exercises,
+      notes: section.notes || '',
+      intervalSec: section.intervalSec,
+      durationMin: section.durationMin,
     };
   }
 

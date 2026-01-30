@@ -79,14 +79,6 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
       style={
         {
           '--sidebar-width': '14rem',
-          '--sidebar': 'color-mix(in srgb, var(--primary), var(--sidebar-mix-base) 35%)',
-          '--sidebar-foreground': 'var(--primary-foreground)',
-          '--sidebar-primary': 'var(--primary-foreground)',
-          '--sidebar-primary-foreground': 'var(--primary)',
-          '--sidebar-accent': 'color-mix(in srgb, var(--primary-foreground) 30%, transparent)',
-          '--sidebar-accent-foreground': 'var(--primary-foreground)',
-          '--sidebar-border': 'transparent',
-          '--sidebar-ring': 'var(--primary-foreground)',
         } as React.CSSProperties
       }
     >

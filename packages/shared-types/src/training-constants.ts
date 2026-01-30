@@ -65,9 +65,19 @@ export type DifficultyLevel = typeof DIFFICULTY_LEVELS[number]['value'];
 export const SECTION_TYPES = [
     { value: 'regular', label: 'Regular', description: 'Standard strength training with sets, reps, and rest periods' },
     { value: 'amrap', label: 'AMRAP', description: 'As Many Rounds/Reps As Possible within a time limit' },
-    { value: 'timed', label: 'Timed', description: 'Work and rest intervals with specified durations' },
-    { value: 'circuits', label: 'Circuits', description: 'Multiple exercises performed in sequence with minimal rest' },
+    { value: 'tabata', label: 'Tabata', description: 'High-intensity intervals: 20s work, 10s rest, 8 rounds' },
+    { value: 'hiit', label: 'HIIT', description: 'High-intensity interval training with customizable work/rest' },
+    { value: 'emom', label: 'EMOM', description: 'Every Minute On the Minute with set duration' },
+    { value: 'circuits', label: 'Circuits', description: 'Circuit training with a set number of rounds' },
 ] as const;
+
+// Default configuration values for interval-based section types
+export const SECTION_TYPE_DEFAULTS = {
+    tabata: { workSec: 20, restSec: 10, rounds: 8 },
+    hiit: { workSec: 40, restSec: 20, rounds: 10 },
+    emom: { intervalSec: 60, durationMin: 10 },
+    circuits: { rounds: 3 },
+} as const;
 
 // Exercise Type/Category Options
 export const EXERCISE_TYPE_OPTIONS = [
@@ -310,6 +320,9 @@ export type HeartRateZone = typeof HEART_RATE_ZONE_OPTIONS[number]['value'];
 
 // Column Selection Options
 export const COLUMN_OPTIONS = [
+    // Optional (disables column)
+    { label: '(Optional)', value: 'Optional' },
+
     // Reps (no units)
     { label: 'Reps', value: 'Reps' },
 
@@ -349,7 +362,7 @@ export type ColumnValue = typeof COLUMN_OPTIONS[number]['value'];
 
 // Optional Column Options (subset of COLUMN_OPTIONS)
 export const OPTIONAL_COLUMN_OPTIONS = [
-    { label: 'Optional', value: 'Optional' },
+    { label: '(Optional)', value: 'Optional' },
     { label: 'Tempo', value: 'Tempo' },
     { label: 'RIR', value: 'RIR' },
     { label: 'RPE', value: 'RPE' },
@@ -364,6 +377,56 @@ export const OPTIONAL_COLUMN_OPTIONS = [
 ] as const;
 
 export type OptionalColumn = typeof OPTIONAL_COLUMN_OPTIONS[number]['value'];
+
+// Category to Default Columns Mapping
+// Defines what columns should be shown by default based on exercise category
+export type CategoryColumnConfig = {
+    column1: ColumnValue;
+    column2: ColumnValue;
+};
+
+export const CATEGORY_COLUMN_DEFAULTS: Record<string, CategoryColumnConfig> = {
+    // Weight-based exercises: Reps + Weight
+    'Barbell': { column1: 'Reps', column2: 'kg' },
+    'Cables': { column1: 'Reps', column2: 'kg' },
+    'Dumbbells': { column1: 'Reps', column2: 'kg' },
+    'Kettlebells': { column1: 'Reps', column2: 'kg' },
+    'Machine': { column1: 'Reps', column2: 'kg' },
+    'Medicine-Ball': { column1: 'Reps', column2: 'kg' },
+    'Plate': { column1: 'Reps', column2: 'kg' },
+    'Smith-Machine': { column1: 'Reps', column2: 'kg' },
+    'Vitruvian': { column1: 'Reps', column2: 'kg' },
+
+    // Bodyweight exercises: Reps only
+    'Bodyweight': { column1: 'Reps', column2: 'Optional' },
+    'Band': { column1: 'Reps', column2: 'Optional' },
+    'Bosu-Ball': { column1: 'Reps', column2: 'Optional' },
+    'TRX': { column1: 'Reps', column2: 'Optional' },
+
+    // Cardio exercises: Duration only
+    'Cardio': { column1: 'minutes', column2: 'Optional' },
+
+    // Recovery/Flexibility
+    'Recovery': { column1: 'Reps', column2: 'Optional' },
+    'Stretches': { column1: 'Reps', column2: 'Optional' },
+    'Yoga': { column1: 'minutes', column2: 'Optional' },
+};
+
+// Default fallback for unknown categories
+export const DEFAULT_COLUMN_CONFIG: CategoryColumnConfig = {
+    column1: 'Reps',
+    column2: 'kg',
+};
+
+/**
+ * Get the default column configuration for an exercise based on its category
+ * @param category - The MuscleWiki category of the exercise
+ * @returns The default column configuration
+ */
+export const getDefaultColumnsForCategory = (category?: string): CategoryColumnConfig => {
+    if (!category) return DEFAULT_COLUMN_CONFIG;
+    return CATEGORY_COLUMN_DEFAULTS[category] || DEFAULT_COLUMN_CONFIG;
+};
 
 // Exercise Category Options (alias for compatibility)
 export const EXERCISE_CATEGORY_OPTIONS = EXERCISE_TYPE_OPTIONS;

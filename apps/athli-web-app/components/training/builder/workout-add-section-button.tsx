@@ -1,6 +1,6 @@
 'use client';
 
-import { Dumbbell, NotebookPen, Plus, Repeat, Sparkles, Timer } from 'lucide-react';
+import { Dumbbell, NotebookPen, Plus, Zap, Activity, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-type SectionType = 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
+type SectionType = 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary';
 
 type WorkoutAddSectionButtonProps = {
   onSectionSelect: (type: SectionType) => void;
@@ -40,7 +40,7 @@ export const WorkoutAddSectionButton = ({
       <DropdownMenuTrigger asChild>{buttonContent}</DropdownMenuTrigger>
       <DropdownMenuContent align={variant === 'centered' ? 'center' : 'start'}>
         <DropdownMenuItem onClick={() => onSectionSelect('auxiliary')}>
-          <Sparkles className="mr-2 size-4 text-foreground" />
+          <Zap className="mr-2 size-4 text-foreground" />
           Warm up / Cool down / Mobility
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onSectionSelect('regular')}>
@@ -51,13 +51,17 @@ export const WorkoutAddSectionButton = ({
           <NotebookPen className="mr-2 size-4 text-foreground" />
           AMRAP
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onSectionSelect('timed')}>
-          <Timer className="mr-2 size-4 text-foreground" />
-          Timed
+        <DropdownMenuItem onClick={() => onSectionSelect('tabata')}>
+          <Activity className="mr-2 size-4 text-foreground" />
+          Tabata
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onSectionSelect('circuits')}>
-          <Repeat className="mr-2 size-4 text-foreground" />
-          Circuits
+        <DropdownMenuItem onClick={() => onSectionSelect('hiit')}>
+          <Zap className="mr-2 size-4 text-foreground" />
+          HIIT
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onSectionSelect('emom')}>
+          <Clock className="mr-2 size-4 text-foreground" />
+          EMOM
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

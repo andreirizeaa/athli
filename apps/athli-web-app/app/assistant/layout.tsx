@@ -6,11 +6,11 @@ export default function AssistantLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="flex h-full w-full">
-            <div className="w-[20%] min-w-[250px] max-w-[300px]">
+        <div className="h-full w-full flex">
+            <div className="w-[400px] border-r bg-background flex flex-col">
                 <AssistantSidebar />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 flex flex-col overflow-hidden">
                 {children}
             </div>
         </div>

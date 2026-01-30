@@ -451,7 +451,17 @@ export const ExerciseBuilderCard = ({
                             </View>
 
                             <View style={styles.inputsRow}>
-                                {exercise.column1Type === 'Heart Rate Zone' ? (
+                                {exercise.column1Type === 'Optional' ? (
+                                    <View style={[
+                                        styles.setInput,
+                                        {
+                                            backgroundColor: themeColors.backgroundTertiary,
+                                            borderColor: themeColors.border,
+                                            borderWidth: 1,
+                                            opacity: 0.5,
+                                        }
+                                    ]} />
+                                ) : exercise.column1Type === 'Heart Rate Zone' ? (
                                     <View style={{ flex: 1 }}>
                                         <DropdownMenuWrapper options={getHRZoneOptions(index, 'column1')}>
                                             <View style={[
@@ -489,7 +499,17 @@ export const ExerciseBuilderCard = ({
                                     />
                                 )}
 
-                                {exercise.column2Type === 'Heart Rate Zone' ? (
+                                {exercise.column2Type === 'Optional' ? (
+                                    <View style={[
+                                        styles.setInput,
+                                        {
+                                            backgroundColor: themeColors.backgroundTertiary,
+                                            borderColor: themeColors.border,
+                                            borderWidth: 1,
+                                            opacity: 0.5,
+                                        }
+                                    ]} />
+                                ) : exercise.column2Type === 'Heart Rate Zone' ? (
                                     <View style={{ flex: 1 }}>
                                         <DropdownMenuWrapper options={getHRZoneOptions(index, 'column2')}>
                                             <View style={[

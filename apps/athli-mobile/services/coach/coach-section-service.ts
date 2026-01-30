@@ -99,7 +99,7 @@ export const createSection = async (sectionData: WorkoutProgramPayload & { secti
       if (section.type === 'regular' || section.type === 'auxiliary') {
         const exercises = section.exercises || [];
         return total + exercises.reduce((sum: number, group: any) => sum + (group.exercises?.length || 0), 0);
-      } else if (section.type === 'circuits') {
+      } else if (section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom') {
         const exercises = section.exercises || [];
         return total + exercises.reduce((sum: number, group: any) => sum + (group.exercises?.length || 0), 0);
       } else if (section.type === 'amrap' || section.type === 'timed') {
@@ -160,7 +160,7 @@ export const updateSection = async (
         if (section.type === 'regular' || section.type === 'auxiliary') {
           const exercises = section.exercises || [];
           return total + exercises.reduce((sum: number, group: any) => sum + (group.exercises?.length || 0), 0);
-        } else if (section.type === 'circuits') {
+        } else if (section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom') {
           const exercises = section.exercises || [];
           return total + exercises.reduce((sum: number, group: any) => sum + (group.exercises?.length || 0), 0);
         } else if (section.type === 'amrap' || section.type === 'timed') {

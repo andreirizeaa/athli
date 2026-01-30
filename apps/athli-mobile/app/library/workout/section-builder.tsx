@@ -41,6 +41,12 @@ type SectionBuilderState = {
     rounds: string;
     notes: string;
     exercises: BuilderExercise[];
+    // Tabata/HIIT fields
+    workSec: string;
+    restSec: string;
+    // EMOM fields
+    intervalSec: string;
+    durationMin: string;
 };
 
 const createInitialState = (params: {
@@ -50,6 +56,10 @@ const createInitialState = (params: {
     rounds?: string;
     notes?: string;
     exercises?: string;
+    workSec?: string;
+    restSec?: string;
+    intervalSec?: string;
+    durationMin?: string;
 }): SectionBuilderState => {
     let exercises: BuilderExercise[] = [];
     if (params.exercises) {
@@ -67,6 +77,10 @@ const createInitialState = (params: {
         rounds: params.rounds || '',
         notes: params.notes || '',
         exercises,
+        workSec: params.workSec || '',
+        restSec: params.restSec || '',
+        intervalSec: params.intervalSec || '',
+        durationMin: params.durationMin || '',
     };
 };
 
@@ -86,6 +100,12 @@ export default function SectionBuilderScreen() {
         sectionId?: string; // For library sections (save to API)
         saveToLibrary?: string; // Flag to indicate this is a library section
         exercises?: string;
+        // Tabata/HIIT fields
+        workSec?: string;
+        restSec?: string;
+        // EMOM fields
+        intervalSec?: string;
+        durationMin?: string;
     }>();
 
     const { colors: themeColors } = useThemePreference();
@@ -103,7 +123,14 @@ export default function SectionBuilderScreen() {
     const initialStateRef = useRef<SectionBuilderState | null>(null);
     const [isDirty, setIsDirty] = useState(false);
     const [validationErrors, setValidationErrors] = useState<ExerciseValidationError[]>([]);
-    const [metadataErrors, setMetadataErrors] = useState({ durationError: false, roundsError: false });
+    const [metadataErrors, setMetadataErrors] = useState({
+        durationError: false,
+        roundsError: false,
+        workSecError: false,
+        restSecError: false,
+        intervalSecError: false,
+        durationMinError: false,
+    });
     const [isLoadingData, setIsLoadingData] = useState(false);
 
     // Dialog states
@@ -149,8 +176,8 @@ export default function SectionBuilderScreen() {
                         });
                         // No exercise groups for AMRAP/Timed
                         exerciseGroups.push(...exerciseData.map((ex: any) => ({ exercises: [ex], isSuperset: false })));
-                    } else if (sectionType === 'circuits') {
-                        // Circuits: exercises is array of CircuitExerciseGroupPayload
+                    } else if (sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'emom') {
+                        // Tabata/HIIT/EMOM: exercises is array of CircuitExerciseGroupPayload
                         // Each group.exercises has a single 'set' field
                         exerciseData.forEach((group: any) => {
                             exerciseGroups.push(group);
@@ -276,9 +303,13 @@ export default function SectionBuilderScreen() {
                         ex.isSupersetNext = isSupersetNext || false;
                     });
 
-                    // Extract duration/rounds from nested section data (reuse sectionItem from above)
+                    // Extract duration/rounds/config from nested section data (reuse sectionItem from above)
                     let duration = '';
                     let rounds = '';
+                    let workSec = '';
+                    let restSec = '';
+                    let intervalSec = '';
+                    let durationMin = '';
 
                     if (sectionItem?.data) {
                         const data = sectionItem.data;
@@ -290,15 +321,36 @@ export default function SectionBuilderScreen() {
                         if (data.targetRounds !== undefined) {
                             rounds = String(data.targetRounds);
                         }
+                        // Tabata/HIIT fields
+                        if (data.workSec !== undefined) {
+                            workSec = String(data.workSec);
+                        }
+                        if (data.restSec !== undefined) {
+                            restSec = String(data.restSec);
+                        }
+                        if (data.rounds !== undefined && (sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'circuits')) {
+                            rounds = String(data.rounds);
+                        }
+                        // EMOM fields
+                        if (data.intervalSec !== undefined) {
+                            intervalSec = String(data.intervalSec);
+                        }
+                        if (data.durationMin !== undefined) {
+                            durationMin = String(data.durationMin);
+                        }
                     }
 
-                    const loadedState = {
+                    const loadedState: SectionBuilderState = {
                         name: sectionData.name,
                         sectionType: sectionData.section_type as SectionType,
                         duration,
                         rounds,
                         notes: sectionData.description || '',
                         exercises,
+                        workSec,
+                        restSec,
+                        intervalSec,
+                        durationMin,
                     };
 
                     console.log('Loading section data:', {
@@ -307,6 +359,10 @@ export default function SectionBuilderScreen() {
                         sectionItemData: sectionItem?.data,
                         loadedDuration: loadedState.duration,
                         loadedRounds: loadedState.rounds,
+                        loadedWorkSec: loadedState.workSec,
+                        loadedRestSec: loadedState.restSec,
+                        loadedIntervalSec: loadedState.intervalSec,
+                        loadedDurationMin: loadedState.durationMin,
                     });
 
                     setState(loadedState);
@@ -397,7 +453,14 @@ export default function SectionBuilderScreen() {
         }
 
         // Validate section-type specific fields
-        let sectionMetadataError = { durationError: false, roundsError: false };
+        let sectionMetadataError = {
+            durationError: false,
+            roundsError: false,
+            workSecError: false,
+            restSecError: false,
+            intervalSecError: false,
+            durationMinError: false,
+        };
         let hasMetadataError = false;
 
         if (state.sectionType === 'amrap') {
@@ -412,6 +475,41 @@ export default function SectionBuilderScreen() {
             const rounds = parseInt(state.rounds);
             if (!state.rounds.trim() || isNaN(rounds) || rounds <= 0) {
                 sectionMetadataError.roundsError = true;
+                hasMetadataError = true;
+            }
+        }
+
+        // Validate Tabata/HIIT fields
+        if (state.sectionType === 'tabata' || state.sectionType === 'hiit') {
+            const workSecNum = parseInt(state.workSec);
+            const restSecNum = parseInt(state.restSec);
+            const roundsNum = parseInt(state.rounds);
+
+            if (!state.workSec.trim() || isNaN(workSecNum) || workSecNum <= 0) {
+                sectionMetadataError.workSecError = true;
+                hasMetadataError = true;
+            }
+            if (!state.restSec.trim() || isNaN(restSecNum) || restSecNum < 0) {
+                sectionMetadataError.restSecError = true;
+                hasMetadataError = true;
+            }
+            if (!state.rounds.trim() || isNaN(roundsNum) || roundsNum <= 0) {
+                sectionMetadataError.roundsError = true;
+                hasMetadataError = true;
+            }
+        }
+
+        // Validate EMOM fields
+        if (state.sectionType === 'emom') {
+            const intervalSecNum = parseInt(state.intervalSec);
+            const durationMinNum = parseInt(state.durationMin);
+
+            if (!state.intervalSec.trim() || isNaN(intervalSecNum) || intervalSecNum <= 0) {
+                sectionMetadataError.intervalSecError = true;
+                hasMetadataError = true;
+            }
+            if (!state.durationMin.trim() || isNaN(durationMinNum) || durationMinNum <= 0) {
+                sectionMetadataError.durationMinError = true;
                 hasMetadataError = true;
             }
         }
@@ -433,6 +531,18 @@ export default function SectionBuilderScreen() {
             if (sectionMetadataError.roundsError) {
                 validationErrorMessage += '• Rounds are required for this section type\n';
             }
+            if (sectionMetadataError.workSecError) {
+                validationErrorMessage += '• Work duration is required\n';
+            }
+            if (sectionMetadataError.restSecError) {
+                validationErrorMessage += '• Rest duration is required\n';
+            }
+            if (sectionMetadataError.intervalSecError) {
+                validationErrorMessage += '• Interval is required for EMOM sections\n';
+            }
+            if (sectionMetadataError.durationMinError) {
+                validationErrorMessage += '• Duration is required for EMOM sections\n';
+            }
 
             // Add exercise validation errors to the message
             if (!exerciseValidation.isValid && exerciseValidation.errorMessage) {
@@ -450,7 +560,14 @@ export default function SectionBuilderScreen() {
 
         // Clear any previous errors
         setValidationErrors([]);
-        setMetadataErrors({ durationError: false, roundsError: false });
+        setMetadataErrors({
+            durationError: false,
+            roundsError: false,
+            workSecError: false,
+            restSecError: false,
+            intervalSecError: false,
+            durationMinError: false,
+        });
 
         if (isLibrarySection) {
             // Save to API as a library section
@@ -467,6 +584,10 @@ export default function SectionBuilderScreen() {
                 rounds: state.rounds,
                 notes: state.notes,
                 exercises: state.exercises,
+                workSec: state.workSec,
+                restSec: state.restSec,
+                intervalSec: state.intervalSec,
+                durationMin: state.durationMin,
             };
 
             console.log('[SECTION BUILDER] BuilderSection exercises:', builderSection.exercises.length);
@@ -508,6 +629,10 @@ export default function SectionBuilderScreen() {
                 rounds: state.rounds,
                 notes: state.notes,
                 exercises: state.exercises,
+                workSec: state.workSec,
+                restSec: state.restSec,
+                intervalSec: state.intervalSec,
+                durationMin: state.durationMin,
             };
 
             triggerSectionSelect(section);
@@ -532,11 +657,14 @@ export default function SectionBuilderScreen() {
                 name: exercise.name,
                 imageUrl: exercise.imageUrl,
                 exerciseType: exercise.exerciseType,
-                sets: [{ id: Math.random().toString(), setNumber: 1, column1: '', column2: '', type: 'R' as const }],
+                sets: [
+                    { id: Math.random().toString(), setNumber: 1, column1: '', column2: '', type: 'R' as const },
+                    { id: Math.random().toString(), setNumber: 2, column1: '', column2: '', type: 'R' as const },
+                ],
                 alternatives: [],
                 tempo: '',
                 eachSide: false,
-                ...getDefaultColumns(exercise.exerciseType),
+                ...getDefaultColumns(exercise.exerciseType, exercise.category),
                 equipments: exercise.equipments,
                 bodyParts: exercise.bodyParts,
             }));
@@ -556,7 +684,57 @@ export default function SectionBuilderScreen() {
     const handleUpdateExercise = (index: number, updates: Partial<BuilderExercise>) => {
         setState(prev => {
             const newExercises = [...prev.exercises];
-            newExercises[index] = { ...newExercises[index], ...updates };
+            const currentExercise = newExercises[index];
+            const updatedExercise = { ...currentExercise, ...updates };
+            newExercises[index] = updatedExercise;
+
+            // If sets are updated, check for superset syncing
+            if (updates.sets && updates.sets.length !== currentExercise.sets.length) {
+                const targetSetCount = updates.sets.length;
+                const sourceSets = updates.sets;
+
+                // Find start of superset chain
+                let start = index;
+                while (start > 0 && newExercises[start - 1].isSupersetNext) {
+                    start--;
+                }
+
+                // Find end of superset chain
+                let end = index;
+                while (end < newExercises.length - 1 && newExercises[end].isSupersetNext) {
+                    end++;
+                }
+
+                // Only sync if we're actually in a superset (more than one exercise in chain)
+                if (end > start) {
+                    // Apply set count to all exercises in chain (except the one that triggered the change)
+                    for (let i = start; i <= end; i++) {
+                        if (i === index) continue;
+
+                        const ex = newExercises[i];
+                        let newSets = [...ex.sets];
+
+                        if (newSets.length > targetSetCount) {
+                            // Remove sets from the end
+                            newSets = newSets.slice(0, targetSetCount);
+                        } else {
+                            // Add sets - copy type and column1 from source exercise's corresponding set
+                            while (newSets.length < targetSetCount) {
+                                const sourceSet = sourceSets[newSets.length];
+                                newSets.push({
+                                    id: Math.random().toString(),
+                                    setNumber: newSets.length + 1,
+                                    column1: sourceSet?.column1 || '',
+                                    column2: '',
+                                    type: sourceSet?.type || 'R' as const,
+                                });
+                            }
+                        }
+                        newExercises[i] = { ...ex, sets: newSets };
+                    }
+                }
+            }
+
             return { ...prev, exercises: newExercises };
         });
     };
@@ -580,7 +758,7 @@ export default function SectionBuilderScreen() {
                     name: newExercise.name,
                     imageUrl: newExercise.imageUrl,
                     exerciseType: newExercise.exerciseType,
-                    ...getDefaultColumns(newExercise.exerciseType),
+                    ...getDefaultColumns(newExercise.exerciseType, newExercise.category),
                 };
 
                 return { ...prev, exercises: newExercises };
@@ -607,6 +785,27 @@ export default function SectionBuilderScreen() {
 
                     // Generate a shared superset group ID or use existing one
                     const supersetGroupId = ex.supersetGroupId || `superset-section-${Date.now()}`;
+                    const targetSetCount = ex.sets.length;
+                    const sourceSets = ex.sets;
+
+                    // Sync next exercise's sets to match current exercise
+                    let newSets = [...nextEx.sets];
+                    if (newSets.length !== targetSetCount) {
+                        if (newSets.length > targetSetCount) {
+                            newSets = newSets.slice(0, targetSetCount);
+                        } else {
+                            while (newSets.length < targetSetCount) {
+                                const sourceSet = sourceSets[newSets.length];
+                                newSets.push({
+                                    id: Math.random().toString(),
+                                    setNumber: newSets.length + 1,
+                                    column1: sourceSet?.column1 || '',
+                                    column2: '',
+                                    type: sourceSet?.type || 'R' as const,
+                                });
+                            }
+                        }
+                    }
 
                     // Update current exercise
                     newExercises[index] = {
@@ -615,9 +814,10 @@ export default function SectionBuilderScreen() {
                         supersetGroupId,
                     };
 
-                    // Update next exercise with the same supersetGroupId
+                    // Update next exercise with the same supersetGroupId and synced sets
                     newExercises[nextIndex] = {
                         ...nextEx,
+                        sets: newSets,
                         supersetGroupId,
                     };
                 }
@@ -766,13 +966,37 @@ export default function SectionBuilderScreen() {
                                         exercises: trimmedExercises,
                                     };
                                 }
-                                return { ...prev, sectionType: newType };
+                                // Set default values for Tabata/HIIT/EMOM/Circuits
+                                let updates: Partial<SectionBuilderState> = { sectionType: newType };
+                                if (newType === 'tabata') {
+                                    updates.workSec = '20';
+                                    updates.restSec = '10';
+                                    updates.rounds = '8';
+                                } else if (newType === 'hiit') {
+                                    updates.workSec = '40';
+                                    updates.restSec = '20';
+                                    updates.rounds = '10';
+                                } else if (newType === 'emom') {
+                                    updates.intervalSec = '60';
+                                    updates.durationMin = '10';
+                                } else if (newType === 'circuits') {
+                                    updates.rounds = '3';
+                                }
+                                return { ...prev, ...updates };
                             });
                         }}
                         duration={state.duration}
                         onDurationChange={(text) => setState(prev => ({ ...prev, duration: text }))}
                         rounds={state.rounds}
                         onRoundsChange={(text) => setState(prev => ({ ...prev, rounds: text }))}
+                        workSec={state.workSec}
+                        onWorkSecChange={(text) => setState(prev => ({ ...prev, workSec: text }))}
+                        restSec={state.restSec}
+                        onRestSecChange={(text) => setState(prev => ({ ...prev, restSec: text }))}
+                        intervalSec={state.intervalSec}
+                        onIntervalSecChange={(text) => setState(prev => ({ ...prev, intervalSec: text }))}
+                        durationMin={state.durationMin}
+                        onDurationMinChange={(text) => setState(prev => ({ ...prev, durationMin: text }))}
                         metadataErrors={metadataErrors}
                         required
                     />

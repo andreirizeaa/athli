@@ -1,9 +1,9 @@
 'use client';
 
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dumbbell, NotebookPen, Repeat, Sparkles, Timer } from 'lucide-react';
+import { Dumbbell, NotebookPen, Activity, Zap, Clock } from 'lucide-react';
 
-type SectionType = 'regular' | 'amrap' | 'timed' | 'circuits';
+type SectionType = 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom';
 
 type SectionSelectionPanelProps = {
   onSectionSelect: (type: SectionType) => void;
@@ -58,36 +58,54 @@ export const SectionSelectionPanel = ({ onSectionSelect }: SectionSelectionPanel
       <Card
         role="button"
         tabIndex={0}
-        onClick={() => onSectionSelect('timed')}
-        onKeyDown={(e) => handleKeyDown(e, 'timed')}
+        onClick={() => onSectionSelect('tabata')}
+        onKeyDown={(e) => handleKeyDown(e, 'tabata')}
         className="cursor-pointer transition-colors hover:bg-accent"
-        aria-label="Select Timed section type"
+        aria-label="Select Tabata section type"
       >
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Timer className="size-4 text-foreground" />
-            Timed
+            <Activity className="size-4 text-foreground" />
+            Tabata
           </CardTitle>
           <CardDescription>
-            Track total duration until completion of assigned rounds.
+            High-intensity intervals: 20s work, 10s rest, 8 rounds.
           </CardDescription>
         </CardHeader>
       </Card>
       <Card
         role="button"
         tabIndex={0}
-        onClick={() => onSectionSelect('circuits')}
-        onKeyDown={(e) => handleKeyDown(e, 'circuits')}
+        onClick={() => onSectionSelect('hiit')}
+        onKeyDown={(e) => handleKeyDown(e, 'hiit')}
         className="cursor-pointer transition-colors hover:bg-accent"
-        aria-label="Select Circuits section type"
+        aria-label="Select HIIT section type"
       >
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Repeat className="size-4 text-foreground" />
-            Circuits
+            <Zap className="size-4 text-foreground" />
+            HIIT
           </CardTitle>
           <CardDescription>
-            Complete all exercises in the circuit for the specified number of rounds. One set per exercise.
+            High-intensity interval training with customizable work/rest periods.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+      <Card
+        role="button"
+        tabIndex={0}
+        onClick={() => onSectionSelect('emom')}
+        onKeyDown={(e) => handleKeyDown(e, 'emom')}
+        className="cursor-pointer transition-colors hover:bg-accent"
+        aria-label="Select EMOM section type"
+      >
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="size-4 text-foreground" />
+            EMOM
+          </CardTitle>
+          <CardDescription>
+            Every Minute On the Minute with set duration.
           </CardDescription>
         </CardHeader>
       </Card>

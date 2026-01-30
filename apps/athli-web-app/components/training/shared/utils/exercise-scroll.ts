@@ -61,24 +61,34 @@ export const handleExerciseClick = (
  * @param contentScrollRef - Ref to the scrollable content container
  * @param setFocusedExerciseId - Callback to set the focused exercise ID (for border flash)
  * @param setCollapsedSections - Callback to update collapsed sections
+ * @param setFocusedSupersetGroupId - Optional callback to set the focused superset group ID
  */
 export const handleExerciseClickById = (
-  exerciseId: string,
+  instanceId: string,
   workoutSections: Array<{
     id: string;
-    exercises?: Array<{ exerciseId: string }>;
+    exercises?: Array<{ instanceId: string; supersetGroupId?: string | null }>;
   }>,
   collapsedSections: Set<string>,
   exerciseRefs: MutableRefObject<Map<string, HTMLDivElement>>,
   contentScrollRef: MutableRefObject<HTMLDivElement | null>,
   setFocusedExerciseId: (id: string | null) => void,
   setCollapsedSections: (updater: (prev: Set<string>) => Set<string>) => void,
-  findExerciseById?: ExerciseLookupFn
+  _findExerciseById?: ExerciseLookupFn,
+  setFocusedSupersetGroupId?: (id: string | null) => void,
+  topLevelExercises?: Array<{ instanceId: string; supersetGroupId?: string | null }>
 ): void => {
   // Find which section contains this exercise
   const sectionContainingExercise = workoutSections.find((section) =>
-    section.exercises?.some((ex) => ex.exerciseId === exerciseId)
+    section.exercises?.some((ex) => ex.instanceId === instanceId)
   );
+
+  // Find the exercise itself to get its supersetGroupId
+  // First check in sections, then in top-level exercises
+  let exercise = sectionContainingExercise?.exercises?.find((ex) => ex.instanceId === instanceId);
+  if (!exercise && topLevelExercises) {
+    exercise = topLevelExercises.find((ex) => ex.instanceId === instanceId);
+  }
 
   // If the section is collapsed, expand it
   const wasCollapsed = sectionContainingExercise && collapsedSections.has(sectionContainingExercise.id);
@@ -91,48 +101,36 @@ export const handleExerciseClickById = (
   }
 
   // Flash the border by setting focused exercise ID
-  setFocusedExerciseId(exerciseId);
-  // Clear the flash after animation (1 second)
+  setFocusedExerciseId(instanceId);
+
+  // If exercise is part of a superset, also set the superset group ID to flash all linked exercises
+  if (setFocusedSupersetGroupId && exercise?.supersetGroupId) {
+    setFocusedSupersetGroupId(exercise.supersetGroupId);
+  }
+
+  // Clear the flash after animation (1.5 seconds)
   setTimeout(() => {
     setFocusedExerciseId(null);
-  }, 1000);
-
-  // Find the exercise by ID from cached exercises (if lookup function provided)
-  const exercise = findExerciseById ? findExerciseById(exerciseId) : undefined;
+    if (setFocusedSupersetGroupId) {
+      setFocusedSupersetGroupId(null);
+    }
+  }, 1500);
 
   // If section was collapsed, wait for it to expand before scrolling
   const scrollToExercise = () => {
-    if (exercise) {
-      const exerciseRef = exerciseRefs.current.get(exercise.exerciseId);
-      if (exerciseRef && contentScrollRef.current) {
-        const scrollContainer = contentScrollRef.current;
-        const containerRect = scrollContainer.getBoundingClientRect();
-        const exerciseRect = exerciseRef.getBoundingClientRect();
-        const scrollTop = scrollContainer.scrollTop;
-        const exerciseTop = exerciseRect.top - containerRect.top + scrollTop;
+    const exerciseRef = exerciseRefs.current.get(instanceId);
+    if (exerciseRef && contentScrollRef.current) {
+      const scrollContainer = contentScrollRef.current;
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const exerciseRect = exerciseRef.getBoundingClientRect();
+      const scrollTop = scrollContainer.scrollTop;
+      const exerciseTop = exerciseRect.top - containerRect.top + scrollTop;
 
-        const targetScroll = exerciseTop - containerRect.height / 2 + exerciseRect.height / 2;
-        scrollContainer.scrollTo({
-          top: Math.max(0, targetScroll),
-          behavior: 'smooth',
-        });
-      }
-    } else {
-      // If exercise not found, try to scroll using just the ID
-      const exerciseRef = exerciseRefs.current.get(exerciseId);
-      if (exerciseRef && contentScrollRef.current) {
-        const scrollContainer = contentScrollRef.current;
-        const containerRect = scrollContainer.getBoundingClientRect();
-        const exerciseRect = exerciseRef.getBoundingClientRect();
-        const scrollTop = scrollContainer.scrollTop;
-        const exerciseTop = exerciseRect.top - containerRect.top + scrollTop;
-
-        const targetScroll = exerciseTop - containerRect.height / 2 + exerciseRect.height / 2;
-        scrollContainer.scrollTo({
-          top: Math.max(0, targetScroll),
-          behavior: 'smooth',
-        });
-      }
+      const targetScroll = exerciseTop - containerRect.height / 2 + exerciseRect.height / 2;
+      scrollContainer.scrollTo({
+        top: Math.max(0, targetScroll),
+        behavior: 'smooth',
+      });
     }
   };
 
