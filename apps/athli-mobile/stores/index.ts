@@ -9,6 +9,7 @@ export { useThemeStore, type ColorSchemePreference } from './useThemeStore';
 export { useTranslationsStore } from './useTranslationsStore';
 export { useUnitsStore, type UnitsPreference } from './useUnitsStore';
 export { useHapticsStore } from './useHapticsStore';
+export { useBiometricStore } from './useBiometricStore';
 export { useAppViewStore, type AppView } from './useAppViewStore';
 export { useLibraryTabStore, type LibraryTab } from './useLibraryTabStore';
 export { useTrainingOverlayStore } from './useTrainingOverlayStore';
@@ -43,6 +44,7 @@ import { useThemeStore } from './useThemeStore';
 import { useTranslationsStore } from './useTranslationsStore';
 import { useUnitsStore } from './useUnitsStore';
 import { useHapticsStore } from './useHapticsStore';
+import { useBiometricStore } from './useBiometricStore';
 import { useAppViewStore } from './useAppViewStore';
 import { useLibraryTabStore } from './useLibraryTabStore';
 import { useTrainingOverlayStore } from './useTrainingOverlayStore';
@@ -182,4 +184,27 @@ export const useHaptics = () => {
   const setHapticsEnabled = useHapticsStore((state) => state.setHapticsEnabled);
 
   return { hapticsEnabled, setHapticsEnabled };
+};
+
+/**
+ * Hook to access biometric preferences (backward compatible)
+ */
+export const useBiometric = () => {
+  const biometricEnabled = useBiometricStore((state) => state.biometricEnabled);
+  const biometricAvailable = useBiometricStore((state) => state.biometricAvailable);
+  const biometricType = useBiometricStore((state) => state.biometricType);
+  const isEnrolled = useBiometricStore((state) => state.isEnrolled);
+  const enableBiometric = useBiometricStore((state) => state.enableBiometric);
+  const disableBiometric = useBiometricStore((state) => state.disableBiometric);
+  const authenticateWithBiometric = useBiometricStore((state) => state.authenticateWithBiometric);
+
+  return {
+    biometricEnabled,
+    biometricAvailable,
+    biometricType,
+    isEnrolled,
+    enableBiometric,
+    disableBiometric,
+    authenticateWithBiometric,
+  };
 };

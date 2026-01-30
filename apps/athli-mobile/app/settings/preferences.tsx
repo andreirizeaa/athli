@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { GestureResponderEvent } from 'react-native';
 import {
   Platform,
@@ -15,9 +15,11 @@ import type { LucideIcon } from 'lucide-react-native';
 import {
   ChevronDown,
   ChevronLeft,
+  Fingerprint,
   Languages,
   Moon,
   Palette,
+  ScanFace,
   Sun,
   Vibrate,
 } from 'lucide-react-native';
@@ -29,8 +31,8 @@ import {
   useCoachProfileStore,
   useClientProfileStore,
 } from '@/stores';
-import { useTranslations } from '@/stores';
-import { useHaptics } from '@/stores';
+import { useTranslations, useHaptics, useBiometric } from '@/stores';
+import { useAuth } from '@/hooks/useAuth';
 
 import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
@@ -63,6 +65,15 @@ export default function PreferencesScreen() {
   } = useThemePreference();
   const { t, locale } = useTranslations();
   const { hapticsEnabled, setHapticsEnabled } = useHaptics();
+  const {
+    biometricEnabled,
+    biometricAvailable,
+    biometricType,
+    isEnrolled,
+    enableBiometric,
+    disableBiometric,
+  } = useBiometric();
+  const { userId } = useAuth();
   const insets = useSafeAreaInsets();
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
@@ -72,6 +83,17 @@ export default function PreferencesScreen() {
   // Dialog state
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showLogoutErrorDialog, setShowLogoutErrorDialog] = useState(false);
+
+  // Debug logging for biometric state
+  useEffect(() => {
+    console.log('[Preferences] Biometric state:', {
+      biometricEnabled,
+      biometricAvailable,
+      biometricType,
+      isEnrolled,
+      userId,
+    });
+  }, [biometricEnabled, biometricAvailable, biometricType, isEnrolled, userId]);
 
   const handleGoBack = () => {
     router.back();
@@ -95,6 +117,32 @@ export default function PreferencesScreen() {
 
   const handleHapticsToggle = (value: boolean) => {
     setHapticsEnabled(value);
+  };
+
+  const handleBiometricToggle = async (value: boolean) => {
+    console.log('[Preferences] handleBiometricToggle called:', { value, userId });
+    if (value) {
+      if (!userId) {
+        console.log('[Preferences] No userId available, cannot enable biometric');
+        return;
+      }
+      const success = await enableBiometric(userId);
+      console.log('[Preferences] enableBiometric result:', success);
+    } else {
+      await disableBiometric();
+      console.log('[Preferences] Biometric disabled');
+    }
+  };
+
+  const getBiometricLabel = (): string => {
+    switch (biometricType) {
+      case 'faceid':
+        return t('preferences.faceId');
+      case 'fingerprint':
+        return t('preferences.touchId');
+      default:
+        return t('preferences.biometric');
+    }
   };
 
   const handleLogout = () => {
@@ -250,6 +298,40 @@ export default function PreferencesScreen() {
               style={{ transform: [{ scaleX: 1 }, { scaleY: 1 }] }}
             />
           </View>
+          {/* Biometric toggle row - only show if hardware available */}
+          {biometricType !== 'none' && (
+            <>
+              <Separator />
+              <View style={styles.switchRow}>
+                <View style={styles.switchRowLeft}>
+                  <PlatformIcon
+                    sf={biometricType === 'faceid' ? 'faceid' : 'touchid'}
+                    IconComponent={biometricType === 'faceid' ? ScanFace : Fingerprint}
+                    size={iconSize}
+                    color={iconColor}
+                  />
+                  <Text style={[styles.switchRowTitle, { color: themeColors.text }]}>
+                    {getBiometricLabel()}
+                  </Text>
+                </View>
+                <Switch
+                  value={biometricEnabled}
+                  onValueChange={handleBiometricToggle}
+                  disabled={!biometricAvailable}
+                  trackColor={preset === 'default' ? undefined : { false: themeColors.border, true: themeColors.primary }}
+                  thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
+                  ios_backgroundColor={preset === 'default' ? undefined : themeColors.border}
+                  style={{ transform: [{ scaleX: 1 }, { scaleY: 1 }] }}
+                />
+              </View>
+              {/* Show hint if biometric not enrolled */}
+              {!isEnrolled && (
+                <Text style={[styles.biometricHint, { color: themeColors.mutedText }]}>
+                  {t('preferences.biometricNotEnrolled')}
+                </Text>
+              )}
+            </>
+          )}
         </Card>
       </View>
 
@@ -321,6 +403,11 @@ const styles = StyleSheet.create({
   switchRowTitle: {
     ...typography.p1,
     lineHeight: 22,
+  },
+  biometricHint: {
+    ...typography.p3,
+    paddingTop: 8,
+    paddingHorizontal: 4,
   },
 });
 

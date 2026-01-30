@@ -72,11 +72,20 @@ const extractExercisePreviewItems = (workoutData: { items?: WorkoutItem[] } | un
             });
           });
         });
-      } else if (section.type === 'amrap' || section.type === 'timed') {
+      } else if (section.type === 'amrap') {
         section.exercises.forEach((ex) => {
           tempExercises.push({
             exerciseId: ex.prescribedExerciseId,
             supersetId: null,
+          });
+        });
+      } else if (section.type === 'circuits') {
+        section.exercises.forEach((group) => {
+          group.exercises.forEach((ex) => {
+            tempExercises.push({
+              exerciseId: ex.prescribedExerciseId,
+              supersetId: group.isSuperset && group.exercises.length > 1 ? (ex.supersetId || `group-${group.exercises[0].prescribedExerciseId}`) : null,
+            });
           });
         });
       }
@@ -231,7 +240,7 @@ const WorkoutDayPage = React.memo(
                   <View style={[pageStyles.divider, { backgroundColor: themeColors.border }]} />
                   <View style={pageStyles.exerciseListContainer}>
                     <ExerciseListPreview
-                      exercises={extractExercisePreviewItems(workout)}
+                      exercises={extractExercisePreviewItems(workout.workout_data)}
                       themeColors={themeColors}
                     />
                   </View>

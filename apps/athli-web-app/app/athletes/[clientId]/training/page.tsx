@@ -2783,26 +2783,28 @@ const ClientTrainingCalendarPage = () => {
                                                 </span>
                                               </div>
                                               <div className="flex items-center gap-0.5">
-                                                {/* Checkbox for multi-select - visible on hover or when in multi-select mode */}
-                                                <div
-                                                  className={cn(
-                                                    "flex-shrink-0 transition-opacity",
-                                                    isMultiSelectMode || isWorkoutSelected(dateKey, workout.id)
-                                                      ? "opacity-100"
-                                                      : "opacity-0 group-hover/card-header:opacity-100",
-                                                    (isCopyMode || isMultiSelectCopyMode) && "invisible"
-                                                  )}
-                                                  onClick={(e) => e.stopPropagation()}
-                                                  onPointerDown={(e) => e.stopPropagation()}
-                                                  onMouseDown={(e) => e.stopPropagation()}
-                                                >
-                                                  <Checkbox
-                                                    checked={isWorkoutSelected(dateKey, workout.id)}
-                                                    onCheckedChange={() => handleToggleWorkoutSelection(dateKey, workout)}
-                                                    aria-label={t('athletes.trainingCalendar.multiSelect.selectWorkoutAria', { name: workout.name })}
-                                                    className="size-3.5"
-                                                  />
-                                                </div>
+                                                {/* Checkbox for multi-select - visible on hover or when in multi-select mode, hidden for in_progress/completed workouts */}
+                                                {status === 'not_started' && (
+                                                  <div
+                                                    className={cn(
+                                                      "flex-shrink-0 transition-opacity",
+                                                      isMultiSelectMode || isWorkoutSelected(dateKey, workout.id)
+                                                        ? "opacity-100"
+                                                        : "opacity-0 group-hover/card-header:opacity-100",
+                                                      (isCopyMode || isMultiSelectCopyMode) && "invisible"
+                                                    )}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onPointerDown={(e) => e.stopPropagation()}
+                                                    onMouseDown={(e) => e.stopPropagation()}
+                                                  >
+                                                    <Checkbox
+                                                      checked={isWorkoutSelected(dateKey, workout.id)}
+                                                      onCheckedChange={() => handleToggleWorkoutSelection(dateKey, workout)}
+                                                      aria-label={t('athletes.trainingCalendar.multiSelect.selectWorkoutAria', { name: workout.name })}
+                                                      className="size-3.5"
+                                                    />
+                                                  </div>
+                                                )}
                                                 <DropdownMenu>
                                                   <DropdownMenuTrigger asChild>
                                                     <Button
@@ -2821,13 +2823,16 @@ const ClientTrainingCalendarPage = () => {
                                                     </Button>
                                                   </DropdownMenuTrigger>
                                                   <DropdownMenuContent align="end" className="w-40" onClick={(e) => e.stopPropagation()}>
-                                                    <DropdownMenuItem onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      handleCopyWorkout(dateKey, workout);
-                                                    }}>
-                                                      <Copy className="mr-2 size-3.5" />
-                                                      <span>{t('general.copy')}</span>
-                                                    </DropdownMenuItem>
+                                                    {/* Hide copy option for in_progress and completed workouts */}
+                                                    {status === 'not_started' && (
+                                                      <DropdownMenuItem onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleCopyWorkout(dateKey, workout);
+                                                      }}>
+                                                        <Copy className="mr-2 size-3.5" />
+                                                        <span>{t('general.copy')}</span>
+                                                      </DropdownMenuItem>
+                                                    )}
                                                     <TooltipProvider>
                                                       <Tooltip>
                                                         <TooltipTrigger asChild>
