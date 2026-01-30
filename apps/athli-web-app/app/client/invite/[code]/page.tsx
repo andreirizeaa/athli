@@ -15,6 +15,7 @@ import { AuthErrorAlert } from '@/components/auth/auth-error-alert';
 import { AuthLayout } from '@/components/auth/auth-layout';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui/spinner';
+import { isWeakPasswordError, getPasswordErrorMessage } from '@/lib/utils/auth-errors';
 
 export default function ClientInvitePage() {
   const params = useParams<{ code: string }>();
@@ -158,7 +159,10 @@ export default function ClientInvitePage() {
       window.location.href = verifyUrl;
     } catch (err: any) {
       console.error('[Client Invite] Signup failed', { error: err.message, stack: err.stack });
-      toast.error(err.message || 'Failed to create account');
+      const message = isWeakPasswordError(err)
+        ? getPasswordErrorMessage(err)
+        : (err.message || 'Failed to create account');
+      toast.error(message);
       setIsSigningUp(false);
     }
   };

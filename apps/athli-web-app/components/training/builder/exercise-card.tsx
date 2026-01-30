@@ -531,7 +531,7 @@ type ExerciseCardProps = {
   canMoveDown?: boolean;
   isLinkedToPrev?: boolean;
   isLinkedToNext?: boolean;
-  sectionType?: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
+  sectionType?: 'regular' | 'amrap' | 'timed' | 'tabata' | 'hiit' | 'emom' | 'auxiliary';
   validationErrors?: Record<number, SetFieldValidation>;
   onClearValidationField?: (setIndex: number, field: keyof SetFieldValidation) => void;
   hasSupersetError?: boolean;
@@ -567,7 +567,7 @@ export const ExerciseCard = ({
   );
   const containerRef = useRef<HTMLDivElement>(null);
   const isEmpty = !exercise.name || exercise.name === '';
-  const isSingleSetOnly = sectionType === 'amrap' || sectionType === 'timed' || sectionType === 'circuits';
+  const isSingleSetOnly = sectionType === 'amrap' || sectionType === 'timed' || sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'emom';
   const [sets, setSets] = useState<SetData[]>(() => {
     // If parent already has sets (e.g. from restored state), use them.
     if (exercise.sets && exercise.sets.length > 0) {
@@ -1245,24 +1245,33 @@ export const ExerciseCard = ({
       }
     };
 
-    setSets((prev) => {
-      const newSet = createNewSet();
-      let updatedSets: SetData[];
+    const newSet = createNewSet();
+    let updatedSets: SetData[];
 
-      if (insertAfterIndex !== undefined && insertAfterIndex >= 0 && insertAfterIndex < prev.length) {
-        // Insert after the specified index
-        updatedSets = [
-          ...prev.slice(0, insertAfterIndex + 1),
-          newSet,
-          ...prev.slice(insertAfterIndex + 1)
-        ];
-      } else {
-        // Add at the end (default behavior)
-        updatedSets = [...prev, newSet];
-      }
+    if (insertAfterIndex !== undefined && insertAfterIndex >= 0 && insertAfterIndex < sets.length) {
+      // Insert after the specified index
+      updatedSets = [
+        ...sets.slice(0, insertAfterIndex + 1),
+        newSet,
+        ...sets.slice(insertAfterIndex + 1)
+      ];
+    } else {
+      // Add at the end (default behavior)
+      updatedSets = [...sets, newSet];
+    }
 
-      // Renumber all sets
-      return updatedSets.map((set, idx) => ({ ...set, setNumber: idx + 1 }));
+    // Renumber all sets
+    updatedSets = updatedSets.map((set, idx) => ({ ...set, setNumber: idx + 1 }));
+
+    setSets(updatedSets);
+
+    // Notify parent about the change so superset sync can be triggered
+    onExerciseChange({
+      ...exercise,
+      sets: updatedSets,
+      alternatives: exercise.alternatives || [],
+      column1Label,
+      column2Label,
     });
   };
 
@@ -1451,8 +1460,9 @@ export const ExerciseCard = ({
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={onDelete}
+              className="text-destructive focus:text-destructive focus:bg-destructive/10"
             >
-              <Trash2 className="size-4 mr-2" />
+              <Trash2 className="size-4 mr-2 text-destructive" />
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -1672,9 +1682,17 @@ export const ExerciseCard = ({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setSets((prev) => {
-                                    const filtered = prev.filter((_, i) => i !== index);
-                                    return filtered.map((s, idx) => ({ ...s, setNumber: idx + 1 }));
+                                  const filtered = sets.filter((_, i) => i !== index);
+                                  const updatedSets = filtered.map((s, idx) => ({ ...s, setNumber: idx + 1 }));
+                                  setSets(updatedSets);
+
+                                  // Notify parent about the change so superset sync can be triggered
+                                  onExerciseChange({
+                                    ...exercise,
+                                    sets: updatedSets,
+                                    alternatives: exercise.alternatives || [],
+                                    column1Label,
+                                    column2Label,
                                   });
                                 }}
                                 className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-destructive transition-colors"

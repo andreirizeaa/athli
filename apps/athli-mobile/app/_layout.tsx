@@ -307,6 +307,13 @@ function RootLayoutNav() {
 
     const subscription = AppState.addEventListener('change', async (nextAppState) => {
       if (nextAppState === 'active') {
+        // Only refresh if there's an existing session
+        const currentSession = useAuthSessionStore.getState().session;
+        if (!currentSession) {
+          console.log('[RootLayout] App foregrounded, no session to refresh');
+          return;
+        }
+
         console.log('[RootLayout] App foregrounded, refreshing session');
         const { data, error } = await supabase.auth.refreshSession();
         if (error) {
@@ -736,6 +743,7 @@ function RootLayoutNav() {
               ...(Platform.OS === 'ios' && {
                 sheetAllowedDetents: [0.50],
                 sheetGrabberVisible: true,
+                contentStyle: { backgroundColor: 'transparent' },
               }),
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -1185,6 +1193,17 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="modals/workout/exercise-details-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/workout/exercise-video-modal"
             options={{
               presentation: 'modal',
               headerShown: false,

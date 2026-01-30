@@ -39,7 +39,20 @@ export default function AddSectionModal() {
     const [sectionType, setSectionType] = useState<SectionType | null>((params.sectionType as SectionType) || null);
     const [duration, setDuration] = useState('');
     const [rounds, setRounds] = useState('');
-    const [metadataErrors, setMetadataErrors] = useState({ durationError: false, roundsError: false });
+    // Tabata/HIIT fields
+    const [workSec, setWorkSec] = useState('');
+    const [restSec, setRestSec] = useState('');
+    // EMOM fields
+    const [intervalSec, setIntervalSec] = useState('');
+    const [durationMin, setDurationMin] = useState('');
+    const [metadataErrors, setMetadataErrors] = useState({
+        durationError: false,
+        roundsError: false,
+        workSecError: false,
+        restSecError: false,
+        intervalSecError: false,
+        durationMinError: false,
+    });
 
     // Dialog state
     const [showErrorDialog, setShowErrorDialog] = useState(false);
@@ -91,6 +104,26 @@ export default function AddSectionModal() {
             formValid = formValid && rounds.trim().length > 0 && !isNaN(roundsNum) && roundsNum > 0;
         }
 
+        // Tabata/HIIT validation
+        if (sectionType === 'tabata' || sectionType === 'hiit') {
+            const workSecNum = parseInt(workSec);
+            const restSecNum = parseInt(restSec);
+            const roundsNum = parseInt(rounds);
+            formValid = formValid &&
+                workSec.trim().length > 0 && !isNaN(workSecNum) && workSecNum > 0 &&
+                restSec.trim().length > 0 && !isNaN(restSecNum) && restSecNum >= 0 &&
+                rounds.trim().length > 0 && !isNaN(roundsNum) && roundsNum > 0;
+        }
+
+        // EMOM validation
+        if (sectionType === 'emom') {
+            const intervalSecNum = parseInt(intervalSec);
+            const durationMinNum = parseInt(durationMin);
+            formValid = formValid &&
+                intervalSec.trim().length > 0 && !isNaN(intervalSecNum) && intervalSecNum > 0 &&
+                durationMin.trim().length > 0 && !isNaN(durationMinNum) && durationMinNum > 0;
+        }
+
         // Check if any field has been modified
         let changes = false;
         if (isEditing) {
@@ -99,14 +132,22 @@ export default function AddSectionModal() {
                 description !== (params.description || '') ||
                 sectionType !== ((params.sectionType as SectionType) || null) ||
                 duration !== '' ||
-                rounds !== '';
+                rounds !== '' ||
+                workSec !== '' ||
+                restSec !== '' ||
+                intervalSec !== '' ||
+                durationMin !== '';
         } else {
             // When creating new, any non-empty field counts as a change
             changes = trimmedName.length > 0 ||
                 description.trim().length > 0 ||
                 sectionType !== null ||
                 duration.trim().length > 0 ||
-                rounds.trim().length > 0;
+                rounds.trim().length > 0 ||
+                workSec.trim().length > 0 ||
+                restSec.trim().length > 0 ||
+                intervalSec.trim().length > 0 ||
+                durationMin.trim().length > 0;
         }
 
         return {
@@ -114,7 +155,7 @@ export default function AddSectionModal() {
             hasChanges: changes,
             canComplete: formValid && changes && !saveMutation.isPending,
         };
-    }, [name, description, sectionType, duration, rounds, saveMutation.isPending, isEditing, params]);
+    }, [name, description, sectionType, duration, rounds, workSec, restSec, intervalSec, durationMin, saveMutation.isPending, isEditing, params]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -135,7 +176,14 @@ export default function AddSectionModal() {
         if (!canComplete) return;
 
         // Validate section-type specific fields
-        let sectionMetadataError = { durationError: false, roundsError: false };
+        let sectionMetadataError = {
+            durationError: false,
+            roundsError: false,
+            workSecError: false,
+            restSecError: false,
+            intervalSecError: false,
+            durationMinError: false,
+        };
         let hasMetadataError = false;
 
         if (sectionType === 'amrap') {
@@ -154,6 +202,41 @@ export default function AddSectionModal() {
             }
         }
 
+        // Validate Tabata/HIIT fields
+        if (sectionType === 'tabata' || sectionType === 'hiit') {
+            const workSecNum = parseInt(workSec);
+            const restSecNum = parseInt(restSec);
+            const roundsNum = parseInt(rounds);
+
+            if (!workSec.trim() || isNaN(workSecNum) || workSecNum <= 0) {
+                sectionMetadataError.workSecError = true;
+                hasMetadataError = true;
+            }
+            if (!restSec.trim() || isNaN(restSecNum) || restSecNum < 0) {
+                sectionMetadataError.restSecError = true;
+                hasMetadataError = true;
+            }
+            if (!rounds.trim() || isNaN(roundsNum) || roundsNum <= 0) {
+                sectionMetadataError.roundsError = true;
+                hasMetadataError = true;
+            }
+        }
+
+        // Validate EMOM fields
+        if (sectionType === 'emom') {
+            const intervalSecNum = parseInt(intervalSec);
+            const durationMinNum = parseInt(durationMin);
+
+            if (!intervalSec.trim() || isNaN(intervalSecNum) || intervalSecNum <= 0) {
+                sectionMetadataError.intervalSecError = true;
+                hasMetadataError = true;
+            }
+            if (!durationMin.trim() || isNaN(durationMinNum) || durationMinNum <= 0) {
+                sectionMetadataError.durationMinError = true;
+                hasMetadataError = true;
+            }
+        }
+
         if (hasMetadataError) {
             setMetadataErrors(sectionMetadataError);
             let validationErrorMessage = t('library.section.error') + '\n\n';
@@ -163,12 +246,31 @@ export default function AddSectionModal() {
             if (sectionMetadataError.roundsError) {
                 validationErrorMessage += '• Rounds are required for this section type\n';
             }
+            if (sectionMetadataError.workSecError) {
+                validationErrorMessage += '• Work duration is required\n';
+            }
+            if (sectionMetadataError.restSecError) {
+                validationErrorMessage += '• Rest duration is required\n';
+            }
+            if (sectionMetadataError.intervalSecError) {
+                validationErrorMessage += '• Interval is required for EMOM sections\n';
+            }
+            if (sectionMetadataError.durationMinError) {
+                validationErrorMessage += '• Duration is required for EMOM sections\n';
+            }
             setErrorMessage(validationErrorMessage);
             setShowErrorDialog(true);
             return;
         }
 
-        setMetadataErrors({ durationError: false, roundsError: false });
+        setMetadataErrors({
+            durationError: false,
+            roundsError: false,
+            workSecError: false,
+            restSecError: false,
+            intervalSecError: false,
+            durationMinError: false,
+        });
 
         // Create an empty section data structure based on type
         const emptySectionData: any = {
@@ -188,10 +290,20 @@ export default function AddSectionModal() {
             emptySectionData.targetRounds = rounds ? parseInt(rounds) : null;
             emptySectionData.actualRounds = null;
             emptySectionData.totalDurationSec = null;
-        } else if (sectionType === 'circuits') {
-            emptySectionData.targetRounds = rounds ? parseInt(rounds) : null;
+        } else if (sectionType === 'tabata' || sectionType === 'hiit') {
+            // Tabata/HIIT sections have work/rest/rounds
+            emptySectionData.workSec = workSec ? parseInt(workSec) : (sectionType === 'tabata' ? 20 : 40);
+            emptySectionData.restSec = restSec ? parseInt(restSec) : (sectionType === 'tabata' ? 10 : 20);
+            emptySectionData.rounds = rounds ? parseInt(rounds) : (sectionType === 'tabata' ? 8 : 10);
             emptySectionData.actualRounds = null;
             emptySectionData.totalDurationSec = null;
+        } else if (sectionType === 'emom') {
+            emptySectionData.intervalSec = intervalSec ? parseInt(intervalSec) : 60;
+            emptySectionData.durationMin = durationMin ? parseInt(durationMin) : 10;
+            emptySectionData.actualDurationSec = null;
+        } else if (sectionType === 'circuits') {
+            emptySectionData.rounds = rounds ? parseInt(rounds) : 3;
+            emptySectionData.actualRounds = null;
         } else {
             // Regular/Auxiliary sections don't need additional fields
         }
@@ -213,7 +325,7 @@ export default function AddSectionModal() {
         console.log('[ADD SECTION MODAL] Saving section:', JSON.stringify(sectionData, null, 2));
 
         saveMutation.mutate(sectionData);
-    }, [canComplete, name, description, sectionType, duration, rounds, saveMutation, t]);
+    }, [canComplete, name, description, sectionType, duration, rounds, workSec, restSec, intervalSec, durationMin, saveMutation, t]);
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
@@ -281,11 +393,36 @@ export default function AddSectionModal() {
 
                         <SectionTypeSelect
                             sectionType={sectionType}
-                            onSectionTypeChange={setSectionType}
+                            onSectionTypeChange={(newType) => {
+                                setSectionType(newType);
+                                // Set default values based on section type
+                                if (newType === 'tabata') {
+                                    setWorkSec('20');
+                                    setRestSec('10');
+                                    setRounds('8');
+                                } else if (newType === 'hiit') {
+                                    setWorkSec('40');
+                                    setRestSec('20');
+                                    setRounds('10');
+                                } else if (newType === 'emom') {
+                                    setIntervalSec('60');
+                                    setDurationMin('10');
+                                } else if (newType === 'circuits') {
+                                    setRounds('3');
+                                }
+                            }}
                             duration={duration}
                             onDurationChange={setDuration}
                             rounds={rounds}
                             onRoundsChange={setRounds}
+                            workSec={workSec}
+                            onWorkSecChange={setWorkSec}
+                            restSec={restSec}
+                            onRestSecChange={setRestSec}
+                            intervalSec={intervalSec}
+                            onIntervalSecChange={setIntervalSec}
+                            durationMin={durationMin}
+                            onDurationMinChange={setDurationMin}
                             metadataErrors={metadataErrors}
                             required
                         />

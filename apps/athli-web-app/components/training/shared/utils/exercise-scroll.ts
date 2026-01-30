@@ -61,24 +61,34 @@ export const handleExerciseClick = (
  * @param contentScrollRef - Ref to the scrollable content container
  * @param setFocusedExerciseId - Callback to set the focused exercise ID (for border flash)
  * @param setCollapsedSections - Callback to update collapsed sections
+ * @param setFocusedSupersetGroupId - Optional callback to set the focused superset group ID
  */
 export const handleExerciseClickById = (
   instanceId: string,
   workoutSections: Array<{
     id: string;
-    exercises?: Array<{ instanceId: string }>;
+    exercises?: Array<{ instanceId: string; supersetGroupId?: string | null }>;
   }>,
   collapsedSections: Set<string>,
   exerciseRefs: MutableRefObject<Map<string, HTMLDivElement>>,
   contentScrollRef: MutableRefObject<HTMLDivElement | null>,
   setFocusedExerciseId: (id: string | null) => void,
   setCollapsedSections: (updater: (prev: Set<string>) => Set<string>) => void,
-  _findExerciseById?: ExerciseLookupFn
+  _findExerciseById?: ExerciseLookupFn,
+  setFocusedSupersetGroupId?: (id: string | null) => void,
+  topLevelExercises?: Array<{ instanceId: string; supersetGroupId?: string | null }>
 ): void => {
   // Find which section contains this exercise
   const sectionContainingExercise = workoutSections.find((section) =>
     section.exercises?.some((ex) => ex.instanceId === instanceId)
   );
+
+  // Find the exercise itself to get its supersetGroupId
+  // First check in sections, then in top-level exercises
+  let exercise = sectionContainingExercise?.exercises?.find((ex) => ex.instanceId === instanceId);
+  if (!exercise && topLevelExercises) {
+    exercise = topLevelExercises.find((ex) => ex.instanceId === instanceId);
+  }
 
   // If the section is collapsed, expand it
   const wasCollapsed = sectionContainingExercise && collapsedSections.has(sectionContainingExercise.id);
@@ -92,9 +102,18 @@ export const handleExerciseClickById = (
 
   // Flash the border by setting focused exercise ID
   setFocusedExerciseId(instanceId);
+
+  // If exercise is part of a superset, also set the superset group ID to flash all linked exercises
+  if (setFocusedSupersetGroupId && exercise?.supersetGroupId) {
+    setFocusedSupersetGroupId(exercise.supersetGroupId);
+  }
+
   // Clear the flash after animation (1.5 seconds)
   setTimeout(() => {
     setFocusedExerciseId(null);
+    if (setFocusedSupersetGroupId) {
+      setFocusedSupersetGroupId(null);
+    }
   }, 1500);
 
   // If section was collapsed, wait for it to expand before scrolling

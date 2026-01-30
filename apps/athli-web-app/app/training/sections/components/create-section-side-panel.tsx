@@ -25,6 +25,12 @@ type CreateSectionSidePanelProps = {
     title: string;
     description: string;
     sectionType: SectionType;
+    roundDurationSec?: number;
+    workSec?: number;
+    restSec?: number;
+    rounds?: number;
+    intervalSec?: number;
+    durationMin?: number;
   }) => void;
 };
 
@@ -37,6 +43,14 @@ export const CreateSectionSidePanel = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [sectionType, setSectionType] = useState<SectionType>('regular');
+  const [configValue, setConfigValue] = useState<string>('');
+  // Tabata/HIIT config
+  const [workSec, setWorkSec] = useState<string>('');
+  const [restSec, setRestSec] = useState<string>('');
+  const [rounds, setRounds] = useState<string>('');
+  // EMOM config
+  const [intervalSec, setIntervalSec] = useState<string>('');
+  const [durationMin, setDurationMin] = useState<string>('');
   const [titleError, setTitleError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -48,8 +62,37 @@ export const CreateSectionSidePanel = ({
     setTitle('');
     setDescription('');
     setSectionType('regular');
+    setConfigValue('');
+    setWorkSec('');
+    setRestSec('');
+    setRounds('');
+    setIntervalSec('');
+    setDurationMin('');
     setTitleError(null);
     onClose();
+  };
+
+  // Check if section type needs config input
+  const needsAmrapConfig = sectionType === 'amrap';
+  const needsTabataHiitConfig = sectionType === 'tabata' || sectionType === 'hiit';
+  const needsEmomConfig = sectionType === 'emom';
+  const needsCircuitsConfig = sectionType === 'circuits';
+
+  // Check if all required config fields are filled
+  const isConfigValid = () => {
+    if (sectionType === 'tabata' || sectionType === 'hiit') {
+      return workSec.trim() !== '' && restSec.trim() !== '' && rounds.trim() !== '';
+    }
+    if (sectionType === 'emom') {
+      return intervalSec.trim() !== '' && durationMin.trim() !== '';
+    }
+    if (sectionType === 'amrap') {
+      return configValue.trim() !== '';
+    }
+    if (sectionType === 'circuits') {
+      return rounds.trim() !== '';
+    }
+    return true;
   };
 
   const handleCreate = async () => {
@@ -59,13 +102,41 @@ export const CreateSectionSidePanel = ({
       return;
     }
 
+    if (!isConfigValid()) {
+      return;
+    }
+
     setIsSaving(true);
     try {
+      // Build config based on section type
+      const configData: {
+        roundDurationSec?: number;
+        workSec?: number;
+        restSec?: number;
+        rounds?: number;
+        intervalSec?: number;
+        durationMin?: number;
+      } = {};
+
+      if (sectionType === 'amrap' && configValue) {
+        configData.roundDurationSec = parseInt(configValue, 10);
+      } else if (sectionType === 'tabata' || sectionType === 'hiit') {
+        if (workSec) configData.workSec = parseInt(workSec, 10);
+        if (restSec) configData.restSec = parseInt(restSec, 10);
+        if (rounds) configData.rounds = parseInt(rounds, 10);
+      } else if (sectionType === 'emom') {
+        if (intervalSec) configData.intervalSec = parseInt(intervalSec, 10);
+        if (durationMin) configData.durationMin = parseInt(durationMin, 10);
+      } else if (sectionType === 'circuits') {
+        if (rounds) configData.rounds = parseInt(rounds, 10);
+      }
+
       // Call parent handler
       await onCreateSection({
         title: title.trim(),
         description: description.trim(),
         sectionType,
+        ...configData,
       });
 
       // Reset and close
@@ -90,7 +161,7 @@ export const CreateSectionSidePanel = ({
           <Button
             type="button"
             onClick={handleCreate}
-            disabled={!title.trim() || isSaving}
+            disabled={!title.trim() || !isConfigValid() || isSaving}
             className="gap-2"
           >
             {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
@@ -101,7 +172,7 @@ export const CreateSectionSidePanel = ({
     >
       <div className="flex flex-col gap-6">
         {/* Section Name */}
-        <div className="flex flex-col">
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="section-name" className="text-sm font-medium">
             <span>
               {t('library.sections.section')}<RequiredAsterisk />
@@ -123,33 +194,198 @@ export const CreateSectionSidePanel = ({
         </div>
 
         {/* Section Type */}
-        <div className="flex flex-col">
-          <Label htmlFor="section-type" className="text-sm font-medium">
-           <span>
-              {t('library.sections.section')}<RequiredAsterisk />
-            </span>
-          </Label>
-          <Select value={sectionType} onValueChange={(value) => setSectionType(value as SectionType)}>
-            <SelectTrigger id="section-type" className="w-full">
-              <SelectValue>
-                {selectedOption?.label || t('library.sections.selectTypePlaceholder')}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {sectionTypeOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  <div className="flex flex-col gap-0.5">
-                    <span>{option.label}</span>
-                    <span className="text-xs text-muted-foreground">{option.description}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex gap-4">
+          <div className="flex flex-col gap-1.5 flex-1">
+            <Label htmlFor="section-type" className="text-sm font-medium">
+              <span>
+                {t('library.sections.sectionType')}<RequiredAsterisk />
+              </span>
+            </Label>
+            <Select value={sectionType} onValueChange={(value) => {
+              const newType = value as SectionType;
+              setSectionType(newType);
+              // Set default values based on section type
+              setConfigValue('');
+              if (newType === 'tabata') {
+                setWorkSec('20');
+                setRestSec('10');
+                setRounds('8');
+                setIntervalSec('');
+                setDurationMin('');
+              } else if (newType === 'hiit') {
+                setWorkSec('40');
+                setRestSec('20');
+                setRounds('10');
+                setIntervalSec('');
+                setDurationMin('');
+              } else if (newType === 'emom') {
+                setWorkSec('');
+                setRestSec('');
+                setRounds('');
+                setIntervalSec('60');
+                setDurationMin('10');
+              } else if (newType === 'circuits') {
+                setWorkSec('');
+                setRestSec('');
+                setRounds('3');
+                setIntervalSec('');
+                setDurationMin('');
+              } else {
+                setWorkSec('');
+                setRestSec('');
+                setRounds('');
+                setIntervalSec('');
+                setDurationMin('');
+              }
+            }}>
+              <SelectTrigger id="section-type" className="w-full">
+                <SelectValue>
+                  {selectedOption?.label || t('library.sections.selectTypePlaceholder')}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {sectionTypeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <div className="flex flex-col gap-0.5">
+                      <span>{option.label}</span>
+                      <span className="text-xs text-muted-foreground">{option.description}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {needsAmrapConfig && (
+            <div className="flex flex-col gap-1.5 flex-1">
+              <Label htmlFor="section-config" className="text-sm font-medium">
+                <span>
+                  Duration (min)<RequiredAsterisk />
+                </span>
+              </Label>
+              <Input
+                id="section-config"
+                type="text"
+                inputMode="numeric"
+                placeholder="e.g. 10"
+                value={configValue}
+                onChange={(e) => {
+                  // Only allow digits
+                  const value = e.target.value.replace(/\D/g, '');
+                  setConfigValue(value);
+                }}
+              />
+            </div>
+          )}
+          {needsCircuitsConfig && (
+            <div className="flex flex-col gap-1.5 flex-1">
+              <Label htmlFor="circuits-rounds" className="text-sm font-medium">
+                <span>
+                  Rounds<RequiredAsterisk />
+                </span>
+              </Label>
+              <Input
+                id="circuits-rounds"
+                type="text"
+                inputMode="numeric"
+                value={rounds}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  setRounds(value);
+                }}
+              />
+            </div>
+          )}
         </div>
 
+        {/* Tabata/HIIT Config */}
+        {needsTabataHiitConfig && (
+          <div className="flex gap-4">
+            <div className="flex flex-col gap-1.5 flex-1">
+              <Label htmlFor="work-sec" className="text-sm font-medium">
+                <span>Work (s)<RequiredAsterisk /></span>
+              </Label>
+              <Input
+                id="work-sec"
+                type="text"
+                inputMode="numeric"
+                value={workSec}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  setWorkSec(value);
+                }}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5 flex-1">
+              <Label htmlFor="rest-sec" className="text-sm font-medium">
+                <span>Rest (s)<RequiredAsterisk /></span>
+              </Label>
+              <Input
+                id="rest-sec"
+                type="text"
+                inputMode="numeric"
+                value={restSec}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  setRestSec(value);
+                }}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5 flex-1">
+              <Label htmlFor="rounds" className="text-sm font-medium">
+                <span>Rounds<RequiredAsterisk /></span>
+              </Label>
+              <Input
+                id="rounds"
+                type="text"
+                inputMode="numeric"
+                value={rounds}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  setRounds(value);
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* EMOM Config */}
+        {needsEmomConfig && (
+          <div className="flex gap-4">
+            <div className="flex flex-col gap-1.5 flex-1">
+              <Label htmlFor="interval-sec" className="text-sm font-medium">
+                <span>Interval (s)<RequiredAsterisk /></span>
+              </Label>
+              <Input
+                id="interval-sec"
+                type="text"
+                inputMode="numeric"
+                value={intervalSec}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  setIntervalSec(value);
+                }}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5 flex-1">
+              <Label htmlFor="duration-min" className="text-sm font-medium">
+                <span>Duration (min)<RequiredAsterisk /></span>
+              </Label>
+              <Input
+                id="duration-min"
+                type="text"
+                inputMode="numeric"
+                value={durationMin}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  setDurationMin(value);
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Description */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="section-description" className="text-sm font-medium">
             {t('general.description')}
           </Label>

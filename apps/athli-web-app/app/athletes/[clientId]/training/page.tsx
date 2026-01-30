@@ -2266,7 +2266,32 @@ const ClientTrainingCalendarPage = () => {
       try {
         const dateKey = getDateKey(selectedDateForWorkout);
 
-        // 1. Await API
+        // 1. Create optimistic workout for immediate UI update
+        const optimisticId = `workout-${Date.now()}__${dateKey}__${Date.now()}`;
+        const optimisticWorkout: Workout & { id: string } = {
+          id: optimisticId,
+          name: payload.name,
+          description: payload.description || '',
+          type: payload.type || '',
+          difficulty: payload.difficulty || 'Intermediate',
+          totalExercises: payload.totalExercises || 0,
+          equipment: payload.equipment || [],
+          created: new Date().toISOString(),
+          isFavourite: false,
+          items: payload.items || [],
+        };
+
+        // 2. Optimistic update - add to local state immediately
+        setWorkoutsByDate((prev) => ({
+          ...prev,
+          [dateKey]: [...(prev[dateKey] || []), optimisticWorkout],
+        }));
+
+        // 3. Close dialog immediately
+        setIsWorkoutBuilderOpen(false);
+        toast.success('Workout created successfully');
+
+        // 4. Call API in background
         await apiAssignWorkout({
           clientId,
           date: dateKey,
@@ -2275,12 +2300,7 @@ const ClientTrainingCalendarPage = () => {
           skipInvalidation: true
         });
 
-        // 2. Close dialog immediately
-        setIsWorkoutBuilderOpen(false);
-        toast.success('Workout created successfully');
-
-        // No need to manually reset loadedDateRange, hook handles invalidation
-        // Actually we skipped it, so we need to valid manually with delay
+        // 5. Invalidate to sync with server data (replaces optimistic with real IDs)
         setTimeout(() => {
           queryClient.invalidateQueries({
             queryKey: ['client-training-calendar', clientId]
@@ -2289,7 +2309,11 @@ const ClientTrainingCalendarPage = () => {
 
       } catch (error) {
         console.error(error);
-        // Hook handles toast error if using mutation, otherwise handled here
+        toast.error('Failed to create workout');
+        // Revert optimistic update on error
+        queryClient.invalidateQueries({
+          queryKey: ['client-training-calendar', clientId]
+        });
       }
     }
   };
@@ -2704,16 +2728,12 @@ const ClientTrainingCalendarPage = () => {
                                                 handleToggleWorkoutSelection(dateKey, workout);
                                                 return;
                                               }
-                                              // For in-progress or completed workouts, open the summary dialog
-                                              if (status === 'in_progress') {
-                                                handleOpenInProgressSummary(dateKey, workout);
-                                                return;
-                                              }
+                                              // For completed workouts, open the summary dialog
                                               if (status === 'completed') {
                                                 handleOpenCompletedSummary(dateKey, workout);
                                                 return;
                                               }
-                                              // For not_started workouts, open the workout builder
+                                              // For not_started and in_progress workouts, open the workout builder
                                               handleOpenWorkoutDetails(dateKey, workout);
                                             }}
                                             onKeyDown={(event) => {
@@ -2725,16 +2745,12 @@ const ClientTrainingCalendarPage = () => {
                                                   handleToggleWorkoutSelection(dateKey, workout);
                                                   return;
                                                 }
-                                                // For in-progress or completed workouts, open the summary dialog
-                                                if (status === 'in_progress') {
-                                                  handleOpenInProgressSummary(dateKey, workout);
-                                                  return;
-                                                }
+                                                // For completed workouts, open the summary dialog
                                                 if (status === 'completed') {
                                                   handleOpenCompletedSummary(dateKey, workout);
                                                   return;
                                                 }
-                                                // For not_started workouts, open the workout builder
+                                                // For not_started and in_progress workouts, open the workout builder
                                                 handleOpenWorkoutDetails(dateKey, workout);
                                               }
                                             }}

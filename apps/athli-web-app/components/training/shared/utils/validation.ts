@@ -285,17 +285,8 @@ export const validateWorkoutSchema = (
         }
       }
 
-      if (section.type === 'timed') {
-        if (!section.targetRounds || section.targetRounds <= 0) {
-          sectionErrors.missingConfig = true;
-        }
-      }
-
-      if (section.type === 'circuits') {
-        if (!section.targetRounds || section.targetRounds <= 0) {
-          sectionErrors.missingConfig = true;
-        }
-      }
+      // Tabata and HIIT have defaults, so no missing config validation needed
+      // EMOM has defaults, so no missing config validation needed
 
       if (section.type === 'auxiliary') {
         if (!section.category) {

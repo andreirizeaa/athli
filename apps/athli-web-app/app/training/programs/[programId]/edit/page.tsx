@@ -75,7 +75,7 @@ const EditProgramPage = () => {
                   } else if (item.itemType === 'section') {
                     const section = item.data;
                     if (section?.exercises) {
-                      if (section.type === 'regular' || section.type === 'auxiliary' || section.type === 'circuits') {
+                      if (section.type === 'regular' || section.type === 'auxiliary' || section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom') {
                         return total + section.exercises.reduce((sum: number, group: any) => sum + (group.exercises?.length || 0), 0);
                       } else {
                         return total + (section.exercises?.length || 0);

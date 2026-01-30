@@ -54,7 +54,7 @@ const getNextWorkoutKey = (data: Record<string, any>): string => {
 
 /**
  * Extract exercise payloads from a workout.
- * Handles all section types: regular, auxiliary, amrap, timed, circuits.
+ * Handles all section types: regular, auxiliary, amrap, timed, tabata, hiit, emom.
  * Returns array of { exerciseId, exerciseData } objects.
  */
 const extractExercisesFromWorkout = (workout: any): Array<{ exerciseId: string; exerciseData: any }> => {
@@ -103,7 +103,9 @@ const extractExercisesFromWorkout = (workout: any): Array<{ exerciseId: string; 
                     }
                     break;
 
-                case 'circuits':
+                case 'tabata':
+                case 'hiit':
+                case 'emom':
                     // CircuitExerciseGroupPayload[] -> each group has exercises: CircuitExercisePayload[]
                     if (Array.isArray(section.exercises)) {
                         for (const group of section.exercises) {
@@ -181,7 +183,9 @@ const extractSupersetFlagsFromWorkout = (workout: any): boolean[] => {
                     }
                     break;
 
-                case 'circuits':
+                case 'tabata':
+                case 'hiit':
+                case 'emom':
                     // CircuitExerciseGroupPayload[] -> each group has isSuperset flag
                     if (Array.isArray(section.exercises)) {
                         for (const group of section.exercises) {

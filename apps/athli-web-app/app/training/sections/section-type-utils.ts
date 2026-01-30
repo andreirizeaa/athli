@@ -1,6 +1,6 @@
 import { SECTION_TYPES } from '@athli/shared-types';
 
-export type SectionType = 'regular' | 'amrap' | 'timed' | 'circuits';
+export type SectionType = 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits';
 
 export type SectionTypeOption = {
   value: SectionType;

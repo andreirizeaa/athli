@@ -575,6 +575,7 @@ export const enMessages = {
       flows: 'Flows',
       checkIns: 'Check Ins',
       referAndEarn: 'Refer and Earn',
+      getFreeMonth: 'Get a free month',
     },
     actions: {
       keepMenuOpen: 'Keep menu open',
@@ -596,7 +597,7 @@ export const enMessages = {
     },
     search: {
       placeholder: 'Search across Athli...',
-      emptyMessage: 'Search for clients, workouts, programs or exercises...',
+      emptyMessage: 'Search for anything and everything...',
       noResults: 'No results found for',
       athletes: 'Athletes',
       workouts: 'Workouts',
@@ -620,6 +621,10 @@ export const enMessages = {
       openHabitAria: 'Open habit {name}',
       openFlowAria: 'Open flow {name}',
       openConversationAria: 'Open conversation with {name}',
+      sections: 'Sections',
+      todosYourList: 'To Do - Your List',
+      todosAthliAssistant: 'To Do - Athli Assistant',
+      conversations: 'Conversations',
     },
     theme: {
       label: 'Theme',
@@ -664,6 +669,7 @@ export const enMessages = {
     goodEvening: 'Good evening',
   },
   general: {
+    help: 'Help',
     save: 'Save',
     saving: 'Saving',
     cancel: 'Cancel',
@@ -873,6 +879,7 @@ export const enMessages = {
         descending: 'Sort Descending',
       },
       toast: {
+        deleting: 'Deleting section...',
         deletedSuccessfully: 'Section deleted successfully',
         deletedBulkSuccessfully: '{count} sections deleted successfully',
         duplicatedSuccessfully: 'Section "{name}" duplicated successfully',
@@ -884,6 +891,7 @@ export const enMessages = {
         updatedSuccessfully: 'Section "{name}" updated successfully',
         failedToSave: 'Failed to save section',
         failedToLoad: 'Failed to load section',
+        failedToDelete: 'Failed to delete section',
       },
     },
     programs: 'Programs',

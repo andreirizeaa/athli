@@ -12,6 +12,7 @@ import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { AuthErrorAlert } from '@/components/auth/auth-error-alert';
 import { AuthLayout } from '@/components/auth/auth-layout';
 import { toast } from 'sonner';
+import { isWeakPasswordError, getPasswordErrorMessage } from '@/lib/utils/auth-errors';
 
 export default function SignUpPage() {
   const { signUp, signInWithGoogle, signInWithApple } = useSupabaseAuth();
@@ -45,7 +46,10 @@ export default function SignUpPage() {
       toast.success('Account created! Please check your email for verification code.');
       // signUp already redirects to verify-email page
     } catch (err: any) {
-      toast.error(err.message || 'Failed to create account');
+      const message = isWeakPasswordError(err)
+        ? getPasswordErrorMessage(err)
+        : (err.message || 'Failed to create account');
+      toast.error(message);
       setIsSigningUp(false);
     }
   };

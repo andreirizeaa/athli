@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { AuthLayout } from '@/components/auth/auth-layout';
 import { toast } from 'sonner';
+import { isWeakPasswordError, getPasswordErrorMessage } from '@/lib/utils/auth-errors';
 
 export default function ResetPasswordPage() {
   const { updatePassword, supabaseUser, isLoading: isAuthLoading } = useSupabaseAuth();
@@ -96,7 +97,10 @@ export default function ResetPasswordPage() {
       toast.success('Password reset successfully');
       router.push('/auth/login');
     } catch (err: any) {
-      toast.error(err.message || 'Failed to reset password');
+      const message = isWeakPasswordError(err)
+        ? getPasswordErrorMessage(err)
+        : (err.message || 'Failed to reset password');
+      toast.error(message);
     } finally {
       setIsResetting(false);
     }

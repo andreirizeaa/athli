@@ -1,4 +1,5 @@
 import type { WorkoutSchema, WorkoutSchemaItem, ExerciseWithSuperset, WorkoutSection } from '@/components/training/shared/types/workout-builder.types';
+import type { SetData } from '@/components/training/builder/exercise-card';
 
 /**
  * Groups consecutive exercises by their superset ID for display purposes
@@ -337,6 +338,176 @@ export const handleSupersetUnlink = (
         };
       }
       return item;
+    }),
+  };
+};
+
+/**
+ * Synchronizes set counts across all exercises in a superset within a section.
+ * When one exercise's set count changes, all other exercises in the same superset
+ * are updated to match, copying the set type from the changed exercise.
+ *
+ * @param sectionId - The ID of the section containing the exercises
+ * @param changedExerciseInstanceId - The instanceId of the exercise that changed
+ * @param newSetCount - The new number of sets
+ * @param currentSchema - The current workout schema
+ * @returns Updated workout schema with synchronized set counts
+ */
+export const syncSupersetSetsInSection = (
+  sectionId: string,
+  changedExerciseInstanceId: string,
+  newSetCount: number,
+  currentSchema: WorkoutSchema
+): WorkoutSchema => {
+  return {
+    ...currentSchema,
+    items: currentSchema.items.map((item) => {
+      if (item.itemType === 'section' && item.section.id === sectionId && item.section.exercises) {
+        const exercises = [...item.section.exercises];
+
+        // Find the changed exercise to get its supersetGroupId and sets
+        const changedExercise = exercises.find(ex => ex.instanceId === changedExerciseInstanceId);
+        if (!changedExercise?.supersetGroupId) {
+          return item; // Not part of a superset, no sync needed
+        }
+
+        const supersetGroupId = changedExercise.supersetGroupId;
+        const sourceSets = changedExercise.sets || [];
+
+        // Update all exercises in the same superset
+        const updatedExercises = exercises.map(exercise => {
+          if (exercise.supersetGroupId !== supersetGroupId || exercise.instanceId === changedExerciseInstanceId) {
+            return exercise; // Different superset or the one that triggered the change
+          }
+
+          const currentSets = exercise.sets || [];
+          const currentSetCount = currentSets.length;
+
+          if (currentSetCount === newSetCount) {
+            return exercise; // Already has the right number of sets
+          }
+
+          let newSets: SetData[];
+
+          if (newSetCount > currentSetCount) {
+            // Add sets - copy type and reps from the source exercise's corresponding set
+            newSets = [...currentSets];
+            for (let i = currentSetCount; i < newSetCount; i++) {
+              const sourceSet = sourceSets[i];
+              newSets.push({
+                setNumber: i + 1,
+                type: sourceSet?.type || 'normal',
+                reps: sourceSet?.reps || '',
+                weight: '',
+                rest: sourceSet?.rest || '',
+                distance: sourceSet?.distance || '',
+                duration: sourceSet?.duration || '',
+              });
+            }
+          } else {
+            // Remove sets from the end
+            newSets = currentSets.slice(0, newSetCount);
+          }
+
+          // Renumber sets
+          newSets = newSets.map((set, idx) => ({ ...set, setNumber: idx + 1 }));
+
+          return {
+            ...exercise,
+            sets: newSets,
+          };
+        });
+
+        return {
+          ...item,
+          section: {
+            ...item.section,
+            exercises: updatedExercises,
+          },
+        };
+      }
+      return item;
+    }),
+  };
+};
+
+/**
+ * Synchronizes set counts across all top-level exercises in a superset.
+ * When one exercise's set count changes, all other exercises in the same superset
+ * are updated to match, copying the set type from the changed exercise.
+ *
+ * @param changedExerciseInstanceId - The instanceId of the exercise that changed
+ * @param newSetCount - The new number of sets
+ * @param currentSchema - The current workout schema
+ * @returns Updated workout schema with synchronized set counts
+ */
+export const syncSupersetSetsTopLevel = (
+  changedExerciseInstanceId: string,
+  newSetCount: number,
+  currentSchema: WorkoutSchema
+): WorkoutSchema => {
+  // Find the changed exercise to get its supersetGroupId and sets
+  const changedItem = currentSchema.items.find(
+    item => item.itemType === 'exercise' && item.exercise.instanceId === changedExerciseInstanceId
+  );
+
+  if (!changedItem || changedItem.itemType !== 'exercise' || !changedItem.exercise.supersetGroupId) {
+    return currentSchema; // Not found or not part of a superset
+  }
+
+  const supersetGroupId = changedItem.exercise.supersetGroupId;
+  const sourceSets = changedItem.exercise.sets || [];
+
+  return {
+    ...currentSchema,
+    items: currentSchema.items.map((item) => {
+      if (item.itemType !== 'exercise') {
+        return item;
+      }
+
+      if (item.exercise.supersetGroupId !== supersetGroupId || item.exercise.instanceId === changedExerciseInstanceId) {
+        return item; // Different superset or the one that triggered the change
+      }
+
+      const currentSets = item.exercise.sets || [];
+      const currentSetCount = currentSets.length;
+
+      if (currentSetCount === newSetCount) {
+        return item; // Already has the right number of sets
+      }
+
+      let newSets: SetData[];
+
+      if (newSetCount > currentSetCount) {
+        // Add sets - copy type and reps from the source exercise's corresponding set
+        newSets = [...currentSets];
+        for (let i = currentSetCount; i < newSetCount; i++) {
+          const sourceSet = sourceSets[i];
+          newSets.push({
+            setNumber: i + 1,
+            type: sourceSet?.type || 'normal',
+            reps: sourceSet?.reps || '',
+            weight: '',
+            rest: sourceSet?.rest || '',
+            distance: sourceSet?.distance || '',
+            duration: sourceSet?.duration || '',
+          });
+        }
+      } else {
+        // Remove sets from the end
+        newSets = currentSets.slice(0, newSetCount);
+      }
+
+      // Renumber sets
+      newSets = newSets.map((set, idx) => ({ ...set, setNumber: idx + 1 }));
+
+      return {
+        ...item,
+        exercise: {
+          ...item.exercise,
+          sets: newSets,
+        },
+      };
     }),
   };
 };

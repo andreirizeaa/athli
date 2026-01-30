@@ -106,10 +106,10 @@ export function UserMenu({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="rounded-sm overflow-hidden hover:opacity-80 transition-opacity"
+          className="rounded-md overflow-hidden hover:opacity-80 transition-opacity h-9 w-9 flex items-center justify-center"
           aria-label={t('sidebar.profile.openAccountMenuAria')}
         >
-          <Avatar className="h-8 w-8 rounded-md">
+          <Avatar className="h-9 w-9 rounded-md">
             {globalUser?.profilePictureUrl && (
               <AvatarImage src={globalUser.profilePictureUrl} alt={displayName} />
             )}
