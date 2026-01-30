@@ -9,12 +9,14 @@ import { UnsavedChangesProvider } from '@/app/settings/context/unsaved-changes-c
 import { useLanguage } from '@/lib/providers/intl-provider';
 import { AppSidebar } from './app-sidebar';
 import { AppHeader } from './app-header';
+import { AIAssistantPanel } from './ai-assistant-panel';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/general/utils';
 import { LogoutProvider, useLogout } from '@/lib/providers/logout-provider';
 import { useGlobalData } from '@/providers/global-data-provider';
 import { useThemeConfig } from '@/components/app/active-theme';
 import { PresetValue } from '@/lib/theme';
+import { AIPanelProvider, useAIPanel } from '@/lib/providers/ai-panel-provider';
 
 // Re-export types for backward compatibility
 export type {
@@ -44,7 +46,9 @@ export const AppShell = ({ children }: AppShellProps) => {
   return (
     <UnsavedChangesProvider>
       <LogoutProvider>
-        <AppShellWithProvider>{children}</AppShellWithProvider>
+        <AIPanelProvider>
+          <AppShellWithProvider>{children}</AppShellWithProvider>
+        </AIPanelProvider>
       </LogoutProvider>
     </UnsavedChangesProvider>
   );
@@ -107,6 +111,7 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
 
 const SidebarInsetWithBorder = ({ children }: { children: ReactNode }) => {
   const { state, isHovered } = useSidebar();
+  const { isOpen: isAIPanelOpen } = useAIPanel();
   const isHoverExpanded = state === 'collapsed' && isHovered;
   const shouldShowBorder = state === 'collapsed';
   const showBorder = shouldShowBorder && !isHoverExpanded;
@@ -114,7 +119,7 @@ const SidebarInsetWithBorder = ({ children }: { children: ReactNode }) => {
   return (
     <SidebarInset
       className={cn(
-        'flex-1 flex flex-col overflow-hidden bg-background reset-sidebar-vars border-none shadow-none',
+        'flex-1 flex flex-row overflow-hidden bg-background reset-sidebar-vars border-none shadow-none',
         showBorder && 'border-l border-sidebar-border'
       )}
       style={{
@@ -122,7 +127,10 @@ const SidebarInsetWithBorder = ({ children }: { children: ReactNode }) => {
         borderBottomLeftRadius: '22px',
       }}
     >
-      {children}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {children}
+      </div>
+      <AIAssistantPanel isOpen={isAIPanelOpen} />
     </SidebarInset>
   );
 };
