@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Gift, Headset, Lightbulb, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { useAIPanel } from '@/lib/providers/ai-panel-provider';
 import Lottie from 'lottie-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -23,8 +25,12 @@ export function AppHeader({
   setCurrentLanguage,
 }: AppHeaderProps) {
   const t = useTranslations();
+  const pathname = usePathname();
   const { state, isHovered, setOpen, setIsHovered, setJustClosed } = useSidebar();
+  const { toggle: toggleAIPanel } = useAIPanel();
   const [aiAnimationData, setAiAnimationData] = useState<object | null>(null);
+
+  const isAssistantPage = pathname?.startsWith('/assistant');
 
   // Load AI sphere animation
   useEffect(() => {
@@ -138,19 +144,17 @@ export function AppHeader({
           <Button
             className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90"
             aria-label={t('sidebar.search.aiAssistantAria')}
-            asChild
+            onClick={() => !isAssistantPage && toggleAIPanel()}
           >
-            <Link href="/assistant">
-              {aiAnimationData && (
-                <Lottie
-                  className="size-10 -ml-4 -mr-2"
-                  animationData={aiAnimationData}
-                  loop
-                  autoplay
-                />
-              )}
-              {t('sidebar.search.aiAssistant')}
-            </Link>
+            {aiAnimationData && (
+              <Lottie
+                className="size-10 -ml-4 -mr-2"
+                animationData={aiAnimationData}
+                loop
+                autoplay
+              />
+            )}
+            {t('sidebar.search.aiAssistant')}
           </Button>
           <UserMenu
             isThemeMounted={isThemeMounted}
