@@ -218,12 +218,12 @@ export default function ChangePasswordModal() {
           onPress={isUpdating ? undefined : handleUpdatePassword}
         >
           {isUpdating ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color={themeColors.primaryForeground} />
           ) : (
             <Text
               style={[
                 styles.primaryButtonText,
-                { color: '#FFFFFF' },
+                { color: themeColors.primaryForeground },
               ]}
             >
               {t('profile.passwordChange.updatePassword')}

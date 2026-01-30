@@ -3,7 +3,7 @@
  * This ensures workouts created on mobile can be opened on web and vice versa
  */
 
-import { SectionType } from '@athli/shared-types';
+import { SectionType, getDefaultColumnsForCategory } from '@athli/shared-types';
 
 // ============================================================================
 // Core Types (Re-export from shared package)
@@ -53,6 +53,12 @@ export type BuilderSection = {
     rounds?: string;
     notes?: string;
     exercises: BuilderExercise[];
+    // Tabata/HIIT fields
+    workSec?: string;
+    restSec?: string;
+    // EMOM fields
+    intervalSec?: string;
+    durationMin?: string;
 };
 
 export type BuilderItem = BuilderExercise | BuilderSection;
@@ -74,12 +80,19 @@ export type BuilderWorkoutState = {
 // Helper Functions (Mobile-specific)
 // ============================================================================
 
-export const getDefaultColumns = (exerciseType: string) => {
+export const getDefaultColumns = (exerciseType: string, category?: string) => {
+    // First try category-based defaults from shared package
+    if (category) {
+        const categoryDefaults = getDefaultColumnsForCategory(category);
+        return { column1Type: categoryDefaults.column1, column2Type: categoryDefaults.column2 };
+    }
+
+    // Fall back to exercise type-based defaults
     switch (exerciseType) {
         case 'weight_reps':
             return { column1Type: 'Reps', column2Type: 'kg' };
         case 'reps':
-            return { column1Type: 'Reps', column2Type: 'kg' };
+            return { column1Type: 'Reps', column2Type: 'Optional' };
         case 'distance_duration':
             return { column1Type: 'km', column2Type: 'minutes' };
         default:
@@ -265,6 +278,79 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
         };
     }
 
+    if (sectionType === 'tabata' || sectionType === 'hiit') {
+        const exerciseGroups: CircuitExerciseGroupPayload[] = groups.map((group) => ({
+            isSuperset: group.length > 1,
+            exercises: group.map((ex) => {
+                const firstSet = ex.sets[0] || { id: '1', setNumber: 1, column1: '', column2: '', type: 'R' as const };
+                return {
+                    id: ex.id, // Instance ID
+                    prescribedExerciseId: ex.exerciseId,
+                    performedExerciseId: null,
+                    alternatives: ex.alternatives.map((alt) => alt.id),
+                    notes: ex.notes || null,
+                    supersetId: ex.supersetGroupId || null,
+                    eachSide: ex.eachSide || false,
+                    tempo: ex.tempo || null,
+                    column1Label: ex.column1Type,
+                    column2Label: ex.column2Type,
+                    set: mapBuilderSetToPayload(firstSet, 0, ex.column1Type, ex.column2Type, ex.setRestSec),
+                };
+            }),
+        }));
+
+        // Default values for tabata/hiit if not specified
+        const defaults = sectionType === 'tabata'
+            ? { workSec: 20, restSec: 10, rounds: 8 }
+            : { workSec: 40, restSec: 20, rounds: 10 };
+
+        return {
+            id: section.id,
+            name: section.name,
+            type: sectionType,
+            workSec: parseNumber(section.workSec) || defaults.workSec,
+            restSec: parseNumber(section.restSec) ?? defaults.restSec,
+            rounds: parseNumber(section.rounds) || defaults.rounds,
+            actualRounds: null,
+            totalDurationSec: null,
+            exercises: exerciseGroups,
+            notes: section.notes || null,
+        };
+    }
+
+    if (sectionType === 'emom') {
+        const exerciseGroups: CircuitExerciseGroupPayload[] = groups.map((group) => ({
+            isSuperset: group.length > 1,
+            exercises: group.map((ex) => {
+                const firstSet = ex.sets[0] || { id: '1', setNumber: 1, column1: '', column2: '', type: 'R' as const };
+                return {
+                    id: ex.id, // Instance ID
+                    prescribedExerciseId: ex.exerciseId,
+                    performedExerciseId: null,
+                    alternatives: ex.alternatives.map((alt) => alt.id),
+                    notes: ex.notes || null,
+                    supersetId: ex.supersetGroupId || null,
+                    eachSide: ex.eachSide || false,
+                    tempo: ex.tempo || null,
+                    column1Label: ex.column1Type,
+                    column2Label: ex.column2Type,
+                    set: mapBuilderSetToPayload(firstSet, 0, ex.column1Type, ex.column2Type, ex.setRestSec),
+                };
+            }),
+        }));
+
+        return {
+            id: section.id,
+            name: section.name,
+            type: 'emom',
+            intervalSec: parseNumber(section.intervalSec) || 60,
+            durationMin: parseNumber(section.durationMin) || 10,
+            actualDurationSec: null,
+            exercises: exerciseGroups,
+            notes: section.notes || null,
+        };
+    }
+
     if (sectionType === 'circuits') {
         const exerciseGroups: CircuitExerciseGroupPayload[] = groups.map((group) => ({
             isSuperset: group.length > 1,
@@ -290,9 +376,8 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
             id: section.id,
             name: section.name,
             type: 'circuits',
-            targetRounds: parseNumber(section.rounds) || 0,
+            rounds: parseNumber(section.rounds) || 3,
             actualRounds: null,
-            totalDurationSec: null,
             exercises: exerciseGroups,
             notes: section.notes || null,
         };

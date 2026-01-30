@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View, InteractionManager, Platform, Pressable } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View, InteractionManager, Platform, Pressable, ViewStyle } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
@@ -656,7 +656,7 @@ export default function SelectDateModal() {
     const minDate = new Date(START_YEAR, 0, 1);
 
     return (
-      <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
+      <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerSideLeft} />
           <View style={styles.titleContainer}>
@@ -703,8 +703,14 @@ export default function SelectDateModal() {
   }
 
   // Default calendar mode
+  const containerStyle: ViewStyle[] = [
+    styles.container,
+    { paddingBottom: 200 },
+    Platform.OS === 'android' && { backgroundColor: themeColors.backgroundSecondary },
+  ].filter(Boolean) as ViewStyle[];
+
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary, paddingBottom: 200 }]}>
+    <View style={containerStyle}>
       <View style={styles.header}>
         <View style={styles.headerSideLeft}>
           {showTodayButton && (

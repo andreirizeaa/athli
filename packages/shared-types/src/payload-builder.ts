@@ -305,13 +305,18 @@ export const buildCircuitExercisePayload = (
 export interface GenericSectionData {
   id: string;
   name: string;
-  type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
+  type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary';
   exercises: GenericExerciseData[][];  // Already grouped by superset
   notes?: string | null;
   // For AMRAP
   durationSec?: number;
-  // For Timed/Circuits
-  targetRounds?: number;
+  // For Tabata/HIIT
+  workSec?: number;
+  restSec?: number;
+  rounds?: number;
+  // For EMOM
+  intervalSec?: number;
+  durationMin?: number;
   // For Auxiliary
   category?: 'warmup' | 'cooldown' | 'mobility';
 }
@@ -357,25 +362,7 @@ export const buildSectionPayload = (
     };
   }
 
-  if (section.type === 'timed') {
-    const flatExercises = section.exercises.flat();
-    const exercises: RoundExercisePayload[] = flatExercises.map((ex) =>
-      buildRoundExercisePayload(ex, parserType)
-    );
-
-    return {
-      id: section.id,
-      name: section.name,
-      type: 'timed',
-      targetRounds: section.targetRounds || 0,
-      actualRounds: null,
-      totalDurationSec: null,
-      exercises,
-      notes: section.notes || null,
-    };
-  }
-
-  if (section.type === 'circuits') {
+  if (section.type === 'tabata') {
     const exercises: CircuitExerciseGroupPayload[] = section.exercises.map((group) => ({
       isSuperset: group.length > 1,
       exercises: group.map((ex) => buildCircuitExercisePayload(ex, parserType)),
@@ -384,10 +371,50 @@ export const buildSectionPayload = (
     return {
       id: section.id,
       name: section.name,
-      type: 'circuits',
-      targetRounds: section.targetRounds || 0,
+      type: 'tabata',
+      workSec: section.workSec || 20,
+      restSec: section.restSec || 10,
+      rounds: section.rounds || 8,
       actualRounds: null,
       totalDurationSec: null,
+      exercises,
+      notes: section.notes || null,
+    };
+  }
+
+  if (section.type === 'hiit') {
+    const exercises: CircuitExerciseGroupPayload[] = section.exercises.map((group) => ({
+      isSuperset: group.length > 1,
+      exercises: group.map((ex) => buildCircuitExercisePayload(ex, parserType)),
+    }));
+
+    return {
+      id: section.id,
+      name: section.name,
+      type: 'hiit',
+      workSec: section.workSec || 40,
+      restSec: section.restSec || 20,
+      rounds: section.rounds || 10,
+      actualRounds: null,
+      totalDurationSec: null,
+      exercises,
+      notes: section.notes || null,
+    };
+  }
+
+  if (section.type === 'emom') {
+    const exercises: CircuitExerciseGroupPayload[] = section.exercises.map((group) => ({
+      isSuperset: group.length > 1,
+      exercises: group.map((ex) => buildCircuitExercisePayload(ex, parserType)),
+    }));
+
+    return {
+      id: section.id,
+      name: section.name,
+      type: 'emom',
+      intervalSec: section.intervalSec || 60,
+      durationMin: section.durationMin || 10,
+      actualDurationSec: null,
       exercises,
       notes: section.notes || null,
     };
@@ -475,11 +502,11 @@ export const buildWorkoutPayload = (
         section.exercises.forEach((group) => {
           totalExercises += group.exercises.length;
         });
-      } else if (section.type === 'circuits') {
+      } else if (section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom') {
         section.exercises.forEach((group) => {
           totalExercises += group.exercises.length;
         });
-      } else if (section.type === 'amrap' || section.type === 'timed') {
+      } else if (section.type === 'amrap') {
         totalExercises += section.exercises.length;
       }
     }

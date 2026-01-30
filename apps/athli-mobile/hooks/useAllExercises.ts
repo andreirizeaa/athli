@@ -280,6 +280,9 @@ export function usePrefetchAllExercises(options?: { enabled?: boolean }) {
  * Hook that provides a function to lookup exercises by ID from the cached data.
  * Use this when you need to resolve exercise IDs to full Exercise objects.
  *
+ * Note: This hook accesses the FULL exercise cache directly (not paginated)
+ * to ensure all exercises can be looked up by ID.
+ *
  * Usage:
  * ```tsx
  * const { findExerciseById, findExercisesByIds, allExercises } = useExerciseLookup();
@@ -288,10 +291,23 @@ export function usePrefetchAllExercises(options?: { enabled?: boolean }) {
  * ```
  */
 export function useExerciseLookup() {
-  const { exercises: allExercises, isLoading } = useAllExercises('');
+  // Access the full exercise cache directly (not paginated)
+  const {
+    data: allExercises,
+    isLoading,
+  } = useQuery({
+    queryKey: ['all-exercises'],
+    queryFn: async () => {
+      const result = await getAllExercises();
+      return result.exercises.map(transformMuscleWikiExercise);
+    },
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 60 * 60 * 1000, // 1 hour
+  });
 
   // Create a memoized Map for O(1) lookups
   const exerciseMap = useMemo(() => {
+    if (!allExercises) return new Map<string, Exercise>();
     return new Map(allExercises.map((e) => [e.exerciseId, e]));
   }, [allExercises]);
 
@@ -316,7 +332,7 @@ export function useExerciseLookup() {
   return {
     findExerciseById,
     findExercisesByIds,
-    allExercises,
+    allExercises: allExercises || [],
     isLoading,
     exerciseMap,
   };

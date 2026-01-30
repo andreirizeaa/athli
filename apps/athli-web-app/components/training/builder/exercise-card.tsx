@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { OPTIONAL_COLUMN_OPTIONS, HEART_RATE_ZONE_OPTIONS, COLUMN_OPTIONS } from '@athli/shared-types';
+import { OPTIONAL_COLUMN_OPTIONS, HEART_RATE_ZONE_OPTIONS, COLUMN_OPTIONS, getDefaultColumnsForCategory } from '@athli/shared-types';
 import {
   Select,
   SelectContent,
@@ -266,6 +266,7 @@ const SelectCell = ({
   return (
     <Select value={value} onValueChange={onChange} open={isOpen} onOpenChange={setIsOpen} disabled={disabled}>
       <SelectTrigger
+        clearable={false}
         className={cn(
           "h-full w-full border-0 shadow-none text-sm focus:ring-0 px-2 bg-transparent text-center transition-all",
           !disabled && "hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent",
@@ -530,7 +531,7 @@ type ExerciseCardProps = {
   canMoveDown?: boolean;
   isLinkedToPrev?: boolean;
   isLinkedToNext?: boolean;
-  sectionType?: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
+  sectionType?: 'regular' | 'amrap' | 'timed' | 'tabata' | 'hiit' | 'emom' | 'auxiliary';
   validationErrors?: Record<number, SetFieldValidation>;
   onClearValidationField?: (setIndex: number, field: keyof SetFieldValidation) => void;
   hasSupersetError?: boolean;
@@ -566,7 +567,7 @@ export const ExerciseCard = ({
   );
   const containerRef = useRef<HTMLDivElement>(null);
   const isEmpty = !exercise.name || exercise.name === '';
-  const isSingleSetOnly = sectionType === 'amrap' || sectionType === 'timed' || sectionType === 'circuits';
+  const isSingleSetOnly = sectionType === 'amrap' || sectionType === 'timed' || sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'emom';
   const [sets, setSets] = useState<SetData[]>(() => {
     // If parent already has sets (e.g. from restored state), use them.
     if (exercise.sets && exercise.sets.length > 0) {
@@ -584,14 +585,12 @@ export const ExerciseCard = ({
       return [
         { setNumber: 1, type: 'normal', reps: '', weight: '', rest: '90', distance: '', duration: '', other: '' },
         { setNumber: 2, type: 'normal', reps: '', weight: '', rest: '90', distance: '', duration: '', other: '' },
-        { setNumber: 3, type: 'normal', reps: '', weight: '', rest: '90', distance: '', duration: '', other: '' },
       ];
     }
 
     return [
-      { setNumber: 1, type: 'normal', reps: '12', weight: '', rest: '90' },
-      { setNumber: 2, type: 'normal', reps: '12', weight: '', rest: '90' },
-      { setNumber: 3, type: 'normal', reps: '12', weight: '', rest: '90' },
+      { setNumber: 1, type: 'normal', reps: '', weight: '', rest: '90' },
+      { setNumber: 2, type: 'normal', reps: '', weight: '', rest: '90' },
     ];
   });
   const [alternativeSearchQuery, setAlternativeSearchQuery] = useState('');
@@ -623,11 +622,19 @@ export const ExerciseCard = ({
   }, [isAlternativesVisible, exercise.exerciseId, exercise.alternatives]);
 
   // Initialize column labels based on exercise type (with default units)
-  const getDefaultColumnLabels = (exerciseType: string) => {
+  // Get default column labels based on category first, then exercise type as fallback
+  const getDefaultColumnLabels = (exerciseType: string, category?: string) => {
+    // First try category-based defaults
+    if (category) {
+      const categoryDefaults = getDefaultColumnsForCategory(category);
+      return { column1: categoryDefaults.column1, column2: categoryDefaults.column2 };
+    }
+
+    // Fall back to exercise type-based defaults
     if (exerciseType === 'weight_reps') {
       return { column1: 'Reps', column2: 'kg' };
     } else if (exerciseType === 'reps') {
-      return { column1: 'Reps', column2: 'kg' };
+      return { column1: 'Reps', column2: 'Optional' };
     } else if (exerciseType === 'distance_duration') {
       return { column1: 'km', column2: 'minutes' };
     }
@@ -636,15 +643,14 @@ export const ExerciseCard = ({
 
   const [column1Label, setColumn1Label] = useState<string>(() => {
     const stored = (exercise as any).column1Label;
-    return stored || getDefaultColumnLabels(exercise.exerciseType).column1;
+    return stored || getDefaultColumnLabels(exercise.exerciseType, exercise.category).column1;
   });
 
   const [column2Label, setColumn2Label] = useState<string>(() => {
     const stored = (exercise as any).column2Label;
-    return stored || getDefaultColumnLabels(exercise.exerciseType).column2;
+    return stored || getDefaultColumnLabels(exercise.exerciseType, exercise.category).column2;
   });
 
-  const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null);
 
 
   // Get all exercises from cache (for ID lookups)
@@ -762,22 +768,11 @@ export const ExerciseCard = ({
             duration: '',
             other: '',
           },
-          {
-            setNumber: 3,
-            type: 'normal',
-            reps: '',
-            weight: '',
-            rest: '90',
-            distance: '',
-            duration: '',
-            other: '',
-          },
         ];
       } else {
         nextSets = [
-          { setNumber: 1, type: 'normal', reps: '12', weight: '', rest: '90' },
-          { setNumber: 2, type: 'normal', reps: '12', weight: '', rest: '90' },
-          { setNumber: 3, type: 'normal', reps: '12', weight: '', rest: '90' },
+          { setNumber: 1, type: 'normal', reps: '', weight: '', rest: '90' },
+          { setNumber: 2, type: 'normal', reps: '', weight: '', rest: '90' },
         ];
       }
     }
@@ -786,8 +781,8 @@ export const ExerciseCard = ({
     // Clear alternatives when main exercise changes
     setAlternatives([]);
 
-    // Reset column labels based on new exercise type
-    const defaultLabels = getDefaultColumnLabels(selectedExercise.exerciseType);
+    // Reset column labels based on category (or exercise type as fallback)
+    const defaultLabels = getDefaultColumnLabels(selectedExercise.exerciseType, selectedExercise.category);
     setColumn1Label(defaultLabels.column1);
     setColumn2Label(defaultLabels.column2);
 
@@ -950,7 +945,7 @@ export const ExerciseCard = ({
     if (columnLabel === 'kg' || columnLabel === 'lbs') return 'weight';
     if (columnLabel === 'km' || columnLabel === 'm' || columnLabel === 'yards' || columnLabel === 'miles' || columnLabel === 'feet') return 'distance';
     if (columnLabel === 'minutes' || columnLabel === 'seconds') return 'duration';
-    if (columnLabel === 'None') return null;
+    if (columnLabel === 'None' || columnLabel === 'Optional') return null;
     // For optional columns (Tempo, RIR, RPE, etc.)
     return 'optional';
   };
@@ -1131,10 +1126,19 @@ export const ExerciseCard = ({
 
   // Helper to render a column cell based on column label
   const renderColumnCell = (set: SetData, setIndex: number, columnLabel: string) => {
+    // Handle "Optional" column - greyed out and disabled
+    if (columnLabel === 'Optional') {
+      return (
+        <TableCell className="py-0 px-0 text-center bg-muted">
+          <div className="w-full h-10" />
+        </TableCell>
+      );
+    }
+
     // Handle "None" column
     if (columnLabel === 'None') {
       return (
-        <TableCell className="py-0 px-0 text-center" key={`${setIndex}-none`}>
+        <TableCell className="py-0 px-0 text-center">
           <div className="w-full h-10 flex items-center justify-center text-sm text-muted-foreground">-</div>
         </TableCell>
       );
@@ -1149,7 +1153,7 @@ export const ExerciseCard = ({
         (fieldName === 'weight' && validationErrors?.[setIndex]?.weight);
 
       return (
-        <TableCell className="py-0 px-0 text-center" key={`${setIndex}-${columnLabel}-dropset`}>
+        <TableCell className="py-0 px-0 text-center">
           <EditableCell
             value={value}
             onChange={(newValue) => updateFieldValue(setIndex, columnLabel, newValue)}
@@ -1162,7 +1166,7 @@ export const ExerciseCard = ({
     // Handle failure type
     if (set.type === 'failure' && columnLabel === 'Reps') {
       return (
-        <TableCell className="py-0 px-0 text-center" key={`${setIndex}-failure`}>
+        <TableCell className="py-0 px-0 text-center">
           <div className="w-full h-10 flex items-center justify-center text-xs text-muted-foreground">
             To failure
           </div>
@@ -1182,7 +1186,7 @@ export const ExerciseCard = ({
     // Render based on column type
     if (columnLabel === 'Heart Rate Zone') {
       return (
-        <TableCell className="py-0 px-0 text-center" key={`${setIndex}-${columnLabel}`}>
+        <TableCell className="py-0 px-0 text-center">
           <SelectCell
             value={value}
             onChange={(newValue) => updateFieldValue(setIndex, columnLabel, newValue)}
@@ -1198,7 +1202,7 @@ export const ExerciseCard = ({
     // Use OptionalCell for optional columns (Tempo, RIR, RPE, etc.)
     if (OPTIONAL_COLUMN_OPTIONS.some(opt => opt.value === columnLabel)) {
       return (
-        <TableCell className="py-0 px-0 text-center" key={`${setIndex}-${columnLabel}`}>
+        <TableCell className="py-0 px-0 text-center">
           <OptionalCell
             columnType={columnLabel}
             value={value}
@@ -1211,7 +1215,7 @@ export const ExerciseCard = ({
 
     // Default: EditableCell for Reps, Weight, Distance, Duration
     return (
-      <TableCell className="py-0 px-0 text-center" key={`${setIndex}-${columnLabel}`}>
+      <TableCell className="py-0 px-0 text-center">
         <EditableCell
           value={value}
           onChange={(newValue) => updateFieldValue(setIndex, columnLabel, newValue)}
@@ -1241,24 +1245,33 @@ export const ExerciseCard = ({
       }
     };
 
-    setSets((prev) => {
-      const newSet = createNewSet();
-      let updatedSets: SetData[];
+    const newSet = createNewSet();
+    let updatedSets: SetData[];
 
-      if (insertAfterIndex !== undefined && insertAfterIndex >= 0 && insertAfterIndex < prev.length) {
-        // Insert after the specified index
-        updatedSets = [
-          ...prev.slice(0, insertAfterIndex + 1),
-          newSet,
-          ...prev.slice(insertAfterIndex + 1)
-        ];
-      } else {
-        // Add at the end (default behavior)
-        updatedSets = [...prev, newSet];
-      }
+    if (insertAfterIndex !== undefined && insertAfterIndex >= 0 && insertAfterIndex < sets.length) {
+      // Insert after the specified index
+      updatedSets = [
+        ...sets.slice(0, insertAfterIndex + 1),
+        newSet,
+        ...sets.slice(insertAfterIndex + 1)
+      ];
+    } else {
+      // Add at the end (default behavior)
+      updatedSets = [...sets, newSet];
+    }
 
-      // Renumber all sets
-      return updatedSets.map((set, idx) => ({ ...set, setNumber: idx + 1 }));
+    // Renumber all sets
+    updatedSets = updatedSets.map((set, idx) => ({ ...set, setNumber: idx + 1 }));
+
+    setSets(updatedSets);
+
+    // Notify parent about the change so superset sync can be triggered
+    onExerciseChange({
+      ...exercise,
+      sets: updatedSets,
+      alternatives: exercise.alternatives || [],
+      column1Label,
+      column2Label,
     });
   };
 
@@ -1447,8 +1460,9 @@ export const ExerciseCard = ({
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={onDelete}
+              className="text-destructive focus:text-destructive focus:bg-destructive/10"
             >
-              <Trash2 className="size-4 mr-2" />
+              <Trash2 className="size-4 mr-2 text-destructive" />
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -1466,7 +1480,7 @@ export const ExerciseCard = ({
               notes: e.target.value,
             });
           }}
-          className="w-full pr-8"
+          className="w-full pr-8 border-0 shadow-none"
         />
         {exercise.notes && (
           <button
@@ -1523,14 +1537,14 @@ export const ExerciseCard = ({
         (exercise.exerciseType === 'weight_reps' ||
           exercise.exerciseType === 'reps' ||
           exercise.exerciseType === 'distance_duration') && (
-          <div className="w-full relative group/table">
+          <div className="w-full">
             <div className="w-full border rounded-md overflow-hidden">
               <Table className="text-[11px] leading-tight w-full" style={{ tableLayout: 'fixed' }}>
                 <TableHeader className="bg-transparent">
-                  <TableRow className="h-8">
-                    <TableHead className="text-center h-8 py-1 px-2 w-[70px] text-xs font-medium pl-1">Type</TableHead>
+                  <TableRow className="h-10 hover:bg-transparent">
+                    <TableHead className="text-left h-10 py-0 px-2 w-[60px] text-sm text-muted-foreground font-normal">Type</TableHead>
                     {/* Column 1 with dropdown */}
-                    <TableHead className="text-center h-8 py-1 px-2 w-[120px]">
+                    <TableHead className="text-center h-10 py-0 px-2 hover:bg-muted transition-colors">
                       <div className="flex items-center justify-center gap-0.5">
                         <Select
                           value={column1Label}
@@ -1548,8 +1562,8 @@ export const ExerciseCard = ({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <SelectTrigger
-                                  className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                                  style={{ minHeight: '24px', height: '24px' }}
+                                  className="h-10 min-h-0 py-0 w-full text-sm text-muted-foreground font-normal border-0 shadow-none hover:bg-muted/50 bg-transparent"
+                                  clearable={false}
                                 >
                                   <SelectValue />
                                 </SelectTrigger>
@@ -1566,8 +1580,7 @@ export const ExerciseCard = ({
                             </Tooltip>
                           ) : (
                             <SelectTrigger
-                              className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                              style={{ minHeight: '24px', height: '24px' }}
+                              className="h-10 min-h-0 py-0 w-full text-sm text-muted-foreground font-normal border-0 shadow-none hover:bg-muted/50 bg-transparent"
                             >
                               <SelectValue />
                             </SelectTrigger>
@@ -1578,29 +1591,10 @@ export const ExerciseCard = ({
                             ))}
                           </SelectContent>
                         </Select>
-                        {column1Label !== 'None' && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              clearColumnValues(column1Label);
-                              const defaultLabels = getDefaultColumnLabels(exercise.exerciseType);
-                              setColumn1Label(defaultLabels.column1);
-                              onExerciseChange({
-                                ...exercise,
-                                column1Label: defaultLabels.column1,
-                                alternatives: exercise.alternatives || [],
-                              });
-                            }}
-                            className="p-0.5 hover:bg-muted rounded"
-                            aria-label="Reset column"
-                          >
-                            <X className="size-3 text-muted-foreground hover:text-foreground" />
-                          </button>
-                        )}
                       </div>
                     </TableHead>
                     {/* Column 2 with dropdown */}
-                    <TableHead className="text-center h-8 py-1 px-2 w-[120px]">
+                    <TableHead className="text-center h-10 py-0 px-2 hover:bg-muted transition-colors">
                       <div className="flex items-center justify-center gap-0.5">
                         <Select
                           value={column2Label}
@@ -1618,8 +1612,8 @@ export const ExerciseCard = ({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <SelectTrigger
-                                  className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                                  style={{ minHeight: '24px', height: '24px' }}
+                                  className="h-10 min-h-0 py-0 w-full text-sm text-muted-foreground font-normal border-0 shadow-none hover:bg-muted/50 bg-transparent"
+                                  clearable={false}
                                 >
                                   <SelectValue />
                                 </SelectTrigger>
@@ -1636,8 +1630,7 @@ export const ExerciseCard = ({
                             </Tooltip>
                           ) : (
                             <SelectTrigger
-                              className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                              style={{ minHeight: '24px', height: '24px' }}
+                              className="h-10 min-h-0 py-0 w-full text-sm text-muted-foreground font-normal border-0 shadow-none hover:bg-muted/50 bg-transparent"
                             >
                               <SelectValue />
                             </SelectTrigger>
@@ -1648,28 +1641,9 @@ export const ExerciseCard = ({
                             ))}
                           </SelectContent>
                         </Select>
-                        {column2Label !== 'None' && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              clearColumnValues(column2Label);
-                              const defaultLabels = getDefaultColumnLabels(exercise.exerciseType);
-                              setColumn2Label(defaultLabels.column2);
-                              onExerciseChange({
-                                ...exercise,
-                                column2Label: defaultLabels.column2,
-                                alternatives: exercise.alternatives || [],
-                              });
-                            }}
-                            className="p-0.5 hover:bg-muted rounded"
-                            aria-label="Reset column"
-                          >
-                            <X className="size-3 text-muted-foreground hover:text-foreground" />
-                          </button>
-                        )}
                       </div>
                     </TableHead>
-                    <TableHead className="text-center h-8 py-1 px-2 w-[70px] text-xs font-medium">Rest</TableHead>
+                    <TableHead className="w-[40px] h-10 py-0 px-1" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1677,10 +1651,8 @@ export const ExerciseCard = ({
                     <TableRow
                       key={index}
                       className="h-10 bg-background"
-                      onMouseEnter={() => setHoveredRowIndex(index)}
-                      onMouseLeave={() => setHoveredRowIndex(null)}
                     >
-                      <TableCell className="py-0 px-0 w-[70px] pl-2">
+                      <TableCell className="py-0 px-0 w-[60px] pl-2">
                         <SelectCell
                           value={set.type}
                           onChange={(value) => handleSetChange(index, 'type', value as SetData['type'])}
@@ -1691,11 +1663,10 @@ export const ExerciseCard = ({
                             ...(exercise.exerciseType === 'weight_reps' ? [{ value: 'dropset', label: 'Dropset' }] : []),
                           ]}
                           displayValue={
-                            `${index + 1}${set.type === 'warmUp' ? 'W' :
+                            set.type === 'warmUp' ? 'W' :
                               set.type === 'normal' ? 'R' :
                                 set.type === 'failure' ? 'F' :
                                   set.type === 'dropset' ? 'D' : ''
-                            }`
                           }
                         />
                       </TableCell>
@@ -1703,76 +1674,87 @@ export const ExerciseCard = ({
                       {renderColumnCell(set, index, column1Label)}
                       {/* Column 2 */}
                       {renderColumnCell(set, index, column2Label)}
-                      {/* Rest */}
-                      <TableCell className="py-0 px-2 text-center w-[70px]">
-                        <EditableCell
-                          value={set.rest}
-                          onChange={(value) => handleSetChange(index, 'rest', value)}
-                          placeholder="-"
-                          hasError={validationErrors?.[index]?.rest}
-                        />
+                      {/* Trash icon */}
+                      <TableCell className="py-0 px-1 w-[40px]">
+                        {sets.length > 1 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const filtered = sets.filter((_, i) => i !== index);
+                                  const updatedSets = filtered.map((s, idx) => ({ ...s, setNumber: idx + 1 }));
+                                  setSets(updatedSets);
+
+                                  // Notify parent about the change so superset sync can be triggered
+                                  onExerciseChange({
+                                    ...exercise,
+                                    sets: updatedSets,
+                                    alternatives: exercise.alternatives || [],
+                                    column1Label,
+                                    column2Label,
+                                  });
+                                }}
+                                className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-destructive transition-colors"
+                                aria-label={`Remove set ${index + 1}`}
+                              >
+                                <Trash2 className="size-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
+                              <p>Delete set</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
-            {/* Delete buttons overlay - only show when more than 1 set */}
-            {sets.length > 1 && (
-              <div className="absolute right-0 top-0 h-full flex flex-col pointer-events-none" style={{ transform: 'translateX(50%)' }}>
-                {/* Header spacer */}
-                <div className="h-8 flex-shrink-0" />
-                {/* Delete buttons for each row - visible only when row is hovered */}
-                {sets.map((_, index) => (
-                  <div
-                    key={index}
-                    className="h-10 flex items-center justify-center flex-shrink-0"
-                    style={{ pointerEvents: hoveredRowIndex === index ? 'auto' : 'none' }}
-                  >
-                    <button
-                      type="button"
-                      onMouseEnter={() => setHoveredRowIndex(index)}
-                      onClick={() => {
-                        setSets((prev) => {
-                          const filtered = prev.filter((_, i) => i !== index);
-                          // Renumber all sets
-                          return filtered.map((set, idx) => ({ ...set, setNumber: idx + 1 }));
-                        });
-                      }}
-                      className={`h-5 w-5 rounded bg-primary flex items-center justify-center shadow-sm hover:bg-primary/90 transition-opacity ${hoveredRowIndex === index ? 'opacity-100' : 'opacity-0'
-                        }`}
-                      aria-label={`Remove set ${index + 1}`}
-                    >
-                      <Trash2 className="h-3 w-3 text-primary-foreground" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            {/* Add buttons overlay - positioned on left edge */}
+            {/* Controls below grid: Add set button (left) and Rest input (right) */}
             {!isSingleSetOnly && (
-              <div className="absolute left-0 top-0 h-full flex flex-col pointer-events-none" style={{ transform: 'translateX(-50%)' }}>
-                {/* Header spacer */}
-                <div className="h-8 flex-shrink-0" />
-                {/* Add buttons for each row - visible only when row is hovered */}
-                {sets.map((_, index) => (
-                  <div
-                    key={index}
-                    className="h-10 flex items-center justify-center flex-shrink-0"
-                    style={{ pointerEvents: hoveredRowIndex === index ? 'auto' : 'none' }}
-                  >
-                    <button
-                      type="button"
-                      onMouseEnter={() => setHoveredRowIndex(index)}
-                      onClick={() => handleAddSet(index)}
-                      className={`h-5 w-5 rounded bg-primary flex items-center justify-center shadow-sm hover:bg-primary/90 transition-opacity ${hoveredRowIndex === index ? 'opacity-100' : 'opacity-0'
-                        }`}
-                      aria-label={`Add set after set ${index + 1}`}
+              <div className="flex items-center justify-between mt-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleAddSet()}
+                      className="h-8 w-8"
+                      aria-label="Add set"
                     >
-                      <Plus className="h-3 w-3 text-primary-foreground" />
-                    </button>
-                  </div>
-                ))}
+                      <Plus className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Add set</p>
+                  </TooltipContent>
+                </Tooltip>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground">Rest (s)</Label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="90"
+                    value={sets[0]?.rest || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || /^[\d]*$/.test(value)) {
+                        const updated = sets.map(s => ({ ...s, rest: value }));
+                        setSets(updated);
+                        onExerciseChange({
+                          ...exercise,
+                          sets: updated,
+                          alternatives: exercise.alternatives || [],
+                          column1Label,
+                          column2Label,
+                        });
+                      }
+                    }}
+                    className="w-16 h-8 text-center text-sm"
+                  />
+                </div>
               </div>
             )}
           </div>

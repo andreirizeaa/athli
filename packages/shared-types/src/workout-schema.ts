@@ -99,7 +99,7 @@ export type RegularExercisePayload = ExerciseIdPair & {
 // Section Types
 // ============================================================================
 
-export type SectionType = 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
+export type SectionType = 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary';
 export type AuxiliaryCategory = 'warmup' | 'cooldown' | 'mobility';
 
 export type ExerciseGroupPayload = {
@@ -126,19 +126,8 @@ export type AmrapSectionPayload = {
   notes: string | null;
 };
 
-export type TimedSectionPayload = {
-  id: string;
-  name: string;
-  type: 'timed';
-  targetRounds: number;
-  actualRounds: number | null;
-  totalDurationSec: number | null;
-  exercises: RoundExercisePayload[];
-  notes: string | null;
-};
-
 /**
- * Circuits: exactly one set per exercise
+ * Interval-based sections: exactly one set per exercise
  */
 export type CircuitExercisePayload = Omit<RegularExercisePayload, 'sets'> & {
   set: SetPayload;
@@ -149,13 +138,49 @@ export type CircuitExerciseGroupPayload = {
   exercises: CircuitExercisePayload[];
 };
 
+export type TabataSectionPayload = {
+  id: string;
+  name: string;
+  type: 'tabata';
+  workSec: number;
+  restSec: number;
+  rounds: number;
+  actualRounds: number | null;
+  totalDurationSec: number | null;
+  exercises: CircuitExerciseGroupPayload[];
+  notes: string | null;
+};
+
+export type HiitSectionPayload = {
+  id: string;
+  name: string;
+  type: 'hiit';
+  workSec: number;
+  restSec: number;
+  rounds: number;
+  actualRounds: number | null;
+  totalDurationSec: number | null;
+  exercises: CircuitExerciseGroupPayload[];
+  notes: string | null;
+};
+
+export type EmomSectionPayload = {
+  id: string;
+  name: string;
+  type: 'emom';
+  intervalSec: number;
+  durationMin: number;
+  actualDurationSec: number | null;
+  exercises: CircuitExerciseGroupPayload[];
+  notes: string | null;
+};
+
 export type CircuitsSectionPayload = {
   id: string;
   name: string;
   type: 'circuits';
-  targetRounds: number;
+  rounds: number;
   actualRounds: number | null;
-  totalDurationSec: number | null;
   exercises: CircuitExerciseGroupPayload[];
   notes: string | null;
 };
@@ -172,7 +197,9 @@ export type AuxiliarySectionPayload = {
 export type WorkoutSectionPayload =
   | RegularSectionPayload
   | AmrapSectionPayload
-  | TimedSectionPayload
+  | TabataSectionPayload
+  | HiitSectionPayload
+  | EmomSectionPayload
   | CircuitsSectionPayload
   | AuxiliarySectionPayload;
 

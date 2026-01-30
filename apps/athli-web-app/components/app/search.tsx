@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Archive, CommandIcon, Search, FileText, BarChart, Activity, Dumbbell, Calendar, Layout } from 'lucide-react';
+import { Archive, CommandIcon, Search, FileText, BarChart, Activity, Dumbbell, Calendar, Layout, Layers, CheckSquare, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -29,6 +29,10 @@ export function SearchComponent() {
     workouts: [],
     programs: [],
     exercises: [],
+    sections: [],
+    todosYourList: [],
+    todosAthliAssistant: [],
+    conversations: [],
   });
   const [isLoading, setIsLoading] = React.useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
@@ -57,6 +61,10 @@ export function SearchComponent() {
           workouts: [],
           programs: [],
           exercises: [],
+          sections: [],
+          todosYourList: [],
+          todosAthliAssistant: [],
+          conversations: [],
         });
         return;
       }
@@ -88,6 +96,10 @@ export function SearchComponent() {
         workouts: [],
         programs: [],
         exercises: [],
+        sections: [],
+        todosYourList: [],
+        todosAthliAssistant: [],
+        conversations: [],
       });
     }
   };
@@ -104,6 +116,10 @@ export function SearchComponent() {
         workouts: [],
         programs: [],
         exercises: [],
+        sections: [],
+        todosYourList: [],
+        todosAthliAssistant: [],
+        conversations: [],
       });
     }
   };
@@ -144,13 +160,41 @@ export function SearchComponent() {
     setSearchQuery('');
   };
 
+  const handleSectionSearchResultClick = (sectionId: string) => {
+    router.push(`/training/sections?sectionId=${sectionId}`);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
+
+  const handleTodoYourListSearchResultClick = () => {
+    router.push(`/todo/your-list`);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
+
+  const handleTodoAthliAssistantSearchResultClick = () => {
+    router.push(`/todo/athli-assistant`);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
+
+  const handleConversationSearchResultClick = (conversationId: string) => {
+    router.push(`/inbox?conversationId=${conversationId}`);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
+
   const hasResults =
     results.workouts.length > 0 ||
     results.programs.length > 0 ||
     results.exercises.length > 0 ||
     results.files.length > 0 ||
     results.habits.length > 0 ||
-    results.metrics.length > 0;
+    results.metrics.length > 0 ||
+    results.sections.length > 0 ||
+    results.todosYourList.length > 0 ||
+    results.todosAthliAssistant.length > 0 ||
+    results.conversations.length > 0;
 
   const isSearching = isLoading || (searchQuery !== debouncedSearchQuery && searchQuery.trim().length > 0);
 
@@ -435,6 +479,170 @@ export function SearchComponent() {
                                   <div className="text-xs text-muted-foreground flex-shrink-0">
                                     {metric.unit && <span>{metric.unit}</span>}
                                   </div>
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sections */}
+                    {results.sections.length > 0 && (
+                      <div>
+                        <div className="px-3 pb-2 pt-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                            {t('sidebar.search.sections')}
+                          </p>
+                          <div className="h-px bg-border" />
+                        </div>
+                        <div className="px-3">
+                          <div className="grid gap-2 grid-cols-1 sm:grid-cols-2">
+                            {results.sections.map((section: any) => (
+                              <Card
+                                key={section.id}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => handleSectionSearchResultClick(section.id)}
+                                className="cursor-pointer hover:bg-accent transition-colors p-3 h-full flex flex-col justify-center"
+                              >
+                                <div className="flex flex-col gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted flex-shrink-0">
+                                      <Layers className="h-4 w-4 text-muted-foreground" />
+                                    </div>
+                                    <span className="text-sm font-medium truncate">
+                                      {section.name}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+                                    {section.section_type && <span>{section.section_type}</span>}
+                                    {section.section_type && section.number_of_exercises && <span>•</span>}
+                                    {section.number_of_exercises && (
+                                      <span>{section.number_of_exercises} {t('sidebar.search.exercisesCount')}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Todos - Your List */}
+                    {results.todosYourList.length > 0 && (
+                      <div>
+                        <div className="px-3 pb-2 pt-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                            {t('sidebar.search.todosYourList')}
+                          </p>
+                          <div className="h-px bg-border" />
+                        </div>
+                        <div className="px-3">
+                          <div className="grid gap-2 grid-cols-1 sm:grid-cols-2">
+                            {results.todosYourList.map((todo: any) => (
+                              <Card
+                                key={todo.id}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => handleTodoYourListSearchResultClick()}
+                                className="cursor-pointer hover:bg-accent transition-colors p-3 h-full flex flex-col justify-center"
+                              >
+                                <div className="flex flex-col gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted flex-shrink-0">
+                                      <CheckSquare className="h-4 w-4 text-muted-foreground" />
+                                    </div>
+                                    <span className="text-sm font-medium truncate">
+                                      {todo.title}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+                                    {todo.type && <span>{todo.type}</span>}
+                                    {todo.completed && <span>• Completed</span>}
+                                  </div>
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Todos - Athli Assistant */}
+                    {results.todosAthliAssistant.length > 0 && (
+                      <div>
+                        <div className="px-3 pb-2 pt-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                            {t('sidebar.search.todosAthliAssistant')}
+                          </p>
+                          <div className="h-px bg-border" />
+                        </div>
+                        <div className="px-3">
+                          <div className="grid gap-2 grid-cols-1 sm:grid-cols-2">
+                            {results.todosAthliAssistant.map((todo: any) => (
+                              <Card
+                                key={todo.id}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => handleTodoAthliAssistantSearchResultClick()}
+                                className="cursor-pointer hover:bg-accent transition-colors p-3 h-full flex flex-col justify-center"
+                              >
+                                <div className="flex flex-col gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted flex-shrink-0">
+                                      <CheckSquare className="h-4 w-4 text-muted-foreground" />
+                                    </div>
+                                    <span className="text-sm font-medium truncate">
+                                      {todo.title}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+                                    {todo.type && <span>{todo.type}</span>}
+                                    {todo.completed && <span>• Completed</span>}
+                                  </div>
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Conversations */}
+                    {results.conversations.length > 0 && (
+                      <div>
+                        <div className="px-3 pb-2 pt-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                            {t('sidebar.search.conversations')}
+                          </p>
+                          <div className="h-px bg-border" />
+                        </div>
+                        <div className="px-3">
+                          <div className="grid gap-2 grid-cols-1 sm:grid-cols-2">
+                            {results.conversations.map((conversation: any) => (
+                              <Card
+                                key={conversation.id}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => handleConversationSearchResultClick(conversation.id)}
+                                className="cursor-pointer hover:bg-accent transition-colors p-3 h-full flex flex-col justify-center"
+                              >
+                                <div className="flex flex-col gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted flex-shrink-0">
+                                      <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                                    </div>
+                                    <span className="text-sm font-medium truncate">
+                                      {conversation.client?.name || 'Unknown'}
+                                    </span>
+                                  </div>
+                                  {conversation.last_message_preview && (
+                                    <div className="text-xs text-muted-foreground px-1 truncate">
+                                      {conversation.last_message_preview}
+                                    </div>
+                                  )}
                                 </div>
                               </Card>
                             ))}

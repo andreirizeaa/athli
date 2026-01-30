@@ -139,6 +139,17 @@
 
   --animate-message-flash: message-flash 0.5s ease-out;
 
+  @keyframes border-flash {
+    0%, 22%, 44%, 66%, 88%, 100% {
+      outline-color: transparent;
+    }
+    11%, 33%, 55%, 77% {
+      outline-color: var(--primary);
+    }
+  }
+
+  --animate-border-flash: border-flash 1.5s linear 1;
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

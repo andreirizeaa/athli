@@ -295,7 +295,7 @@ export default function AddExerciseToBuilderModal() {
                         )}
                         {/* Play button overlay */}
                         <View style={styles.playOverlay}>
-                            <Play {...({ size: 12, color: "#fff", fill: "#fff" } as any)} />
+                            <Play size={10} color="#000" fill="#000" />
                         </View>
                     </View>
                 </PressableScale>
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
         width: 18,
         height: 18,
         borderRadius: 9,
-        backgroundColor: 'rgba(0,0,0,0.6)',
+        backgroundColor: 'rgba(255,255,255,0.85)',
         alignItems: 'center',
         justifyContent: 'center',
     },

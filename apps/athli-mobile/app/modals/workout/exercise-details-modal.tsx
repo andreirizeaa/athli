@@ -1,12 +1,12 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Dumbbell, BarChart3, Zap, Settings2 } from 'lucide-react-native';
+import { X, Dumbbell, BarChart3, Zap, Settings2, Play } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
-import { useVideoPlayer, VideoView } from 'expo-video';
-import { WebView } from 'react-native-webview';
+import { Image } from 'expo-image';
+import { PressableOpacity } from 'pressto';
 
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
@@ -14,32 +14,10 @@ import { typography } from '@/constants/typography';
 import { IconButton } from '@/components/ui/icon-button';
 import { Card } from '@/components/ui/card';
 import { hexToRgba } from '@/utils/colorUtils';
-import { getExerciseById, getExerciseVideos } from '@/services/musclewiki-service';
+import { getExerciseById } from '@/services/musclewiki-service';
 import { getExerciseById as getCoachExerciseById } from '@/services/coach/coach-exercise-service';
 import { useExerciseLookup, type Exercise } from '@/hooks/useAllExercises';
-
-// Extract video ID from YouTube/Vimeo URLs
-const extractVideoId = (url: string): { id: string; type: 'youtube' | 'vimeo' | null } => {
-    if (!url?.trim()) {
-        return { id: '', type: null };
-    }
-
-    // YouTube patterns
-    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-    const youtubeMatch = url.match(youtubeRegex);
-    if (youtubeMatch) {
-        return { id: youtubeMatch[1], type: 'youtube' };
-    }
-
-    // Vimeo patterns
-    const vimeoRegex = /(?:vimeo\.com\/)(?:.*\/)?(\d+)/;
-    const vimeoMatch = url.match(vimeoRegex);
-    if (vimeoMatch) {
-        return { id: vimeoMatch[1], type: 'vimeo' };
-    }
-
-    return { id: '', type: null };
-};
+import { useSingleThumbnail } from '@/hooks/useExerciseThumbnails';
 
 // Simple inline badge component
 const InfoBadge = ({
@@ -85,8 +63,6 @@ export default function ExerciseDetailsModal() {
     const { t } = useTranslations();
     const { findExerciseById } = useExerciseLookup();
 
-    const [videoUrl, setVideoUrl] = useState<string | null>(null);
-
     // Check if this is a custom exercise
     const isCustomExercise = isCustom === 'true';
 
@@ -113,46 +89,6 @@ export default function ExerciseDetailsModal() {
         enabled: isCustomExercise && !!exerciseId,
         staleTime: 5 * 60 * 1000, // 5 minutes
     });
-
-    // Get musclewiki ID for video fetch
-    const musclewikiIdForVideos = cachedExercise?.musclewikiId || musclewikiExercise?.musclewikiId || exerciseId;
-
-    // Fetch MuscleWiki video URLs
-    const { data: musclewikiVideos, isLoading: isLoadingVideos } = useQuery({
-        queryKey: ['exercise-videos', musclewikiIdForVideos],
-        queryFn: () => getExerciseVideos(musclewikiIdForVideos!),
-        enabled: !!musclewikiIdForVideos && !isCustomExercise,
-        staleTime: 30 * 60 * 1000, // 30 minutes
-    });
-
-    // Determine video URL based on source
-    useEffect(() => {
-        if (isCustomExercise && coachExercise?.video_link) {
-            setVideoUrl(coachExercise.video_link);
-        } else if (musclewikiVideos?.maleVideoFrontUrl) {
-            setVideoUrl(musclewikiVideos.maleVideoFrontUrl);
-        } else {
-            setVideoUrl(null);
-        }
-    }, [isCustomExercise, coachExercise, musclewikiVideos]);
-
-    // Detect YouTube/Vimeo for external video embedding
-    const videoInfo = videoUrl ? extractVideoId(videoUrl) : { id: '', type: null };
-    const isExternalVideo = Boolean(videoInfo.id && videoInfo.type);
-
-    // Video player for non-external videos
-    const videoSource = videoUrl && !isExternalVideo ? videoUrl : '';
-    const videoPlayer = useVideoPlayer(videoSource, (player) => {
-        player.loop = true;
-        player.muted = true; // Start muted to allow autoplay
-    });
-
-    // Auto-play video when source becomes available
-    useEffect(() => {
-        if (videoPlayer && videoSource) {
-            videoPlayer.play();
-        }
-    }, [videoPlayer, videoSource]);
 
     // Transform coach exercise to unified format for display
     const exercise: Exercise | null = useMemo(() => {
@@ -217,10 +153,29 @@ export default function ExerciseDetailsModal() {
     }, [cachedExercise, musclewikiExercise, coachExercise]);
 
     const isLoading = isLoadingMusclewiki || isLoadingCoach;
-    const hasVideo = !!videoUrl;
+
+    // Get thumbnail URL for the exercise
+    const rawThumbnailUrl = exercise?.rawThumbnailUrl || cachedExercise?.rawThumbnailUrl || musclewikiExercise?.thumbnailUrl;
+    const { thumbnailUrl, isLoading: isThumbnailLoading } = useSingleThumbnail(rawThumbnailUrl);
+
+    // Get musclewiki ID for video modal
+    const musclewikiIdForVideo = exercise?.musclewikiId || cachedExercise?.musclewikiId || musclewikiExercise?.musclewikiId || exerciseId;
 
     const handleClose = () => {
         router.back();
+    };
+
+    const handleOpenVideoModal = () => {
+        router.push({
+            pathname: '/modals/workout/exercise-video-modal',
+            params: {
+                name: name || exercise?.name || '',
+                exerciseId: exerciseId || '',
+                musclewikiId: musclewikiIdForVideo || '',
+                isCustom: isCustomExercise ? 'true' : 'false',
+                videoLink: coachExercise?.video_link || '',
+            },
+        });
     };
 
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
@@ -279,73 +234,41 @@ export default function ExerciseDetailsModal() {
                     </View>
                 ) : (
                     <>
-                        {/* Video Section */}
+                        {/* Video Thumbnail Section */}
                         <View style={styles.videoSection}>
-                            <View style={[styles.videoContainer, { backgroundColor: themeColors.surfacePrimary }]}>
-                                {isLoadingVideos ? (
+                            <PressableOpacity
+                                onPress={handleOpenVideoModal}
+                                style={[styles.videoContainer, { backgroundColor: themeColors.surfacePrimary }]}
+                            >
+                                {isThumbnailLoading ? (
                                     <View style={styles.videoPlaceholder}>
                                         <ActivityIndicator size="large" color={themeColors.primary} />
                                     </View>
-                                ) : hasVideo ? (
-                                    isExternalVideo && videoInfo.id && videoInfo.type ? (
-                                        <WebView
-                                            source={{
-                                                html: `
-                                                    <!DOCTYPE html>
-                                                    <html>
-                                                    <head>
-                                                        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-                                                        <style>
-                                                            * { margin: 0; padding: 0; }
-                                                            html, body { height: 100%; overflow: hidden; background: #000; }
-                                                            iframe {
-                                                                position: absolute;
-                                                                top: 0;
-                                                                left: 0;
-                                                                width: 100%;
-                                                                height: 100%;
-                                                                border: none;
-                                                            }
-                                                        </style>
-                                                    </head>
-                                                    <body>
-                                                        <iframe
-                                                            src="${videoInfo.type === 'youtube'
-                                                                ? `https://www.youtube.com/embed/${videoInfo.id}?autoplay=0&playsinline=1&rel=0&modestbranding=1`
-                                                                : `https://player.vimeo.com/video/${videoInfo.id}?autoplay=0`
-                                                            }"
-                                                            frameborder="0"
-                                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                                            allowfullscreen
-                                                        ></iframe>
-                                                    </body>
-                                                    </html>
-                                                `
-                                            }}
-                                            style={styles.video}
-                                            allowsFullscreenVideo
-                                            allowsInlineMediaPlayback
-                                            mediaPlaybackRequiresUserAction={false}
-                                            javaScriptEnabled
-                                            domStorageEnabled
+                                ) : thumbnailUrl ? (
+                                    <>
+                                        <Image
+                                            source={{ uri: thumbnailUrl }}
+                                            style={styles.thumbnail}
+                                            contentFit="cover"
                                         />
-                                    ) : (
-                                        <VideoView
-                                            player={videoPlayer}
-                                            style={styles.video}
-                                            allowsFullscreen
-                                            allowsPictureInPicture
-                                            nativeControls
-                                        />
-                                    )
+                                        {/* Play button overlay */}
+                                        <View style={styles.playButtonOverlay}>
+                                            <View style={styles.playButton}>
+                                                <Play size={20} color="#000" fill="#000" />
+                                            </View>
+                                        </View>
+                                    </>
                                 ) : (
                                     <View style={styles.videoPlaceholder}>
-                                        <Text style={[styles.noVideoText, { color: themeColors.mutedText }]}>
-                                            {t('library.noVideoAvailable')}
+                                        <View style={[styles.playButton, { backgroundColor: themeColors.primary }]}>
+                                            <Play size={24} color="#FFF" fill="#FFF" />
+                                        </View>
+                                        <Text style={[styles.tapToPlayText, { color: themeColors.mutedText }]}>
+                                            {t('library.tapToPlayVideo')}
                                         </Text>
                                     </View>
                                 )}
-                            </View>
+                            </PressableOpacity>
                             {/* Attribution for MuscleWiki */}
                             {!isCustomExercise && (
                                 <Text style={[styles.attribution, { color: themeColors.mutedText }]}>
@@ -539,9 +462,23 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         overflow: 'hidden',
     },
-    video: {
+    thumbnail: {
         width: '100%',
         height: '100%',
+    },
+    playButtonOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    },
+    playButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     videoPlaceholder: {
         flex: 1,
@@ -549,8 +486,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 12,
     },
-    noVideoText: {
-        ...typography.p2,
+    tapToPlayText: {
+        ...typography.p3,
     },
     attribution: {
         ...typography.p4,

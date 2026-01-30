@@ -81,7 +81,15 @@ export const deleteSections = async (sectionIds: string | string[]): Promise<voi
 /**
  * Create a new section
  */
-export const createSection = async (sectionData: WorkoutProgramPayload & { sectionType: string }): Promise<Section> => {
+export const createSection = async (sectionData: WorkoutProgramPayload & {
+  sectionType: string;
+  roundDurationSec?: number;
+  workSec?: number;
+  restSec?: number;
+  rounds?: number;
+  intervalSec?: number;
+  durationMin?: number;
+}): Promise<Section> => {
   // Calculate total exercises from items
   const totalExercises = (sectionData.items || []).reduce((total, item) => {
     if (item.itemType === 'exercise') {
@@ -92,20 +100,57 @@ export const createSection = async (sectionData: WorkoutProgramPayload & { secti
       if (section.type === 'regular' || section.type === 'auxiliary') {
         const exercises = section.exercises || [];
         return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
-      } else if (section.type === 'circuits') {
+      } else if (section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom' || section.type === 'circuits') {
         const exercises = section.exercises || [];
         return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
-      } else if (section.type === 'amrap' || section.type === 'timed') {
+      } else if (section.type === 'amrap') {
         return total + (section.exercises?.length || 0);
       }
     }
     return total;
   }, 0);
 
-  // Separate metadata from section data
-  const cleanSectionData = {
-    items: sectionData.items,
-  };
+  // Build section data structure
+  // If no items provided but we have config values, create a proper section structure
+  let cleanSectionData: Record<string, any>;
+
+  if (sectionData.items && sectionData.items.length > 0) {
+    // Use existing items
+    cleanSectionData = { items: sectionData.items };
+  } else {
+    // Create a proper section item with config embedded
+    const sectionItem: Record<string, any> = {
+      id: `sec_${sectionData.sectionType}_${Date.now()}`,
+      name: sectionData.name || '',
+      type: sectionData.sectionType,
+      exercises: [],
+      notes: null,
+    };
+
+    // Add type-specific config
+    if (sectionData.sectionType === 'amrap' && sectionData.roundDurationSec !== undefined) {
+      // Convert minutes to seconds for storage
+      sectionItem.durationSec = sectionData.roundDurationSec * 60;
+    } else if (sectionData.sectionType === 'tabata' || sectionData.sectionType === 'hiit') {
+      if (sectionData.workSec !== undefined) sectionItem.workSec = sectionData.workSec;
+      if (sectionData.restSec !== undefined) sectionItem.restSec = sectionData.restSec;
+      if (sectionData.rounds !== undefined) sectionItem.rounds = sectionData.rounds;
+    } else if (sectionData.sectionType === 'emom') {
+      if (sectionData.intervalSec !== undefined) sectionItem.intervalSec = sectionData.intervalSec;
+      if (sectionData.durationMin !== undefined) sectionItem.durationMin = sectionData.durationMin;
+    } else if (sectionData.sectionType === 'circuits') {
+      if (sectionData.rounds !== undefined) sectionItem.rounds = sectionData.rounds;
+    }
+
+    cleanSectionData = {
+      items: [
+        {
+          itemType: 'section',
+          data: sectionItem,
+        },
+      ],
+    };
+  }
 
   const response = await apiFetch<ApiResponse<{ section: any }>>('/coach/training/sections', {
     method: 'POST',
@@ -149,10 +194,10 @@ export const updateSection = async (
         if (section.type === 'regular' || section.type === 'auxiliary') {
           const exercises = section.exercises || [];
           return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
-        } else if (section.type === 'circuits') {
+        } else if (section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom' || section.type === 'circuits') {
           const exercises = section.exercises || [];
           return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
-        } else if (section.type === 'amrap' || section.type === 'timed') {
+        } else if (section.type === 'amrap') {
           return total + (section.exercises?.length || 0);
         }
       }

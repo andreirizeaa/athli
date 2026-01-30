@@ -1,8 +1,10 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { Gift, Headset, Lightbulb, PanelLeftClose, PanelLeftOpen, Sparkles } from 'lucide-react';
+import { Gift, Headset, Lightbulb, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import Lottie from 'lottie-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSidebar } from '@/components/ui/sidebar';
@@ -22,6 +24,15 @@ export function AppHeader({
 }: AppHeaderProps) {
   const t = useTranslations();
   const { state, isHovered, setOpen, setIsHovered, setJustClosed } = useSidebar();
+  const [aiAnimationData, setAiAnimationData] = useState<object | null>(null);
+
+  // Load AI sphere animation
+  useEffect(() => {
+    fetch('/animations/ai-sphere-animation.json')
+      .then(res => res.json())
+      .then(data => setAiAnimationData(data))
+      .catch(err => console.error('Failed to load AI animation:', err));
+  }, []);
 
   const isHoverExpanded = state === 'collapsed' && isHovered;
 
@@ -88,37 +99,25 @@ export function AppHeader({
           <SearchComponent />
         </div>
         <div className="flex items-center gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                asChild
-                aria-label={t('sidebar.links.referAndEarn')}
-              >
-                <Link href="/refer-and-earn">
-                  <Gift className="size-4" />
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t('sidebar.links.referAndEarn')}
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label={t('sidebar.helpAndSupport.label') || 'Help and support'}
-              >
-                <Headset className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t('sidebar.helpAndSupport.label') || 'Help and support'}
-            </TooltipContent>
-          </Tooltip>
+          <Button
+            variant="outline"
+            asChild
+            className="gap-2"
+            aria-label={t('sidebar.links.referAndEarn')}
+          >
+            <Link href="/refer-and-earn">
+              <Gift className="size-4" />
+              {t('sidebar.links.getFreeMonth')}
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            aria-label={t('sidebar.helpAndSupport.label') || 'Help and support'}
+          >
+            <Headset className="size-4" />
+            {t('general.help')}
+          </Button>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -142,7 +141,14 @@ export function AppHeader({
             asChild
           >
             <Link href="/assistant">
-              <Sparkles className="size-4" />
+              {aiAnimationData && (
+                <Lottie
+                  className="size-10 -ml-4 -mr-2"
+                  animationData={aiAnimationData}
+                  loop
+                  autoplay
+                />
+              )}
               {t('sidebar.search.aiAssistant')}
             </Link>
           </Button>

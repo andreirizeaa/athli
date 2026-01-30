@@ -29,6 +29,7 @@ export {
   PROGRAM_TYPES,
   DIFFICULTY_LEVELS,
   SECTION_TYPES,
+  SECTION_TYPE_DEFAULTS,
   EXERCISE_TYPE_OPTIONS,
   MUSCLE_GROUP_OPTIONS,
   MUSCLE_OPTIONS,
@@ -42,6 +43,9 @@ export {
   HEART_RATE_ZONE_OPTIONS,
   COLUMN_OPTIONS,
   OPTIONAL_COLUMN_OPTIONS,
+  CATEGORY_COLUMN_DEFAULTS,
+  DEFAULT_COLUMN_CONFIG,
+  getDefaultColumnsForCategory,
   EXERCISE_CATEGORY_OPTIONS,
   // MuscleWiki-specific filter options
   MUSCLEWIKI_CATEGORY_OPTIONS,
@@ -64,6 +68,7 @@ export {
   type HeartRateZone,
   type ColumnValue,
   type OptionalColumn,
+  type CategoryColumnConfig,
   type ExerciseType,
   // MuscleWiki types
   type MuscleWikiCategory,

@@ -82,6 +82,7 @@ export default function WorkoutDetailScreen() {
         clientId?: string;
         clientWorkoutDate?: string;
         coachId?: string; // Coach ID passed from training screen
+        workoutPayload?: string; // Full workout data as JSON string (avoids refetch)
     }>();
 
     // Determine if we're editing a client's workout instance vs a library workout
@@ -217,7 +218,38 @@ export default function WorkoutDetailScreen() {
                 try {
                     let workoutData: any;
 
-                    if (isClientWorkout && params.clientId && params.clientWorkoutDate && coachId) {
+                    // If workoutPayload is provided, use it directly (no API fetch needed)
+                    if (params.workoutPayload) {
+                        try {
+                            const parsedPayload = JSON.parse(params.workoutPayload);
+                            console.log('[WorkoutDetailScreen] Using provided workout payload:', {
+                                id: parsedPayload.id,
+                                name: parsedPayload.name || parsedPayload.workout,
+                                hasItems: !!parsedPayload.items,
+                                itemsCount: parsedPayload.items?.length || 0,
+                            });
+
+                            // Items are at top level in the payload
+                            const workoutItems = parsedPayload.items || [];
+
+                            workoutData = {
+                                id: parsedPayload.id || params.id,
+                                name: parsedPayload.name || parsedPayload.workout || params.name,
+                                description: parsedPayload.description || params.description,
+                                type: parsedPayload.type || params.type,
+                                difficulty: parsedPayload.difficulty || params.difficulty,
+                                workout_data: {
+                                    items: workoutItems,
+                                },
+                            };
+                        } catch (parseError) {
+                            console.error('[WorkoutDetailScreen] Failed to parse workout payload:', parseError);
+                            // Fall through to fetch from API
+                        }
+                    }
+
+                    // If no payload or parsing failed, fetch from API
+                    if (!workoutData && isClientWorkout && params.clientId && params.clientWorkoutDate && coachId) {
                         // For client workouts, fetch from client training table (not library)
                         console.log('[WorkoutDetailScreen] Fetching client workout instance:', {
                             clientId: params.clientId,
@@ -240,21 +272,21 @@ export default function WorkoutDetailScreen() {
                             itemsLength: clientWorkout?.items?.length || 0,
                             nestedItemsLength: clientWorkout?.workout_data?.items?.length || 0,
                         });
-                        
+
                         // Items can be at top level OR nested under workout_data
                         // Handle both API response formats
-                        const workoutItems = clientWorkout?.items || 
-                            clientWorkout?.workout_data?.items || 
+                        const workoutItems = clientWorkout?.items ||
+                            clientWorkout?.workout_data?.items ||
                             [];
-                        
+
                         console.log('[WorkoutDetailScreen] Resolved workout items:', {
                             count: workoutItems.length,
-                            firstItem: workoutItems[0] ? { 
+                            firstItem: workoutItems[0] ? {
                                 itemType: workoutItems[0].itemType,
                                 hasData: !!workoutItems[0].data,
                             } : null,
                         });
-                        
+
                         // Transform client workout instance format to match expected structure
                         workoutData = {
                             id: clientWorkout?.id || params.id,
@@ -273,7 +305,7 @@ export default function WorkoutDetailScreen() {
                             hasTopLevelItems: !!clientWorkout?.items,
                             hasNestedItems: !!clientWorkout?.workout_data?.items,
                         });
-                    } else {
+                    } else if (!workoutData) {
                         // For library workouts, fetch from coach's workout library
                         workoutData = await getWorkoutById(params.id);
                         console.log('[WorkoutDetailScreen] Loaded workout data from library:', {
@@ -318,7 +350,7 @@ export default function WorkoutDetailScreen() {
                                     // Handle different section exercise structures
                                     const sectionExercises = item.data.exercises || [];
                                     sectionExercises.forEach((groupOrEx: any) => {
-                                        // Could be exercise group (regular/circuits) or direct exercise (amrap/timed)
+                                        // Could be exercise group (regular/tabata/hiit/emom) or direct exercise (amrap/timed)
                                         if (groupOrEx.prescribedExerciseId) {
                                             ids.add(groupOrEx.prescribedExerciseId);
                                             (groupOrEx.alternatives || []).forEach((altId: string) => ids.add(altId));
@@ -468,8 +500,8 @@ export default function WorkoutDetailScreen() {
                                         const isSupersetNext = nextEx && ex.supersetGroupId && ex.supersetGroupId === nextEx.supersetGroupId;
                                         return { ...ex, isSupersetNext: isSupersetNext || false };
                                     });
-                                } else if (data.type === 'circuits') {
-                                    // Circuits have exercise groups, each exercise has a single 'set' field
+                                } else if (data.type === 'tabata' || data.type === 'hiit' || data.type === 'emom') {
+                                    // Tabata/HIIT/EMOM have exercise groups, each exercise has a single 'set' field
                                     const allExercises = (data.exercises || []).flatMap((group: any) =>
                                         (group.exercises || []).map((ex: any) => {
                                             // Convert single 'set' to 'sets' array for transformExercise
@@ -921,11 +953,14 @@ export default function WorkoutDetailScreen() {
                 name: exercise.name,
                 imageUrl: exercise.imageUrl,
                 exerciseType: exercise.exerciseType,
-                sets: [{ id: Math.random().toString(), setNumber: 1, column1: '', column2: '', type: 'R' as const }],
+                sets: [
+                    { id: Math.random().toString(), setNumber: 1, column1: '', column2: '', type: 'R' as const },
+                    { id: Math.random().toString(), setNumber: 2, column1: '', column2: '', type: 'R' as const },
+                ],
                 alternatives: [],
                 tempo: '',
                 eachSide: false,
-                ...getDefaultColumns(exercise.exerciseType),
+                ...getDefaultColumns(exercise.exerciseType, exercise.category),
                 equipments: exercise.equipments,
                 bodyParts: exercise.bodyParts,
             }));
@@ -953,7 +988,7 @@ export default function WorkoutDetailScreen() {
                     name: newExercise.name,
                     imageUrl: newExercise.imageUrl,
                     exerciseType: newExercise.exerciseType,
-                    ...getDefaultColumns(newExercise.exerciseType),
+                    ...getDefaultColumns(newExercise.exerciseType, newExercise.category),
                 };
 
                 return { ...prev, items: newItems };
@@ -986,13 +1021,14 @@ export default function WorkoutDetailScreen() {
             // If sets are updated, check for superset syncing
             if (updates.sets && updates.sets.length !== currentExercise.sets.length) {
                 const targetSetCount = updates.sets.length;
+                const sourceSets = updates.sets;
 
                 // Find start of chain
                 let start = index;
                 while (start > 0) {
-                    const prev = newItems[start - 1];
-                    if (isBuilderSection(prev)) break;
-                    if (!(prev as BuilderExercise).isSupersetNext) break;
+                    const prevItem = newItems[start - 1];
+                    if (isBuilderSection(prevItem)) break;
+                    if (!(prevItem as BuilderExercise).isSupersetNext) break;
                     start--;
                 }
 
@@ -1009,27 +1045,32 @@ export default function WorkoutDetailScreen() {
                     end++;
                 }
 
-                // Apply set count to all in chain (except index which is already updated)
-                for (let i = start; i <= end; i++) {
-                    if (i === index) continue;
+                // Only sync if we're actually in a superset (more than one exercise in chain)
+                if (end > start) {
+                    // Apply set count to all in chain (except index which is already updated)
+                    for (let i = start; i <= end; i++) {
+                        if (i === index) continue;
 
-                    const ex = newItems[i] as BuilderExercise;
-                    let newSets = [...ex.sets];
+                        const ex = newItems[i] as BuilderExercise;
+                        let newSets = [...ex.sets];
 
-                    if (newSets.length > targetSetCount) {
-                        newSets = newSets.slice(0, targetSetCount);
-                    } else {
-                        while (newSets.length < targetSetCount) {
-                            newSets.push({
-                                id: Math.random().toString(),
-                                setNumber: newSets.length + 1,
-                                column1: '',
-                                column2: '',
-                                type: 'R' as const
-                            });
+                        if (newSets.length > targetSetCount) {
+                            newSets = newSets.slice(0, targetSetCount);
+                        } else {
+                            // Add sets - copy type and column1 from source exercise's corresponding set
+                            while (newSets.length < targetSetCount) {
+                                const sourceSet = sourceSets[newSets.length];
+                                newSets.push({
+                                    id: Math.random().toString(),
+                                    setNumber: newSets.length + 1,
+                                    column1: sourceSet?.column1 || '',
+                                    column2: '',
+                                    type: sourceSet?.type || 'R' as const,
+                                });
+                            }
                         }
+                        newItems[i] = { ...ex, sets: newSets } as BuilderExercise;
                     }
-                    newItems[i] = { ...ex, sets: newSets } as BuilderExercise;
                 }
             }
 
@@ -1075,23 +1116,25 @@ export default function WorkoutDetailScreen() {
                     if (!isBuilderSection(nextItem)) {
                         const nextEx = nextItem as BuilderExercise;
                         const targetSetCount = ex.sets.length;
+                        const sourceSets = ex.sets;
 
                         // Generate a shared superset group ID
                         const supersetGroupId = ex.supersetGroupId || `superset-${Date.now()}`;
 
-                        // Sync B to A if set counts differ
+                        // Sync B to A if set counts differ - copy values from source
                         let newSets = [...nextEx.sets];
                         if (newSets.length !== targetSetCount) {
                             if (newSets.length > targetSetCount) {
                                 newSets = newSets.slice(0, targetSetCount);
                             } else {
                                 while (newSets.length < targetSetCount) {
+                                    const sourceSet = sourceSets[newSets.length];
                                     newSets.push({
                                         id: Math.random().toString(),
                                         setNumber: newSets.length + 1,
-                                        column1: '',
+                                        column1: sourceSet?.column1 || '',
                                         column2: '',
-                                        type: 'R' as const
+                                        type: sourceSet?.type || 'R' as const,
                                     });
                                 }
                             }
