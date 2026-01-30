@@ -214,7 +214,7 @@ When a client is selected, AI has access to:
 
 | Requirement | Specification |
 |-------------|---------------|
-| Provider | OpenAI GPT-5 (or Claude Opus 4.5 as fallback) |
+| Provider | OpenAI GPT-4o (or Claude Opus 4.5 as fallback) |
 | Features | Function calling / Tool use for actions |
 | Streaming | Yes, with typing indicator |
 | Context window | Sufficient for client data + conversation |
@@ -464,7 +464,7 @@ Each executable action displays with:
 
 | Question | Decision |
 |----------|----------|
-| LLM Provider | OpenAI GPT-5 |
+| LLM Provider | OpenAI GPT-4o |
 | Action button | Simple "Confirm" button that navigates to the relevant page (e.g., workout builder) with pre-filled data |
 | Streaming indicator | Yes, show typing indicator while streaming |
 | Error handling | Display friendly error message in chat |
@@ -691,7 +691,7 @@ Agent Loop:
 │  ├─ Authenticate user (JWT)                                                 │
 │  ├─ Load context data from Supabase                                         │
 │  ├─ Build system prompt                                                     │
-│  ├─ Call OpenAI GPT-5 with tools                                            │
+│  ├─ Call OpenAI GPT-4o with tools                                           │
 │  └─ Stream response back                                                    │
 │                                                                              │
 │  POST /api/v1/ai/execute                                                     │
@@ -717,7 +717,7 @@ Agent Loop:
                                        │
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              OpenAI GPT-5                                    │
+│                              OpenAI GPT-4o                                   │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  - System prompt with Athli context                                          │
 │  - Conversation history                                                      │
@@ -726,7 +726,7 @@ Agent Loop:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 12.2 File Structure
+### 12.5 File Structure
 
 ```
 apps/athli-web-api/
@@ -761,21 +761,22 @@ apps/athli-web-app/
 │       └── action-card.tsx       # New: displays action with Confirm button
 ```
 
-### 12.2.1 Dependencies
+### 12.5.1 Dependencies
 
 ```json
 // apps/athli-web-api/package.json (new dependencies)
+// Note: Version placeholders - resolve to latest stable at implementation time
 {
   "dependencies": {
-    "@langchain/langgraph": "^x.x.x",
-    "@langchain/openai": "^x.x.x",
-    "@modelcontextprotocol/sdk": "^1.x.x",
-    "openai": "^4.x.x"
+    "@langchain/langgraph": "^0.2.x",
+    "@langchain/openai": "^0.3.x",
+    "@langchain/core": "^0.3.x",
+    "openai": "^4.x"
   }
 }
 ```
 
-### 12.3 Action Card Component
+### 12.6 Action Card Component
 
 When AI suggests an executable action, display:
 
@@ -793,14 +794,14 @@ When AI suggests an executable action, display:
 
 Clicking "Confirm" navigates to the relevant page (e.g., `/training/workouts/new`) with pre-filled data.
 
-### 12.4 Example Flow
+### 12.7 Example Flow
 
 **User:** "Create a push day workout for John"
 
 1. Frontend sends to `/api/v1/ai/chat` with `selectedClientId: "john-123"`
 2. Backend loads John's profile, workout history, coach's exercises
-3. Backend calls GPT-5 with system prompt + tools
-4. GPT-5 calls `create_workout` tool with generated payload
+3. Backend calls GPT-4o with system prompt + tools
+4. GPT-4o calls `create_workout` tool with generated payload
 5. Backend streams response: "I'll create a Push Day workout..."
 6. Backend includes action: `{ type: "create_workout", payload: {...} }`
 7. Frontend displays Action Card with "Confirm" button

@@ -179,13 +179,14 @@ athli-monorepo/
 
 ```
 ├── src/
-│   ├── routes/             # Express routes
+│   ├── api/v1/             # Express routes (versioned)
+│   │   ├── routes/index.ts # Route aggregator
 │   │   ├── auth/           # Authentication
 │   │   ├── coach/          # Coach operations
 │   │   ├── client/         # Client operations
-│   │   └── v1Router.ts     # Route aggregator
+│   │   └── exercises/      # Exercise library
 │   ├── services/           # Business logic
-│   ├── middleware/         # Auth, error handling
+│   ├── middlewares/        # Auth, error handling
 │   ├── loaders/            # Express setup
 │   └── server.ts           # Entry point
 ```
@@ -402,7 +403,7 @@ npm run android  # Mobile Android
 ## Additional Documentation
 
 - `docs/PRD_AI_ASSISTANT.md` - **AI Assistant PRD** (features, architecture, acceptance criteria)
-- `apps/athli-mobile/CLAUDE.md` - Detailed mobile conventions
-- `apps/athli-mobile/docs/ZUSTAND_ARCHITECTURE.md` - State management
-- `apps/athli-web-app/MESSAGING_INTEGRATION_GUIDE.md` - Messaging setup
-- `packages/shared-types/README.md` - Shared types documentation
+- `apps/athli-mobile/CLAUDE.md` - Detailed mobile conventions (if exists)
+- `apps/athli-mobile/docs/ZUSTAND_ARCHITECTURE.md` - State management (if exists)
+- `apps/athli-web-app/MESSAGING_INTEGRATION_GUIDE.md` - Messaging setup (if exists)
+- `packages/shared-types/README.md` - Shared types documentation (if exists)
