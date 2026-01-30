@@ -710,7 +710,7 @@ const SectionsPage = () => {
         <SectionBuilder
           open={isSectionBuilderOpen}
           onOpenChange={setIsSectionBuilderOpen}
-          sectionType={selectedSectionForBuilder.sectionType as 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary'}
+          sectionType={selectedSectionForBuilder.sectionType as 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary'}
           initialData={selectedSectionData}
           isLoadingInitialData={isLoadingSectionData}
           meta={{

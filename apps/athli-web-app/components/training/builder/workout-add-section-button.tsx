@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-type SectionType = 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary';
+type SectionType = 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary';
 
 type WorkoutAddSectionButtonProps = {
   onSectionSelect: (type: SectionType) => void;
