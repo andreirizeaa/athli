@@ -141,6 +141,13 @@ export const adaptSection = (section: WorkoutSection): GenericSectionData => {
     notes: section.notes || null,
     durationSec: section.roundDurationSec,
     category: section.category,
+    // Tabata/HIIT/Circuits config
+    workSec: section.workSec,
+    restSec: section.restSec,
+    rounds: section.rounds,
+    // EMOM config
+    intervalSec: section.intervalSec,
+    durationMin: section.durationMin,
   };
 };
 

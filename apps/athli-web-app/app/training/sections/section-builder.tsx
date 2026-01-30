@@ -118,7 +118,7 @@ type SectionBuilderProps = {
   saveSignal?: number;
   onSaveSuccess?: (payload: WorkoutProgramPayload) => Promise<void> | void;
   onSaveError?: () => void;
-  sectionType: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary';
+  sectionType: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary';
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDelete?: () => Promise<void> | void;
@@ -196,6 +196,7 @@ export const SectionBuilder = ({
           ...(sectionType === 'amrap' && { roundDurationSec: undefined }),
           ...((sectionType === 'tabata' || sectionType === 'hiit') && { workSec: undefined, restSec: undefined, rounds: undefined }),
           ...(sectionType === 'emom' && { intervalSec: undefined, durationMin: undefined }),
+          ...(sectionType === 'circuits' && { rounds: undefined }),
           ...(sectionType === 'auxiliary' && { category: 'warmup' }),
         },
       }],
@@ -222,6 +223,8 @@ export const SectionBuilder = ({
   const exerciseRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [isCreatingSection, setIsCreatingSection] = useState(false);
   const creatorRef = useRef<HTMLDivElement>(null);
+  const [editingSectionNameId, setEditingSectionNameId] = useState<string | null>(null);
+  const sectionNameInputRef = useRef<HTMLInputElement>(null);
 
   // AI Builder state
   const [activeBuilder, setActiveBuilder] = useState<'ai' | 'manual'>('manual');
@@ -279,8 +282,9 @@ export const SectionBuilder = ({
               exercises: [],
               name: meta?.name || '',
               ...(sectionType === 'amrap' && { roundDurationSec: undefined }),
-                  ...((sectionType === 'tabata' || sectionType === 'hiit') && { workSec: undefined, restSec: undefined, rounds: undefined }),
+              ...((sectionType === 'tabata' || sectionType === 'hiit') && { workSec: undefined, restSec: undefined, rounds: undefined }),
               ...(sectionType === 'emom' && { intervalSec: undefined, durationMin: undefined }),
+              ...(sectionType === 'circuits' && { rounds: undefined }),
               ...(sectionType === 'auxiliary' && { category: 'warmup' }),
             },
           }],
@@ -468,7 +472,7 @@ export const SectionBuilder = ({
     const sectionsWithStructure: WorkoutSchemaItem[] = aiGenerated.sections.map((section: any) => {
       const sectionData: WorkoutSection = {
         id: section.id as string,
-        type: section.type as 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary',
+        type: section.type as 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary',
         exercises: [] as ExerciseWithSuperset[],
         ...(section.type === 'amrap' && { roundDurationSec: section.roundDurationSec }),
         ...((section.type === 'tabata' || section.type === 'hiit') && { workSec: section.workSec, restSec: section.restSec, rounds: section.rounds }),
@@ -932,7 +936,7 @@ Focus on proper form and progressive overload.`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveSignal]);
 
-  const handleSectionSelect = (type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary') => {
+  const handleSectionSelect = (type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary') => {
     if (contentScrollRef.current) {
       pendingScrollTopRef.current = contentScrollRef.current.scrollTop;
     }
@@ -1154,8 +1158,8 @@ Focus on proper form and progressive overload.`;
             });
           }
 
-          // Normalize AMRAP/Tabata/HIIT/EMOM exercises to include sets
-          if (coreData && (coreData.type === 'amrap' || coreData.type === 'tabata' || coreData.type === 'hiit' || coreData.type === 'emom')) {
+          // Normalize AMRAP/Tabata/HIIT/EMOM/Circuits exercises to include sets
+          if (coreData && (coreData.type === 'amrap' || coreData.type === 'tabata' || coreData.type === 'hiit' || coreData.type === 'emom' || coreData.type === 'circuits')) {
             if (coreData.exercises && Array.isArray(coreData.exercises)) {
               coreData.exercises = coreData.exercises.map((ex: any) => {
                 if (ex.sets && ex.sets.length > 0) return ex;
@@ -1168,19 +1172,60 @@ Focus on proper form and progressive overload.`;
                   return metric.toString();
                 };
 
-                const set = {
-                  setNumber: 1,
-                  type: 'normal',
-                  reps: getMetricVal(ex.reps),
-                  weight: getMetricVal(ex.weight),
-                  rest: ex.restSec !== null && ex.restSec !== undefined ? ex.restSec.toString() : '',
-                  distance: getMetricVal(ex.distance),
-                  duration: getMetricVal(ex.durationSec),
+                // For interval sections, trackableField1/trackableField2 are inside the 'set' object
+                const setData = ex.set || {};
+                const trackableField1 = setData.trackableField1 || ex.trackableField1;
+                const trackableField2 = setData.trackableField2 || ex.trackableField2;
+                const column1Label = ex.column1Label || 'Reps';
+                const column2Label = ex.column2Label || 'Optional';
+
+                // Map values based on column labels
+                const value1 = getMetricVal(trackableField1);
+                const value2 = getMetricVal(trackableField2);
+
+                // Helper to determine field from label
+                const getFieldFromLabel = (label: string) => {
+                  if (label === 'Reps') return 'reps';
+                  if (label === 'kg' || label === 'lbs') return 'weight';
+                  if (label === 'km' || label === 'm' || label === 'yards' || label === 'miles' || label === 'feet') return 'distance';
+                  if (label === 'minutes' || label === 'seconds') return 'duration';
+                  if (label === 'None') return null;
+                  return 'optional'; // Optional, Tempo, RIR, RPE, etc.
                 };
+
+                const field1 = getFieldFromLabel(column1Label);
+                const field2 = getFieldFromLabel(column2Label);
+
+                const set: any = {
+                  setNumber: setData.setNumber || 1,
+                  type: setData.type || 'normal',
+                  reps: '',
+                  weight: '',
+                  rest: setData.restSec !== null && setData.restSec !== undefined ? setData.restSec.toString() : (ex.restSec?.toString() || ''),
+                  distance: '',
+                  duration: '',
+                  optional: { prescribed: '', completed: '' },
+                };
+
+                // Map value1 to the correct field
+                if (field1 === 'reps') set.reps = value1;
+                else if (field1 === 'weight') set.weight = value1;
+                else if (field1 === 'distance') set.distance = value1;
+                else if (field1 === 'duration') set.duration = value1;
+                else if (field1 === 'optional') set.optional = { prescribed: value1, completed: '' };
+
+                // Map value2 to the correct field
+                if (field2 === 'reps') set.reps = value2;
+                else if (field2 === 'weight') set.weight = value2;
+                else if (field2 === 'distance') set.distance = value2;
+                else if (field2 === 'duration') set.duration = value2;
+                else if (field2 === 'optional') set.optional = { prescribed: value2, completed: '' };
 
                 return {
                   ...ex,
-                  sets: [set]
+                  sets: [set],
+                  column1Label,
+                  column2Label,
                 };
               });
             }
@@ -1202,6 +1247,8 @@ Focus on proper form and progressive overload.`;
                     // Let's ensure the type is correct.
                     type: type || 'regular',
                     name: draggedSection.program,
+                    // Map API config fields to builder config fields
+                    ...(coreData?.durationSec && { roundDurationSec: coreData.durationSec }),
                   }
                 }
               }
@@ -1285,7 +1332,14 @@ Focus on proper form and progressive overload.`;
   };
 
   const handleAddExercise = (sectionId: string) => {
-    setWorkoutSchema((prev) => addExercise(sectionId, prev));
+    setWorkoutSchema((prev) => {
+      // Find the section to get its type
+      const sectionItem = prev.items.find(
+        (item) => item.itemType === 'section' && item.section.id === sectionId
+      );
+      const sectionTypeForExercise = sectionItem?.itemType === 'section' ? sectionItem.section.type : undefined;
+      return addExercise(sectionId, prev, sectionTypeForExercise);
+    });
     markDirty();
     setSectionValidationErrors((prev) => clearEmptyExercisesError(sectionId, prev));
   };
@@ -1479,34 +1533,54 @@ Focus on proper form and progressive overload.`;
                     {isCollapsed ? 'Expand section' : 'Collapse section'}
                   </TooltipContent>
                 </Tooltip>
-                <Input
-                  disabled={isSectionMode}
-                  className="h-7 flex-1 border-input bg-background text-sm focus-visible:ring-primary shadow-none"
-                  placeholder={section.type ? (section.type.charAt(0).toUpperCase() + section.type.slice(1)) : 'Section'}
-                  value={isSectionMode ? workoutTitle : (section.name || '')}
-                  onChange={(e) => {
-                    const newName = e.target.value;
-                    markDirty();
-                    setWorkoutSchema((prev) => ({
-                      ...prev,
-                      items: prev.items.map((item) => {
-                        if (item.itemType === 'section' && item.section.id === section.id) {
-                          return {
-                            ...item,
-                            section: { ...item.section, name: newName },
-                          };
-                        }
-                        return item;
-                      }),
-                    }));
-                    // Sync to Top Title if in Section Mode
-                    if (isSectionMode) {
-                      setWorkoutTitle(newName);
-                    }
-                  }}
-                />
+                {editingSectionNameId === section.id ? (
+                  <Input
+                    ref={sectionNameInputRef}
+                    autoFocus
+                    className="h-7 flex-1 min-w-0 border-input bg-background text-sm focus-visible:ring-primary shadow-none"
+                    placeholder={section.type ? (section.type.charAt(0).toUpperCase() + section.type.slice(1)) : 'Section'}
+                    value={isSectionMode ? workoutTitle : (section.name || '')}
+                    onChange={(e) => {
+                      const newName = e.target.value;
+                      markDirty();
+                      setWorkoutSchema((prev) => ({
+                        ...prev,
+                        items: prev.items.map((item) => {
+                          if (item.itemType === 'section' && item.section.id === section.id) {
+                            return {
+                              ...item,
+                              section: { ...item.section, name: newName },
+                            };
+                          }
+                          return item;
+                        }),
+                      }));
+                      // Sync to Top Title if in Section Mode
+                      if (isSectionMode) {
+                        setWorkoutTitle(newName);
+                      }
+                    }}
+                    onBlur={() => setEditingSectionNameId(null)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === 'Escape') {
+                        setEditingSectionNameId(null);
+                      }
+                    }}
+                  />
+                ) : (
+                  <span
+                    className="text-sm font-medium cursor-pointer hover:text-primary transition-colors truncate max-w-[300px] pl-[3px]"
+                    onClick={() => setEditingSectionNameId(section.id)}
+                  >
+                    {(isSectionMode ? workoutTitle : section.name) || (
+                      <span className="text-muted-foreground">
+                        {section.type ? (section.type.charAt(0).toUpperCase() + section.type.slice(1)) : 'Section'}
+                      </span>
+                    )}
+                  </span>
+                )}
                 {section.type && (
-                  <Badge variant="outline" className="h-7 px-2 text-xs font-bold capitalize bg-background text-foreground border-input rounded-md shadow-none">
+                  <Badge variant="outline" className="ml-2 px-2 py-0.5 text-[10px] font-medium capitalize bg-transparent text-primary border-primary rounded-full shadow-none">
                     {section.type}
                   </Badge>
                 )}
@@ -1514,8 +1588,8 @@ Focus on proper form and progressive overload.`;
               <div className="flex items-center gap-1">
                 {section.type === 'amrap' && (
                   <div className="relative flex items-center">
-                    <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">
-                      Time (m)
+                    <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">
+                      minutes
                     </span>
                     <Input
                       type="text"
@@ -1547,7 +1621,7 @@ Focus on proper form and progressive overload.`;
                         }
                       }}
                       className={cn(
-                        'h-7 w-28 text-center text-[11px] bg-background border-input shadow-none pl-14',
+                        'h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14',
                         sectionValidationErrors[section.id]?.missingConfig && 'border-destructive focus-visible:ring-destructive'
                       )}
                       placeholder="-"
@@ -1557,7 +1631,7 @@ Focus on proper form and progressive overload.`;
                 {(section.type === 'tabata' || section.type === 'hiit') && (
                   <div className="flex items-center gap-1">
                     <div className="relative flex items-center">
-                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">Work</span>
+                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">work (s)</span>
                       <Input
                         type="text"
                         inputMode="numeric"
@@ -1575,12 +1649,12 @@ Focus on proper form and progressive overload.`;
                             }),
                           }));
                         }}
-                        className="h-7 w-20 text-center text-[11px] bg-background border-input shadow-none pl-10"
+                        className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14"
                         placeholder={section.type === 'tabata' ? '20' : '40'}
                       />
                     </div>
                     <div className="relative flex items-center">
-                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">Rest</span>
+                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">rest (s)</span>
                       <Input
                         type="text"
                         inputMode="numeric"
@@ -1598,12 +1672,12 @@ Focus on proper form and progressive overload.`;
                             }),
                           }));
                         }}
-                        className="h-7 w-20 text-center text-[11px] bg-background border-input shadow-none pl-10"
+                        className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14"
                         placeholder={section.type === 'tabata' ? '10' : '20'}
                       />
                     </div>
                     <div className="relative flex items-center">
-                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">Rds</span>
+                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">rounds</span>
                       <Input
                         type="text"
                         inputMode="numeric"
@@ -1621,63 +1695,94 @@ Focus on proper form and progressive overload.`;
                             }),
                           }));
                         }}
-                        className="h-7 w-16 text-center text-[11px] bg-background border-input shadow-none pl-8"
+                        className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-12"
                         placeholder={section.type === 'tabata' ? '8' : '10'}
                       />
                     </div>
                   </div>
                 )}
                 {section.type === 'emom' && (
-                  <div className="flex items-center gap-1">
-                    <div className="relative flex items-center">
-                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">Int(s)</span>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={section.intervalSec?.toString() || ''}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          markDirty();
-                          setWorkoutSchema((prev) => ({
-                            ...prev,
-                            items: prev.items.map((item) => {
-                              if (item.itemType === 'section' && item.section.id === section.id) {
-                                return { ...item, section: { ...item.section, intervalSec: value ? parseInt(value, 10) : undefined } };
-                              }
-                              return item;
-                            }),
-                          }));
-                        }}
-                        className="h-7 w-20 text-center text-[11px] bg-background border-input shadow-none pl-10"
-                        placeholder="60"
-                      />
-                    </div>
-                    <div className="relative flex items-center">
-                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">Dur(m)</span>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={section.durationMin?.toString() || ''}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          markDirty();
-                          setWorkoutSchema((prev) => ({
-                            ...prev,
-                            items: prev.items.map((item) => {
-                              if (item.itemType === 'section' && item.section.id === section.id) {
-                                return { ...item, section: { ...item.section, durationMin: value ? parseInt(value, 10) : undefined } };
-                              }
-                              return item;
-                            }),
-                          }));
-                        }}
-                        className="h-7 w-20 text-center text-[11px] bg-background border-input shadow-none pl-12"
-                        placeholder="10"
-                      />
-                    </div>
-                  </div>
-                )}
-                {/* Hide actions in section mode */}
+                                  <div className="flex items-center gap-1">
+                                    <div className="relative flex items-center">
+                                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">interval (s)</span>
+                                      <Input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={section.intervalSec?.toString() || ''}
+                                        onChange={(e) => {
+                                          const value = e.target.value.replace(/\D/g, '');
+                                          markDirty();
+                                          setWorkoutSchema((prev) => ({
+                                            ...prev,
+                                            items: prev.items.map((item) => {
+                                              if (item.itemType === 'section' && item.section.id === section.id) {
+                                                return { ...item, section: { ...item.section, intervalSec: value ? parseInt(value, 10) : undefined } };
+                                              }
+                                              return item;
+                                            }),
+                                          }));
+                                        }}
+                                        className="h-7 w-28 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-16"
+                                        placeholder="60"
+                                      />
+                                    </div>
+                                    <div className="relative flex items-center">
+                                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">duration (m)</span>
+                                      <Input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={section.durationMin?.toString() || ''}
+                                        onChange={(e) => {
+                                          const value = e.target.value.replace(/\D/g, '');
+                                          markDirty();
+                                          setWorkoutSchema((prev) => ({
+                                            ...prev,
+                                            items: prev.items.map((item) => {
+                                              if (item.itemType === 'section' && item.section.id === section.id) {
+                                                return { ...item, section: { ...item.section, durationMin: value ? parseInt(value, 10) : undefined } };
+                                              }
+                                              return item;
+                                            }),
+                                          }));
+                                        }}
+                                        className="h-7 w-28 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-16"
+                                        placeholder="10"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                                {section.type === 'circuits' && (
+                                  <div className="relative flex items-center">
+                                    <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">rounds</span>
+                                    <Input
+                                      type="text"
+                                      inputMode="numeric"
+                                      value={section.rounds?.toString() || ''}
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace(/\D/g, '');
+                                        markDirty();
+                                        setWorkoutSchema((prev) => ({
+                                          ...prev,
+                                          items: prev.items.map((item) => {
+                                            if (item.itemType === 'section' && item.section.id === section.id) {
+                                              return { ...item, section: { ...item.section, rounds: value ? parseInt(value, 10) : undefined } };
+                                            }
+                                            return item;
+                                          }),
+                                        }));
+                                        if (value && value.trim() !== '') {
+                                          setSectionValidationErrors((prev) => clearMissingConfigError(section.id, prev));
+                                        }
+                                      }}
+                                      className={cn(
+                                        'h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-12',
+                                        sectionValidationErrors[section.id]?.missingConfig && 'border-destructive focus-visible:ring-destructive'
+                                      )}
+                                      placeholder="3"
+                                    />
+                                  </div>
+                                )}
+                                {/* Hide actions in section mode */}
                 {!isSectionMode && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -1718,7 +1823,6 @@ Focus on proper form and progressive overload.`;
           </CardHeader>
           {!isCollapsed && (
             <>
-              <Separator />
               <div className="overflow-hidden transition-all duration-300 ease-in-out" style={{ maxHeight: '10000px', opacity: 1 }}>
                 <CardContent
                 ref={(el) => registerSectionRef(section.id, el)}

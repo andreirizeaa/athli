@@ -305,12 +305,12 @@ export const buildCircuitExercisePayload = (
 export interface GenericSectionData {
   id: string;
   name: string;
-  type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary';
+  type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary';
   exercises: GenericExerciseData[][];  // Already grouped by superset
   notes?: string | null;
   // For AMRAP
   durationSec?: number;
-  // For Tabata/HIIT
+  // For Tabata/HIIT/Circuits
   workSec?: number;
   restSec?: number;
   rounds?: number;
@@ -415,6 +415,23 @@ export const buildSectionPayload = (
       intervalSec: section.intervalSec || 60,
       durationMin: section.durationMin || 10,
       actualDurationSec: null,
+      exercises,
+      notes: section.notes || null,
+    };
+  }
+
+  if (section.type === 'circuits') {
+    const exercises: CircuitExerciseGroupPayload[] = section.exercises.map((group) => ({
+      isSuperset: group.length > 1,
+      exercises: group.map((ex) => buildCircuitExercisePayload(ex, parserType)),
+    }));
+
+    return {
+      id: section.id,
+      name: section.name,
+      type: 'circuits',
+      rounds: section.rounds || 3,
+      actualRounds: null,
       exercises,
       notes: section.notes || null,
     };

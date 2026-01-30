@@ -22,12 +22,12 @@ export type ExerciseWithSuperset = Exercise & {
 export type WorkoutSection = {
   id: string;
   name?: string;
-  type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary';
+  type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary';
   exercises?: ExerciseWithSuperset[];
   roundDurationSec?: number;  // AMRAP
   workSec?: number;           // Tabata/HIIT
   restSec?: number;           // Tabata/HIIT
-  rounds?: number;            // Tabata/HIIT
+  rounds?: number;            // Tabata/HIIT/Circuits
   intervalSec?: number;       // EMOM
   durationMin?: number;       // EMOM
   category?: 'warmup' | 'cooldown' | 'mobility';

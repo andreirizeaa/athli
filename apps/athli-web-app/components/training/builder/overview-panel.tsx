@@ -338,7 +338,7 @@ const OverviewExerciseRow = ({
             <Trash2 className="size-3" />
           </button>
         </div>
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 p-1">
           <GripVertical className="size-3 text-muted-foreground" />
         </div>
       </div>
@@ -460,7 +460,9 @@ const OverviewSupersetRow = ({
             >
               <Trash2 className="size-3" />
             </button>
-            <GripVertical className="size-3 text-muted-foreground flex-shrink-0" />
+            <div className="p-1 flex-shrink-0">
+              <GripVertical className="size-3 text-muted-foreground" />
+            </div>
           </div>
         </div>
       </div>

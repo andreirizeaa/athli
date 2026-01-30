@@ -111,6 +111,12 @@ export const en = {
       errorMessage: 'Failed to send reset link. Please try again.',
       linkText: 'Forgot Password?',
     },
+    biometricUnlock: 'Unlock Athli',
+    useFaceIdToUnlock: 'Use Face ID to access your account',
+    useTouchIdToUnlock: 'Use Touch ID to access your account',
+    biometricFailed: 'Authentication failed. Please try again.',
+    tryAgain: 'Try Again',
+    useAnotherAccount: 'Use Another Account',
   },
   common: {
     discardChanges: 'Discard Changes?',
@@ -1147,6 +1153,10 @@ export const en = {
     searchPalettes: 'Search',
     searchLanguages: 'Search',
     haptics: 'Haptic feedback',
+    faceId: 'Face ID',
+    touchId: 'Touch ID',
+    biometric: 'Biometric unlock',
+    biometricNotEnrolled: 'Set up Face ID or Touch ID in device settings to enable this feature.',
   },
   clientDetail: {
     tabs: {

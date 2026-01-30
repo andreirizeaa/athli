@@ -118,15 +118,7 @@ export const WorkoutsTab = () => {
       return;
     }
 
-    console.log('[WorkoutsTab] Opening workout:', {
-      id: workout.id,
-      name: workout.name,
-      description: workout.description,
-      type: workout.type,
-      difficulty: workout.difficulty,
-      totalExercises: workout.totalExercises,
-      fullWorkoutData: workout,
-    });
+    console.log('[WorkoutsTab] Opening workout - RAW DATA:', JSON.stringify(workout, null, 2));
     closeOpenRow();
     router.push({
       pathname: '/library/workout/[id]',

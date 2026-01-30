@@ -15,6 +15,7 @@ import { useThemeStore } from '@/stores/useThemeStore';
 import { useTranslationsStore } from '@/stores/useTranslationsStore';
 import { useUnitsStore } from '@/stores/useUnitsStore';
 import { useHapticsStore } from '@/stores/useHapticsStore';
+import { useBiometricStore } from '@/stores/useBiometricStore';
 import { haptics } from '@/utils/haptics';
 import { useColorScheme as useNativeColorScheme } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -139,6 +140,7 @@ function RootLayoutNav() {
     useTranslationsStore.getState().initialize();
     useUnitsStore.getState().initialize();
     useHapticsStore.getState().initialize();
+    useBiometricStore.getState().initialize();
     useCoachProfileStore.getState().initialize();
     useCoachCompanyStore.getState().initialize();
     useClientProfileStore.getState().initialize();
@@ -394,6 +396,14 @@ function RootLayoutNav() {
               contentStyle: {
                 backgroundColor: '#090909',
               },
+            }}
+          />
+          <Stack.Screen
+            name="biometric-lock"
+            options={{
+              headerShown: false,
+              animation: 'none',
+              gestureEnabled: false,
             }}
           />
           <Stack.Screen

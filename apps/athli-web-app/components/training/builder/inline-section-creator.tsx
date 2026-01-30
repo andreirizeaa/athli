@@ -29,20 +29,41 @@ type SectionConfig = {
 type InlineSectionCreatorProps = {
     onCreate: (name: string, type: SectionType, config?: SectionConfig) => void;
     onCancel: () => void;
+    initialType?: SectionType;
 };
 
-export const InlineSectionCreator = ({ onCreate, onCancel }: InlineSectionCreatorProps) => {
+// Helper to get initial config values based on section type
+const getInitialConfig = (sectionType?: SectionType) => {
+    if (!sectionType) {
+        return { workSec: '', restSec: '', rounds: '', intervalSec: '', durationMin: '' };
+    }
+    switch (sectionType) {
+        case 'tabata':
+            return { workSec: '20', restSec: '10', rounds: '8', intervalSec: '', durationMin: '' };
+        case 'hiit':
+            return { workSec: '40', restSec: '20', rounds: '10', intervalSec: '', durationMin: '' };
+        case 'emom':
+            return { workSec: '', restSec: '', rounds: '', intervalSec: '60', durationMin: '10' };
+        case 'circuits':
+            return { workSec: '', restSec: '', rounds: '3', intervalSec: '', durationMin: '' };
+        default:
+            return { workSec: '', restSec: '', rounds: '', intervalSec: '', durationMin: '' };
+    }
+};
+
+export const InlineSectionCreator = ({ onCreate, onCancel, initialType }: InlineSectionCreatorProps) => {
     const t = useTranslations();
+    const initialConfig = getInitialConfig(initialType);
     const [name, setName] = useState('');
-    const [type, setType] = useState<SectionType | ''>('');
+    const [type, setType] = useState<SectionType | ''>(initialType || '');
     const [configValue, setConfigValue] = useState('');
     // Tabata/HIIT config
-    const [workSec, setWorkSec] = useState('');
-    const [restSec, setRestSec] = useState('');
-    const [rounds, setRounds] = useState('');
+    const [workSec, setWorkSec] = useState(initialConfig.workSec);
+    const [restSec, setRestSec] = useState(initialConfig.restSec);
+    const [rounds, setRounds] = useState(initialConfig.rounds);
     // EMOM config
-    const [intervalSec, setIntervalSec] = useState('');
-    const [durationMin, setDurationMin] = useState('');
+    const [intervalSec, setIntervalSec] = useState(initialConfig.intervalSec);
+    const [durationMin, setDurationMin] = useState(initialConfig.durationMin);
 
     const sectionTypeOptions = getSectionTypeOptions();
     const selectedOption = sectionTypeOptions.find(opt => opt.value === type);
