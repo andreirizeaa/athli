@@ -531,7 +531,7 @@ type ExerciseCardProps = {
   canMoveDown?: boolean;
   isLinkedToPrev?: boolean;
   isLinkedToNext?: boolean;
-  sectionType?: 'regular' | 'amrap' | 'timed' | 'tabata' | 'hiit' | 'emom' | 'auxiliary';
+  sectionType?: 'regular' | 'amrap' | 'timed' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary';
   validationErrors?: Record<number, SetFieldValidation>;
   onClearValidationField?: (setIndex: number, field: keyof SetFieldValidation) => void;
   hasSupersetError?: boolean;
@@ -567,7 +567,7 @@ export const ExerciseCard = ({
   );
   const containerRef = useRef<HTMLDivElement>(null);
   const isEmpty = !exercise.name || exercise.name === '';
-  const isSingleSetOnly = sectionType === 'amrap' || sectionType === 'timed' || sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'emom';
+  const isSingleSetOnly = sectionType === 'amrap' || sectionType === 'timed' || sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'emom' || sectionType === 'circuits';
   const [sets, setSets] = useState<SetData[]>(() => {
     // If parent already has sets (e.g. from restored state), use them.
     if (exercise.sets && exercise.sets.length > 0) {
@@ -623,22 +623,38 @@ export const ExerciseCard = ({
 
   // Initialize column labels based on exercise type (with default units)
   // Get default column labels based on category first, then exercise type as fallback
+  // For interval-based sections (tabata, hiit, emom, circuits), column2 is always Optional
+  const isIntervalSection = sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'emom' || sectionType === 'circuits';
+
   const getDefaultColumnLabels = (exerciseType: string, category?: string) => {
     // First try category-based defaults
+    let column1: string;
+    let column2: string;
+
     if (category) {
       const categoryDefaults = getDefaultColumnsForCategory(category);
-      return { column1: categoryDefaults.column1, column2: categoryDefaults.column2 };
+      column1 = categoryDefaults.column1;
+      column2 = categoryDefaults.column2;
+    } else if (exerciseType === 'weight_reps') {
+      column1 = 'Reps';
+      column2 = 'kg';
+    } else if (exerciseType === 'reps') {
+      column1 = 'Reps';
+      column2 = 'Optional';
+    } else if (exerciseType === 'distance_duration') {
+      column1 = 'km';
+      column2 = 'minutes';
+    } else {
+      column1 = 'Reps';
+      column2 = 'kg';
     }
 
-    // Fall back to exercise type-based defaults
-    if (exerciseType === 'weight_reps') {
-      return { column1: 'Reps', column2: 'kg' };
-    } else if (exerciseType === 'reps') {
-      return { column1: 'Reps', column2: 'Optional' };
-    } else if (exerciseType === 'distance_duration') {
-      return { column1: 'km', column2: 'minutes' };
+    // Override column2 to Optional for interval-based sections
+    if (isIntervalSection) {
+      column2 = 'Optional';
     }
-    return { column1: 'Reps', column2: 'kg' };
+
+    return { column1, column2 };
   };
 
   const [column1Label, setColumn1Label] = useState<string>(() => {
@@ -802,12 +818,15 @@ export const ExerciseCard = ({
   );
 
   // On first mount, if the parent has no sets yet, push our initial defaults up
+  // Also push column labels to ensure they're persisted on save
   useEffect(() => {
     if (!exercise.sets || exercise.sets.length === 0) {
       onExerciseChange({
         ...exercise,
         sets,
         alternatives: exercise.alternatives || [],
+        column1Label,
+        column2Label,
       });
     }
     // We intentionally run this only once on mount to establish initial sets.
@@ -945,8 +964,8 @@ export const ExerciseCard = ({
     if (columnLabel === 'kg' || columnLabel === 'lbs') return 'weight';
     if (columnLabel === 'km' || columnLabel === 'm' || columnLabel === 'yards' || columnLabel === 'miles' || columnLabel === 'feet') return 'distance';
     if (columnLabel === 'minutes' || columnLabel === 'seconds') return 'duration';
-    if (columnLabel === 'None' || columnLabel === 'Optional') return null;
-    // For optional columns (Tempo, RIR, RPE, etc.)
+    if (columnLabel === 'None') return null;
+    // For optional columns (Optional, Tempo, RIR, RPE, etc.)
     return 'optional';
   };
 
