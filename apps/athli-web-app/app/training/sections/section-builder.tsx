@@ -118,7 +118,7 @@ type SectionBuilderProps = {
   saveSignal?: number;
   onSaveSuccess?: (payload: WorkoutProgramPayload) => Promise<void> | void;
   onSaveError?: () => void;
-  sectionType: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary';
+  sectionType: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary';
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDelete?: () => Promise<void> | void;
@@ -196,6 +196,7 @@ export const SectionBuilder = ({
           ...(sectionType === 'amrap' && { roundDurationSec: undefined }),
           ...((sectionType === 'tabata' || sectionType === 'hiit') && { workSec: undefined, restSec: undefined, rounds: undefined }),
           ...(sectionType === 'emom' && { intervalSec: undefined, durationMin: undefined }),
+          ...(sectionType === 'circuits' && { rounds: undefined }),
           ...(sectionType === 'auxiliary' && { category: 'warmup' }),
         },
       }],
@@ -281,8 +282,9 @@ export const SectionBuilder = ({
               exercises: [],
               name: meta?.name || '',
               ...(sectionType === 'amrap' && { roundDurationSec: undefined }),
-                  ...((sectionType === 'tabata' || sectionType === 'hiit') && { workSec: undefined, restSec: undefined, rounds: undefined }),
+              ...((sectionType === 'tabata' || sectionType === 'hiit') && { workSec: undefined, restSec: undefined, rounds: undefined }),
               ...(sectionType === 'emom' && { intervalSec: undefined, durationMin: undefined }),
+              ...(sectionType === 'circuits' && { rounds: undefined }),
               ...(sectionType === 'auxiliary' && { category: 'warmup' }),
             },
           }],
@@ -470,7 +472,7 @@ export const SectionBuilder = ({
     const sectionsWithStructure: WorkoutSchemaItem[] = aiGenerated.sections.map((section: any) => {
       const sectionData: WorkoutSection = {
         id: section.id as string,
-        type: section.type as 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary',
+        type: section.type as 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary',
         exercises: [] as ExerciseWithSuperset[],
         ...(section.type === 'amrap' && { roundDurationSec: section.roundDurationSec }),
         ...((section.type === 'tabata' || section.type === 'hiit') && { workSec: section.workSec, restSec: section.restSec, rounds: section.rounds }),
@@ -934,7 +936,7 @@ Focus on proper form and progressive overload.`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveSignal]);
 
-  const handleSectionSelect = (type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary') => {
+  const handleSectionSelect = (type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary') => {
     if (contentScrollRef.current) {
       pendingScrollTopRef.current = contentScrollRef.current.scrollTop;
     }
@@ -1517,7 +1519,7 @@ Focus on proper form and progressive overload.`;
                   />
                 ) : (
                   <span
-                    className="text-sm font-medium cursor-pointer hover:text-primary transition-colors truncate max-w-[300px]"
+                    className="text-sm font-medium cursor-pointer hover:text-primary transition-colors truncate max-w-[300px] pl-[3px]"
                     onClick={() => setEditingSectionNameId(section.id)}
                   >
                     {(isSectionMode ? workoutTitle : section.name) || (
@@ -1650,56 +1652,87 @@ Focus on proper form and progressive overload.`;
                   </div>
                 )}
                 {section.type === 'emom' && (
-                  <div className="flex items-center gap-1">
-                    <div className="relative flex items-center">
-                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">interval (s)</span>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={section.intervalSec?.toString() || ''}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          markDirty();
-                          setWorkoutSchema((prev) => ({
-                            ...prev,
-                            items: prev.items.map((item) => {
-                              if (item.itemType === 'section' && item.section.id === section.id) {
-                                return { ...item, section: { ...item.section, intervalSec: value ? parseInt(value, 10) : undefined } };
-                              }
-                              return item;
-                            }),
-                          }));
-                        }}
-                        className="h-7 w-28 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-16"
-                        placeholder="60"
-                      />
-                    </div>
-                    <div className="relative flex items-center">
-                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">duration (m)</span>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={section.durationMin?.toString() || ''}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          markDirty();
-                          setWorkoutSchema((prev) => ({
-                            ...prev,
-                            items: prev.items.map((item) => {
-                              if (item.itemType === 'section' && item.section.id === section.id) {
-                                return { ...item, section: { ...item.section, durationMin: value ? parseInt(value, 10) : undefined } };
-                              }
-                              return item;
-                            }),
-                          }));
-                        }}
-                        className="h-7 w-28 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-16"
-                        placeholder="10"
-                      />
-                    </div>
-                  </div>
-                )}
-                {/* Hide actions in section mode */}
+                                  <div className="flex items-center gap-1">
+                                    <div className="relative flex items-center">
+                                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">interval (s)</span>
+                                      <Input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={section.intervalSec?.toString() || ''}
+                                        onChange={(e) => {
+                                          const value = e.target.value.replace(/\D/g, '');
+                                          markDirty();
+                                          setWorkoutSchema((prev) => ({
+                                            ...prev,
+                                            items: prev.items.map((item) => {
+                                              if (item.itemType === 'section' && item.section.id === section.id) {
+                                                return { ...item, section: { ...item.section, intervalSec: value ? parseInt(value, 10) : undefined } };
+                                              }
+                                              return item;
+                                            }),
+                                          }));
+                                        }}
+                                        className="h-7 w-28 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-16"
+                                        placeholder="60"
+                                      />
+                                    </div>
+                                    <div className="relative flex items-center">
+                                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">duration (m)</span>
+                                      <Input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={section.durationMin?.toString() || ''}
+                                        onChange={(e) => {
+                                          const value = e.target.value.replace(/\D/g, '');
+                                          markDirty();
+                                          setWorkoutSchema((prev) => ({
+                                            ...prev,
+                                            items: prev.items.map((item) => {
+                                              if (item.itemType === 'section' && item.section.id === section.id) {
+                                                return { ...item, section: { ...item.section, durationMin: value ? parseInt(value, 10) : undefined } };
+                                              }
+                                              return item;
+                                            }),
+                                          }));
+                                        }}
+                                        className="h-7 w-28 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-16"
+                                        placeholder="10"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                                {section.type === 'circuits' && (
+                                  <div className="relative flex items-center">
+                                    <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">rounds</span>
+                                    <Input
+                                      type="text"
+                                      inputMode="numeric"
+                                      value={section.rounds?.toString() || ''}
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace(/\D/g, '');
+                                        markDirty();
+                                        setWorkoutSchema((prev) => ({
+                                          ...prev,
+                                          items: prev.items.map((item) => {
+                                            if (item.itemType === 'section' && item.section.id === section.id) {
+                                              return { ...item, section: { ...item.section, rounds: value ? parseInt(value, 10) : undefined } };
+                                            }
+                                            return item;
+                                          }),
+                                        }));
+                                        if (value && value.trim() !== '') {
+                                          setSectionValidationErrors((prev) => clearMissingConfigError(section.id, prev));
+                                        }
+                                      }}
+                                      className={cn(
+                                        'h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-12',
+                                        sectionValidationErrors[section.id]?.missingConfig && 'border-destructive focus-visible:ring-destructive'
+                                      )}
+                                      placeholder="3"
+                                    />
+                                  </div>
+                                )}
+                                {/* Hide actions in section mode */}
                 {!isSectionMode && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -1740,7 +1773,6 @@ Focus on proper form and progressive overload.`;
           </CardHeader>
           {!isCollapsed && (
             <>
-              <Separator />
               <div className="overflow-hidden transition-all duration-300 ease-in-out" style={{ maxHeight: '10000px', opacity: 1 }}>
                 <CardContent
                 ref={(el) => registerSectionRef(section.id, el)}

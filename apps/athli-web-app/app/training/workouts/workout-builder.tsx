@@ -246,6 +246,8 @@ export const WorkoutBuilder = ({
   const [isCreatingSection, setIsCreatingSection] = useState(false);
   const [presetSectionType, setPresetSectionType] = useState<'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | null>(null);
   const creatorRef = useRef<HTMLDivElement>(null);
+  const [editingSectionNameId, setEditingSectionNameId] = useState<string | null>(null);
+  const sectionNameInputRef = useRef<HTMLInputElement>(null);
 
   // AI Builder state
   const [activeBuilder, setActiveBuilder] = useState<'ai' | 'manual'>(initialAiMode ? 'ai' : 'manual');
@@ -541,11 +543,12 @@ export const WorkoutBuilder = ({
     const sectionsWithStructure: WorkoutSchemaItem[] = aiGenerated.sections.map((section: any) => {
       const sectionData: WorkoutSection = {
         id: section.id as string,
-        type: section.type as 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary',
+        type: section.type as 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary',
         exercises: [] as ExerciseWithSuperset[],
         ...(section.type === 'amrap' && { roundDurationSec: section.roundDurationSec }),
         ...((section.type === 'tabata' || section.type === 'hiit') && { workSec: section.workSec, restSec: section.restSec, rounds: section.rounds }),
         ...(section.type === 'emom' && { intervalSec: section.intervalSec, durationMin: section.durationMin }),
+        ...(section.type === 'circuits' && { rounds: section.rounds }),
         ...(section.type === 'auxiliary' && { category: section.category }),
       };
       return {
@@ -564,7 +567,7 @@ export const WorkoutBuilder = ({
     }> = [];
 
     aiGenerated.sections.forEach((section: any) => {
-      if (section.type === 'regular' || section.type === 'auxiliary' || section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom') {
+      if (section.type === 'regular' || section.type === 'auxiliary' || section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom' || section.type === 'circuits') {
         section.exercises?.forEach((group: any) => {
           if (group.isSuperset && group.exercises) {
             const supersetGroupId = `superset_${section.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -1028,7 +1031,7 @@ Focus on proper form and progressive overload.`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveSignal]);
 
-  const handleSectionSelect = (type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary') => {
+  const handleSectionSelect = (type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary') => {
     if (contentScrollRef.current) {
       pendingScrollTopRef.current = contentScrollRef.current.scrollTop;
     }
@@ -1614,49 +1617,68 @@ Focus on proper form and progressive overload.`;
                     {isCollapsed ? 'Expand section' : 'Collapse section'}
                   </TooltipContent>
                 </Tooltip>
-                <Input
-                  disabled={isSectionMode}
-                  className="h-7 flex-1 border-input bg-background text-sm focus-visible:ring-primary shadow-none"
-                  placeholder={section.type ? (section.type.charAt(0).toUpperCase() + section.type.slice(1)) : 'Section'}
-                  value={isSectionMode ? workoutTitle : (section.name || '')}
-                  onChange={(e) => {
-                    const newName = e.target.value;
-                    markDirty();
-                    setWorkoutSchema((prev) => ({
-                      ...prev,
-                      items: prev.items.map((item) => {
-                        if (item.itemType === 'section' && item.section.id === section.id) {
-                          return {
-                            ...item,
-                            section: { ...item.section, name: newName },
-                          };
-                        }
-                        return item;
-                      }),
-                    }));
-                    // Sync to Top Title if in Section Mode
-                    if (isSectionMode) {
-                      setWorkoutTitle(newName);
-                    }
-                  }}
-                />
+                {editingSectionNameId === section.id ? (
+                  <Input
+                    ref={sectionNameInputRef}
+                    autoFocus
+                    className="h-7 flex-1 min-w-0 border-input bg-background text-sm focus-visible:ring-primary shadow-none"
+                    placeholder={section.type ? (section.type.charAt(0).toUpperCase() + section.type.slice(1)) : 'Section'}
+                    value={isSectionMode ? workoutTitle : (section.name || '')}
+                    onChange={(e) => {
+                      const newName = e.target.value;
+                      markDirty();
+                      setWorkoutSchema((prev) => ({
+                        ...prev,
+                        items: prev.items.map((item) => {
+                          if (item.itemType === 'section' && item.section.id === section.id) {
+                            return {
+                              ...item,
+                              section: { ...item.section, name: newName },
+                            };
+                          }
+                          return item;
+                        }),
+                      }));
+                      // Sync to Top Title if in Section Mode
+                      if (isSectionMode) {
+                        setWorkoutTitle(newName);
+                      }
+                    }}
+                    onBlur={() => setEditingSectionNameId(null)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === 'Escape') {
+                        setEditingSectionNameId(null);
+                      }
+                    }}
+                  />
+                ) : (
+                  <span
+                    className="text-sm font-medium cursor-pointer hover:text-primary transition-colors truncate max-w-[300px] pl-[3px]"
+                    onClick={() => setEditingSectionNameId(section.id)}
+                  >
+                    {(isSectionMode ? workoutTitle : section.name) || (
+                      <span className="text-muted-foreground">
+                        {section.type ? (section.type.charAt(0).toUpperCase() + section.type.slice(1)) : 'Section'}
+                      </span>
+                    )}
+                  </span>
+                )}
                 {section.type && (
-                  <Badge variant="outline" className="h-7 px-2 text-xs font-bold capitalize bg-background text-foreground border-input rounded-md shadow-none">
+                  <Badge variant="outline" className="ml-2 px-2 py-0.5 text-[10px] font-medium capitalize bg-transparent text-primary border-primary rounded-full shadow-none">
                     {section.type}
                   </Badge>
                 )}
               </div>
               <div className="flex items-center gap-1">
-                {/* AMRAP config */}
                 {section.type === 'amrap' && (
                   <div className="relative flex items-center">
-                    <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">
-                      Time (s)
+                    <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">
+                      minutes
                     </span>
                     <Input
                       type="text"
                       inputMode="numeric"
-                      value={section.roundDurationSec?.toString() || ''}
+                      value={section.roundDurationSec ? Math.round(section.roundDurationSec / 60).toString() : ''}
                       onChange={(e) => {
                         const rawValue = e.target.value;
                         const value = rawValue.replace(/\D/g, '');
@@ -1670,7 +1692,7 @@ Focus on proper form and progressive overload.`;
                                 ...item,
                                 section: {
                                   ...item.section,
-                                  roundDurationSec: value ? parseInt(value, 10) : undefined,
+                                  roundDurationSec: value ? parseInt(value, 10) * 60 : undefined,
                                 },
                               };
                             }
@@ -1682,20 +1704,17 @@ Focus on proper form and progressive overload.`;
                         }
                       }}
                       className={cn(
-                        'h-7 w-28 text-center text-[11px] bg-background border-input shadow-none pl-14',
+                        'h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14',
                         sectionValidationErrors[section.id]?.missingConfig && 'border-destructive focus-visible:ring-destructive'
                       )}
                       placeholder="-"
                     />
                   </div>
                 )}
-                {/* Tabata/HIIT config */}
                 {(section.type === 'tabata' || section.type === 'hiit') && (
-                  <>
+                  <div className="flex items-center gap-1">
                     <div className="relative flex items-center">
-                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">
-                        Work
-                      </span>
+                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">work (s)</span>
                       <Input
                         type="text"
                         inputMode="numeric"
@@ -1707,23 +1726,18 @@ Focus on proper form and progressive overload.`;
                             ...prev,
                             items: prev.items.map((item) => {
                               if (item.itemType === 'section' && item.section.id === section.id) {
-                                return {
-                                  ...item,
-                                  section: { ...item.section, workSec: value ? parseInt(value, 10) : undefined },
-                                };
+                                return { ...item, section: { ...item.section, workSec: value ? parseInt(value, 10) : undefined } };
                               }
                               return item;
                             }),
                           }));
                         }}
-                        className="h-7 w-20 text-center text-[11px] bg-background border-input shadow-none pl-10"
+                        className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14"
                         placeholder={section.type === 'tabata' ? '20' : '40'}
                       />
                     </div>
                     <div className="relative flex items-center">
-                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">
-                        Rest
-                      </span>
+                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">rest (s)</span>
                       <Input
                         type="text"
                         inputMode="numeric"
@@ -1735,23 +1749,18 @@ Focus on proper form and progressive overload.`;
                             ...prev,
                             items: prev.items.map((item) => {
                               if (item.itemType === 'section' && item.section.id === section.id) {
-                                return {
-                                  ...item,
-                                  section: { ...item.section, restSec: value ? parseInt(value, 10) : undefined },
-                                };
+                                return { ...item, section: { ...item.section, restSec: value ? parseInt(value, 10) : undefined } };
                               }
                               return item;
                             }),
                           }));
                         }}
-                        className="h-7 w-20 text-center text-[11px] bg-background border-input shadow-none pl-9"
+                        className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14"
                         placeholder={section.type === 'tabata' ? '10' : '20'}
                       />
                     </div>
                     <div className="relative flex items-center">
-                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">
-                        Rds
-                      </span>
+                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">rounds</span>
                       <Input
                         type="text"
                         inputMode="numeric"
@@ -1763,28 +1772,22 @@ Focus on proper form and progressive overload.`;
                             ...prev,
                             items: prev.items.map((item) => {
                               if (item.itemType === 'section' && item.section.id === section.id) {
-                                return {
-                                  ...item,
-                                  section: { ...item.section, rounds: value ? parseInt(value, 10) : undefined },
-                                };
+                                return { ...item, section: { ...item.section, rounds: value ? parseInt(value, 10) : undefined } };
                               }
                               return item;
                             }),
                           }));
                         }}
-                        className="h-7 w-16 text-center text-[11px] bg-background border-input shadow-none pl-8"
+                        className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-12"
                         placeholder={section.type === 'tabata' ? '8' : '10'}
                       />
                     </div>
-                  </>
+                  </div>
                 )}
-                {/* EMOM config */}
                 {section.type === 'emom' && (
-                  <>
+                  <div className="flex items-center gap-1">
                     <div className="relative flex items-center">
-                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">
-                        Int
-                      </span>
+                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">interval (s)</span>
                       <Input
                         type="text"
                         inputMode="numeric"
@@ -1796,23 +1799,18 @@ Focus on proper form and progressive overload.`;
                             ...prev,
                             items: prev.items.map((item) => {
                               if (item.itemType === 'section' && item.section.id === section.id) {
-                                return {
-                                  ...item,
-                                  section: { ...item.section, intervalSec: value ? parseInt(value, 10) : undefined },
-                                };
+                                return { ...item, section: { ...item.section, intervalSec: value ? parseInt(value, 10) : undefined } };
                               }
                               return item;
                             }),
                           }));
                         }}
-                        className="h-7 w-16 text-center text-[11px] bg-background border-input shadow-none pl-7"
+                        className="h-7 w-28 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-16"
                         placeholder="60"
                       />
                     </div>
                     <div className="relative flex items-center">
-                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">
-                        Dur
-                      </span>
+                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">duration (m)</span>
                       <Input
                         type="text"
                         inputMode="numeric"
@@ -1824,20 +1822,48 @@ Focus on proper form and progressive overload.`;
                             ...prev,
                             items: prev.items.map((item) => {
                               if (item.itemType === 'section' && item.section.id === section.id) {
-                                return {
-                                  ...item,
-                                  section: { ...item.section, durationMin: value ? parseInt(value, 10) : undefined },
-                                };
+                                return { ...item, section: { ...item.section, durationMin: value ? parseInt(value, 10) : undefined } };
                               }
                               return item;
                             }),
                           }));
                         }}
-                        className="h-7 w-16 text-center text-[11px] bg-background border-input shadow-none pl-8"
+                        className="h-7 w-28 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-16"
                         placeholder="10"
                       />
                     </div>
-                  </>
+                  </div>
+                )}
+                {section.type === 'circuits' && (
+                  <div className="relative flex items-center">
+                    <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">rounds</span>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      value={section.rounds?.toString() || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        markDirty();
+                        setWorkoutSchema((prev) => ({
+                          ...prev,
+                          items: prev.items.map((item) => {
+                            if (item.itemType === 'section' && item.section.id === section.id) {
+                              return { ...item, section: { ...item.section, rounds: value ? parseInt(value, 10) : undefined } };
+                            }
+                            return item;
+                          }),
+                        }));
+                        if (value && value.trim() !== '') {
+                          setSectionValidationErrors((prev) => clearMissingConfigError(section.id, prev));
+                        }
+                      }}
+                      className={cn(
+                        'h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-12',
+                        sectionValidationErrors[section.id]?.missingConfig && 'border-destructive focus-visible:ring-destructive'
+                      )}
+                      placeholder="3"
+                    />
+                  </div>
                 )}
                 {/* Hide actions in section mode */}
                 {!isSectionMode && (
@@ -1891,7 +1917,6 @@ Focus on proper form and progressive overload.`;
           </CardHeader>
           {!isCollapsed && (
             <>
-              <Separator />
               <div className="overflow-hidden transition-all duration-300 ease-in-out" style={{ maxHeight: '10000px', opacity: 1 }}>
                 <CardContent
                 ref={(el) => registerSectionRef(section.id, el)}

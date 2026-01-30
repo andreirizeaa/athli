@@ -311,6 +311,9 @@ export const convertPayloadToBuilderFormat = (
                     intervalSec: (sectionPayload as any).intervalSec,
                     durationMin: (sectionPayload as any).durationMin
                 }),
+                ...(sectionPayload.type === 'circuits' && {
+                    rounds: (sectionPayload as any).rounds
+                }),
                 ...(sectionPayload.type === 'auxiliary' && { category: sectionPayload.category }),
             };
 
@@ -357,8 +360,8 @@ export const convertPayloadToBuilderFormat = (
                     });
                 });
                 console.log('[PAYLOAD CONVERTER] Finished converting section, final exercise count:', section.exercises!.length);
-            } else if ((sectionPayload.type === 'tabata' || sectionPayload.type === 'hiit' || sectionPayload.type === 'emom') && sectionPayload.exercises) {
-                // For Tabata, HIIT, EMOM sections - exercises have a single set
+            } else if ((sectionPayload.type === 'tabata' || sectionPayload.type === 'hiit' || sectionPayload.type === 'emom' || sectionPayload.type === 'circuits') && sectionPayload.exercises) {
+                // For Tabata, HIIT, EMOM, Circuits sections - exercises have a single set
                 (sectionPayload.exercises as any[]).forEach((group: any) => {
                     group.exercises.forEach((exercisePayload: any) => {
                         // Find exercise details from the exercise database, or use fallback

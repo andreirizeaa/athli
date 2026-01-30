@@ -9,14 +9,14 @@ import { SECTION_TYPE_DEFAULTS } from '@athli/shared-types';
  * @returns Updated workout schema
  */
 export const handleSectionSelect = (
-  type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary',
+  type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary',
   currentSchema: WorkoutSchema,
   overrides?: Partial<WorkoutSection>
 ): WorkoutSchema => {
   const newSection: WorkoutSection = {
     id: `sec_${type}_${Date.now()}`,
     type,
-    // All section types use `exercises` for the builder UI. For AMRAP/Tabata/HIIT/EMOM/Auxiliary,
+    // All section types use `exercises` for the builder UI. For AMRAP/Tabata/HIIT/EMOM/Circuits/Auxiliary,
     // these will later be mapped appropriately in the payload.
     exercises: [] as ExerciseWithSuperset[],
     ...(type === 'amrap' && { roundDurationSec: undefined }),
@@ -33,6 +33,9 @@ export const handleSectionSelect = (
     ...(type === 'emom' && {
       intervalSec: SECTION_TYPE_DEFAULTS.emom.intervalSec,
       durationMin: SECTION_TYPE_DEFAULTS.emom.durationMin
+    }),
+    ...(type === 'circuits' && {
+      rounds: SECTION_TYPE_DEFAULTS.circuits.rounds
     }),
     ...(type === 'auxiliary' && { category: undefined }),
     ...overrides,
@@ -86,7 +89,7 @@ export const handleDeleteSection = (
  * @returns A description of what the section type means
  */
 export const getSectionDescription = (
-  type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary'
+  type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary'
 ): string => {
   switch (type) {
     case 'regular':
@@ -99,6 +102,8 @@ export const getSectionDescription = (
       return 'High-intensity interval training with customizable work/rest periods.';
     case 'emom':
       return 'Every Minute On the Minute - complete exercises within each minute interval.';
+    case 'circuits':
+      return 'Circuit training - complete all exercises in order for the specified number of rounds.';
     case 'auxiliary':
       return 'Warm up, cool down, or mobility exercises. Follow the sets and reps specified.';
     default:
