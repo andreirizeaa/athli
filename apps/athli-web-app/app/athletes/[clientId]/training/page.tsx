@@ -1461,6 +1461,7 @@ const ClientTrainingCalendarPage = () => {
     // Call API for each workout in parallel
     const results = await Promise.allSettled(
       workoutsToDelete.map(async ({ dateKey, workout }) => {
+        const loadingKey = `${dateKey}::${workout.id}`;
         try {
           await apiDeleteWorkoutByKey({
             clientId,
@@ -1485,7 +1486,7 @@ const ClientTrainingCalendarPage = () => {
           // Remove loading state for this workout
           setLoadingWorkoutIds((prev) => {
             const next = new Set(prev);
-            next.delete(workout.id);
+            next.delete(loadingKey);
             return next;
           });
         }

@@ -39,13 +39,6 @@ export const SectionBuilderCard = ({
 
     const typeLabel = SECTION_TYPES.find(t => t.value === section.sectionType)?.label || section.sectionType;
 
-    let details = typeLabel;
-    if (section.sectionType === 'amrap' && section.duration) {
-        details += ` • ${section.duration}m`;
-    } else if (section.sectionType === 'timed' && section.rounds) {
-        details += ` • ${section.rounds} Rounds`;
-    }
-
     const hasExercises = (section.exercises?.length ?? 0) > 0;
 
     const actionOptions: DropdownMenuOption[] = [
@@ -77,53 +70,55 @@ export const SectionBuilderCard = ({
     ];
 
     return (
-        <Card style={[styles.card, hasError && { borderColor: RED_ERROR, borderWidth: 2 }]}>
-            <PressableScale style={styles.pressable} onPress={onEdit}>
-                <View style={styles.header}>
-                    <View style={styles.headerContent}>
-                        <Text style={[styles.title, { color: themeColors.text }]}>{section.name}</Text>
-                        <Text style={[styles.details, { color: themeColors.mutedText }]}>{details}</Text>
+        <PressableScale onPress={onEdit}>
+            <Card style={[styles.card, hasError && { borderColor: RED_ERROR, borderWidth: 2 }]}>
+                <View style={styles.content}>
+                    <View style={styles.header}>
+                        <View style={styles.headerContent}>
+                            <Text style={[styles.title, { color: themeColors.text }]}>{section.name}</Text>
+                            <Text style={[styles.details, { color: themeColors.mutedText }]}>{typeLabel}</Text>
+                        </View>
+
+                        <DropdownMenuWrapper options={actionOptions}>
+                            <IconButton
+                                icon={{ sf: 'ellipsis', IconComponent: Ellipsis }}
+                                onPress={() => { }}
+                                size="md"
+                                color={themeColors.text}
+                            />
+                        </DropdownMenuWrapper>
                     </View>
 
-                    <DropdownMenuWrapper options={actionOptions}>
-                        <IconButton
-                            icon={{ sf: 'ellipsis', IconComponent: Ellipsis }}
-                            onPress={() => { }}
-                            size="md"
-                            color={themeColors.text}
-                        />
-                    </DropdownMenuWrapper>
-                </View>
-
-                {(section.exercises?.length ?? 0) > 0 ? (
-                    <>
-                        <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
-                        <View style={styles.exerciseList}>
-                            {section.exercises.map((ex, idx) => (
-                                <View key={ex.id} style={styles.exerciseRow}>
-                                    <View style={[styles.numberCircle, { backgroundColor: themeColors.primary }]}>
-                                        <Text style={[styles.numberText, { color: themeColors.primaryForeground }]}>{idx + 1}</Text>
+                    {(section.exercises?.length ?? 0) > 0 ? (
+                        <>
+                            <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
+                            <View style={styles.exerciseList}>
+                                {section.exercises.map((ex, idx) => (
+                                    <View key={ex.id} style={styles.exerciseRow}>
+                                        <View style={[styles.numberCircle, { backgroundColor: themeColors.primary }]}>
+                                            <Text style={[styles.numberText, { color: themeColors.primaryForeground }]}>{idx + 1}</Text>
+                                        </View>
+                                        <Text style={[styles.exerciseName, { color: themeColors.text }]} numberOfLines={1}>
+                                            {ex.name}
+                                        </Text>
                                     </View>
-                                    <Text style={[styles.exerciseName, { color: themeColors.text }]} numberOfLines={1}>
-                                        {ex.name}
-                                    </Text>
-                                </View>
-                            ))}
-                        </View>
-                    </>
-                ) : (
-                    <>
-                        <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
-                        <View style={styles.emptyRow}>
-                            <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
-                                Add your first exercises
-                            </Text>
-                            <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-                        </View>
-                    </>
-                )}
-            </PressableScale>
-        </Card>
+                                ))}
+                            </View>
+                        </>
+                    ) : (
+                        <>
+                            <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
+                            <View style={styles.emptyRow}>
+                                <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
+                                    Add your first exercises
+                                </Text>
+                                <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                            </View>
+                        </>
+                    )}
+                </View>
+            </Card>
+        </PressableScale>
     );
 };
 
@@ -134,7 +129,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         overflow: 'hidden',
     },
-    pressable: {
+    content: {
         paddingVertical: 12,
         paddingHorizontal: 16,
     },

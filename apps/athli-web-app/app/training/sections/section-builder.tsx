@@ -1158,8 +1158,8 @@ Focus on proper form and progressive overload.`;
             });
           }
 
-          // Normalize AMRAP/Tabata/HIIT/EMOM exercises to include sets
-          if (coreData && (coreData.type === 'amrap' || coreData.type === 'tabata' || coreData.type === 'hiit' || coreData.type === 'emom')) {
+          // Normalize AMRAP/Tabata/HIIT/EMOM/Circuits exercises to include sets
+          if (coreData && (coreData.type === 'amrap' || coreData.type === 'tabata' || coreData.type === 'hiit' || coreData.type === 'emom' || coreData.type === 'circuits')) {
             if (coreData.exercises && Array.isArray(coreData.exercises)) {
               coreData.exercises = coreData.exercises.map((ex: any) => {
                 if (ex.sets && ex.sets.length > 0) return ex;
@@ -1172,19 +1172,60 @@ Focus on proper form and progressive overload.`;
                   return metric.toString();
                 };
 
-                const set = {
-                  setNumber: 1,
-                  type: 'normal',
-                  reps: getMetricVal(ex.reps),
-                  weight: getMetricVal(ex.weight),
-                  rest: ex.restSec !== null && ex.restSec !== undefined ? ex.restSec.toString() : '',
-                  distance: getMetricVal(ex.distance),
-                  duration: getMetricVal(ex.durationSec),
+                // For interval sections, trackableField1/trackableField2 are inside the 'set' object
+                const setData = ex.set || {};
+                const trackableField1 = setData.trackableField1 || ex.trackableField1;
+                const trackableField2 = setData.trackableField2 || ex.trackableField2;
+                const column1Label = ex.column1Label || 'Reps';
+                const column2Label = ex.column2Label || 'Optional';
+
+                // Map values based on column labels
+                const value1 = getMetricVal(trackableField1);
+                const value2 = getMetricVal(trackableField2);
+
+                // Helper to determine field from label
+                const getFieldFromLabel = (label: string) => {
+                  if (label === 'Reps') return 'reps';
+                  if (label === 'kg' || label === 'lbs') return 'weight';
+                  if (label === 'km' || label === 'm' || label === 'yards' || label === 'miles' || label === 'feet') return 'distance';
+                  if (label === 'minutes' || label === 'seconds') return 'duration';
+                  if (label === 'None') return null;
+                  return 'optional'; // Optional, Tempo, RIR, RPE, etc.
                 };
+
+                const field1 = getFieldFromLabel(column1Label);
+                const field2 = getFieldFromLabel(column2Label);
+
+                const set: any = {
+                  setNumber: setData.setNumber || 1,
+                  type: setData.type || 'normal',
+                  reps: '',
+                  weight: '',
+                  rest: setData.restSec !== null && setData.restSec !== undefined ? setData.restSec.toString() : (ex.restSec?.toString() || ''),
+                  distance: '',
+                  duration: '',
+                  optional: { prescribed: '', completed: '' },
+                };
+
+                // Map value1 to the correct field
+                if (field1 === 'reps') set.reps = value1;
+                else if (field1 === 'weight') set.weight = value1;
+                else if (field1 === 'distance') set.distance = value1;
+                else if (field1 === 'duration') set.duration = value1;
+                else if (field1 === 'optional') set.optional = { prescribed: value1, completed: '' };
+
+                // Map value2 to the correct field
+                if (field2 === 'reps') set.reps = value2;
+                else if (field2 === 'weight') set.weight = value2;
+                else if (field2 === 'distance') set.distance = value2;
+                else if (field2 === 'duration') set.duration = value2;
+                else if (field2 === 'optional') set.optional = { prescribed: value2, completed: '' };
 
                 return {
                   ...ex,
-                  sets: [set]
+                  sets: [set],
+                  column1Label,
+                  column2Label,
                 };
               });
             }
@@ -1206,6 +1247,8 @@ Focus on proper form and progressive overload.`;
                     // Let's ensure the type is correct.
                     type: type || 'regular',
                     name: draggedSection.program,
+                    // Map API config fields to builder config fields
+                    ...(coreData?.durationSec && { roundDurationSec: coreData.durationSec }),
                   }
                 }
               }
@@ -1289,7 +1332,14 @@ Focus on proper form and progressive overload.`;
   };
 
   const handleAddExercise = (sectionId: string) => {
-    setWorkoutSchema((prev) => addExercise(sectionId, prev));
+    setWorkoutSchema((prev) => {
+      // Find the section to get its type
+      const sectionItem = prev.items.find(
+        (item) => item.itemType === 'section' && item.section.id === sectionId
+      );
+      const sectionTypeForExercise = sectionItem?.itemType === 'section' ? sectionItem.section.type : undefined;
+      return addExercise(sectionId, prev, sectionTypeForExercise);
+    });
     markDirty();
     setSectionValidationErrors((prev) => clearEmptyExercisesError(sectionId, prev));
   };

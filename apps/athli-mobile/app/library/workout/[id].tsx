@@ -500,8 +500,8 @@ export default function WorkoutDetailScreen() {
                                         const isSupersetNext = nextEx && ex.supersetGroupId && ex.supersetGroupId === nextEx.supersetGroupId;
                                         return { ...ex, isSupersetNext: isSupersetNext || false };
                                     });
-                                } else if (data.type === 'tabata' || data.type === 'hiit' || data.type === 'emom') {
-                                    // Tabata/HIIT/EMOM have exercise groups, each exercise has a single 'set' field
+                                } else if (data.type === 'tabata' || data.type === 'hiit' || data.type === 'emom' || data.type === 'circuits') {
+                                    // Tabata/HIIT/EMOM/Circuits have exercise groups, each exercise has a single 'set' field
                                     const allExercises = (data.exercises || []).flatMap((group: any) =>
                                         (group.exercises || []).map((ex: any) => {
                                             // Convert single 'set' to 'sets' array for transformExercise

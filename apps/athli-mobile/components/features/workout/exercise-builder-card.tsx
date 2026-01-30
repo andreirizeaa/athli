@@ -565,32 +565,32 @@ export const ExerciseBuilderCard = ({
                     );
                 })}
 
-                {/* Add Set Row + Rest Timer */}
-                {!hideSetControls && (
-                    <View style={styles.addSetRow}>
-                        <View style={styles.setNumberContainer}>
+                {/* Add Set Button + Rest Timer */}
+                <View style={styles.addSetRow}>
+                    <View style={styles.setNumberContainer}>
+                        {!hideSetControls && (
                             <PressableScale
                                 onPress={handleAddSet}
                                 style={[styles.addSetCircle, { borderColor: themeColors.primary }]}
                             >
                                 <Plus {...({ size: 16, color: themeColors.primary } as any)} />
                             </PressableScale>
-                        </View>
-                        <View style={styles.inputsRow}>
-                            {/* Empty space to match the layout */}
-                        </View>
-                        <View style={styles.restTimerContainer}>
-                            <DropdownMenuWrapper options={getRestTimerOptions()}>
-                                <View style={[styles.restTimerButton, { backgroundColor: themeColors.backgroundTertiary }]}>
-                                    <Timer {...({ size: 16, color: themeColors.primary } as any)} />
-                                    <Text style={[styles.restTimerText, { color: themeColors.primary }]}>
-                                        {formatRestTime(exercise.setRestSec)}
-                                    </Text>
-                                </View>
-                            </DropdownMenuWrapper>
-                        </View>
+                        )}
                     </View>
-                )}
+                    <View style={styles.inputsRow}>
+                        {/* Empty space to match the layout */}
+                    </View>
+                    <View style={styles.restTimerContainer}>
+                        <DropdownMenuWrapper options={getRestTimerOptions()}>
+                            <View style={[styles.restTimerButton, { backgroundColor: themeColors.backgroundTertiary }]}>
+                                <Timer {...({ size: 16, color: themeColors.primary } as any)} />
+                                <Text style={[styles.restTimerText, { color: themeColors.primary }]}>
+                                    {formatRestTime(exercise.setRestSec)}
+                                </Text>
+                            </View>
+                        </DropdownMenuWrapper>
+                    </View>
+                </View>
 
                 <View style={styles.notesContainer}>
                     <InputBox
