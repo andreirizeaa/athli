@@ -73,10 +73,24 @@ export function AssistantSidebar() {
     const isNewChat = pathname === "/assistant";
 
     return (
-        <div className="flex h-full w-full flex-col border-r bg-background">
-            <div className="flex items-center gap-2 p-4">
-                <div className="relative flex-1">
-                    <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <div className="flex h-full w-full flex-col">
+            {/* Header */}
+            <div className="px-4 my-2 flex items-center justify-between">
+                <h2 className="text-[22px] font-semibold">Chats</h2>
+                <Button
+                    onClick={handleNewChat}
+                    size="sm"
+                    title="New chat"
+                >
+                    <SquarePen className="h-4 w-4 mr-1" />
+                    New
+                </Button>
+            </div>
+
+            {/* Search */}
+            <div className="px-4 pb-3 border-b">
+                <div className="relative">
+                    <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         placeholder="Search chats..."
                         value={searchQuery}
@@ -84,49 +98,41 @@ export function AssistantSidebar() {
                         className="pl-9"
                     />
                 </div>
-                <Button
-                    onClick={handleNewChat}
-                    size="icon"
-                    variant="outline"
-                    className="shrink-0"
-                    title="New chat"
-                >
-                    <SquarePen className="size-4" />
-                </Button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-2 pb-4">
-                <div className="flex flex-col gap-1">
-                    {filteredChats.map((chat) => (
-                        <button
-                            key={chat.id}
-                            onClick={() => handleChatClick(chat.id)}
-                            className={cn(
-                                "flex w-full flex-col items-start gap-1 rounded-lg p-3 text-left transition-colors hover:bg-muted",
-                                isActiveChat(chat.id) && "bg-primary/10"
-                            )}
-                        >
-                            <div className="flex w-full items-center gap-2">
-                                <MessageSquareIcon className="size-4 shrink-0 text-muted-foreground" />
-                                <span className="truncate text-sm font-medium">
-                                    {chat.title}
+            {/* Chat List */}
+            <div className="flex-1 overflow-y-auto">
+                {filteredChats.length === 0 ? (
+                    <div className="p-4 text-center text-muted-foreground text-sm">
+                        No chats found
+                    </div>
+                ) : (
+                    <div>
+                        {filteredChats.map((chat) => (
+                            <button
+                                key={chat.id}
+                                onClick={() => handleChatClick(chat.id)}
+                                className={cn(
+                                    "w-full text-left px-4 py-3 border-b transition-colors hover:bg-accent cursor-pointer",
+                                    isActiveChat(chat.id) && "bg-accent"
+                                )}
+                            >
+                                <div className="flex items-center gap-2 mb-1">
+                                    <MessageSquareIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                    <span className="truncate text-sm font-medium">
+                                        {chat.title}
+                                    </span>
+                                </div>
+                                <p className="line-clamp-1 text-xs text-muted-foreground pl-6">
+                                    {chat.lastMessage}
+                                </p>
+                                <span className="text-xs text-muted-foreground/60 pl-6">
+                                    {chat.timestamp}
                                 </span>
-                            </div>
-                            <p className="line-clamp-1 text-xs text-muted-foreground pl-6">
-                                {chat.lastMessage}
-                            </p>
-                            <span className="text-xs text-muted-foreground/60 pl-6">
-                                {chat.timestamp}
-                            </span>
-                        </button>
-                    ))}
-
-                    {filteredChats.length === 0 && (
-                        <p className="p-4 text-center text-sm text-muted-foreground">
-                            No chats found
-                        </p>
-                    )}
-                </div>
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );

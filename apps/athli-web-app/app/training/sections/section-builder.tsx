@@ -97,6 +97,8 @@ import {
   handleSupersetUnlink as unlinkSuperset,
   handleTopLevelSupersetLink as linkTopLevelSuperset,
   handleTopLevelSupersetUnlink as unlinkTopLevelSuperset,
+  syncSupersetSetsInSection,
+  syncSupersetSetsTopLevel,
 } from '@/components/training/shared/utils/superset-handlers';
 import {
   handleDrop as dropExercise,
@@ -116,7 +118,7 @@ type SectionBuilderProps = {
   saveSignal?: number;
   onSaveSuccess?: (payload: WorkoutProgramPayload) => Promise<void> | void;
   onSaveError?: () => void;
-  sectionType: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
+  sectionType: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary';
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDelete?: () => Promise<void> | void;
@@ -192,8 +194,8 @@ export const SectionBuilder = ({
           exercises: [],
           name: meta?.name || '',
           ...(sectionType === 'amrap' && { roundDurationSec: undefined }),
-          ...(sectionType === 'timed' && { targetRounds: undefined }),
-          ...(sectionType === 'circuits' && { targetRounds: undefined }),
+          ...((sectionType === 'tabata' || sectionType === 'hiit') && { workSec: undefined, restSec: undefined, rounds: undefined }),
+          ...(sectionType === 'emom' && { intervalSec: undefined, durationMin: undefined }),
           ...(sectionType === 'auxiliary' && { category: 'warmup' }),
         },
       }],
@@ -213,6 +215,7 @@ export const SectionBuilder = ({
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [focusedExerciseId, setFocusedExerciseId] = useState<string | null>(null);
+  const [focusedSupersetGroupId, setFocusedSupersetGroupId] = useState<string | null>(null);
   const [isLoadingAiWorkout, setIsLoadingAiWorkout] = useState(false);
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollTopRef = useRef<number | null>(null);
@@ -276,8 +279,8 @@ export const SectionBuilder = ({
               exercises: [],
               name: meta?.name || '',
               ...(sectionType === 'amrap' && { roundDurationSec: undefined }),
-              ...(sectionType === 'timed' && { targetRounds: undefined }),
-              ...(sectionType === 'circuits' && { targetRounds: undefined }),
+                  ...((sectionType === 'tabata' || sectionType === 'hiit') && { workSec: undefined, restSec: undefined, rounds: undefined }),
+              ...(sectionType === 'emom' && { intervalSec: undefined, durationMin: undefined }),
               ...(sectionType === 'auxiliary' && { category: 'warmup' }),
             },
           }],
@@ -465,11 +468,11 @@ export const SectionBuilder = ({
     const sectionsWithStructure: WorkoutSchemaItem[] = aiGenerated.sections.map((section: any) => {
       const sectionData: WorkoutSection = {
         id: section.id as string,
-        type: section.type as 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary',
+        type: section.type as 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary',
         exercises: [] as ExerciseWithSuperset[],
         ...(section.type === 'amrap' && { roundDurationSec: section.roundDurationSec }),
-        ...(section.type === 'timed' && { targetRounds: section.targetRounds }),
-        ...(section.type === 'circuits' && { targetRounds: section.targetRounds }),
+        ...((section.type === 'tabata' || section.type === 'hiit') && { workSec: section.workSec, restSec: section.restSec, rounds: section.rounds }),
+        ...(section.type === 'emom' && { intervalSec: section.intervalSec, durationMin: section.durationMin }),
         ...(section.type === 'auxiliary' && { category: section.category }),
       };
       return {
@@ -488,7 +491,7 @@ export const SectionBuilder = ({
     }> = [];
 
     aiGenerated.sections.forEach((section: any) => {
-      if (section.type === 'regular' || section.type === 'auxiliary' || section.type === 'circuits') {
+      if (section.type === 'regular' || section.type === 'auxiliary' || section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom') {
         section.exercises?.forEach((group: any) => {
           if (group.isSuperset && group.exercises) {
             const supersetGroupId = `superset_${section.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -778,6 +781,12 @@ Focus on proper form and progressive overload.`;
       .map((item) => item.section);
   };
 
+  const getTopLevelExercisesFromItems = () => {
+    return workoutSchema.items
+      .filter((item): item is { itemType: 'exercise'; exercise: ExerciseWithSuperset } => item.itemType === 'exercise')
+      .map((item) => item.exercise);
+  };
+
   const handleExerciseClickByIdWrapper = (exerciseId: string) => {
     handleExerciseClickById(
       exerciseId,
@@ -787,7 +796,9 @@ Focus on proper form and progressive overload.`;
       contentScrollRef,
       setFocusedExerciseId,
       setCollapsedSections,
-      findExerciseById
+      findExerciseById,
+      setFocusedSupersetGroupId,
+      getTopLevelExercisesFromItems()
     );
   };
 
@@ -921,7 +932,7 @@ Focus on proper form and progressive overload.`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveSignal]);
 
-  const handleSectionSelect = (type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary') => {
+  const handleSectionSelect = (type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary') => {
     if (contentScrollRef.current) {
       pendingScrollTopRef.current = contentScrollRef.current.scrollTop;
     }
@@ -942,7 +953,7 @@ Focus on proper form and progressive overload.`;
     setDraggedSection(section);
   };
 
-  const handleCreateSection = (name: string, type: SectionType, config?: { roundDurationSec?: number; targetRounds?: number }) => {
+  const handleCreateSection = (name: string, type: SectionType, config?: { roundDurationSec?: number }) => {
     setWorkoutSchema((prev) => selectSection(type, prev, { name, ...config }));
     setIsCreatingSection(false);
     markDirty();
@@ -1143,8 +1154,8 @@ Focus on proper form and progressive overload.`;
             });
           }
 
-          // Normalize AMRAP/Timed/Circuits exercises to include sets
-          if (coreData && (coreData.type === 'amrap' || coreData.type === 'timed' || coreData.type === 'circuits')) {
+          // Normalize AMRAP/Tabata/HIIT/EMOM exercises to include sets
+          if (coreData && (coreData.type === 'amrap' || coreData.type === 'tabata' || coreData.type === 'hiit' || coreData.type === 'emom')) {
             if (coreData.exercises && Array.isArray(coreData.exercises)) {
               coreData.exercises = coreData.exercises.map((ex: any) => {
                 if (ex.sets && ex.sets.length > 0) return ex;
@@ -1501,19 +1512,15 @@ Focus on proper form and progressive overload.`;
                 )}
               </div>
               <div className="flex items-center gap-1">
-                {(section.type === 'amrap' || section.type === 'timed' || section.type === 'circuits') && (
+                {section.type === 'amrap' && (
                   <div className="relative flex items-center">
                     <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">
-                      {section.type === 'amrap' ? 'Time (m)' : 'Rounds'}
+                      Time (m)
                     </span>
                     <Input
                       type="text"
                       inputMode="numeric"
-                      value={
-                        section.type === 'amrap'
-                          ? section.roundDurationSec ? Math.round(section.roundDurationSec / 60).toString() : ''
-                          : section.targetRounds?.toString() || ''
-                      }
+                      value={section.roundDurationSec ? Math.round(section.roundDurationSec / 60).toString() : ''}
                       onChange={(e) => {
                         const rawValue = e.target.value;
                         // Only allow digits
@@ -1524,22 +1531,12 @@ Focus on proper form and progressive overload.`;
                           ...prev,
                           items: prev.items.map((item) => {
                             if (item.itemType === 'section' && item.section.id === section.id) {
-                              if (section.type === 'amrap') {
-                                return {
-                                  ...item,
-                                  section: {
-                                    ...item.section,
-                                    roundDurationSec: value ? parseInt(value, 10) * 60 : undefined, // Convert minutes to seconds
-                                  },
-                                };
-                              }
                               return {
                                 ...item,
                                 section: {
                                   ...item.section,
-                                  targetRounds: value ? parseInt(value, 10) : undefined,
+                                  roundDurationSec: value ? parseInt(value, 10) * 60 : undefined, // Convert minutes to seconds
                                 },
-
                               };
                             }
                             return item;
@@ -1550,12 +1547,134 @@ Focus on proper form and progressive overload.`;
                         }
                       }}
                       className={cn(
-                        'h-7 w-28 text-center text-[11px] bg-background border-input shadow-none',
-                        section.type === 'amrap' ? 'pl-14' : 'pl-12',
+                        'h-7 w-28 text-center text-[11px] bg-background border-input shadow-none pl-14',
                         sectionValidationErrors[section.id]?.missingConfig && 'border-destructive focus-visible:ring-destructive'
                       )}
                       placeholder="-"
                     />
+                  </div>
+                )}
+                {(section.type === 'tabata' || section.type === 'hiit') && (
+                  <div className="flex items-center gap-1">
+                    <div className="relative flex items-center">
+                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">Work</span>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={section.workSec?.toString() || ''}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          markDirty();
+                          setWorkoutSchema((prev) => ({
+                            ...prev,
+                            items: prev.items.map((item) => {
+                              if (item.itemType === 'section' && item.section.id === section.id) {
+                                return { ...item, section: { ...item.section, workSec: value ? parseInt(value, 10) : undefined } };
+                              }
+                              return item;
+                            }),
+                          }));
+                        }}
+                        className="h-7 w-20 text-center text-[11px] bg-background border-input shadow-none pl-10"
+                        placeholder={section.type === 'tabata' ? '20' : '40'}
+                      />
+                    </div>
+                    <div className="relative flex items-center">
+                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">Rest</span>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={section.restSec?.toString() || ''}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          markDirty();
+                          setWorkoutSchema((prev) => ({
+                            ...prev,
+                            items: prev.items.map((item) => {
+                              if (item.itemType === 'section' && item.section.id === section.id) {
+                                return { ...item, section: { ...item.section, restSec: value ? parseInt(value, 10) : undefined } };
+                              }
+                              return item;
+                            }),
+                          }));
+                        }}
+                        className="h-7 w-20 text-center text-[11px] bg-background border-input shadow-none pl-10"
+                        placeholder={section.type === 'tabata' ? '10' : '20'}
+                      />
+                    </div>
+                    <div className="relative flex items-center">
+                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">Rds</span>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={section.rounds?.toString() || ''}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          markDirty();
+                          setWorkoutSchema((prev) => ({
+                            ...prev,
+                            items: prev.items.map((item) => {
+                              if (item.itemType === 'section' && item.section.id === section.id) {
+                                return { ...item, section: { ...item.section, rounds: value ? parseInt(value, 10) : undefined } };
+                              }
+                              return item;
+                            }),
+                          }));
+                        }}
+                        className="h-7 w-16 text-center text-[11px] bg-background border-input shadow-none pl-8"
+                        placeholder={section.type === 'tabata' ? '8' : '10'}
+                      />
+                    </div>
+                  </div>
+                )}
+                {section.type === 'emom' && (
+                  <div className="flex items-center gap-1">
+                    <div className="relative flex items-center">
+                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">Int(s)</span>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={section.intervalSec?.toString() || ''}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          markDirty();
+                          setWorkoutSchema((prev) => ({
+                            ...prev,
+                            items: prev.items.map((item) => {
+                              if (item.itemType === 'section' && item.section.id === section.id) {
+                                return { ...item, section: { ...item.section, intervalSec: value ? parseInt(value, 10) : undefined } };
+                              }
+                              return item;
+                            }),
+                          }));
+                        }}
+                        className="h-7 w-20 text-center text-[11px] bg-background border-input shadow-none pl-10"
+                        placeholder="60"
+                      />
+                    </div>
+                    <div className="relative flex items-center">
+                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">Dur(m)</span>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={section.durationMin?.toString() || ''}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          markDirty();
+                          setWorkoutSchema((prev) => ({
+                            ...prev,
+                            items: prev.items.map((item) => {
+                              if (item.itemType === 'section' && item.section.id === section.id) {
+                                return { ...item, section: { ...item.section, durationMin: value ? parseInt(value, 10) : undefined } };
+                              }
+                              return item;
+                            }),
+                          }));
+                        }}
+                        className="h-7 w-20 text-center text-[11px] bg-background border-input shadow-none pl-12"
+                        placeholder="10"
+                      />
+                    </div>
                   </div>
                 )}
                 {/* Hide actions in section mode */}
@@ -1683,161 +1802,215 @@ Focus on proper form and progressive overload.`;
                         )}
                       </div>
 
-                      {section.exercises.map((exercise, exerciseIndex) => {
-                        const nextExercise = section.exercises?.[exerciseIndex + 1];
-                        const prevExercise = exerciseIndex > 0 ? section.exercises?.[exerciseIndex - 1] : null;
+                      {(() => {
+                        // Group exercises by superset for unified flashing
+                        const exerciseGroups = groupExercisesBySuperset(section.exercises || []);
+                        let globalExerciseIndex = 0;
 
-                        const isLinkedToNext = !!(
-                          exercise.supersetGroupId &&
-                          nextExercise?.supersetGroupId === exercise.supersetGroupId
-                        );
+                        return exerciseGroups.map((group, groupIndex) => {
+                          const isSuperset = group.length > 1;
+                          const supersetGroupId = group[0]?.supersetGroupId;
+                          const isSupersetFocused = isSuperset && focusedSupersetGroupId && focusedSupersetGroupId === supersetGroupId;
 
-                        const isLinkedToPrev = !!(
-                          exercise.supersetGroupId &&
-                          prevExercise?.supersetGroupId === exercise.supersetGroupId
-                        );
+                          const groupContent = group.map((exercise, indexInGroup) => {
+                            const exerciseIndex = globalExerciseIndex;
+                            globalExerciseIndex++;
 
-                        const wrapperClasses = cn(
-                          'flex flex-col',
-                          isLinkedToNext ? 'gap-0' : 'gap-2',
-                          exerciseIndex === 0 ? '' : isLinkedToPrev ? '-mt-px' : isLinkedToNext ? 'mt-0' : 'mt-1'
-                        );
+                            const nextExercise = section.exercises?.[exerciseIndex + 1];
+                            const prevExercise = exerciseIndex > 0 ? section.exercises?.[exerciseIndex - 1] : null;
 
-                        return (
-                          <div
-                            key={exercise.instanceId}
-                            ref={(el) => {
-                              if (el) {
-                                exerciseRefs.current.set(exercise.instanceId, el);
-                              } else {
-                                exerciseRefs.current.delete(exercise.instanceId);
-                              }
-                            }}
-                            className={wrapperClasses}
-                          >
-                            <div
-                              data-exercise-card
-                              className={cn(focusedExerciseId === exercise.instanceId && "[&>div]:outline [&>div]:outline-1 [&>div]:rounded-lg [&>div]:animate-border-flash")}
-                            >
-                              <ExerciseCard
-                                key={`${exercise.instanceId}-${exercise.sets?.length || 0}`}
-                                exercise={exercise}
-                                isLinkedToPrev={isLinkedToPrev}
-                                isLinkedToNext={isLinkedToNext}
-                                onVideoClick={handleExerciseClick}
-                                sectionType={section.type}
-                                validationErrors={validationErrors[exercise.instanceId]}
-                                hasSupersetError={validationErrors[exercise.instanceId]?.supersetMismatch}
-                                onClearValidationField={(setIndex, field) =>
-                                  handleClearSetValidationField(exercise.instanceId, setIndex, field)
-                                }
-                                onMoveUp={exerciseIndex > 0 ? () => handleMoveExerciseUp(section.id, exerciseIndex) : undefined}
-                                onMoveDown={exerciseIndex < (section.exercises?.length || 0) - 1 ? () => handleMoveExerciseDown(section.id, exerciseIndex, section.exercises?.length || 0) : undefined}
-                                canMoveUp={exerciseIndex > 0}
-                                canMoveDown={exerciseIndex < (section.exercises?.length || 0) - 1}
-                                onExerciseChange={(newExercise) => {
-                                  markDirty();
-                                  const castExercise = newExercise as ExerciseWithSuperset;
-                                  handleRecomputeExerciseValidation(
-                                    exercise.instanceId,
-                                    castExercise.exerciseType as 'weight_reps' | 'reps' | 'distance_duration',
-                                    castExercise.sets || [],
-                                    castExercise.eachSide
-                                  );
+                            const isLinkedToNext = !!(
+                              exercise.supersetGroupId &&
+                              nextExercise?.supersetGroupId === exercise.supersetGroupId
+                            );
 
-                                  setWorkoutSchema((prev) => ({
-                                    ...prev,
-                                    items: prev.items.map((item) => {
-                                      if (item.itemType === 'section' && item.section.id === section.id && item.section.exercises) {
-                                        const updatedExercises: ExerciseWithSuperset[] = [...item.section.exercises];
-                                        updatedExercises[exerciseIndex] = {
-                                          ...castExercise,
-                                          supersetGroupId: exercise.supersetGroupId,
-                                        };
-                                        return {
-                                          ...item,
-                                          section: { ...item.section, exercises: updatedExercises },
-                                        };
-                                      }
-                                      return item;
-                                    }),
-                                  }));
+                            const isLinkedToPrev = !!(
+                              exercise.supersetGroupId &&
+                              prevExercise?.supersetGroupId === exercise.supersetGroupId
+                            );
+
+                            const wrapperClasses = cn(
+                              'flex flex-col',
+                              isLinkedToNext ? 'gap-0' : 'gap-2',
+                              indexInGroup === 0 ? '' : isLinkedToPrev ? '-mt-px' : isLinkedToNext ? 'mt-0' : 'mt-1'
+                            );
+
+                            // Only apply individual flash if NOT part of a superset, or if it's a single exercise being focused
+                            const shouldFlashIndividually = !isSuperset && focusedExerciseId === exercise.instanceId;
+
+                            return (
+                              <div
+                                key={exercise.instanceId}
+                                ref={(el) => {
+                                  if (el) {
+                                    exerciseRefs.current.set(exercise.instanceId, el);
+                                  } else {
+                                    exerciseRefs.current.delete(exercise.instanceId);
+                                  }
                                 }}
-                                onDelete={() => {
-                                  markDirty();
-                                  setWorkoutSchema((prev) => ({
-                                    ...prev,
-                                    items: prev.items.map((item) => {
-                                      if (item.itemType === 'section' && item.section.id === section.id && item.section.exercises) {
-                                        const updatedExercises = item.section.exercises.filter((_, idx) => idx !== exerciseIndex);
-                                        return {
-                                          ...item,
-                                          section: { ...item.section, exercises: updatedExercises },
-                                        };
-                                      }
-                                      return item;
-                                    }),
-                                  }));
-                                }}
-                              />
-                            </div>
+                                className={wrapperClasses}
+                              >
+                                <div
+                                  data-exercise-card
+                                  className={cn(shouldFlashIndividually && "[&>div]:outline [&>div]:outline-1 [&>div]:rounded-lg [&>div]:animate-border-flash")}
+                                >
+                                  <ExerciseCard
+                                    key={`${exercise.instanceId}-${exercise.sets?.length || 0}`}
+                                    exercise={exercise}
+                                    isLinkedToPrev={isLinkedToPrev}
+                                    isLinkedToNext={isLinkedToNext}
+                                    onVideoClick={handleExerciseClick}
+                                    sectionType={section.type}
+                                    validationErrors={validationErrors[exercise.instanceId]}
+                                    hasSupersetError={validationErrors[exercise.instanceId]?.supersetMismatch}
+                                    onClearValidationField={(setIndex, field) =>
+                                      handleClearSetValidationField(exercise.instanceId, setIndex, field)
+                                    }
+                                    onMoveUp={exerciseIndex > 0 ? () => handleMoveExerciseUp(section.id, exerciseIndex) : undefined}
+                                    onMoveDown={exerciseIndex < (section.exercises?.length || 0) - 1 ? () => handleMoveExerciseDown(section.id, exerciseIndex, section.exercises?.length || 0) : undefined}
+                                    canMoveUp={exerciseIndex > 0}
+                                    canMoveDown={exerciseIndex < (section.exercises?.length || 0) - 1}
+                                    onExerciseChange={(newExercise) => {
+                                      markDirty();
+                                      const castExercise = newExercise as ExerciseWithSuperset;
+                                      handleRecomputeExerciseValidation(
+                                        exercise.instanceId,
+                                        castExercise.exerciseType as 'weight_reps' | 'reps' | 'distance_duration',
+                                        castExercise.sets || [],
+                                        castExercise.eachSide
+                                      );
 
-                            {/* Drop zone between exercises OR superset button */}
-                            {section.exercises && exerciseIndex < section.exercises.length - 1 && (
-                              <>
-                                {isLinkedToNext ? (
-                                  // Linked superset - show unlink button (no drop zone even when dragging)
-                                  <div className={cn(
-                                    "relative flex items-center justify-center bg-background py-1",
-                                    // Add red borders on left/right if superset has error
-                                    validationErrors[exercise.instanceId]?.supersetMismatch
-                                      ? "border-x-2 border-x-destructive"
-                                      : "border-x"
-                                  )}>
-                                    <Separator className="absolute w-full" />
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      className="gap-1.5 bg-background z-10 text-xs h-7 px-2"
-                                      onClick={() => handleSupersetUnlink(section.id, exerciseIndex)}
-                                    >
-                                      <Link2Off className="size-3" />
-                                      Unlink
-                                    </Button>
-                                  </div>
-                                ) : draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === exerciseIndex + 1 ? (
-                                  // Dragging and this is the drop slot - show drop zone
+                                      const newSetCount = castExercise.sets?.length || 0;
+                                      const oldSetCount = exercise.sets?.length || 0;
+
+                                      setWorkoutSchema((prev) => {
+                                        // First, update the changed exercise
+                                        let updated = {
+                                          ...prev,
+                                          items: prev.items.map((item) => {
+                                            if (item.itemType === 'section' && item.section.id === section.id && item.section.exercises) {
+                                              const updatedExercises: ExerciseWithSuperset[] = [...item.section.exercises];
+                                              updatedExercises[exerciseIndex] = {
+                                                ...castExercise,
+                                                supersetGroupId: exercise.supersetGroupId,
+                                              };
+                                              return {
+                                                ...item,
+                                                section: { ...item.section, exercises: updatedExercises },
+                                              };
+                                            }
+                                            return item;
+                                          }),
+                                        };
+
+                                        // If set count changed and exercise is in a superset, sync other exercises
+                                        if (newSetCount !== oldSetCount && exercise.supersetGroupId) {
+                                          updated = syncSupersetSetsInSection(section.id, exercise.instanceId, newSetCount, updated);
+                                        }
+
+                                        return updated;
+                                      });
+                                    }}
+                                    onDelete={() => {
+                                      markDirty();
+                                      setWorkoutSchema((prev) => ({
+                                        ...prev,
+                                        items: prev.items.map((item) => {
+                                          if (item.itemType === 'section' && item.section.id === section.id && item.section.exercises) {
+                                            const updatedExercises = item.section.exercises.filter((_, idx) => idx !== exerciseIndex);
+                                            return {
+                                              ...item,
+                                              section: { ...item.section, exercises: updatedExercises },
+                                            };
+                                          }
+                                          return item;
+                                        }),
+                                      }));
+                                    }}
+                                  />
+                                </div>
+
+                                {/* Drop zone between exercises OR superset button */}
+                                {section.exercises && exerciseIndex < section.exercises.length - 1 && (
+                                  <>
+                                    {isLinkedToNext ? (
+                                      // Linked superset - show unlink button (no drop zone even when dragging)
+                                      <div className={cn(
+                                        "relative flex items-center justify-center bg-background py-1",
+                                        // Add red borders on left/right if superset has error
+                                        validationErrors[exercise.instanceId]?.supersetMismatch
+                                          ? "border-x-2 border-x-destructive"
+                                          : "border-x"
+                                      )}>
+                                        <Separator className="absolute w-full" />
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          className="gap-1.5 bg-background z-10 text-xs h-7 px-2"
+                                          onClick={() => handleSupersetUnlink(section.id, exerciseIndex)}
+                                        >
+                                          <Link2Off className="size-3" />
+                                          Unlink
+                                        </Button>
+                                      </div>
+                                    ) : draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === exerciseIndex + 1 ? (
+                                      // Dragging and this is the drop slot - show drop zone
+                                      <div className="my-2 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
+                                        <span>Drop your exercise here</span>
+                                      </div>
+                                    ) : (
+                                      // Show superset button (visible even when dragging, unless drop zone is showing here)
+                                      <div className="flex justify-center my-2">
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          className="gap-1.5 text-xs h-7 px-2"
+                                          onClick={() => handleSupersetLink(section.id, exerciseIndex)}
+                                        >
+                                          <Link2 className="size-3" />
+                                          Superset
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+
+                                {/* Drop zone after the last exercise */}
+                                {section.exercises && exerciseIndex === section.exercises.length - 1 && draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === exerciseIndex + 1 && (
                                   <div className="my-2 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
                                     <span>Drop your exercise here</span>
                                   </div>
-                                ) : (
-                                  // Show superset button (visible even when dragging, unless drop zone is showing here)
-                                  <div className="flex justify-center my-2">
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      className="gap-1.5 text-xs h-7 px-2"
-                                      onClick={() => handleSupersetLink(section.id, exerciseIndex)}
-                                    >
-                                      <Link2 className="size-3" />
-                                      Superset
-                                    </Button>
-                                  </div>
                                 )}
-                              </>
-                            )}
-
-                            {/* Drop zone after the last exercise */}
-                            {section.exercises && exerciseIndex === section.exercises.length - 1 && draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === exerciseIndex + 1 && (
-                              <div className="my-2 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                                <span>Drop your exercise here</span>
                               </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                            );
+                          });
+
+                          // Wrap superset groups in a container for unified flashing
+                          if (isSuperset) {
+                            return (
+                              <div
+                                key={`superset-${supersetGroupId}`}
+                                className={cn(
+                                  "flex flex-col",
+                                  groupIndex > 0 && "mt-1",
+                                  isSupersetFocused && "outline outline-1 rounded-lg animate-border-flash"
+                                )}
+                              >
+                                {groupContent}
+                              </div>
+                            );
+                          }
+
+                          // Single exercise - render directly (already has its own wrapper)
+                          return (
+                            <div key={group[0]?.instanceId} className={cn(groupIndex > 0 && "mt-1")}>
+                              {groupContent}
+                            </div>
+                          );
+                        });
+                      })()}
                       <div className="flex justify-center py-3">
                         <Button
                           type="button"
@@ -1912,6 +2085,12 @@ Focus on proper form and progressive overload.`;
       prevItem.exercise.supersetGroupId === exercise.supersetGroupId
     );
 
+    // Check if this exercise is part of a superset (linked to prev or next)
+    const isPartOfSuperset = isLinkedToNext || isLinkedToPrev;
+
+    // Only apply individual flash if NOT part of a superset
+    const shouldFlashIndividually = !isPartOfSuperset && focusedExerciseId === exercise.instanceId;
+
     // Can move if not at start/end of items list
     const canMoveUp = itemIndex > 0;
     const canMoveDown = itemIndex < workoutSchema.items.length - 1;
@@ -1935,7 +2114,7 @@ Focus on proper form and progressive overload.`;
       >
         <div
           data-exercise-card
-          className={cn(focusedExerciseId === exercise.instanceId && "[&>div]:outline [&>div]:outline-1 [&>div]:rounded-lg [&>div]:animate-border-flash")}
+          className={cn(shouldFlashIndividually && "[&>div]:outline [&>div]:outline-1 [&>div]:rounded-lg [&>div]:animate-border-flash")}
         >
           <ExerciseCard
             key={`${exercise.instanceId}-${exercise.sets?.length || 0}`}
@@ -1963,21 +2142,34 @@ Focus on proper form and progressive overload.`;
                 castExercise.eachSide
               );
 
-              setWorkoutSchema((prev) => ({
-                ...prev,
-                items: prev.items.map((item, idx) => {
-                  if (idx === itemIndex && item.itemType === 'exercise') {
-                    return {
-                      ...item,
-                      exercise: {
-                        ...castExercise,
-                        supersetGroupId: exercise.supersetGroupId,
-                      },
-                    };
-                  }
-                  return item;
-                }),
-              }));
+              const newSetCount = castExercise.sets?.length || 0;
+              const oldSetCount = exercise.sets?.length || 0;
+
+              setWorkoutSchema((prev) => {
+                // First, update the changed exercise
+                let updated = {
+                  ...prev,
+                  items: prev.items.map((item, idx) => {
+                    if (idx === itemIndex && item.itemType === 'exercise') {
+                      return {
+                        ...item,
+                        exercise: {
+                          ...castExercise,
+                          supersetGroupId: exercise.supersetGroupId,
+                        },
+                      };
+                    }
+                    return item;
+                  }),
+                };
+
+                // If set count changed and exercise is in a superset, sync other exercises
+                if (newSetCount !== oldSetCount && exercise.supersetGroupId) {
+                  updated = syncSupersetSetsTopLevel(exercise.instanceId, newSetCount, updated);
+                }
+
+                return updated;
+              });
             }}
             onDelete={() => {
               markDirty();
@@ -2432,81 +2624,137 @@ Focus on proper form and progressive overload.`;
                           </div>
                         ) : workoutSchema.items.length > 0 ? (
                           <div className="flex flex-col gap-2 w-full min-h-0">
-                            {workoutSchema.items.map((item, itemIndex) => {
-                              const nextItem = workoutSchema.items[itemIndex + 1];
-                              const prevItem = itemIndex > 0 ? workoutSchema.items[itemIndex - 1] : null;
+                            {(() => {
+                              const renderedItems: React.ReactElement[] = [];
+                              let i = 0;
 
-                              // Check if this item is linked to previous or next
-                              const isLinkedToPrev = !!(
-                                item.itemType === 'exercise' &&
-                                prevItem?.itemType === 'exercise' &&
-                                item.exercise?.supersetGroupId &&
-                                prevItem.exercise?.supersetGroupId === item.exercise.supersetGroupId
-                              );
+                              while (i < workoutSchema.items.length) {
+                                const item = workoutSchema.items[i];
+                                const itemIndex = i;
+                                const nextItem = workoutSchema.items[i + 1];
+                                const prevItem = i > 0 ? workoutSchema.items[i - 1] : null;
 
-                              const isLinkedToNext = !!(
-                                item.itemType === 'exercise' &&
-                                nextItem?.itemType === 'exercise' &&
-                                item.exercise?.supersetGroupId &&
-                                nextItem.exercise?.supersetGroupId === item.exercise.supersetGroupId
-                              );
+                                // Check if this item starts a superset
+                                const isExerciseItem = item.itemType === 'exercise';
+                                const startsSuperset = isExerciseItem &&
+                                  item.exercise?.supersetGroupId &&
+                                  nextItem?.itemType === 'exercise' &&
+                                  nextItem.exercise?.supersetGroupId === item.exercise.supersetGroupId &&
+                                  !(prevItem?.itemType === 'exercise' && prevItem.exercise?.supersetGroupId === item.exercise.supersetGroupId);
 
-                              // Check if current/prev/next items are sections
-                              const isSection = item.itemType === 'section';
-                              const isPrevSection = prevItem?.itemType === 'section';
-                              const isNextSection = nextItem?.itemType === 'section';
+                                if (startsSuperset && item.exercise) {
+                                  // Collect all exercises in this superset
+                                  const supersetGroupId = item.exercise.supersetGroupId;
+                                  const supersetItems: Array<{ item: typeof item; itemIndex: number }> = [];
+                                  let j = i;
 
-                              // Check if there's a superset button area that will handle the drop zone
-                              const hasSupersetButtonAfter = item.itemType === 'exercise' && nextItem?.itemType === 'exercise';
-
-                              // Determine where drop zones CAN appear:
-                              // - Before: not if linked to previous, AND not if previous item is an exercise (superset area handles it)
-                              //   Special case: allow before sections if there's no previous item (top of list)
-                              // - After: not if linked to next, AND not if superset button area exists (it handles the drop zone internally)
-                              // Note: The superset button area handles drop zones between exercises for BOTH exercises and sections
-                              const canShowDropZoneBefore = !isLinkedToPrev && prevItem?.itemType !== 'exercise' && (!isSection || !prevItem);
-                              const canShowDropZoneAfter = !isLinkedToNext && !hasSupersetButtonAfter;
-
-                              // ONLY ONE drop zone appears at a time - the one matching dragOverTopLevelSlot
-                              // Priority: "after" drop zones take precedence over "before" drop zones to avoid duplicates
-                              // NOTE: In section-builder, exercises can ONLY be dropped into sections (not at top level)
-                              // Only sections can be dropped at the top level between items
-                              const isDraggingSectionOnly = draggedSection && !draggedExercise;
-                              const isPrevItemShowingDropZoneAfter = isDraggingSectionOnly && dragOverTopLevelSlot === itemIndex && prevItem;
-                              // Sections can drop anywhere at top level but exercises can NOT drop at top level in section-builder
-                              const showDropZoneBefore = isDraggingSectionOnly && dragOverTopLevelSlot === itemIndex && canShowDropZoneBefore && !isPrevItemShowingDropZoneAfter;
-                              const showDropZoneAfter = isDraggingSectionOnly && dragOverTopLevelSlot === itemIndex + 1 && canShowDropZoneAfter;
-
-                              // Add extra spacing around sections
-                              const extraTopMargin = isSection && isPrevSection ? 'mt-2' : isSection && prevItem ? 'mt-4' : '';
-                              const extraBottomMargin = isSection && isNextSection ? 'mb-2' : isSection && nextItem ? 'mb-4' : '';
-
-                              return (
-                                <React.Fragment key={item.itemType === 'section' ? item.section.id : item.exercise.instanceId}>
-                                  {/* Drop zone before this item - ONLY if this is the nearest slot and NOT inside a section */}
-                                  {showDropZoneBefore && (
-                                    <div className="h-14 mb-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                                      <span>Drop section here</span>
-                                    </div>
-                                  )}
-
-                                  {/* Render the item (section or exercise) with extra spacing */}
-                                  <div className={cn(extraTopMargin, extraBottomMargin)}>
-                                    {item.itemType === 'section'
-                                      ? (item.section ? renderSectionItem(item.section, itemIndex) : null)
-                                      : (item.exercise ? renderExerciseItem(item.exercise, itemIndex) : null)
+                                  while (j < workoutSchema.items.length) {
+                                    const currentItem = workoutSchema.items[j];
+                                    if (currentItem.itemType === 'exercise' && currentItem.exercise?.supersetGroupId === supersetGroupId) {
+                                      supersetItems.push({ item: currentItem, itemIndex: j });
+                                      j++;
+                                    } else {
+                                      break;
                                     }
-                                  </div>
+                                  }
 
-                                  {/* Drop zone after this item - ONLY if this is the nearest slot and NOT in superset area */}
-                                  {showDropZoneAfter && (
-                                    <div className="h-14 mt-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                                      <span>Drop section here</span>
-                                    </div>
-                                  )}
-                                </React.Fragment>
-                              );
-                            })}
+                                  const isSupersetFocused = focusedSupersetGroupId === supersetGroupId;
+                                  const firstItemPrev = i > 0 ? workoutSchema.items[i - 1] : null;
+                                  const lastItemNext = workoutSchema.items[j];
+
+                                  // Check for drop zones (only sections can be dropped at top level in section-builder)
+                                  const canShowDropZoneBefore = firstItemPrev?.itemType !== 'exercise' && !firstItemPrev;
+                                  const canShowDropZoneAfter = lastItemNext?.itemType !== 'exercise';
+                                  const isDraggingSectionOnly = draggedSection && !draggedExercise;
+                                  const showDropZoneBefore = isDraggingSectionOnly && dragOverTopLevelSlot === i && canShowDropZoneBefore;
+                                  const showDropZoneAfter = isDraggingSectionOnly && dragOverTopLevelSlot === j && canShowDropZoneAfter;
+
+                                  renderedItems.push(
+                                    <React.Fragment key={`superset-${supersetGroupId}`}>
+                                      {showDropZoneBefore && (
+                                        <div className="h-14 mb-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
+                                          <span>Drop section here</span>
+                                        </div>
+                                      )}
+                                      <div className={cn(
+                                        isSupersetFocused && "outline outline-1 rounded-lg animate-border-flash"
+                                      )}>
+                                        {supersetItems.map(({ item: supersetItem, itemIndex: supersetItemIndex }) => (
+                                          <div key={supersetItem.exercise?.instanceId}>
+                                            {supersetItem.exercise && renderExerciseItem(supersetItem.exercise, supersetItemIndex)}
+                                          </div>
+                                        ))}
+                                      </div>
+                                      {showDropZoneAfter && (
+                                        <div className="h-14 mt-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
+                                          <span>Drop section here</span>
+                                        </div>
+                                      )}
+                                    </React.Fragment>
+                                  );
+
+                                  i = j; // Skip to after the superset
+                                } else {
+                                  // Regular item (section or single exercise)
+                                  const isLinkedToPrev = !!(
+                                    item.itemType === 'exercise' &&
+                                    prevItem?.itemType === 'exercise' &&
+                                    item.exercise?.supersetGroupId &&
+                                    prevItem.exercise?.supersetGroupId === item.exercise.supersetGroupId
+                                  );
+
+                                  const isLinkedToNext = !!(
+                                    item.itemType === 'exercise' &&
+                                    nextItem?.itemType === 'exercise' &&
+                                    item.exercise?.supersetGroupId &&
+                                    nextItem.exercise?.supersetGroupId === item.exercise.supersetGroupId
+                                  );
+
+                                  const isSection = item.itemType === 'section';
+                                  const isPrevSection = prevItem?.itemType === 'section';
+                                  const isNextSection = nextItem?.itemType === 'section';
+                                  const hasSupersetButtonAfter = item.itemType === 'exercise' && nextItem?.itemType === 'exercise';
+
+                                  const canShowDropZoneBefore = !isLinkedToPrev && prevItem?.itemType !== 'exercise' && (!isSection || !prevItem);
+                                  const canShowDropZoneAfter = !isLinkedToNext && !hasSupersetButtonAfter;
+
+                                  const isDraggingSectionOnly = draggedSection && !draggedExercise;
+                                  const isPrevItemShowingDropZoneAfter = isDraggingSectionOnly && dragOverTopLevelSlot === itemIndex && prevItem;
+                                  const showDropZoneBefore = isDraggingSectionOnly && dragOverTopLevelSlot === itemIndex && canShowDropZoneBefore && !isPrevItemShowingDropZoneAfter;
+                                  const showDropZoneAfter = isDraggingSectionOnly && dragOverTopLevelSlot === itemIndex + 1 && canShowDropZoneAfter;
+
+                                  const extraTopMargin = isSection && isPrevSection ? 'mt-2' : isSection && prevItem ? 'mt-4' : '';
+                                  const extraBottomMargin = isSection && isNextSection ? 'mb-2' : isSection && nextItem ? 'mb-4' : '';
+
+                                  renderedItems.push(
+                                    <React.Fragment key={item.itemType === 'section' ? item.section.id : item.exercise?.instanceId}>
+                                      {showDropZoneBefore && (
+                                        <div className="h-14 mb-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
+                                          <span>Drop section here</span>
+                                        </div>
+                                      )}
+
+                                      <div className={cn(extraTopMargin, extraBottomMargin)}>
+                                        {item.itemType === 'section'
+                                          ? (item.section ? renderSectionItem(item.section, itemIndex) : null)
+                                          : (item.exercise ? renderExerciseItem(item.exercise, itemIndex) : null)
+                                        }
+                                      </div>
+
+                                      {showDropZoneAfter && (
+                                        <div className="h-14 mt-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
+                                          <span>Drop section here</span>
+                                        </div>
+                                      )}
+                                    </React.Fragment>
+                                  );
+
+                                  i++;
+                                }
+                              }
+
+                              return renderedItems;
+                            })()}
                             {/* Hide "Add exercise" and "Add section" buttons in section mode */}
                             {!isSectionMode && (
                               <div className="flex flex-col gap-2 py-2 w-full">

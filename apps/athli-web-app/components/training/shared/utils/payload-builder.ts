@@ -140,7 +140,6 @@ export const adaptSection = (section: WorkoutSection): GenericSectionData => {
     exercises: groupedExercises.map(group => group.map(adaptExercise)),
     notes: section.notes || null,
     durationSec: section.roundDurationSec,
-    targetRounds: section.targetRounds,
     category: section.category,
   };
 };

@@ -1,4 +1,5 @@
 import type { WorkoutSchema, WorkoutSchemaItem, ExerciseWithSuperset, WorkoutSection } from '@/components/training/shared/types/workout-builder.types';
+import { SECTION_TYPE_DEFAULTS } from '@athli/shared-types';
 
 /**
  * Handles adding a new section to the workout
@@ -8,19 +9,31 @@ import type { WorkoutSchema, WorkoutSchemaItem, ExerciseWithSuperset, WorkoutSec
  * @returns Updated workout schema
  */
 export const handleSectionSelect = (
-  type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary',
+  type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary',
   currentSchema: WorkoutSchema,
   overrides?: Partial<WorkoutSection>
 ): WorkoutSchema => {
   const newSection: WorkoutSection = {
     id: `sec_${type}_${Date.now()}`,
     type,
-    // All section types use `exercises` for the builder UI. For AMRAP/Timed/Circuits/Auxiliary,
+    // All section types use `exercises` for the builder UI. For AMRAP/Tabata/HIIT/EMOM/Auxiliary,
     // these will later be mapped appropriately in the payload.
     exercises: [] as ExerciseWithSuperset[],
     ...(type === 'amrap' && { roundDurationSec: undefined }),
-    ...(type === 'timed' && { targetRounds: undefined }),
-    ...(type === 'circuits' && { targetRounds: undefined }),
+    ...(type === 'tabata' && {
+      workSec: SECTION_TYPE_DEFAULTS.tabata.workSec,
+      restSec: SECTION_TYPE_DEFAULTS.tabata.restSec,
+      rounds: SECTION_TYPE_DEFAULTS.tabata.rounds
+    }),
+    ...(type === 'hiit' && {
+      workSec: SECTION_TYPE_DEFAULTS.hiit.workSec,
+      restSec: SECTION_TYPE_DEFAULTS.hiit.restSec,
+      rounds: SECTION_TYPE_DEFAULTS.hiit.rounds
+    }),
+    ...(type === 'emom' && {
+      intervalSec: SECTION_TYPE_DEFAULTS.emom.intervalSec,
+      durationMin: SECTION_TYPE_DEFAULTS.emom.durationMin
+    }),
     ...(type === 'auxiliary' && { category: undefined }),
     ...overrides,
   };
@@ -73,17 +86,19 @@ export const handleDeleteSection = (
  * @returns A description of what the section type means
  */
 export const getSectionDescription = (
-  type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary'
+  type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary'
 ): string => {
   switch (type) {
     case 'regular':
       return 'Exercise for exercise. Follow the sets and reps specified.';
     case 'amrap':
       return 'Track the total amount of rounds completed in the allocated time.';
-    case 'timed':
-      return 'Track total duration until completion of assigned rounds.';
-    case 'circuits':
-      return 'Complete all exercises in the circuit for the specified number of rounds. One set per exercise.';
+    case 'tabata':
+      return 'High-intensity intervals with 20s work and 10s rest for 8 rounds.';
+    case 'hiit':
+      return 'High-intensity interval training with customizable work/rest periods.';
+    case 'emom':
+      return 'Every Minute On the Minute - complete exercises within each minute interval.';
     case 'auxiliary':
       return 'Warm up, cool down, or mobility exercises. Follow the sets and reps specified.';
     default:

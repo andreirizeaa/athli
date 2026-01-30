@@ -15,6 +15,13 @@ export {
 // Note: WorkoutItem from shared package refers to the API payload item type
 // Use BuilderItem for builder UI state
 
-export { COLUMN_OPTIONS, HEART_RATE_ZONE_OPTIONS } from '@athli/shared-types';
-export type { ColumnValue, HeartRateZone } from '@athli/shared-types';
+export {
+    COLUMN_OPTIONS,
+    HEART_RATE_ZONE_OPTIONS,
+    OPTIONAL_COLUMN_OPTIONS,
+    CATEGORY_COLUMN_DEFAULTS,
+    DEFAULT_COLUMN_CONFIG,
+    getDefaultColumnsForCategory,
+} from '@athli/shared-types';
+export type { ColumnValue, HeartRateZone, OptionalColumn, CategoryColumnConfig } from '@athli/shared-types';
 

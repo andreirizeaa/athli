@@ -23,8 +23,8 @@ export const WorkoutSessionPageTitle = ({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 24,
+    paddingTop: 4,
+    paddingBottom: 16,
   },
   title: {
     ...typography.h2,

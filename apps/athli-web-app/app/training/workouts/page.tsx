@@ -47,7 +47,6 @@ import {
   Hash,
   UserPlus,
   HelpCircle,
-  Sparkles,
   BrainCog,
   Download,
   Settings,
@@ -56,6 +55,7 @@ import {
   Trash2,
   Copy,
 } from 'lucide-react';
+import Lottie from 'lottie-react';
 
 import type { Workout } from '@/components/app/app-shell';
 import { getWorkouts, starWorkouts, deleteWorkouts, duplicateWorkout, editWorkout, getWorkoutById, createWorkout } from '@/api/coach/coach-workout-service';
@@ -134,6 +134,15 @@ const WorkoutsPage = () => {
   const [selectedWorkoutData, setSelectedWorkoutData] = useState<any>(null);
   const [isLoadingWorkoutData, setIsLoadingWorkoutData] = useState(false);
   const [isAiBuilderOpen, setIsAiBuilderOpen] = useState(false);
+  const [aiAnimationData, setAiAnimationData] = useState<object | null>(null);
+
+  // Load AI sphere animation
+  useEffect(() => {
+    fetch('/animations/ai-sphere-animation.json')
+      .then(res => res.json())
+      .then(data => setAiAnimationData(data))
+      .catch(err => console.error('Failed to load AI animation:', err));
+  }, []);
 
   // Helper to check if value is empty (null, undefined, empty string, 0, or empty array)
   const isEmpty = (value: any): boolean => {
@@ -745,29 +754,37 @@ const WorkoutsPage = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              onClick={handleOpenAiWorkout}
-              className="gap-2 bg-gradient-to-r from-primary via-primary to-primary/80 hover:from-primary/90 hover:via-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg shadow-primary/30 border-0"
-              aria-label="Athli AI"
-            >
-              <Sparkles className="size-4" />
-              <span>Athli AI</span>
-            </Button>
-            <ButtonGroup>
-              <Button
-                variant="ghost"
-                onClick={handleOpenAssignWorkout}
-                className="gap-2 border border-primary"
-                aria-label={t('library.assignWorkout')}
-              >
-                <UserPlus className="size-4" />
-                <span>{t('general.assign')}</span>
-              </Button>
-              <Button onClick={handleOpenCreateWorkout} className="gap-2" aria-label={t('library.createWorkout')}>
-                <Plus className="size-4" />
-                <span>{t('library.createWorkout')}</span>
-              </Button>
-            </ButtonGroup>
+<ButtonGroup>
+                              <Button
+                                variant="ghost"
+                                onClick={handleOpenAssignWorkout}
+                                className="gap-2 border border-primary"
+                                aria-label={t('library.assignWorkout')}
+                              >
+                                <UserPlus className="size-4" />
+                                <span>{t('general.assign')}</span>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                onClick={handleOpenAiWorkout}
+                                className="gap-0 border border-primary pl-2"
+                                aria-label="Athli AI"
+                              >
+                                {aiAnimationData && (
+                                  <Lottie
+                                    className="size-10 -ml-2 -mr-1"
+                                    animationData={aiAnimationData}
+                                    loop
+                                    autoplay
+                                  />
+                                )}
+                                <span>Athli AI</span>
+                              </Button>
+                              <Button onClick={handleOpenCreateWorkout} className="gap-2" aria-label={t('library.createWorkout')}>
+                                <Plus className="size-4" />
+                                <span>{t('library.createWorkout')}</span>
+                              </Button>
+                            </ButtonGroup>
           </div>
         </div>
       </div>

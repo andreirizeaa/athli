@@ -139,7 +139,7 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   asChild
                   isActive={activePath === '/get-started'}
-                  className="text-sm"
+                  className="text-sm hover:bg-[var(--primary)]/5"
                 >
                   <Link href="/get-started">
                     <Rocket className="shrink-0" />
@@ -151,7 +151,7 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   asChild
                   isActive={activePath === '/home'}
-                  className="text-sm"
+                  className="text-sm hover:bg-[var(--primary)]/5"
                 >
                   <Link href="/home">
                     <Home className="shrink-0" />
@@ -195,7 +195,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className="text-sm"
+                      className="text-sm hover:bg-[var(--primary)]/5"
                     >
                       <Link href={item.href}>
                         <Icon className="shrink-0" />
@@ -245,7 +245,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className="text-sm"
+                      className="text-sm hover:bg-[var(--primary)]/5"
                     >
                       <Link href={item.href}>
                         <Icon className="shrink-0" />
@@ -284,7 +284,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className="text-sm"
+                      className="text-sm hover:bg-[var(--primary)]/5"
                     >
                       <Link href={item.href}>
                         <Icon className="shrink-0" />
@@ -304,7 +304,7 @@ export function AppSidebar() {
             <SidebarMenuButton
               asChild
               isActive={activePath === '/settings' || activePath.startsWith('/settings/')}
-              className="text-sm"
+              className="text-sm hover:bg-[var(--primary)]/5"
             >
               <Link href="/settings">
                 <Settings className="shrink-0" />

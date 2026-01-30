@@ -33,6 +33,8 @@ type ExerciseSessionCardProps = {
   onSetComplete: (setIndex: number, completed: boolean) => void;
   onSetValueChange: (setIndex: number, field: 'trackableField1' | 'trackableField2', value: string) => void;
   onAlternativeSelect?: (alternativeId: string) => void;
+  isSuperset?: boolean;
+  supersetLabel?: string;
 };
 
 export const ExerciseSessionCard = ({
@@ -43,6 +45,8 @@ export const ExerciseSessionCard = ({
   onSetComplete,
   onSetValueChange,
   onAlternativeSelect,
+  isSuperset = false,
+  supersetLabel,
 }: ExerciseSessionCardProps) => {
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
@@ -75,10 +79,11 @@ export const ExerciseSessionCard = ({
   const { thumbnailUrl: cachedThumbnailUrl, isLoading: isThumbnailLoading } = useSingleThumbnail(rawThumbnailUrl);
   const displayThumbnailUrl = isCustomExercise ? exerciseImageUrl : (cachedThumbnailUrl || exerciseImageUrl);
 
-  // Determine which columns to show
-  const showColumn1 = exercise.column1Label && exercise.column1Label !== 'None';
-  const showColumn2 = exercise.column2Label && exercise.column2Label !== 'None';
+  // Determine which columns to show (hide if None or Optional)
+  const showColumn1 = exercise.column1Label && exercise.column1Label !== 'None' && exercise.column1Label !== 'Optional';
+  const showColumn2 = exercise.column2Label && exercise.column2Label !== 'None' && exercise.column2Label !== 'Optional';
   const showBothColumns = showColumn1 && showColumn2;
+  const showNoColumns = !showColumn1 && !showColumn2;
 
   // Parse tempo values (format: "3-1-2-0")
   const parseTempo = (tempo: string | null) => {
@@ -146,6 +151,9 @@ export const ExerciseSessionCard = ({
           </View>
         </PressableScale>
         <Text style={[styles.exerciseName, { color: themeColors.text }]} numberOfLines={2}>
+          {supersetLabel && (
+            <Text style={[styles.supersetLabel, { color: themeColors.primary }]}>{supersetLabel}  </Text>
+          )}
           {exerciseName}
         </Text>
         {hasAlternatives && (
@@ -204,18 +212,21 @@ export const ExerciseSessionCard = ({
         <View style={styles.setHeaderContainer}>
           <Text style={[styles.columnHeaderText, { color: themeColors.mutedText }]}>{t('training.session.set' as any)}</Text>
         </View>
-        <View style={styles.inputsHeader}>
-          {showColumn1 && (
-            <Text style={[styles.columnHeaderText, styles.inputHeaderText, { color: themeColors.mutedText }]}>
-              {exercise.column1Label.toUpperCase()}
-            </Text>
-          )}
-          {showColumn2 && (
-            <Text style={[styles.columnHeaderText, styles.inputHeaderText, { color: themeColors.mutedText }]}>
-              {exercise.column2Label.toUpperCase()}
-            </Text>
-          )}
-        </View>
+        {!showNoColumns && (
+          <View style={styles.inputsHeader}>
+            {showColumn1 && (
+              <Text style={[styles.columnHeaderText, styles.inputHeaderText, { color: themeColors.mutedText }]}>
+                {exercise.column1Label.toUpperCase()}
+              </Text>
+            )}
+            {showColumn2 && (
+              <Text style={[styles.columnHeaderText, styles.inputHeaderText, { color: themeColors.mutedText }]}>
+                {exercise.column2Label.toUpperCase()}
+              </Text>
+            )}
+          </View>
+        )}
+        {showNoColumns && <View style={styles.spacer} />}
         <View style={styles.completeHeaderSpacer}>
           <Check size={16} color={themeColors.mutedText} strokeWidth={2.5} />
         </View>
@@ -230,6 +241,7 @@ export const ExerciseSessionCard = ({
           showColumn1={showColumn1}
           showColumn2={showColumn2}
           showBothColumns={showBothColumns}
+          showNoColumns={showNoColumns}
           themeColors={themeColors}
           onComplete={(completed) => onSetComplete(index, completed)}
           onValueChange={(field, value) => onSetValueChange(index, field, value)}
@@ -327,6 +339,7 @@ type SetRowProps = {
   showColumn1: boolean;
   showColumn2: boolean;
   showBothColumns: boolean;
+  showNoColumns: boolean;
   themeColors: any;
   onComplete: (completed: boolean) => void;
   onValueChange: (field: 'trackableField1' | 'trackableField2', value: string) => void;
@@ -361,6 +374,7 @@ const SetRow = ({
   showColumn1,
   showColumn2,
   showBothColumns,
+  showNoColumns,
   themeColors,
   onComplete,
   onValueChange,
@@ -383,41 +397,48 @@ const SetRow = ({
         </View>
       </PressableScale>
 
-      {/* Input Fields - Center */}
-      <View style={styles.inputsRow}>
-        {showColumn1 && (
-          <TextInput
-            style={[
-              styles.setInput,
-              {
-                color: themeColors.text,
-                borderColor: isCompleted ? GREEN : themeColors.border,
-              }
-            ]}
-            value={set.trackableField1.completed ?? set.trackableField1.prescribed ?? ''}
-            onChangeText={(text) => onValueChange('trackableField1', text)}
-            placeholder={set.trackableField1.prescribed || '0'}
-            placeholderTextColor={themeColors.mutedText}
-            keyboardType="numeric"
-          />
-        )}
-        {showColumn2 && (
-          <TextInput
-            style={[
-              styles.setInput,
-              {
-                color: themeColors.text,
-                borderColor: isCompleted ? GREEN : themeColors.border,
-              }
-            ]}
-            value={set.trackableField2.completed ?? set.trackableField2.prescribed ?? ''}
-            onChangeText={(text) => onValueChange('trackableField2', text)}
-            placeholder={set.trackableField2.prescribed || '0'}
-            placeholderTextColor={themeColors.mutedText}
-            keyboardType="numeric"
-          />
-        )}
-      </View>
+      {/* Input Fields - Center (only if at least one column to show) */}
+      {!showNoColumns && (
+        <View style={styles.inputsRow}>
+          {showColumn1 && (
+            <TextInput
+              style={[
+                styles.setInput,
+                !showBothColumns && styles.setInputFull,
+                {
+                  color: themeColors.text,
+                  borderColor: isCompleted ? GREEN : themeColors.border,
+                }
+              ]}
+              value={set.trackableField1.completed ?? set.trackableField1.prescribed ?? ''}
+              onChangeText={(text) => onValueChange('trackableField1', text)}
+              placeholder={set.trackableField1.prescribed || '0'}
+              placeholderTextColor={themeColors.mutedText}
+              keyboardType="numeric"
+            />
+          )}
+          {showColumn2 && (
+            <TextInput
+              style={[
+                styles.setInput,
+                !showBothColumns && styles.setInputFull,
+                {
+                  color: themeColors.text,
+                  borderColor: isCompleted ? GREEN : themeColors.border,
+                }
+              ]}
+              value={set.trackableField2.completed ?? set.trackableField2.prescribed ?? ''}
+              onChangeText={(text) => onValueChange('trackableField2', text)}
+              placeholder={set.trackableField2.prescribed || '0'}
+              placeholderTextColor={themeColors.mutedText}
+              keyboardType="numeric"
+            />
+          )}
+        </View>
+      )}
+
+      {/* Spacer when no columns */}
+      {showNoColumns && <View style={styles.spacer} />}
 
       {/* Complete Button - Right Edge */}
       <PressableScale onPress={() => {
@@ -505,6 +526,9 @@ const styles = StyleSheet.create({
     ...typography.h4,
     fontWeight: '700',
   },
+  supersetLabel: {
+    fontWeight: '800',
+  },
   columnHeaders: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -572,6 +596,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     ...typography.p1,
     fontWeight: '600',
+  },
+  setInputFull: {
+    maxWidth: '100%',
+  },
+  spacer: {
+    flex: 1,
   },
   completeCircle: {
     width: 32,

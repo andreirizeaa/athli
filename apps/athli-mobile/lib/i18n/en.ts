@@ -328,8 +328,12 @@ export const en = {
         amrapDescription: 'As Many Rounds/Reps As Possible within a time limit',
         timed: 'Timed',
         timedDescription: 'Work and rest intervals with specified durations',
-        circuits: 'Circuits',
-        circuitsDescription: 'Multiple exercises performed in sequence with minimal rest',
+        tabata: 'Tabata',
+        tabataDescription: 'High-intensity intervals: 20s work, 10s rest, 8 rounds',
+        hiit: 'HIIT',
+        hiitDescription: 'High-intensity interval training with customizable work/rest',
+        emom: 'EMOM',
+        emomDescription: 'Every Minute On the Minute with set duration',
       },
     },
     addProgram: {
@@ -572,6 +576,16 @@ export const en = {
       durationRequired: 'Please enter a valid duration for AMRAP sections',
       roundsRequired: 'Please enter a valid number of rounds',
       savedSuccessfully: 'Section saved to library',
+      // Tabata/HIIT fields
+      workSec: 'Work',
+      restSec: 'Rest',
+      workSecRequired: 'Please enter a valid work duration',
+      restSecRequired: 'Please enter a valid rest duration',
+      // EMOM fields
+      intervalSec: 'Interval',
+      durationMin: 'Duration',
+      intervalSecRequired: 'Please enter a valid interval',
+      durationMinRequired: 'Please enter a valid duration',
     },
     formBuilder: {
       title: 'Form Builder',

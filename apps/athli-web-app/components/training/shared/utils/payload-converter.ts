@@ -297,8 +297,20 @@ export const convertPayloadToBuilderFormat = (
                 exercises: [],
                 notes: sectionPayload.notes || '',
                 ...(sectionPayload.type === 'amrap' && { roundDurationSec: sectionPayload.durationSec }),
-                ...(sectionPayload.type === 'timed' && { targetRounds: sectionPayload.targetRounds }),
-                ...(sectionPayload.type === 'circuits' && { targetRounds: sectionPayload.targetRounds }),
+                ...(sectionPayload.type === 'tabata' && {
+                    workSec: (sectionPayload as any).workSec,
+                    restSec: (sectionPayload as any).restSec,
+                    rounds: (sectionPayload as any).rounds
+                }),
+                ...(sectionPayload.type === 'hiit' && {
+                    workSec: (sectionPayload as any).workSec,
+                    restSec: (sectionPayload as any).restSec,
+                    rounds: (sectionPayload as any).rounds
+                }),
+                ...(sectionPayload.type === 'emom' && {
+                    intervalSec: (sectionPayload as any).intervalSec,
+                    durationMin: (sectionPayload as any).durationMin
+                }),
                 ...(sectionPayload.type === 'auxiliary' && { category: sectionPayload.category }),
             };
 
@@ -345,41 +357,42 @@ export const convertPayloadToBuilderFormat = (
                     });
                 });
                 console.log('[PAYLOAD CONVERTER] Finished converting section, final exercise count:', section.exercises!.length);
-            } else if (sectionPayload.type === 'circuits' && sectionPayload.exercises) {
-                sectionPayload.exercises.forEach((group) => {
-                    group.exercises.forEach((exercisePayload) => {
+            } else if ((sectionPayload.type === 'tabata' || sectionPayload.type === 'hiit' || sectionPayload.type === 'emom') && sectionPayload.exercises) {
+                // For Tabata, HIIT, EMOM sections - exercises have a single set
+                (sectionPayload.exercises as any[]).forEach((group: any) => {
+                    group.exercises.forEach((exercisePayload: any) => {
                         // Find exercise details from the exercise database, or use fallback
                         const cleanedId = cleanExerciseId(exercisePayload);
                         const exerciseDetails = findExerciseById(cleanedId)
-                            || createFallbackExercise(cleanedId, (exercisePayload as any).exerciseType);
+                            || createFallbackExercise(cleanedId, exercisePayload.exerciseType);
 
                         // Get exercise type for set conversion
-                        const exerciseType = (exercisePayload as any).exerciseType || exerciseDetails.exerciseType || 'weight_reps';
+                        const exerciseType = exercisePayload.exerciseType || exerciseDetails.exerciseType || 'weight_reps';
 
                         // Get column labels for proper trackable field mapping
-                        const column1Label = (exercisePayload as any).column1Label;
-                        const column2Label = (exercisePayload as any).column2Label;
+                        const column1Label = exercisePayload.column1Label;
+                        const column2Label = exercisePayload.column2Label;
 
-                        // For circuits, convert the single set to an array using the helper function
+                        // Convert the single set to an array using the helper function
                         const setPayload = exercisePayload.set;
                         const sets: SetData[] = [convertSetToSetData(setPayload, exerciseType, column1Label, column2Label)];
 
                         section.exercises!.push({
                             ...exerciseDetails,
-                            instanceId: (exercisePayload as any).id || `${cleanedId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-                            supersetGroupId: (exercisePayload as any).supersetId || null,
+                            instanceId: exercisePayload.id || `${cleanedId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                            supersetGroupId: exercisePayload.supersetId || null,
                             sets,
                             notes: exercisePayload.notes || '',
                             eachSide: !!exercisePayload.eachSide,
-                            tempo: (exercisePayload as any).tempo || undefined,
-                            alternatives: ((exercisePayload as any).alternatives || []).filter((a: any) => a != null),
+                            tempo: exercisePayload.tempo || undefined,
+                            alternatives: (exercisePayload.alternatives || []).filter((a: any) => a != null),
                             column1Label: column1Label || undefined,
                             column2Label: column2Label || undefined,
                         });
                     });
                 });
-            } else if ((sectionPayload.type === 'amrap' || sectionPayload.type === 'timed') && sectionPayload.exercises) {
-                // For AMRAP and Timed sections, exercises have a single set with the trackable field values
+            } else if (sectionPayload.type === 'amrap' && sectionPayload.exercises) {
+                // For AMRAP sections, exercises have a single set with the trackable field values
                 sectionPayload.exercises.forEach((exercisePayload) => {
                     // Find exercise details from the exercise database, or use fallback
                     const cleanedId = cleanExerciseId(exercisePayload);
