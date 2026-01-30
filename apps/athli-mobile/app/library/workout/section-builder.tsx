@@ -269,6 +269,10 @@ export default function SectionBuilderScreen() {
                             ? ex.sets[0].restSec
                             : undefined;
 
+                        // Determine default column2Type based on section type
+                        const isIntervalType = sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'emom' || sectionType === 'circuits';
+                        const defaultColumn2Type = isIntervalType ? 'Optional' : 'kg';
+
                         return {
                             id: ex.prescribedExerciseId + '-' + Date.now() + '-' + idx,
                             exerciseId: ex.prescribedExerciseId,
@@ -276,7 +280,7 @@ export default function SectionBuilderScreen() {
                             imageUrl: details.imageUrl,
                             exerciseType: details.exerciseType,
                             column1Type: ex.column1Label || 'Reps',
-                            column2Type: ex.column2Label || 'kg',
+                            column2Type: ex.column2Label || defaultColumn2Type,
                             sets: (ex.sets || []).map((set: any, setIdx: number) => ({
                                 id: 'set-' + Date.now() + '-' + idx + '-' + setIdx,
                                 setNumber: set.setNumber,
@@ -651,23 +655,33 @@ export default function SectionBuilderScreen() {
 
     const handleAddExercise = () => {
         setExercisesSelectCallback((newExercises: Exercise[]) => {
-            const items: BuilderExercise[] = newExercises.map((exercise, idx) => ({
-                id: `${exercise.exerciseId}-${Date.now()}-${idx}`,
-                exerciseId: exercise.exerciseId,
-                name: exercise.name,
-                imageUrl: exercise.imageUrl,
-                exerciseType: exercise.exerciseType,
-                sets: [
-                    { id: Math.random().toString(), setNumber: 1, column1: '', column2: '', type: 'R' as const },
-                    { id: Math.random().toString(), setNumber: 2, column1: '', column2: '', type: 'R' as const },
-                ],
-                alternatives: [],
-                tempo: '',
-                eachSide: false,
-                ...getDefaultColumns(exercise.exerciseType, exercise.category),
-                equipments: exercise.equipments,
-                bodyParts: exercise.bodyParts,
-            }));
+            // For interval-based sections (tabata, hiit, emom, circuits), override column2 to Optional
+            const isIntervalSection = state.sectionType === 'tabata' || state.sectionType === 'hiit' || state.sectionType === 'emom' || state.sectionType === 'circuits';
+
+            const items: BuilderExercise[] = newExercises.map((exercise, idx) => {
+                const defaultColumns = getDefaultColumns(exercise.exerciseType, exercise.category);
+                // Override column2 to Optional for interval-based sections
+                const column2Type = isIntervalSection ? 'Optional' : defaultColumns.column2Type;
+
+                return {
+                    id: `${exercise.exerciseId}-${Date.now()}-${idx}`,
+                    exerciseId: exercise.exerciseId,
+                    name: exercise.name,
+                    imageUrl: exercise.imageUrl,
+                    exerciseType: exercise.exerciseType,
+                    sets: [
+                        { id: Math.random().toString(), setNumber: 1, column1: '', column2: '', type: 'R' as const },
+                        { id: Math.random().toString(), setNumber: 2, column1: '', column2: '', type: 'R' as const },
+                    ],
+                    alternatives: [],
+                    tempo: '',
+                    eachSide: false,
+                    column1Type: defaultColumns.column1Type,
+                    column2Type,
+                    equipments: exercise.equipments,
+                    bodyParts: exercise.bodyParts,
+                };
+            });
 
             setState(prev => ({
                 ...prev,
@@ -752,13 +766,19 @@ export default function SectionBuilderScreen() {
                 const newExercises = [...prev.exercises];
                 const currentExercise = newExercises[index];
 
+                // For interval-based sections (tabata, hiit, emom, circuits), override column2 to Optional
+                const isIntervalSection = prev.sectionType === 'tabata' || prev.sectionType === 'hiit' || prev.sectionType === 'emom' || prev.sectionType === 'circuits';
+                const defaultColumns = getDefaultColumns(newExercise.exerciseType, newExercise.category);
+                const column2Type = isIntervalSection ? 'Optional' : defaultColumns.column2Type;
+
                 newExercises[index] = {
                     ...currentExercise,
                     exerciseId: newExercise.exerciseId,
                     name: newExercise.name,
                     imageUrl: newExercise.imageUrl,
                     exerciseType: newExercise.exerciseType,
-                    ...getDefaultColumns(newExercise.exerciseType, newExercise.category),
+                    column1Type: defaultColumns.column1Type,
+                    column2Type,
                 };
 
                 return { ...prev, exercises: newExercises };
@@ -953,21 +973,30 @@ export default function SectionBuilderScreen() {
                         sectionType={state.sectionType}
                         onSectionTypeChange={(newType) => {
                             setState(prev => {
-                                // If changing to amrap or timed, trim all exercises to one set each
+                                const isIntervalType = newType === 'tabata' || newType === 'hiit' || newType === 'emom' || newType === 'circuits';
+
+                                // Start with current exercises
+                                let updatedExercises = prev.exercises;
+
+                                // If changing to amrap, timed, or circuits, trim all exercises to one set each
                                 // These section types only support one set per exercise (values per round)
-                                if (newType === 'amrap' || newType === 'timed') {
-                                    const trimmedExercises = prev.exercises.map(ex => ({
+                                if (newType === 'amrap' || newType === 'timed' || newType === 'circuits') {
+                                    updatedExercises = updatedExercises.map(ex => ({
                                         ...ex,
                                         sets: ex.sets.length > 0 ? [ex.sets[0]] : ex.sets,
                                     }));
-                                    return {
-                                        ...prev,
-                                        sectionType: newType,
-                                        exercises: trimmedExercises,
-                                    };
                                 }
+
+                                // Update column2Type for interval sections
+                                if (isIntervalType) {
+                                    updatedExercises = updatedExercises.map(ex => ({
+                                        ...ex,
+                                        column2Type: 'Optional',
+                                    }));
+                                }
+
                                 // Set default values for Tabata/HIIT/EMOM/Circuits
-                                let updates: Partial<SectionBuilderState> = { sectionType: newType };
+                                let updates: Partial<SectionBuilderState> = { sectionType: newType, exercises: updatedExercises };
                                 if (newType === 'tabata') {
                                     updates.workSec = '20';
                                     updates.restSec = '10';
@@ -1064,7 +1093,7 @@ export default function SectionBuilderScreen() {
                                 canMoveDown={index < state.exercises.length - 1}
                                 onMoveUp={() => handleMoveUp(index)}
                                 onMoveDown={() => handleMoveDown(index)}
-                                hideSetControls={state.sectionType === 'amrap' || state.sectionType === 'timed'}
+                                hideSetControls={state.sectionType !== 'regular'}
                                 validationErrors={validationErrors}
                                 onSwap={() => handleSwapExercise(index)}
                             />

@@ -1,7 +1,8 @@
 import { Redirect, useRouter } from 'expo-router';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuth } from '@/hooks/useAuth';
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useAuthSessionStore } from '@/stores';
+import { useBiometricStore } from '@/stores/useBiometricStore';
 import { useEffect, useRef } from 'react';
 
 export default function Index() {
@@ -19,18 +20,36 @@ export default function Index() {
       return;
     }
 
-    hasNavigated.current = true;
+    const checkBiometricAndNavigate = async () => {
+      hasNavigated.current = true;
 
-    // Small delay to ensure everything is settled
-    const timer = setTimeout(() => {
+      console.log('🔵 [Index] checkBiometricAndNavigate - isAuthenticated:', isAuthenticated);
+
       if (isAuthenticated) {
+        // Check if biometric is enabled for this user
+        const userId = useAuthSessionStore.getState().userId;
+        console.log('🔵 [Index] userId from store:', userId);
+
+        if (userId) {
+          const biometricEnabled = await useBiometricStore.getState().isBiometricEnabledForUser(userId);
+          console.log('🔵 [Index] biometricEnabled for user:', biometricEnabled);
+
+          if (biometricEnabled) {
+            console.log('🔐 [Index] Biometric enabled, navigating to /biometric-lock');
+            router.replace('/biometric-lock');
+            return;
+          }
+        }
         console.log('🟢 [Index] User authenticated, navigating to /(tabs)');
         router.replace('/(tabs)');
       } else {
         console.log('🔵 [Index] No authentication, navigating to /welcome');
         router.replace('/welcome');
       }
-    }, 50);
+    };
+
+    // Small delay to ensure everything is settled
+    const timer = setTimeout(checkBiometricAndNavigate, 50);
 
     return () => clearTimeout(timer);
   }, [isReady, isAuthenticated, router]);

@@ -131,12 +131,16 @@ export const handleAddTopLevelExercise = (
  *
  * @param sectionId - The ID of the section to add the exercise to
  * @param currentSchema - The current workout schema
+ * @param sectionType - Optional section type to determine default column labels
  * @returns Updated workout schema
  */
 export const handleAddExercise = (
   sectionId: string,
-  currentSchema: WorkoutSchema
+  currentSchema: WorkoutSchema,
+  sectionType?: string
 ): WorkoutSchema => {
+  const isIntervalSection = sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'emom' || sectionType === 'circuits';
+
   const emptyExercise: ExerciseWithSuperset = {
     exerciseId: `empty_${Date.now()}`,
     name: '',
@@ -156,6 +160,8 @@ export const handleAddExercise = (
     source: 'musclewiki',
     supersetGroupId: null,
     instanceId: `empty_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    column1Label: 'Reps',
+    column2Label: isIntervalSection ? 'Optional' : undefined,
   };
 
   return {

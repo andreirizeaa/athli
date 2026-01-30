@@ -5,6 +5,7 @@ import { signInWithApple } from './apple-auth';
 import { signInWithEmail } from './email-auth';
 import { validateUserProfile } from './profile-validation';
 import type { AuthResult } from '@/types/profile';
+import { useBiometricStore } from '@/stores/useBiometricStore';
 
 const USER_ID_KEY = 'athli_user_id';
 const PROFILE_TYPE_KEY = 'athli_profile_type';
@@ -114,6 +115,8 @@ export async function signOut(): Promise<void> {
     await supabase.auth.signOut();
     Storage.removeItem(USER_ID_KEY);
     Storage.removeItem(PROFILE_TYPE_KEY);
+    // Clear biometric preference on logout
+    await useBiometricStore.getState().disableBiometric();
   } catch (error) {
     console.log('Sign out error:', error);
     throw error;

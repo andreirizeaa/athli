@@ -6,6 +6,7 @@ import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { useTrainingData } from '@/app/training/training-data-context';
 import { cn } from '@/lib/general/utils';
 import type { Section } from '@/api/coach/coach-section-service';
@@ -34,14 +35,16 @@ const DraggableSectionCard = ({
                 "cursor-grab active:cursor-grabbing hover:border-primary transition-colors select-none"
             )}
         >
-            <CardContent className="p-3 flex flex-col gap-1">
-                <div className="font-semibold text-sm truncate" title={section.program}>
+            <CardContent className="p-2 flex items-center gap-2">
+                <span className="font-medium text-sm truncate" title={section.program}>
                     {section.program}
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="capitalize">{section.sectionType}</span>
-                    <span>{section.totalExercises} exercises</span>
-                </div>
+                </span>
+                <span className="text-xs text-muted-foreground ml-auto shrink-0">
+                    {section.totalExercises} exercises
+                </span>
+                <Badge variant="outline" className="px-2 py-0.5 text-[10px] font-medium capitalize bg-transparent text-primary border-primary rounded-full shadow-none shrink-0">
+                    {section.sectionType}
+                </Badge>
             </CardContent>
         </Card>
     );
