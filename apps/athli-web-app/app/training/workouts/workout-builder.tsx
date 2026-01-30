@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/general/utils';
-import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@athli/shared-types';
+import { WORKOUT_TYPES, DIFFICULTY_LEVELS, SECTION_TYPES } from '@athli/shared-types';
 import { useExerciseLookup, type Exercise } from '@/hooks/use-all-exercises';
 import { generateWorkoutFromPrompt, type GeneratedWorkout } from '@/api/exercise/generate-exercise';
 import { toast } from 'sonner';
@@ -244,6 +244,7 @@ export const WorkoutBuilder = ({
   const pendingScrollTopRef = useRef<number | null>(null);
   const exerciseRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [isCreatingSection, setIsCreatingSection] = useState(false);
+  const [presetSectionType, setPresetSectionType] = useState<'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | null>(null);
   const creatorRef = useRef<HTMLDivElement>(null);
 
   // AI Builder state
@@ -1051,6 +1052,7 @@ Focus on proper form and progressive overload.`;
   const handleCreateSection = (name: string, type: SectionType, config?: { roundDurationSec?: number }) => {
     setWorkoutSchema((prev) => selectSection(type, prev, { name, ...config }));
     setIsCreatingSection(false);
+    setPresetSectionType(null);
     markDirty();
   };
 
@@ -3033,21 +3035,44 @@ Focus on proper form and progressive overload.`;
                                   <div ref={creatorRef} className="w-full mb-2">
                                     <InlineSectionCreator
                                       onCreate={handleCreateSection}
-                                      onCancel={() => setIsCreatingSection(false)}
+                                      onCancel={() => {
+                                        setIsCreatingSection(false);
+                                        setPresetSectionType(null);
+                                      }}
+                                      initialType={presetSectionType || undefined}
                                     />
                                   </div>
                                 )}
                                 <div className="flex items-center gap-2 w-full">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="flex-1 gap-1.5 text-xs h-9 px-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                                    onClick={() => setIsCreatingSection(true)}
-                                  >
-                                    <Plus className="size-3" />
-                                    <span>Create section</span>
-                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="flex-1 gap-1.5 text-xs h-9 px-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                                      >
+                                        <Plus className="size-3" />
+                                        <span>Create section</span>
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-64">
+                                      {SECTION_TYPES.map((sectionType) => (
+                                        <DropdownMenuItem
+                                          key={sectionType.value}
+                                          onClick={() => {
+                                            setPresetSectionType(sectionType.value as 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits');
+                                            setIsCreatingSection(true);
+                                          }}
+                                        >
+                                          <div className="flex flex-col gap-0.5">
+                                            <span className="font-medium">{sectionType.label}</span>
+                                            <span className="text-xs text-muted-foreground">{sectionType.description}</span>
+                                          </div>
+                                        </DropdownMenuItem>
+                                      ))}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                   <Button
                                     type="button"
                                     variant="outline"
@@ -3078,21 +3103,44 @@ Focus on proper form and progressive overload.`;
                                   <div ref={creatorRef} className="w-full mb-4">
                                     <InlineSectionCreator
                                       onCreate={handleCreateSection}
-                                      onCancel={() => setIsCreatingSection(false)}
+                                      onCancel={() => {
+                                        setIsCreatingSection(false);
+                                        setPresetSectionType(null);
+                                      }}
+                                      initialType={presetSectionType || undefined}
                                     />
                                   </div>
                                 )}
 
                                 <div className="flex gap-2 items-center justify-center w-full">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                                    onClick={() => setIsCreatingSection(true)}
-                                  >
-                                    <Plus className="size-4" />
-                                    <span>Create section</span>
-                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                                      >
+                                        <Plus className="size-4" />
+                                        <span>Create section</span>
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="center" className="w-64">
+                                      {SECTION_TYPES.map((sectionType) => (
+                                        <DropdownMenuItem
+                                          key={sectionType.value}
+                                          onClick={() => {
+                                            setPresetSectionType(sectionType.value as 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits');
+                                            setIsCreatingSection(true);
+                                          }}
+                                        >
+                                          <div className="flex flex-col gap-0.5">
+                                            <span className="font-medium">{sectionType.label}</span>
+                                            <span className="text-xs text-muted-foreground">{sectionType.description}</span>
+                                          </div>
+                                        </DropdownMenuItem>
+                                      ))}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
 
                                   <Button
                                     type="button"
