@@ -222,6 +222,8 @@ export const SectionBuilder = ({
   const exerciseRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [isCreatingSection, setIsCreatingSection] = useState(false);
   const creatorRef = useRef<HTMLDivElement>(null);
+  const [editingSectionNameId, setEditingSectionNameId] = useState<string | null>(null);
+  const sectionNameInputRef = useRef<HTMLInputElement>(null);
 
   // AI Builder state
   const [activeBuilder, setActiveBuilder] = useState<'ai' | 'manual'>('manual');
@@ -1479,34 +1481,54 @@ Focus on proper form and progressive overload.`;
                     {isCollapsed ? 'Expand section' : 'Collapse section'}
                   </TooltipContent>
                 </Tooltip>
-                <Input
-                  disabled={isSectionMode}
-                  className="h-7 flex-1 border-input bg-background text-sm focus-visible:ring-primary shadow-none"
-                  placeholder={section.type ? (section.type.charAt(0).toUpperCase() + section.type.slice(1)) : 'Section'}
-                  value={isSectionMode ? workoutTitle : (section.name || '')}
-                  onChange={(e) => {
-                    const newName = e.target.value;
-                    markDirty();
-                    setWorkoutSchema((prev) => ({
-                      ...prev,
-                      items: prev.items.map((item) => {
-                        if (item.itemType === 'section' && item.section.id === section.id) {
-                          return {
-                            ...item,
-                            section: { ...item.section, name: newName },
-                          };
-                        }
-                        return item;
-                      }),
-                    }));
-                    // Sync to Top Title if in Section Mode
-                    if (isSectionMode) {
-                      setWorkoutTitle(newName);
-                    }
-                  }}
-                />
+                {editingSectionNameId === section.id ? (
+                  <Input
+                    ref={sectionNameInputRef}
+                    autoFocus
+                    className="h-7 flex-1 min-w-0 border-input bg-background text-sm focus-visible:ring-primary shadow-none"
+                    placeholder={section.type ? (section.type.charAt(0).toUpperCase() + section.type.slice(1)) : 'Section'}
+                    value={isSectionMode ? workoutTitle : (section.name || '')}
+                    onChange={(e) => {
+                      const newName = e.target.value;
+                      markDirty();
+                      setWorkoutSchema((prev) => ({
+                        ...prev,
+                        items: prev.items.map((item) => {
+                          if (item.itemType === 'section' && item.section.id === section.id) {
+                            return {
+                              ...item,
+                              section: { ...item.section, name: newName },
+                            };
+                          }
+                          return item;
+                        }),
+                      }));
+                      // Sync to Top Title if in Section Mode
+                      if (isSectionMode) {
+                        setWorkoutTitle(newName);
+                      }
+                    }}
+                    onBlur={() => setEditingSectionNameId(null)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === 'Escape') {
+                        setEditingSectionNameId(null);
+                      }
+                    }}
+                  />
+                ) : (
+                  <span
+                    className="text-sm font-medium cursor-pointer hover:text-primary transition-colors truncate max-w-[300px]"
+                    onClick={() => setEditingSectionNameId(section.id)}
+                  >
+                    {(isSectionMode ? workoutTitle : section.name) || (
+                      <span className="text-muted-foreground">
+                        {section.type ? (section.type.charAt(0).toUpperCase() + section.type.slice(1)) : 'Section'}
+                      </span>
+                    )}
+                  </span>
+                )}
                 {section.type && (
-                  <Badge variant="outline" className="h-7 px-2 text-xs font-bold capitalize bg-background text-foreground border-input rounded-md shadow-none">
+                  <Badge variant="outline" className="ml-2 px-2 py-0.5 text-[10px] font-medium capitalize bg-transparent text-primary border-primary rounded-full shadow-none">
                     {section.type}
                   </Badge>
                 )}
@@ -1514,8 +1536,8 @@ Focus on proper form and progressive overload.`;
               <div className="flex items-center gap-1">
                 {section.type === 'amrap' && (
                   <div className="relative flex items-center">
-                    <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">
-                      Time (m)
+                    <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">
+                      minutes
                     </span>
                     <Input
                       type="text"
@@ -1547,7 +1569,7 @@ Focus on proper form and progressive overload.`;
                         }
                       }}
                       className={cn(
-                        'h-7 w-28 text-center text-[11px] bg-background border-input shadow-none pl-14',
+                        'h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14',
                         sectionValidationErrors[section.id]?.missingConfig && 'border-destructive focus-visible:ring-destructive'
                       )}
                       placeholder="-"
@@ -1557,7 +1579,7 @@ Focus on proper form and progressive overload.`;
                 {(section.type === 'tabata' || section.type === 'hiit') && (
                   <div className="flex items-center gap-1">
                     <div className="relative flex items-center">
-                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">Work</span>
+                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">work (s)</span>
                       <Input
                         type="text"
                         inputMode="numeric"
@@ -1575,12 +1597,12 @@ Focus on proper form and progressive overload.`;
                             }),
                           }));
                         }}
-                        className="h-7 w-20 text-center text-[11px] bg-background border-input shadow-none pl-10"
+                        className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14"
                         placeholder={section.type === 'tabata' ? '20' : '40'}
                       />
                     </div>
                     <div className="relative flex items-center">
-                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">Rest</span>
+                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">rest (s)</span>
                       <Input
                         type="text"
                         inputMode="numeric"
@@ -1598,12 +1620,12 @@ Focus on proper form and progressive overload.`;
                             }),
                           }));
                         }}
-                        className="h-7 w-20 text-center text-[11px] bg-background border-input shadow-none pl-10"
+                        className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14"
                         placeholder={section.type === 'tabata' ? '10' : '20'}
                       />
                     </div>
                     <div className="relative flex items-center">
-                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">Rds</span>
+                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">rounds</span>
                       <Input
                         type="text"
                         inputMode="numeric"
@@ -1621,7 +1643,7 @@ Focus on proper form and progressive overload.`;
                             }),
                           }));
                         }}
-                        className="h-7 w-16 text-center text-[11px] bg-background border-input shadow-none pl-8"
+                        className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-12"
                         placeholder={section.type === 'tabata' ? '8' : '10'}
                       />
                     </div>
@@ -1630,7 +1652,7 @@ Focus on proper form and progressive overload.`;
                 {section.type === 'emom' && (
                   <div className="flex items-center gap-1">
                     <div className="relative flex items-center">
-                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">Int(s)</span>
+                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">interval (s)</span>
                       <Input
                         type="text"
                         inputMode="numeric"
@@ -1648,12 +1670,12 @@ Focus on proper form and progressive overload.`;
                             }),
                           }));
                         }}
-                        className="h-7 w-20 text-center text-[11px] bg-background border-input shadow-none pl-10"
+                        className="h-7 w-28 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-16"
                         placeholder="60"
                       />
                     </div>
                     <div className="relative flex items-center">
-                      <span className="absolute left-2 text-[10px] uppercase font-medium text-muted-foreground pointer-events-none">Dur(m)</span>
+                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">duration (m)</span>
                       <Input
                         type="text"
                         inputMode="numeric"
@@ -1671,7 +1693,7 @@ Focus on proper form and progressive overload.`;
                             }),
                           }));
                         }}
-                        className="h-7 w-20 text-center text-[11px] bg-background border-input shadow-none pl-12"
+                        className="h-7 w-28 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-16"
                         placeholder="10"
                       />
                     </div>

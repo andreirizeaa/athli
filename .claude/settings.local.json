@@ -66,7 +66,8 @@
       "Bash(npx eslint:*)",
       "Bash(node -e \"require\\('fs'\\).readFileSync\\('apps/athli-mobile/app/modals/library/add-exercise-modal.tsx', 'utf8'\\)\":*)",
       "Bash(npx babel:*)",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(pnpm exec tsc:*)"
     ]
   }
 }
