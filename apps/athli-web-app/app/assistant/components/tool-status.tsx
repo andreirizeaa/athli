@@ -16,20 +16,24 @@ interface ToolStatusProps {
 }
 
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
+  list_all_clients: 'Loading your clients',
   search_clients: 'Searching clients',
   get_client_profile: 'Loading client profile',
   get_client_workouts: 'Fetching workout history',
   get_client_metrics: 'Loading metrics',
   get_client_checkins: 'Fetching check-ins',
+  get_inactive_clients: 'Finding inactive clients',
   search_exercises: 'Searching exercises',
   get_coach_workouts: 'Loading your workouts',
   get_coach_programs: 'Loading your programs',
   get_coach_sections: 'Loading your sections',
+  list_all_checkin_templates: 'Loading check-in templates',
+  list_all_metrics: 'Loading tracked metrics',
   create_workout: 'Creating workout',
   create_program: 'Creating program',
   create_section: 'Creating section',
+  assign_workout: 'Preparing workout assignment',
   analyze_client_progress: 'Analyzing progress',
-  get_inactive_clients: 'Finding inactive clients',
 };
 
 export function ToolStatus({ toolCall, className }: ToolStatusProps) {
@@ -39,24 +43,24 @@ export function ToolStatus({ toolCall, className }: ToolStatusProps) {
   return (
     <div
       className={cn(
-        'flex items-center gap-2 text-sm text-muted-foreground py-1',
+        'inline-flex items-center gap-2 text-sm py-1.5 px-3 rounded-full',
+        toolCall.status === 'calling' && 'bg-muted/50 text-foreground',
+        toolCall.status === 'complete' && 'bg-green-500/10 text-green-600',
+        toolCall.status === 'error' && 'bg-red-500/10 text-red-500',
         className
       )}
     >
       {toolCall.status === 'calling' && (
-        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+        <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-500" />
       )}
       {toolCall.status === 'complete' && (
-        <CheckCircle2 className="h-4 w-4 text-green-500" />
+        <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
       )}
       {toolCall.status === 'error' && (
-        <XCircle className="h-4 w-4 text-red-500" />
+        <XCircle className="h-3.5 w-3.5 text-red-500" />
       )}
-      <span className={cn(
-        toolCall.status === 'calling' && 'text-foreground',
-        toolCall.status === 'error' && 'text-red-500'
-      )}>
-        {message}...
+      <span>
+        {message}{toolCall.status === 'calling' ? '...' : ''}
       </span>
     </div>
   );

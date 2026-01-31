@@ -288,8 +288,14 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
 
                 {/* Loading indicator */}
                 {isStreaming && !currentToolCall && messages.length > 0 && (
-                    <div className="ps-2">
-                        <PromptLoader variant="pulse-dot" />
+                    <div className="ps-2 flex items-center gap-2">
+                        <div className="flex items-center gap-2 bg-muted/50 rounded-full px-4 py-2">
+                            <div className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-purple-500"></span>
+                            </div>
+                            <PromptLoader variant="text-shimmer" text="Thinking..." size="sm" />
+                        </div>
                     </div>
                 )}
 
