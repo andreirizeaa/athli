@@ -180,12 +180,17 @@ export default function FormBuilderScreen() {
   const handleEditQuestion = useCallback((question: Question, index: number) => {
     // Set callback to receive edited question from modal
     setQuestionSelectCallback((editedQuestion: Question) => {
-      setQuestions(prev => {
-        const newQuestions = [...prev];
-        newQuestions[index] = editedQuestion;
-        return newQuestions;
-      });
-      setIsDirty(true);
+      // Only mark as dirty if the question actually changed
+      const hasChanged = JSON.stringify(editedQuestion) !== JSON.stringify(question);
+
+      if (hasChanged) {
+        setQuestions(prev => {
+          const newQuestions = [...prev];
+          newQuestions[index] = editedQuestion;
+          return newQuestions;
+        });
+        setIsDirty(true);
+      }
     });
 
     // Check if progress photo question already exists (excluding the current question being edited)
@@ -284,14 +289,14 @@ export default function FormBuilderScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
       <View style={[styles.fixedHeader, { height: headerHeight }]}>
         <LinearGradient
           colors={[
-            hexToRgba(themeColors.backgroundSecondary, 1),
-            hexToRgba(themeColors.backgroundSecondary, 0.85),
-            hexToRgba(themeColors.backgroundSecondary, 0.5),
-            hexToRgba(themeColors.backgroundSecondary, 0),
+            hexToRgba(themeColors.backgroundPrimary, 1),
+            hexToRgba(themeColors.backgroundPrimary, 0.85),
+            hexToRgba(themeColors.backgroundPrimary, 0.5),
+            hexToRgba(themeColors.backgroundPrimary, 0),
           ]}
           locations={[0, 0.5, 0.8, 1]}
           style={[styles.headerGradient, { height: gradientHeight }]}
@@ -341,15 +346,14 @@ export default function FormBuilderScreen() {
         <View style={{ height: 160 }} />
       </ScrollView>
 
-      <View style={[
-        styles.bottomBarContainer,
-        {
-          backgroundColor: themeColors.backgroundPrimary,
-          paddingBottom: insets.bottom + 12,
-          borderTopColor: themeColors.border,
-        }
-      ]}>
-        <View style={styles.bottomBarContent}>
+      <View style={styles.bottomBarWrapper}>
+        <View style={[styles.bottomBarDivider, { backgroundColor: themeColors.border }]} />
+        <View
+          style={[
+            styles.bottomBarContainer,
+            { backgroundColor: themeColors.surfacePrimary },
+          ]}
+        >
           <View style={styles.buttonWrapper}>
             <PressableScale
               style={[styles.actionButton, { backgroundColor: themeColors.primary, opacity: questions.length < 2 ? 0.5 : 1 }]}
@@ -378,6 +382,15 @@ export default function FormBuilderScreen() {
             </PressableScale>
           </View>
         </View>
+        <View
+          style={[
+            styles.bottomBarSafeAreaFill,
+            {
+              height: insets.bottom,
+              backgroundColor: themeColors.surfacePrimary,
+            },
+          ]}
+        />
       </View>
 
       <Dialog
@@ -472,20 +485,28 @@ const styles = StyleSheet.create({
   questionsContainer: {
     flex: 1,
   },
-  bottomBarContainer: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 10,
+  bottomBarWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
-  bottomBarContent: {
+  bottomBarDivider: {
+    height: 1,
+  },
+  bottomBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 12,
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -24,
     gap: 12,
+  },
+  bottomBarSafeAreaFill: {
+    width: '100%',
   },
   buttonWrapper: {
     flex: 1,

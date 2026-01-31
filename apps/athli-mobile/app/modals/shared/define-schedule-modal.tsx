@@ -57,8 +57,10 @@ export default function DefineScheduleModal() {
             let initSpecificDay = 1;
 
             if (scheduleData) {
-                initFrequency = scheduleData.frequency;
-                setFrequency(scheduleData.frequency);
+                if (scheduleData.frequency) {
+                    initFrequency = scheduleData.frequency;
+                    setFrequency(scheduleData.frequency);
+                }
 
                 if (scheduleData.selectedDays) {
                     initSelectedDays = scheduleData.selectedDays;
