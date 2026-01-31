@@ -184,7 +184,6 @@ export const SessionFeedbackPage = ({ values, onValueChange }: SessionFeedbackPa
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     paddingHorizontal: 16,
     gap: 24,
   },

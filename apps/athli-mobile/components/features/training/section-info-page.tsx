@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     marginTop: 8,
-    marginHorizontal: -16,
+    alignSelf: 'stretch',
   },
   descriptionCard: {
     marginBottom: 0,

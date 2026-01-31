@@ -288,6 +288,10 @@ function RootLayoutNav() {
           useCoachCompanyStore.getState().clearCompany();
           useChatsStore.getState().clearChats();
           clearClientProfile();
+          // Reset data stores
+          const { useAthleteDataStore, useCoachDataStore } = require('@/stores');
+          useAthleteDataStore.getState().reset();
+          useCoachDataStore.getState().reset();
           router.replace('/welcome');
         } else if (event === 'TOKEN_REFRESHED') {
           // Token was refreshed in background - update session
