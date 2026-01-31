@@ -227,6 +227,26 @@ export const en = {
           intervals: '{{time}}s intervals',
         },
       },
+      congratulations: {
+        title: 'All Done!',
+        subtitle: 'Great work completing your workout',
+      },
+      feedback: {
+        title: 'How was your session?',
+        intensity: 'Session intensity',
+        intensityLabels: ['Easy', 'Light', 'Moderate', 'Hard', 'Brutal'],
+        rating: 'Rate your workout',
+        ratingLabels: ['Poor', 'Fair', 'Good', 'Great', 'Amazing'],
+        comments: 'Session comments',
+        commentsPlaceholder: 'How did you feel? Any notes for your coach...',
+      },
+      summary: {
+        title: 'Workout Summary',
+        duration: 'Duration',
+        exercises: 'Exercises',
+        setsCompleted: 'Sets Completed',
+        finishWorkout: 'Finish Workout',
+      },
     },
     addOptions: {
       addFromLibrary: 'Add from library',

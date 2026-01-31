@@ -12,6 +12,8 @@ import { assignWorkout } from '@/services/client/client-training-service';
 import { ReadinessPage } from '@/components/features/training/readiness-page';
 import { ExerciseSessionCard } from '@/components/features/training/exercise-session-card';
 import { SectionInfoPage } from '@/components/features/training/section-info-page';
+import { CongratulationsPage } from '@/components/features/training/congratulations-page';
+import { SessionFeedbackPage } from '@/components/features/training/session-feedback-page';
 import {
   WorkoutSessionHeader,
   WorkoutSessionBottomNav,
@@ -19,6 +21,7 @@ import {
 } from '@/components/features/training/workout-session';
 import {
   WorkoutPre,
+  WorkoutPost,
   WorkoutPayload,
   WorkoutMeta,
   DEFAULT_EXECUTION_FIELDS,
@@ -51,6 +54,8 @@ type WorkoutPage =
   | { type: 'section-info'; itemIndex: number; section: WorkoutSectionPayload }
   | { type: 'exercise'; itemIndex: number; exercise: RegularExercisePayload; groupIndex?: number; exerciseIndex?: number }
   | { type: 'circuit-exercise'; itemIndex: number; exercise: CircuitExercisePayload; groupIndex?: number; exerciseIndex?: number }
+  | { type: 'congratulations' }
+  | { type: 'feedback' }
   | { type: 'summary' };
 
 export default function WorkoutSessionModal() {
@@ -159,7 +164,9 @@ export default function WorkoutSessionModal() {
       }
     });
 
-    // Add summary page at the end
+    // Add end-of-workout pages: congratulations, feedback, then summary
+    pageList.push({ type: 'congratulations' });
+    pageList.push({ type: 'feedback' });
     pageList.push({ type: 'summary' });
 
     return pageList;
@@ -374,6 +381,30 @@ export default function WorkoutSessionModal() {
     }
   };
 
+  // Feedback change handler
+  const handleFeedbackChange = async (field: keyof WorkoutPost, value: number | string | null) => {
+    if (!workoutData) return;
+
+    const currentPost = workoutData.post || DEFAULT_EXECUTION_FIELDS.post;
+    const updatedData = {
+      ...workoutData,
+      post: { ...currentPost, [field]: value },
+    };
+    setWorkoutData(updatedData);
+
+    try {
+      await assignWorkout({
+        workoutId: params.workoutId,
+        clientId: params.clientId,
+        ...(params.coachId && { coachId: params.coachId }),
+        date: params.date,
+        workoutPayload: updatedData,
+      });
+    } catch (error) {
+      console.error('Failed to save feedback value:', error);
+    }
+  };
+
   // Pause toggle handler
   const handleTogglePause = async () => {
     if (!workoutData || !workoutData.completedSummary) return;
@@ -528,8 +559,14 @@ export default function WorkoutSessionModal() {
     if (currentPage.type === 'section-info') {
       return '';
     }
+    if (currentPage.type === 'congratulations') {
+      return '';
+    }
+    if (currentPage.type === 'feedback') {
+      return t('training.session.feedback.title' as any);
+    }
     if (currentPage.type === 'summary') {
-      return t('training.summary.title' as any) || 'Summary';
+      return t('training.session.summary.title' as any);
     }
     // For exercise pages, return empty - the exercise name is shown in the card
     return '';
@@ -623,11 +660,28 @@ export default function WorkoutSessionModal() {
           </View>
         );
 
+      case 'congratulations':
+        return (
+          <View style={styles.congratulationsContainer}>
+            <CongratulationsPage />
+          </View>
+        );
+
+      case 'feedback':
+        return (
+          <View style={styles.feedbackContainer}>
+            <SessionFeedbackPage
+              values={workoutData.post || DEFAULT_EXECUTION_FIELDS.post}
+              onValueChange={handleFeedbackChange}
+            />
+          </View>
+        );
+
       case 'summary':
         return (
           <View style={styles.summaryContainer}>
             <Text style={[styles.summaryText, { color: themeColors.text }]}>
-              {t('training.summary.complete' as any) || 'Workout Complete!'}
+              {t('training.session.summary.title' as any)}
             </Text>
           </View>
         );
@@ -704,6 +758,13 @@ const styles = StyleSheet.create({
     minHeight: 400,
   },
   exerciseContainer: {
+    flex: 1,
+  },
+  congratulationsContainer: {
+    flex: 1,
+    minHeight: 400,
+  },
+  feedbackContainer: {
     flex: 1,
   },
   summaryContainer: {
