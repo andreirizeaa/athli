@@ -179,7 +179,6 @@ export type CircuitsSectionPayload = {
   name: string;
   type: 'circuits';
   rounds: number;
-  actualRounds: number | null;
   exercises: CircuitExerciseGroupPayload[];
   notes: string | null;
   completed: boolean;

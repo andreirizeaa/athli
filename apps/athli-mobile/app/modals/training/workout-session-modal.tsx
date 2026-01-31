@@ -1189,9 +1189,77 @@ export default function WorkoutSessionModal() {
     );
   };
 
+  // Check if current page is completed
+  const isCurrentPageComplete = (): boolean => {
+    if (!workoutData) return false;
+
+    if (currentPage.type === 'readiness') {
+      return isReadinessComplete();
+    }
+
+    if (currentPage.type === 'exercise') {
+      const { itemIndex, groupIndex, exerciseIndex, exercise } = currentPage;
+      const item = workoutData.items[itemIndex];
+      
+      if (item.itemType === 'exercise') {
+        // Top-level exercise - check if all sets are completed
+        return exercise.sets.every((set) => set.completed);
+      } else if (item.itemType === 'section' && (item.data.type === 'regular' || item.data.type === 'auxiliary')) {
+        // Section exercise - check if all sets are completed
+        if (groupIndex !== undefined && exerciseIndex !== undefined) {
+          const ex = item.data.exercises[groupIndex].exercises[exerciseIndex];
+          return ex.sets.every((set) => set.completed);
+        }
+      }
+      return false;
+    }
+
+    if (currentPage.type === 'superset-round') {
+      const { exercises, currentSet } = currentPage;
+      const setIndex = currentSet - 1;
+      // Check if all exercises in the current set are completed
+      return exercises.every((exercise) => exercise.sets[setIndex]?.completed === true);
+    }
+
+    if (currentPage.type === 'circuit-round') {
+      const { section, roundNumber } = currentPage;
+      // Get all exercises for this round
+      const circuitExercises: { exercise: CircuitExercisePayload; groupIndex: number; exerciseIndex: number }[] = [];
+      section.exercises.forEach((group, groupIndex) => {
+        group.exercises.forEach((exercise, exerciseIndex) => {
+          circuitExercises.push({ exercise, groupIndex, exerciseIndex });
+        });
+      });
+      // Check if all exercises in the round are completed
+      return circuitExercises.every((e) => e.exercise.set.completed);
+    }
+
+    if (currentPage.type === 'emom-round' || currentPage.type === 'hiit-round' || currentPage.type === 'tabata-round') {
+      const { section } = currentPage;
+      // Get all exercises for this round
+      const exercises: { exercise: CircuitExercisePayload; groupIndex: number; exerciseIndex: number }[] = [];
+      section.exercises.forEach((group, groupIndex) => {
+        group.exercises.forEach((exercise, exerciseIndex) => {
+          exercises.push({ exercise, groupIndex, exerciseIndex });
+        });
+      });
+      // Check if all exercises in the round are completed
+      return exercises.every((e) => e.exercise.set.completed);
+    }
+
+    if (currentPage.type === 'amrap-round') {
+      const { section } = currentPage;
+      // Check if all exercises are completed
+      return section.exercises.every((ex) => ex.completed);
+    }
+
+    // For other page types (section-info, congratulations, feedback, summary), allow navigation
+    return true;
+  };
+
   // Navigation state
   const canGoBack = currentStep > 1;
-  const canGoNext = currentStep < totalSteps && (currentPage.type !== 'readiness' || isReadinessComplete());
+  const canGoNext = currentStep < totalSteps && isCurrentPageComplete();
 
   // Get page title based on current page
   const getPageTitle = (): string => {
