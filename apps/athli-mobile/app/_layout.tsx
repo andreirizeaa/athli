@@ -396,7 +396,7 @@ function RootLayoutNav() {
             name="welcome"
             options={{
               headerShown: false,
-              animation: 'none',
+              animation: 'fade',
               contentStyle: {
                 backgroundColor: '#090909',
               },

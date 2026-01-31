@@ -35,6 +35,8 @@ type ExerciseSessionCardProps = {
   onAlternativeSelect?: (alternativeId: string) => void;
   isSuperset?: boolean;
   supersetLabel?: string;
+  /** If true, only the first uncompleted set checkbox is enabled (sequential completion) */
+  sequentialSets?: boolean;
 };
 
 export const ExerciseSessionCard = ({
@@ -47,6 +49,7 @@ export const ExerciseSessionCard = ({
   onAlternativeSelect,
   isSuperset = false,
   supersetLabel,
+  sequentialSets = false,
 }: ExerciseSessionCardProps) => {
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
@@ -197,6 +200,11 @@ export const ExerciseSessionCard = ({
 
   const tempoValues = parseTempo(exercise.tempo);
 
+  // For sequential sets, find the first uncompleted set index
+  const nextSetToComplete = sequentialSets
+    ? exercise.sets.findIndex((set) => !set.completed)
+    : -1; // -1 means all sets are enabled
+
   // Build tempo description message
   const buildTempoDescription = () => {
     if (!tempoValues) return '';
@@ -343,6 +351,7 @@ export const ExerciseSessionCard = ({
             onComplete={(completed) => handleSetCompleteWithRest(index, completed)}
             onValueChange={(field, value) => onSetValueChange(index, field, value)}
             onSetTypePress={handleSetTypePress}
+            isCheckboxEnabled={nextSetToComplete === -1 || set.completed || index === nextSetToComplete}
           />
           {/* Rest Timer - always visible for non-superset exercises, show rest duration by default */}
           {!isSuperset && index < exercise.sets.length - 1 && set.restSec > 0 && (
@@ -476,6 +485,7 @@ type SetRowProps = {
   onComplete: (completed: boolean) => void;
   onValueChange: (field: 'trackableField1' | 'trackableField2', value: string) => void;
   onSetTypePress: (type: string) => void;
+  isCheckboxEnabled?: boolean;
 };
 
 // Map set type to display letter
@@ -511,9 +521,11 @@ const SetRow = ({
   onComplete,
   onValueChange,
   onSetTypePress,
+  isCheckboxEnabled = true,
 }: SetRowProps) => {
   const isCompleted = set.completed;
   const setTypeLabel = getSetTypeLabel(set.type);
+  const canToggle = isCheckboxEnabled;
 
   return (
     <View style={[
@@ -573,10 +585,14 @@ const SetRow = ({
       {showNoColumns && <View style={styles.spacer} />}
 
       {/* Complete Button - Right Edge */}
-      <PressableScale onPress={() => {
-        haptics.success();
-        onComplete(!isCompleted);
-      }}>
+      <PressableScale
+        onPress={() => {
+          if (!canToggle) return;
+          haptics.success();
+          onComplete(!isCompleted);
+        }}
+        style={{ opacity: canToggle ? 1 : 0.4 }}
+      >
         <View style={[
           styles.completeCircle,
           {

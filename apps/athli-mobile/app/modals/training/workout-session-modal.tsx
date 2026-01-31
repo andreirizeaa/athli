@@ -3,9 +3,11 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { View, StyleSheet, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSequence, withDelay, runOnJS } from 'react-native-reanimated';
+import LottieView from 'lottie-react-native';
 
 import { useTranslations, useThemePreference } from '@/stores';
+import { en } from '@/lib/i18n/en';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { Storage } from '@/lib/storage';
 import { typography } from '@/constants/typography';
@@ -61,6 +63,7 @@ const SUPERSET_MESSAGES = [
   'Superset mode: activated ⚡',
 ];
 
+
 // Circuit section type union
 type CircuitSectionType = CircuitsSectionPayload | TabataSectionPayload | HiitSectionPayload | EmomSectionPayload;
 
@@ -108,6 +111,14 @@ export default function WorkoutSessionModal() {
   const supersetOverlayOpacity = useSharedValue(0);
   const supersetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const previousStepRef = useRef(currentStep);
+
+  // Completion celebration overlay state
+  const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
+  const [completionMessage, setCompletionMessage] = useState('');
+  const completionOverlayOpacity = useSharedValue(0);
+  const completionTextScale = useSharedValue(0.5);
+  const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastCompletionMessageRef = useRef(-1);
 
   const { formattedTime, isPaused } = useWorkoutTimer(workoutData?.completedSummary ?? null);
   const { findExerciseById, findExercisesByIds } = useExerciseLookup();
@@ -496,6 +507,61 @@ export default function WorkoutSessionModal() {
     opacity: supersetOverlayOpacity.value,
   }));
 
+  // Animated styles for completion overlay
+  const completionOverlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: completionOverlayOpacity.value,
+  }));
+
+  const completionTextAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: completionTextScale.value }],
+  }));
+
+  // Show completion celebration overlay and navigate after
+  const showCompletionCelebration = useCallback(() => {
+    // Get messages directly from translations object (t() only returns strings)
+    const messages = en.training.session.exerciseComplete;
+    if (!messages || messages.length === 0) return;
+
+    // Pick a random message (avoid repeating the last one)
+    let messageIndex: number;
+    do {
+      messageIndex = Math.floor(Math.random() * messages.length);
+    } while (messageIndex === lastCompletionMessageRef.current && messages.length > 1);
+    lastCompletionMessageRef.current = messageIndex;
+
+    setCompletionMessage(messages[messageIndex]);
+    setShowCompletionOverlay(true);
+
+    // Animate in
+    completionOverlayOpacity.value = withTiming(1, { duration: 200 });
+    completionTextScale.value = withSequence(
+      withTiming(1.1, { duration: 250 }),
+      withTiming(1, { duration: 150 })
+    );
+
+    // Auto dismiss and navigate after delay
+    completionTimeoutRef.current = setTimeout(() => {
+      completionOverlayOpacity.value = withTiming(0, { duration: 200 });
+      // Navigate after fade out completes
+      setTimeout(() => {
+        setShowCompletionOverlay(false);
+        if (currentStep < pages.length) {
+          if (isPaused) resumeWorkout();
+          setCurrentStep(currentStep + 1);
+        }
+      }, 200);
+    }, 1200);
+  }, [completionOverlayOpacity, completionTextScale, currentStep, pages.length, isPaused]);
+
+  // Cleanup completion timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (completionTimeoutRef.current) {
+        clearTimeout(completionTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Readiness change handler
   const handleReadinessChange = async (field: keyof WorkoutPre, value: number) => {
     if (!workoutData) return;
@@ -560,16 +626,16 @@ export default function WorkoutSessionModal() {
   // Handle set completion toggle for regular exercises and supersets
   const handleSetComplete = async (setIndex: number, completed: boolean, exerciseIdxInSuperset?: number) => {
     if (!workoutData) return;
-    
+
     if (currentPage.type === 'superset') {
       const { itemIndex, exercises, exerciseIndices } = currentPage;
       const actualExerciseIndex = exerciseIdxInSuperset !== undefined ? exerciseIdxInSuperset : 0;
       const exercise = exercises[actualExerciseIndex];
-      
+
       // Deep clone the items to update
       const updatedItems = JSON.parse(JSON.stringify(workoutData.items)) as WorkoutItem[];
       const item = updatedItems[itemIndex];
-      
+
       if (item.itemType === 'exercise') {
         // Top-level superset - find the exercise by matching ID
         const exerciseItemIndex = exerciseIndices[actualExerciseIndex];
@@ -590,7 +656,7 @@ export default function WorkoutSessionModal() {
           }
         }
       }
-      
+
       const updatedData = { ...workoutData, items: updatedItems };
       setWorkoutData(updatedData);
 
@@ -607,9 +673,9 @@ export default function WorkoutSessionModal() {
       }
       return;
     }
-    
+
     if (currentPage.type !== 'exercise') return;
-    const { itemIndex, groupIndex, exerciseIndex } = currentPage;
+    const { itemIndex, groupIndex, exerciseIndex, exercise } = currentPage;
 
     // Deep clone the items to update
     const updatedItems = JSON.parse(JSON.stringify(workoutData.items)) as WorkoutItem[];
@@ -636,6 +702,12 @@ export default function WorkoutSessionModal() {
       });
     } catch (error) {
       console.error('Failed to save set completion:', error);
+    }
+
+    // Show celebration and auto-advance when last set is completed
+    const isLastSet = setIndex === exercise.sets.length - 1;
+    if (completed && isLastSet) {
+      showCompletionCelebration();
     }
   };
 
@@ -1251,6 +1323,7 @@ export default function WorkoutSessionModal() {
               onSetComplete={handleSetComplete}
               onSetValueChange={handleSetValueChange}
               onAlternativeSelect={handleAlternativeSelect}
+              sequentialSets
             />
           </View>
         );
@@ -1582,6 +1655,21 @@ export default function WorkoutSessionModal() {
           </Pressable>
         </Animated.View>
       )}
+
+      {/* Completion celebration overlay */}
+      {showCompletionOverlay && (
+        <Animated.View style={[styles.completionOverlay, completionOverlayAnimatedStyle]}>
+          <LottieView
+            source={require('@/assets/animations/confetti.json')}
+            autoPlay
+            loop={false}
+            style={styles.confettiAnimation}
+          />
+          <Animated.Text style={[styles.completionText, { color: themeColors.text }, completionTextAnimatedStyle]}>
+            {completionMessage}
+          </Animated.Text>
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -1641,5 +1729,25 @@ const styles = StyleSheet.create({
   supersetText: {
     ...typography.h2,
     textAlign: 'center',
+  },
+  completionOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  confettiAnimation: {
+    position: 'absolute',
+    top: -100,
+    left: -100,
+    right: -100,
+    bottom: -100,
+    zIndex: 0,
+  },
+  completionText: {
+    ...typography.h1,
+    textAlign: 'center',
+    zIndex: 1,
   },
 });
