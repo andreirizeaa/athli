@@ -430,7 +430,6 @@ export const buildSectionPayload = (
       name: section.name,
       type: 'circuits',
       rounds: section.rounds || 3,
-      actualRounds: null,
       exercises,
       notes: section.notes || null,
       completed: false,

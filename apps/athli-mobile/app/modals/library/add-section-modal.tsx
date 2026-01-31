@@ -303,7 +303,6 @@ export default function AddSectionModal() {
             emptySectionData.actualDurationSec = null;
         } else if (sectionType === 'circuits') {
             emptySectionData.rounds = rounds ? parseInt(rounds) : 3;
-            emptySectionData.actualRounds = null;
         } else {
             // Regular/Auxiliary sections don't need additional fields
         }
