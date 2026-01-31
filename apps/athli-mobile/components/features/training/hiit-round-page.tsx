@@ -1,0 +1,545 @@
+import React, { useRef, useState, useEffect } from 'react';
+import { StyleSheet, Text, View, AppState, AppStateStatus } from 'react-native';
+import { Flame, Coffee } from 'lucide-react-native';
+import LottieView from 'lottie-react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  runOnJS,
+} from 'react-native-reanimated';
+
+import { typography } from '@/constants/typography';
+import { useThemePreference, useTranslations } from '@/stores';
+import { Card } from '@/components/ui/card';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { ExerciseSessionCard } from './exercise-session-card';
+import type { CircuitExercisePayload, RegularExercisePayload } from '@athli/shared-types';
+
+type ExerciseData = {
+  exerciseId: string;
+  name: string;
+  thumbnailUrl?: string;
+};
+
+type HiitRoundPageProps = {
+  sectionId: string;
+  sectionName: string;
+  workSec: number;
+  restSec: number;
+  currentRound: number;
+  totalRounds: number;
+  exercises: CircuitExercisePayload[];
+  exerciseDataMap: Map<string, ExerciseData>;
+  onExerciseComplete: (exerciseIndex: number, completed: boolean) => void;
+  onExerciseValueChange: (
+    exerciseIndex: number,
+    field: 'trackableField1' | 'trackableField2',
+    value: string
+  ) => void;
+  onRoundComplete: () => void;
+  isPaused: boolean;
+};
+
+const HIIT_COLOR = '#8B5CF6'; // Purple for HIIT
+const WORK_COLOR = '#EF4444'; // Red for work
+const REST_COLOR = '#10B981'; // Green for rest
+
+type TimerPhase = 'work' | 'rest';
+
+export const HiitRoundPage = ({
+  sectionId,
+  sectionName,
+  workSec,
+  restSec,
+  currentRound,
+  totalRounds,
+  exercises,
+  exerciseDataMap,
+  onExerciseComplete,
+  onExerciseValueChange,
+  onRoundComplete,
+  isPaused,
+}: HiitRoundPageProps) => {
+  const { colors: themeColors } = useThemePreference();
+  const { t } = useTranslations();
+  const lottieRef = useRef<LottieView>(null);
+
+  // Refs for timer management - using refs to avoid stale closures
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const hasCompletedRef = useRef(false);
+  const phaseStartTimeRef = useRef<number>(Date.now());
+  const currentPhaseRef = useRef<TimerPhase>('work');
+  const workSecRef = useRef(workSec);
+  const restSecRef = useRef(restSec);
+  const isPausedRef = useRef(isPaused);
+  const onRoundCompleteRef = useRef(onRoundComplete);
+  const currentRoundRef = useRef(currentRound);
+  const totalRoundsRef = useRef(totalRounds);
+  const tickFunctionRef = useRef<(() => void) | null>(null);
+
+  // Keep refs updated with latest prop values
+  useEffect(() => {
+    workSecRef.current = workSec;
+  }, [workSec]);
+
+  useEffect(() => {
+    restSecRef.current = restSec;
+  }, [restSec]);
+
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
+
+  useEffect(() => {
+    onRoundCompleteRef.current = onRoundComplete;
+  }, [onRoundComplete]);
+
+  useEffect(() => {
+    currentRoundRef.current = currentRound;
+  }, [currentRound]);
+
+  useEffect(() => {
+    totalRoundsRef.current = totalRounds;
+  }, [totalRounds]);
+
+  // Timer state - ensure we have a valid initial value
+  const [currentPhase, setCurrentPhase] = useState<TimerPhase>('work');
+  const [timeRemaining, setTimeRemaining] = useState(Math.max(0, workSec || 0));
+
+  // Overlay states
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [showPhaseOverlay, setShowPhaseOverlay] = useState(false);
+  const [overlayText, setOverlayText] = useState('');
+  const overlayOpacity = useSharedValue(0);
+
+  // Format time as MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Initialize timer on mount - runs once per component instance
+  useEffect(() => {
+    // Set up refs for this round
+    hasCompletedRef.current = false;
+    phaseStartTimeRef.current = Date.now();
+    currentPhaseRef.current = 'work';
+
+    // Set initial state - ensure valid values
+    setCurrentPhase('work');
+    setTimeRemaining(Math.max(0, workSec || 0));
+
+    // Helper to calculate remaining time for current phase
+    const calculateRemaining = (): number => {
+      const phaseDuration = currentPhaseRef.current === 'work' ? workSecRef.current : restSecRef.current;
+      const elapsed = Math.floor((Date.now() - phaseStartTimeRef.current) / 1000);
+      return Math.max(0, phaseDuration - elapsed);
+    };
+
+    // Helper to show phase transition overlay
+    const showTransitionOverlay = (text: string, onComplete: () => void) => {
+      setOverlayText(text);
+      setShowPhaseOverlay(true);
+      overlayOpacity.value = withSequence(
+        withTiming(1, { duration: 200 }),
+        withTiming(1, { duration: 800 }),
+        withTiming(0, { duration: 200 }, () => {
+          runOnJS(setShowPhaseOverlay)(false);
+          runOnJS(onComplete)();
+        })
+      );
+    };
+
+    // Helper to complete the round
+    const completeRound = () => {
+      if (hasCompletedRef.current) return;
+      hasCompletedRef.current = true;
+
+      // Clear timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+
+      // Check if this is the last round
+      const isLastRound = currentRoundRef.current >= totalRoundsRef.current;
+      
+      if (isLastRound) {
+        // Last round - show confetti and complete overlay
+        setShowConfetti(true);
+        lottieRef.current?.play();
+        
+        showTransitionOverlay(
+          t('training.session.hiit.complete' as any) || 'Complete! 🎉',
+          () => {
+            onRoundCompleteRef.current();
+          }
+        );
+      } else {
+        // Not last round - show "WORK" overlay and advance
+        showTransitionOverlay(
+          t('training.session.hiit.work' as any) || 'WORK 💪',
+          () => {
+            onRoundCompleteRef.current();
+          }
+        );
+      }
+    };
+
+    // Helper to transition to rest phase
+    const transitionToRest = () => {
+      // Start rest phase immediately (don't wait for overlay)
+      currentPhaseRef.current = 'rest';
+      phaseStartTimeRef.current = Date.now();
+      setCurrentPhase('rest');
+      setTimeRemaining(restSecRef.current);
+      
+      // Show overlay (non-blocking)
+      showTransitionOverlay(
+        t('training.session.hiit.rest' as any) || 'REST 😮‍💨',
+        () => {
+          // Overlay dismissed
+        }
+      );
+      
+      // Restart timer for rest phase immediately (after a brief delay to ensure state is updated)
+      setTimeout(() => {
+        if (!hasCompletedRef.current && !isPausedRef.current && timerRef.current === null && tickFunctionRef.current) {
+          timerRef.current = setInterval(tickFunctionRef.current, 1000);
+        }
+      }, 50);
+    };
+
+    // Tick function called every second
+    const tick = () => {
+      if (hasCompletedRef.current || isPausedRef.current) return;
+
+      const remaining = calculateRemaining();
+      const clampedRemaining = Math.max(0, remaining);
+      setTimeRemaining(clampedRemaining);
+
+      if (clampedRemaining <= 0) {
+        // Clear the interval during transition
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+
+        if (currentPhaseRef.current === 'work') {
+          // Work phase ended, transition to rest
+          transitionToRest();
+        } else if (currentPhaseRef.current === 'rest') {
+          // Rest phase ended, complete round
+          completeRound();
+        }
+      }
+    };
+
+    // Store tick function in ref for pause/resume access
+    tickFunctionRef.current = tick;
+
+    // Start the countdown timer
+    timerRef.current = setInterval(tick, 1000);
+
+    // Handle app state changes (background/foreground)
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active' && !isPausedRef.current && !hasCompletedRef.current) {
+        const remaining = calculateRemaining();
+        setTimeRemaining(remaining);
+        // Note: phase transitions will be handled by the next tick
+      }
+    };
+
+    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+
+    // Cleanup on unmount
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      appStateSubscription.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Handle pause state changes
+  useEffect(() => {
+    if (hasCompletedRef.current) return;
+
+    if (isPaused) {
+      // Pause: clear the interval
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    } else if (timerRef.current === null && !showPhaseOverlay) {
+      // Resume: restart interval if not already running and not showing overlay
+      const calculateRemaining = (): number => {
+        const phaseDuration = currentPhaseRef.current === 'work' ? workSecRef.current : restSecRef.current;
+        const elapsed = Math.floor((Date.now() - phaseStartTimeRef.current) / 1000);
+        return Math.max(0, phaseDuration - elapsed);
+      };
+
+      const calculateRemainingForResume = (): number => {
+        const phaseDuration = currentPhaseRef.current === 'work' ? workSecRef.current : restSecRef.current;
+        const elapsed = Math.floor((Date.now() - phaseStartTimeRef.current) / 1000);
+        return Math.max(0, phaseDuration - elapsed);
+      };
+
+      const remaining = calculateRemainingForResume();
+      const clampedRemaining = Math.max(0, remaining);
+      setTimeRemaining(clampedRemaining);
+
+      // Restart the timer using the tick function from ref
+      if (timerRef.current === null && tickFunctionRef.current && !hasCompletedRef.current) {
+        // If phase expired while paused, tick will handle the transition
+        timerRef.current = setInterval(tickFunctionRef.current, 1000);
+      }
+    }
+  }, [isPaused, showPhaseOverlay, overlayOpacity, t, currentRound, totalRounds]);
+
+  // Handle exercise completion toggle
+  const handleExerciseComplete = (exerciseIndex: number, setIndex: number, completed: boolean) => {
+    onExerciseComplete(exerciseIndex, completed);
+  };
+
+  // Handle exercise value change
+  const handleExerciseValueChange = (
+    exerciseIndex: number,
+    setIndex: number,
+    field: 'trackableField1' | 'trackableField2',
+    value: string
+  ) => {
+    onExerciseValueChange(exerciseIndex, field, value);
+  };
+
+  // Handle confetti animation finish
+  const handleConfettiFinish = () => {
+    setShowConfetti(false);
+  };
+
+  // Animated style for overlay
+  const overlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: overlayOpacity.value,
+  }));
+
+  // Get timer color based on ratio of time remaining
+  // For rest phase, always return HIIT_COLOR (purple)
+  // For work phase, start with HIIT_COLOR, then amber, then red (like EMOM)
+  const getTimerColor = (): string => {
+    // Rest phase always uses HIIT color
+    if (currentPhase === 'rest') {
+      return HIIT_COLOR;
+    }
+    
+    // Work phase uses dynamic colors based on time remaining (ratio-based like EMOM)
+    const phaseDuration = workSec;
+    
+    // Handle edge cases
+    if (phaseDuration === 0) {
+      return HIIT_COLOR; // Default to HIIT color if duration is 0
+    }
+    
+    if (timeRemaining <= 0) {
+      return '#EF4444'; // Red when time is up
+    }
+    
+    // Ensure timeRemaining doesn't exceed phaseDuration
+    const clampedTime = Math.min(timeRemaining, phaseDuration);
+    const ratio = clampedTime / phaseDuration;
+    
+    // Start with HIIT_COLOR (purple) for first 60% (ratio > 0.4, i.e., 40-100% of time remaining)
+    // This includes when ratio = 1.0 (full time remaining)
+    if (ratio > 0.4) {
+      return HIIT_COLOR;
+    }
+    // Amber: 20-40% (ratio 0.2-0.4, i.e., 20-40% of time remaining)
+    if (ratio > 0.2) {
+      return '#F59E0B';
+    }
+    // Red: last 20% (ratio <= 0.2, i.e., 0-20% of time remaining)
+    return '#EF4444';
+  };
+
+  // Get phase label
+  const getPhaseLabel = (): string => {
+    return currentPhase === 'work'
+      ? t('training.session.hiit.workPhase' as any) || 'WORK'
+      : t('training.session.hiit.restPhase' as any) || 'REST';
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Confetti animation overlay */}
+      {showConfetti && (
+        <LottieView
+          ref={lottieRef}
+          source={require('@/assets/animations/confetti.json')}
+          autoPlay
+          loop={false}
+          onAnimationFinish={handleConfettiFinish}
+          style={styles.confettiAnimation}
+        />
+      )}
+
+      {/* Phase Transition Overlay */}
+      {showPhaseOverlay && (
+        <Animated.View style={[styles.phaseOverlay, overlayAnimatedStyle]}>
+          <Text style={styles.phaseOverlayText}>{overlayText}</Text>
+        </Animated.View>
+      )}
+
+      {/* Round Indicator Card with Timer */}
+      <View style={styles.roundCardContainer}>
+        <Card style={[styles.roundCard, { borderColor: HIIT_COLOR, borderWidth: 2 }]}>
+          <View style={styles.roundCardContent}>
+            <View style={[styles.roundIconCircle, { backgroundColor: `${HIIT_COLOR}20` }]}>
+              <PlatformIcon
+                sf={currentPhase === 'work' ? 'flame' : 'cup.and.saucer'}
+                IconComponent={currentPhase === 'work' ? Flame : Coffee}
+                size={24}
+                color={HIIT_COLOR}
+              />
+            </View>
+            <View style={styles.roundTextContainer}>
+              <Text style={[styles.roundLabel, { color: themeColors.mutedText }]}>
+                {sectionName}
+              </Text>
+              <Text style={[styles.roundNumber, { color: themeColors.text }]}>
+                {t('training.session.circuit.roundOf' as any, {
+                  current: currentRound,
+                  total: totalRounds,
+                }) || `Round ${currentRound} of ${totalRounds}`}
+              </Text>
+            </View>
+            {/* Countdown Timer */}
+            <View style={[styles.timerContainer, { backgroundColor: `${getTimerColor()}20` }]}>
+              <Text style={[styles.timerPhaseLabel, { color: getTimerColor() }]}>
+                {getPhaseLabel()}
+              </Text>
+              <Text style={[styles.timerText, { color: getTimerColor() }]}>
+                {formatTime(timeRemaining)}
+              </Text>
+            </View>
+          </View>
+        </Card>
+      </View>
+
+      {/* Exercise Cards */}
+      <View style={styles.exerciseList}>
+        {exercises.map((exercise, index) => {
+          const exerciseData = exerciseDataMap.get(exercise.prescribedExerciseId);
+          const exerciseWithSets: RegularExercisePayload = {
+            ...exercise,
+            sets: [exercise.set],
+          };
+
+          return (
+            <ExerciseSessionCard
+              key={exercise.id}
+              exercise={exerciseWithSets}
+              exerciseName={exerciseData?.name || 'Exercise'}
+              exerciseImageUrl={exerciseData?.thumbnailUrl}
+              alternatives={[]}
+              onSetComplete={(setIndex, completed) => handleExerciseComplete(index, setIndex, completed)}
+              onSetValueChange={(setIndex, field, value) => handleExerciseValueChange(index, setIndex, field, value)}
+              onAlternativeSelect={() => {}}
+            />
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingTop: 8,
+  },
+  confettiAnimation: {
+    position: 'absolute',
+    top: -100,
+    left: -100,
+    right: -100,
+    bottom: -100,
+    zIndex: 10,
+    pointerEvents: 'none',
+  },
+  phaseOverlay: {
+    position: 'absolute',
+    top: -500,
+    left: -50,
+    right: -50,
+    bottom: -500,
+    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    zIndex: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  phaseOverlayText: {
+    ...typography.h1,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    fontSize: 48,
+  },
+  roundCardContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  roundCard: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginBottom: 0,
+  },
+  roundCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  roundIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  roundTextContainer: {
+    flex: 1,
+  },
+  roundLabel: {
+    ...typography.caption,
+    marginBottom: 2,
+  },
+  roundNumber: {
+    ...typography.h4,
+    fontWeight: '700',
+  },
+  timerContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timerPhaseLabel: {
+    ...typography.caption,
+    fontWeight: '700',
+    fontSize: 10,
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  timerText: {
+    ...typography.h3,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
+  },
+  exerciseList: {
+    gap: 16,
+  },
+});

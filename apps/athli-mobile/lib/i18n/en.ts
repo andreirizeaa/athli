@@ -177,6 +177,10 @@ export const en = {
         },
       },
       eachSide: 'Perform on each side',
+      rest: 'Rest',
+      superset: 'Superset',
+      setXOfY: 'Set {{current}} of {{total}}',
+      nextSet: 'Next Set',
       selectAlternative: 'Select Alternative',
       tempo: {
         label: 'Tempo',
@@ -251,6 +255,32 @@ export const en = {
         exercises: 'Exercises',
         setsCompleted: 'Sets Completed',
         finishWorkout: 'Finish Workout',
+      },
+      circuit: {
+        roundOf: 'Round {{current}} of {{total}}',
+      },
+      emom: {
+        nextRound: 'Next Round!',
+        complete: 'Complete!',
+      },
+      hiit: {
+        work: 'WORK 💪',
+        rest: 'REST 😮‍💨',
+        complete: 'Complete! 🎉',
+        workPhase: 'WORK',
+        restPhase: 'REST',
+      },
+      tabata: {
+        work: 'WORK 💪',
+        rest: 'REST 😮‍💨',
+        complete: 'Complete! 🎉',
+        workPhase: 'WORK',
+        restPhase: 'REST',
+      },
+      amrap: {
+        roundOne: 'Round 1',
+        roundX: 'Round {{round}}',
+        completeRound: 'Complete Round',
       },
     },
     addOptions: {

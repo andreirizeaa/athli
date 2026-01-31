@@ -99,6 +99,10 @@ import {
   handleTopLevelSupersetUnlink as unlinkTopLevelSuperset,
   syncSupersetSetsInSection,
   syncSupersetSetsTopLevel,
+  syncSupersetRestInSection,
+  syncSupersetRestTopLevel,
+  syncSupersetColumnLabelsInSection,
+  syncSupersetColumnLabelsTopLevel,
 } from '@/components/training/shared/utils/superset-handlers';
 import {
   handleDrop as dropExercise,
@@ -1306,9 +1310,14 @@ Focus on proper form and progressive overload.`;
   const handleDrop = (e: React.DragEvent, sectionId: string) => {
     e.preventDefault();
     if (draggedExercise) {
-      setWorkoutSchema((prev) =>
-        dropExercise(sectionId, draggedExercise, prev)
-      );
+      setWorkoutSchema((prev) => {
+        // Find the section to get its type
+        const sectionItem = prev.items.find(
+          (item) => item.itemType === 'section' && item.section.id === sectionId
+        );
+        const sectionType = sectionItem?.itemType === 'section' ? sectionItem.section.type : undefined;
+        return dropExercise(sectionId, draggedExercise, prev, sectionType);
+      });
       markDirty();
       setSectionValidationErrors((prev) => clearEmptyExercisesError(sectionId, prev));
     }
@@ -1354,9 +1363,14 @@ Focus on proper form and progressive overload.`;
     e.stopPropagation();
     if (!draggedExercise) return;
 
-    setWorkoutSchema((prev) =>
-      handleSlotDrop(sectionId, slotIndex, draggedExercise, prev)
-    );
+    setWorkoutSchema((prev) => {
+      // Find the section to get its type
+      const sectionItem = prev.items.find(
+        (item) => item.itemType === 'section' && item.section.id === sectionId
+      );
+      const sectionType = sectionItem?.itemType === 'section' ? sectionItem.section.type : undefined;
+      return handleSlotDrop(sectionId, slotIndex, draggedExercise, prev, sectionType);
+    });
 
     setSectionValidationErrors((prev) => clearEmptyExercisesError(sectionId, prev));
 
@@ -1628,7 +1642,14 @@ Focus on proper form and progressive overload.`;
                     />
                   </div>
                 )}
-                {(section.type === 'tabata' || section.type === 'hiit') && (
+                {/* Tabata - Static text display (fixed 20s work, 10s rest, 8 rounds) */}
+                {section.type === 'tabata' && (
+                  <span className="text-sm">
+                    {section.workSec ?? 20}s work - {section.restSec ?? 10}s rest - {section.rounds ?? 8} rounds
+                  </span>
+                )}
+                {/* HIIT - Editable inputs */}
+                {section.type === 'hiit' && (
                   <div className="flex items-center gap-1">
                     <div className="relative flex items-center">
                       <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">work (s)</span>
@@ -1650,7 +1671,7 @@ Focus on proper form and progressive overload.`;
                           }));
                         }}
                         className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14"
-                        placeholder={section.type === 'tabata' ? '20' : '40'}
+                        placeholder="40"
                       />
                     </div>
                     <div className="relative flex items-center">
@@ -1673,7 +1694,7 @@ Focus on proper form and progressive overload.`;
                           }));
                         }}
                         className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14"
-                        placeholder={section.type === 'tabata' ? '10' : '20'}
+                        placeholder="20"
                       />
                     </div>
                     <div className="relative flex items-center">
@@ -1696,7 +1717,7 @@ Focus on proper form and progressive overload.`;
                           }));
                         }}
                         className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-12"
-                        placeholder={section.type === 'tabata' ? '8' : '10'}
+                        placeholder="10"
                       />
                     </div>
                   </div>
@@ -1936,7 +1957,7 @@ Focus on proper form and progressive overload.`;
                             const wrapperClasses = cn(
                               'flex flex-col',
                               isLinkedToNext ? 'gap-0' : 'gap-2',
-                              indexInGroup === 0 ? '' : isLinkedToPrev ? '-mt-px' : isLinkedToNext ? 'mt-0' : 'mt-1'
+                              indexInGroup === 0 ? '' : isLinkedToPrev ? 'mt-3' : isLinkedToNext ? 'mt-0' : 'mt-1'
                             );
 
                             // Only apply individual flash if NOT part of a superset, or if it's a single exercise being focused
@@ -2012,6 +2033,22 @@ Focus on proper form and progressive overload.`;
                                           updated = syncSupersetSetsInSection(section.id, exercise.instanceId, newSetCount, updated);
                                         }
 
+                                        // If rest changed and exercise is in a superset, sync rest to all exercises
+                                        const newRest = castExercise.sets?.[0]?.rest || '';
+                                        const oldRest = exercise.sets?.[0]?.rest || '';
+                                        if (newRest !== oldRest && exercise.supersetGroupId) {
+                                          updated = syncSupersetRestInSection(section.id, exercise.instanceId, newRest, updated);
+                                        }
+
+                                        // If column labels changed and exercise is in a superset, sync to all exercises
+                                        const newColumn1 = castExercise.column1Label;
+                                        const newColumn2 = castExercise.column2Label;
+                                        const oldColumn1 = exercise.column1Label;
+                                        const oldColumn2 = exercise.column2Label;
+                                        if ((newColumn1 !== oldColumn1 || newColumn2 !== oldColumn2) && exercise.supersetGroupId) {
+                                          updated = syncSupersetColumnLabelsInSection(section.id, exercise.instanceId, newColumn1, newColumn2, updated);
+                                        }
+
                                         return updated;
                                       });
                                     }}
@@ -2034,13 +2071,18 @@ Focus on proper form and progressive overload.`;
                                   />
                                 </div>
 
+                                {/* Gap between exercises for non-regular sections */}
+                                {section.type !== 'regular' && exerciseIndex < section.exercises.length - 1 && (
+                                  <div className="h-2" />
+                                )}
+
                                 {/* Drop zone between exercises OR superset button */}
-                                {section.exercises && exerciseIndex < section.exercises.length - 1 && (
+                                {section.type === 'regular' && section.exercises && exerciseIndex < section.exercises.length - 1 && (
                                   <>
                                     {isLinkedToNext ? (
                                       // Linked superset - show unlink button (no drop zone even when dragging)
                                       <div className={cn(
-                                        "relative flex items-center justify-center bg-background py-1",
+                                        "relative flex items-center justify-center bg-background mt-2 mb-4",
                                         // Add red borders on left/right if superset has error
                                         validationErrors[exercise.instanceId]?.supersetMismatch
                                           ? "border-x-2 border-x-destructive"
@@ -2213,7 +2255,7 @@ Focus on proper form and progressive overload.`;
         className={cn(
           'flex flex-col',
           isLinkedToNext ? 'gap-0' : 'gap-2',
-          itemIndex === 0 ? '' : isLinkedToPrev ? '-mt-px' : 'mt-1'
+          itemIndex === 0 ? '' : isLinkedToPrev ? 'mt-3' : 'mt-1'
         )}
       >
         <div
@@ -2272,6 +2314,22 @@ Focus on proper form and progressive overload.`;
                   updated = syncSupersetSetsTopLevel(exercise.instanceId, newSetCount, updated);
                 }
 
+                // If rest changed and exercise is in a superset, sync rest to all exercises
+                const newRest = castExercise.sets?.[0]?.rest || '';
+                const oldRest = exercise.sets?.[0]?.rest || '';
+                if (newRest !== oldRest && exercise.supersetGroupId) {
+                  updated = syncSupersetRestTopLevel(exercise.instanceId, newRest, updated);
+                }
+
+                // If column labels changed and exercise is in a superset, sync to all exercises
+                const newColumn1 = castExercise.column1Label;
+                const newColumn2 = castExercise.column2Label;
+                const oldColumn1 = exercise.column1Label;
+                const oldColumn2 = exercise.column2Label;
+                if ((newColumn1 !== oldColumn1 || newColumn2 !== oldColumn2) && exercise.supersetGroupId) {
+                  updated = syncSupersetColumnLabelsTopLevel(exercise.instanceId, newColumn1, newColumn2, updated);
+                }
+
                 return updated;
               });
             }}
@@ -2288,7 +2346,7 @@ Focus on proper form and progressive overload.`;
             {isLinkedToNext ? (
               // Linked superset - show unlink button (always visible, even when dragging)
               <div className={cn(
-                "relative flex items-center justify-center bg-background py-1 -mb-2",
+                "relative flex items-center justify-center bg-background mt-2 mb-4",
                 // Add red borders on left/right if superset has error
                 validationErrors[exercise.instanceId]?.supersetMismatch
                   ? "border-x-2 border-x-destructive"

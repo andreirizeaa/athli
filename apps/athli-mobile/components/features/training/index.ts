@@ -10,3 +10,5 @@ export { ExerciseSessionCard } from './exercise-session-card';
 export { SectionInfoPage } from './section-info-page';
 export { CongratulationsPage } from './congratulations-page';
 export { SessionFeedbackPage } from './session-feedback-page';
+export { CircuitRoundPage } from './circuit-round-page';
+export { EmomRoundPage } from './emom-round-page';

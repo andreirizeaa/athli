@@ -340,6 +340,7 @@ export const buildSectionPayload = (
       type: 'regular',
       exercises,
       notes: section.notes || null,
+      completed: false,
     };
   }
 
@@ -355,10 +356,10 @@ export const buildSectionPayload = (
       name: section.name,
       type: 'amrap',
       durationSec: section.durationSec || 0,
-      actualDurationSec: null,
       roundsCompleted: null,
       exercises,
       notes: section.notes || null,
+      completed: false,
     };
   }
 
@@ -375,10 +376,9 @@ export const buildSectionPayload = (
       workSec: section.workSec || 20,
       restSec: section.restSec || 10,
       rounds: section.rounds || 8,
-      actualRounds: null,
-      totalDurationSec: null,
       exercises,
       notes: section.notes || null,
+      completed: false,
     };
   }
 
@@ -395,10 +395,9 @@ export const buildSectionPayload = (
       workSec: section.workSec || 40,
       restSec: section.restSec || 20,
       rounds: section.rounds || 10,
-      actualRounds: null,
-      totalDurationSec: null,
       exercises,
       notes: section.notes || null,
+      completed: false,
     };
   }
 
@@ -414,9 +413,9 @@ export const buildSectionPayload = (
       type: 'emom',
       intervalSec: section.intervalSec || 60,
       durationMin: section.durationMin || 10,
-      actualDurationSec: null,
       exercises,
       notes: section.notes || null,
+      completed: false,
     };
   }
 
@@ -434,6 +433,7 @@ export const buildSectionPayload = (
       actualRounds: null,
       exercises,
       notes: section.notes || null,
+      completed: false,
     };
   }
 
@@ -450,6 +450,7 @@ export const buildSectionPayload = (
     category: section.category || 'warmup',
     exercises,
     notes: section.notes || null,
+    completed: false,
   };
 };
 
@@ -519,7 +520,7 @@ export const buildWorkoutPayload = (
         section.exercises.forEach((group) => {
           totalExercises += group.exercises.length;
         });
-      } else if (section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom') {
+      } else if (section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom' || section.type === 'circuits') {
         section.exercises.forEach((group) => {
           totalExercises += group.exercises.length;
         });

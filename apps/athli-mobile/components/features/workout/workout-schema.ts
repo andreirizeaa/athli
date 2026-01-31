@@ -3,7 +3,7 @@
  * This ensures workouts created on mobile can be opened on web and vice versa
  */
 
-import { SectionType, getDefaultColumnsForCategory } from '@athli/shared-types';
+import { SectionType, getDefaultColumnsForCategory, CATEGORY_COLUMN_DEFAULTS, DEFAULT_COLUMN_CONFIG } from '@athli/shared-types';
 
 // ============================================================================
 // Core Types (Re-export from shared package)
@@ -83,20 +83,40 @@ export type BuilderWorkoutState = {
 export const getDefaultColumns = (exerciseType: string, category?: string) => {
     // First try category-based defaults from shared package
     if (category) {
-        const categoryDefaults = getDefaultColumnsForCategory(category);
-        return { column1Type: categoryDefaults.column1, column2Type: categoryDefaults.column2 };
+        // Try exact match first
+        let categoryDefaults = CATEGORY_COLUMN_DEFAULTS[category];
+
+        // If no exact match, try case-insensitive match
+        if (!categoryDefaults) {
+            const lowerCategory = category.toLowerCase();
+            const matchingKey = Object.keys(CATEGORY_COLUMN_DEFAULTS).find(
+                key => key.toLowerCase() === lowerCategory
+            );
+            if (matchingKey) {
+                categoryDefaults = CATEGORY_COLUMN_DEFAULTS[matchingKey];
+            }
+        }
+
+        if (categoryDefaults) {
+            return {
+                column1Type: categoryDefaults.column1,
+                column2Type: categoryDefaults.column2,
+                column1Value: categoryDefaults.column1Value || '',
+                column2Value: categoryDefaults.column2Value || '',
+            };
+        }
     }
 
     // Fall back to exercise type-based defaults
     switch (exerciseType) {
         case 'weight_reps':
-            return { column1Type: 'Reps', column2Type: 'kg' };
+            return { column1Type: 'Reps', column2Type: 'kg', column1Value: '10', column2Value: '' };
         case 'reps':
-            return { column1Type: 'Reps', column2Type: 'Optional' };
+            return { column1Type: 'Reps', column2Type: 'Optional', column1Value: '10', column2Value: '' };
         case 'distance_duration':
-            return { column1Type: 'km', column2Type: 'minutes' };
+            return { column1Type: 'km', column2Type: 'minutes', column1Value: '', column2Value: '' };
         default:
-            return { column1Type: 'Reps', column2Type: 'kg' };
+            return { column1Type: 'Reps', column2Type: 'kg', column1Value: '10', column2Value: '' };
     }
 };
 

@@ -7,6 +7,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 
 
 import { useTranslations, useThemePreference } from '@/stores';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
+import { Storage } from '@/lib/storage';
 import { typography } from '@/constants/typography';
 import { assignWorkout } from '@/services/client/client-training-service';
 import { ReadinessPage } from '@/components/features/training/readiness-page';
@@ -14,6 +15,12 @@ import { ExerciseSessionCard } from '@/components/features/training/exercise-ses
 import { SectionInfoPage } from '@/components/features/training/section-info-page';
 import { CongratulationsPage } from '@/components/features/training/congratulations-page';
 import { SessionFeedbackPage } from '@/components/features/training/session-feedback-page';
+import { CircuitRoundPage } from '@/components/features/training/circuit-round-page';
+import { EmomRoundPage } from '@/components/features/training/emom-round-page';
+import { HiitRoundPage } from '@/components/features/training/hiit-round-page';
+import { TabataRoundPage } from '@/components/features/training/tabata-round-page';
+import { AmrapRoundPage } from '@/components/features/training/amrap-round-page';
+import { SupersetRoundPage } from '@/components/features/training/superset-round-page';
 import {
   WorkoutSessionHeader,
   WorkoutSessionBottomNav,
@@ -29,6 +36,11 @@ import {
   WorkoutItem,
   WorkoutSectionPayload,
   CircuitExercisePayload,
+  CircuitsSectionPayload,
+  TabataSectionPayload,
+  HiitSectionPayload,
+  EmomSectionPayload,
+  AmrapSectionPayload,
 } from '@athli/shared-types';
 import { useWorkoutTimer } from '@/hooks/useWorkoutTimer';
 import { useExerciseLookup } from '@/hooks/useAllExercises';
@@ -36,6 +48,7 @@ import { useExerciseLookup } from '@/hooks/useAllExercises';
 // Constants
 const BOTTOM_NAV_HEIGHT = 80;
 const CONTENT_BOTTOM_PADDING = 24;
+const EMOM_TIMER_KEY_PREFIX = 'emom_timer_';
 
 // Superset announcement messages
 const SUPERSET_MESSAGES = [
@@ -48,12 +61,22 @@ const SUPERSET_MESSAGES = [
   'Superset mode: activated ⚡',
 ];
 
+// Circuit section type union
+type CircuitSectionType = CircuitsSectionPayload | TabataSectionPayload | HiitSectionPayload | EmomSectionPayload;
+
 // Page types for navigation
 type WorkoutPage =
   | { type: 'readiness' }
   | { type: 'section-info'; itemIndex: number; section: WorkoutSectionPayload }
   | { type: 'exercise'; itemIndex: number; exercise: RegularExercisePayload; groupIndex?: number; exerciseIndex?: number }
+  | { type: 'superset'; itemIndex: number; exercises: RegularExercisePayload[]; exerciseIndices: number[] }
+  | { type: 'superset-round'; itemIndex: number; exercises: RegularExercisePayload[]; exerciseIndices: number[]; currentSet: number; totalSets: number; restSec: number }
   | { type: 'circuit-exercise'; itemIndex: number; exercise: CircuitExercisePayload; groupIndex?: number; exerciseIndex?: number }
+  | { type: 'circuit-round'; itemIndex: number; section: CircuitSectionType; roundNumber: number; totalRounds: number }
+  | { type: 'emom-round'; itemIndex: number; section: EmomSectionPayload; roundNumber: number; totalRounds: number; intervalSec: number }
+  | { type: 'hiit-round'; itemIndex: number; section: HiitSectionPayload; roundNumber: number; totalRounds: number; workSec: number; restSec: number }
+  | { type: 'tabata-round'; itemIndex: number; section: TabataSectionPayload; roundNumber: number; totalRounds: number; workSec: number; restSec: number }
+  | { type: 'amrap-round'; itemIndex: number; section: AmrapSectionPayload; durationSec: number; initialRoundsCompleted: number }
   | { type: 'congratulations' }
   | { type: 'feedback' }
   | { type: 'summary' };
@@ -76,6 +99,9 @@ export default function WorkoutSessionModal() {
   const [currentStep, setCurrentStep] = useState(1);
   const [hasUpdatedStatus, setHasUpdatedStatus] = useState(false);
 
+  // Track local completion state for circuit rounds (resets each round)
+  const [circuitRoundCompletions, setCircuitRoundCompletions] = useState<Map<string, boolean[]>>(new Map());
+
   // Superset overlay state
   const [showSupersetOverlay, setShowSupersetOverlay] = useState(false);
   const [supersetMessage, setSupersetMessage] = useState('');
@@ -94,12 +120,70 @@ export default function WorkoutSessionModal() {
 
     workoutData.items.forEach((item, itemIndex) => {
       if (item.itemType === 'exercise') {
-        // Top-level exercise - add directly
-        pageList.push({
-          type: 'exercise',
-          itemIndex,
-          exercise: item.data,
-        });
+        // Top-level exercise - check if it's part of a superset
+        const currentSupersetId = item.data.supersetId;
+        
+        if (currentSupersetId) {
+          // Check if this exercise has already been added as part of a superset
+          const alreadyAdded = pageList.some(
+            (page) => page.type === 'superset' && 
+            page.exerciseIndices.includes(itemIndex)
+          );
+          
+          if (!alreadyAdded) {
+            // Find all exercises in this superset
+            const supersetExercises: RegularExercisePayload[] = [];
+            const exerciseIndices: number[] = [];
+            
+            // Look ahead to find all exercises with the same supersetId
+            for (let i = itemIndex; i < workoutData.items.length; i++) {
+              const currentItem = workoutData.items[i];
+              if (currentItem.itemType === 'exercise' && currentItem.data.supersetId === currentSupersetId) {
+                supersetExercises.push(currentItem.data);
+                exerciseIndices.push(i);
+              } else if (currentItem.itemType === 'exercise' && currentItem.data.supersetId !== currentSupersetId) {
+                // Different superset or no superset - stop
+                break;
+              } else if (currentItem.itemType === 'section') {
+                // Hit a section - stop
+                break;
+              }
+            }
+            
+            if (supersetExercises.length > 1) {
+              // All exercises in a superset have the same number of sets
+              const totalSets = supersetExercises[0]?.sets.length || 1;
+              const restSec = supersetExercises[0]?.sets[0]?.restSec || 90; // Use first exercise's rest time
+              
+              // Create a page for each set
+              for (let setNum = 1; setNum <= totalSets; setNum++) {
+                pageList.push({
+                  type: 'superset-round',
+                  itemIndex,
+                  exercises: supersetExercises,
+                  exerciseIndices,
+                  currentSet: setNum,
+                  totalSets,
+                  restSec,
+                });
+              }
+            } else {
+              // Single exercise with supersetId but no partner - add as regular exercise
+              pageList.push({
+                type: 'exercise',
+                itemIndex,
+                exercise: item.data,
+              });
+            }
+          }
+        } else {
+          // Regular exercise (no superset) - add directly
+          pageList.push({
+            type: 'exercise',
+            itemIndex,
+            exercise: item.data,
+          });
+        }
       } else if (item.itemType === 'section') {
         const section = item.data;
 
@@ -114,52 +198,99 @@ export default function WorkoutSessionModal() {
         if (section.type === 'regular' || section.type === 'auxiliary') {
           // Regular sections have grouped exercises with sets
           section.exercises.forEach((group, groupIndex) => {
-            group.exercises.forEach((exercise, exerciseIndex) => {
-              pageList.push({
-                type: 'exercise',
-                itemIndex,
-                exercise,
-                groupIndex,
-                exerciseIndex,
+            if (group.isSuperset && group.exercises.length > 1) {
+              // Superset group - all exercises have the same number of sets
+              const totalSets = group.exercises[0]?.sets.length || 1;
+              const restSec = group.exercises[0]?.sets[0]?.restSec || 90; // Use first exercise's rest time
+              
+              // Create a page for each set
+              for (let setNum = 1; setNum <= totalSets; setNum++) {
+                pageList.push({
+                  type: 'superset-round',
+                  itemIndex,
+                  exercises: group.exercises,
+                  exerciseIndices: group.exercises.map((_, idx) => idx),
+                  currentSet: setNum,
+                  totalSets,
+                  restSec,
+                });
+              }
+            } else {
+              // Regular exercise group - add each exercise separately
+              group.exercises.forEach((exercise, exerciseIndex) => {
+                pageList.push({
+                  type: 'exercise',
+                  itemIndex,
+                  exercise,
+                  groupIndex,
+                  exerciseIndex,
+                });
               });
-            });
+            }
           });
         } else if (section.type === 'amrap') {
-          // AMRAP has flat exercise array (RoundExercisePayload)
-          section.exercises.forEach((exercise, exerciseIndex) => {
-            // Convert RoundExercisePayload to a format we can display
+          // AMRAP: Create one page with countdown timer and all exercises
+          pageList.push({
+            type: 'amrap-round',
+            itemIndex,
+            section,
+            durationSec: section.durationSec,
+            initialRoundsCompleted: section.roundsCompleted || 0,
+          });
+        } else if (section.type === 'emom') {
+          // EMOM: Calculate rounds from duration and interval
+          const totalRounds = Math.floor((section.durationMin * 60) / section.intervalSec);
+          for (let round = 1; round <= totalRounds; round++) {
             pageList.push({
-              type: 'circuit-exercise',
+              type: 'emom-round',
               itemIndex,
-              exercise: {
-                ...exercise,
-                set: {
-                  setNumber: 1,
-                  type: 'normal',
-                  restSec: exercise.restSec,
-                  completed: exercise.completed,
-                  skipped: false,
-                  trackableField1: exercise.trackableField1,
-                  trackableField2: exercise.trackableField2,
-                  dropset: null,
-                },
-              } as CircuitExercisePayload,
-              exerciseIndex,
+              section,
+              roundNumber: round,
+              totalRounds,
+              intervalSec: section.intervalSec,
             });
-          });
+          }
+        } else if (section.type === 'hiit') {
+          // HIIT: Create one page per round with work/rest timer
+          const totalRounds = section.rounds;
+          for (let round = 1; round <= totalRounds; round++) {
+            pageList.push({
+              type: 'hiit-round',
+              itemIndex,
+              section,
+              roundNumber: round,
+              totalRounds,
+              workSec: section.workSec,
+              restSec: section.restSec,
+            });
+          }
+        } else if (section.type === 'tabata') {
+          // Tabata: Create one page per round with work/rest timer
+          const totalRounds = section.rounds;
+          for (let round = 1; round <= totalRounds; round++) {
+            pageList.push({
+              type: 'tabata-round',
+              itemIndex,
+              section,
+              roundNumber: round,
+              totalRounds,
+              workSec: section.workSec,
+              restSec: section.restSec,
+            });
+          }
         } else {
-          // Circuit-based sections (tabata, hiit, emom, circuits)
-          section.exercises.forEach((group, groupIndex) => {
-            group.exercises.forEach((exercise, exerciseIndex) => {
-              pageList.push({
-                type: 'circuit-exercise',
-                itemIndex,
-                exercise,
-                groupIndex,
-                exerciseIndex,
-              });
+          // Circuit-based sections (circuits)
+          // Create one page per round with all exercises shown together
+          const totalRounds = section.rounds;
+          for (let round = 1; round <= totalRounds; round++) {
+            pageList.push({
+              type: 'circuit-round',
+              itemIndex,
+              section: section as CircuitSectionType,
+              roundNumber: round,
+              totalRounds,
             });
-          });
+          }
         }
       }
     });
@@ -324,6 +455,13 @@ export default function WorkoutSessionModal() {
   const handleNext = () => {
     if (currentStep < pages.length) {
       if (isPaused) resumeWorkout();
+
+      // If currently on an EMOM round, clear the timer storage so next round starts fresh
+      if (currentPage.type === 'emom-round') {
+        const storageKey = `${EMOM_TIMER_KEY_PREFIX}${currentPage.section.id}_${currentPage.roundNumber}`;
+        Storage.removeItem(storageKey);
+      }
+
       setCurrentStep(currentStep + 1);
     }
   };
@@ -419,9 +557,58 @@ export default function WorkoutSessionModal() {
   // Get current page
   const currentPage = pages[currentStep - 1] || { type: 'readiness' };
 
-  // Handle set completion toggle for regular exercises
-  const handleSetComplete = async (setIndex: number, completed: boolean) => {
-    if (!workoutData || currentPage.type !== 'exercise') return;
+  // Handle set completion toggle for regular exercises and supersets
+  const handleSetComplete = async (setIndex: number, completed: boolean, exerciseIdxInSuperset?: number) => {
+    if (!workoutData) return;
+    
+    if (currentPage.type === 'superset') {
+      const { itemIndex, exercises, exerciseIndices } = currentPage;
+      const actualExerciseIndex = exerciseIdxInSuperset !== undefined ? exerciseIdxInSuperset : 0;
+      const exercise = exercises[actualExerciseIndex];
+      
+      // Deep clone the items to update
+      const updatedItems = JSON.parse(JSON.stringify(workoutData.items)) as WorkoutItem[];
+      const item = updatedItems[itemIndex];
+      
+      if (item.itemType === 'exercise') {
+        // Top-level superset - find the exercise by matching ID
+        const exerciseItemIndex = exerciseIndices[actualExerciseIndex];
+        const exerciseItem = updatedItems[exerciseItemIndex];
+        if (exerciseItem.itemType === 'exercise' && exerciseItem.data.id === exercise.id) {
+          exerciseItem.data.sets[setIndex].completed = completed;
+        }
+      } else if (item.itemType === 'section' && (item.data.type === 'regular' || item.data.type === 'auxiliary')) {
+        // Regular section superset - find the exercise in the group
+        for (let groupIndex = 0; groupIndex < item.data.exercises.length; groupIndex++) {
+          const group = item.data.exercises[groupIndex];
+          if (group.isSuperset) {
+            const exerciseIndex = group.exercises.findIndex((ex) => ex.id === exercise.id);
+            if (exerciseIndex !== -1) {
+              group.exercises[exerciseIndex].sets[setIndex].completed = completed;
+              break;
+            }
+          }
+        }
+      }
+      
+      const updatedData = { ...workoutData, items: updatedItems };
+      setWorkoutData(updatedData);
+
+      try {
+        await assignWorkout({
+          workoutId: params.workoutId,
+          clientId: params.clientId,
+          ...(params.coachId && { coachId: params.coachId }),
+          date: params.date,
+          workoutPayload: updatedData,
+        });
+      } catch (error) {
+        console.error('Failed to save set completion:', error);
+      }
+      return;
+    }
+    
+    if (currentPage.type !== 'exercise') return;
     const { itemIndex, groupIndex, exerciseIndex } = currentPage;
 
     // Deep clone the items to update
@@ -452,13 +639,63 @@ export default function WorkoutSessionModal() {
     }
   };
 
-  // Handle set value change for regular exercises
+  // Handle set value change for regular exercises and supersets
   const handleSetValueChange = async (
     setIndex: number,
     field: 'trackableField1' | 'trackableField2',
-    value: string
+    value: string,
+    exerciseIdxInSuperset?: number
   ) => {
-    if (!workoutData || currentPage.type !== 'exercise') return;
+    if (!workoutData) return;
+    
+    if (currentPage.type === 'superset') {
+      const { itemIndex, exercises, exerciseIndices } = currentPage;
+      const actualExerciseIndex = exerciseIdxInSuperset !== undefined ? exerciseIdxInSuperset : 0;
+      const exercise = exercises[actualExerciseIndex];
+      
+      // Deep clone the items to update
+      const updatedItems = JSON.parse(JSON.stringify(workoutData.items)) as WorkoutItem[];
+      const item = updatedItems[itemIndex];
+      
+      if (item.itemType === 'exercise') {
+        // Top-level superset
+        const exerciseItemIndex = exerciseIndices[actualExerciseIndex];
+        const exerciseItem = updatedItems[exerciseItemIndex];
+        if (exerciseItem.itemType === 'exercise' && exerciseItem.data.id === exercise.id) {
+          exerciseItem.data.sets[setIndex][field].completed = value;
+        }
+      } else if (item.itemType === 'section' && (item.data.type === 'regular' || item.data.type === 'auxiliary')) {
+        // Regular section superset
+        for (let groupIndex = 0; groupIndex < item.data.exercises.length; groupIndex++) {
+          const group = item.data.exercises[groupIndex];
+          if (group.isSuperset) {
+            const exerciseIndex = group.exercises.findIndex((ex) => ex.id === exercise.id);
+            if (exerciseIndex !== -1) {
+              group.exercises[exerciseIndex].sets[setIndex][field].completed = value;
+              break;
+            }
+          }
+        }
+      }
+      
+      const updatedData = { ...workoutData, items: updatedItems };
+      setWorkoutData(updatedData);
+
+      try {
+        await assignWorkout({
+          workoutId: params.workoutId,
+          clientId: params.clientId,
+          ...(params.coachId && { coachId: params.coachId }),
+          date: params.date,
+          workoutPayload: updatedData,
+        });
+      } catch (error) {
+        console.error('Failed to save set value:', error);
+      }
+      return;
+    }
+    
+    if (currentPage.type !== 'exercise') return;
     const { itemIndex, groupIndex, exerciseIndex } = currentPage;
 
     // Deep clone the items to update
@@ -489,9 +726,66 @@ export default function WorkoutSessionModal() {
     }
   };
 
-  // Handle alternative exercise selection
-  const handleAlternativeSelect = async (alternativeId: string) => {
-    if (!workoutData || currentPage.type !== 'exercise') return;
+  // Handle alternative exercise selection for regular exercises and supersets
+  const handleAlternativeSelect = async (alternativeId: string, exerciseIdxInSuperset?: number) => {
+    if (!workoutData) return;
+    
+    if (currentPage.type === 'superset') {
+      const { itemIndex, exercises, exerciseIndices } = currentPage;
+      const actualExerciseIndex = exerciseIdxInSuperset !== undefined ? exerciseIdxInSuperset : 0;
+      const exercise = exercises[actualExerciseIndex];
+      const currentExerciseId = exercise.prescribedExerciseId;
+
+      // Deep clone the items to update
+      const updatedItems = JSON.parse(JSON.stringify(workoutData.items)) as WorkoutItem[];
+      const item = updatedItems[itemIndex];
+
+      // Helper to swap exercise IDs
+      const swapExercise = (ex: RegularExercisePayload) => {
+        ex.prescribedExerciseId = alternativeId;
+        ex.alternatives = ex.alternatives.filter(id => id !== alternativeId);
+        ex.alternatives.push(currentExerciseId);
+      };
+
+      if (item.itemType === 'exercise') {
+        // Top-level superset
+        const exerciseItemIndex = exerciseIndices[actualExerciseIndex];
+        const exerciseItem = updatedItems[exerciseItemIndex];
+        if (exerciseItem.itemType === 'exercise' && exerciseItem.data.id === exercise.id) {
+          swapExercise(exerciseItem.data);
+        }
+      } else if (item.itemType === 'section' && (item.data.type === 'regular' || item.data.type === 'auxiliary')) {
+        // Regular section superset
+        for (let groupIndex = 0; groupIndex < item.data.exercises.length; groupIndex++) {
+          const group = item.data.exercises[groupIndex];
+          if (group.isSuperset) {
+            const exerciseIndex = group.exercises.findIndex((ex) => ex.id === exercise.id);
+            if (exerciseIndex !== -1) {
+              swapExercise(group.exercises[exerciseIndex]);
+              break;
+            }
+          }
+        }
+      }
+
+      const updatedData = { ...workoutData, items: updatedItems };
+      setWorkoutData(updatedData);
+
+      try {
+        await assignWorkout({
+          workoutId: params.workoutId,
+          clientId: params.clientId,
+          ...(params.coachId && { coachId: params.coachId }),
+          date: params.date,
+          workoutPayload: updatedData,
+        });
+      } catch (error) {
+        console.error('Failed to swap exercise:', error);
+      }
+      return;
+    }
+    
+    if (currentPage.type !== 'exercise') return;
     const { itemIndex, groupIndex, exerciseIndex, exercise } = currentPage;
     const currentExerciseId = exercise.prescribedExerciseId;
 
@@ -528,6 +822,282 @@ export default function WorkoutSessionModal() {
     } catch (error) {
       console.error('Failed to swap exercise:', error);
     }
+  };
+
+  // Handle circuit exercise completion (local state only within round)
+  const handleCircuitExerciseComplete = (
+    sectionId: string,
+    roundNumber: number,
+    exerciseIndex: number,
+    completed: boolean
+  ) => {
+    const key = `${sectionId}-${roundNumber}`;
+    setCircuitRoundCompletions((prev) => {
+      const newMap = new Map(prev);
+      const existing = newMap.get(key) || [];
+      const updated = [...existing];
+      updated[exerciseIndex] = completed;
+      newMap.set(key, updated);
+      return newMap;
+    });
+  };
+
+  // Handle circuit exercise value change
+  const handleCircuitExerciseValueChange = async (
+    itemIndex: number,
+    groupIndex: number,
+    exerciseIndex: number,
+    field: 'trackableField1' | 'trackableField2',
+    value: string
+  ) => {
+    if (!workoutData) return;
+
+    const updatedItems = JSON.parse(JSON.stringify(workoutData.items)) as WorkoutItem[];
+    const item = updatedItems[itemIndex];
+
+    if (
+      item.itemType === 'section' &&
+      (item.data.type === 'circuits' || item.data.type === 'tabata' || item.data.type === 'hiit' || item.data.type === 'emom')
+    ) {
+      item.data.exercises[groupIndex].exercises[exerciseIndex].set[field].completed = value;
+    }
+
+    const updatedData = { ...workoutData, items: updatedItems };
+    setWorkoutData(updatedData);
+
+    try {
+      await assignWorkout({
+        workoutId: params.workoutId,
+        clientId: params.clientId,
+        ...(params.coachId && { coachId: params.coachId }),
+        date: params.date,
+        workoutPayload: updatedData,
+      });
+    } catch (error) {
+      console.error('Failed to save circuit exercise value:', error);
+    }
+  };
+
+  // Handle AMRAP exercise completion
+  const handleAmrapExerciseComplete = async (itemIndex: number, exerciseIndex: number, completed: boolean) => {
+    if (!workoutData) return;
+
+    const updatedItems = JSON.parse(JSON.stringify(workoutData.items)) as WorkoutItem[];
+    const item = updatedItems[itemIndex];
+
+    if (item.itemType === 'section' && item.data.type === 'amrap') {
+      item.data.exercises[exerciseIndex].completed = completed;
+    }
+
+    const updatedData = { ...workoutData, items: updatedItems };
+    setWorkoutData(updatedData);
+
+    try {
+      await assignWorkout({
+        workoutId: params.workoutId,
+        clientId: params.clientId,
+        ...(params.coachId && { coachId: params.coachId }),
+        date: params.date,
+        workoutPayload: updatedData,
+      });
+    } catch (error) {
+      console.error('Failed to save AMRAP exercise completion:', error);
+    }
+  };
+
+  // Handle AMRAP exercise value change
+  const handleAmrapExerciseValueChange = async (
+    itemIndex: number,
+    exerciseIndex: number,
+    field: 'trackableField1' | 'trackableField2',
+    value: string
+  ) => {
+    if (!workoutData) return;
+
+    const updatedItems = JSON.parse(JSON.stringify(workoutData.items)) as WorkoutItem[];
+    const item = updatedItems[itemIndex];
+
+    if (item.itemType === 'section' && item.data.type === 'amrap') {
+      item.data.exercises[exerciseIndex][field].completed = value;
+    }
+
+    const updatedData = { ...workoutData, items: updatedItems };
+    setWorkoutData(updatedData);
+
+    try {
+      await assignWorkout({
+        workoutId: params.workoutId,
+        clientId: params.clientId,
+        ...(params.coachId && { coachId: params.coachId }),
+        date: params.date,
+        workoutPayload: updatedData,
+      });
+    } catch (error) {
+      console.error('Failed to save AMRAP exercise value:', error);
+    }
+  };
+
+  // Handle superset exercise completion
+  const handleSupersetExerciseComplete = async (
+    itemIndex: number,
+    exerciseIndex: number,
+    setIndex: number,
+    completed: boolean,
+    exercises: RegularExercisePayload[],
+    exerciseIndices: number[]
+  ) => {
+    if (!workoutData) return;
+
+    const updatedItems = JSON.parse(JSON.stringify(workoutData.items)) as WorkoutItem[];
+    const item = updatedItems[itemIndex];
+    const exercise = exercises[exerciseIndex];
+
+    if (item.itemType === 'exercise') {
+      // Top-level superset
+      const exerciseItemIndex = exerciseIndices[exerciseIndex];
+      const exerciseItem = updatedItems[exerciseItemIndex];
+      if (exerciseItem.itemType === 'exercise' && exerciseItem.data.id === exercise.id) {
+        exerciseItem.data.sets[setIndex].completed = completed;
+      }
+    } else if (item.itemType === 'section' && (item.data.type === 'regular' || item.data.type === 'auxiliary')) {
+      // Regular section superset
+      for (let groupIndex = 0; groupIndex < item.data.exercises.length; groupIndex++) {
+        const group = item.data.exercises[groupIndex];
+        if (group.isSuperset) {
+          const exerciseIdx = group.exercises.findIndex((ex) => ex.id === exercise.id);
+          if (exerciseIdx !== -1) {
+            group.exercises[exerciseIdx].sets[setIndex].completed = completed;
+            break;
+          }
+        }
+      }
+    }
+
+    const updatedData = { ...workoutData, items: updatedItems };
+    setWorkoutData(updatedData);
+
+    try {
+      await assignWorkout({
+        workoutId: params.workoutId,
+        clientId: params.clientId,
+        ...(params.coachId && { coachId: params.coachId }),
+        date: params.date,
+        workoutPayload: updatedData,
+      });
+    } catch (error) {
+      console.error('Failed to save superset exercise completion:', error);
+    }
+  };
+
+  // Handle superset exercise value change
+  const handleSupersetExerciseValueChange = async (
+    itemIndex: number,
+    exerciseIndex: number,
+    setIndex: number,
+    field: 'trackableField1' | 'trackableField2',
+    value: string,
+    exercises: RegularExercisePayload[],
+    exerciseIndices: number[]
+  ) => {
+    if (!workoutData) return;
+
+    const updatedItems = JSON.parse(JSON.stringify(workoutData.items)) as WorkoutItem[];
+    const item = updatedItems[itemIndex];
+    const exercise = exercises[exerciseIndex];
+
+    if (item.itemType === 'exercise') {
+      // Top-level superset
+      const exerciseItemIndex = exerciseIndices[exerciseIndex];
+      const exerciseItem = updatedItems[exerciseItemIndex];
+      if (exerciseItem.itemType === 'exercise' && exerciseItem.data.id === exercise.id) {
+        exerciseItem.data.sets[setIndex][field].completed = value;
+      }
+    } else if (item.itemType === 'section' && (item.data.type === 'regular' || item.data.type === 'auxiliary')) {
+      // Regular section superset
+      for (let groupIndex = 0; groupIndex < item.data.exercises.length; groupIndex++) {
+        const group = item.data.exercises[groupIndex];
+        if (group.isSuperset) {
+          const exerciseIdx = group.exercises.findIndex((ex) => ex.id === exercise.id);
+          if (exerciseIdx !== -1) {
+            group.exercises[exerciseIdx].sets[setIndex][field].completed = value;
+            break;
+          }
+        }
+      }
+    }
+
+    const updatedData = { ...workoutData, items: updatedItems };
+    setWorkoutData(updatedData);
+
+    try {
+      await assignWorkout({
+        workoutId: params.workoutId,
+        clientId: params.clientId,
+        ...(params.coachId && { coachId: params.coachId }),
+        date: params.date,
+        workoutPayload: updatedData,
+      });
+    } catch (error) {
+      console.error('Failed to save superset exercise value:', error);
+    }
+  };
+
+  // Handle circuit round completion (advances to next round/section)
+  const handleCircuitRoundComplete = () => {
+    // Simply advance to the next step - the pages array handles the logic
+    if (currentStep < pages.length) {
+      if (isPaused) resumeWorkout();
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  // Get flat list of circuit exercises for current round
+  const getCircuitExercisesForRound = (
+    section: CircuitSectionType
+  ): { exercise: CircuitExercisePayload; groupIndex: number; exerciseIndex: number }[] => {
+    const exercises: { exercise: CircuitExercisePayload; groupIndex: number; exerciseIndex: number }[] = [];
+    section.exercises.forEach((group, groupIndex) => {
+      group.exercises.forEach((exercise, exerciseIndex) => {
+        exercises.push({ exercise, groupIndex, exerciseIndex });
+      });
+    });
+    return exercises;
+  };
+
+  // Get exercise data map for circuit exercises
+  const getCircuitExerciseDataMap = (section: CircuitSectionType): Map<string, { exerciseId: string; name: string; thumbnailUrl?: string }> => {
+    const exerciseIds = new Set<string>();
+    section.exercises.forEach((group) => {
+      group.exercises.forEach((ex) => {
+        exerciseIds.add(ex.prescribedExerciseId);
+      });
+    });
+
+    const exerciseData = findExercisesByIds(Array.from(exerciseIds));
+    const dataMap = new Map<string, { exerciseId: string; name: string; thumbnailUrl?: string }>();
+    exerciseData.forEach((ex) => {
+      dataMap.set(ex.exerciseId, {
+        exerciseId: ex.exerciseId,
+        name: ex.name,
+        thumbnailUrl: ex.rawThumbnailUrl,
+      });
+    });
+    return dataMap;
+  };
+
+  // Get exercise data map for AMRAP exercises
+  const getAmrapExerciseDataMap = (section: AmrapSectionPayload): Map<string, { exerciseId: string; name: string; thumbnailUrl?: string }> => {
+    const exerciseIds = section.exercises.map((ex) => ex.prescribedExerciseId);
+    const exerciseData = findExercisesByIds(exerciseIds);
+    const dataMap = new Map<string, { exerciseId: string; name: string; thumbnailUrl?: string }>();
+    exerciseData.forEach((ex) => {
+      dataMap.set(ex.exerciseId, {
+        exerciseId: ex.exerciseId,
+        name: ex.name,
+        thumbnailUrl: ex.rawThumbnailUrl,
+      });
+    });
+    return dataMap;
   };
 
   // Progress calculation
@@ -626,6 +1196,50 @@ export default function WorkoutSessionModal() {
           </View>
         );
 
+      case 'superset': {
+        const { exercises, exerciseIndices } = currentPage;
+        const supersetExercisesData = exercises.map((ex) => findExerciseById(ex.prescribedExerciseId));
+        
+        return (
+          <View style={styles.exerciseContainer}>
+            {exercises.map((exercise, idx) => {
+              const exerciseData = supersetExercisesData[idx];
+              const supersetLabel = idx === 0 ? 'A' : idx === 1 ? 'B' : String.fromCharCode(67 + idx - 2);
+              
+              // Get alternatives for this exercise
+              const exerciseAlternatives = exercise.alternatives
+                ? findExercisesByIds(exercise.alternatives).map(ex => ({
+                    id: ex.exerciseId,
+                    name: ex.name,
+                    thumbnailUrl: ex.rawThumbnailUrl,
+                  }))
+                : [];
+              
+              return (
+                <ExerciseSessionCard
+                  key={exercise.id}
+                  exercise={exercise}
+                  exerciseName={exerciseData?.name || 'Exercise'}
+                  exerciseImageUrl={exerciseData?.rawThumbnailUrl}
+                  alternatives={exerciseAlternatives}
+                  isSuperset={true}
+                  supersetLabel={supersetLabel}
+                  onSetComplete={(setIndex, completed) => {
+                    handleSetComplete(setIndex, completed, idx);
+                  }}
+                  onSetValueChange={(setIndex, field, value) => {
+                    handleSetValueChange(setIndex, field, value, idx);
+                  }}
+                  onAlternativeSelect={(alternativeId) => {
+                    handleAlternativeSelect(alternativeId, idx);
+                  }}
+                />
+              );
+            })}
+          </View>
+        );
+      }
+
       case 'exercise':
         return (
           <View style={styles.exerciseContainer}>
@@ -659,6 +1273,241 @@ export default function WorkoutSessionModal() {
             />
           </View>
         );
+
+      case 'circuit-round': {
+        const { section, roundNumber, totalRounds, itemIndex } = currentPage;
+        const circuitExercises = getCircuitExercisesForRound(section);
+        const exerciseDataMap = getCircuitExerciseDataMap(section);
+        const roundKey = `${section.id}-${roundNumber}`;
+
+        // Get local completion state for this round, or use exercise set.completed as initial
+        const localCompletions = circuitRoundCompletions.get(roundKey) || circuitExercises.map((e) => e.exercise.set.completed);
+
+        // Create exercises with local completion state overlay
+        const exercisesWithLocalState = circuitExercises.map((e, idx) => ({
+          ...e.exercise,
+          set: {
+            ...e.exercise.set,
+            completed: localCompletions[idx] ?? e.exercise.set.completed,
+          },
+        }));
+
+        return (
+          <View style={styles.exerciseContainer}>
+            <CircuitRoundPage
+              sectionName={section.name}
+              sectionType={section.type as 'circuits' | 'tabata' | 'hiit' | 'emom'}
+              currentRound={roundNumber}
+              totalRounds={totalRounds}
+              exercises={exercisesWithLocalState}
+              exerciseDataMap={exerciseDataMap}
+              onExerciseComplete={(exerciseIdx, completed) => {
+                handleCircuitExerciseComplete(section.id, roundNumber, exerciseIdx, completed);
+              }}
+              onExerciseValueChange={(exerciseIdx, field, value) => {
+                const { groupIndex, exerciseIndex } = circuitExercises[exerciseIdx];
+                handleCircuitExerciseValueChange(itemIndex, groupIndex, exerciseIndex, field, value);
+              }}
+              onRoundComplete={handleCircuitRoundComplete}
+            />
+          </View>
+        );
+      }
+
+      case 'emom-round': {
+        const { section, roundNumber, totalRounds, itemIndex, intervalSec } = currentPage;
+        const emomExercises = getCircuitExercisesForRound(section as unknown as CircuitSectionType);
+        const exerciseDataMap = getCircuitExerciseDataMap(section as unknown as CircuitSectionType);
+        const roundKey = `${section.id}-${roundNumber}`;
+
+        // Get local completion state for this round
+        const localCompletions = circuitRoundCompletions.get(roundKey) || emomExercises.map((e) => e.exercise.set.completed);
+
+        // Create exercises with local completion state overlay
+        const exercisesWithLocalState = emomExercises.map((e, idx) => ({
+          ...e.exercise,
+          set: {
+            ...e.exercise.set,
+            completed: localCompletions[idx] ?? e.exercise.set.completed,
+          },
+        }));
+
+        return (
+          <View style={styles.exerciseContainer}>
+            <EmomRoundPage
+              key={`emom-${section.id}-${roundNumber}`}
+              sectionId={section.id}
+              sectionName={section.name}
+              intervalSec={intervalSec}
+              currentRound={roundNumber}
+              totalRounds={totalRounds}
+              exercises={exercisesWithLocalState}
+              exerciseDataMap={exerciseDataMap}
+              onExerciseComplete={(exerciseIdx, completed) => {
+                handleCircuitExerciseComplete(section.id, roundNumber, exerciseIdx, completed);
+              }}
+              onExerciseValueChange={(exerciseIdx, field, value) => {
+                const { groupIndex, exerciseIndex } = emomExercises[exerciseIdx];
+                handleCircuitExerciseValueChange(itemIndex, groupIndex, exerciseIndex, field, value);
+              }}
+              onRoundComplete={handleCircuitRoundComplete}
+              isPaused={isPaused}
+            />
+          </View>
+        );
+      }
+
+      case 'hiit-round': {
+        const { section, roundNumber, totalRounds, itemIndex, workSec, restSec } = currentPage;
+        const hiitExercises = getCircuitExercisesForRound(section as unknown as CircuitSectionType);
+        const exerciseDataMap = getCircuitExerciseDataMap(section as unknown as CircuitSectionType);
+        const roundKey = `${section.id}-${roundNumber}`;
+
+        // Get local completion state for this round
+        const localCompletions = circuitRoundCompletions.get(roundKey) || hiitExercises.map((e) => e.exercise.set.completed);
+
+        // Create exercises with local completion state overlay
+        const exercisesWithLocalState = hiitExercises.map((e, idx) => ({
+          ...e.exercise,
+          set: {
+            ...e.exercise.set,
+            completed: localCompletions[idx] ?? e.exercise.set.completed,
+          },
+        }));
+
+        return (
+          <View style={styles.exerciseContainer}>
+            <HiitRoundPage
+              key={`hiit-${section.id}-${roundNumber}`}
+              sectionId={section.id}
+              sectionName={section.name}
+              workSec={workSec}
+              restSec={restSec}
+              currentRound={roundNumber}
+              totalRounds={totalRounds}
+              exercises={exercisesWithLocalState}
+              exerciseDataMap={exerciseDataMap}
+              onExerciseComplete={(exerciseIdx, completed) => {
+                handleCircuitExerciseComplete(section.id, roundNumber, exerciseIdx, completed);
+              }}
+              onExerciseValueChange={(exerciseIdx, field, value) => {
+                const { groupIndex, exerciseIndex } = hiitExercises[exerciseIdx];
+                handleCircuitExerciseValueChange(itemIndex, groupIndex, exerciseIndex, field, value);
+              }}
+              onRoundComplete={handleCircuitRoundComplete}
+              isPaused={isPaused}
+            />
+          </View>
+        );
+      }
+
+      case 'tabata-round': {
+        const { section, roundNumber, totalRounds, itemIndex, workSec, restSec } = currentPage;
+        const tabataExercises = getCircuitExercisesForRound(section as unknown as CircuitSectionType);
+        const exerciseDataMap = getCircuitExerciseDataMap(section as unknown as CircuitSectionType);
+        const roundKey = `${section.id}-${roundNumber}`;
+
+        // Get local completion state for this round
+        const localCompletions = circuitRoundCompletions.get(roundKey) || tabataExercises.map((e) => e.exercise.set.completed);
+
+        // Create exercises with local completion state overlay
+        const exercisesWithLocalState = tabataExercises.map((e, idx) => ({
+          ...e.exercise,
+          set: {
+            ...e.exercise.set,
+            completed: localCompletions[idx] ?? e.exercise.set.completed,
+          },
+        }));
+
+        return (
+          <View style={styles.exerciseContainer}>
+            <TabataRoundPage
+              key={`tabata-${section.id}-${roundNumber}`}
+              sectionId={section.id}
+              sectionName={section.name}
+              workSec={workSec}
+              restSec={restSec}
+              currentRound={roundNumber}
+              totalRounds={totalRounds}
+              exercises={exercisesWithLocalState}
+              exerciseDataMap={exerciseDataMap}
+              onExerciseComplete={(exerciseIdx, completed) => {
+                handleCircuitExerciseComplete(section.id, roundNumber, exerciseIdx, completed);
+              }}
+              onExerciseValueChange={(exerciseIdx, field, value) => {
+                const { groupIndex, exerciseIndex } = tabataExercises[exerciseIdx];
+                handleCircuitExerciseValueChange(itemIndex, groupIndex, exerciseIndex, field, value);
+              }}
+              onRoundComplete={handleCircuitRoundComplete}
+              isPaused={isPaused}
+            />
+          </View>
+        );
+      }
+
+      case 'amrap-round': {
+        const { section, itemIndex, durationSec, initialRoundsCompleted } = currentPage;
+        const exerciseDataMap = getAmrapExerciseDataMap(section);
+
+        return (
+          <View style={styles.exerciseContainer}>
+            <AmrapRoundPage
+              key={`amrap-${section.id}`}
+              sectionId={section.id}
+              sectionName={section.name}
+              durationSec={durationSec}
+              initialRoundsCompleted={initialRoundsCompleted}
+              exercises={section.exercises}
+              exerciseDataMap={exerciseDataMap}
+              onExerciseComplete={(exerciseIdx, completed) => {
+                handleAmrapExerciseComplete(itemIndex, exerciseIdx, completed);
+              }}
+              onExerciseValueChange={(exerciseIdx, field, value) => {
+                handleAmrapExerciseValueChange(itemIndex, exerciseIdx, field, value);
+              }}
+              onRoundComplete={handleCircuitRoundComplete}
+              isPaused={isPaused}
+            />
+          </View>
+        );
+      }
+
+      case 'superset-round': {
+        const { exercises, exerciseIndices, itemIndex, currentSet, totalSets, restSec } = currentPage;
+        const supersetExercisesData = exercises.map((ex) => findExerciseById(ex.prescribedExerciseId));
+        const exerciseDataMap = new Map(
+          supersetExercisesData.map((ex, idx) => [
+            exercises[idx].prescribedExerciseId,
+            {
+              exerciseId: exercises[idx].prescribedExerciseId,
+              name: ex?.name || 'Exercise',
+              thumbnailUrl: ex?.rawThumbnailUrl,
+            },
+          ])
+        );
+
+        return (
+          <View style={styles.exerciseContainer}>
+            <SupersetRoundPage
+              key={`superset-${itemIndex}-${currentSet}`}
+              sectionId={currentPage.itemIndex.toString()}
+              exercises={exercises}
+              exerciseDataMap={exerciseDataMap}
+              currentSet={currentSet}
+              totalSets={totalSets}
+              restSec={restSec}
+              onExerciseComplete={(exerciseIndex, setIndex, completed) => {
+                handleSupersetExerciseComplete(itemIndex, exerciseIndex, setIndex, completed, exercises, exerciseIndices);
+              }}
+              onExerciseValueChange={(exerciseIndex, setIndex, field, value) => {
+                handleSupersetExerciseValueChange(itemIndex, exerciseIndex, setIndex, field, value, exercises, exerciseIndices);
+              }}
+              onSetComplete={handleCircuitRoundComplete}
+              isPaused={isPaused}
+            />
+          </View>
+        );
+      }
 
       case 'congratulations':
         return (

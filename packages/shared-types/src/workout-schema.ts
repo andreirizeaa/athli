@@ -113,6 +113,7 @@ export type RegularSectionPayload = {
   type: 'regular';
   exercises: ExerciseGroupPayload[];
   notes: string | null;
+  completed: boolean;
 };
 
 export type AmrapSectionPayload = {
@@ -120,10 +121,10 @@ export type AmrapSectionPayload = {
   name: string;
   type: 'amrap';
   durationSec: number;
-  actualDurationSec: number | null;
   roundsCompleted: number | null;
   exercises: RoundExercisePayload[];
   notes: string | null;
+  completed: boolean;
 };
 
 /**
@@ -145,10 +146,9 @@ export type TabataSectionPayload = {
   workSec: number;
   restSec: number;
   rounds: number;
-  actualRounds: number | null;
-  totalDurationSec: number | null;
   exercises: CircuitExerciseGroupPayload[];
   notes: string | null;
+  completed: boolean;
 };
 
 export type HiitSectionPayload = {
@@ -158,10 +158,9 @@ export type HiitSectionPayload = {
   workSec: number;
   restSec: number;
   rounds: number;
-  actualRounds: number | null;
-  totalDurationSec: number | null;
   exercises: CircuitExerciseGroupPayload[];
   notes: string | null;
+  completed: boolean;
 };
 
 export type EmomSectionPayload = {
@@ -170,9 +169,9 @@ export type EmomSectionPayload = {
   type: 'emom';
   intervalSec: number;
   durationMin: number;
-  actualDurationSec: number | null;
   exercises: CircuitExerciseGroupPayload[];
   notes: string | null;
+  completed: boolean;
 };
 
 export type CircuitsSectionPayload = {
@@ -183,6 +182,7 @@ export type CircuitsSectionPayload = {
   actualRounds: number | null;
   exercises: CircuitExerciseGroupPayload[];
   notes: string | null;
+  completed: boolean;
 };
 
 export type AuxiliarySectionPayload = {
@@ -192,6 +192,7 @@ export type AuxiliarySectionPayload = {
   category: AuxiliaryCategory;
   exercises: ExerciseGroupPayload[];
   notes: string | null;
+  completed: boolean;
 };
 
 export type WorkoutSectionPayload =
