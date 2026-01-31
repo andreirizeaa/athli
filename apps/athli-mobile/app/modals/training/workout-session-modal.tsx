@@ -765,7 +765,7 @@ const styles = StyleSheet.create({
     minHeight: 400,
   },
   feedbackContainer: {
-    flex: 1,
+    paddingTop: 8,
   },
   summaryContainer: {
     flex: 1,

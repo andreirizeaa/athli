@@ -127,6 +127,11 @@ export const en = {
   home: {
     title: 'Home',
   },
+  athlete: {
+    loading: {
+      preparingData: 'Preparing your data...',
+    },
+  },
   training: {
     title: 'Training',
     athlete: {

@@ -30,6 +30,8 @@ export { useClientsStore } from './useClientsStore';
 export { useChatsStore } from './useChatsStore';
 export { useClientDetailStore } from './useClientDetailStore';
 export { useFeatureRequestsStore } from './useFeatureRequestsStore';
+export { useAthleteDataStore } from './useAthleteDataStore';
+export { useCoachDataStore } from './useCoachDataStore';
 
 // Export auth hook
 export { useAuth } from '../hooks/useAuth';

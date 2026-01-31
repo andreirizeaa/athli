@@ -80,7 +80,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   lottieAnimation: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: -100,
+    left: -100,
+    right: -100,
+    bottom: -100,
     zIndex: 0,
   },
   contentContainer: {
