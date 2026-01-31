@@ -186,6 +186,47 @@ export const en = {
         pause2: 'Pause',
         pause2Desc: '{{value}} seconds pause at the top',
       },
+      sectionTypes: {
+        regular: {
+          label: 'Regular',
+          description: 'Standard strength training with sets, reps, and rest periods. Complete each exercise with the prescribed sets before moving on.',
+        },
+        amrap: {
+          label: 'AMRAP',
+          description: 'As Many Rounds As Possible. Complete all exercises in order, then repeat. Keep going until the time runs out!',
+        },
+        tabata: {
+          label: 'Tabata',
+          description: 'Classic high-intensity protocol: 20 seconds of all-out effort followed by 10 seconds of rest. Push hard during work periods!',
+        },
+        hiit: {
+          label: 'HIIT',
+          description: 'High-Intensity Interval Training. Alternate between intense work periods and rest periods at your prescribed intervals.',
+        },
+        emom: {
+          label: 'EMOM',
+          description: 'Every Minute On the Minute. Start each exercise at the top of every minute. The faster you finish, the more rest you get!',
+        },
+        circuits: {
+          label: 'Circuit',
+          description: 'Move through all exercises with minimal rest between them. After completing one round, repeat for the prescribed number of rounds.',
+        },
+        auxiliary: {
+          label: 'Auxiliary',
+          description: 'Supplementary exercises for warm-up, cooldown, or mobility work. Focus on preparation and recovery.',
+        },
+        details: {
+          rounds: '{{count}} rounds',
+          roundsSingular: '1 round',
+          exercises: '{{count}} exercises',
+          exercisesSingular: '1 exercise',
+          exercisesPerRound: '{{count}} exercises per round',
+          timeCap: '{{time}} time cap',
+          workRest: '{{work}}s work / {{rest}}s rest',
+          duration: '{{time}} minutes',
+          intervals: '{{time}}s intervals',
+        },
+      },
     },
     addOptions: {
       addFromLibrary: 'Add from library',
