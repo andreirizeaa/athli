@@ -11,6 +11,7 @@ import { typography } from '@/constants/typography';
 import { assignWorkout } from '@/services/client/client-training-service';
 import { ReadinessPage } from '@/components/features/training/readiness-page';
 import { ExerciseSessionCard } from '@/components/features/training/exercise-session-card';
+import { SectionInfoPage } from '@/components/features/training/section-info-page';
 import {
   WorkoutSessionHeader,
   WorkoutSessionBottomNav,
@@ -23,6 +24,8 @@ import {
   DEFAULT_EXECUTION_FIELDS,
   RegularExercisePayload,
   WorkoutItem,
+  WorkoutSectionPayload,
+  CircuitExercisePayload,
 } from '@athli/shared-types';
 import { useWorkoutTimer } from '@/hooks/useWorkoutTimer';
 import { useExerciseLookup } from '@/hooks/useAllExercises';
@@ -41,6 +44,14 @@ const SUPERSET_MESSAGES = [
   'Back to back, no looking back 💥',
   'Superset mode: activated ⚡',
 ];
+
+// Page types for navigation
+type WorkoutPage =
+  | { type: 'readiness' }
+  | { type: 'section-info'; itemIndex: number; section: WorkoutSectionPayload }
+  | { type: 'exercise'; itemIndex: number; exercise: RegularExercisePayload; groupIndex?: number; exerciseIndex?: number }
+  | { type: 'circuit-exercise'; itemIndex: number; exercise: CircuitExercisePayload; groupIndex?: number; exerciseIndex?: number }
+  | { type: 'summary' };
 
 export default function WorkoutSessionModal() {
   const router = useRouter();
@@ -70,93 +81,96 @@ export default function WorkoutSessionModal() {
   const { formattedTime, isPaused } = useWorkoutTimer(workoutData?.completedSummary ?? null);
   const { findExerciseById, findExercisesByIds } = useExerciseLookup();
 
-  // Type for exercise info
-  type ExerciseInfo = { exercise: RegularExercisePayload; itemIndex: number; groupIndex?: number; exerciseIndex?: number };
+  // Build the pages array based on workout items
+  const pages = useMemo((): WorkoutPage[] => {
+    if (!workoutData?.items) return [{ type: 'readiness' }];
 
-  // Extract exercises grouped by superset (supersetted exercises appear together)
-  const exerciseGroups = useMemo(() => {
-    if (!workoutData?.items) {
-      console.log('No items in workoutData');
-      return [];
-    }
-
-    console.log('Processing items:', workoutData.items.length);
-
-    const allExercises: ExerciseInfo[] = [];
+    const pageList: WorkoutPage[] = [{ type: 'readiness' }];
 
     workoutData.items.forEach((item, itemIndex) => {
       if (item.itemType === 'exercise') {
-        console.log('Found exercise:', item.data.prescribedExerciseId);
-        allExercises.push({ exercise: item.data, itemIndex });
+        // Top-level exercise - add directly
+        pageList.push({
+          type: 'exercise',
+          itemIndex,
+          exercise: item.data,
+        });
       } else if (item.itemType === 'section') {
         const section = item.data;
+
+        // Add section info page first
+        pageList.push({
+          type: 'section-info',
+          itemIndex,
+          section,
+        });
+
+        // Then add exercise pages based on section type
         if (section.type === 'regular' || section.type === 'auxiliary') {
+          // Regular sections have grouped exercises with sets
           section.exercises.forEach((group, groupIndex) => {
-            group.exercises.forEach((ex, exerciseIndex) => {
-              allExercises.push({ exercise: ex, itemIndex, groupIndex, exerciseIndex });
+            group.exercises.forEach((exercise, exerciseIndex) => {
+              pageList.push({
+                type: 'exercise',
+                itemIndex,
+                exercise,
+                groupIndex,
+                exerciseIndex,
+              });
+            });
+          });
+        } else if (section.type === 'amrap') {
+          // AMRAP has flat exercise array (RoundExercisePayload)
+          section.exercises.forEach((exercise, exerciseIndex) => {
+            // Convert RoundExercisePayload to a format we can display
+            pageList.push({
+              type: 'circuit-exercise',
+              itemIndex,
+              exercise: {
+                ...exercise,
+                set: {
+                  setNumber: 1,
+                  type: 'normal',
+                  restSec: exercise.restSec,
+                  completed: exercise.completed,
+                  skipped: false,
+                  trackableField1: exercise.trackableField1,
+                  trackableField2: exercise.trackableField2,
+                  dropset: null,
+                },
+              } as CircuitExercisePayload,
+              exerciseIndex,
+            });
+          });
+        } else {
+          // Circuit-based sections (tabata, hiit, emom, circuits)
+          section.exercises.forEach((group, groupIndex) => {
+            group.exercises.forEach((exercise, exerciseIndex) => {
+              pageList.push({
+                type: 'circuit-exercise',
+                itemIndex,
+                exercise,
+                groupIndex,
+                exerciseIndex,
+              });
             });
           });
         }
       }
     });
 
-    // Group exercises by superset - consecutive exercises with same supersetId go together
-    const groups: ExerciseInfo[][] = [];
-    let currentGroup: ExerciseInfo[] = [];
-    let currentSupersetId: string | null = null;
+    // Add summary page at the end
+    pageList.push({ type: 'summary' });
 
-    allExercises.forEach((exInfo, index) => {
-      const supersetId = exInfo.exercise.supersetId || null;
-      const nextExInfo = index < allExercises.length - 1 ? allExercises[index + 1] : null;
-      const nextSupersetId = nextExInfo?.exercise.supersetId || null;
-
-      if (supersetId && supersetId === currentSupersetId) {
-        // Continue current superset group
-        currentGroup.push(exInfo);
-      } else if (supersetId && currentGroup.length === 0) {
-        // Start new superset group
-        currentGroup.push(exInfo);
-        currentSupersetId = supersetId;
-      } else if (currentGroup.length > 0) {
-        // Finish current group and start new one
-        groups.push(currentGroup);
-        currentGroup = [exInfo];
-        currentSupersetId = supersetId;
-      } else {
-        // Standalone exercise
-        currentGroup = [exInfo];
-        currentSupersetId = supersetId;
-      }
-
-      // If this is the last in a superset chain or standalone, push the group
-      const isLastInSuperset = !supersetId || supersetId !== nextSupersetId;
-      if (isLastInSuperset && currentGroup.length > 0) {
-        groups.push(currentGroup);
-        currentGroup = [];
-        currentSupersetId = null;
-      }
-    });
-
-    // Push any remaining group
-    if (currentGroup.length > 0) {
-      groups.push(currentGroup);
-    }
-
-    console.log('Exercise groups count:', groups.length, 'from', allExercises.length, 'exercises');
-    return groups;
+    return pageList;
   }, [workoutData?.items]);
-
-  // Flatten for backward compatibility where needed
-  const flatExercises = useMemo(() => {
-    return exerciseGroups.flat();
-  }, [exerciseGroups]);
 
   // Parse workout on mount
   useEffect(() => {
     if (params.workoutPayload) {
       try {
         const parsed = JSON.parse(params.workoutPayload);
-        console.log('Workout data:', JSON.stringify(parsed, null, 2));
+        console.log('RAW WORKOUT PAYLOAD:', JSON.stringify(parsed, null, 2));
 
         // The API returns workout_data nested - extract and merge
         // Note: items may be at top level (web-created) or inside workout_data (legacy)
@@ -301,7 +315,7 @@ export default function WorkoutSessionModal() {
   };
 
   const handleNext = () => {
-    if (currentStep < totalSteps) {
+    if (currentStep < pages.length) {
       if (isPaused) resumeWorkout();
       setCurrentStep(currentStep + 1);
     }
@@ -318,29 +332,10 @@ export default function WorkoutSessionModal() {
     });
   }, [supersetOverlayOpacity]);
 
-  // Detect navigation to superset page and show overlay
+  // Detect navigation to superset page and show overlay (placeholder for now)
   useEffect(() => {
-    // Only trigger when moving forward (next button)
-    if (currentStep > previousStepRef.current && currentStep > 1) {
-      const groupIndex = currentStep - 2;
-      const group = exerciseGroups[groupIndex];
-
-      // Check if this is a superset (more than 1 exercise in group)
-      if (group && group.length > 1) {
-        // Pick a random message
-        const randomMessage = SUPERSET_MESSAGES[Math.floor(Math.random() * SUPERSET_MESSAGES.length)];
-        setSupersetMessage(randomMessage);
-        setShowSupersetOverlay(true);
-        supersetOverlayOpacity.value = withTiming(1, { duration: 300 });
-
-        // Auto-dismiss after 3 seconds
-        supersetTimeoutRef.current = setTimeout(() => {
-          dismissSupersetOverlay();
-        }, 3000);
-      }
-    }
     previousStepRef.current = currentStep;
-  }, [currentStep, exerciseGroups, supersetOverlayOpacity, dismissSupersetOverlay]);
+  }, [currentStep]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -390,31 +385,18 @@ export default function WorkoutSessionModal() {
     }
   };
 
-  // Get current exercise group for step (step 1 is readiness, step 2+ are exercise groups)
-  const getCurrentExerciseGroup = () => {
-    if (currentStep <= 1) return null;
-    const groupIndex = currentStep - 2; // 0-indexed
-    return exerciseGroups[groupIndex] || null;
-  };
+  // Get current page
+  const currentPage = pages[currentStep - 1] || { type: 'readiness' };
 
-  // Get current exercise for step (backward compatibility - returns first exercise in group)
-  const getCurrentExercise = () => {
-    const group = getCurrentExerciseGroup();
-    return group?.[0] || null;
-  };
-
-  // Handle set completion toggle (with exercise index in group)
-  const handleSetComplete = async (setIndex: number, completed: boolean, exerciseIndexInGroup: number = 0) => {
-    if (!workoutData || !currentExerciseGroup) return;
-    const exerciseInfo = currentExerciseGroup[exerciseIndexInGroup];
-    if (!exerciseInfo) return;
+  // Handle set completion toggle for regular exercises
+  const handleSetComplete = async (setIndex: number, completed: boolean) => {
+    if (!workoutData || currentPage.type !== 'exercise') return;
+    const { itemIndex, groupIndex, exerciseIndex } = currentPage;
 
     // Deep clone the items to update
     const updatedItems = JSON.parse(JSON.stringify(workoutData.items)) as WorkoutItem[];
-    const { itemIndex, groupIndex, exerciseIndex } = exerciseInfo;
-
-    // Find and update the set
     const item = updatedItems[itemIndex];
+
     if (item.itemType === 'exercise') {
       item.data.sets[setIndex].completed = completed;
     } else if (item.itemType === 'section' && (item.data.type === 'regular' || item.data.type === 'auxiliary')) {
@@ -439,23 +421,19 @@ export default function WorkoutSessionModal() {
     }
   };
 
-  // Handle set value change (with exercise index in group)
+  // Handle set value change for regular exercises
   const handleSetValueChange = async (
     setIndex: number,
     field: 'trackableField1' | 'trackableField2',
-    value: string,
-    exerciseIndexInGroup: number = 0
+    value: string
   ) => {
-    if (!workoutData || !currentExerciseGroup) return;
-    const exerciseInfo = currentExerciseGroup[exerciseIndexInGroup];
-    if (!exerciseInfo) return;
+    if (!workoutData || currentPage.type !== 'exercise') return;
+    const { itemIndex, groupIndex, exerciseIndex } = currentPage;
 
     // Deep clone the items to update
     const updatedItems = JSON.parse(JSON.stringify(workoutData.items)) as WorkoutItem[];
-    const { itemIndex, groupIndex, exerciseIndex } = exerciseInfo;
-
-    // Find and update the value
     const item = updatedItems[itemIndex];
+
     if (item.itemType === 'exercise') {
       item.data.sets[setIndex][field].completed = value;
     } else if (item.itemType === 'section' && (item.data.type === 'regular' || item.data.type === 'auxiliary')) {
@@ -480,81 +458,10 @@ export default function WorkoutSessionModal() {
     }
   };
 
-  // Progress calculation - step 1 is readiness, steps 2+ are exercise groups, last step is summary
-  const totalSteps = exerciseGroups.length + 2; // readiness + exercise groups + summary
-  const progressPercent = (currentStep / totalSteps) * 100;
-
-  // Readiness validation
-  const isReadinessComplete = (): boolean => {
-    if (!workoutData?.pre) return false;
-    const { sleep, mood, energy, stress, soreness } = workoutData.pre;
-    return (
-      sleep !== null &&
-      mood !== null &&
-      energy !== null &&
-      stress !== null &&
-      soreness !== null
-    );
-  };
-
-  // Navigation state
-  const canGoBack = currentStep > 1;
-  const canGoNext = currentStep < totalSteps && (currentStep !== 1 || isReadinessComplete());
-
-  // Get page title based on current step
-  const getPageTitle = (): string => {
-    if (currentStep === 1) {
-      return t('training.readiness.title' as any);
-    }
-    // For exercise steps, return empty - the exercise name is shown in the card
-    return '';
-  };
-
-  // Get current exercise group for rendering
-  const currentExerciseGroup = getCurrentExerciseGroup();
-
-  // Get exercise data for all exercises in current group
-  const currentGroupData = useMemo(() => {
-    if (!currentExerciseGroup) return [];
-    return currentExerciseGroup.map(exInfo => {
-      const exerciseData = findExerciseById(exInfo.exercise.prescribedExerciseId);
-      const alternativesData = exInfo.exercise.alternatives
-        ? findExercisesByIds(exInfo.exercise.alternatives).map(ex => ({
-            id: ex.exerciseId,
-            name: ex.name,
-            thumbnailUrl: ex.rawThumbnailUrl,
-          }))
-        : [];
-      return {
-        exInfo,
-        exerciseData,
-        alternativesData,
-      };
-    });
-  }, [currentExerciseGroup, findExerciseById, findExercisesByIds]);
-
-  // Backward compatibility
-  const currentExerciseInfo = getCurrentExercise();
-  const currentExerciseData = currentExerciseInfo
-    ? findExerciseById(currentExerciseInfo.exercise.prescribedExerciseId)
-    : null;
-
-  // Get alternatives data for current exercise (first in group for backward compat)
-  const alternativesData = currentExerciseInfo?.exercise.alternatives
-    ? findExercisesByIds(currentExerciseInfo.exercise.alternatives).map(ex => ({
-        id: ex.exerciseId,
-        name: ex.name,
-        thumbnailUrl: ex.rawThumbnailUrl,
-      }))
-    : [];
-
-  // Handle alternative exercise selection (with exercise index in group)
-  const handleAlternativeSelect = async (alternativeId: string, exerciseIndexInGroup: number = 0) => {
-    if (!workoutData || !currentExerciseGroup) return;
-    const exerciseInfo = currentExerciseGroup[exerciseIndexInGroup];
-    if (!exerciseInfo) return;
-
-    const { itemIndex, groupIndex, exerciseIndex, exercise } = exerciseInfo;
+  // Handle alternative exercise selection
+  const handleAlternativeSelect = async (alternativeId: string) => {
+    if (!workoutData || currentPage.type !== 'exercise') return;
+    const { itemIndex, groupIndex, exerciseIndex, exercise } = currentPage;
     const currentExerciseId = exercise.prescribedExerciseId;
 
     // Deep clone the items to update
@@ -563,14 +470,11 @@ export default function WorkoutSessionModal() {
 
     // Helper to swap exercise IDs
     const swapExercise = (ex: RegularExercisePayload) => {
-      // Set the new exercise ID
       ex.prescribedExerciseId = alternativeId;
-      // Update alternatives: remove the new one, add the old one
       ex.alternatives = ex.alternatives.filter(id => id !== alternativeId);
       ex.alternatives.push(currentExerciseId);
     };
 
-    // Find and update the exercise
     if (item.itemType === 'exercise') {
       swapExercise(item.data);
     } else if (item.itemType === 'section' && (item.data.type === 'regular' || item.data.type === 'auxiliary')) {
@@ -595,6 +499,60 @@ export default function WorkoutSessionModal() {
     }
   };
 
+  // Progress calculation
+  const totalSteps = pages.length;
+  const progressPercent = (currentStep / totalSteps) * 100;
+
+  // Readiness validation
+  const isReadinessComplete = (): boolean => {
+    if (!workoutData?.pre) return false;
+    const { sleep, mood, energy, stress, soreness } = workoutData.pre;
+    return (
+      sleep !== null &&
+      mood !== null &&
+      energy !== null &&
+      stress !== null &&
+      soreness !== null
+    );
+  };
+
+  // Navigation state
+  const canGoBack = currentStep > 1;
+  const canGoNext = currentStep < totalSteps && (currentPage.type !== 'readiness' || isReadinessComplete());
+
+  // Get page title based on current page
+  const getPageTitle = (): string => {
+    if (currentPage.type === 'readiness') {
+      return t('training.readiness.title' as any);
+    }
+    if (currentPage.type === 'section-info') {
+      return '';
+    }
+    if (currentPage.type === 'summary') {
+      return t('training.summary.title' as any) || 'Summary';
+    }
+    // For exercise pages, return empty - the exercise name is shown in the card
+    return '';
+  };
+
+  // Get exercise data for current page
+  const currentExerciseData = useMemo(() => {
+    if (currentPage.type !== 'exercise' && currentPage.type !== 'circuit-exercise') return null;
+    return findExerciseById(currentPage.exercise.prescribedExerciseId);
+  }, [currentPage, findExerciseById]);
+
+  // Get alternatives data for current exercise
+  const alternativesData = useMemo(() => {
+    if (currentPage.type !== 'exercise') return [];
+    return currentPage.exercise.alternatives
+      ? findExercisesByIds(currentPage.exercise.alternatives).map(ex => ({
+          id: ex.exerciseId,
+          name: ex.name,
+          thumbnailUrl: ex.rawThumbnailUrl,
+        }))
+      : [];
+  }, [currentPage, findExercisesByIds]);
+
   // Bottom navigation overlay
   const bottomNavBar = (
     <WorkoutSessionBottomNav
@@ -608,6 +566,76 @@ export default function WorkoutSessionModal() {
   );
 
   const bottomBarHeight = BOTTOM_NAV_HEIGHT + insets.bottom + CONTENT_BOTTOM_PADDING;
+
+  // Render current page content
+  const renderPageContent = () => {
+    if (!workoutData) return null;
+
+    switch (currentPage.type) {
+      case 'readiness':
+        return (
+          <View style={styles.readinessContainer}>
+            <ReadinessPage
+              values={workoutData.pre}
+              onValueChange={handleReadinessChange}
+            />
+          </View>
+        );
+
+      case 'section-info':
+        return (
+          <View style={styles.sectionInfoContainer}>
+            <SectionInfoPage section={currentPage.section} />
+          </View>
+        );
+
+      case 'exercise':
+        return (
+          <View style={styles.exerciseContainer}>
+            <ExerciseSessionCard
+              exercise={currentPage.exercise}
+              exerciseName={currentExerciseData?.name || 'Exercise'}
+              exerciseImageUrl={currentExerciseData?.rawThumbnailUrl}
+              alternatives={alternativesData}
+              onSetComplete={handleSetComplete}
+              onSetValueChange={handleSetValueChange}
+              onAlternativeSelect={handleAlternativeSelect}
+            />
+          </View>
+        );
+
+      case 'circuit-exercise':
+        // For circuit exercises, we'll show a simplified view for now
+        return (
+          <View style={styles.exerciseContainer}>
+            <ExerciseSessionCard
+              exercise={{
+                ...currentPage.exercise,
+                sets: [currentPage.exercise.set],
+              } as RegularExercisePayload}
+              exerciseName={currentExerciseData?.name || 'Exercise'}
+              exerciseImageUrl={currentExerciseData?.rawThumbnailUrl}
+              alternatives={[]}
+              onSetComplete={handleSetComplete}
+              onSetValueChange={handleSetValueChange}
+              onAlternativeSelect={handleAlternativeSelect}
+            />
+          </View>
+        );
+
+      case 'summary':
+        return (
+          <View style={styles.summaryContainer}>
+            <Text style={[styles.summaryText, { color: themeColors.text }]}>
+              {t('training.summary.complete' as any) || 'Workout Complete!'}
+            </Text>
+          </View>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
@@ -631,35 +659,7 @@ export default function WorkoutSessionModal() {
         {getPageTitle() && <WorkoutSessionPageTitle title={getPageTitle()} />}
 
         <View style={styles.content}>
-          {/* Step 1: Readiness */}
-          {workoutData && currentStep === 1 && (
-            <View style={styles.readinessContainer}>
-              <ReadinessPage
-                values={workoutData.pre}
-                onValueChange={handleReadinessChange}
-              />
-            </View>
-          )}
-
-          {/* Steps 2+: Exercise Groups (supersets shown together) */}
-          {workoutData && currentStep > 1 && currentStep <= exerciseGroups.length + 1 && currentGroupData.length > 0 && (
-            <View style={styles.exerciseGroupContainer}>
-              {currentGroupData.map((item, indexInGroup) => (
-                <ExerciseSessionCard
-                  key={`${item.exInfo.exercise.prescribedExerciseId}-${indexInGroup}`}
-                  exercise={item.exInfo.exercise}
-                  exerciseName={item.exerciseData?.name || 'Exercise'}
-                  exerciseImageUrl={item.exerciseData?.rawThumbnailUrl}
-                  alternatives={item.alternativesData}
-                  onSetComplete={(setIndex, completed) => handleSetComplete(setIndex, completed, indexInGroup)}
-                  onSetValueChange={(setIndex, field, value) => handleSetValueChange(setIndex, field, value, indexInGroup)}
-                  onAlternativeSelect={(altId) => handleAlternativeSelect(altId, indexInGroup)}
-                  isSuperset={currentGroupData.length > 1}
-                  supersetLabel={currentGroupData.length > 1 ? `${String.fromCharCode(65 + (currentStep - 2))}${indexInGroup + 1}` : undefined}
-                />
-              ))}
-            </View>
-          )}
+          {renderPageContent()}
         </View>
       </KeyboardAwareScrollView>
 
@@ -699,8 +699,23 @@ const styles = StyleSheet.create({
   readinessContainer: {
     paddingHorizontal: 16,
   },
-  exerciseGroupContainer: {
-    gap: 16,
+  sectionInfoContainer: {
+    flex: 1,
+    minHeight: 400,
+  },
+  exerciseContainer: {
+    flex: 1,
+  },
+  summaryContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    minHeight: 400,
+  },
+  summaryText: {
+    ...typography.h1,
+    textAlign: 'center',
   },
   supersetOverlay: {
     ...StyleSheet.absoluteFillObject,
