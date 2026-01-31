@@ -9,6 +9,9 @@
 ### Objective
 Implement the Athli AI Assistant as specified in this PRD. You have been given full API keys and access to all necessary resources.
 
+### Before You Start
+**READ THE ARCHITECTURE DOCUMENT FIRST:** Before writing any code, read `/ARCHITECTURE.md` to understand the platform's tech stack, folder structure, coding conventions, and data flow patterns. This will help you make implementation decisions that align with existing patterns.
+
 ### Rules
 1. **DO NOT STOP** until all features in this PRD are fully implemented
 2. **DO NOT SKIP** any acceptance criteria - every single one must be tested and passing
