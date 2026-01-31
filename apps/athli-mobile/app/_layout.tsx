@@ -1199,6 +1199,19 @@ function RootLayoutNav() {
             options={{
               presentation: 'modal',
               headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/workout/exercise-filter-values-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
                 gestureDirection: 'vertical',

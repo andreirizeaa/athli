@@ -13,7 +13,6 @@ import { haptics } from '@/utils/haptics';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { PressableScale } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useModalCallbacks } from '@/stores';
@@ -120,6 +119,7 @@ export default function WorkoutDetailScreen() {
     const [errorMessage, setErrorMessage] = useState('');
     const [showDiscardDialog, setShowDiscardDialog] = useState(false);
     const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+    const [showAddDialog, setShowAddDialog] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
 
     // Mutation for creating workout
@@ -648,7 +648,7 @@ export default function WorkoutDetailScreen() {
                         });
 
                         // Update state with the loaded workout schema
-                        setWorkoutState({
+                        const loadedState: BuilderWorkoutState = {
                             meta: {
                                 id: params.id,
                                 name: workoutData.name,
@@ -657,11 +657,14 @@ export default function WorkoutDetailScreen() {
                                 difficulty: workoutData.difficulty || 'all_levels',
                             },
                             items: fixedItems,
-                        });
+                        };
+                        setWorkoutState(loadedState);
+                        // Set initial state for dirty tracking (must happen after data loads)
+                        initialStateRef.current = JSON.parse(JSON.stringify(loadedState));
                     } else {
                         // No items found - just update the meta data
                         console.log('[WorkoutDetailScreen] No workout items found, updating meta only');
-                        setWorkoutState({
+                        const loadedState: BuilderWorkoutState = {
                             meta: {
                                 id: params.id,
                                 name: workoutData.name || params.name || '',
@@ -670,7 +673,10 @@ export default function WorkoutDetailScreen() {
                                 difficulty: workoutData.difficulty || params.difficulty || 'all_levels',
                             },
                             items: [],
-                        });
+                        };
+                        setWorkoutState(loadedState);
+                        // Set initial state for dirty tracking (must happen after data loads)
+                        initialStateRef.current = JSON.parse(JSON.stringify(loadedState));
                     }
                 } catch (error) {
                     console.error('Failed to load workout data:', error);
@@ -764,12 +770,15 @@ export default function WorkoutDetailScreen() {
     //     }
     // }, [workoutState.items.length, params.id]);
 
-    // Set initial state ref once data is loaded
+    // Set initial state for NEW workouts immediately on mount
     useEffect(() => {
-        if (!initialStateRef.current && workoutState.items.length > 0) {
-            initialStateRef.current = JSON.parse(JSON.stringify(workoutState)); // Deep clone
+        if (params.id === 'new' && !initialStateRef.current) {
+            initialStateRef.current = JSON.parse(JSON.stringify(workoutState));
         }
-    }, [workoutState]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Empty deps - run once on mount
+
+    // Note: For EXISTING workouts, initialStateRef is set directly in loadWorkoutData after data loads
 
     // Track dirty state
     useEffect(() => {
@@ -798,23 +807,26 @@ export default function WorkoutDetailScreen() {
 
                         if (metadataChanged) {
                             // Update only the metadata, preserve items
-                            setWorkoutState(prev => {
-                                const newState = {
-                                    ...prev,
-                                    meta: {
-                                        ...prev.meta,
-                                        name: updatedWorkout.name,
-                                        description: updatedWorkout.description || '',
-                                        type: updatedWorkout.type || '',
-                                        difficulty: updatedWorkout.difficulty || '',
-                                    }
-                                };
-                                // Also update the initialStateRef so metadata sync doesn't count as a change
-                                if (initialStateRef.current) {
-                                    initialStateRef.current = JSON.parse(JSON.stringify(newState));
+                            setWorkoutState(prev => ({
+                                ...prev,
+                                meta: {
+                                    ...prev.meta,
+                                    name: updatedWorkout.name,
+                                    description: updatedWorkout.description || '',
+                                    type: updatedWorkout.type || '',
+                                    difficulty: updatedWorkout.difficulty || '',
                                 }
-                                return newState;
-                            });
+                            }));
+                            // Update ONLY the meta part of initialStateRef (preserves items tracking)
+                            if (initialStateRef.current) {
+                                initialStateRef.current.meta = {
+                                    ...initialStateRef.current.meta,
+                                    name: updatedWorkout.name,
+                                    description: updatedWorkout.description || '',
+                                    type: updatedWorkout.type || '',
+                                    difficulty: updatedWorkout.difficulty || '',
+                                };
+                            }
                         }
                     }
                 }
@@ -839,6 +851,8 @@ export default function WorkoutDetailScreen() {
 
     const handleDiscard = useCallback(() => {
         setShowDiscardDialog(false);
+        // Set isDirty to false so the beforeRemove listener allows navigation
+        setIsDirty(false);
         if (router.canGoBack()) {
             router.back();
         }
@@ -855,6 +869,24 @@ export default function WorkoutDetailScreen() {
             gestureEnabled: !isDirty,
         });
     }, [navigation, isDirty]);
+
+    // Intercept hardware back button and other navigation events when dirty
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+            if (!isDirty) {
+                // If not dirty, allow navigation
+                return;
+            }
+
+            // Prevent default behavior of leaving the screen
+            e.preventDefault();
+
+            // Show discard dialog
+            showDiscardAlert();
+        });
+
+        return unsubscribe;
+    }, [navigation, isDirty, showDiscardAlert]);
 
     const handleBackPress = useCallback(() => {
         if (isDirty) {
@@ -873,24 +905,26 @@ export default function WorkoutDetailScreen() {
         
         // Set callback to update local state when modal saves
         setMetadataUpdateCallback((metadata) => {
-            setWorkoutState(prev => {
-                const newState = {
-                    ...prev,
-                    meta: {
-                        ...prev.meta,
-                        name: metadata.name,
-                        description: metadata.description,
-                        type: metadata.type,
-                        difficulty: metadata.difficulty,
-                    },
+            setWorkoutState(prev => ({
+                ...prev,
+                meta: {
+                    ...prev.meta,
+                    name: metadata.name,
+                    description: metadata.description,
+                    type: metadata.type,
+                    difficulty: metadata.difficulty,
+                },
+            }));
+            // Update ONLY the meta part of initialStateRef (preserves items tracking)
+            if (initialStateRef.current) {
+                initialStateRef.current.meta = {
+                    ...initialStateRef.current.meta,
+                    name: metadata.name,
+                    description: metadata.description,
+                    type: metadata.type,
+                    difficulty: metadata.difficulty,
                 };
-                // Also update initialStateRef so this doesn't count as a dirty change
-                // (the changes were already saved via the modal)
-                if (initialStateRef.current) {
-                    initialStateRef.current = JSON.parse(JSON.stringify(newState));
-                }
-                return newState;
-            });
+            }
         });
         
         router.push({
@@ -987,23 +1021,31 @@ export default function WorkoutDetailScreen() {
 
     const handleAddExercise = () => {
         setExercisesSelectCallback((exercises: Exercise[]) => {
-            const newExercises: BuilderExercise[] = exercises.map((exercise, idx) => ({
-                id: `${exercise.exerciseId}-${Date.now()}-${idx}`,
-                exerciseId: exercise.exerciseId,
-                name: exercise.name,
-                imageUrl: exercise.imageUrl,
-                exerciseType: exercise.exerciseType,
-                sets: [
-                    { id: Math.random().toString(), setNumber: 1, column1: '', column2: '', type: 'R' as const },
-                    { id: Math.random().toString(), setNumber: 2, column1: '', column2: '', type: 'R' as const },
-                ],
-                alternatives: [],
-                tempo: '',
-                eachSide: false,
-                ...getDefaultColumns(exercise.exerciseType, exercise.category),
-                equipments: exercise.equipments,
-                bodyParts: exercise.bodyParts,
-            }));
+            const newExercises: BuilderExercise[] = exercises.map((exercise, idx) => {
+                const defaultColumns = getDefaultColumns(exercise.exerciseType, exercise.category);
+
+                const col1Value = defaultColumns.column1Value || '';
+                const col2Value = defaultColumns.column2Value || '';
+
+                return {
+                    id: `${exercise.exerciseId}-${Date.now()}-${idx}`,
+                    exerciseId: exercise.exerciseId,
+                    name: exercise.name,
+                    imageUrl: exercise.imageUrl,
+                    exerciseType: exercise.exerciseType,
+                    sets: [
+                        { id: Math.random().toString(), setNumber: 1, column1: col1Value, column2: col2Value, type: 'R' as const },
+                        { id: Math.random().toString(), setNumber: 2, column1: col1Value, column2: col2Value, type: 'R' as const },
+                    ],
+                    alternatives: [],
+                    tempo: '',
+                    eachSide: false,
+                    column1Type: defaultColumns.column1Type,
+                    column2Type: defaultColumns.column2Type,
+                    equipments: exercise.equipments,
+                    bodyParts: exercise.bodyParts,
+                };
+            });
             setWorkoutState(prev => ({
                 ...prev,
                 items: [...prev.items, ...newExercises],
@@ -1058,59 +1100,89 @@ export default function WorkoutDetailScreen() {
             const updatedExercise = { ...currentExercise, ...updates } as BuilderExercise;
             newItems[index] = updatedExercise;
 
-            // If sets are updated, check for superset syncing
-            if (updates.sets && updates.sets.length !== currentExercise.sets.length) {
+            // Find start and end of superset chain for syncing
+            let start = index;
+            while (start > 0) {
+                const prevItem = newItems[start - 1];
+                if (isBuilderSection(prevItem)) break;
+                if (!(prevItem as BuilderExercise).isSupersetNext) break;
+                start--;
+            }
+
+            let end = index;
+            while (end < newItems.length - 1) {
+                const curr = newItems[end];
+                if (isBuilderSection(curr)) break;
+                if (!(curr as BuilderExercise).isSupersetNext) break;
+
+                const next = newItems[end + 1];
+                if (isBuilderSection(next)) break;
+
+                end++;
+            }
+
+            // Only sync if we're actually in a superset (more than one exercise in chain)
+            const isInSuperset = end > start;
+
+            // If sets are updated, sync set count
+            if (updates.sets && updates.sets.length !== currentExercise.sets.length && isInSuperset) {
                 const targetSetCount = updates.sets.length;
                 const sourceSets = updates.sets;
 
-                // Find start of chain
-                let start = index;
-                while (start > 0) {
-                    const prevItem = newItems[start - 1];
-                    if (isBuilderSection(prevItem)) break;
-                    if (!(prevItem as BuilderExercise).isSupersetNext) break;
-                    start--;
-                }
+                // Apply set count to all in chain (except index which is already updated)
+                for (let i = start; i <= end; i++) {
+                    if (i === index) continue;
 
-                // Find end of chain
-                let end = index;
-                while (end < newItems.length - 1) {
-                    const curr = newItems[end];
-                    if (isBuilderSection(curr)) break;
-                    if (!(curr as BuilderExercise).isSupersetNext) break;
+                    const ex = newItems[i] as BuilderExercise;
+                    let newSets = [...ex.sets];
 
-                    const next = newItems[end + 1];
-                    if (isBuilderSection(next)) break;
-
-                    end++;
-                }
-
-                // Only sync if we're actually in a superset (more than one exercise in chain)
-                if (end > start) {
-                    // Apply set count to all in chain (except index which is already updated)
-                    for (let i = start; i <= end; i++) {
-                        if (i === index) continue;
-
-                        const ex = newItems[i] as BuilderExercise;
-                        let newSets = [...ex.sets];
-
-                        if (newSets.length > targetSetCount) {
-                            newSets = newSets.slice(0, targetSetCount);
-                        } else {
-                            // Add sets - copy type and column1 from source exercise's corresponding set
-                            while (newSets.length < targetSetCount) {
-                                const sourceSet = sourceSets[newSets.length];
-                                newSets.push({
-                                    id: Math.random().toString(),
-                                    setNumber: newSets.length + 1,
-                                    column1: sourceSet?.column1 || '',
-                                    column2: '',
-                                    type: sourceSet?.type || 'R' as const,
-                                });
-                            }
+                    if (newSets.length > targetSetCount) {
+                        newSets = newSets.slice(0, targetSetCount);
+                    } else {
+                        // Add sets - copy type and column1 from source exercise's corresponding set
+                        while (newSets.length < targetSetCount) {
+                            const sourceSet = sourceSets[newSets.length];
+                            newSets.push({
+                                id: Math.random().toString(),
+                                setNumber: newSets.length + 1,
+                                column1: sourceSet?.column1 || '',
+                                column2: '',
+                                type: sourceSet?.type || 'R' as const,
+                            });
                         }
-                        newItems[i] = { ...ex, sets: newSets } as BuilderExercise;
                     }
+                    newItems[i] = { ...ex, sets: newSets } as BuilderExercise;
+                }
+            }
+
+            // If setRestSec changed, sync rest to all exercises in superset
+            if (updates.setRestSec !== undefined && updates.setRestSec !== currentExercise.setRestSec && isInSuperset) {
+                for (let i = start; i <= end; i++) {
+                    if (i === index) continue;
+                    const ex = newItems[i] as BuilderExercise;
+                    newItems[i] = { ...ex, setRestSec: updates.setRestSec } as BuilderExercise;
+                }
+            }
+
+            // If column1Type changed, sync to all exercises in superset (including resetting column1 values)
+            if (updates.column1Type !== undefined && updates.column1Type !== currentExercise.column1Type && isInSuperset) {
+                for (let i = start; i <= end; i++) {
+                    if (i === index) continue;
+                    const ex = newItems[i] as BuilderExercise;
+                    // Reset column1 values in all sets when column type changes
+                    const resetSets = ex.sets.map(s => ({ ...s, column1: '' }));
+                    newItems[i] = { ...ex, column1Type: updates.column1Type, sets: resetSets } as BuilderExercise;
+                }
+            }
+
+            // If column2Type changed, sync to all exercises in superset (including resetting column2 values)
+            if (updates.column2Type !== undefined && updates.column2Type !== currentExercise.column2Type && isInSuperset) {
+                for (let i = start; i <= end; i++) {
+                    if (i === index) continue;
+                    const ex = newItems[i] as BuilderExercise;
+                    // Reset column2 values in all sets when column type changes
+                    const resetSets = ex.sets.map(s => ({ ...s, column2: '' }));
+                    newItems[i] = { ...ex, column2Type: updates.column2Type, sets: resetSets } as BuilderExercise;
                 }
             }
 
@@ -1193,11 +1265,14 @@ export default function WorkoutDetailScreen() {
                             supersetGroupId,
                         };
 
-                        // Update next exercise with same group ID and synced sets
+                        // Update next exercise with same group ID, synced sets, rest, and column types
                         newItems[nextIndex] = {
                             ...nextEx,
                             sets: newSets,
                             supersetGroupId,
+                            setRestSec: ex.setRestSec, // Sync rest from top exercise
+                            column1Type: ex.column1Type, // Sync column1 type from top exercise
+                            column2Type: ex.column2Type, // Sync column2 type from top exercise
                         } as BuilderExercise;
                     }
                 }
@@ -1278,18 +1353,19 @@ export default function WorkoutDetailScreen() {
         saveSectionMutation.mutate(sectionPayload);
     };
 
-    const addOptions: DropdownMenuOption[] = [
-        {
-            label: t('library.workout.addSection'),
-            icon: { sf: 'square.stack.3d.down.right.fill', IconComponent: Layers },
-            onPress: handleAddSection,
-        },
-        {
-            label: t('library.workout.addExercise'),
-            icon: { sf: 'dumbbell.fill', IconComponent: Dumbbell },
-            onPress: handleAddExercise,
-        },
-    ];
+    const handleOpenAddDialog = useCallback(() => {
+        setShowAddDialog(true);
+    }, []);
+
+    const handleAddExerciseFromDialog = useCallback(() => {
+        setShowAddDialog(false);
+        handleAddExercise();
+    }, [handleAddExercise]);
+
+    const handleAddSectionFromDialog = useCallback(() => {
+        setShowAddDialog(false);
+        handleAddSection();
+    }, [handleAddSection]);
 
     const canSave = isDirty;
     const items = workoutState.items;
@@ -1325,12 +1401,13 @@ export default function WorkoutDetailScreen() {
                 </View>
 
                 <View style={styles.buttonWrapper}>
-                    <DropdownMenuWrapper options={addOptions}>
-                        <View style={[styles.actionButton, { backgroundColor: themeColors.primary }]}>
-                            <Plus {...({ size: 18, color: themeColors.primaryForeground, style: styles.buttonIcon } as any)} />
-                            <Text style={[styles.actionButtonText, { color: themeColors.primaryForeground }]}>{t('library.workout.add')}</Text>
-                        </View>
-                    </DropdownMenuWrapper>
+                    <PressableScale
+                        style={[styles.actionButton, { backgroundColor: themeColors.primary }]}
+                        onPress={handleOpenAddDialog}
+                    >
+                        <Plus {...({ size: 18, color: themeColors.primaryForeground, style: styles.buttonIcon } as any)} />
+                        <Text style={[styles.actionButtonText, { color: themeColors.primaryForeground }]}>{t('library.workout.add')}</Text>
+                    </PressableScale>
                 </View>
             </View>
         </View>
@@ -1578,6 +1655,17 @@ export default function WorkoutDetailScreen() {
                 buttons={[
                     { label: t('common.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
                     { label: t('common.discard'), onPress: handleDiscard, variant: 'destructive' }
+                ]}
+            />
+
+            <Dialog
+                visible={showAddDialog}
+                onClose={() => setShowAddDialog(false)}
+                title={t('library.workout.add')}
+                buttonLayout="vertical"
+                buttons={[
+                    { label: t('library.workout.addExercise'), onPress: handleAddExerciseFromDialog, variant: 'primary' },
+                    { label: t('library.workout.addSection'), onPress: handleAddSectionFromDialog, variant: 'secondary' }
                 ]}
             />
         </View>

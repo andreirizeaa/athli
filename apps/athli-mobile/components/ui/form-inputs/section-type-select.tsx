@@ -163,8 +163,35 @@ export const SectionTypeSelect = ({
         </>
       )}
 
-      {/* Tabata/HIIT fields: Work, Rest, Rounds */}
-      {(sectionType === 'tabata' || sectionType === 'hiit') && onWorkSecChange && onRestSecChange && onRoundsChange && (
+      {/* Tabata - Static text display (fixed 20s work, 10s rest, 8 rounds) */}
+      {sectionType === 'tabata' && (
+        <>
+          <View style={[styles.configDivider, { backgroundColor: themeColors.border }]} />
+          <View style={styles.fieldRow}>
+            <Text style={[styles.fieldLabel, { color: themeColors.mutedText }]}>
+              {t('library.section.workSec')}
+            </Text>
+            <Text style={[styles.dropdownValue, { color: themeColors.mutedText }]}>20s</Text>
+          </View>
+          <View style={[styles.configDivider, { backgroundColor: themeColors.border }]} />
+          <View style={styles.fieldRow}>
+            <Text style={[styles.fieldLabel, { color: themeColors.mutedText }]}>
+              {t('library.section.restSec')}
+            </Text>
+            <Text style={[styles.dropdownValue, { color: themeColors.mutedText }]}>10s</Text>
+          </View>
+          <View style={[styles.configDivider, { backgroundColor: themeColors.border }]} />
+          <View style={styles.fieldRow}>
+            <Text style={[styles.fieldLabel, { color: themeColors.mutedText }]}>
+              {t('library.section.rounds')}
+            </Text>
+            <Text style={[styles.dropdownValue, { color: themeColors.mutedText }]}>8</Text>
+          </View>
+        </>
+      )}
+
+      {/* HIIT - Editable inputs */}
+      {sectionType === 'hiit' && onWorkSecChange && onRestSecChange && onRoundsChange && (
         <>
           <View style={[styles.configDivider, { backgroundColor: themeColors.border }]} />
           <View

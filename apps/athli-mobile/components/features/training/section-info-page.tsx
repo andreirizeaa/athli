@@ -28,8 +28,8 @@ type SectionConfig = {
 
 const SECTION_CONFIG: Record<SectionType, SectionConfig> = {
   regular: { sfIcon: 'dumbbell', IconComponent: Dumbbell, color: '#3B82F6' },
-  amrap: { sfIcon: 'flame', IconComponent: Flame, color: '#F59E0B' },
-  tabata: { sfIcon: 'timer', IconComponent: Timer, color: '#EF4444' },
+  amrap: { sfIcon: 'flame', IconComponent: Flame, color: '#06B6D4' }, // Cyan (distinct from timer amber)
+  tabata: { sfIcon: 'timer', IconComponent: Timer, color: '#F43F5E' }, // Rose/pink-red (distinct from timer red)
   hiit: { sfIcon: 'bolt', IconComponent: Zap, color: '#8B5CF6' },
   emom: { sfIcon: 'clock', IconComponent: Timer, color: '#10B981' },
   circuits: { sfIcon: 'repeat', IconComponent: Repeat, color: '#EC4899' },

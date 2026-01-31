@@ -138,6 +138,14 @@ export default function SectionBuilderScreen() {
     const [errorMessage, setErrorMessage] = useState('');
     const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
+    // Set initial state for new sections (not from API) on mount
+    useEffect(() => {
+        if (!params.sectionId && !initialStateRef.current) {
+            initialStateRef.current = JSON.parse(JSON.stringify(state));
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run once on mount
+
     // Load section data from API when editing
     useEffect(() => {
         const loadSectionData = async () => {
@@ -379,9 +387,6 @@ export default function SectionBuilderScreen() {
                 } finally {
                     setIsLoadingData(false);
                 }
-            } else if (!initialStateRef.current) {
-                // For new sections (not loaded from API), set initial state ref from params
-                initialStateRef.current = JSON.parse(JSON.stringify(state));
             }
         };
 
@@ -434,6 +439,8 @@ export default function SectionBuilderScreen() {
 
     const handleDiscard = useCallback(() => {
         setShowDiscardDialog(false);
+        // Set isDirty to false so the beforeRemove listener allows navigation
+        setIsDirty(false);
         router.back();
     }, [router]);
 
@@ -448,6 +455,24 @@ export default function SectionBuilderScreen() {
             gestureEnabled: !isDirty,
         });
     }, [navigation, isDirty]);
+
+    // Intercept hardware back button and other navigation events when dirty
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+            if (!isDirty) {
+                // If not dirty, allow navigation
+                return;
+            }
+
+            // Prevent default behavior of leaving the screen
+            e.preventDefault();
+
+            // Show discard dialog
+            showDiscardAlert();
+        });
+
+        return unsubscribe;
+    }, [navigation, isDirty, showDiscardAlert]);
 
     const handleSave = useCallback(() => {
         if (!state.name.trim()) {
@@ -660,8 +685,12 @@ export default function SectionBuilderScreen() {
 
             const items: BuilderExercise[] = newExercises.map((exercise, idx) => {
                 const defaultColumns = getDefaultColumns(exercise.exerciseType, exercise.category);
+
                 // Override column2 to Optional for interval-based sections
                 const column2Type = isIntervalSection ? 'Optional' : defaultColumns.column2Type;
+                // Use default values from category (e.g., Cardio: 30 minutes, Barbell: 10 reps)
+                const col1Value = defaultColumns.column1Value || '';
+                const col2Value = isIntervalSection ? '' : (defaultColumns.column2Value || '');
 
                 return {
                     id: `${exercise.exerciseId}-${Date.now()}-${idx}`,
@@ -670,8 +699,8 @@ export default function SectionBuilderScreen() {
                     imageUrl: exercise.imageUrl,
                     exerciseType: exercise.exerciseType,
                     sets: [
-                        { id: Math.random().toString(), setNumber: 1, column1: '', column2: '', type: 'R' as const },
-                        { id: Math.random().toString(), setNumber: 2, column1: '', column2: '', type: 'R' as const },
+                        { id: Math.random().toString(), setNumber: 1, column1: col1Value, column2: col2Value, type: 'R' as const },
+                        { id: Math.random().toString(), setNumber: 2, column1: col1Value, column2: col2Value, type: 'R' as const },
                     ],
                     alternatives: [],
                     tempo: '',
@@ -702,50 +731,79 @@ export default function SectionBuilderScreen() {
             const updatedExercise = { ...currentExercise, ...updates };
             newExercises[index] = updatedExercise;
 
+            // Find start and end of superset chain for syncing
+            let start = index;
+            while (start > 0 && newExercises[start - 1].isSupersetNext) {
+                start--;
+            }
+
+            let end = index;
+            while (end < newExercises.length - 1 && newExercises[end].isSupersetNext) {
+                end++;
+            }
+
+            // Only sync if we're actually in a superset (more than one exercise in chain)
+            const isInSuperset = end > start;
+
             // If sets are updated, check for superset syncing
-            if (updates.sets && updates.sets.length !== currentExercise.sets.length) {
+            if (updates.sets && updates.sets.length !== currentExercise.sets.length && isInSuperset) {
                 const targetSetCount = updates.sets.length;
                 const sourceSets = updates.sets;
 
-                // Find start of superset chain
-                let start = index;
-                while (start > 0 && newExercises[start - 1].isSupersetNext) {
-                    start--;
-                }
+                // Apply set count to all exercises in chain (except the one that triggered the change)
+                for (let i = start; i <= end; i++) {
+                    if (i === index) continue;
 
-                // Find end of superset chain
-                let end = index;
-                while (end < newExercises.length - 1 && newExercises[end].isSupersetNext) {
-                    end++;
-                }
+                    const ex = newExercises[i];
+                    let newSets = [...ex.sets];
 
-                // Only sync if we're actually in a superset (more than one exercise in chain)
-                if (end > start) {
-                    // Apply set count to all exercises in chain (except the one that triggered the change)
-                    for (let i = start; i <= end; i++) {
-                        if (i === index) continue;
-
-                        const ex = newExercises[i];
-                        let newSets = [...ex.sets];
-
-                        if (newSets.length > targetSetCount) {
-                            // Remove sets from the end
-                            newSets = newSets.slice(0, targetSetCount);
-                        } else {
-                            // Add sets - copy type and column1 from source exercise's corresponding set
-                            while (newSets.length < targetSetCount) {
-                                const sourceSet = sourceSets[newSets.length];
-                                newSets.push({
-                                    id: Math.random().toString(),
-                                    setNumber: newSets.length + 1,
-                                    column1: sourceSet?.column1 || '',
-                                    column2: '',
-                                    type: sourceSet?.type || 'R' as const,
-                                });
-                            }
+                    if (newSets.length > targetSetCount) {
+                        // Remove sets from the end
+                        newSets = newSets.slice(0, targetSetCount);
+                    } else {
+                        // Add sets - copy type and column1 from source exercise's corresponding set
+                        while (newSets.length < targetSetCount) {
+                            const sourceSet = sourceSets[newSets.length];
+                            newSets.push({
+                                id: Math.random().toString(),
+                                setNumber: newSets.length + 1,
+                                column1: sourceSet?.column1 || '',
+                                column2: '',
+                                type: sourceSet?.type || 'R' as const,
+                            });
                         }
-                        newExercises[i] = { ...ex, sets: newSets };
                     }
+                    newExercises[i] = { ...ex, sets: newSets };
+                }
+            }
+
+            // If setRestSec changed and exercise is in a superset, sync rest to all exercises
+            if (updates.setRestSec !== undefined && updates.setRestSec !== currentExercise.setRestSec && isInSuperset) {
+                for (let i = start; i <= end; i++) {
+                    if (i === index) continue;
+                    newExercises[i] = { ...newExercises[i], setRestSec: updates.setRestSec };
+                }
+            }
+
+            // If column1Type changed, sync to all exercises in superset (including resetting column1 values)
+            if (updates.column1Type !== undefined && updates.column1Type !== currentExercise.column1Type && isInSuperset) {
+                for (let i = start; i <= end; i++) {
+                    if (i === index) continue;
+                    const ex = newExercises[i];
+                    // Reset column1 values in all sets when column type changes
+                    const resetSets = ex.sets.map(s => ({ ...s, column1: '' }));
+                    newExercises[i] = { ...ex, column1Type: updates.column1Type, sets: resetSets };
+                }
+            }
+
+            // If column2Type changed, sync to all exercises in superset (including resetting column2 values)
+            if (updates.column2Type !== undefined && updates.column2Type !== currentExercise.column2Type && isInSuperset) {
+                for (let i = start; i <= end; i++) {
+                    if (i === index) continue;
+                    const ex = newExercises[i];
+                    // Reset column2 values in all sets when column type changes
+                    const resetSets = ex.sets.map(s => ({ ...s, column2: '' }));
+                    newExercises[i] = { ...ex, column2Type: updates.column2Type, sets: resetSets };
                 }
             }
 
@@ -834,11 +892,14 @@ export default function SectionBuilderScreen() {
                         supersetGroupId,
                     };
 
-                    // Update next exercise with the same supersetGroupId and synced sets
+                    // Update next exercise with the same supersetGroupId, synced sets, rest, and column types
                     newExercises[nextIndex] = {
                         ...nextEx,
                         sets: newSets,
                         supersetGroupId,
+                        setRestSec: ex.setRestSec, // Sync rest from top exercise
+                        column1Type: ex.column1Type, // Sync column1 type from top exercise
+                        column2Type: ex.column2Type, // Sync column2 type from top exercise
                     };
                 }
             } else {
@@ -1091,7 +1152,7 @@ export default function SectionBuilderScreen() {
                                 onSwap={() => handleSwapExercise(index)}
                             />
 
-                            {!isLast && canSupersetNext && (
+                            {!isLast && canSupersetNext && state.sectionType === 'regular' && (
                                 <View style={[
                                     styles.supersetConnector,
                                     { borderColor: themeColors.border },
@@ -1125,6 +1186,10 @@ export default function SectionBuilderScreen() {
                                         {!isLinkedToNext && <View style={[styles.connectorLine, { backgroundColor: themeColors.border }]} />}
                                     </View>
                                 </View>
+                            )}
+
+                            {!isLast && canSupersetNext && state.sectionType !== 'regular' && (
+                                <View style={{ height: 8 }} />
                             )}
 
                             {!isLast && !canSupersetNext && (
