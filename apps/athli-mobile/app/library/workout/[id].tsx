@@ -575,18 +575,58 @@ export default function WorkoutDetailScreen() {
                                     });
                                 }
 
+                                // Map config values based on section type
+                                let sectionDuration: string | undefined;
+                                let sectionRounds: string | undefined;
+                                let sectionWorkSec: string | undefined;
+                                let sectionRestSec: string | undefined;
+                                let sectionIntervalSec: string | undefined;
+                                let sectionDurationMin: string | undefined;
+
+                                // AMRAP sections have durationSec (in seconds, convert to minutes for UI)
+                                if (data.durationSec !== undefined && data.type === 'amrap') {
+                                    sectionDuration = String(Math.round(data.durationSec / 60));
+                                }
+
+                                // Timed sections use targetRounds
+                                if (data.targetRounds !== undefined) {
+                                    sectionRounds = String(data.targetRounds);
+                                }
+
+                                // Circuits/Tabata/HIIT use rounds directly
+                                if (data.rounds !== undefined && (data.type === 'circuits' || data.type === 'tabata' || data.type === 'hiit')) {
+                                    sectionRounds = String(data.rounds);
+                                }
+
+                                // Tabata/HIIT fields
+                                if (data.workSec !== undefined) {
+                                    sectionWorkSec = String(data.workSec);
+                                }
+                                if (data.restSec !== undefined && (data.type === 'tabata' || data.type === 'hiit')) {
+                                    sectionRestSec = String(data.restSec);
+                                }
+
+                                // EMOM fields
+                                if (data.intervalSec !== undefined) {
+                                    sectionIntervalSec = String(data.intervalSec);
+                                }
+                                if (data.durationMin !== undefined) {
+                                    sectionDurationMin = String(data.durationMin);
+                                }
+
                                 return {
                                     id: data.id || `section-${Date.now()}`,
                                     type: 'section' as const,
                                     name: data.name || '',
                                     sectionType: data.type || 'regular',
-                                    // Convert durationSec (seconds) to minutes for AMRAP sections
-                                    duration: data.durationSec !== undefined && data.type === 'amrap' 
-                                        ? String(Math.round(data.durationSec / 60)) 
-                                        : undefined,
-                                    rounds: data.targetRounds ? data.targetRounds.toString() : undefined,
+                                    duration: sectionDuration,
+                                    rounds: sectionRounds,
                                     notes: data.notes || '',
                                     exercises: sectionExercises,
+                                    workSec: sectionWorkSec,
+                                    restSec: sectionRestSec,
+                                    intervalSec: sectionIntervalSec,
+                                    durationMin: sectionDurationMin,
                                 } as BuilderSection;
                             }
                             return null;
@@ -1097,6 +1137,12 @@ export default function WorkoutDetailScreen() {
                 notes: section.notes || '',
                 editingId: section.id,
                 exercises: JSON.stringify(section.exercises),
+                // Tabata/HIIT fields
+                workSec: section.workSec || '',
+                restSec: section.restSec || '',
+                // EMOM fields
+                intervalSec: section.intervalSec || '',
+                durationMin: section.durationMin || '',
             }
         });
     };
