@@ -31,7 +31,7 @@ export interface StreamEvent {
 }
 
 export interface ActionPayload {
-  type: 'create_workout' | 'create_section' | 'create_program';
+  type: 'create_workout' | 'create_section' | 'create_program' | 'assign_workout';
   payload: any;
 }
 

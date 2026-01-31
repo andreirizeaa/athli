@@ -88,12 +88,23 @@ export function createExpressApp() {
   app.use(cors(corsOptions));
 
   // Performance with security limits
-  app.use(compression());
+  // Skip compression for SSE/streaming responses
+  app.use(compression({
+    filter: (req, res) => {
+      // Don't compress SSE streams
+      if (req.path.includes('/ai/chat')) {
+        return false;
+      }
+      // Use default compression filter for other requests
+      return compression.filter(req, res);
+    }
+  }));
 
   // Request timeout middleware - prevents slow loris attacks
   app.use((req, res, next) => {
-    // Set timeout for all requests (30 seconds)
-    req.setTimeout(30000, () => {
+    // Longer timeout for AI endpoints (5 minutes)
+    const timeout = req.path.includes('/ai/') ? 300000 : 30000;
+    req.setTimeout(timeout, () => {
       if (!res.headersSent) {
         res.status(408).json({
           error: {

@@ -27,7 +27,7 @@ export type StreamCallback = (event: StreamEvent) => void;
 
 // Agent configuration
 const MAX_ITERATIONS = 10;
-const REQUEST_TIMEOUT_MS = 60000;
+const REQUEST_TIMEOUT_MS = 300000; // 5 minutes
 
 /**
  * Create the LLM instance configured for OpenRouter
@@ -42,7 +42,7 @@ const createLLM = () => {
   process.env.OPENAI_API_KEY = apiKey;
 
   return new ChatOpenAI({
-    modelName: 'openai/gpt-4o',
+    modelName: 'openai/gpt-5',
     openAIApiKey: apiKey,
     configuration: {
       baseURL: 'https://openrouter.ai/api/v1',
@@ -102,9 +102,10 @@ export const runAgent = async (
   const tools = createAllTools(toolContext);
   const llmWithTools = llm.bindTools(tools);
 
-  // Build messages
+  // Build messages with pre-loaded context
   const systemPrompt = buildSystemPromptWithContext({
     coachId: toolContext.coachId,
+    startupContext: toolContext.startupContext,
   });
 
   const messages: BaseMessage[] = [

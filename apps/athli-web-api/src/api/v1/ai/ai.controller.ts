@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import { runAgent, ConversationMessage, ChatContext, StreamEvent } from '../../../services/ai/langgraph-agent';
 import { ToolContext } from './tools';
 import { unauthorized, badRequest } from '../../../utils/http-response';
+import { fetchStartupContext, formatStartupContext } from '../../../services/ai/startup-context';
 
 /**
  * Chat endpoint with Server-Sent Events streaming
@@ -33,11 +34,15 @@ export const aiController = {
     res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
     res.flushHeaders();
 
-    // Helper to send SSE events
+    // Helper to send SSE events with immediate flush
     const sendEvent = (event: StreamEvent) => {
       const eventType = event.type;
       const data = event.data ? JSON.stringify(event.data) : '{}';
       res.write(`event: ${eventType}\ndata: ${data}\n\n`);
+      // Flush to ensure immediate delivery
+      if (typeof (res as any).flush === 'function') {
+        (res as any).flush();
+      }
     };
 
     // Parse conversation history
@@ -55,9 +60,21 @@ export const aiController = {
       currentPage: context?.currentPage,
     };
 
-    // Tool context includes coach ID
+    // Fetch startup context (clients, workouts) to inject into prompt
+    // This eliminates tool calls for basic data lookup
+    let startupContextStr: string | undefined;
+    try {
+      const startupContext = await fetchStartupContext(userId);
+      startupContextStr = formatStartupContext(startupContext);
+    } catch (err) {
+      console.error('Failed to fetch startup context:', err);
+      // Continue without startup context - AI will use tools instead
+    }
+
+    // Tool context includes coach ID and pre-loaded data
     const toolContext: ToolContext = {
       coachId: userId,
+      startupContext: startupContextStr,
     };
 
     try {
