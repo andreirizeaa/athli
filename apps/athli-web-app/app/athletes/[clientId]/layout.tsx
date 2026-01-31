@@ -64,6 +64,13 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
     };
   }, []);
 
+  // Redirect to /athletes if client not found (404)
+  useEffect(() => {
+    if (!isLoading && (error || !athlete)) {
+      router.replace('/athletes');
+    }
+  }, [isLoading, error, athlete, router]);
+
   const tabs = [
     {
       value: 'overview',

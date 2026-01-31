@@ -12,6 +12,7 @@ import { settingsRouter } from '../settings/settings.routes';
 import searchRouter from '../search';
 import { featureRequestsRouter } from '../feature-requests/feature-requests.routes';
 import { aiRouter } from '../ai/ai.routes';
+import { seedDataRouter } from '../seed-data/seed-data.routes';
 
 export const v1Router = Router();
 
@@ -30,3 +31,4 @@ v1Router.use('/settings', settingsRouter);
 v1Router.use('/search', searchRouter);
 v1Router.use('/feature-requests', featureRequestsRouter);
 v1Router.use('/ai', aiRouter);
+v1Router.use('/seed-data', seedDataRouter);
