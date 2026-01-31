@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Gift, Headset, Lightbulb, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Code2, Gift, Headset, Lightbulb, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAIPanel } from '@/lib/providers/ai-panel-provider';
 import Lottie from 'lottie-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSidebar } from '@/components/ui/sidebar';
 import { SearchComponent } from './search';
+import { DevStudioPanel } from './dev-studio-panel';
 import { UserMenu } from './user-menu';
 
 type AppHeaderProps = {
@@ -29,6 +30,9 @@ export function AppHeader({
   const { state, isHovered, setOpen, setIsHovered, setJustClosed } = useSidebar();
   const { toggle: toggleAIPanel } = useAIPanel();
   const [aiAnimationData, setAiAnimationData] = useState<object | null>(null);
+  const [isDevStudioOpen, setIsDevStudioOpen] = useState(false);
+
+  const isDevelopment = process.env.NODE_ENV === 'development';
 
   const isAssistantPage = pathname?.startsWith('/assistant');
 
@@ -69,6 +73,7 @@ export function AppHeader({
   };
 
   return (
+    <>
     <div className="flex flex-col gap-2 p-2 border-b flex-shrink-0 bg-background sticky top-0 z-10">
       <div className="flex items-center justify-between gap-2 px-2 py-0.5">
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -105,6 +110,17 @@ export function AppHeader({
           <SearchComponent />
         </div>
         <div className="flex items-center gap-2">
+          {isDevelopment && (
+            <Button
+              variant="outline"
+              className="gap-2 border-rose-500 bg-rose-500 text-white hover:bg-rose-600 hover:border-rose-600 dark:border-rose-500 dark:bg-rose-500 dark:text-white dark:hover:bg-rose-600"
+              aria-label="Dev Studio"
+              onClick={() => setIsDevStudioOpen(true)}
+            >
+              <Code2 className="size-4" />
+              DEV STUDIO
+            </Button>
+          )}
           <Button
             variant="outline"
             asChild
@@ -164,6 +180,14 @@ export function AppHeader({
         </div>
       </div>
     </div>
+
+    {isDevelopment && (
+      <DevStudioPanel
+        open={isDevStudioOpen}
+        onOpenChange={setIsDevStudioOpen}
+      />
+    )}
+    </>
   );
 }
 
