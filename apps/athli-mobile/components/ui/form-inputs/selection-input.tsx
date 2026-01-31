@@ -28,7 +28,7 @@ export const SelectionInput = ({
     placeholder = 'Select...',
     required,
     disabled = false,
-    clearable = false,
+    clearable = true,
 }: SelectionInputProps) => {
     const { colors: themeColors } = useThemePreference();
     const showClearButton = clearable && value !== null && onClear;
