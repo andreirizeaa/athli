@@ -18,9 +18,9 @@ import {
   ChevronDown,
   ChevronLeft,
   Trash2,
-  CircleX,
-  CircleDashed,
-  CircleCheck,
+  X,
+  Ellipsis,
+  Check,
   Dumbbell,
 } from 'lucide-react-native';
 import { haptics } from '@/utils/haptics';
@@ -310,6 +310,13 @@ const pageStyles = StyleSheet.create({
   statusIconContainer: {
     width: 32,
     height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusIconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -835,20 +842,29 @@ export default function ClientTrainingScreen() {
     }
   }, [workoutToDelete, deleteMutation]);
 
-  // Render status icon based on workout status
+  // Render status icon based on workout status (styled like IconButton md with border)
   const renderStatusIcon = useCallback((status: string | undefined, isPast: boolean) => {
-    switch (status) {
-      case 'completed':
-        return <CircleCheck {...({ size: 20, color: '#22C55E' } as any)} />;
-      case 'in_progress':
-        return <CircleDashed {...({ size: 20, color: '#F59E0B' } as any)} />;
-      default: {
-        // Use red for not_started on past dates, muted otherwise
-        const notStartedColor = isPast ? '#E85C4A' : themeColors.mutedText;
-        return <CircleX {...({ size: 20, color: notStartedColor } as any)} />;
+    const iconSize = 18;
+    const getIconAndColor = () => {
+      switch (status) {
+        case 'completed':
+          return { icon: <Check {...({ size: iconSize, strokeWidth: 2, color: '#22C55E' } as any)} />, borderColor: '#22C55E' };
+        case 'in_progress':
+          return { icon: <Ellipsis {...({ size: iconSize, strokeWidth: 2, color: '#F59E0B' } as any)} />, borderColor: '#F59E0B' };
+        default: {
+          // Use red for not_started on past dates, muted otherwise
+          const notStartedColor = isPast ? '#E85C4A' : themeColors.mutedText;
+          return { icon: <X {...({ size: iconSize, strokeWidth: 2, color: notStartedColor } as any)} />, borderColor: notStartedColor };
+        }
       }
-    }
-  }, [themeColors.mutedText]);
+    };
+    const { icon, borderColor } = getIconAndColor();
+    return (
+      <View style={[pageStyles.statusIconButton, { backgroundColor: themeColors.surfacePrimary, borderColor, borderWidth: 1.5 }]}>
+        {icon}
+      </View>
+    );
+  }, [themeColors.surfacePrimary, themeColors.mutedText]);
 
   // Pre-calculate today's timestamp
   const todayTimestamp = useMemo(() => {
@@ -869,6 +885,10 @@ export default function ClientTrainingScreen() {
           size="md"
           color={iconColor}
         />
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+          {t('training.title')}
+        </Text>
+        <View style={styles.headerSpacer} />
         <PressableScale style={styles.dateButton} onPress={handleOpenDatePicker}>
           <Text style={[styles.dateButtonText, { color: themeColors.text }]}>{displayText}</Text>
           <PlatformIcon
@@ -878,7 +898,6 @@ export default function ClientTrainingScreen() {
             color={themeColors.text}
           />
         </PressableScale>
-        <View style={styles.headerSpacer} />
       </View>
 
       {/* Content - rendered after navigation completes */}
@@ -1016,6 +1035,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerSpacer: {
-    width: 44,
+    flex: 1,
+  },
+  headerTitle: {
+    ...typography.h5,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });
