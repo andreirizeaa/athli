@@ -1042,18 +1042,11 @@ export default function SectionBuilderScreen() {
 
                 <View style={[styles.fullWidthDivider, { backgroundColor: themeColors.border }]} />
 
-                {isLoadingData ? (
-                    <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color={themeColors.primary} />
-                        <Text style={[styles.loadingText, { color: themeColors.mutedText }]}>
-                            {t('library.section.loading')}
-                        </Text>
-                    </View>
-                ) : state.exercises.length === 0 ? (
+                {!isLoadingData && state.exercises.length === 0 && (
                     <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
                         {t('library.section.addExercisesHint')}
                     </Text>
-                ) : null}
+                )}
 
                 {!isLoadingData && state.exercises.map((ex, index) => {
                     const isLinkedToPrev = index > 0 && state.exercises[index - 1].isSupersetNext;
@@ -1197,6 +1190,15 @@ export default function SectionBuilderScreen() {
                     { label: t('common.discard'), onPress: handleDiscard, variant: 'destructive' }
                 ]}
             />
+
+            {isLoadingData && (
+                <View style={[styles.loadingOverlay, { backgroundColor: themeColors.backgroundPrimary }]}>
+                    <ActivityIndicator size="large" color={themeColors.primary} />
+                    <Text style={[styles.loadingText, { color: themeColors.mutedText }]}>
+                        {t('library.section.loading')}
+                    </Text>
+                </View>
+            )}
         </View>
     );
 }
@@ -1262,11 +1264,11 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 32,
     },
-    loadingContainer: {
-        flex: 1,
+    loadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingVertical: 60,
+        zIndex: 100,
         gap: 12,
     },
     loadingText: {
