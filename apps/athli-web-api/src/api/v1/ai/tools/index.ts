@@ -13,6 +13,7 @@ import { getSupabaseClient } from '../../../../services/supabase.service';
 
 export interface ToolContext {
   coachId: string;
+  startupContext?: string;
 }
 
 // ============================================================================
@@ -263,6 +264,44 @@ export const createGetClientCheckinsTool = (ctx: ToolContext) =>
     }
   );
 
+export const createListAllClientsTool = (ctx: ToolContext) =>
+  tool(
+    async () => {
+      const supabase = getSupabaseClient();
+
+      const { data: clients, error } = await supabase
+        .from('coach_clients_view')
+        .select('client_id, full_name, email, category, status, created_at')
+        .eq('coach_id', ctx.coachId)
+        .eq('is_active', true)
+        .eq('is_archived', false)
+        .order('full_name', { ascending: true });
+
+      if (error) {
+        return JSON.stringify({ error: error.message });
+      }
+
+      return JSON.stringify({
+        count: clients?.length || 0,
+        clients:
+          clients?.map((c) => ({
+            id: c.client_id,
+            name: c.full_name,
+            email: c.email,
+            category: c.category,
+            status: c.status,
+            joinedAt: c.created_at,
+          })) || [],
+      });
+    },
+    {
+      name: 'list_all_clients',
+      description:
+        "List all of the coach's active clients. Use this to see all clients or when the user asks 'who are my clients' or 'show me all clients'.",
+      schema: z.object({}),
+    }
+  );
+
 export const createGetInactiveClientsTool = (ctx: ToolContext) =>
   tool(
     async ({ days = 7 }) => {
@@ -505,6 +544,82 @@ export const createGetCoachSectionsTool = (ctx: ToolContext) =>
   );
 
 // ============================================================================
+// CHECKIN & METRICS TOOLS
+// ============================================================================
+
+export const createListAllCheckinTemplatesTool = (ctx: ToolContext) =>
+  tool(
+    async () => {
+      const supabase = getSupabaseClient();
+
+      const { data: checkins, error } = await supabase
+        .from('coach_checkins')
+        .select('id, name, description, questions, is_active, created_at')
+        .eq('coach_id', ctx.coachId)
+        .order('name', { ascending: true });
+
+      if (error) {
+        return JSON.stringify({ error: error.message });
+      }
+
+      return JSON.stringify({
+        count: checkins?.length || 0,
+        checkinTemplates:
+          checkins?.map((c) => ({
+            id: c.id,
+            name: c.name,
+            description: c.description,
+            questionCount: Array.isArray(c.questions) ? c.questions.length : 0,
+            isActive: c.is_active,
+            createdAt: c.created_at,
+          })) || [],
+      });
+    },
+    {
+      name: 'list_all_checkin_templates',
+      description:
+        "List all of the coach's check-in form templates. Use this to see what check-in forms are available.",
+      schema: z.object({}),
+    }
+  );
+
+export const createListAllMetricsTool = (ctx: ToolContext) =>
+  tool(
+    async () => {
+      const supabase = getSupabaseClient();
+
+      const { data: metrics, error } = await supabase
+        .from('coach_metrics')
+        .select('id, name, metric_type, unit, is_active, created_at')
+        .eq('coach_id', ctx.coachId)
+        .order('name', { ascending: true });
+
+      if (error) {
+        return JSON.stringify({ error: error.message });
+      }
+
+      return JSON.stringify({
+        count: metrics?.length || 0,
+        metrics:
+          metrics?.map((m) => ({
+            id: m.id,
+            name: m.name,
+            type: m.metric_type,
+            unit: m.unit,
+            isActive: m.is_active,
+            createdAt: m.created_at,
+          })) || [],
+      });
+    },
+    {
+      name: 'list_all_metrics',
+      description:
+        "List all of the coach's tracked metrics (e.g., weight, body fat, measurements). Use this to see what metrics are being tracked.",
+      schema: z.object({}),
+    }
+  );
+
+// ============================================================================
 // WORKOUT CREATION TOOLS
 // ============================================================================
 
@@ -646,6 +761,68 @@ export const createCreateSectionTool = (ctx: ToolContext) =>
   );
 
 // ============================================================================
+// ASSIGNMENT TOOLS
+// ============================================================================
+
+export const createAssignWorkoutTool = (ctx: ToolContext) =>
+  tool(
+    async (input) => {
+      const { clientId, clientName, workoutId, workoutName, date, time, isRecurring, recurrencePattern, notes } = input;
+
+      // Validate required fields
+      if (!clientId || !workoutId || !date) {
+        return JSON.stringify({
+          success: false,
+          error: 'clientId, workoutId, and date are required to assign a workout',
+        });
+      }
+
+      // Format the assignment for display
+      const formattedDate = new Date(date).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+
+      const scheduleType = isRecurring ? `recurring (${recurrencePattern || 'weekly'})` : 'one-off';
+
+      return JSON.stringify({
+        success: true,
+        action: 'assign_workout',
+        payload: {
+          clientId,
+          clientName: clientName || 'Client',
+          workoutId,
+          workoutName: workoutName || 'Workout',
+          date,
+          time: time || null,
+          isRecurring: isRecurring || false,
+          recurrencePattern: recurrencePattern || null,
+          notes: notes || null,
+        },
+        message: `Ready to assign "${workoutName || 'Workout'}" to ${clientName || 'client'} on ${formattedDate}${time ? ` at ${time}` : ''} (${scheduleType}).${notes ? ` Note: "${notes}"` : ''}`,
+      });
+    },
+    {
+      name: 'assign_workout',
+      description:
+        'Assign a workout to a client for a specific date. Returns a payload that the user must confirm before the assignment is saved. ALWAYS use this tool when user asks to assign, schedule, or give a workout to a client.',
+      schema: z.object({
+        clientId: z.string().describe('The client ID (UUID) to assign the workout to'),
+        clientName: z.string().optional().describe('The client name for display'),
+        workoutId: z.string().describe('The workout ID (UUID) to assign'),
+        workoutName: z.string().optional().describe('The workout name for display'),
+        date: z.string().describe('The date to assign the workout (ISO format, e.g., 2026-02-03)'),
+        time: z.string().optional().describe('Optional time for the workout (e.g., "13:00" or "1:00 PM")'),
+        isRecurring: z.boolean().optional().describe('Whether this is a recurring assignment'),
+        recurrencePattern: z.string().optional().describe('Recurrence pattern if recurring (e.g., "weekly", "every monday")'),
+        notes: z.string().optional().describe('Optional notes for the client about this workout'),
+      }),
+    }
+  );
+
+// ============================================================================
 // ANALYTICS TOOLS
 // ============================================================================
 
@@ -722,6 +899,7 @@ export const createAnalyzeClientProgressTool = (ctx: ToolContext) =>
 
 export const createAllTools = (ctx: ToolContext) => [
   // Client tools
+  createListAllClientsTool(ctx),
   createSearchClientsTool(ctx),
   createGetClientProfileTool(ctx),
   createGetClientWorkoutsTool(ctx),
@@ -737,9 +915,16 @@ export const createAllTools = (ctx: ToolContext) => [
   createGetCoachProgramsTool(ctx),
   createGetCoachSectionsTool(ctx),
 
+  // Checkin & Metrics tools
+  createListAllCheckinTemplatesTool(ctx),
+  createListAllMetricsTool(ctx),
+
   // Creation tools
   createCreateWorkoutTool(ctx),
   createCreateSectionTool(ctx),
+
+  // Assignment tools
+  createAssignWorkoutTool(ctx),
 
   // Analytics tools
   createAnalyzeClientProgressTool(ctx),

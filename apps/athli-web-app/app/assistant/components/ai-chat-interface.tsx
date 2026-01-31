@@ -38,11 +38,13 @@ import { PromptLoader } from "@/components/ui/custom/prompt/loader";
 import { PromptScrollButton } from "@/components/ui/custom/prompt/scroll-button";
 
 import { useAIChat, ChatMessage, ToolCallStatus } from "@/hooks/use-ai-chat";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import { ToolStatus, ToolStatusList } from "./tool-status";
 import { ActionCard } from "./action-card";
 import { useCoachWorkouts } from "@/hooks/use-coach-workouts";
 import { transformWorkoutPayload, transformSectionPayload } from "@/lib/ai-payload-transformer";
 import { ActionType, getActionRedirectUrl } from "@/stores/ai-action-store";
+import { assignWorkout } from "@/api/client/client-training-service";
 
 interface AIChatInterfaceProps {
     chatId?: string;
@@ -76,6 +78,9 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
     // Use workout hook for creating workouts
     const { createWorkout } = useCoachWorkouts();
 
+    // Get user profile for coach ID
+    const { user } = useUserProfile();
+
     // Load animation
     useEffect(() => {
         fetch('/animations/ai-sphere-animation.json')
@@ -88,12 +93,16 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
     const handleSendMessage = useCallback(async () => {
         if (isStreaming || !prompt.trim()) return;
 
-        setHasStartedChat(true);
-        await sendMessage(prompt.trim(), {
-            currentPage: window.location.pathname,
-        });
+        const messageToSend = prompt.trim();
+
+        // Clear input immediately for better UX
         setPrompt("");
         setFiles([]);
+        setHasStartedChat(true);
+
+        await sendMessage(messageToSend, {
+            currentPage: window.location.pathname,
+        });
     }, [prompt, isStreaming, sendMessage]);
 
     // Handle confirming an action
@@ -111,6 +120,19 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                 // TODO: Implement section creation
                 const apiPayload = transformSectionPayload(payload);
                 toast.info('Section creation coming soon');
+            } else if (actionType === 'assign_workout') {
+                // Assign workout to client's calendar
+                await assignWorkout({
+                    workoutId: payload.workoutId,
+                    clientId: payload.clientId,
+                    date: payload.date,
+                    coachId: user?.id,
+                });
+                toast.success(`Workout assigned to ${payload.clientName || 'client'}!`);
+                // Navigate to client's calendar
+                setTimeout(() => {
+                    router.push(`/client/${payload.clientId}/calendar`);
+                }, 500);
             } else {
                 toast.info('This action type is not yet supported');
             }
@@ -119,7 +141,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
             toast.error(error.message || 'Failed to save');
             throw error; // Re-throw to keep the action card in non-confirmed state
         }
-    }, [createWorkout, router]);
+    }, [createWorkout, router, user?.id]);
 
     // Handle file changes
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,7 +219,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
 
                                         {/* Message content */}
                                         {message.content && (
-                                            <div className="bg-muted text-foreground prose rounded-lg border p-4">
+                                            <div className="bg-muted text-foreground prose prose-sm dark:prose-invert prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-ul:text-foreground prose-ol:text-foreground prose-li:text-foreground max-w-none rounded-lg border p-4">
                                                 <Markdown className={"space-y-4"}>{message.content}</Markdown>
                                             </div>
                                         )}

@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 
-export type ActionType = 'create_workout' | 'create_program' | 'create_section';
+export type ActionType = 'create_workout' | 'create_program' | 'create_section' | 'assign_workout';
 
 export interface AIActionPayload {
   type: ActionType;
@@ -48,6 +48,8 @@ export function getActionRedirectUrl(actionType: ActionType): string {
       return '/training/programs';
     case 'create_section':
       return '/training/sections';
+    case 'assign_workout':
+      return '/training/calendar';
     default:
       return '/training/workouts';
   }
@@ -64,6 +66,8 @@ export function getActionDisplayName(actionType: ActionType): string {
       return 'Add Program to Library';
     case 'create_section':
       return 'Add Section to Library';
+    case 'assign_workout':
+      return 'Assign Workout';
     default:
       return 'Confirm';
   }
