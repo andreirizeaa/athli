@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, AppState, AppStateStatus } from 'react-native';
 import { Flame, Coffee } from 'lucide-react-native';
 import LottieView from 'lottie-react-native';
@@ -12,6 +12,7 @@ import Animated, {
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations } from '@/stores';
+import { en } from '@/lib/i18n/en';
 import { Card } from '@/components/ui/card';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { ExerciseSessionCard } from './exercise-session-card';
@@ -64,7 +65,6 @@ export const HiitRoundPage = ({
 }: HiitRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const lottieRef = useRef<LottieView>(null);
 
   // Refs for timer management - using refs to avoid stale closures
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -78,6 +78,15 @@ export const HiitRoundPage = ({
   const currentRoundRef = useRef(currentRound);
   const totalRoundsRef = useRef(totalRounds);
   const tickFunctionRef = useRef<(() => void) | null>(null);
+
+  // Completion celebration overlay state
+  const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
+  const [completionMessage, setCompletionMessage] = useState('');
+  const completionOverlayOpacity = useSharedValue(0);
+  const completionTextScale = useSharedValue(0.5);
+  const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastCompletionMessageRef = useRef(-1);
+  const hasShownCompletionRef = useRef(false);
 
   // Keep refs updated with latest prop values
   useEffect(() => {
@@ -109,7 +118,6 @@ export const HiitRoundPage = ({
   const [timeRemaining, setTimeRemaining] = useState(Math.max(0, workSec || 0));
 
   // Overlay states
-  const [showConfetti, setShowConfetti] = useState(false);
   const [showPhaseOverlay, setShowPhaseOverlay] = useState(false);
   const [overlayText, setOverlayText] = useState('');
   const overlayOpacity = useSharedValue(0);
@@ -168,10 +176,7 @@ export const HiitRoundPage = ({
       const isLastRound = currentRoundRef.current >= totalRoundsRef.current;
       
       if (isLastRound) {
-        // Last round - show confetti and complete overlay
-        setShowConfetti(true);
-        lottieRef.current?.play();
-        
+        // Last round - show complete overlay
         showTransitionOverlay(
           t('training.session.hiit.complete' as any) || 'Complete! 🎉',
           () => {
@@ -302,9 +307,78 @@ export const HiitRoundPage = ({
     }
   }, [isPaused, showPhaseOverlay, overlayOpacity, t, currentRound, totalRounds]);
 
+  // Show completion celebration overlay
+  const showCompletionCelebration = useCallback(() => {
+    // Get messages directly from translations object
+    const messages = en.training.session.exerciseComplete;
+    if (!messages || messages.length === 0) return;
+
+    // Pick a random message (avoid repeating the last one)
+    let messageIndex: number;
+    do {
+      messageIndex = Math.floor(Math.random() * messages.length);
+    } while (messageIndex === lastCompletionMessageRef.current && messages.length > 1);
+    lastCompletionMessageRef.current = messageIndex;
+
+    setCompletionMessage(messages[messageIndex]);
+    setShowCompletionOverlay(true);
+
+    // Animate in
+    completionOverlayOpacity.value = withTiming(1, { duration: 200 });
+    completionTextScale.value = withSequence(
+      withTiming(1.1, { duration: 250 }),
+      withTiming(1, { duration: 150 })
+    );
+
+    // Auto dismiss and navigate after delay
+    completionTimeoutRef.current = setTimeout(() => {
+      completionOverlayOpacity.value = withTiming(0, { duration: 200 });
+      // Call onRoundComplete after fade out completes
+      setTimeout(() => {
+        setShowCompletionOverlay(false);
+        onRoundCompleteRef.current();
+      }, 200);
+    }, 1200);
+  }, [completionOverlayOpacity, completionTextScale]);
+
   // Handle exercise completion toggle
   const handleExerciseComplete = (exerciseIndex: number, setIndex: number, completed: boolean) => {
     onExerciseComplete(exerciseIndex, completed);
+
+    // If unchecking, reset the completion flag
+    if (!completed) {
+      hasShownCompletionRef.current = false;
+      return;
+    }
+
+    // Check if all exercises will be completed (accounting for the one just completed)
+    const willAllBeCompleted = exercises.every((ex, idx) =>
+      idx === exerciseIndex ? true : ex.set.completed
+    );
+
+    if (willAllBeCompleted) {
+      // Check if this is the last round
+      if (currentRound === totalRounds && !hasShownCompletionRef.current) {
+        // Last round - show celebration and complete immediately (ignore timer)
+        hasShownCompletionRef.current = true;
+        // Stop the timer if it's running
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        hasCompletedRef.current = true;
+        showCompletionCelebration();
+      } else if (currentRound < totalRounds) {
+        // Not the last round - just advance to next round without celebration
+        // Stop the timer if it's running
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        hasCompletedRef.current = true;
+        onRoundCompleteRef.current();
+      }
+    }
   };
 
   // Handle exercise value change
@@ -317,15 +391,28 @@ export const HiitRoundPage = ({
     onExerciseValueChange(exerciseIndex, field, value);
   };
 
-  // Handle confetti animation finish
-  const handleConfettiFinish = () => {
-    setShowConfetti(false);
-  };
+  // Animated styles for completion overlay
+  const completionOverlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: completionOverlayOpacity.value,
+  }));
+
+  const completionTextAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: completionTextScale.value }],
+  }));
 
   // Animated style for overlay
   const overlayAnimatedStyle = useAnimatedStyle(() => ({
     opacity: overlayOpacity.value,
   }));
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (completionTimeoutRef.current) {
+        clearTimeout(completionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Get timer color based on ratio of time remaining
   // For rest phase, always return HIIT_COLOR (purple)
@@ -374,16 +461,19 @@ export const HiitRoundPage = ({
 
   return (
     <View style={styles.container}>
-      {/* Confetti animation overlay */}
-      {showConfetti && (
-        <LottieView
-          ref={lottieRef}
-          source={require('@/assets/animations/confetti.json')}
-          autoPlay
-          loop={false}
-          onAnimationFinish={handleConfettiFinish}
-          style={styles.confettiAnimation}
-        />
+      {/* Completion celebration overlay */}
+      {showCompletionOverlay && (
+        <Animated.View style={[styles.completionOverlay, completionOverlayAnimatedStyle]}>
+          <LottieView
+            source={require('@/assets/animations/confetti.json')}
+            autoPlay
+            loop={false}
+            style={styles.confettiAnimation}
+          />
+          <Animated.Text style={[styles.completionText, { color: themeColors.text }, completionTextAnimatedStyle]}>
+            {completionMessage}
+          </Animated.Text>
+        </Animated.View>
       )}
 
       {/* Phase Transition Overlay */}
@@ -461,14 +551,25 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 8,
   },
+  completionOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
   confettiAnimation: {
     position: 'absolute',
     top: -100,
     left: -100,
     right: -100,
     bottom: -100,
-    zIndex: 10,
-    pointerEvents: 'none',
+    zIndex: 0,
+  },
+  completionText: {
+    ...typography.h1,
+    textAlign: 'center',
+    zIndex: 1,
   },
   phaseOverlay: {
     position: 'absolute',

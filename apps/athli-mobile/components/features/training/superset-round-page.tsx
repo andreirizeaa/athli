@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, AppState, AppStateStatus } from 'react-native';
 import { Dumbbell } from 'lucide-react-native';
 import LottieView from 'lottie-react-native';
@@ -12,6 +12,7 @@ import Animated, {
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations } from '@/stores';
+import { en } from '@/lib/i18n/en';
 import { Card } from '@/components/ui/card';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { ExerciseSessionCard } from './exercise-session-card';
@@ -42,7 +43,7 @@ type SupersetRoundPageProps = {
   isPaused: boolean;
 };
 
-const SUPERSET_COLOR = '#8B5CF6'; // Purple for superset
+const SUPERSET_COLOR = '#F97316'; // Orange for superset
 
 type TimerPhase = 'rest' | 'complete';
 
@@ -61,7 +62,6 @@ export const SupersetRoundPage = ({
 }: SupersetRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const lottieRef = useRef<LottieView>(null);
 
   // Refs for timer management
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -79,14 +79,20 @@ export const SupersetRoundPage = ({
   const [timeRemaining, setTimeRemaining] = useState(restSec);
   const [showRestOverlay, setShowRestOverlay] = useState(false);
   const [showNextSetOverlay, setShowNextSetOverlay] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
+  const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
+  const [completionMessage, setCompletionMessage] = useState('');
   const [exerciseCompletions, setExerciseCompletions] = useState<boolean[][]>(
     exercises.map(() => new Array(exercises[0]?.sets.length || 0).fill(false))
   );
+  const lastCompletionMessageRef = useRef(-1);
+  const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasShownCompletionRef = useRef(false);
 
   // Overlay animations
   const restOverlayOpacity = useSharedValue(0);
   const nextSetOverlayOpacity = useSharedValue(0);
+  const completionOverlayOpacity = useSharedValue(0);
+  const completionTextScale = useSharedValue(0.5);
 
   // Keep refs updated
   useEffect(() => {
@@ -103,6 +109,8 @@ export const SupersetRoundPage = ({
 
   useEffect(() => {
     currentSetRef.current = currentSet;
+    // Reset completion flag when set changes
+    hasShownCompletionRef.current = false;
   }, [currentSet]);
 
   useEffect(() => {
@@ -110,7 +118,7 @@ export const SupersetRoundPage = ({
   }, [totalSets]);
 
   // Check if all exercises in current set are completed
-  const checkSetCompletion = () => {
+  const checkSetCompletion = (wasCompleted: boolean) => {
     const currentSetIndex = currentSetRef.current - 1;
     // Check both the exercises prop and local state
     const allCompleted = exercises.every((exercise, exerciseIdx) => {
@@ -119,12 +127,18 @@ export const SupersetRoundPage = ({
       return set?.completed === true || localCompleted === true;
     });
 
+    // If unchecking, reset the completion flag
+    if (!wasCompleted) {
+      hasShownCompletionRef.current = false;
+    }
+
     if (allCompleted && currentSetRef.current < totalSetsRef.current) {
       // Start rest timer
       startRestTimer();
-    } else if (allCompleted && currentSetRef.current === totalSetsRef.current) {
-      // All sets completed - show confetti and complete
-      showCompletionConfetti();
+    } else if (allCompleted && currentSetRef.current === totalSetsRef.current && wasCompleted && !hasShownCompletionRef.current) {
+      // All sets completed - show celebration and complete (only if completing, not uncompleting)
+      hasShownCompletionRef.current = true;
+      showCompletionCelebration();
     }
   };
 
@@ -182,17 +196,39 @@ export const SupersetRoundPage = ({
     );
   };
 
-  // Show completion confetti
-  const showCompletionConfetti = () => {
-    setShowConfetti(true);
-    if (lottieRef.current) {
-      lottieRef.current.play();
-    }
-    setTimeout(() => {
-      setShowConfetti(false);
-      onSetCompleteRef.current();
-    }, 2000);
-  };
+  // Show completion celebration overlay
+  const showCompletionCelebration = useCallback(() => {
+    // Get messages directly from translations object
+    const messages = en.training.session.exerciseComplete;
+    if (!messages || messages.length === 0) return;
+
+    // Pick a random message (avoid repeating the last one)
+    let messageIndex: number;
+    do {
+      messageIndex = Math.floor(Math.random() * messages.length);
+    } while (messageIndex === lastCompletionMessageRef.current && messages.length > 1);
+    lastCompletionMessageRef.current = messageIndex;
+
+    setCompletionMessage(messages[messageIndex]);
+    setShowCompletionOverlay(true);
+
+    // Animate in
+    completionOverlayOpacity.value = withTiming(1, { duration: 200 });
+    completionTextScale.value = withSequence(
+      withTiming(1.1, { duration: 250 }),
+      withTiming(1, { duration: 150 })
+    );
+
+    // Auto dismiss and navigate after delay
+    completionTimeoutRef.current = setTimeout(() => {
+      completionOverlayOpacity.value = withTiming(0, { duration: 200 });
+      // Call onSetComplete after fade out completes
+      setTimeout(() => {
+        setShowCompletionOverlay(false);
+        onSetCompleteRef.current();
+      }, 200);
+    }, 1200);
+  }, [completionOverlayOpacity, completionTextScale]);
 
   // Handle exercise completion
   const handleExerciseComplete = (exerciseIndex: number, setIndex: number, completed: boolean) => {
@@ -215,7 +251,7 @@ export const SupersetRoundPage = ({
 
     // Check if set is complete after a short delay
     setTimeout(() => {
-      checkSetCompletion();
+      checkSetCompletion(completed);
     }, 100);
   };
 
@@ -226,6 +262,10 @@ export const SupersetRoundPage = ({
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
+      }
+      if (completionTimeoutRef.current) {
+        clearTimeout(completionTimeoutRef.current);
+        completionTimeoutRef.current = null;
       }
     };
   }, []);
@@ -294,6 +334,14 @@ export const SupersetRoundPage = ({
     opacity: nextSetOverlayOpacity.value,
   }));
 
+  const completionOverlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: completionOverlayOpacity.value,
+  }));
+
+  const completionTextAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: completionTextScale.value }],
+  }));
+
   // Get current set exercises (only show current set)
   const getCurrentSetExercises = () => {
     const setIndex = currentSet - 1;
@@ -308,15 +356,19 @@ export const SupersetRoundPage = ({
 
   return (
     <View style={styles.container}>
-      {/* Confetti animation overlay */}
-      {showConfetti && (
-        <LottieView
-          ref={lottieRef}
-          source={require('@/assets/animations/confetti.json')}
-          style={styles.confetti}
-          loop={false}
-          autoPlay={false}
-        />
+      {/* Completion celebration overlay */}
+      {showCompletionOverlay && (
+        <Animated.View style={[styles.completionOverlay, completionOverlayAnimatedStyle]}>
+          <LottieView
+            source={require('@/assets/animations/confetti.json')}
+            autoPlay
+            loop={false}
+            style={styles.confettiAnimation}
+          />
+          <Animated.Text style={[styles.completionText, { color: themeColors.text }, completionTextAnimatedStyle]}>
+            {completionMessage}
+          </Animated.Text>
+        </Animated.View>
       )}
 
       {/* Rest overlay */}
@@ -484,9 +536,24 @@ const styles = StyleSheet.create({
     ...typography.h1,
     textAlign: 'center',
   },
-  confetti: {
+  completionOverlay: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 200,
-    pointerEvents: 'none',
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  confettiAnimation: {
+    position: 'absolute',
+    top: -100,
+    left: -100,
+    right: -100,
+    bottom: -100,
+    zIndex: 0,
+  },
+  completionText: {
+    ...typography.h1,
+    textAlign: 'center',
+    zIndex: 1,
   },
 });

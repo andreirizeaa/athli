@@ -91,7 +91,9 @@ export const AmrapRoundPage = ({
 
   // Overlay states
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showNextRoundOverlay, setShowNextRoundOverlay] = useState(false);
   const overlayOpacity = useSharedValue(0);
+  const nextRoundOverlayOpacity = useSharedValue(0);
 
   // Format time as MM:SS
   const formatTime = (seconds: number): string => {
@@ -229,6 +231,36 @@ export const AmrapRoundPage = ({
     }
   }, [isPaused]);
 
+  // Actually complete the round (increment and reset)
+  const completeRoundInternal = () => {
+    if (hasCompletedRef.current) return;
+    
+    // Increment round
+    setCurrentRound((prev) => prev + 1);
+    
+    // Reset all exercise completions
+    const newCompletions = exercises.map(() => false);
+    setExerciseCompletions(newCompletions);
+    
+    // Reset exercise completions in parent
+    exercises.forEach((_, index) => {
+      onExerciseComplete(index, false);
+    });
+  };
+
+  // Show next round overlay
+  const showNextRoundTransition = () => {
+    setShowNextRoundOverlay(true);
+    nextRoundOverlayOpacity.value = withSequence(
+      withTiming(1, { duration: 200 }),
+      withTiming(1, { duration: 600 }),
+      withTiming(0, { duration: 200 }, () => {
+        runOnJS(setShowNextRoundOverlay)(false);
+        runOnJS(completeRoundInternal)();
+      })
+    );
+  };
+
   // Handle exercise completion
   const handleExerciseComplete = (exerciseIndex: number, setIndex: number, completed: boolean) => {
     const newCompletions = [...exerciseCompletions];
@@ -236,10 +268,12 @@ export const AmrapRoundPage = ({
     setExerciseCompletions(newCompletions);
     onExerciseComplete(exerciseIndex, completed);
 
-    // Check if all exercises are completed
-    if (completed && newCompletions.every((c) => c)) {
-      // All exercises completed - increment round
-      handleCompleteRound();
+    // Check if all exercises will be completed (accounting for the one just completed)
+    const willAllBeCompleted = newCompletions.every((c) => c);
+
+    if (completed && willAllBeCompleted) {
+      // All exercises completed - show next round overlay
+      showNextRoundTransition();
     }
   };
 
@@ -257,23 +291,30 @@ export const AmrapRoundPage = ({
   const handleCompleteRound = () => {
     if (hasCompletedRef.current) return;
     
-    // Increment round
-    setCurrentRound((prev) => prev + 1);
+    // Mark all exercises as completed in local state so button shows solid color
+    const allCompleted = exercises.map(() => true);
+    setExerciseCompletions(allCompleted);
     
-    // Reset all exercise completions
-    const newCompletions = exercises.map(() => false);
-    setExerciseCompletions(newCompletions);
-    
-    // Reset exercise completions in parent
+    // Also update parent state
     exercises.forEach((_, index) => {
-      onExerciseComplete(index, false);
+      onExerciseComplete(index, true);
     });
+    
+    // Small delay to allow button to flash to solid color before showing overlay
+    setTimeout(() => {
+      showNextRoundTransition();
+    }, 100);
   };
 
   // Handle confetti animation finish
   const handleConfettiFinish = () => {
     setShowConfetti(false);
   };
+
+  // Animated style for next round overlay
+  const nextRoundOverlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: nextRoundOverlayOpacity.value,
+  }));
 
   // Get timer color based on ratio of time remaining
   const getTimerColor = (): string => {
@@ -317,6 +358,15 @@ export const AmrapRoundPage = ({
           onAnimationFinish={handleConfettiFinish}
           style={styles.confettiAnimation}
         />
+      )}
+
+      {/* Next round overlay */}
+      {showNextRoundOverlay && (
+        <Animated.View style={[styles.nextRoundOverlay, nextRoundOverlayAnimatedStyle]}>
+          <Text style={[styles.nextRoundText, { color: themeColors.text }]}>
+            {t('training.session.circuit.nextRound' as any) || 'Next Round'} 💪
+          </Text>
+        </Animated.View>
       )}
 
       {/* Round Indicator Card with Timer */}
@@ -414,6 +464,17 @@ const styles = StyleSheet.create({
     bottom: -100,
     zIndex: 10,
     pointerEvents: 'none',
+  },
+  nextRoundOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  nextRoundText: {
+    ...typography.h1,
+    textAlign: 'center',
   },
   roundCardContainer: {
     paddingHorizontal: 16,
