@@ -121,8 +121,9 @@ export const ClientProfileProvider = ({ children, clientId: clientIdProp }: Clie
     }, [isInitialLoad, isAnyLoading, isAnyFetching, athlete, user]);
 
     // Show loading on initial load until ALL data is loaded
-    const isLoading = isInitialLoad && (isAnyLoading || isAnyFetching || !athlete || !user);
+    // Don't show loading if there's a profile error (e.g., 404 client not found)
     const error = profileError ? (profileError as Error).message : null;
+    const isLoading = !error && isInitialLoad && (isAnyLoading || isAnyFetching || !athlete || !user);
 
     // Refresh all data by invalidating all queries
     const refreshData = async () => {
