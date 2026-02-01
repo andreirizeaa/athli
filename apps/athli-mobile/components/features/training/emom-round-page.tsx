@@ -46,6 +46,8 @@ type EmomRoundPageProps = {
   isPaused: boolean;
   /** If true, this round is already completed - don't run timer, allow normal navigation */
   isRoundCompleted?: boolean;
+  /** If true, all exercises are complete - don't auto-advance, let user use Next button */
+  allExercisesComplete?: boolean;
 };
 
 const EMOM_COLOR = '#10B981';
@@ -63,6 +65,7 @@ export const EmomRoundPage = ({
   onRoundComplete,
   isPaused,
   isRoundCompleted = false,
+  allExercisesComplete = false,
 }: EmomRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -84,6 +87,9 @@ export const EmomRoundPage = ({
   const lastCompletionMessageRef = useRef(-1);
   const hasShownCompletionRef = useRef(false);
 
+  // Ref to track allExercisesComplete
+  const allExercisesCompleteRef = useRef(allExercisesComplete);
+
   // Keep refs updated with latest prop values
   useEffect(() => {
     intervalSecRef.current = intervalSec;
@@ -96,6 +102,10 @@ export const EmomRoundPage = ({
   useEffect(() => {
     onRoundCompleteRef.current = onRoundComplete;
   }, [onRoundComplete]);
+
+  useEffect(() => {
+    allExercisesCompleteRef.current = allExercisesComplete;
+  }, [allExercisesComplete]);
 
   // Countdown timer state - initialize to intervalSec
   const [timeRemaining, setTimeRemaining] = useState(intervalSec);
@@ -153,6 +163,11 @@ export const EmomRoundPage = ({
 
       // Clear storage
       Storage.removeItem(storageKey);
+
+      // If all exercises are complete, don't auto-advance - let user use Next button
+      if (allExercisesCompleteRef.current) {
+        return;
+      }
 
       // Show next round overlay
       setShowNextRoundOverlay(true);
@@ -234,7 +249,7 @@ export const EmomRoundPage = ({
 
       timerRef.current = setInterval(() => {
         if (hasCompletedRef.current || isPausedRef.current) return;
-        
+
         const newRemaining = calculateRemaining();
         setTimeRemaining(newRemaining);
 
@@ -243,6 +258,10 @@ export const EmomRoundPage = ({
           if (timerRef.current) {
             clearInterval(timerRef.current);
             timerRef.current = null;
+          }
+          // If all exercises are complete, don't auto-advance
+          if (allExercisesCompleteRef.current) {
+            return;
           }
           setShowNextRoundOverlay(true);
           overlayOpacity.value = withSequence(

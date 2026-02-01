@@ -714,6 +714,50 @@ export default function WorkoutSessionModal() {
     }
   };
 
+  // Helper to persist round completion without navigating
+  const persistRoundCompletion = async (sectionId: string, roundNumber: number): Promise<void> => {
+    if (!workoutData) return;
+
+    const updatedItems = JSON.parse(JSON.stringify(workoutData.items)) as WorkoutItem[];
+
+    for (const item of updatedItems) {
+      if (item.itemType === 'section' && item.data.id === sectionId) {
+        const section = item.data;
+        if (section.type === 'circuits' || section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom') {
+          // Update completedRounds
+          section.completedRounds = roundNumber;
+
+          // Calculate total rounds for status
+          let totalRounds: number;
+          if (section.type === 'emom') {
+            totalRounds = Math.floor((section.durationMin * 60) / section.intervalSec);
+          } else {
+            totalRounds = section.rounds;
+          }
+
+          // Update section completion status
+          section.completed = deriveIntervalSectionStatus(roundNumber, totalRounds);
+        }
+        break;
+      }
+    }
+
+    const updatedData = { ...workoutData, items: updatedItems };
+    setWorkoutData(updatedData);
+
+    try {
+      await assignWorkout({
+        workoutId: params.workoutId,
+        clientId: params.clientId,
+        ...(params.coachId && { coachId: params.coachId }),
+        date: params.date,
+        workoutPayload: updatedData,
+      });
+    } catch (error) {
+      console.error('Failed to save round completion:', error);
+    }
+  };
+
   const handleNext = async () => {
     if (currentStep < pages.length) {
       if (isPaused) resumeWorkout();
@@ -722,6 +766,11 @@ export default function WorkoutSessionModal() {
       if (currentPage.type === 'emom-round') {
         const storageKey = `${EMOM_TIMER_KEY_PREFIX}${currentPage.section.id}_${currentPage.roundNumber}`;
         Storage.removeItem(storageKey);
+      }
+
+      // Persist round completion for timer-based sections when advancing via Next button
+      if (currentPage.type === 'emom-round' || currentPage.type === 'hiit-round' || currentPage.type === 'tabata-round') {
+        await persistRoundCompletion(currentPage.section.id, currentPage.roundNumber);
       }
 
       // If leaving feedback page, save the feedback data (including deferred sessionComments)
@@ -1616,19 +1665,29 @@ export default function WorkoutSessionModal() {
 
     if (currentPage.type === 'emom-round' || currentPage.type === 'hiit-round' || currentPage.type === 'tabata-round') {
       const { section, roundNumber } = currentPage;
-      // If round is already completed, allow navigation
+      // If round is already completed (persisted), allow navigation
       if (roundNumber <= (section.completedRounds || 0)) {
         return true;
       }
+      // Check LOCAL completion state first
+      const roundKey = `${section.id}-${roundNumber}`;
+      const localCompletions = circuitRoundCompletions.get(roundKey);
+
       // Get all exercises for this round
-      const exercises: { exercise: CircuitExercisePayload; groupIndex: number; exerciseIndex: number }[] = [];
-      section.exercises.forEach((group, gIdx) => {
-        group.exercises.forEach((exercise, eIdx) => {
-          exercises.push({ exercise, groupIndex: gIdx, exerciseIndex: eIdx });
+      const exercises: CircuitExercisePayload[] = [];
+      section.exercises.forEach((group) => {
+        group.exercises.forEach((exercise) => {
+          exercises.push(exercise);
         });
       });
-      // Check if all exercises in the round are completed
-      return exercises.every((e) => e.exercise.set.completed === 'completed');
+
+      // If we have local completions, use those
+      if (localCompletions && localCompletions.length === exercises.length) {
+        return localCompletions.every((c) => c === true);
+      }
+
+      // Fallback: check persisted state
+      return exercises.every((e) => e.set.completed === 'completed');
     }
 
     if (currentPage.type === 'amrap-round') {
@@ -1892,6 +1951,7 @@ export default function WorkoutSessionModal() {
               onRoundComplete={() => handleCircuitRoundComplete(section.id, roundNumber)}
               isPaused={isPaused}
               isRoundCompleted={isRoundCompleted}
+              allExercisesComplete={localCompletions.every((c) => c === true)}
             />
           </View>
         );
@@ -1944,6 +2004,7 @@ export default function WorkoutSessionModal() {
               onRoundComplete={() => handleCircuitRoundComplete(section.id, roundNumber)}
               isPaused={isPaused}
               isRoundCompleted={isRoundCompleted}
+              allExercisesComplete={localCompletions.every((c) => c === true)}
             />
           </View>
         );
@@ -1996,6 +2057,7 @@ export default function WorkoutSessionModal() {
               onRoundComplete={() => handleCircuitRoundComplete(section.id, roundNumber)}
               isPaused={isPaused}
               isRoundCompleted={isRoundCompleted}
+              allExercisesComplete={localCompletions.every((c) => c === true)}
             />
           </View>
         );
