@@ -45,11 +45,7 @@ const SecurityPage = () => {
 
   // Check if there are unsaved changes for password
   useEffect(() => {
-    const currentData = {
-      newPassword,
-      confirmPassword,
-    };
-    const hasChanges = JSON.stringify(currentData) !== JSON.stringify(passwordSavedData);
+    const hasChanges = newPassword !== passwordSavedData.newPassword || confirmPassword !== passwordSavedData.confirmPassword;
     setHasPasswordChanges(hasChanges);
   }, [newPassword, confirmPassword, passwordSavedData]);
 

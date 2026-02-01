@@ -634,7 +634,7 @@ export const ExerciseHistoryChartDialog = ({
                                 <LineChart
                                     accessibilityLayer
                                     data={chartData}
-                                    margin={{ left: 10, right: 10, top: 20, bottom: 20 }}
+                                    margin={{ left: 20, right: 10, top: 20, bottom: 20 }}
                                 >
                                     <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.5} />
                                     <XAxis
@@ -653,6 +653,7 @@ export const ExerciseHistoryChartDialog = ({
                                         ticks={yAxisTicks}
                                         tickFormatter={(value) => value.toFixed(0)}
                                         tick={{ fill: 'currentColor', fontSize: 11 }}
+                                        label={{ value: yAxisLabel, angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: 'currentColor', fontSize: 11 } }}
                                     />
                                     <ChartTooltip
                                         cursor={false}

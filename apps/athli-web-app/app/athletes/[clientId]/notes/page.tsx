@@ -43,7 +43,7 @@ const ClientNotesPage = () => {
     isDeleting
   } = useClientNotes(clientId);
 
-  const notes = notesFromContext.length > 0 ? notesFromContext : notesFromHook;
+  const notes: Note[] = notesFromContext.length > 0 ? notesFromContext as Note[] : notesFromHook;
   const isLoading = isLoadingContext || isLoadingHook;
 
   const [isViewNoteOpen, setIsViewNoteOpen] = useState(false);

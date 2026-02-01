@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useRef, useEffect, useState } from 'react';
+import React, { createContext, useContext, useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useClientProfile } from '@/hooks/use-client-profile';
@@ -17,6 +17,7 @@ import { useClientInjuries } from '@/hooks/use-client-injuries';
 import { useClientDetails } from '@/hooks/use-client-details';
 import { useClientWorkoutStats } from '@/hooks/use-client-workout-stats';
 import { useClientUpdates } from '@/hooks/use-client-updates';
+import { useClientUniqueExercises } from '@/hooks/use-client-unique-exercises';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import type { Athlete, ClientMetric, ClientHabit, ClientNote } from '@/api/coach/coach-client-service';
 import type { ClientPhoto } from '@/api/client/client-photo-service';
@@ -24,6 +25,7 @@ import type { ClientCheckIn, ClientQuestionnaire } from '@/api/client/client-for
 import type { ClientFileAssignment } from '@/api/coach/coach-file-service';
 import type { AthleteDetails, WorkoutStatistics, AthleteGoal, AthleteInjury } from '@/api/client/client-service';
 import type { ClientUpdate } from '@/api/client/client-updates-service';
+import type { UniqueExercise } from '@/api/client/client-training-service';
 
 interface ClientProfileContextType {
     athlete: Athlete | null;
@@ -44,10 +46,11 @@ interface ClientProfileContextType {
         nextWeek: WorkoutStatistics | null;
     } | null;
     updates: ClientUpdate[];
+    uniqueExercises: UniqueExercise[];
     isLoading: boolean;
     error: string | null;
     refreshData: () => Promise<void>;
-    refreshSection: (section: 'metrics' | 'habits' | 'photos' | 'check-ins' | 'questionnaires' | 'files' | 'notes' | 'bio' | 'goals' | 'injuries' | 'details' | 'workout-stats' | 'updates') => Promise<void>;
+    refreshSection: (section: 'metrics' | 'habits' | 'photos' | 'check-ins' | 'questionnaires' | 'files' | 'notes' | 'bio' | 'goals' | 'injuries' | 'details' | 'workout-stats' | 'updates' | 'unique-exercises') => Promise<void>;
 }
 
 const ClientProfileContext = createContext<ClientProfileContextType | undefined>(undefined);
@@ -87,17 +90,18 @@ export const ClientProfileProvider = ({ children, clientId: clientIdProp }: Clie
     const { details, isLoading: isLoadingDetails, isFetching: isFetchingDetails } = useClientDetails(resolvedClientId);
     const { stats: workoutStats, isLoading: isLoadingWorkoutStats, isFetching: isFetchingWorkoutStats } = useClientWorkoutStats(resolvedClientId);
     const { updates, isLoading: isLoadingUpdates, isFetching: isFetchingUpdates } = useClientUpdates(resolvedClientId);
+    const { uniqueExercises, isLoading: isLoadingUniqueExercises, isFetching: isFetchingUniqueExercises } = useClientUniqueExercises(resolvedClientId);
 
     // Check if ANY data is currently loading or fetching (fetching includes cached data being revalidated)
     const isAnyLoading = isLoadingProfile || isLoadingMetrics || isLoadingHabits || isLoadingPhotos ||
         isLoadingCheckIns || isLoadingQuestionnaires || isLoadingFiles || isLoadingNotes ||
         isLoadingBio || isLoadingGoals || isLoadingInjuries || isLoadingDetails || isLoadingWorkoutStats ||
-        isLoadingUpdates;
+        isLoadingUpdates || isLoadingUniqueExercises;
 
     const isAnyFetching = isFetchingProfile || isFetchingMetrics || isFetchingHabits || isFetchingPhotos ||
         isFetchingCheckIns || isFetchingQuestionnaires || isFetchingFiles || isFetchingNotes ||
         isFetchingBio || isFetchingGoals || isFetchingInjuries || isFetchingDetails || isFetchingWorkoutStats ||
-        isFetchingUpdates;
+        isFetchingUpdates || isFetchingUniqueExercises;
 
 
 
@@ -125,7 +129,7 @@ export const ClientProfileProvider = ({ children, clientId: clientIdProp }: Clie
     const error = profileError ? (profileError as Error).message : null;
 
     // Refresh all data by invalidating all queries
-    const refreshData = async () => {
+    const refreshData = useCallback(async () => {
         if (!athlete?.id) return;
         const targetId = athlete.id;
 
@@ -144,12 +148,12 @@ export const ClientProfileProvider = ({ children, clientId: clientIdProp }: Clie
             queryClient.invalidateQueries({ queryKey: ['client-details', targetId] }),
             queryClient.invalidateQueries({ queryKey: ['client-workout-stats', targetId] }),
             queryClient.invalidateQueries({ queryKey: ['client-updates', targetId] }),
+            queryClient.invalidateQueries({ queryKey: ['client-unique-exercises', targetId] }),
         ]);
-    };
+    }, [athlete?.id, queryClient, rawClientId]);
 
     // Refresh specific section by invalidating its query
-    // Refresh specific section by invalidating its query
-    const refreshSection = async (section: 'metrics' | 'habits' | 'photos' | 'check-ins' | 'questionnaires' | 'files' | 'notes' | 'bio' | 'goals' | 'injuries' | 'details' | 'workout-stats' | 'updates') => {
+    const refreshSection = useCallback(async (section: 'metrics' | 'habits' | 'photos' | 'check-ins' | 'questionnaires' | 'files' | 'notes' | 'bio' | 'goals' | 'injuries' | 'details' | 'workout-stats' | 'updates' | 'unique-exercises') => {
         if (!athlete?.id) return;
         const targetId = athlete.id;
 
@@ -167,34 +171,56 @@ export const ClientProfileProvider = ({ children, clientId: clientIdProp }: Clie
             'details': ['client-details', targetId],
             'workout-stats': ['client-workout-stats', targetId],
             'updates': ['client-updates', targetId],
+            'unique-exercises': ['client-unique-exercises', targetId],
         };
 
         await queryClient.invalidateQueries({ queryKey: queryKeyMap[section] });
-    };
+    }, [athlete?.id, queryClient]);
+
+    const value = useMemo(() => ({
+        athlete,
+        metrics,
+        habits,
+        photos,
+        checkIns,
+        questionnaires,
+        files,
+        notes,
+        bio,
+        goals,
+        injuries,
+        details,
+        workoutStats,
+        updates,
+        uniqueExercises,
+        isLoading,
+        error,
+        refreshData,
+        refreshSection,
+    }), [
+        athlete,
+        metrics,
+        habits,
+        photos,
+        checkIns,
+        questionnaires,
+        files,
+        notes,
+        bio,
+        goals,
+        injuries,
+        details,
+        workoutStats,
+        updates,
+        uniqueExercises,
+        isLoading,
+        error,
+        refreshData,
+        refreshSection,
+    ]);
 
     return (
-        <ClientProfileContext.Provider
-            value={{
-                athlete,
-                metrics,
-                habits,
-                photos,
-                checkIns,
-                questionnaires,
-                files,
-                notes,
-                bio,
-                goals,
-                injuries,
-                details,
-                workoutStats,
-                updates,
-                isLoading,
-                error,
-                refreshData,
-                refreshSection,
-            }}
-        >
+        <ClientProfileContext.Provider value={value}>
             {children}
         </ClientProfileContext.Provider>
     );

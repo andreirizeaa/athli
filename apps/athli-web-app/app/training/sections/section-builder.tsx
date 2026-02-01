@@ -2072,7 +2072,7 @@ Focus on proper form and progressive overload.`;
                                 </div>
 
                                 {/* Gap between exercises for non-regular sections */}
-                                {section.type !== 'regular' && exerciseIndex < section.exercises.length - 1 && (
+                                {section.type !== 'regular' && section.exercises && exerciseIndex < section.exercises.length - 1 && (
                                   <div className="h-2" />
                                 )}
 

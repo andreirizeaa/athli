@@ -34,10 +34,20 @@ export function AppHeader({
 
   // Load AI sphere animation
   useEffect(() => {
-    fetch('/animations/ai-sphere-animation.json')
+    const controller = new AbortController();
+    fetch('/animations/ai-sphere-animation.json', { signal: controller.signal })
       .then(res => res.json())
-      .then(data => setAiAnimationData(data))
-      .catch(err => console.error('Failed to load AI animation:', err));
+      .then(data => {
+        if (!controller.signal.aborted) {
+          setAiAnimationData(data);
+        }
+      })
+      .catch(err => {
+        if (err.name !== 'AbortError') {
+          console.error('Failed to load AI animation:', err);
+        }
+      });
+    return () => controller.abort();
   }, []);
 
   return (

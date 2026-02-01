@@ -26,7 +26,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 
-import { useEffect, useImperativeHandle, useRef } from "react";
+import { useEffect, useImperativeHandle, useRef, useMemo } from "react";
 
 
 import { FadeLoader } from "react-spinners";
@@ -261,38 +261,40 @@ export const MultiAsyncSelect = React.forwardRef<MultiAsyncSelectRef, Props>(
       }
     };
 
-    // 使用 optionsRef 来记录 options 已选项目，同时控制其 size 减少对性能的影响
-    useEffect(() => {
-      const temp = options.reduce((acc, option) => {
+    // Memoize the options map to prevent new object creation on every render
+    const optionsMap = useMemo(() =>
+      options.reduce((acc, option) => {
         acc[option.value] = option;
         return acc;
-      }, {} as Record<string, Option>);
+      }, {} as Record<string, Option>),
+    [options]);
+
+    // 使用 optionsRef 来记录 options 已选项目，同时控制其 size 减少对性能的影响
+    useEffect(() => {
       if (async) {
         // 初始化时，使用 options 来生成 optionsRef
         if (!isInit.current) {
-          optionsRef.current = temp;
-          setReserveOptions(temp);
+          optionsRef.current = optionsMap;
+          setReserveOptions(optionsMap);
           isInit.current = true;
         } else {
           // 当 options 变化时，仅保留上一次 selectedValues 中存在的选项
-          const temp2 = selectedValues.reduce((acc, value) => {
+          const selectedOptionsMap = selectedValues.reduce((acc, value) => {
             const option = optionsRef.current[value];
             if (option) {
               acc[option.value] = option;
             }
             return acc;
           }, {} as Record<string, Option>);
-          optionsRef.current = {
-            ...temp,
-            ...temp2,
+          const mergedOptions = {
+            ...optionsMap,
+            ...selectedOptionsMap,
           };
-          setReserveOptions({
-            ...temp,
-            ...temp2,
-          });
+          optionsRef.current = mergedOptions;
+          setReserveOptions(mergedOptions);
         }
       }
-    }, [async, options, selectedValues]);
+    }, [async, optionsMap, selectedValues]);
 
     useEffect(() => {
       if (value) {

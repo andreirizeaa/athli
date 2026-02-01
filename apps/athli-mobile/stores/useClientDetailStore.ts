@@ -42,6 +42,10 @@ import {
   getClientNotes,
   type ClientNote,
 } from '@/services/client/client-notes-service';
+import {
+  getClientUniqueExercises,
+  type UniqueExercise,
+} from '@/services/client/client-training-service';
 import { formatDateDDMMYYYY } from '@/lib/utils/date-formatters';
 
 interface ClientDetailStore {
@@ -63,6 +67,7 @@ interface ClientDetailStore {
   updates: ClientUpdate[];
   notes: ClientNote[];
   trainingCalendar: TrainingCalendarSchema;
+  uniqueExercises: UniqueExercise[];
 
   // Track loaded date range for training calendar
   loadedTrainingRange: { startDate: string; endDate: string } | null;
@@ -78,6 +83,7 @@ interface ClientDetailStore {
   isLoadingUpdates: boolean;
   isLoadingNotes: boolean;
   isLoadingTraining: boolean;
+  isLoadingUniqueExercises: boolean;
 
   // Error
   error: string | null;
@@ -100,6 +106,7 @@ interface ClientDetailStore {
       | 'updates'
       | 'notes'
       | 'training'
+      | 'unique-exercises'
   ) => Promise<void>;
   fetchTrainingDataForDate: (targetDate: Date) => Promise<void>;
   extendTrainingRange: (targetDate: Date, forceFetch?: boolean) => Promise<void>;
@@ -110,6 +117,8 @@ interface ClientDetailStore {
   setMetrics: (metrics: ClientMetric[]) => void;
   setHabits: (habits: ClientHabit[]) => void;
   setClientId: (clientId: string) => void;
+  setCoachId: (coachId: string) => void;
+  setUniqueExercises: (exercises: UniqueExercise[]) => void;
 }
 
 // Helper to format date as YYYY-MM-DD
@@ -216,6 +225,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
   updates: [],
   notes: [],
   trainingCalendar: {},
+  uniqueExercises: [],
   loadedTrainingRange: null,
   isLoading: false,
   isLoadingClient: false,
@@ -227,6 +237,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
   isLoadingUpdates: false,
   isLoadingNotes: false,
   isLoadingTraining: false,
+  isLoadingUniqueExercises: false,
   error: null,
 
   // Load all client data
@@ -269,6 +280,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       updates: [],
       notes: [],
       trainingCalendar: {},
+      uniqueExercises: [],
       loadedTrainingRange: null,
       isLoading: true,
       isLoadingClient: true,
@@ -280,6 +292,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       isLoadingUpdates: true,
       isLoadingNotes: true,
       isLoadingTraining: true,
+      isLoadingUniqueExercises: true,
       error: null,
     });
 
@@ -316,6 +329,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         updatesData,
         notesData,
         trainingData,
+        uniqueExercisesData,
       ] = await Promise.all([
         getAthleteBio(clientId, coachId).catch(() => ''),
         getAthleteGoals(clientId, coachId).catch(() => []),
@@ -329,6 +343,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         getClientUpdates(clientId, coachId).catch(() => []),
         getClientNotes(clientId, coachId).catch(() => []),
         getTrainingCalendarRange(clientId, coachId, startDate, endDate).catch(() => ({})),
+        getClientUniqueExercises({ clientId, coachId }).catch(() => []),
       ]);
 
       set({
@@ -344,6 +359,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         updates: updatesData,
         notes: notesData,
         trainingCalendar: trainingData,
+        uniqueExercises: uniqueExercisesData,
         loadedTrainingRange: { startDate, endDate },
         isLoading: false,
         isLoadingMetrics: false,
@@ -354,6 +370,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         isLoadingUpdates: false,
         isLoadingNotes: false,
         isLoadingTraining: false,
+        isLoadingUniqueExercises: false,
       });
 
       console.log('[ClientDetailStore] All data loaded for client:', clientId);
@@ -371,6 +388,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         isLoadingUpdates: false,
         isLoadingNotes: false,
         isLoadingTraining: false,
+        isLoadingUniqueExercises: false,
       });
     }
   },
@@ -471,11 +489,17 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         case 'training':
           set({ isLoadingTraining: true });
           const trainingData = await getTrainingCalendarRange(clientId, coachId, startDate, endDate);
-          set({ 
-            trainingCalendar: trainingData, 
+          set({
+            trainingCalendar: trainingData,
             loadedTrainingRange: { startDate, endDate },
-            isLoadingTraining: false 
+            isLoadingTraining: false
           });
+          break;
+
+        case 'unique-exercises':
+          set({ isLoadingUniqueExercises: true });
+          const uniqueExercisesData = await getClientUniqueExercises({ clientId, coachId });
+          set({ uniqueExercises: uniqueExercisesData, isLoadingUniqueExercises: false });
           break;
       }
     } catch (err) {
@@ -689,6 +713,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       updates: [],
       notes: [],
       trainingCalendar: {},
+      uniqueExercises: [],
       loadedTrainingRange: null,
       isLoading: false,
       isLoadingClient: false,
@@ -700,6 +725,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       isLoadingUpdates: false,
       isLoadingNotes: false,
       isLoadingTraining: false,
+      isLoadingUniqueExercises: false,
       error: null,
     });
   },
@@ -715,5 +741,13 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
 
   setClientId: (clientId: string) => {
     set({ clientId });
+  },
+
+  setCoachId: (coachId: string) => {
+    set({ coachId });
+  },
+
+  setUniqueExercises: (exercises: UniqueExercise[]) => {
+    set({ uniqueExercises: exercises, isLoadingUniqueExercises: false });
   },
 }));

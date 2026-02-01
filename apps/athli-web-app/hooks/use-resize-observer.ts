@@ -16,6 +16,8 @@ export const useResizeObserver = <T extends HTMLElement>(
         const element = ref.current;
         if (!element) return;
 
+        let rafId: number | null = null;
+
         const updateRect = () => {
             const bounding = element.getBoundingClientRect();
             setRect({
@@ -26,24 +28,33 @@ export const useResizeObserver = <T extends HTMLElement>(
             });
         };
 
+        const throttledUpdate = () => {
+            if (rafId !== null) return;
+            rafId = requestAnimationFrame(() => {
+                updateRect();
+                rafId = null;
+            });
+        };
+
         // Initial measurement
         updateRect();
 
         // Observe resizes
         const resizeObserver = new ResizeObserver(() => {
-            updateRect();
+            throttledUpdate();
         });
 
         resizeObserver.observe(element);
 
-        // Also listen for window resize/scroll as getBoundingClientRect depends on viewport
-        window.addEventListener('resize', updateRect);
-        window.addEventListener('scroll', updateRect, true); // Capture phase for all scrollable parents
+        // Listen for window resize only - ResizeObserver handles element size changes
+        window.addEventListener('resize', throttledUpdate, { passive: true });
 
         return () => {
             resizeObserver.disconnect();
-            window.removeEventListener('resize', updateRect);
-            window.removeEventListener('scroll', updateRect, true);
+            window.removeEventListener('resize', throttledUpdate);
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+            }
         };
     }, [ref]);
 

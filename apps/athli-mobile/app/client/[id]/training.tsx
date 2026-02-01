@@ -779,20 +779,35 @@ export default function ClientTrainingScreen() {
   const handleWorkoutPress = useCallback((workout: any) => {
     if (!selectedDate || !id || !coachId) return;
 
-    router.push({
-      pathname: '/library/workout/[id]',
-      params: {
-        id: workout.id,
-        name: workout.workout,
-        description: workout.description || '',
-        type: workout.type || '',
-        difficulty: workout.difficulty || 'all_levels',
-        clientId: id,
-        clientWorkoutDate: formatDateYYYYMMDD(selectedDate),
-        coachId: coachId,
-        workoutPayload: JSON.stringify(workout),
-      },
-    });
+    const status = workout.completedSummary?.status;
+
+    if (status === 'completed') {
+      router.push({
+        pathname: '/modals/training/workout-review-modal',
+        params: {
+          workoutId: workout.id,
+          date: formatDateYYYYMMDD(selectedDate),
+          clientId: id,
+          coachId,
+          workoutPayload: JSON.stringify(workout),
+        },
+      });
+    } else {
+      router.push({
+        pathname: '/library/workout/[id]',
+        params: {
+          id: workout.id,
+          name: workout.workout,
+          description: workout.description || '',
+          type: workout.type || '',
+          difficulty: workout.difficulty || 'all_levels',
+          clientId: id,
+          clientWorkoutDate: formatDateYYYYMMDD(selectedDate),
+          coachId: coachId,
+          workoutPayload: JSON.stringify(workout),
+        },
+      });
+    }
   }, [selectedDate, id, coachId, router]);
 
   const handleAddWorkout = useCallback(() => {

@@ -62,6 +62,17 @@ export interface AddExerciseHistoryData {
   sectionCompletedRounds?: number | null;
 }
 
+export interface UniqueExercise {
+  id: string;
+  name: string;
+  rawThumbnailUrl?: string;
+}
+
+export interface GetUniqueExercisesData {
+  clientId: string;
+  coachId: string;
+}
+
 export interface HistoryEntry {
   date: string;
   workout_id: string;
@@ -292,4 +303,21 @@ export const addExerciseHistory = async (data: AddExerciseHistoryData): Promise<
       section_completed_rounds: data.sectionCompletedRounds ?? null,
     }),
   });
+};
+
+/**
+ * Get unique exercises that have history for a client
+ */
+export const getClientUniqueExercises = async (data: GetUniqueExercisesData): Promise<UniqueExercise[]> => {
+  const response = await apiFetch<{ success: boolean; data: { exercises: UniqueExercise[] } }>(
+    '/client/trainings/unique-exercises',
+    {
+      method: 'POST',
+      headers: {
+        'x-client-id': data.clientId,
+        'x-coach-id': data.coachId,
+      },
+    }
+  );
+  return response.data?.exercises || [];
 };

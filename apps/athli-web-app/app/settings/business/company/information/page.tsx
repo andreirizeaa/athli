@@ -133,7 +133,8 @@ const InformationPage = () => {
       currentData.website !== (savedData.website || '') ||
       currentData.linkedin !== (savedData.linkedin || '') ||
       (currentData.location || '') !== (savedData.location || '') ||
-      JSON.stringify(currentData.specialities) !== JSON.stringify(savedData.specialities || []) ||
+      (currentData.specialities.length !== (savedData.specialities || []).length ||
+        currentData.specialities.some((s, i) => s !== (savedData.specialities || [])[i])) ||
       currentData.logo_url !== (savedData.logo_url || undefined);
 
     setHasUnsavedChanges(isDifferent);
