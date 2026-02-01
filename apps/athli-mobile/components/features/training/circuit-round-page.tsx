@@ -211,7 +211,7 @@ export const CircuitRoundPage = ({
             loop={false}
             style={styles.confettiAnimation}
           />
-          <Animated.Text style={[styles.completionText, { color: themeColors.text }, completionTextAnimatedStyle]}>
+          <Animated.Text style={[styles.completionText, completionTextAnimatedStyle]}>
             {completionMessage}
           </Animated.Text>
         </Animated.View>
@@ -288,7 +288,11 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   completionOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: -500,
+    left: -50,
+    right: -50,
+    bottom: -500,
     backgroundColor: 'rgba(0, 0, 0, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -304,6 +308,7 @@ const styles = StyleSheet.create({
   },
   completionText: {
     ...typography.h1,
+    color: '#FFFFFF',
     textAlign: 'center',
     zIndex: 1,
   },

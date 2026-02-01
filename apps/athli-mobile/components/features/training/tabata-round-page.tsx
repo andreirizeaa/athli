@@ -500,7 +500,7 @@ export const TabataRoundPage = ({
             loop={false}
             style={styles.confettiAnimation}
           />
-          <Animated.Text style={[styles.completionText, { color: themeColors.text }, completionTextAnimatedStyle]}>
+          <Animated.Text style={[styles.completionText, completionTextAnimatedStyle]}>
             {completionMessage}
           </Animated.Text>
         </Animated.View>
@@ -536,13 +536,15 @@ export const TabataRoundPage = ({
                 }) || `Round ${currentRound} of ${totalRounds}`}
               </Text>
             </View>
-            {/* Countdown Timer */}
-            <View style={[styles.timerContainer, { backgroundColor: `${getTimerColor()}20` }]}>
-              <Text style={[styles.timerPhaseLabel, { color: getTimerColor() }]}>
-                {getPhaseLabel()}
-              </Text>
-              <Text style={[styles.timerText, { color: getTimerColor() }]}>
-                {formatTime(timeRemaining)}
+            {/* Countdown Timer or Done badge */}
+            <View style={[styles.timerContainer, { backgroundColor: isRoundCompleted ? `${TABATA_COLOR}20` : `${getTimerColor()}20` }]}>
+              {!isRoundCompleted && (
+                <Text style={[styles.timerPhaseLabel, { color: getTimerColor() }]}>
+                  {getPhaseLabel()}
+                </Text>
+              )}
+              <Text style={[styles.timerText, { color: isRoundCompleted ? TABATA_COLOR : getTimerColor() }]}>
+                {isRoundCompleted ? t('training.session.tabata.done' as any) || 'Done' : formatTime(timeRemaining)}
               </Text>
             </View>
           </View>
@@ -583,7 +585,11 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   completionOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: -500,
+    left: -50,
+    right: -50,
+    bottom: -500,
     backgroundColor: 'rgba(0, 0, 0, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -599,6 +605,7 @@ const styles = StyleSheet.create({
   },
   completionText: {
     ...typography.h1,
+    color: '#FFFFFF',
     textAlign: 'center',
     zIndex: 1,
   },

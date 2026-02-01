@@ -12,6 +12,7 @@ import Animated, {
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations } from '@/stores';
+import { en } from '@/lib/i18n/en';
 import { Card } from '@/components/ui/card';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { FilledButton } from '@/components/ui/buttons/filled-button';
@@ -37,8 +38,10 @@ type AmrapRoundPageProps = {
     field: 'trackableField1' | 'trackableField2',
     value: string
   ) => void;
-  onRoundComplete: () => void;
+  onSectionComplete: (roundsCompleted: number) => void;
   isPaused: boolean;
+  /** If true, this section is already completed - don't run timer, show completed state */
+  isSectionCompleted?: boolean;
   isExerciseDataLoading?: boolean;
   /** Callback to show phase overlay at modal level (covers entire screen) */
   onShowPhaseOverlay?: (text: string, durationMs?: number) => void;
@@ -55,8 +58,9 @@ export const AmrapRoundPage = ({
   exerciseDataMap,
   onExerciseComplete,
   onExerciseValueChange,
-  onRoundComplete,
+  onSectionComplete,
   isPaused,
+  isSectionCompleted = false,
   isExerciseDataLoading = false,
   onShowPhaseOverlay,
 }: AmrapRoundPageProps) => {
@@ -70,10 +74,11 @@ export const AmrapRoundPage = ({
   const startTimeRef = useRef<number>(Date.now());
   const durationSecRef = useRef(durationSec);
   const isPausedRef = useRef(isPaused);
-  const onRoundCompleteRef = useRef(onRoundComplete);
+  const onSectionCompleteRef = useRef(onSectionComplete);
   const pausedDurationRef = useRef(0);
   const pauseStartTimeRef = useRef<number | null>(null);
   const onShowPhaseOverlayRef = useRef(onShowPhaseOverlay);
+  const currentRoundRef = useRef(initialRoundsCompleted + 1);
 
   // Keep refs updated
   useEffect(() => {
@@ -85,24 +90,39 @@ export const AmrapRoundPage = ({
   }, [isPaused]);
 
   useEffect(() => {
-    onRoundCompleteRef.current = onRoundComplete;
-  }, [onRoundComplete]);
+    onSectionCompleteRef.current = onSectionComplete;
+  }, [onSectionComplete]);
 
   useEffect(() => {
     onShowPhaseOverlayRef.current = onShowPhaseOverlay;
   }, [onShowPhaseOverlay]);
 
-  // Timer state
-  const [timeRemaining, setTimeRemaining] = useState(Math.max(0, durationSec || 0));
-  const [currentRound, setCurrentRound] = useState(initialRoundsCompleted + 1);
+  // Timer state - currentRoundRef is updated after state changes
+  // to ensure the timer callbacks have access to the latest value
+  // If section is completed, show 0:00, otherwise show full duration
+  const [timeRemaining, setTimeRemaining] = useState(isSectionCompleted ? 0 : Math.max(0, durationSec || 0));
+  // If section is completed, show the completed rounds count, otherwise show "Round 1" (or resume from initialRoundsCompleted + 1)
+  const [currentRound, setCurrentRound] = useState(isSectionCompleted ? initialRoundsCompleted : initialRoundsCompleted + 1);
+
+  // Keep currentRoundRef in sync for timer callbacks
+  useEffect(() => {
+    currentRoundRef.current = currentRound;
+  }, [currentRound]);
+
+  // If section is completed, all exercises should show as completed
   const [exerciseCompletions, setExerciseCompletions] = useState<boolean[]>(
-    exercises.map((ex) => ex.completed === 'completed')
+    isSectionCompleted ? exercises.map(() => true) : exercises.map((ex) => ex.completed === 'completed')
   );
 
-  // Overlay states
-  const [showConfetti, setShowConfetti] = useState(false);
+  // Completion overlay states
+  const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
+  const [completionMessage, setCompletionMessage] = useState('');
+  const completionOverlayOpacity = useSharedValue(0);
+  const completionTextScale = useSharedValue(0.5);
+  const lastCompletionMessageRef = useRef(-1);
+
+  // Next round overlay states
   const [showNextRoundOverlay, setShowNextRoundOverlay] = useState(false);
-  const overlayOpacity = useSharedValue(0);
   const nextRoundOverlayOpacity = useSharedValue(0);
 
   // Format time as MM:SS
@@ -114,6 +134,13 @@ export const AmrapRoundPage = ({
 
   // Initialize timer on mount
   useEffect(() => {
+    // If section is already completed, don't start timer - allow normal navigation
+    if (isSectionCompleted) {
+      hasCompletedRef.current = true;
+      setTimeRemaining(0); // Show 0:00 to indicate completed
+      return;
+    }
+
     hasCompletedRef.current = false;
     startTimeRef.current = Date.now();
     setTimeRemaining(Math.max(0, durationSec || 0));
@@ -128,6 +155,40 @@ export const AmrapRoundPage = ({
       return Math.max(0, durationSecRef.current - elapsed);
     };
 
+    // Helper to show completion celebration
+    const showCelebration = () => {
+      // Get messages directly from translations object
+      const messages = en.training.session.exerciseComplete;
+      if (!messages || messages.length === 0) return;
+
+      // Pick a random message (avoid repeating the last one)
+      let messageIndex: number;
+      do {
+        messageIndex = Math.floor(Math.random() * messages.length);
+      } while (messageIndex === lastCompletionMessageRef.current && messages.length > 1);
+      lastCompletionMessageRef.current = messageIndex;
+
+      setCompletionMessage(messages[messageIndex]);
+      setShowCompletionOverlay(true);
+
+      // Animate in
+      completionOverlayOpacity.value = withTiming(1, { duration: 200 });
+      completionTextScale.value = withSequence(
+        withTiming(1.1, { duration: 250 }),
+        withTiming(1, { duration: 150 })
+      );
+
+      // Auto dismiss and complete after delay
+      setTimeout(() => {
+        completionOverlayOpacity.value = withTiming(0, { duration: 200 });
+        setTimeout(() => {
+          setShowCompletionOverlay(false);
+          // Pass rounds completed (currentRound - 1 since currentRound is the one being worked on)
+          onSectionCompleteRef.current(currentRoundRef.current - 1);
+        }, 200);
+      }, 1500);
+    };
+
     // Helper to complete the AMRAP
     const completeAmrap = () => {
       if (hasCompletedRef.current) return;
@@ -138,14 +199,8 @@ export const AmrapRoundPage = ({
         timerRef.current = null;
       }
 
-      // Show confetti and complete
-      setShowConfetti(true);
-      lottieRef.current?.play();
-
-      // Advance after a delay
-      setTimeout(() => {
-        onRoundCompleteRef.current();
-      }, 2000);
+      // Show completion celebration overlay
+      showCelebration();
     };
 
     // Tick function
@@ -230,11 +285,29 @@ export const AmrapRoundPage = ({
               clearInterval(timerRef.current);
               timerRef.current = null;
             }
-            setShowConfetti(true);
-            lottieRef.current?.play();
+            // Show completion celebration
+            const messages = en.training.session.exerciseComplete;
+            if (messages && messages.length > 0) {
+              let messageIndex: number;
+              do {
+                messageIndex = Math.floor(Math.random() * messages.length);
+              } while (messageIndex === lastCompletionMessageRef.current && messages.length > 1);
+              lastCompletionMessageRef.current = messageIndex;
+              setCompletionMessage(messages[messageIndex]);
+            }
+            setShowCompletionOverlay(true);
+            completionOverlayOpacity.value = withTiming(1, { duration: 200 });
+            completionTextScale.value = withSequence(
+              withTiming(1.1, { duration: 250 }),
+              withTiming(1, { duration: 150 })
+            );
             setTimeout(() => {
-              onRoundCompleteRef.current();
-            }, 2000);
+              completionOverlayOpacity.value = withTiming(0, { duration: 200 });
+              setTimeout(() => {
+                setShowCompletionOverlay(false);
+                onSectionCompleteRef.current(currentRoundRef.current - 1);
+              }, 200);
+            }, 1500);
           }
         }, 1000);
       }
@@ -324,10 +397,14 @@ export const AmrapRoundPage = ({
     }, 100);
   };
 
-  // Handle confetti animation finish
-  const handleConfettiFinish = () => {
-    setShowConfetti(false);
-  };
+  // Animated styles for completion overlay
+  const completionOverlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: completionOverlayOpacity.value,
+  }));
+
+  const completionTextAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: completionTextScale.value }],
+  }));
 
   // Animated style for next round overlay
   const nextRoundOverlayAnimatedStyle = useAnimatedStyle(() => ({
@@ -366,16 +443,20 @@ export const AmrapRoundPage = ({
 
   return (
     <View style={styles.container}>
-      {/* Confetti animation overlay */}
-      {showConfetti && (
-        <LottieView
-          ref={lottieRef}
-          source={require('@/assets/animations/confetti.json')}
-          autoPlay
-          loop={false}
-          onAnimationFinish={handleConfettiFinish}
-          style={styles.confettiAnimation}
-        />
+      {/* Completion celebration overlay */}
+      {showCompletionOverlay && (
+        <Animated.View style={[styles.completionOverlay, completionOverlayAnimatedStyle]}>
+          <LottieView
+            ref={lottieRef}
+            source={require('@/assets/animations/confetti.json')}
+            autoPlay
+            loop={false}
+            style={styles.confettiAnimation}
+          />
+          <Animated.Text style={[styles.completionText, completionTextAnimatedStyle]}>
+            {completionMessage}
+          </Animated.Text>
+        </Animated.View>
       )}
 
       {/* Next round overlay */}
@@ -404,31 +485,35 @@ export const AmrapRoundPage = ({
                 {sectionName}
               </Text>
               <Text style={[styles.roundNumber, { color: themeColors.text }]}>
-                {currentRound === 1
-                  ? t('training.session.amrap.roundOne' as any) || 'Round 1'
-                  : t('training.session.amrap.roundX' as any, { round: currentRound }) || `Round ${currentRound}`}
+                {isSectionCompleted
+                  ? t('training.session.amrap.roundsCompleted' as any, { count: currentRound }) || `${currentRound} Rounds Completed`
+                  : currentRound === 1
+                    ? t('training.session.amrap.roundOne' as any) || 'Round 1'
+                    : t('training.session.amrap.roundX' as any, { round: currentRound }) || `Round ${currentRound}`}
               </Text>
             </View>
             {/* Countdown Timer */}
             <View style={[styles.timerContainer, { backgroundColor: `${getTimerColor()}20` }]}>
               <Text style={[styles.timerText, { color: getTimerColor() }]}>
-                {formatTime(timeRemaining)}
+                {isSectionCompleted ? t('training.session.amrap.complete' as any) || 'Done' : formatTime(timeRemaining)}
               </Text>
             </View>
           </View>
         </Card>
-        
-        {/* Complete Round Button */}
-        <View style={styles.buttonContainer}>
-          <FilledButton
-            label={t('training.session.amrap.completeRound' as any) || 'Complete Round'}
-            onPress={handleCompleteRound}
-            disabled={hasCompletedRef.current}
-            backgroundColor={allExercisesCompleted ? AMRAP_COLOR : `${AMRAP_COLOR}40`}
-            textColor={allExercisesCompleted ? '#FFFFFF' : themeColors.text}
-            style={styles.completeRoundButton}
-          />
-        </View>
+
+        {/* Complete Round Button - only show if section is not completed */}
+        {!isSectionCompleted && (
+          <View style={styles.buttonContainer}>
+            <FilledButton
+              label={t('training.session.amrap.completeRound' as any) || 'Complete Round'}
+              onPress={handleCompleteRound}
+              disabled={hasCompletedRef.current}
+              backgroundColor={allExercisesCompleted ? AMRAP_COLOR : `${AMRAP_COLOR}40`}
+              textColor={allExercisesCompleted ? '#FFFFFF' : themeColors.text}
+              style={styles.completeRoundButton}
+            />
+          </View>
+        )}
       </View>
 
       {/* Exercise Cards */}
@@ -476,14 +561,30 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 8,
   },
+  completionOverlay: {
+    position: 'absolute',
+    top: -500,
+    left: -50,
+    right: -50,
+    bottom: -500,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
   confettiAnimation: {
     position: 'absolute',
     top: -100,
     left: -100,
     right: -100,
     bottom: -100,
-    zIndex: 10,
-    pointerEvents: 'none',
+    zIndex: 0,
+  },
+  completionText: {
+    ...typography.h1,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    zIndex: 1,
   },
   nextRoundOverlay: {
     position: 'absolute',
