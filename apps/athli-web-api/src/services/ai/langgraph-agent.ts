@@ -42,7 +42,13 @@ const createLLM = () => {
   process.env.OPENAI_API_KEY = apiKey;
 
   return new ChatOpenAI({
-    modelName: 'openai/gpt-5',
+    // Best models for tool calling (tested on 10 varied queries):
+    // - google/gemini-3-flash-preview: Best overall (8.2s), 100% success, smart tool usage
+    // - openai/gpt-4o: Very reliable (9.0s), 100% success
+    // - google/gemini-2.0-flash-001: Good (7.7s), 90% success
+    // - google/gemini-2.5-flash: Fast but unreliable (4.2s), 60% success
+    // - openai/gpt-5: BROKEN - loops on get_exercise_catalog, never calls create_workout
+    modelName: 'google/gemini-3-flash-preview',
     openAIApiKey: apiKey,
     configuration: {
       baseURL: 'https://openrouter.ai/api/v1',
