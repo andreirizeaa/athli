@@ -199,6 +199,9 @@ export interface HistoryEntry {
   exercise_id: string;
   exercise_data: {
     sets?: Array<{
+      trackableField1?: { label?: string; prescribed?: number; completed?: number };
+      trackableField2?: { label?: string; prescribed?: number; completed?: number };
+      // Legacy fields for backwards compatibility
       weight?: number | { completed?: number; prescribed?: number };
       reps?: number | { completed?: number; prescribed?: number };
       distance?: number | { completed?: number; prescribed?: number };

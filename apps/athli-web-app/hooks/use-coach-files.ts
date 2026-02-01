@@ -22,7 +22,7 @@ export const useCoachFiles = (options?: { enabled?: boolean }) => {
     });
 
     const uploadMutation = useMutation({
-        mutationFn: (data: AddFileData) => uploadFile(data),
+        mutationFn: (data: AddFileData & { file: File }) => uploadFile(data),
         onSuccess: (newFile) => {
             queryClient.setQueryData(['coach-files'], (old: CoachFile[] | undefined) => {
                 return old ? [newFile, ...old] : [newFile];

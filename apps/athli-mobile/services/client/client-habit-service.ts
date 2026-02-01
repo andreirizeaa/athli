@@ -1,98 +1,33 @@
 import { apiFetch } from '@/lib/api-client';
+import type {
+  AssignHabitData,
+  AssignHabitsToClientsData,
+  DeleteClientHabitsData,
+  LogHabitData,
+  UpdateHabitData,
+  UpdateHabitLogData,
+  HabitStreaks,
+  ClientHabit,
+  HabitLog,
+} from '@athli/shared-types';
 
 /**
  * Client habit service for habit tracking
  * Mirrors apps/athli-web-app/api/client/client-habit-service.ts
  */
 
-export interface AssignHabitData {
-  habitIds?: string[];
-  name?: string;
-  amount?: number;
-  unit?: string;
-  period?: 'daily' | 'weekly';
-  description?: string;
-  custom_schedule?: any;
-  clientId: string;
-  coachId: string;
-}
-
-export interface AssignHabitsToClientsData {
-  habitIds: string[];
-  clientIds: string[];
-  coachId: string;
-}
-
-export interface DeleteClientHabitsData {
-  habitIds: string[];
-  clientId: string;
-  coachId: string;
-}
-
-export interface LogHabitData {
-  assignmentId: string;
-  status: 'completed' | 'skipped' | 'partial';
-  value?: number;
-  date: Date;
-  clientId: string;
-  coachId: string;
-}
-
-export interface UpdateHabitData {
-  assignmentId: string;
-  name?: string;
-  description?: string;
-  period?: 'daily' | 'weekly';
-  custom_schedule?: any;
-  clientId: string;
-  coachId: string;
-}
-
-export interface UpdateHabitLogData {
-  logId: string;
-  status: 'completed' | 'skipped' | 'partial';
-  value?: number;
-  date?: Date;
-  clientId: string;
-  coachId: string;
-}
-
-export interface HabitStreaks {
-  longest_streak: number;
-  current_streak: number;
-}
-
-export interface ClientHabit {
-  id: string;
-  assignment_id: string;
-  name: string;
-  description?: string;
-  amount?: number;
-  unit?: string;
-  period: 'daily' | 'weekly';
-  custom_schedule?: any;
-  schedule_config?: {
-    amount?: number;
-    unit?: string;
-    duration?: number;
-    reminder_message?: string;
-  };
-  schedule_type?: 'daily' | 'weekly' | 'custom';
-  times_of_day?: string[];
-  days_of_week?: number[] | null;
-  timezone?: string;
-  start_date?: string | null;
-  end_date?: string | null;
-  logs?: HabitLog[];
-}
-
-export interface HabitLog {
-  id: string;
-  status: 'completed' | 'skipped' | 'partial';
-  value?: number;
-  date: string;
-  created_at: string;
-}
+// Re-export types from shared-types for backwards compatibility
+export type {
+  AssignHabitData,
+  AssignHabitsToClientsData,
+  DeleteClientHabitsData,
+  LogHabitData,
+  UpdateHabitData,
+  UpdateHabitLogData,
+  HabitStreaks,
+  ClientHabit,
+  HabitLog,
+};
 
 /**
  * Assign habits to a client (or create new private ones)

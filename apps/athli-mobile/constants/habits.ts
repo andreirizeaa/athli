@@ -1,18 +1,7 @@
-export interface DefaultHabit {
-    name: string;
-    amount: number;
-    unit: string;
-    period: 'daily' | 'weekly';
-    description?: string;
-    duration?: number;
-    reminderTime?: string;
-    reminderMessage?: string;
-}
+import type { DefaultHabit, HabitSection } from '@athli/shared-types';
 
-export interface HabitSection {
-    label: string;
-    habits: DefaultHabit[];
-}
+// Re-export types from shared-types for backwards compatibility
+export type { DefaultHabit, HabitSection };
 
 export const defaultHabits: HabitSection[] = [
     {

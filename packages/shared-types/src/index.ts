@@ -14,16 +14,20 @@
  * ONE SCHEMA - ONE BUILDER - ONE CONVERTER - NO DRIFT
  */
 
-// Core schema types
-export * from './workout-schema';
+// ================================================
+// SCHEMAS - Core type definitions
+// ================================================
+export * from './schemas';
 
-// Payload building (builder → API)
-export * from './payload-builder';
+// ================================================
+// FUNCTIONS - Utility functions
+// ================================================
+export * from './functions';
 
-// Payload conversion (API → builder)
-export * from './payload-converter';
-
-// Training constants (centralized) - export specific items to avoid duplicates
+// ================================================
+// CONSTANTS - Centralized constants
+// ================================================
+// Export specific items from training-constants to avoid duplicates
 export {
   WORKOUT_TYPES,
   PROGRAM_TYPES,
@@ -77,17 +81,7 @@ export {
   type MuscleWikiDifficulty,
   type MuscleWikiForce,
   type MuscleWikiMechanic,
-} from './training-constants';
-
-// ================================================
-// MESSAGING SCHEMA & UTILITIES
-// ================================================
-
-// Messaging schema types
-export * from './messaging-schema';
+} from './constants/training-constants';
 
 // Messaging constants
-export * from './messaging-constants';
-
-// Messaging utilities
-export * from './messaging-utils';
+export * from './constants/messaging-constants';

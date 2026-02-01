@@ -75,6 +75,9 @@ const SECTION_ICONS: Record<string, { sf: string; IconComponent: LucideIcon }> =
 type ReadinessField = keyof WorkoutPre;
 const READINESS_FIELDS: ReadinessField[] = ['sleep', 'mood', 'energy', 'stress', 'soreness'];
 
+// Fields where lower is better (inverted color scale)
+const INVERTED_FIELDS: ReadinessField[] = ['stress', 'soreness'];
+
 const FIELD_ICONS: Record<ReadinessField, { sf: string; IconComponent: LucideIcon }> = {
   sleep: { sf: 'moon.zzz', IconComponent: Moon },
   mood: { sf: 'sun.max.fill', IconComponent: Sun },
@@ -595,7 +598,10 @@ export default function WorkoutReviewModal() {
             <View style={styles.readinessRow}>
               {READINESS_FIELDS.map((field) => {
                 const value = readinessData[field];
-                const color = value ? RATING_COLORS[value - 1] : themeColors.border;
+                const isInverted = INVERTED_FIELDS.includes(field);
+                // For inverted fields (stress, soreness), lower is better: 1=green, 5=red
+                const colorIndex = value ? (isInverted ? 5 - value : value - 1) : -1;
+                const color = colorIndex >= 0 ? RATING_COLORS[colorIndex] : themeColors.border;
                 const label = value ? READINESS_LABELS[field][value - 1] : '-';
                 const iconConfig = FIELD_ICONS[field];
 

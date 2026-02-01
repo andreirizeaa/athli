@@ -82,9 +82,11 @@ export function useClientTraining(clientId: string) {
     });
 
     // Mutation for deleting workout by key (sourceDate + workoutId)
-    // No cache invalidation - page uses optimistic local state updates
     const deleteWorkoutByKeyMutation = useMutation({
         mutationFn: (data: DeleteWorkoutByKeyData) => deleteWorkoutByKey({ ...data, coachId: coachId! }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['client-training-calendar', clientId] });
+        },
         onError: (error: Error) => {
             toast.error(error.message || 'Failed to delete workout');
         }

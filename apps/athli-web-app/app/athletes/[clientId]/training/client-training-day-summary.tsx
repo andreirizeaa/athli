@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CircleCheck, Clock, Gauge, Weight, Activity, Star, Loader2, MessageSquare } from 'lucide-react';
+import { Loader2, MessageSquare, Moon, Sun, Zap, Brain, Dumbbell, X } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -15,6 +15,20 @@ import { WorkoutPreviewContent } from './workout-preview-content';
 import { ExerciseHistoryPanel } from './exercise-history-panel';
 import { searchExercises } from '@/api/exercise/exercise-search';
 import { useUserProfile } from '@/hooks/use-user-profile';
+
+// Rating colors matching the mobile app (1-5 scale)
+const RATING_COLORS = [
+    '#EF4444', // 1 - red
+    '#F97316', // 2 - orange
+    '#FBBF24', // 3 - amber/yellow
+    '#84CC16', // 4 - lime
+    '#22C55E', // 5 - green
+];
+
+const getRatingColor = (value: number) => RATING_COLORS[value - 1] || RATING_COLORS[2];
+
+// Inverted color scale for metrics where lower is better (stress, soreness)
+const getRatingColorInverted = (value: number) => RATING_COLORS[5 - value] || RATING_COLORS[2];
 
 interface ClientTrainingDaySummaryProps {
     open: boolean;
@@ -40,9 +54,8 @@ interface ClientTrainingDaySummaryProps {
         exercisesCompleted: number;
         exercisesTotal: number;
         duration: number;
-        intensity: number; // 0-10
+        intensity: number; // 1-5
         volume: number;
-        readiness: number; // 0-10
         rating: number; // 1-5
     };
 }
@@ -75,7 +88,6 @@ export const ClientTrainingDaySummary = ({
         duration: 0,
         intensity: 0,
         volume: 0,
-        readiness: 0,
         rating: 0,
     },
 }: ClientTrainingDaySummaryProps) => {
@@ -93,6 +105,10 @@ export const ClientTrainingDaySummary = ({
     const completedAt = completedSummary?.completed_at || completedSummary?.completedAt;
     const startedAt = completedSummary?.started_at || completedSummary?.startedAt;
     const isInProgress = !completedAt && (!!startedAt || completedSummary?.status === 'started' || completedSummary?.status === 'in_progress');
+
+    // Extract pre-workout readiness scores (mood, sleep, energy, stress, soreness)
+    const pre = workoutData?.workout_data?.pre || workoutData?.pre || {};
+    const post = workoutData?.workout_data?.post || workoutData?.post || {};
 
     // Process exercises for stats calculation
     const items = workoutData?.workout_data?.items || workoutData?.items || [];
@@ -132,7 +148,7 @@ export const ClientTrainingDaySummary = ({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
                 className={cn(
-                    "bg-transparent border-0 shadow-none p-0 outline-none overflow-visible flex gap-3 h-[80vh]",
+                    "bg-transparent border-0 shadow-none p-0 outline-none overflow-visible flex gap-3 h-[88vh]",
                     historyExercise ? "!max-w-[80vw] w-[80vw]" : "!max-w-[55vw] w-[55vw]"
                 )}
                 onOpenAutoFocus={(e) => e.preventDefault()}
@@ -151,13 +167,159 @@ export const ClientTrainingDaySummary = ({
                 <DialogTitle className="sr-only">Training Day Summary</DialogTitle>
 
                 <LayoutGroup>
+                    {/* Readiness Sidebar - Left Side */}
+                    <motion.div
+                        layout
+                        initial="hidden"
+                        animate="visible"
+                        variants={containerVariants}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        className="w-36 shrink-0 bg-background rounded-2xl shadow-2xl flex flex-col relative group border border-border/50 overflow-y-auto overflow-x-hidden custom-scrollbar no-scrollbar"
+                    >
+
+                        {isLoading ? (
+                            <div className="flex-1 flex items-center justify-center relative z-10 min-h-full">
+                                <Loader2 className="size-10 text-foreground animate-spin" />
+                            </div>
+                        ) : (
+                            <motion.div
+                                key="metrics"
+                                variants={containerVariants}
+                                initial="hidden"
+                                animate="visible"
+                                className="flex flex-col justify-evenly relative z-10 h-full py-4"
+                            >
+                                {/* Pre-workout Section Header */}
+                                <div className="text-center">
+                                    <span className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] font-bold">Readiness</span>
+                                </div>
+
+                                {/* Sleep */}
+                                {pre.sleep !== undefined && pre.sleep !== null && (
+                                    <motion.div
+                                        variants={itemVariants}
+                                        whileHover={{ scale: 1.05, x: 2 }}
+                                        className="flex flex-col items-center gap-1 text-center h-fit"
+                                    >
+                                        <div
+                                            className="p-2.5 rounded-xl"
+                                            style={{ backgroundColor: `${getRatingColor(pre.sleep)}15` }}
+                                        >
+                                            <Moon
+                                                className="size-8 shrink-0"
+                                                style={{ color: getRatingColor(pre.sleep) }}
+                                            />
+                                        </div>
+                                        <div className="flex flex-col items-center gap-0.5">
+                                            <span className="text-sm font-bold leading-tight tabular-nums text-foreground">{pre.sleep}/5</span>
+                                            <span className="text-[9px] text-muted-foreground uppercase tracking-[0.1em] font-bold">Sleep</span>
+                                        </div>
+                                    </motion.div>
+                                )}
+
+                                {/* Mood */}
+                                {pre.mood !== undefined && pre.mood !== null && (
+                                    <motion.div
+                                        variants={itemVariants}
+                                        whileHover={{ scale: 1.05, x: 2 }}
+                                        className="flex flex-col items-center gap-1 text-center h-fit"
+                                    >
+                                        <div
+                                            className="p-2.5 rounded-xl"
+                                            style={{ backgroundColor: `${getRatingColor(pre.mood)}15` }}
+                                        >
+                                            <Sun
+                                                className="size-8 shrink-0"
+                                                style={{ color: getRatingColor(pre.mood) }}
+                                            />
+                                        </div>
+                                        <div className="flex flex-col items-center gap-0.5">
+                                            <span className="text-sm font-bold leading-tight tabular-nums text-foreground">{pre.mood}/5</span>
+                                            <span className="text-[9px] text-muted-foreground uppercase tracking-[0.1em] font-bold">Mood</span>
+                                        </div>
+                                    </motion.div>
+                                )}
+
+                                {/* Energy */}
+                                {pre.energy !== undefined && pre.energy !== null && (
+                                    <motion.div
+                                        variants={itemVariants}
+                                        whileHover={{ scale: 1.05, x: 2 }}
+                                        className="flex flex-col items-center gap-1 text-center h-fit"
+                                    >
+                                        <div
+                                            className="p-2.5 rounded-xl"
+                                            style={{ backgroundColor: `${getRatingColor(pre.energy)}15` }}
+                                        >
+                                            <Zap
+                                                className="size-8 shrink-0"
+                                                style={{ color: getRatingColor(pre.energy) }}
+                                            />
+                                        </div>
+                                        <div className="flex flex-col items-center gap-0.5">
+                                            <span className="text-sm font-bold leading-tight tabular-nums text-foreground">{pre.energy}/5</span>
+                                            <span className="text-[9px] text-muted-foreground uppercase tracking-[0.1em] font-bold">Energy</span>
+                                        </div>
+                                    </motion.div>
+                                )}
+
+                                {/* Stress - inverted scale (lower is better) */}
+                                {pre.stress !== undefined && pre.stress !== null && (
+                                    <motion.div
+                                        variants={itemVariants}
+                                        whileHover={{ scale: 1.05, x: 2 }}
+                                        className="flex flex-col items-center gap-1 text-center h-fit"
+                                    >
+                                        <div
+                                            className="p-2.5 rounded-xl"
+                                            style={{ backgroundColor: `${getRatingColorInverted(pre.stress)}15` }}
+                                        >
+                                            <Brain
+                                                className="size-8 shrink-0"
+                                                style={{ color: getRatingColorInverted(pre.stress) }}
+                                            />
+                                        </div>
+                                        <div className="flex flex-col items-center gap-0.5">
+                                            <span className="text-sm font-bold leading-tight tabular-nums text-foreground">{pre.stress}/5</span>
+                                            <span className="text-[9px] text-muted-foreground uppercase tracking-[0.1em] font-bold">Stress</span>
+                                        </div>
+                                    </motion.div>
+                                )}
+
+                                {/* Soreness - inverted scale (lower is better) */}
+                                {pre.soreness !== undefined && pre.soreness !== null && (
+                                    <motion.div
+                                        variants={itemVariants}
+                                        whileHover={{ scale: 1.05, x: 2 }}
+                                        className="flex flex-col items-center gap-1 text-center h-fit"
+                                    >
+                                        <div
+                                            className="p-2.5 rounded-xl"
+                                            style={{ backgroundColor: `${getRatingColorInverted(pre.soreness)}15` }}
+                                        >
+                                            <Dumbbell
+                                                className="size-8 shrink-0"
+                                                style={{ color: getRatingColorInverted(pre.soreness) }}
+                                            />
+                                        </div>
+                                        <div className="flex flex-col items-center gap-0.5">
+                                            <span className="text-sm font-bold leading-tight tabular-nums text-foreground">{pre.soreness}/5</span>
+                                            <span className="text-[9px] text-muted-foreground uppercase tracking-[0.1em] font-bold">Soreness</span>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </motion.div>
+                        )}
+                    </motion.div>
+
+                    {/* Main Content */}
                     <motion.div
                         layout="position"
                         layoutId="main-summary"
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="w-[calc(55vw-11rem)] bg-background rounded-2xl shadow-2xl flex flex-col overflow-hidden relative shrink-0"
+                        className="w-[calc(55vw-12rem)] bg-background rounded-2xl shadow-2xl flex flex-col overflow-hidden relative shrink-0"
                     >
                         {isLoading ? (
                             <div className="flex-1 flex items-center justify-center">
@@ -199,6 +361,19 @@ export const ClientTrainingDaySummary = ({
                                                         <p>Message Client</p>
                                                     </TooltipContent>
                                                 </Tooltip>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <button
+                                                            onClick={() => onOpenChange(false)}
+                                                            className="p-2 rounded-xl bg-sidebar-foreground/10 hover:bg-sidebar-foreground/20 text-sidebar-foreground transition-all duration-200 group/close h-9 w-9 flex items-center justify-center"
+                                                        >
+                                                            <X className="size-5 transition-transform group-hover/close:scale-110" />
+                                                        </button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>Close</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
                                             </div>
                                         </div>
                                         {(completedSummary?.started_at || completedSummary?.startedAt) && (completedSummary?.completed_at || completedSummary?.completedAt) ? (
@@ -210,26 +385,37 @@ export const ClientTrainingDaySummary = ({
                                                 {format(new Date(), 'MMMM do, yyyy')}
                                             </p>
                                         ) : null}
-                                        {(workoutData?.workout_data?.post?.sessionComments || workoutData?.post?.sessionComments) && (
-                                            <div className="flex flex-col gap-2 w-full mt-2 p-3 rounded-xl bg-sidebar-foreground/10 border border-sidebar-foreground/20">
-                                                <div className="flex items-center gap-2">
-                                                    {athlete && (
-                                                        <Avatar className="size-5 border border-sidebar-foreground/30">
-                                                            <AvatarImage src={athlete.avatarUrl} alt={athlete.name} />
-                                                            <AvatarFallback className="text-[10px] bg-sidebar-foreground/20 text-sidebar-foreground">{athlete.name.charAt(0).toUpperCase()}</AvatarFallback>
-                                                        </Avatar>
-                                                    )}
-                                                    <span className="text-xs font-bold uppercase tracking-wider text-sidebar-foreground/80">Workout Comment</span>
-                                                </div>
-                                                <p className="text-sm leading-relaxed text-sidebar-foreground font-medium">
-                                                    {workoutData?.workout_data?.post?.sessionComments || workoutData?.post?.sessionComments}
-                                                </p>
+                                        <div className="flex flex-col gap-2 w-full mt-2 p-3 rounded-xl bg-sidebar-foreground/10 border border-sidebar-foreground/20">
+                                            <div className="flex items-center gap-2">
+                                                {athlete && (
+                                                    <Avatar className="size-5 border border-sidebar-foreground/30">
+                                                        <AvatarImage src={athlete.avatarUrl} alt={athlete.name} />
+                                                        <AvatarFallback className="text-[10px] bg-sidebar-foreground/20 text-sidebar-foreground">{athlete.name.charAt(0).toUpperCase()}</AvatarFallback>
+                                                    </Avatar>
+                                                )}
+                                                <span className="text-xs font-bold uppercase tracking-wider text-sidebar-foreground/80">Workout Comment</span>
                                             </div>
-                                        )}
+                                            <p className={cn(
+                                                "text-sm leading-relaxed font-medium",
+                                                (workoutData?.workout_data?.post?.sessionComments || workoutData?.post?.sessionComments)
+                                                    ? "text-sidebar-foreground"
+                                                    : "text-sidebar-foreground/40 italic"
+                                            )}>
+                                                {workoutData?.workout_data?.post?.sessionComments || workoutData?.post?.sessionComments || "No comment provided"}
+                                            </p>
+                                        </div>
                                     </div>
                                     <WorkoutPreviewContent
                                         workoutData={workoutData}
                                         onHistoryClick={(ex) => setHistoryExercise(ex)}
+                                        postStats={{
+                                            intensity: post.intensity,
+                                            rating: post.rating,
+                                            exercisesCompleted: exercisesCompletedSpan,
+                                            exercisesTotal: exercisesTotalSpan,
+                                            duration: stats.duration,
+                                            volume: stats.volume,
+                                        }}
                                     />
                                 </motion.div>
                             </AnimatePresence>
@@ -248,152 +434,6 @@ export const ClientTrainingDaySummary = ({
                         )}
                     </AnimatePresence>
 
-                    <motion.div
-                        layout
-                        initial="hidden"
-                        animate="visible"
-                        variants={containerVariants}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="w-32 shrink-0 bg-sidebar rounded-2xl shadow-2xl flex flex-col relative group border border-sidebar-foreground/10 overflow-y-auto overflow-x-hidden custom-scrollbar no-scrollbar"
-                    >
-                        {/* Decorative Background Glow */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-sidebar-foreground/5 to-transparent opacity-50 pointer-events-none" />
-
-                        {isLoading ? (
-                            <div className="flex-1 flex items-center justify-center relative z-10 min-h-full">
-                                <Loader2 className="size-10 text-sidebar-foreground animate-spin" />
-                            </div>
-                        ) : (
-                            <motion.div
-                                key="metrics"
-                                variants={containerVariants}
-                                initial="hidden"
-                                animate="visible"
-                                className="flex flex-col gap-4 relative z-10 my-auto py-6"
-                            >
-                                {/* Exercises */}
-                                <motion.div
-                                    variants={itemVariants}
-                                    whileHover={{ scale: 1.05, x: -2 }}
-                                    className="flex flex-col items-center gap-1 text-center h-fit"
-                                >
-                                    <div className="p-2 rounded-xl bg-sidebar-foreground/10 shadow-[0_0_20px_rgba(255,255,255,0.05)]">
-                                        <CircleCheck className="size-7 text-sidebar-foreground shrink-0" />
-                                    </div>
-                                    <div className="flex flex-col items-center gap-0">
-                                        <span className="text-base font-bold leading-tight tabular-nums text-sidebar-foreground">{exercisesCompletedSpan}/{exercisesTotalSpan}</span>
-                                        <span className="text-[10px] text-sidebar-foreground/60 uppercase tracking-[0.1em] font-bold">{t('home.exercises')}</span>
-                                    </div>
-                                </motion.div>
-
-                                <motion.div
-                                    variants={itemVariants}
-                                    whileHover={{ scale: 1.05, x: -2 }}
-                                    className="flex flex-col items-center gap-1 text-center h-fit relative z-10"
-                                >
-                                    <div className="p-2 rounded-xl bg-sidebar-foreground/10 shadow-[0_0_20px_rgba(255,255,255,0.05)]">
-                                        <Clock className="size-7 text-sidebar-foreground shrink-0" />
-                                    </div>
-                                    <div className="flex flex-col items-center gap-0">
-                                        <span className="text-base font-bold leading-tight tabular-nums text-sidebar-foreground">{stats.duration}</span>
-                                        <span className="text-[10px] text-sidebar-foreground/60 uppercase tracking-[0.1em] font-bold">{t('home.minutes')}</span>
-                                    </div>
-                                </motion.div>
-
-                                {/* Readiness */}
-                                <motion.div
-                                    variants={itemVariants}
-                                    whileHover={{ scale: 1.05, x: -2 }}
-                                    className="flex flex-col items-center gap-1 text-center h-fit relative z-10"
-                                >
-                                    <div className={cn(
-                                        "p-2 rounded-xl",
-                                        stats.readiness <= 3 ? "bg-red-500/10 shadow-[0_0_20px_rgba(239,68,68,0.15)]" :
-                                            stats.readiness <= 7 ? "bg-amber-500/10 shadow-[0_0_20px_rgba(245,158,11,0.15)]" :
-                                                "bg-green-500/10 shadow-[0_0_20px_rgba(34,197,94,0.15)]"
-                                    )}>
-                                        <Activity
-                                            className={cn(
-                                                'size-7 shrink-0',
-                                                stats.readiness <= 3 ? 'text-red-500' :
-                                                    stats.readiness <= 7 ? 'text-amber-500' :
-                                                        'text-green-500'
-                                            )}
-                                        />
-                                    </div>
-                                    <div className="flex flex-col items-center gap-0">
-                                        <span className="text-base font-bold leading-tight tabular-nums text-sidebar-foreground">{stats.readiness}</span>
-                                        <span className="text-[10px] text-sidebar-foreground/60 uppercase tracking-[0.1em] font-bold">Readiness</span>
-                                    </div>
-                                </motion.div>
-
-                                <motion.div
-                                    variants={itemVariants}
-                                    whileHover={{ scale: 1.05, x: -2 }}
-                                    className="flex flex-col items-center gap-1 text-center h-fit relative z-10"
-                                >
-                                    <div className={cn(
-                                        "p-2 rounded-xl",
-                                        stats.intensity <= 3 ? "bg-red-500/10 shadow-[0_0_20px_rgba(239,68,68,0.15)]" :
-                                            stats.intensity <= 7 ? "bg-amber-500/10 shadow-[0_0_20px_rgba(245,158,11,0.15)]" :
-                                                "bg-green-500/10 shadow-[0_0_20px_rgba(34,197,94,0.15)]"
-                                    )}>
-                                        <Gauge
-                                            className={cn(
-                                                'size-7 shrink-0',
-                                                stats.intensity <= 3 ? 'text-red-500' :
-                                                    stats.intensity <= 7 ? 'text-amber-500' :
-                                                        'text-green-500'
-                                            )}
-                                        />
-                                    </div>
-                                    <div className="flex flex-col items-center gap-0">
-                                        <span className="text-base font-bold leading-tight tabular-nums text-sidebar-foreground">{stats.intensity}</span>
-                                        <span className="text-[10px] text-sidebar-foreground/60 uppercase tracking-[0.1em] font-bold">{t('home.intensity')}</span>
-                                    </div>
-                                </motion.div>
-
-                                <motion.div
-                                    variants={itemVariants}
-                                    whileHover={{ scale: 1.05, x: -2 }}
-                                    className="flex flex-col items-center gap-1 text-center h-fit relative z-10"
-                                >
-                                    <div className="p-2 rounded-xl bg-sidebar-foreground/10 shadow-[0_0_20px_rgba(255,255,255,0.05)]">
-                                        <Weight className="size-7 text-sidebar-foreground shrink-0" />
-                                    </div>
-                                    <div className="flex flex-col items-center gap-0">
-                                        <span className="text-base font-bold leading-tight tabular-nums text-sidebar-foreground">{stats.volume}kg</span>
-                                        <span className="text-[10px] text-sidebar-foreground/60 uppercase tracking-[0.1em] font-bold">{t('home.weight')}</span>
-                                    </div>
-                                </motion.div>
-
-                                {/* Rating */}
-                                <motion.div
-                                    variants={itemVariants}
-                                    whileHover={{ scale: 1.05, x: -2 }}
-                                    className="flex flex-col items-center gap-1 text-center h-fit relative z-10"
-                                >
-                                    <div className="relative p-2 rounded-xl bg-sidebar-foreground/10 shadow-[0_0_20px_rgba(255,255,255,0.15)]">
-                                        <div className="relative size-7 shrink-0">
-                                            {/* Background Star (Stroke) */}
-                                            <Star className="size-7 text-sidebar-foreground" strokeWidth={2} />
-                                            {/* Foreground Star (Filled) */}
-                                            <div
-                                                className="absolute inset-y-0 left-0 overflow-hidden"
-                                                style={{ width: `${(stats.rating / 5) * 100}%` }}
-                                            >
-                                                <Star className="size-7 text-sidebar-foreground fill-sidebar-foreground" strokeWidth={2} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col items-center gap-0">
-                                        <span className="text-base font-bold leading-tight tabular-nums text-sidebar-foreground">{stats.rating}</span>
-                                        <span className="text-[10px] text-sidebar-foreground/60 uppercase tracking-[0.1em] font-bold">Rating</span>
-                                    </div>
-                                </motion.div>
-                            </motion.div>
-                        )}
-                    </motion.div>
                 </LayoutGroup>
             </DialogContent>
 

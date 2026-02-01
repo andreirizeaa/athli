@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
-import { Link2, Play, History, CircleCheck, CircleX } from 'lucide-react';
+import { Link2, Play, History, CircleCheck, CircleX, Dumbbell, Loader2, Gauge, Star, Clock, Weight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/general/utils';
 import { useExerciseLookup } from '@/hooks/use-all-exercises';
+import { useExerciseThumbnails } from '@/hooks/use-exercise-thumbnails';
 import { VideoModal } from '@/components/training/builder/video-modal';
 import {
     Table,
@@ -16,10 +17,31 @@ import {
     TableRow,
 } from '@/components/ui/table';
 
+interface PostStats {
+    intensity?: number;
+    rating?: number;
+    exercisesCompleted: number;
+    exercisesTotal: number;
+    duration: number;
+    volume: number;
+}
+
 interface WorkoutPreviewContentProps {
     workoutData: any;
     onHistoryClick?: (exercise: any) => void;
+    postStats?: PostStats;
 }
+
+// Rating colors matching the mobile app (1-5 scale)
+const RATING_COLORS = [
+    '#EF4444', // 1 - red
+    '#F97316', // 2 - orange
+    '#FBBF24', // 3 - amber/yellow
+    '#84CC16', // 4 - lime
+    '#22C55E', // 5 - green
+];
+
+const getRatingColor = (value: number) => RATING_COLORS[value - 1] || RATING_COLORS[2];
 
 // Helper function to render set values (weight/reps) showing differences between prescribed and completed
 const renderValue = (value: any) => {
@@ -78,7 +100,7 @@ const renderValue = (value: any) => {
     return value;
 };
 
-export const WorkoutPreviewContent = ({ workoutData, onHistoryClick }: WorkoutPreviewContentProps) => {
+export const WorkoutPreviewContent = ({ workoutData, onHistoryClick, postStats }: WorkoutPreviewContentProps) => {
     const [enrichedExercises, setEnrichedExercises] = useState<any[]>([]);
     const [isLoadingExercises, setIsLoadingExercises] = useState(false);
     const [selectedExercise, setSelectedExercise] = useState<any | null>(null);
@@ -86,6 +108,15 @@ export const WorkoutPreviewContent = ({ workoutData, onHistoryClick }: WorkoutPr
     
     // Get exercise lookup from cached exercises
     const { findExerciseById } = useExerciseLookup();
+
+    // Get only exercise items for thumbnail loading
+    const exerciseItems = useMemo(() =>
+        enrichedExercises.filter((item) => item.itemType === 'exercise'),
+        [enrichedExercises]
+    );
+
+    // Load thumbnails for exercises
+    const { getThumbnailUrl, isThumbnailLoading } = useExerciseThumbnails(exerciseItems);
 
     useEffect(() => {
         if (!workoutData) {
@@ -156,7 +187,6 @@ export const WorkoutPreviewContent = ({ workoutData, onHistoryClick }: WorkoutPr
                             id: exerciseDetails.exerciseId, // Map to 'id' for components expecting it (like ExerciseHistoryPanel)
                             prescribedName, // Add prescribed name if substituted
                             exerciseType: exercise.exerciseType || exerciseDetails.exerciseType || 'weight_reps',
-                            thumbnailUrl: exerciseDetails.imageUrl,
                             sets: sets,
                             isSuperset: isSuperset,
                             tempo: exercise.tempo,
@@ -215,46 +245,6 @@ export const WorkoutPreviewContent = ({ workoutData, onHistoryClick }: WorkoutPr
         }
     };
 
-    const getMetricsConfig = (type: string) => {
-        switch (type) {
-            case 'distance_duration':
-                return {
-                    labels: ['Distance (m)', 'Duration (s)'],
-                    keys: ['distance', 'durationSec']
-                };
-            case 'weight_distance':
-                return {
-                    labels: ['Weight', 'Distance'],
-                    keys: ['weight', 'distance']
-                };
-            case 'reps_distance':
-                return {
-                    labels: ['Reps', 'Distance'],
-                    keys: ['reps', 'distance']
-                };
-            case 'duration':
-                return {
-                    labels: ['Duration (s)', ''],
-                    keys: ['durationSec', null]
-                };
-            case 'weight_duration':
-                return {
-                    labels: ['Weight', 'Duration'],
-                    keys: ['weight', 'durationSec']
-                };
-            case 'reps_duration':
-                return {
-                    labels: ['Reps', 'Duration'],
-                    keys: ['reps', 'durationSec']
-                };
-            default: // weight_reps
-                return {
-                    labels: ['Weight', 'Reps'],
-                    keys: ['weight', 'reps']
-                };
-        }
-    };
-
     return (
         <>
             <div className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar bg-muted/5">
@@ -268,6 +258,104 @@ export const WorkoutPreviewContent = ({ workoutData, onHistoryClick }: WorkoutPr
                     </div>
                 ) : (
                     <div className="flex flex-col gap-4">
+                        {/* Post-workout Stats Row */}
+                        {postStats && (
+                            <div className="flex items-center justify-center gap-6 py-3 px-4 rounded-xl bg-muted/30 border border-border/50">
+                                {/* Intensity */}
+                                {postStats.intensity !== undefined && postStats.intensity !== null && (
+                                    <div className="flex items-center gap-2">
+                                        <div
+                                            className="p-2 rounded-lg"
+                                            style={{ backgroundColor: `${getRatingColor(postStats.intensity)}15` }}
+                                        >
+                                            <Gauge
+                                                className="size-5"
+                                                style={{ color: getRatingColor(postStats.intensity) }}
+                                            />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold tabular-nums">{postStats.intensity}/5</span>
+                                            <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Intensity</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Rating */}
+                                {postStats.rating !== undefined && postStats.rating !== null && (
+                                    <div className="flex items-center gap-2">
+                                        <div
+                                            className="p-2 rounded-lg"
+                                            style={{ backgroundColor: `${getRatingColor(postStats.rating)}15` }}
+                                        >
+                                            <div className="relative size-5">
+                                                {/* Background star (outline) */}
+                                                <Star
+                                                    className="size-5 absolute inset-0"
+                                                    style={{ color: getRatingColor(postStats.rating) }}
+                                                    strokeWidth={2}
+                                                />
+                                                {/* Foreground star (filled) with clip */}
+                                                <div
+                                                    className="absolute inset-0 overflow-hidden"
+                                                    style={{ width: `${(postStats.rating / 5) * 100}%` }}
+                                                >
+                                                    <Star
+                                                        className="size-5"
+                                                        style={{ color: getRatingColor(postStats.rating), fill: getRatingColor(postStats.rating) }}
+                                                        strokeWidth={2}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold tabular-nums">{postStats.rating}/5</span>
+                                            <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Rating</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Divider */}
+                                {(postStats.intensity || postStats.rating) && (
+                                    <div className="h-8 w-px bg-border/50" />
+                                )}
+
+                                {/* Exercises */}
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded-lg bg-primary/10">
+                                        <CircleCheck className="size-5 text-primary" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-bold tabular-nums">{postStats.exercisesCompleted}/{postStats.exercisesTotal}</span>
+                                        <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Exercises</span>
+                                    </div>
+                                </div>
+
+                                {/* Duration */}
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded-lg bg-primary/10">
+                                        <Clock className="size-5 text-primary" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-bold tabular-nums">{postStats.duration} min</span>
+                                        <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Duration</span>
+                                    </div>
+                                </div>
+
+                                {/* Volume */}
+                                {postStats.volume > 0 && (
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-2 rounded-lg bg-primary/10">
+                                            <Weight className="size-5 text-primary" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold tabular-nums">{postStats.volume}kg</span>
+                                            <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Volume</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {enrichedExercises.map((item: any, index: number) => {
                             if (item.itemType === 'section-header') {
                                 return (
@@ -314,12 +402,19 @@ export const WorkoutPreviewContent = ({ workoutData, onHistoryClick }: WorkoutPr
                                                     className="group relative size-9 rounded-lg overflow-hidden shrink-0 bg-muted cursor-pointer"
                                                     onClick={() => handleThumbnailClick(exercise)}
                                                 >
-                                                    {exercise.thumbnailUrl && (
-                                                        <Image
-                                                            src={exercise.thumbnailUrl}
+                                                    {isThumbnailLoading(exercise.rawThumbnailUrl) ? (
+                                                        <div className="absolute inset-0 flex items-center justify-center bg-muted rounded">
+                                                            <Loader2 className="size-4 text-muted-foreground animate-spin" />
+                                                        </div>
+                                                    ) : !getThumbnailUrl(exercise.rawThumbnailUrl) ? (
+                                                        <div className="absolute inset-0 flex items-center justify-center bg-muted rounded">
+                                                            <Dumbbell className="size-4 text-muted-foreground" />
+                                                        </div>
+                                                    ) : (
+                                                        <img
+                                                            src={getThumbnailUrl(exercise.rawThumbnailUrl)}
                                                             alt={exercise.name || 'Exercise'}
-                                                            fill
-                                                            className="object-cover transition-transform duration-300 group-hover:scale-110"
+                                                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                                                         />
                                                     )}
                                                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -371,88 +466,84 @@ export const WorkoutPreviewContent = ({ workoutData, onHistoryClick }: WorkoutPr
                                             </div>
                                         )}
 
-                                        {exercise.sets && exercise.sets.length > 0 && (
-                                            <div className="border-t border-border/50">
-                                                <Table>
-                                                    <TableHeader className="bg-muted/20">
-                                                        <TableRow className="hover:bg-transparent border-b border-border/50">
-                                                            <TableHead className="w-16 text-center font-bold text-[10px] uppercase tracking-widest text-muted-foreground h-8 py-1 px-2">
-                                                                Set
-                                                            </TableHead>
-                                                            <TableHead className="text-center font-bold text-[10px] uppercase tracking-widest text-muted-foreground h-8 py-1 px-2">
-                                                                Type
-                                                            </TableHead>
-                                                            {(() => {
-                                                                const config = getMetricsConfig(exercise.exerciseType);
-                                                                return (
-                                                                    <>
-                                                                        <TableHead className="text-center font-bold text-[10px] uppercase tracking-widest text-muted-foreground h-8 py-1 px-2">
-                                                                            {config.labels[0]}
-                                                                        </TableHead>
-                                                                        {config.labels[1] && (
-                                                                            <TableHead className="text-center font-bold text-[10px] uppercase tracking-widest text-muted-foreground h-8 py-1 px-2">
-                                                                                {config.labels[1]}
-                                                                            </TableHead>
-                                                                        )}
-                                                                    </>
-                                                                );
-                                                            })()}
-                                                            <TableHead className="text-center font-bold text-[10px] uppercase tracking-widest text-muted-foreground h-8 py-1 px-2">
-                                                                Rest (s)
-                                                            </TableHead>
-                                                            <TableHead className="w-16 text-center font-bold text-[10px] uppercase tracking-widest text-muted-foreground h-8 py-1 px-2">
-                                                                Status
-                                                            </TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {exercise.sets.map((set: any, setIndex: number) => {
-                                                            const config = getMetricsConfig(exercise.exerciseType);
-                                                            return (
+                                        {exercise.sets && exercise.sets.length > 0 && (() => {
+                                            // Determine which columns to show based on trackable fields
+                                            const firstSet = exercise.sets[0];
+                                            const field1Label = firstSet?.trackableField1?.label || exercise.column1Label || 'Value';
+                                            const field2Label = firstSet?.trackableField2?.label || exercise.column2Label;
+
+                                            // Check if field2 should be shown (not "Optional" and has some data)
+                                            const showField2 = field2Label &&
+                                                field2Label.toLowerCase() !== 'optional' &&
+                                                exercise.sets.some((s: any) =>
+                                                    s.trackableField2?.prescribed !== null ||
+                                                    s.trackableField2?.completed !== null
+                                                );
+
+                                            // Check if rest column should be shown
+                                            const showRest = exercise.sets.some((s: any) => s.restSec && s.restSec > 0);
+
+                                            return (
+                                                <div className="border-t border-border/50">
+                                                    <Table>
+                                                        <TableHeader className="bg-muted/20">
+                                                            <TableRow className="hover:bg-transparent border-b border-border/50">
+                                                                <TableHead className="w-14 text-center font-bold text-[10px] uppercase tracking-widest text-muted-foreground h-8 py-1 px-2">
+                                                                    Set
+                                                                </TableHead>
+                                                                <TableHead className="text-center font-bold text-[10px] uppercase tracking-widest text-muted-foreground h-8 py-1 px-2">
+                                                                    {field1Label}
+                                                                </TableHead>
+                                                                {showField2 && (
+                                                                    <TableHead className="text-center font-bold text-[10px] uppercase tracking-widest text-muted-foreground h-8 py-1 px-2">
+                                                                        {field2Label}
+                                                                    </TableHead>
+                                                                )}
+                                                                {showRest && (
+                                                                    <TableHead className="text-center font-bold text-[10px] uppercase tracking-widest text-muted-foreground h-8 py-1 px-2">
+                                                                        Rest
+                                                                    </TableHead>
+                                                                )}
+                                                                <TableHead className="w-14 text-center font-bold text-[10px] uppercase tracking-widest text-muted-foreground h-8 py-1 px-2">
+                                                                    Status
+                                                                </TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {exercise.sets.map((set: any, setIndex: number) => (
                                                                 <TableRow key={setIndex} className="h-10 border-b border-border/50 last:border-0 bg-background hover:bg-muted/10 transition-colors">
                                                                     <TableCell className="text-center py-1 px-2 font-bold text-xs text-foreground/80">
                                                                         {setIndex + 1}
                                                                     </TableCell>
-                                                                    <TableCell className="text-center py-1 px-2">
-                                                                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                                                                            {set.type || 'normal'}
-                                                                        </span>
-                                                                    </TableCell>
                                                                     <TableCell className="text-center py-1 px-2 text-xs font-medium text-foreground/80">
-                                                                        {exercise.eachSide && config.keys[0] === 'reps' ? (
-                                                                            <span className="flex items-center justify-center gap-1">
-                                                                                <span>L: {renderValue(set.leftReps || set.reps)}</span>
-                                                                                <span className="text-muted-foreground/50">|</span>
-                                                                                <span>R: {renderValue(set.rightReps || set.reps)}</span>
-                                                                            </span>
-                                                                        ) : (
-                                                                            renderValue(set[config.keys[0] as string])
-                                                                        )}
+                                                                        {renderValue(set.trackableField1)}
                                                                     </TableCell>
-                                                                    {config.keys[1] && (
+                                                                    {showField2 && (
                                                                         <TableCell className="text-center py-1 px-2 text-xs font-medium text-foreground/80">
-                                                                            {renderValue(set[config.keys[1] as string])}
+                                                                            {renderValue(set.trackableField2)}
                                                                         </TableCell>
                                                                     )}
-                                                                    <TableCell className="text-center py-1 px-2 text-xs font-medium text-foreground/80 italic">
-                                                                        {set.restSec ? `${set.restSec}` : set.rest ? set.rest : '-'}
-                                                                    </TableCell>
+                                                                    {showRest && (
+                                                                        <TableCell className="text-center py-1 px-2 text-xs font-medium text-muted-foreground">
+                                                                            {set.restSec ? `${set.restSec}s` : '-'}
+                                                                        </TableCell>
+                                                                    )}
                                                                     <TableCell className="text-center py-1 px-2">
-                                                                        {set.completed === true ? (
+                                                                        {set.completed === 'completed' || set.completed === true ? (
                                                                             <CircleCheck className="size-4 text-green-500 mx-auto" />
-                                                                        ) : set.completed === false || set.skipped === true ? (
+                                                                        ) : set.completed === 'skipped' || set.completed === false || set.skipped === true ? (
                                                                             <CircleX className="size-4 text-red-500 mx-auto" />
                                                                         ) : (
                                                                             <div className="size-3 rounded-full border-2 border-muted-foreground/20 mx-auto" />
                                                                         )}
                                                                     </TableCell>
                                                                 </TableRow>
-                                                            );
-                                                        })}
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
-                                        )}
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             );
