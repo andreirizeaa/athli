@@ -868,6 +868,20 @@ export const clientTrainingsController = {
             return res.status(404).json({ success: false, message: 'Workout not found in this date' });
         }
 
+        // Delete training history (cascades to exercise history via FK)
+        const { error: historyDeleteError } = await supabase
+            .from('client_training_history')
+            .delete()
+            .eq('client_id', clientId)
+            .eq('coach_id', existingEntry.coach_id)
+            .eq('date', sourceDate)
+            .eq('workout_id', workoutId);
+
+        if (historyDeleteError) {
+            console.error('Failed to delete training history:', historyDeleteError);
+            // Continue with workout deletion even if history deletion fails
+        }
+
         const remainingCount = Object.keys(trainingData).length;
 
         // 2. Update or delete row
