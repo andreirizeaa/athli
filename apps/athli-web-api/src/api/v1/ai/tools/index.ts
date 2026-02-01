@@ -624,10 +624,11 @@ export const createListAllMetricsTool = (ctx: ToolContext) =>
 // ============================================================================
 
 // Valid filter values for get_exercise_catalog
+// These match the actual values in musclewiki_filter_cache table
 const VALID_MUSCLES = [
-  'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Forearms',
-  'Quadriceps', 'Hamstrings', 'Glutes', 'Calves', 'Abs',
-  'Lower Back', 'Traps', 'Lats'
+  'Chest', 'Lats', 'Shoulders', 'Biceps', 'Triceps', 'Forearms',
+  'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Abdominals',
+  'Lower back', 'Traps', 'Obliques'
 ] as const;
 
 const VALID_CATEGORIES = [
@@ -651,7 +652,8 @@ export const createGetExerciseCatalogTool = (ctx: ToolContext) =>
 
       // Apply filters (use ONE at a time for best results)
       if (muscle) {
-        query = query.contains('target_muscles', [muscle]);
+        // Use filter with 'cs' (contains) operator for JSONB arrays
+        query = query.filter('target_muscles', 'cs', JSON.stringify([muscle]));
       }
       if (category) {
         query = query.eq('category', category);
