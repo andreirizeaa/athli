@@ -293,63 +293,7 @@ get_exercise_catalog({ muscle_group: "back" })
 
 ---
 
-### 2.2 Mobile App Integration
-
-**Phase 1:** Web app only (`/assistant` page)
-
-**Phase 2 Scope:**
-- Connect mobile `app/client/[id]/assistant.tsx` to same backend API
-- Adapt UI for mobile constraints (smaller action cards, touch-friendly)
-- Consider offline behavior / poor connectivity handling
-- Push notifications for AI responses (if async processing added)
-
-**Open Questions:**
-- Same API endpoints or mobile-specific?
-- How to handle long-running requests on mobile?
-- Reduced feature set for mobile, or full parity?
-
----
-
-### 2.3 Conversation Persistence
-
-**Phase 1:** Frontend state only. Page refresh = lost conversation.
-
-**Phase 2 Solution:**
-- Store conversations in Supabase
-- Schema:
-  ```sql
-  CREATE TABLE ai_conversations (
-    id UUID PRIMARY KEY,
-    coach_id UUID REFERENCES coaches(id),
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    title TEXT, -- Auto-generated from first message
-    metadata JSONB -- selected client, page context, etc.
-  );
-
-  CREATE TABLE ai_messages (
-    id UUID PRIMARY KEY,
-    conversation_id UUID REFERENCES ai_conversations(id),
-    role TEXT, -- 'user' | 'assistant' | 'system'
-    content TEXT,
-    action JSONB, -- If message includes an action
-    created_at TIMESTAMP
-  );
-  ```
-- Load conversation history on page load
-- Sidebar shows past conversations (already built, needs data)
-- Search/filter past conversations
-
-**Open Questions:**
-- Retention policy? Delete after 30 days? Keep forever?
-- Max conversations per coach?
-- Export conversation history?
-
----
-
 ## 3. Acceptance Criteria
-
-### 3.1 Exercise ID Resolution (MuscleWiki Integration)
 
 **Must Have:**
 - [ ] `get_exercise_catalog` tool returns all exercises with MuscleWiki IDs
@@ -388,86 +332,12 @@ Use Claude Code or similar AI agent to fully test the implementation:
 
 ---
 
-### 3.2 Mobile App Integration
-
-**Must Have:**
-- [ ] Mobile app connects to same `/ai/chat` API endpoint
-- [ ] SSE streaming works on mobile (iOS and Android)
-- [ ] Action cards render correctly on mobile screen sizes
-- [ ] User can confirm/cancel AI actions on mobile
-
-**Should Have:**
-- [ ] Touch-friendly UI (larger tap targets, swipe gestures)
-- [ ] Handle poor connectivity gracefully (loading states, retry)
-- [ ] Reduce payload size for mobile (optional fields)
-
-**Testing (AI Agent-Driven):**
-
-Use Claude Code or similar AI agent to test mobile integration:
-
-1. **API Compatibility Test:**
-   - [ ] Agent sends test request to `/ai/chat` endpoint with mobile headers
-   - [ ] Agent verifies SSE stream is received correctly
-   - [ ] Agent parses response and verifies format matches web app
-
-2. **Mobile-Specific Tests:**
-   - [ ] Agent creates workout via mobile → verifies saves correctly
-   - [ ] Agent assigns workout via mobile → verifies appears on client calendar
-   - [ ] Agent tests action card confirm/cancel flow
-
-3. **Debug Any Issues:**
-   - [ ] If API response differs from web, agent identifies and fixes
-   - [ ] Agent ensures mobile and web produce identical database records
-
----
-
-### 3.3 Conversation Persistence
-
-**Must Have:**
-- [ ] Conversations saved to `ai_conversations` table
-- [ ] Messages saved to `ai_messages` table
-- [ ] Page refresh preserves conversation
-- [ ] Past conversations appear in sidebar
-- [ ] Clicking past conversation loads full history
-
-**Should Have:**
-- [ ] Auto-generated conversation titles from first message
-- [ ] Search/filter past conversations
-- [ ] Delete conversation option
-
-**Testing (AI Agent-Driven):**
-
-Use Claude Code or similar AI agent to test persistence:
-
-1. **Database Verification:**
-   - [ ] Agent starts a conversation and sends a message
-   - [ ] Agent queries `ai_conversations` table → verifies record created
-   - [ ] Agent queries `ai_messages` table → verifies messages saved with correct roles
-
-2. **Persistence Test:**
-   - [ ] Agent simulates page refresh (new session)
-   - [ ] Agent loads conversation by ID → verifies full history returned
-   - [ ] Agent verifies conversation appears in sidebar list
-
-3. **Multi-Conversation Test:**
-   - [ ] Agent creates 3 different conversations
-   - [ ] Agent verifies all 3 appear in sidebar
-   - [ ] Agent switches between conversations → verifies correct history loads
-
-4. **Debug Any Issues:**
-   - [ ] If messages don't persist, agent inspects API calls and database
-   - [ ] Agent fixes any issues and re-runs tests until all pass
-
----
-
 ## 4. Success Metrics
 
 | Metric | Target |
 |--------|--------|
 | Exercise ID resolution accuracy | > 95% of AI-created exercises have valid IDs |
 | Workout creation success rate | > 90% of AI workouts save and open correctly |
-| Mobile adoption rate | 30% of active coaches use AI on mobile |
-| Conversation continuation rate | 40% of coaches return to past conversations |
 
 ---
 
@@ -475,13 +345,14 @@ Use Claude Code or similar AI agent to test persistence:
 
 - Phase 1 must be stable and in production
 - `musclewiki_exercise_cache` table must be populated
-- User feedback from Phase 1 to validate priorities
 
 ---
 
 ## 6. Out of Scope (See Phase 3)
 
 The following features are deferred to Phase 3:
+- Mobile app integration
+- Conversation persistence
 - File/PDF processing
 - Voice input
 - Advanced streaming UI

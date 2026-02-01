@@ -126,6 +126,60 @@ Error: "AI service temporarily unavailable. Please try again."
 
 ---
 
+### 2.5 Mobile App Integration
+
+**Current State:** Web app only (`/assistant` page)
+
+**Phase 3 Scope:**
+- Connect mobile `app/client/[id]/assistant.tsx` to same backend API
+- Adapt UI for mobile constraints (smaller action cards, touch-friendly)
+- Consider offline behavior / poor connectivity handling
+- Push notifications for AI responses (if async processing added)
+
+**Open Questions:**
+- Same API endpoints or mobile-specific?
+- How to handle long-running requests on mobile?
+- Reduced feature set for mobile, or full parity?
+
+---
+
+### 2.6 Conversation Persistence
+
+**Current State:** Frontend state only. Page refresh = lost conversation.
+
+**Phase 3 Scope:**
+- Store conversations in Supabase
+- Schema:
+  ```sql
+  CREATE TABLE ai_conversations (
+    id UUID PRIMARY KEY,
+    coach_id UUID REFERENCES coaches(id),
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    title TEXT, -- Auto-generated from first message
+    metadata JSONB -- selected client, page context, etc.
+  );
+
+  CREATE TABLE ai_messages (
+    id UUID PRIMARY KEY,
+    conversation_id UUID REFERENCES ai_conversations(id),
+    role TEXT, -- 'user' | 'assistant' | 'system'
+    content TEXT,
+    action JSONB, -- If message includes an action
+    created_at TIMESTAMP
+  );
+  ```
+- Load conversation history on page load
+- Sidebar shows past conversations (already built, needs data)
+- Search/filter past conversations
+
+**Open Questions:**
+- Retention policy? Delete after 30 days? Keep forever?
+- Max conversations per coach?
+- Export conversation history?
+
+---
+
 ## 3. Success Metrics
 
 | Metric | Target |
@@ -133,12 +187,13 @@ Error: "AI service temporarily unavailable. Please try again."
 | PDF processing success rate | > 80% |
 | Voice input accuracy | > 90% |
 | Auto-retry success rate | > 70% of retried requests succeed |
-| User satisfaction with streaming UX | > 4/5 rating |
+| Mobile adoption rate | 30% of active coaches use AI on mobile |
+| Conversation continuation rate | 40% of coaches return to past conversations |
 
 ---
 
 ## 4. Dependencies
 
-- Phase 2 complete (exercise ID resolution, mobile, persistence)
+- Phase 2 complete (exercise ID resolution)
 - User feedback from Phase 2 to prioritize features
 - Cost analysis to budget for PDF/voice processing
