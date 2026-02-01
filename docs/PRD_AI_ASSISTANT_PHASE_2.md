@@ -373,23 +373,151 @@ Use Claude Code or similar AI agent to fully test the implementation:
 
 ---
 
-## 4. Success Metrics
+## 4. End-to-End Test Cases
+
+These tests verify the complete flow works. The AI can create any valid workout - we're just checking the structure is correct.
+
+### Test 1: Basic Workout Creation
+
+```
+Input: "Create a chest workout with 3 exercises"
+
+Expected:
+1. AI calls get_exercise_catalog (optionally filtered by muscle: "Chest")
+2. AI calls create_workout with payload containing:
+   - name: any string
+   - sections: array with at least 1 section
+   - each exercise has prescribedExerciseId that exists in DB
+3. Frontend shows confirm card
+4. User confirms → workout saved to coach_workouts table
+
+Verify in database:
+- workout_data.items is not empty
+- workout_data.items[].data.exercises[].exercises[].prescribedExerciseId is valid
+- All prescribedExerciseId values exist in musclewiki_exercise_cache
+```
+
+### Test 2: Workout Opens Correctly
+
+```
+Prerequisite: Workout created via Test 1
+
+Steps:
+1. Navigate to /training/workouts
+2. Click on the AI-created workout
+3. Workout preview opens
+
+Verify:
+- Exercise names display (not "Unknown Exercise")
+- Exercise thumbnails load
+- Clicking exercise shows video
+- Sets/reps display correctly
+```
+
+### Test 3: Filtered Catalog
+
+```
+Input: "Create a back workout using only dumbbells"
+
+Expected:
+1. AI calls get_exercise_catalog with filters:
+   - muscle: "Back" OR category: "Dumbbells" (either is valid)
+2. AI creates workout with exercises matching the filter
+3. All prescribedExerciseId values are valid
+
+Verify:
+- Exercises in workout are appropriate for the request
+- No validation errors on create_workout
+```
+
+### Test 4: Error Recovery
+
+```
+Scenario: AI tries to create workout without calling get_exercise_catalog
+
+Steps:
+1. AI calls create_workout with exercises that have no prescribedExerciseId
+2. Tool returns error message
+
+Expected error:
+{
+  success: false,
+  error: "Invalid exercise IDs:\n- \"Bench Press\" is missing prescribedExerciseId.\n\nCall get_exercise_catalog to get valid IDs."
+}
+
+Recovery:
+3. AI calls get_exercise_catalog
+4. AI retries create_workout with correct IDs
+5. Workout saves successfully
+```
+
+### Test 5: Invalid Filter Rejected
+
+```
+Input: AI calls get_exercise_catalog({ muscle: "Legs" })
+
+Expected:
+- Zod validation rejects "Legs" (not a valid muscle)
+- Error returned: "Invalid enum value. Expected 'Chest' | 'Back' | ..."
+- AI should retry with valid value like "Quadriceps" or "Hamstrings"
+```
+
+### Test 6: Workout Structure Validation
+
+```
+After workout is saved, verify workout_data matches schema:
+
+{
+  items: [
+    {
+      itemType: "section",           // NOT "type"
+      data: {
+        id: "uuid",
+        name: "string",
+        type: "regular",
+        exercises: [
+          {
+            isSuperset: false,
+            exercises: [
+              {
+                prescribedExerciseId: "213",    // Valid MuscleWiki ID
+                performedExerciseId: null,
+                id: "uuid",
+                sets: [...],
+                // ... other fields
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  pre: { ... },
+  post: { ... },
+  completedSummary: { status: "not_started", ... }
+}
+```
+
+---
+
+## 5. Success Metrics
 
 | Metric | Target |
 |--------|--------|
 | Exercise ID resolution accuracy | > 95% of AI-created exercises have valid IDs |
 | Workout creation success rate | > 90% of AI workouts save and open correctly |
+| E2E tests passing | 100% of tests 1-6 pass |
 
 ---
 
-## 5. Dependencies
+## 6. Dependencies
 
 - Phase 1 must be stable and in production
 - `musclewiki_exercise_cache` table must be populated
 
 ---
 
-## 6. Out of Scope (See Phase 3)
+## 7. Out of Scope (See Phase 3)
 
 The following features are deferred to Phase 3:
 - Mobile app integration
