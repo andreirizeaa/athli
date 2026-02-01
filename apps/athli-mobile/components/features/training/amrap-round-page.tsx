@@ -86,7 +86,7 @@ export const AmrapRoundPage = ({
   const [timeRemaining, setTimeRemaining] = useState(Math.max(0, durationSec || 0));
   const [currentRound, setCurrentRound] = useState(initialRoundsCompleted + 1);
   const [exerciseCompletions, setExerciseCompletions] = useState<boolean[]>(
-    exercises.map((ex) => ex.completed)
+    exercises.map((ex) => ex.completed === 'completed')
   );
 
   // Overlay states
@@ -417,6 +417,7 @@ export const AmrapRoundPage = ({
       <View style={styles.exerciseList}>
         {exercises.map((exercise, index) => {
           const exerciseData = exerciseDataMap.get(exercise.prescribedExerciseId);
+          const isCompleted = exerciseCompletions[index] ?? (exercise.completed === 'completed');
           const exerciseWithSets: RegularExercisePayload = {
             ...exercise,
             sets: [
@@ -424,7 +425,7 @@ export const AmrapRoundPage = ({
                 setNumber: 1,
                 type: 'normal',
                 restSec: exercise.restSec || 0,
-                completed: exerciseCompletions[index] ?? exercise.completed,
+                completed: isCompleted ? 'completed' : 'not_started',
                 skipped: false,
                 trackableField1: exercise.trackableField1,
                 trackableField2: exercise.trackableField2,

@@ -44,6 +44,8 @@ type EmomRoundPageProps = {
   ) => void;
   onRoundComplete: () => void;
   isPaused: boolean;
+  /** If true, this round is already completed - don't run timer, allow normal navigation */
+  isRoundCompleted?: boolean;
 };
 
 const EMOM_COLOR = '#10B981';
@@ -60,6 +62,7 @@ export const EmomRoundPage = ({
   onExerciseValueChange,
   onRoundComplete,
   isPaused,
+  isRoundCompleted = false,
 }: EmomRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -110,16 +113,23 @@ export const EmomRoundPage = ({
 
   // Initialize timer on mount - runs once per component instance (key change = new instance)
   useEffect(() => {
+    // If round is already completed, don't start timer - allow normal navigation
+    if (isRoundCompleted) {
+      hasCompletedRef.current = true;
+      setTimeRemaining(intervalSec); // Show full interval time
+      return;
+    }
+
     // Set up refs for this round
     hasCompletedRef.current = false;
     startTimeRef.current = Date.now();
-    
+
     // Set initial time remaining
     setTimeRemaining(intervalSec);
 
     // Storage key for background/foreground recovery
     const storageKey = `${EMOM_TIMER_KEY_PREFIX}${sectionId}_${currentRound}`;
-    
+
     // Clear any stale storage and set fresh start time
     Storage.removeItem(storageKey);
     Storage.setItem(storageKey, startTimeRef.current.toString());
@@ -159,7 +169,7 @@ export const EmomRoundPage = ({
     // Tick function called every second
     const tick = () => {
       if (hasCompletedRef.current || isPausedRef.current) return;
-      
+
       const remaining = calculateRemaining();
       setTimeRemaining(remaining);
 
@@ -294,7 +304,7 @@ export const EmomRoundPage = ({
 
     // Check if all exercises will be completed (accounting for the one just completed)
     const willAllBeCompleted = exercises.every((ex, idx) =>
-      idx === exerciseIndex ? true : ex.set.completed
+      idx === exerciseIndex ? true : ex.set.completed === 'completed'
     );
 
     if (willAllBeCompleted) {
@@ -309,16 +319,9 @@ export const EmomRoundPage = ({
         }
         hasCompletedRef.current = true;
         showCompletionCelebration();
-      } else if (currentRound < totalRounds) {
-        // Not the last round - just advance to next round without celebration
-        // Stop the timer if it's running
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
-        hasCompletedRef.current = true;
-        onRoundCompleteRef.current();
       }
+      // For non-last rounds: don't advance immediately - let the timer dictate navigation
+      // The timer's doCompleteRound() function will handle advancing when time expires
     }
   };
 

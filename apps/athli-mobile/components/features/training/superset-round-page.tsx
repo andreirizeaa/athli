@@ -124,7 +124,7 @@ export const SupersetRoundPage = ({
     const allCompleted = exercises.every((exercise, exerciseIdx) => {
       const set = exercise.sets[currentSetIndex];
       const localCompleted = exerciseCompletions[exerciseIdx]?.[currentSetIndex];
-      return set?.completed === true || localCompleted === true;
+      return set?.completed === 'completed' || localCompleted === true;
     });
 
     // If unchecking, reset the completion flag
@@ -430,7 +430,6 @@ export const SupersetRoundPage = ({
       <View style={styles.exerciseList}>
         {currentSetExercises.map((exercise, index) => {
           const exerciseData = exerciseDataMap.get(exercise.prescribedExerciseId);
-          const supersetLabel = index === 0 ? 'A' : index === 1 ? 'B' : String.fromCharCode(67 + index - 2);
 
           // Get alternatives
           const exerciseAlternatives = exercise.alternatives
@@ -451,7 +450,6 @@ export const SupersetRoundPage = ({
               exerciseImageUrl={exerciseData?.thumbnailUrl}
               alternatives={exerciseAlternatives}
               isSuperset={true}
-              supersetLabel={supersetLabel}
               onSetComplete={(setIdx, completed) => {
                 handleExerciseComplete(index, currentSet - 1, completed);
               }}

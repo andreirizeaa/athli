@@ -14,6 +14,16 @@
 export type WorkoutStatus = 'not_started' | 'in_progress' | 'completed';
 
 /**
+ * Completion status for exercises and sections (3 states)
+ */
+export type CompletionStatus = 'not_started' | 'in_progress' | 'completed';
+
+/**
+ * Completion status for individual sets (2 states - no in_progress)
+ */
+export type SetCompletionStatus = 'not_started' | 'completed';
+
+/**
  * Trackable field with label and prescribed/completed values
  * - label: column type (e.g., 'Reps', 'kg', 'lbs', 'km', 'minutes', 'RIR', etc.)
  * - prescribed: coach target value
@@ -41,7 +51,7 @@ export type ExerciseIdPair = {
 export type DropsetStage = {
   trackableField1: TrackableField;
   trackableField2: TrackableField;
-  completed: boolean;
+  completed: SetCompletionStatus;
 };
 
 export type DropsetPayload = {
@@ -55,7 +65,7 @@ export type SetPayload = {
   setNumber: number;
   type: 'warmUp' | 'normal' | 'failure' | 'dropset';
   restSec: number | null;
-  completed: boolean;
+  completed: SetCompletionStatus;
   skipped: boolean;
   trackableField1: TrackableField;
   trackableField2: TrackableField;
@@ -68,7 +78,7 @@ export type SetPayload = {
 export type RoundExercisePayload = ExerciseIdPair & {
   id: string; // Instance ID - unique for this specific exercise instance in the workout/section
   notes: string | null;
-  completed: boolean;
+  completed: CompletionStatus;
   eachSide: boolean;
   tempo: string | null;
   trackableField1: TrackableField;
@@ -93,6 +103,7 @@ export type RegularExercisePayload = ExerciseIdPair & {
   tempo: string | null;
   column1Label: string;
   column2Label: string;
+  completed: CompletionStatus; // Derived from sets: not_started -> in_progress -> completed
 };
 
 // ============================================================================
@@ -113,7 +124,7 @@ export type RegularSectionPayload = {
   type: 'regular';
   exercises: ExerciseGroupPayload[];
   notes: string | null;
-  completed: boolean;
+  completed: CompletionStatus;
 };
 
 export type AmrapSectionPayload = {
@@ -124,14 +135,15 @@ export type AmrapSectionPayload = {
   roundsCompleted: number | null;
   exercises: RoundExercisePayload[];
   notes: string | null;
-  completed: boolean;
+  completed: CompletionStatus;
 };
 
 /**
  * Interval-based sections: exactly one set per exercise
  */
-export type CircuitExercisePayload = Omit<RegularExercisePayload, 'sets'> & {
+export type CircuitExercisePayload = Omit<RegularExercisePayload, 'sets' | 'completed'> & {
   set: SetPayload;
+  completed: CompletionStatus; // Derived from set completion
 };
 
 export type CircuitExerciseGroupPayload = {
@@ -146,9 +158,10 @@ export type TabataSectionPayload = {
   workSec: number;
   restSec: number;
   rounds: number;
+  completedRounds: number; // Tracks which round user is on for resume
   exercises: CircuitExerciseGroupPayload[];
   notes: string | null;
-  completed: boolean;
+  completed: CompletionStatus;
 };
 
 export type HiitSectionPayload = {
@@ -158,9 +171,10 @@ export type HiitSectionPayload = {
   workSec: number;
   restSec: number;
   rounds: number;
+  completedRounds: number; // Tracks which round user is on for resume
   exercises: CircuitExerciseGroupPayload[];
   notes: string | null;
-  completed: boolean;
+  completed: CompletionStatus;
 };
 
 export type EmomSectionPayload = {
@@ -169,9 +183,10 @@ export type EmomSectionPayload = {
   type: 'emom';
   intervalSec: number;
   durationMin: number;
+  completedRounds: number; // Tracks which round user is on for resume
   exercises: CircuitExerciseGroupPayload[];
   notes: string | null;
-  completed: boolean;
+  completed: CompletionStatus;
 };
 
 export type CircuitsSectionPayload = {
@@ -179,9 +194,10 @@ export type CircuitsSectionPayload = {
   name: string;
   type: 'circuits';
   rounds: number;
+  completedRounds: number; // Tracks which round user is on for resume
   exercises: CircuitExerciseGroupPayload[];
   notes: string | null;
-  completed: boolean;
+  completed: CompletionStatus;
 };
 
 export type AuxiliarySectionPayload = {
@@ -191,7 +207,7 @@ export type AuxiliarySectionPayload = {
   category: AuxiliaryCategory;
   exercises: ExerciseGroupPayload[];
   notes: string | null;
-  completed: boolean;
+  completed: CompletionStatus;
 };
 
 export type WorkoutSectionPayload =
@@ -342,9 +358,87 @@ export const createDefaultSet = (
   setNumber,
   type: 'normal',
   restSec: null,
-  completed: false,
+  completed: 'not_started',
   skipped: false,
   trackableField1: createTrackableField(column1Label),
   trackableField2: createTrackableField(column2Label),
   dropset: null,
 });
+
+// ============================================================================
+// Completion Status Helper Functions
+// ============================================================================
+
+/**
+ * Helper to derive exercise completion status from its sets
+ * - not_started: no sets completed
+ * - in_progress: some sets completed
+ * - completed: all sets completed
+ */
+export const deriveExerciseStatus = (sets: SetPayload[]): CompletionStatus => {
+  if (sets.length === 0) return 'not_started';
+
+  const completedCount = sets.filter(s => s.completed === 'completed').length;
+
+  if (completedCount === 0) return 'not_started';
+  if (completedCount === sets.length) return 'completed';
+  return 'in_progress';
+};
+
+/**
+ * Helper to derive section completion status from exercises
+ */
+export const deriveSectionStatus = (
+  completedCount: number,
+  totalCount: number
+): CompletionStatus => {
+  if (completedCount === 0) return 'not_started';
+  if (completedCount === totalCount) return 'completed';
+  return 'in_progress';
+};
+
+/**
+ * Helper to derive interval section status from completed rounds
+ */
+export const deriveIntervalSectionStatus = (
+  completedRounds: number,
+  totalRounds: number
+): CompletionStatus => {
+  if (completedRounds === 0) return 'not_started';
+  if (completedRounds >= totalRounds) return 'completed';
+  return 'in_progress';
+};
+
+/**
+ * Migration helper: Convert boolean completed to CompletionStatus
+ * Used for backward compatibility with existing data
+ */
+export const migrateSetCompletionBoolean = (
+  completed: boolean | SetCompletionStatus
+): SetCompletionStatus => {
+  if (typeof completed === 'boolean') {
+    return completed ? 'completed' : 'not_started';
+  }
+  return completed;
+};
+
+/**
+ * Migration helper: Convert boolean completed to CompletionStatus
+ * Used for backward compatibility with existing data
+ */
+export const migrateCompletionBoolean = (
+  completed: boolean | CompletionStatus
+): CompletionStatus => {
+  if (typeof completed === 'boolean') {
+    return completed ? 'completed' : 'not_started';
+  }
+  return completed;
+};
+
+/**
+ * Check if a trackable field is optional (should not be marked as completed)
+ * Optional when label is 'Optional' AND no prescribed value
+ */
+export const isOptionalField = (field: TrackableField): boolean => {
+  return field.label === 'Optional' && field.prescribed === null;
+};

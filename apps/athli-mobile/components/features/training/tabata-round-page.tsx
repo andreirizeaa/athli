@@ -41,6 +41,8 @@ type TabataRoundPageProps = {
   ) => void;
   onRoundComplete: () => void;
   isPaused: boolean;
+  /** If true, this round is already completed - don't run timer, allow normal navigation */
+  isRoundCompleted?: boolean;
 };
 
 const TABATA_COLOR = '#F43F5E'; // Rose/pink-red for Tabata (distinct from timer red)
@@ -60,6 +62,7 @@ export const TabataRoundPage = ({
   onExerciseValueChange,
   onRoundComplete,
   isPaused,
+  isRoundCompleted = false,
 }: TabataRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -129,6 +132,14 @@ export const TabataRoundPage = ({
 
   // Initialize timer on mount - runs once per component instance
   useEffect(() => {
+    // If round is already completed, don't start timer - allow normal navigation
+    if (isRoundCompleted) {
+      hasCompletedRef.current = true;
+      setCurrentPhase('work');
+      setTimeRemaining(workSec); // Show full work time
+      return;
+    }
+
     // Set up refs for this round
     hasCompletedRef.current = false;
     phaseStartTimeRef.current = Date.now();
@@ -345,7 +356,7 @@ export const TabataRoundPage = ({
 
     // Check if all exercises will be completed (accounting for the one just completed)
     const willAllBeCompleted = exercises.every((ex, idx) =>
-      idx === exerciseIndex ? true : ex.set.completed
+      idx === exerciseIndex ? true : ex.set.completed === 'completed'
     );
 
     if (willAllBeCompleted) {
@@ -360,16 +371,9 @@ export const TabataRoundPage = ({
         }
         hasCompletedRef.current = true;
         showCompletionCelebration();
-      } else if (currentRound < totalRounds) {
-        // Not the last round - just advance to next round without celebration
-        // Stop the timer if it's running
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
-        hasCompletedRef.current = true;
-        onRoundCompleteRef.current();
       }
+      // For non-last rounds: don't advance immediately - let the timer dictate navigation
+      // The timer's completeRound() function will handle advancing when work+rest phases complete
     }
   };
 
