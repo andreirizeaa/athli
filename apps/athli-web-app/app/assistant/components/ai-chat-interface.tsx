@@ -4,13 +4,17 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { cn } from "@/lib/general/utils";
 import {
     ArrowUpIcon,
+    BarChart3Icon,
     BrainIcon,
+    DumbbellIcon,
+    FolderOpenIcon,
     GlobeIcon,
     MicIcon,
     Paperclip,
     SquareIcon,
     ThumbsDownIcon,
     ThumbsUpIcon,
+    UsersIcon,
     X
 } from "lucide-react";
 import { CodeIcon, CopyIcon } from "@radix-ui/react-icons";
@@ -313,7 +317,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
             {/* Welcome message */}
             {!hasStartedChat && (
                 <div className="mb-10">
-                    <div className="mx-auto -mt-36 hidden w-72 mask-b-from-100% mask-radial-[50%_50%] mask-radial-from-0% md:block">
+                    <div className="mx-auto -mt-20 hidden w-32 mask-b-from-100% mask-radial-[50%_50%] mask-radial-from-0% md:block">
                         {animationData && <Lottie className="w-full" animationData={animationData} loop autoplay />}
                     </div>
 
@@ -323,6 +327,54 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                             Assist You Today?
                         </span>
                     </h1>
+
+                    {/* Capabilities section */}
+                    <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-2 max-w-3xl mx-auto px-4">
+                        <div className="bg-muted/30 border border-border/50 rounded-lg p-3 space-y-1.5">
+                            <div className="flex items-center gap-1.5">
+                                <DumbbellIcon className="h-3.5 w-3.5 text-purple-500" />
+                                <p className="font-medium text-foreground text-[11px]">Training</p>
+                            </div>
+                            <ul className="space-y-0.5 text-[10px] text-muted-foreground leading-tight">
+                                <li>Create workouts & sections</li>
+                                <li>Search exercises</li>
+                                <li>Assign to clients</li>
+                            </ul>
+                        </div>
+                        <div className="bg-muted/30 border border-border/50 rounded-lg p-3 space-y-1.5">
+                            <div className="flex items-center gap-1.5">
+                                <UsersIcon className="h-3.5 w-3.5 text-blue-500" />
+                                <p className="font-medium text-foreground text-[11px]">Clients</p>
+                            </div>
+                            <ul className="space-y-0.5 text-[10px] text-muted-foreground leading-tight">
+                                <li>View & search clients</li>
+                                <li>Profiles, goals & injuries</li>
+                                <li>Find inactive clients</li>
+                            </ul>
+                        </div>
+                        <div className="bg-muted/30 border border-border/50 rounded-lg p-3 space-y-1.5">
+                            <div className="flex items-center gap-1.5">
+                                <BarChart3Icon className="h-3.5 w-3.5 text-green-500" />
+                                <p className="font-medium text-foreground text-[11px]">Analytics</p>
+                            </div>
+                            <ul className="space-y-0.5 text-[10px] text-muted-foreground leading-tight">
+                                <li>Analyze progress</li>
+                                <li>Completion rates</li>
+                                <li>Metrics & check-ins</li>
+                            </ul>
+                        </div>
+                        <div className="bg-muted/30 border border-border/50 rounded-lg p-3 space-y-1.5">
+                            <div className="flex items-center gap-1.5">
+                                <FolderOpenIcon className="h-3.5 w-3.5 text-orange-500" />
+                                <p className="font-medium text-foreground text-[11px]">Library</p>
+                            </div>
+                            <ul className="space-y-0.5 text-[10px] text-muted-foreground leading-tight">
+                                <li>Browse workouts</li>
+                                <li>Check-in templates</li>
+                                <li>Tracked metrics</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             )}
 
