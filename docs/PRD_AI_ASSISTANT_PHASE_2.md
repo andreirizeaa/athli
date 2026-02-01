@@ -72,28 +72,69 @@ The transformer also creates an incompatible structure:
 
 ### New Tool: `get_exercise_catalog`
 
-Returns the full MuscleWiki exercise list for the AI to reference:
+Returns the full MuscleWiki exercise list for the AI to reference.
+
+#### Available Filter Options (from `musclewiki_filter_cache` table)
+
+| Filter Type | Valid Values |
+|-------------|--------------|
+| **muscle** | Chest, Back, Shoulders, Biceps, Triceps, Forearms, Quadriceps, Hamstrings, Glutes, Calves, Abs, Lower Back, Traps, Lats |
+| **category** | Band, Barbell, Bodyweight, Bosu-Ball, Cables, Cardio, Dumbbells, Kettlebells, Machine, Medicine-Ball, Plate, Recovery, Smith-Machine, Stretches, TRX, Vitruvian, Yoga |
+| **difficulty** | Novice, Intermediate, Advanced |
+| **force** | Push, Pull, Static |
+| **mechanic** | Compound, Isolation |
+
+#### Tool Schema with Zod Validation
 
 ```typescript
-// Tool definition
+// Valid filter values (from musclewiki_filter_cache)
+const VALID_MUSCLES = [
+  'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Forearms',
+  'Quadriceps', 'Hamstrings', 'Glutes', 'Calves', 'Abs',
+  'Lower Back', 'Traps', 'Lats'
+] as const;
+
+const VALID_CATEGORIES = [
+  'Band', 'Barbell', 'Bodyweight', 'Bosu-Ball', 'Cables', 'Cardio',
+  'Dumbbells', 'Kettlebells', 'Machine', 'Medicine-Ball', 'Plate',
+  'Recovery', 'Smith-Machine', 'Stretches', 'TRX', 'Vitruvian', 'Yoga'
+] as const;
+
+const VALID_DIFFICULTIES = ['Novice', 'Intermediate', 'Advanced'] as const;
+const VALID_FORCES = ['Push', 'Pull', 'Static'] as const;
+const VALID_MECHANICS = ['Compound', 'Isolation'] as const;
+
+// Tool definition with validated filters
 {
   name: "get_exercise_catalog",
-  description: "Get the full exercise catalog with MuscleWiki IDs. Call this BEFORE create_workout to get the exercise IDs you need.",
+  description: "Get the exercise catalog with MuscleWiki IDs. Call this BEFORE create_workout.",
   schema: z.object({
-    muscle_group: z.string().optional().describe("Optional: filter by muscle group (e.g., 'chest', 'back', 'legs')")
+    muscle: z.enum(VALID_MUSCLES).optional()
+      .describe("Filter by target muscle (e.g., 'Chest', 'Back', 'Lats')"),
+    category: z.enum(VALID_CATEGORIES).optional()
+      .describe("Filter by equipment (e.g., 'Barbell', 'Dumbbells', 'Machine')"),
+    difficulty: z.enum(VALID_DIFFICULTIES).optional()
+      .describe("Filter by difficulty (Novice, Intermediate, Advanced)"),
+    force: z.enum(VALID_FORCES).optional()
+      .describe("Filter by force type (Push, Pull, Static)"),
+    mechanic: z.enum(VALID_MECHANICS).optional()
+      .describe("Filter by mechanic (Compound, Isolation)")
   })
 }
+```
 
-// Returns
-`## Exercise Catalog
+#### Example Returns
+
+```
+## Exercise Catalog (filtered by muscle: Back)
 ID   | Name                          | Target Muscles    | Equipment
 -----|-------------------------------|-------------------|----------
-213  | Lat Pulldown                  | Lats, Biceps      | Cable
-214  | Lat Pulldown (Wide Grip)      | Lats              | Cable
-312  | Seated Cable Row              | Back, Biceps      | Cable
-448  | Barbell Bench Press           | Chest, Triceps    | Barbell
+213  | Lat Pulldown                  | Lats, Biceps      | Cables
+214  | Lat Pulldown (Wide Grip)      | Lats              | Cables
+312  | Seated Cable Row              | Back, Biceps      | Cables
+448  | Barbell Bent Over Row         | Back, Biceps      | Barbell
 ...
-(~1700 exercises, or filtered subset)`
+(~150 exercises for Back)
 ```
 
 ---
