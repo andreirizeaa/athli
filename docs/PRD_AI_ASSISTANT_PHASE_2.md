@@ -61,65 +61,235 @@ The transformer also creates an incompatible structure:
 
 ---
 
-**Phase 2 Solutions:**
+## Chosen Solution: On-Demand Catalog + Validation
 
-**Option A: AI Provides MuscleWiki IDs**
-1. AI uses `search_exercises` tool before creating workout
-2. AI includes `prescribedExerciseId` in payload
-- Pros: Accurate matching
-- Cons: More tool calls (slower)
-
-**Option B: Backend Auto-Matching**
-1. Backend searches for each exercise name when saving
-2. Uses fuzzy matching to find MuscleWiki IDs
-- Pros: No AI changes
-- Cons: Fuzzy matching may be inaccurate
-
-**Option C: Hybrid Approach (Recommended)**
-1. AI generates workout with exercise names
-2. Frontend transformer searches exercise cache for matches
-3. Uses best match for `prescribedExerciseId`
-4. Falls back to name-only if no match
-- Pros: Fast (uses cached exercises), no AI changes
-- Cons: Requires exercise cache loaded
-
-**Option D: Deferred Linking**
-1. Save workout with names only
-2. Link exercises on-the-fly when opening workout
-- Pros: Works immediately
-- Cons: First open is slow
+**Approach:**
+1. AI calls `get_exercise_catalog` tool to load exercises before creating workout
+2. AI calls `create_workout` with MuscleWiki IDs
+3. Tool validates IDs exist, rejects with helpful error if not
 
 ---
 
-**Implementation (Option C):**
+### New Tool: `get_exercise_catalog`
+
+Returns the full MuscleWiki exercise list for the AI to reference:
+
 ```typescript
-interface ExerciseMatch {
-  id: string;
-  musclewikiId: string;
-  name: string;
-  confidence: number;
+// Tool definition
+{
+  name: "get_exercise_catalog",
+  description: "Get the full exercise catalog with MuscleWiki IDs. Call this BEFORE create_workout to get the exercise IDs you need.",
+  schema: z.object({
+    muscle_group: z.string().optional().describe("Optional: filter by muscle group (e.g., 'chest', 'back', 'legs')")
+  })
 }
 
-async function resolveExerciseName(
-  name: string,
-  exerciseCache: Exercise[]
-): Promise<ExerciseMatch | null> {
-  // 1. Exact match
-  // 2. Case-insensitive match
-  // 3. Fuzzy match (Levenshtein)
-  // Return best match with confidence score
+// Returns
+`## Exercise Catalog
+ID   | Name                          | Target Muscles    | Equipment
+-----|-------------------------------|-------------------|----------
+213  | Lat Pulldown                  | Lats, Biceps      | Cable
+214  | Lat Pulldown (Wide Grip)      | Lats              | Cable
+312  | Seated Cable Row              | Back, Biceps      | Cable
+448  | Barbell Bench Press           | Chest, Triceps    | Barbell
+...
+(~1700 exercises, or filtered subset)`
+```
+
+---
+
+### Updated Tool: `create_workout` Validation
+
+The tool validates exercise IDs and returns helpful errors:
+
+```typescript
+// Validation logic in create_workout tool
+async function validateExercises(exercises: Exercise[]): Promise<ValidationResult> {
+  const errors: string[] = [];
+
+  for (const exercise of exercises) {
+    // Check 1: ID is required
+    if (!exercise.prescribedExerciseId) {
+      errors.push(`"${exercise.name}" is missing prescribedExerciseId. Call get_exercise_catalog first.`);
+      continue;
+    }
+
+    // Check 2: ID must exist in database
+    const exists = await checkExerciseExists(exercise.prescribedExerciseId);
+    if (!exists) {
+      errors.push(`ID "${exercise.prescribedExerciseId}" for "${exercise.name}" not found. Check the exercise catalog for correct IDs.`);
+    }
+  }
+
+  if (errors.length > 0) {
+    return {
+      success: false,
+      error: "Invalid exercise IDs:\n" + errors.join("\n") + "\n\nCall get_exercise_catalog to get valid IDs."
+    };
+  }
+
+  return { success: true };
 }
 ```
 
-**Files to Modify:**
-- `apps/athli-web-app/lib/ai-payload-transformer.ts` - Add exercise matching, fix structure
-- `apps/athli-web-app/app/assistant/components/ai-chat-interface.tsx` - Pass exercise cache
-- `packages/shared-types/src/workout-schema.ts` - Reference for correct structure
+---
 
-**Open Questions:**
-- Fuzzy matching algorithm? (Levenshtein, trigram, embeddings?)
-- Confidence threshold for auto-accept vs ask user?
-- Pre-index exercises for faster search?
+### System Prompt Addition
+
+Add to `prompts.ts`:
+
+```typescript
+## Creating Workouts
+
+When creating workouts with exercises, you MUST:
+1. First call \`get_exercise_catalog\` to get the MuscleWiki exercise IDs
+2. Then call \`create_workout\` with \`prescribedExerciseId\` for each exercise
+
+The create_workout tool will reject exercises without valid IDs.
+
+Example flow:
+- User: "Create a chest workout"
+- You: Call get_exercise_catalog (optionally filter by muscle_group: "chest")
+- You: Review the catalog, pick appropriate exercises
+- You: Call create_workout with prescribedExerciseId for each exercise
+```
+
+---
+
+### Complete Flow
+
+```
+User: "Create a beginner back workout"
+                ↓
+┌─────────────────────────────────────────────────────────────┐
+│  STEP 1: AI calls get_exercise_catalog                      │
+│  → Optional: filter by muscle_group: "back"                 │
+└─────────────────────────────────────────────────────────────┘
+                ↓
+┌─────────────────────────────────────────────────────────────┐
+│  STEP 2: Tool returns exercise list                         │
+│                                                             │
+│  ID   | Name                    | Muscles      | Equipment  │
+│  213  | Lat Pulldown            | Lats, Biceps | Cable      │
+│  214  | Lat Pulldown (Wide)     | Lats         | Cable      │
+│  312  | Seated Cable Row        | Back, Biceps | Cable      │
+│  ...                                                        │
+└─────────────────────────────────────────────────────────────┘
+                ↓
+┌─────────────────────────────────────────────────────────────┐
+│  STEP 3: AI calls create_workout WITH IDs                   │
+│                                                             │
+│  { exercises: [                                             │
+│    { prescribedExerciseId: "213", name: "Lat Pulldown", ... }│
+│    { prescribedExerciseId: "312", name: "Seated Cable Row" } │
+│  ]}                                                         │
+└─────────────────────────────────────────────────────────────┘
+                ↓
+┌─────────────────────────────────────────────────────────────┐
+│  STEP 4: Tool validates IDs                                 │
+│  ✓ ID 213 exists → OK                                       │
+│  ✓ ID 312 exists → OK                                       │
+│  → Returns action payload for confirmation                  │
+└─────────────────────────────────────────────────────────────┘
+                ↓
+┌─────────────────────────────────────────────────────────────┐
+│  STEP 5: Frontend shows confirm card                        │
+│  User clicks "Add to Library" → Saved to database           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Error Handling Examples
+
+**Missing ID:**
+```
+AI calls create_workout({ exercises: [{ name: "Lat Pulldown", sets: 3 }] })
+                ↓
+Tool returns:
+{
+  success: false,
+  error: "Invalid exercise IDs:\n- \"Lat Pulldown\" is missing prescribedExerciseId.\n\nCall get_exercise_catalog to get valid IDs."
+}
+                ↓
+AI calls get_exercise_catalog → then retries create_workout with IDs
+```
+
+**Invalid ID:**
+```
+AI calls create_workout({ exercises: [{ prescribedExerciseId: "99999", name: "Lat Pulldown" }] })
+                ↓
+Tool returns:
+{
+  success: false,
+  error: "Invalid exercise IDs:\n- ID \"99999\" for \"Lat Pulldown\" not found.\n\nCheck the exercise catalog for correct IDs."
+}
+                ↓
+AI calls get_exercise_catalog → finds correct ID → retries
+```
+
+---
+
+### Size Estimate
+
+- Full catalog: ~1700 exercises × ~50 chars = **~85KB** (~20-25k tokens)
+- Filtered by muscle: ~100-200 exercises = **~5-10KB** (~2-3k tokens)
+- Cost per catalog call: ~$0.005-0.02
+
+---
+
+### Fallback: Chunking by Muscle Group
+
+If full catalog is too large, AI can filter:
+
+```typescript
+// AI calls with filter
+get_exercise_catalog({ muscle_group: "back" })
+
+// Returns only back exercises (~150 instead of 1700)
+```
+
+---
+
+### Implementation
+
+**Files to Modify:**
+
+1. `apps/athli-web-api/src/api/v1/ai/tools/index.ts`
+   - Add `get_exercise_catalog` tool
+   - Update `create_workout` with ID validation
+
+2. `apps/athli-web-api/src/services/ai/exercise-catalog.ts` (new)
+   - `getExerciseCatalog(muscleGroup?: string)` - fetch and format exercises
+   - `validateExerciseIds(ids: string[])` - check IDs exist in DB
+   - Cache the formatted catalog (regenerate daily)
+
+3. `apps/athli-web-api/src/services/ai/prompts.ts`
+   - Add workout creation instructions to system prompt
+
+4. `apps/athli-web-app/lib/ai-payload-transformer.ts`
+   - Update to expect `prescribedExerciseId` in payload
+   - Fix structure to match workout schema
+
+**Database:**
+- Read from existing `musclewiki_exercise_cache` table
+- Fields: `musclewiki_id`, `name`, `target_muscles`, `category`
+
+---
+
+### Alternative Approaches (Rejected)
+
+**Option A: AI searches exercises first**
+- Too many tool calls, slower
+
+**Option B: Backend fuzzy matching**
+- Inaccurate, user loses control
+
+**Option C: Frontend fuzzy matching**
+- Same issues as Option B
+
+**Option D: Deferred linking**
+- Slow first open, linkage might change
 
 ---
 
