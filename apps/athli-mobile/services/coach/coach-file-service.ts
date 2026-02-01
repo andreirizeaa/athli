@@ -1,36 +1,28 @@
 import { apiFetch } from '@/lib/api-client';
+import type {
+  UpdateFileData,
+  DeleteFileData,
+  CoachFile,
+  FileWithUrl,
+  ClientFileAssignment,
+} from '@athli/shared-types';
 
+// Re-export types from shared-types for backwards compatibility
+export type {
+  UpdateFileData,
+  DeleteFileData,
+  CoachFile,
+  FileWithUrl,
+  ClientFileAssignment,
+};
+
+// Mobile-specific AddFileData with required file field
 export interface AddFileData {
   fileName: string;
   file: File;
   tags?: string[];
   clientId?: string;
-  coachId?: string; // Required if assigning to client
-}
-
-export interface UpdateFileData {
-  fileId: string;
-  fileName: string;
-}
-
-export interface DeleteFileData {
-  fileId: string;
-}
-
-export interface CoachFile {
-  id: string;
-  coach_id: string;
-  bucket_id: string;
-  file_path: string;
-  filename: string;
-  mime_type: string | null;
-  size: number | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface FileWithUrl extends CoachFile {
-  url: string;
+  coachId?: string;
 }
 
 /**
@@ -141,12 +133,6 @@ export const isPreviewable = (mimeType: string | null): boolean => {
   const type = getFileTypeFromMime(mimeType);
   return type === 'pdf' || type === 'image' || type === 'video';
 };
-
-export interface ClientFileAssignment extends CoachFile {
-  assignment_id: string;
-  display_name?: string;
-  sort_order: number;
-}
 
 export const getClientFiles = async (clientId: string, coachId: string): Promise<ClientFileAssignment[]> => {
   const response = await apiFetch<{ data: { assignments: any[] } }>(`/client/files`, {

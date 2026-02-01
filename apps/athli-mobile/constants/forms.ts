@@ -1,29 +1,16 @@
 import type { ScheduleData } from '@/stores';
+import type {
+    FormTemplateQuestion,
+    FormTemplateSchedule,
+    FormTemplate,
+} from '@athli/shared-types';
 
-export interface FormTemplateQuestion {
-    question: string;
-    required: boolean;
-    format: string;
-    options?: string[];
-    scaleFrom?: string;
-    scaleTo?: string;
-    mediaCount?: number;
-}
-
-export interface FormTemplateSchedule {
-    type: 'check-in' | 'questionnaire';
-    frequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly';
-    selectedDays?: string[];
-    monthlyOption?: 'first' | 'last' | 'specific';
-    specificDay?: number;
-}
-
-export interface FormTemplate {
-    name: string;
-    description?: string;
-    questions: FormTemplateQuestion[];
-    schedule?: FormTemplateSchedule;
-}
+// Re-export types from shared-types for backwards compatibility
+export type {
+    FormTemplateQuestion,
+    FormTemplateSchedule,
+    FormTemplate,
+};
 
 // Helper schedules for check-ins
 const dailyScheduleAllDays: ScheduleData = {

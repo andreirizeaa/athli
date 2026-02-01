@@ -152,8 +152,8 @@ export const en = {
         sleep: ['Restless', 'Poor', 'Fair', 'Rested', 'Refreshed'],
         mood: ['Down', 'Low', 'Neutral', 'Good', 'Great'],
         energy: ['Drained', 'Tired', 'Okay', 'Energized', 'Pumped'],
-        stress: ['Maxed', 'Stressed', 'Managing', 'Calm', 'Relaxed'],
-        soreness: ['Wrecked', 'Sore', 'Tight', 'Mild', 'Fresh'],
+        stress: ['Relaxed', 'Calm', 'Managing', 'Stressed', 'Maxed'],
+        soreness: ['Fresh', 'Mild', 'Tight', 'Sore', 'Wrecked'],
       },
     },
     review: {

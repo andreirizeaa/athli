@@ -1,39 +1,29 @@
 import { apiFetch } from '../api-client';
 import type { ClientData } from '../../lib/general/csv-parser';
 
-export interface AddClientData {
-  fullName: string;
-  email: string;
-  coachingType: 'online' | 'in-person' | 'hybrid';
-}
+// Import shared types and re-export for backwards compatibility
+export type {
+  Athlete,
+  AddClientData,
+  ClientNote,
+  CreateNoteData,
+  EditNoteData,
+  DeleteNoteData,
+  CoachingType,
+  ClientStatus,
+} from '@athli/shared-types';
+
+import type {
+  Athlete,
+  AddClientData,
+  ClientNote,
+  CreateNoteData,
+  EditNoteData,
+  DeleteNoteData,
+} from '@athli/shared-types';
 
 export interface AddClientsData {
   clients: ClientData[];
-}
-
-export interface Athlete {
-  id: string;
-  publicId?: string;
-  name: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  coachingType: 'online' | 'in-person' | 'hybrid';
-  category: 'online' | 'in-person' | 'hybrid' | null;
-  status: 'invited' | 'accepted' | 'bounced' | 'connected' | 'archived';
-  avatarUrl: string;
-  createdAt: number; // timestamp in milliseconds
-  phone: string;
-  country: string;
-  birthDate: string | null;
-  age: number | null;
-  height: string | null;
-  lastActivity: string;
-  last7DaysTraining: string;
-  last30DaysTraining: string;
-  clientFor: string;
-  connected: boolean | 'invitation-sent';
-  invitationToken?: string;
 }
 
 const calculateAge = (dateOfBirth: string | null): number | null => {
@@ -213,7 +203,7 @@ export const getClientFiles = async (clientId: string, coachId: string): Promise
 /**
  * Service method to add a single client
  */
-export const addClient = async (data: AddClientData): Promise<Athlete> => {
+export const addClient = async (data: AddClientData & { fullName: string }): Promise<Athlete> => {
   const response = await apiFetch<{ data: { clients: any[] } }>('/clients/new', {
     method: 'POST',
     body: JSON.stringify({
@@ -369,6 +359,7 @@ export const deleteClient = async (athleteId: string): Promise<void> => {
 };
 
 
+// Local Note interface for web app (uses title/body format)
 export interface Note {
   id: string;
   title: string;
@@ -378,14 +369,15 @@ export interface Note {
   isPinned: boolean;
 }
 
-export interface CreateNoteData {
+// Local web app data interfaces (uses contactId)
+export interface WebCreateNoteData {
   contactId: string;
   coachId: string;
   title: string;
   body: string;
 }
 
-export interface EditNoteData {
+export interface WebEditNoteData {
   noteId: string;
   contactId: string;
   coachId: string;
@@ -393,13 +385,11 @@ export interface EditNoteData {
   body: string;
 }
 
-export interface DeleteNoteData {
+export interface WebDeleteNoteData {
   noteId: string;
   contactId: string;
   coachId: string;
 }
-
-export type ClientNote = Note;
 
 export const getNotes = async (contactId: string, coachId: string): Promise<Note[]> => {
   const response = await apiFetch<{ data: { notes: any[] } }>(`/client/notes`, {
@@ -422,7 +412,7 @@ export const getNotes = async (contactId: string, coachId: string): Promise<Note
 
 export const getClientNotes = getNotes;
 
-export const createNote = async (data: CreateNoteData): Promise<Note> => {
+export const createNote = async (data: WebCreateNoteData): Promise<Note> => {
   const response = await apiFetch<{ data: { note: any } }>(`/client/notes`, {
     method: 'POST',
     headers: {
@@ -446,7 +436,7 @@ export const createNote = async (data: CreateNoteData): Promise<Note> => {
   };
 };
 
-export const editNote = async (data: EditNoteData): Promise<Note> => {
+export const editNote = async (data: WebEditNoteData): Promise<Note> => {
   const response = await apiFetch<{ data: { note: any } }>(`/client/notes/${data.noteId}`, {
     method: 'PATCH',
     headers: {
@@ -469,7 +459,7 @@ export const editNote = async (data: EditNoteData): Promise<Note> => {
   };
 };
 
-export const deleteNote = async (data: DeleteNoteData): Promise<void> => {
+export const deleteNote = async (data: WebDeleteNoteData): Promise<void> => {
   await apiFetch(`/client/notes/${data.noteId}`, {
     method: 'DELETE',
     headers: {

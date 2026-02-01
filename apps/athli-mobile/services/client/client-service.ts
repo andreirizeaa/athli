@@ -1,43 +1,33 @@
 import { apiFetch } from '@/lib/api-client';
+import type {
+  AthleteDetails,
+  AthleteGoal,
+  AthleteInjury,
+  TrainingCalendarCompletionLogs,
+  ClientWorkoutCompletionLog,
+  ClientSetCompletionLog,
+  ClientSectionCompletionLog,
+} from '@athli/shared-types';
 
 /**
  * Client service for coach to view/manage client data
  * Mirrors apps/athli-web-app/api/client/client-service.ts
  */
 
-export interface AthleteDetails {
-  id: string;
-  name: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  birthDate: string | null;
-  category: 'online' | 'in-person' | 'hybrid';
-  gender: 'male' | 'female' | 'prefer-not-to-say' | null;
-  phone: string;
-  country: string;
-  height: string | null;
-  avatarUrl?: string | null;
-  status: 'invited' | 'accepted' | 'bounced' | 'connected' | 'archived';
-  createdAt: number;
-  clientFor: string;
-}
+// Re-export types from shared-types for backwards compatibility
+export type {
+  AthleteDetails,
+  AthleteGoal,
+  AthleteInjury,
+  TrainingCalendarCompletionLogs,
+};
 
-export interface AthleteGoal {
-  id: string;
-  goal: string;
-  target_date: string | null;
-  achieved: boolean;
-  details?: string;
-}
+// Local aliases for completion status types
+export type WorkoutCompletionStatus = ClientWorkoutCompletionLog;
+export type SetCompletionStatus = ClientSetCompletionLog;
+export type SectionCompletionStatus = ClientSectionCompletionLog;
 
-export interface AthleteInjury {
-  id: string;
-  injury: string;
-  date: string | null;
-  details?: string;
-}
-
+// Training calendar types are app-specific and stay local
 export interface TrainingCalendarItem {
   id: string;
   templateId?: string; // Original template ID from coach's library
@@ -49,7 +39,7 @@ export interface TrainingCalendarItem {
   totalExercises: number;
   equipment: string | string[];
   created: string;
-  workout_data?: any;
+  workout_data?: unknown;
   day_status?: 'not_started' | 'in_progress' | 'completed';
   completedSummary?: {
     status: 'not_started' | 'in_progress' | 'completed';
@@ -63,35 +53,6 @@ export interface TrainingCalendarItem {
 // e.g., { "23-01-2026": { "workout_1": {...}, "workout_2": {...} } }
 export interface TrainingCalendarSchema {
   [date: string]: { [workoutKey: string]: TrainingCalendarItem } | TrainingCalendarItem[];
-}
-
-export interface WorkoutCompletionStatus {
-  workoutId: string;
-  status: 'not_started' | 'in_progress' | 'completed';
-  completedAt?: number;
-  startedAt?: number;
-}
-
-export interface SetCompletionStatus {
-  workoutId: string;
-  exerciseInstanceId: string;
-  setNumber: number;
-  status: 'not_started' | 'completed';
-  completedAt?: number;
-}
-
-export interface SectionCompletionStatus {
-  workoutId: string;
-  sectionId: string;
-  status: 'not_started' | 'in_progress' | 'completed';
-  completedAt?: number;
-  startedAt?: number;
-}
-
-export interface TrainingCalendarCompletionLogs {
-  workouts: WorkoutCompletionStatus[];
-  sets: SetCompletionStatus[];
-  sections: SectionCompletionStatus[];
 }
 
 const calculateAge = (dateOfBirth: string | null): number | null => {

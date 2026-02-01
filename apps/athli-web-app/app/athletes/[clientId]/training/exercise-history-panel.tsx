@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
-import { X, TrendingUp, Award, ArrowUpDown, Loader2, Repeat, MapPin, Clock, BarChart3 } from 'lucide-react';
+import { X, TrendingUp, ArrowUpDown, Loader2, BarChart3 } from 'lucide-react';
 import { getExerciseHistory, type HistoryEntry } from '@/api/client/client-training-service';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ExerciseHistoryChartDialog } from './exercise-history-chart-dialog';
 
 interface ExerciseHistoryPanelProps {
@@ -32,12 +33,120 @@ const extractValue = (val: any): number => {
     return Number(val ?? 0);
 };
 
+// Format label for display (value -> nice label)
+const LABEL_MAP: Record<string, string> = {
+    'Optional': '(Optional)',
+    'Reps': 'Reps',
+    'kg': 'Kg',
+    'lbs': 'Lbs',
+    'km': 'Km',
+    'm': 'Metres',
+    'yards': 'Yards',
+    'miles': 'Miles',
+    'feet': 'Feet',
+    'minutes': 'Minutes',
+    'seconds': 'Seconds',
+    'sec': 'Seconds',
+    'None': 'None',
+    'Tempo': 'Tempo',
+    'RIR': 'RIR',
+    'RPE': 'RPE',
+    'Heart Rate Zone': 'HR Zone',
+    'Calories': 'Calories',
+    'Watts': 'Watts',
+    'Pace': 'Pace',
+    'Speed': 'Speed',
+    'Incline': 'Incline',
+    'Height': 'Height',
+    'RPM': 'RPM',
+};
+
+const formatLabel = (value: string): string => {
+    return LABEL_MAP[value] || value;
+};
+
+const formatCombinationLabel = (combo: string): string => {
+    return combo.split(' + ').map(formatLabel).join(' & ');
+};
+
 export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coachId, onClose }: ExerciseHistoryPanelProps) => {
     const [history, setHistory] = useState<HistoryEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [sortAsc, setSortAsc] = useState(false); // false = newest first
     const hasFetched = React.useRef(false); // Ref to prevent double fetch in Strict Mode
     const [isChartViewOpen, setIsChartViewOpen] = useState(false);
+    const [selectedCombination, setSelectedCombination] = useState<string>('');
+
+    // Extract unique label combinations from history
+    const combinationNames = React.useMemo(() => {
+        const combos = new Set<string>();
+        history.forEach((entry) => {
+            const sets = entry.exercise_data?.sets || [];
+            sets.forEach((set) => {
+                const label1 = set.trackableField1?.label || '';
+                const label2 = set.trackableField2?.label || '';
+                const validLabel1 = label1 && label1 !== 'Optional' ? label1 : '';
+                const validLabel2 = label2 && label2 !== 'Optional' ? label2 : '';
+                const displayCombo = [validLabel1, validLabel2].filter(Boolean).join(' + ') || 'Unknown';
+                combos.add(displayCombo);
+            });
+        });
+        // Fallback to legacy fields
+        if (combos.size === 0 || (combos.size === 1 && combos.has('Unknown'))) {
+            let hasWeight = false, hasReps = false, hasDistance = false, hasDuration = false;
+            history.forEach((entry) => {
+                const sets = entry.exercise_data?.sets || [];
+                sets.forEach((set) => {
+                    if (extractValue(set.weight) > 0) hasWeight = true;
+                    if (extractValue(set.reps) > 0) hasReps = true;
+                    if (extractValue(set.distance) > 0) hasDistance = true;
+                    if (extractValue(set.duration) > 0) hasDuration = true;
+                });
+            });
+            combos.clear();
+            if (hasWeight && hasReps) combos.add('kg + Reps');
+            else if (hasDistance && hasDuration) combos.add('m + sec');
+            else if (hasReps) combos.add('Reps');
+            else if (hasWeight) combos.add('kg');
+            else if (hasDistance) combos.add('m');
+            else if (hasDuration) combos.add('sec');
+        }
+        return Array.from(combos);
+    }, [history]);
+
+    // Set default combination
+    React.useEffect(() => {
+        if (combinationNames.length > 0 && !combinationNames.includes(selectedCombination)) {
+            setSelectedCombination(combinationNames[0]);
+        }
+    }, [combinationNames, selectedCombination]);
+
+    // Helper to check if a set matches the selected combination
+    const setMatchesCombination = React.useCallback((set: any): boolean => {
+        const label1 = set.trackableField1?.label || '';
+        const label2 = set.trackableField2?.label || '';
+        const validLabel1 = label1 && label1 !== 'Optional' ? label1 : '';
+        const validLabel2 = label2 && label2 !== 'Optional' ? label2 : '';
+        const displayCombo = [validLabel1, validLabel2].filter(Boolean).join(' + ') || 'Unknown';
+
+        if (displayCombo === selectedCombination) return true;
+
+        // Legacy field fallback
+        if (!set.trackableField1 && !set.trackableField2) {
+            const weight = extractValue(set.weight);
+            const reps = extractValue(set.reps);
+            const distance = extractValue(set.distance);
+            const duration = extractValue(set.duration);
+
+            if (selectedCombination === 'kg + Reps' && weight > 0 && reps > 0) return true;
+            if (selectedCombination === 'm + sec' && distance > 0 && duration > 0) return true;
+            if (selectedCombination === 'Reps' && reps > 0 && weight <= 0) return true;
+            if (selectedCombination === 'kg' && weight > 0 && reps <= 0) return true;
+            if (selectedCombination === 'm' && distance > 0 && duration <= 0) return true;
+            if (selectedCombination === 'sec' && duration > 0 && distance <= 0) return true;
+        }
+        return false;
+    }, [selectedCombination]);
 
     useEffect(() => {
         const fetchHistory = async () => {
@@ -75,11 +184,15 @@ export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coach
         return () => { hasFetched.current = false; };
     }, [clientId, coachId, exerciseId, exerciseName]);
 
-    // Group history by date and workout
+    // Group history by date and workout - filtered by selected combination
     const groupedHistory: GroupedHistory[] = React.useMemo(() => {
         const groups: Map<string, GroupedHistory> = new Map();
 
         history.forEach((entry) => {
+            // Filter sets that match the selected combination
+            const matchingSets = (entry.exercise_data?.sets || []).filter(setMatchesCombination);
+            if (matchingSets.length === 0) return;
+
             const key = `${entry.date}-${entry.workout_id}`;
             if (!groups.has(key)) {
                 groups.set(key, {
@@ -89,7 +202,13 @@ export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coach
                     exercises: [],
                 });
             }
-            groups.get(key)!.exercises.push(entry);
+            groups.get(key)!.exercises.push({
+                ...entry,
+                exercise_data: {
+                    ...entry.exercise_data,
+                    sets: matchingSets
+                }
+            });
         });
 
         const sorted = Array.from(groups.values()).sort((a, b) => {
@@ -99,157 +218,130 @@ export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coach
         });
 
         return sorted;
-    }, [history, sortAsc]);
+    }, [history, sortAsc, setMatchesCombination]);
 
-    // Calculate stats dynamic to exercise type
+    // Calculate stats dynamically based on selected combination
     const statsCards = React.useMemo(() => {
-        // Determine exercise type from first available entry with type, or default
-        const exerciseType = history.find(h => h.exercise_data?.exerciseType)?.exercise_data?.exerciseType || 'weight_reps';
-
-        let totalWeight = 0;
-        let weightCount = 0;
-        let totalReps = 0;
-        let repsCount = 0;
-        let totalDistance = 0;
-        let distanceCount = 0;
-        let totalDuration = 0;
-        let durationCount = 0;
-
-        // PBs
-        let pbWeight = 0;
-        let pbWeightReps = 0;
-        let pbReps = 0;
-        let pbDistance = 0;
+        // Collect stats per unique label
+        const labelCounts: Record<string, { sum: number; count: number; max: number }> = {};
 
         history.forEach((entry) => {
             const sets = entry.exercise_data?.sets || [];
             sets.forEach((set) => {
-                const weight = extractValue(set.weight);
-                const reps = extractValue(set.reps);
-                const distance = extractValue(set.distance);
-                const duration = extractValue(set.duration);
+                // Only process sets that match the selected combination
+                if (!setMatchesCombination(set)) return;
 
-                // Accumulate totals
-                if (weight > 0) {
-                    totalWeight += weight;
-                    weightCount++;
-                }
-                if (reps > 0) {
-                    totalReps += reps;
-                    repsCount++;
-                }
-                if (distance > 0) {
-                    totalDistance += distance;
-                    distanceCount++;
-                }
-                if (duration > 0) {
-                    totalDuration += duration;
-                    durationCount++;
-                }
+                // Track if we processed any trackable fields with labels
+                let processedTrackableField = false;
 
-                // PB Logic
-                // Weight x Reps PB
-                if (weight > pbWeight) {
-                    pbWeight = weight;
-                    pbWeightReps = reps;
-                } else if (weight === pbWeight && reps > pbWeightReps) {
-                    pbWeightReps = reps;
+                // Process trackable fields
+                [set.trackableField1, set.trackableField2].forEach((field) => {
+                    if (!field?.label) return;
+                    // Parse as number since values may be stored as strings
+                    const val = Number(field.completed ?? field.prescribed ?? 0);
+                    if (isNaN(val) || val <= 0) return;
+
+                    processedTrackableField = true;
+                    if (!labelCounts[field.label]) {
+                        labelCounts[field.label] = { sum: 0, count: 0, max: 0 };
+                    }
+                    labelCounts[field.label].sum += val;
+                    labelCounts[field.label].count++;
+                    labelCounts[field.label].max = Math.max(labelCounts[field.label].max, val);
+                });
+
+                // Fallback to legacy fields if no trackable fields with labels were processed
+                if (!processedTrackableField) {
+                    const weight = extractValue(set.weight);
+                    const reps = extractValue(set.reps);
+                    const distance = extractValue(set.distance);
+                    const duration = extractValue(set.duration);
+
+                    if (weight > 0) {
+                        if (!labelCounts['kg']) labelCounts['kg'] = { sum: 0, count: 0, max: 0 };
+                        labelCounts['kg'].sum += weight;
+                        labelCounts['kg'].count++;
+                        labelCounts['kg'].max = Math.max(labelCounts['kg'].max, weight);
+                    }
+                    if (reps > 0) {
+                        if (!labelCounts['Reps']) labelCounts['Reps'] = { sum: 0, count: 0, max: 0 };
+                        labelCounts['Reps'].sum += reps;
+                        labelCounts['Reps'].count++;
+                        labelCounts['Reps'].max = Math.max(labelCounts['Reps'].max, reps);
+                    }
+                    if (distance > 0) {
+                        if (!labelCounts['m']) labelCounts['m'] = { sum: 0, count: 0, max: 0 };
+                        labelCounts['m'].sum += distance;
+                        labelCounts['m'].count++;
+                        labelCounts['m'].max = Math.max(labelCounts['m'].max, distance);
+                    }
+                    if (duration > 0) {
+                        if (!labelCounts['sec']) labelCounts['sec'] = { sum: 0, count: 0, max: 0 };
+                        labelCounts['sec'].sum += duration;
+                        labelCounts['sec'].count++;
+                        labelCounts['sec'].max = Math.max(labelCounts['sec'].max, duration);
+                    }
                 }
-
-                // Reps PB
-                if (reps > pbReps) pbReps = reps;
-
-                // Distance PB
-                if (distance > pbDistance) pbDistance = distance;
             });
         });
 
-        // Construct Cards based on Type
-        const cards: { label: string; value: string; icon: React.ElementType; color: string }[] = [];
-
-        if (exerciseType === 'weight_reps') {
-            cards.push({
-                label: 'Avg Weight',
-                value: weightCount > 0 ? `${(totalWeight / weightCount).toFixed(1)} kg` : '-',
-                icon: TrendingUp,
-                color: 'text-sidebar-foreground'
+        // Generate cards for top 2-3 labels by count
+        return Object.entries(labelCounts)
+            .sort((a, b) => b[1].count - a[1].count)
+            .slice(0, 3)
+            .map(([label, stats]) => {
+                const avg = stats.sum / stats.count;
+                // Round to nearest integer for Reps/sec, keep 1 decimal for kg/m
+                const shouldRound = label === 'Reps' || label === 'sec' || label === 'seconds';
+                return {
+                    label: `Avg ${formatLabel(label)}`,
+                    value: stats.count > 0 ? (shouldRound ? `${Math.round(avg)}` : `${avg.toFixed(1)}`) : '-',
+                    best: stats.max,
+                    icon: TrendingUp,
+                    color: 'text-sidebar-foreground'
+                };
             });
-            cards.push({
-                label: 'Avg Reps',
-                value: repsCount > 0 ? Math.round(totalReps / repsCount).toString() : '-',
-                icon: Repeat,
-                color: 'text-sidebar-foreground'
-            });
-            cards.push({
-                label: 'Best (PR)',
-                value: pbWeight > 0 ? `${pbWeight}kg × ${pbWeightReps}` : '-',
-                icon: Award,
-                color: 'text-sidebar-foreground'
-            });
-        } else if (exerciseType === 'reps') {
-            cards.push({
-                label: 'Avg Reps',
-                value: repsCount > 0 ? Math.round(totalReps / repsCount).toString() : '-',
-                icon: Repeat,
-                color: 'text-sidebar-foreground'
-            });
-            cards.push({
-                label: 'Best (PR)',
-                value: pbReps > 0 ? `${pbReps} reps` : '-',
-                icon: Award,
-                color: 'text-sidebar-foreground'
-            });
-        } else if (exerciseType === 'distance_duration') {
-            cards.push({
-                label: 'Avg Dist',
-                value: distanceCount > 0 ? `${Math.round(totalDistance / distanceCount)}m` : '-',
-                icon: MapPin,
-                color: 'text-sidebar-foreground'
-            });
-            cards.push({
-                label: 'Avg Time',
-                value: durationCount > 0 ? `${Math.round(totalDuration / durationCount)}s` : '-',
-                icon: Clock,
-                color: 'text-sidebar-foreground'
-            });
-            cards.push({
-                label: 'Best Dist',
-                value: pbDistance > 0 ? `${pbDistance}m` : '-',
-                icon: Award,
-                color: 'text-sidebar-foreground'
-            });
-        } else {
-            // Fallback generic 
-            cards.push({
-                label: 'Avg Reps',
-                value: repsCount > 0 ? Math.round(totalReps / repsCount).toString() : '-',
-                icon: Repeat,
-                color: 'text-sidebar-foreground'
-            });
-        }
-
-        return cards;
-    }, [history]);
+    }, [history, setMatchesCombination]);
 
     const formatSetValue = (set: any): string => {
-        const weight = extractValue(set.weight);
-        const reps = extractValue(set.reps);
-        const distance = extractValue(set.distance);
-        const duration = extractValue(set.duration);
+        const parts: string[] = [];
 
-        if (weight > 0 && reps > 0) {
-            return `${weight}kg × ${reps}`;
-        } else if (reps > 0) {
-            return `${reps} reps`;
-        } else if (distance > 0 && duration > 0) {
-            return `${distance}m × ${duration}s`;
-        } else if (distance > 0) {
-            return `${distance}m`;
-        } else if (duration > 0) {
-            return `${duration}s`;
+        // Use trackable fields if available (parse as number since values may be strings)
+        if (set.trackableField1) {
+            const val = Number(set.trackableField1.completed ?? set.trackableField1.prescribed);
+            if (!isNaN(val) && val > 0) {
+                parts.push(`${val} ${set.trackableField1.label || ''}`);
+            }
         }
 
-        return '-';
+        if (set.trackableField2) {
+            const val = Number(set.trackableField2.completed ?? set.trackableField2.prescribed);
+            if (!isNaN(val) && val > 0) {
+                parts.push(`${val} ${set.trackableField2.label || ''}`);
+            }
+        }
+
+        // Fallback to legacy fields if no trackable fields
+        if (parts.length === 0) {
+            const weight = extractValue(set.weight);
+            const reps = extractValue(set.reps);
+            const distance = extractValue(set.distance);
+            const duration = extractValue(set.duration);
+
+            if (weight > 0 && reps > 0) {
+                return `${weight}kg × ${reps}`;
+            } else if (reps > 0) {
+                return `${reps} reps`;
+            } else if (distance > 0 && duration > 0) {
+                return `${distance}m × ${duration}s`;
+            } else if (distance > 0) {
+                return `${distance}m`;
+            } else if (duration > 0) {
+                return `${duration}s`;
+            }
+        }
+
+        return parts.join(', ') || '-';
     };
 
     return (
@@ -293,14 +385,14 @@ export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coach
                                 <span className="text-xs text-sidebar-foreground/70 font-medium">History</span>
                                 <button
                                     onClick={() => setIsChartViewOpen(true)}
-                                    className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-sidebar-foreground/10 transition-colors text-[10px] font-bold uppercase tracking-wider text-sidebar-foreground/70 hover:text-sidebar-foreground group/chart"
+                                    className="flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors text-[10px] font-bold uppercase tracking-wider group/chart hover:bg-sidebar-foreground/10 text-sidebar-foreground/70 hover:text-sidebar-foreground cursor-pointer"
                                 >
                                     <BarChart3 className="size-3.5" />
                                     <span>Chart view</span>
                                 </button>
                             </div>
                             {/* Stats Summary - Dynamic Grid */}
-                            <div className={`grid gap-2 mt-3 ${statsCards.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                            <div className={`grid gap-2 mt-0.5 ${statsCards.length === 1 ? 'grid-cols-1' : statsCards.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
                                 {statsCards.map((card, idx) => (
                                     <div key={idx} className="p-2.5 rounded-xl bg-sidebar-foreground/10 border border-sidebar-foreground/20 flex flex-col gap-1 items-center justify-center text-center">
                                         <card.icon className="size-3.5 text-sidebar-foreground/60 mb-0.5" />
@@ -315,8 +407,31 @@ export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coach
 
                         {/* Content */}
                         <div className="flex-1 flex flex-col overflow-hidden bg-muted/5">
+                            {/* Exercise Variants Toggle */}
+                            {combinationNames.length > 1 && (
+                                <div className="px-4 pt-4 shrink-0 flex flex-col gap-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Exercise Variant</span>
+                                    <Tabs
+                                        value={selectedCombination}
+                                        onValueChange={setSelectedCombination}
+                                    >
+                                        <TabsList className="w-full bg-muted/30 border border-border/50">
+                                            {combinationNames.map((combo) => (
+                                                <TabsTrigger
+                                                    key={combo}
+                                                    value={combo}
+                                                    className="flex-1 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                                                >
+                                                    {formatCombinationLabel(combo)}
+                                                </TabsTrigger>
+                                            ))}
+                                        </TabsList>
+                                    </Tabs>
+                                </div>
+                            )}
+
                             {/* Records count and sort toggle */}
-                            <div className="flex items-center justify-between px-5 py-3 border-b border-muted/20 bg-background">
+                            <div className="flex items-center justify-between px-5 py-2">
                                 <span className="text-[11px] font-bold text-muted-foreground">
                                     {groupedHistory.length} record{groupedHistory.length !== 1 ? 's' : ''}
                                 </span>

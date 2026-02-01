@@ -1,54 +1,46 @@
-import type { CheckIn } from '@/api/coach/coach-check-in-service';
-import type { Questionnaire } from '@/api/coach/coach-questionnaire-service';
+import type { CheckIn, Questionnaire } from '@athli/shared-types';
 import { apiFetch } from '@/api/api-client';
 
+// Import shared types and re-export for backwards compatibility
+export type {
+  Question,
+  QuestionAnswer,
+  ClientCheckIn,
+  ClientQuestionnaire,
+  ClientQuestionnaireDetail,
+  CheckInInstance,
+  AssignFormScheduleData,
+  AssignClientCheckInData,
+  AssignClientQuestionnaireData,
+  DeleteClientCheckInsData,
+  DeleteClientQuestionnairesData,
+  AssignFormData,
+  AssignFormsToClientsData,
+  AddCoachReviewData,
+  UpdateCoachReviewData,
+  CoachReview,
+} from '@athli/shared-types';
+
+import type {
+  Question,
+  QuestionAnswer,
+  ClientCheckIn,
+  ClientQuestionnaire,
+  ClientQuestionnaireDetail,
+  CheckInInstance,
+  AssignFormScheduleData,
+  AssignClientCheckInData,
+  AssignClientQuestionnaireData,
+  DeleteClientCheckInsData,
+  DeleteClientQuestionnairesData,
+  AssignFormData,
+  AssignFormsToClientsData,
+  AddCoachReviewData,
+  UpdateCoachReviewData,
+  CoachReview,
+} from '@athli/shared-types';
+
 type Form = CheckIn | Questionnaire;
-
-export interface Question {
-  id: string;
-  question: string;
-  required: boolean;
-  format: string;
-  options?: string[];
-  scaleFrom?: string;
-  scaleTo?: string;
-  mediaCount?: number;
-}
-
-export interface ClientCheckIn {
-  id: string;
-  name: string;
-  questionCount: number;
-  schedule: string;
-  nextScheduledAt: Date;
-  description?: string;
-}
-
-export interface ClientQuestionnaire {
-  id: string;
-  name: string;
-  questionCount: number;
-  status: 'pending' | 'completed';
-  sentAt: Date;
-  completedAt?: Date;
-  description?: string;
-}
-
-export interface QuestionAnswer {
-  questionId: string;
-  answer: string | string[] | number | Date | null;
-}
-
-export interface ClientQuestionnaireDetail {
-  id: string;
-  name: string;
-  description?: string;
-  status: 'pending' | 'completed';
-  sentAt: Date;
-  completedAt?: Date;
-  questions: Question[];
-  answers: QuestionAnswer[];
-}
 
 // Mock check-ins data
 const mockClientCheckIns: ClientCheckIn[] = [
@@ -155,14 +147,6 @@ export const getClientQuestionnaire = async (clientId: string, questionnaireId: 
 
 // ... (get single form methods are still mocked/placeholders, keeping as is for now)
 
-export interface AssignClientCheckInData {
-  checkInIds: string[];
-  clientId: string;
-  coachId: string;
-  schedule_config?: any;
-  cron_expression?: string;
-}
-
 export const assignClientCheckIn = async (data: AssignClientCheckInData): Promise<void> => {
   await apiFetch(`/client/forms/check-ins`, {
     method: 'POST',
@@ -175,14 +159,6 @@ export const assignClientCheckIn = async (data: AssignClientCheckInData): Promis
   });
 };
 
-export interface AssignClientQuestionnaireData {
-  questionnaireIds: string[];
-  clientId: string;
-  coachId: string;
-  schedule_config?: any;
-  cron_expression?: string;
-}
-
 export const assignClientQuestionnaire = async (data: AssignClientQuestionnaireData): Promise<void> => {
   await apiFetch(`/client/forms/questionnaires`, {
     method: 'POST',
@@ -192,11 +168,6 @@ export const assignClientQuestionnaire = async (data: AssignClientQuestionnaireD
     }),
   });
 };
-
-export interface DeleteClientCheckInsData {
-  checkInIds: string[];
-  clientId: string;
-}
 
 /**
  * Service method to delete check-ins from a client
@@ -209,11 +180,6 @@ export const deleteClientCheckIns = async (data: DeleteClientCheckInsData & { co
   });
 };
 
-export interface DeleteClientQuestionnairesData {
-  questionnaireIds: string[];
-  clientId: string;
-}
-
 export const deleteClientQuestionnaires = async (data: DeleteClientQuestionnairesData & { coachId: string }): Promise<void> => {
   await apiFetch(`/client/forms/questionnaires`, {
     method: 'DELETE',
@@ -221,25 +187,6 @@ export const deleteClientQuestionnaires = async (data: DeleteClientQuestionnaire
     body: JSON.stringify({ questionnaireIds: data.questionnaireIds }),
   });
 };
-
-export interface AssignFormScheduleData {
-  type: 'check-in' | 'one-time';
-  frequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly';
-  selectedDays?: string[];
-  monthlyOption?: 'first' | 'last' | 'specific';
-  specificDay?: number;
-  sendNow?: boolean;
-  scheduledDate?: Date;
-}
-
-export interface AssignFormData {
-  formId: string;
-  clientId: string;
-  coachId: string;
-  formType: 'check-in' | 'questionnaire';
-  cronExpression: string;
-  scheduleData: AssignFormScheduleData;
-}
 
 /**
  * Converts schedule data to Supabase pg_cron expression syntax
@@ -366,15 +313,6 @@ export const assignForm = async (data: AssignFormData): Promise<void> => {
   }
 };
 
-export interface AssignFormsToClientsData {
-  formIds: string[];
-  clientIds: string[];
-  coachId: string;
-  formType: 'check-in' | 'questionnaire';
-  cronExpression: string;
-  scheduleData: AssignFormScheduleData;
-}
-
 export const assignFormsToClients = async (data: AssignFormsToClientsData): Promise<void> => {
   if (data.formType === 'check-in') {
     await apiFetch(`/client/forms/check-ins`, {
@@ -417,17 +355,6 @@ export const duplicateForm = async (formId: string, originalForm: Form): Promise
     return await duplicateQuestionnaire(formId, originalForm as Questionnaire);
   }
 };
-
-export interface CheckInInstance {
-  id: string;
-  formId: string;
-  formName: string;
-  scheduledDate: Date;
-  status: 'assigned' | 'completed' | 'review' | 'reviewed';
-  completedAt?: Date;
-  questions?: Question[];
-  answers?: QuestionAnswer[];
-}
 
 // Mock check-in instances data - in production this would come from an API
 // Key format: `${clientId}-${checkInId}`
@@ -685,30 +612,6 @@ export const getCheckInInstance = async (
     answers: mockAnswers,
   };
 };
-
-export interface AddCoachReviewData {
-  clientId: string;
-  checkInId: string;
-  instanceId: string;
-  review: string;
-}
-
-export interface UpdateCoachReviewData {
-  clientId: string;
-  checkInId: string;
-  instanceId: string;
-  review: string;
-}
-
-export interface CoachReview {
-  id: string;
-  clientId: string;
-  checkInId: string;
-  instanceId: string;
-  review: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 /**
  * Service method to get a coach review for a check-in instance

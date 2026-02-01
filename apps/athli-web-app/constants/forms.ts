@@ -1,27 +1,11 @@
-export interface FormTemplateQuestion {
-  question: string;
-  required: boolean;
-  format: string;
-  options?: string[];
-  scaleFrom?: string;
-  scaleTo?: string;
-  mediaCount?: number;
-}
+// Import shared types and re-export for backwards compatibility
+export type {
+  FormTemplateQuestion,
+  FormTemplateSchedule,
+  FormTemplate,
+} from '@athli/shared-types';
 
-export interface FormTemplateSchedule {
-  type: 'check-in' | 'questionnaire';
-  frequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly';
-  selectedDays?: string[];
-  monthlyOption?: 'first' | 'last' | 'specific';
-  specificDay?: number;
-}
-
-export interface FormTemplate {
-  name: string;
-  description?: string;
-  questions: FormTemplateQuestion[];
-  schedule?: FormTemplateSchedule;
-}
+import type { FormTemplate } from '@athli/shared-types';
 
 export const formTemplates: FormTemplate[] = [
   {

@@ -1,12 +1,25 @@
 import { apiFetch } from '../api-client';
 
-export interface MetricScheduleData {
-  type: 'metric';
-  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
-  selectedDays?: string[];
-  monthlyOption?: 'first' | 'last' | 'specific';
-  specificDay?: number;
-}
+// Import shared types and re-export for backwards compatibility
+export type {
+  MetricScheduleData,
+  AssignMetricData,
+  AssignMetricsToClientsData,
+  RemoveMetricData,
+  LogMetricData,
+  UpdateMetricData,
+  UpdateMetricLogData,
+} from '@athli/shared-types';
+
+import type {
+  MetricScheduleData,
+  AssignMetricData,
+  AssignMetricsToClientsData,
+  RemoveMetricData,
+  LogMetricData,
+  UpdateMetricData,
+  UpdateMetricLogData,
+} from '@athli/shared-types';
 
 /**
  * Converts metric schedule data to cron expression
@@ -58,39 +71,16 @@ export const convertMetricScheduleToCron = (scheduleData: MetricScheduleData): s
   return `${defaultMinute} ${defaultHour} * * *`;
 };
 
-export interface AssignMetricData {
-  metricIds?: string[];
-  name?: string;
-  unit?: string;
-  description?: string;
-  value_kind?: 'number' | 'percent' | 'duration' | 'score';
-  schedule_config?: MetricScheduleData;
-  cron_expression?: string;
-}
-
-export interface RemoveMetricData {
-  metricIds: string[];
-  clientId: string;
-}
-
 /**
  * Service method to assign metrics to clients (or create new private ones)
  */
-export const assignMetric = async (data: AssignMetricData & { clientId: string; coachId: string }): Promise<void> => {
+export const assignMetric = async (data: AssignMetricData): Promise<void> => {
   await apiFetch(`/client/metrics`, {
     method: 'POST',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify(data),
   });
 };
-
-export interface AssignMetricsToClientsData {
-  metricIds: string[];
-  clientIds: string[];
-  coachId: string;
-  schedule_config?: MetricScheduleData;
-  cron_expression?: string;
-}
 
 export const assignMetricsToClients = async (data: AssignMetricsToClientsData): Promise<void> => {
   await apiFetch(`/client/metrics`, {
@@ -116,22 +106,13 @@ export const addMetric = async (data: Omit<AssignMetricData, 'metricIds'> & { cl
 /**
  * Service method to remove metrics from clients
  */
-export const removeMetric = async (data: RemoveMetricData & { coachId: string }): Promise<void> => {
+export const removeMetric = async (data: RemoveMetricData): Promise<void> => {
   await apiFetch(`/client/metrics`, {
     method: 'DELETE',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify({ metricIds: data.metricIds }),
   });
 };
-
-export interface LogMetricData {
-  assignmentId: string;
-  value: number;
-  date: Date;
-  // Context needed for headers
-  clientId: string;
-  coachId: string;
-}
 
 /**
  * Service method to log a metric value for a client
@@ -158,18 +139,7 @@ export const getClientMetrics = async (clientId: string, coachId: string): Promi
   return response.data.metrics;
 };
 
-export interface UpdateMetricData {
-  assignmentId: string;
-  name?: string;
-  unit?: string;
-  description?: string;
-  schedule_config?: MetricScheduleData;
-  cron_expression?: string;
-  clientId: string;
-  coachId: string;
-}
-
-export const updateMetric = async (data: UpdateMetricData): Promise<void> => {
+export const updateClientMetric = async (data: UpdateMetricData): Promise<void> => {
   await apiFetch(`/client/metrics`, {
     method: 'PUT',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
@@ -184,6 +154,9 @@ export const updateMetric = async (data: UpdateMetricData): Promise<void> => {
   });
 };
 
+// Backwards compatible alias
+export const updateMetric = updateClientMetric;
+
 export const deleteMetricLog = async (logId: string, clientId: string, coachId: string): Promise<void> => {
   await apiFetch(`/client/metrics/logs`, {
     method: 'DELETE',
@@ -191,14 +164,6 @@ export const deleteMetricLog = async (logId: string, clientId: string, coachId: 
     body: JSON.stringify({ logId }),
   });
 };
-
-export interface UpdateMetricLogData {
-  logId: string;
-  value: number;
-  date?: Date;
-  clientId: string;
-  coachId: string;
-}
 
 export const updateMetricLog = async (data: UpdateMetricLogData): Promise<void> => {
   await apiFetch(`/client/metrics/logs`, {
