@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -231,6 +231,9 @@ const ClientTrainingCalendarPage = () => {
 
   // Track optimistic workout IDs (not yet persisted to server)
   const [optimisticWorkoutIds, setOptimisticWorkoutIds] = useState<Set<string>>(new Set());
+  // Ref to access current optimistic IDs in effects without causing re-renders
+  const optimisticWorkoutIdsRef = useRef<Set<string>>(optimisticWorkoutIds);
+  optimisticWorkoutIdsRef.current = optimisticWorkoutIds;
 
   const [startDate] = useState<Date>(() => {
     // Start from the beginning of the current week (Monday)
@@ -823,6 +826,9 @@ const ClientTrainingCalendarPage = () => {
     };
 
     if (Object.keys(allData).length > 0) {
+      // Use ref to get current optimistic IDs without adding to deps
+      const currentOptimisticIds = optimisticWorkoutIdsRef.current;
+
       // Merge server data with only optimistic entries from local state
       setWorkoutsByDate((prev) => {
         const merged: typeof prev = {};
@@ -835,7 +841,7 @@ const ClientTrainingCalendarPage = () => {
         // Add back only entries that are still optimistic (pending server confirmation)
         Object.keys(prev).forEach((dateKey) => {
           const optimisticEntries = (prev[dateKey] || []).filter(
-            (w) => optimisticWorkoutIds.has(w.id)
+            (w) => currentOptimisticIds.has(w.id)
           );
           if (optimisticEntries.length > 0) {
             merged[dateKey] = [...(merged[dateKey] || []), ...optimisticEntries];
@@ -865,7 +871,7 @@ const ClientTrainingCalendarPage = () => {
       setIsNavigationLoading(false);
       setPendingNavigationWeek(null);
     }
-  }, [calendarData, prevChunkData, nextChunkData, isNavigationLoading, optimisticWorkoutIds]);
+  }, [calendarData, prevChunkData, nextChunkData, isNavigationLoading]);
 
   // Use hook for completion logs
   const { data: completionLogs } = useCompletionLogs({ enabled: !!clientId });
