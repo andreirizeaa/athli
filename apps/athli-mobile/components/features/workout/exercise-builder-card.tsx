@@ -207,6 +207,8 @@ export const ExerciseBuilderCard = ({
             params: {
                 name: exerciseData.name,
                 exerciseId: exerciseData.exerciseId || '',
+                // For MuscleWiki exercises, exerciseId IS the musclewikiId
+                musclewikiId: exerciseData.isCustom ? '' : (exerciseData.exerciseId || ''),
                 isCustom: exerciseData.isCustom ? 'true' : 'false',
             }
         });

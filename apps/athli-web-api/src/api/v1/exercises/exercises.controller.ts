@@ -437,6 +437,7 @@ export const exercisesController = {
    *
    * MuscleWiki videos require RapidAPI authentication headers.
    * This endpoint proxies the request with proper auth.
+   * Supports HTTP Range requests for iOS AVPlayer compatibility.
    */
   proxyVideo: async (req: Request, res: Response) => {
     try {
@@ -459,30 +460,47 @@ export const exercisesController = {
         return badRequest(res, { message: 'Video service unavailable' });
       }
 
-      // Fetch video from MuscleWiki with auth headers
       const videoUrl = `https://${apiHost}/media/videos/branded/${filename}`;
 
-      const response = await fetch(videoUrl, {
-        headers: {
-          'X-RapidAPI-Key': apiKey,
-          'X-RapidAPI-Host': apiHost,
-        },
-      });
+      // Handle Range requests for video seeking (required by iOS AVPlayer)
+      const rangeHeader = req.headers.range;
+      const headers: Record<string, string> = {
+        'X-RapidAPI-Key': apiKey,
+        'X-RapidAPI-Host': apiHost,
+      };
 
-      if (!response.ok) {
+      if (rangeHeader) {
+        headers['Range'] = rangeHeader;
+      }
+
+      const response = await fetch(videoUrl, { headers });
+
+      if (!response.ok && response.status !== 206) {
         logger.warn({ status: response.status, filename }, 'Failed to fetch video from MuscleWiki');
         return res.status(response.status).send('Video not found');
       }
 
-      // Get content type from response
+      // Forward headers required for video streaming
       const contentType = response.headers.get('content-type') || 'video/mp4';
+      const contentLength = response.headers.get('content-length');
+      const contentRange = response.headers.get('content-range');
+      const acceptRanges = response.headers.get('accept-ranges');
 
-      // Set headers for video streaming (transient caching only per MuscleWiki Terms)
       res.setHeader('Content-Type', contentType);
-      res.setHeader('Cache-Control', 'no-store'); // No persistent caching per Terms
-      res.setHeader('X-Content-Source', 'musclewiki-proxy');
+      res.setHeader('Accept-Ranges', acceptRanges || 'bytes');
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
       res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'no-store');
+
+      if (contentLength) {
+        res.setHeader('Content-Length', contentLength);
+      }
+      if (contentRange) {
+        res.setHeader('Content-Range', contentRange);
+      }
+
+      // Set appropriate status code (206 for partial content)
+      res.status(response.status === 206 ? 206 : 200);
 
       // Stream the video data
       const arrayBuffer = await response.arrayBuffer();

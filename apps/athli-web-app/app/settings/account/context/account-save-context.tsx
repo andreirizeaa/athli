@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useRef, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useRef, ReactNode, useCallback, useMemo } from 'react';
 
 interface AccountSaveContextType {
   onSave?: () => Promise<void>;
@@ -29,8 +29,16 @@ export const AccountSaveProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const value = useMemo(() => ({
+    onSave,
+    setOnSave,
+    isSaving,
+    setIsSaving,
+    hasSaveHandler,
+  }), [onSave, setOnSave, isSaving, hasSaveHandler]);
+
   return (
-    <AccountSaveContext.Provider value={{ onSave, setOnSave, isSaving, setIsSaving, hasSaveHandler }}>
+    <AccountSaveContext.Provider value={value}>
       {children}
     </AccountSaveContext.Provider>
   );

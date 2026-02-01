@@ -38,6 +38,11 @@ type CircuitRoundPageProps = {
     value: string
   ) => void;
   onRoundComplete: () => void;
+  isExerciseDataLoading?: boolean;
+  /** Callback to show phase overlay at modal level (covers entire screen) */
+  onShowPhaseOverlay?: (text: string, durationMs?: number) => void;
+  /** Callback to show completion overlay at modal level (covers entire screen) */
+  onShowCompletionOverlay?: (message: string) => void;
 };
 
 // Map section type to color
@@ -58,6 +63,9 @@ export const CircuitRoundPage = ({
   onExerciseComplete,
   onExerciseValueChange,
   onRoundComplete,
+  isExerciseDataLoading = false,
+  onShowPhaseOverlay,
+  onShowCompletionOverlay,
 }: CircuitRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -90,7 +98,17 @@ export const CircuitRoundPage = ({
     } while (messageIndex === lastCompletionMessageRef.current && messages.length > 1);
     lastCompletionMessageRef.current = messageIndex;
 
-    setCompletionMessage(messages[messageIndex]);
+    const message = messages[messageIndex];
+
+    // Use parent overlay callback if available (covers entire screen)
+    if (onShowCompletionOverlay) {
+      onShowCompletionOverlay(message);
+      setTimeout(onRoundComplete, 1400);
+      return;
+    }
+
+    // Fallback to local overlay
+    setCompletionMessage(message);
     setShowCompletionOverlay(true);
 
     // Animate in
@@ -109,10 +127,18 @@ export const CircuitRoundPage = ({
         onRoundComplete();
       }, 200);
     }, 1200);
-  }, [completionOverlayOpacity, completionTextScale, onRoundComplete]);
+  }, [completionOverlayOpacity, completionTextScale, onRoundComplete, onShowCompletionOverlay]);
 
   // Show simple next round overlay (for intermediate rounds)
   const showNextRoundTransition = useCallback(() => {
+    // Use parent overlay callback if available (covers entire screen)
+    if (onShowPhaseOverlay) {
+      onShowPhaseOverlay(t('training.session.circuit.nextRound' as any) || 'Next Round! 💪', 800);
+      setTimeout(onRoundComplete, 1000);
+      return;
+    }
+
+    // Fallback to local overlay
     setShowNextRoundOverlay(true);
     nextRoundOverlayOpacity.value = withSequence(
       withTiming(1, { duration: 200 }),
@@ -122,7 +148,7 @@ export const CircuitRoundPage = ({
         runOnJS(onRoundComplete)();
       })
     );
-  }, [nextRoundOverlayOpacity, onRoundComplete]);
+  }, [nextRoundOverlayOpacity, onRoundComplete, onShowPhaseOverlay, t]);
 
   // Handle exercise completion toggle
   const handleExerciseComplete = (exerciseIndex: number, setIndex: number, completed: boolean) => {
@@ -198,7 +224,7 @@ export const CircuitRoundPage = ({
             loop={false}
             style={styles.confettiAnimation}
           />
-          <Animated.Text style={[styles.completionText, { color: themeColors.text }, completionTextAnimatedStyle]}>
+          <Animated.Text style={[styles.completionText, completionTextAnimatedStyle]}>
             {completionMessage}
           </Animated.Text>
         </Animated.View>
@@ -260,6 +286,7 @@ export const CircuitRoundPage = ({
               onSetComplete={(setIndex, completed) => handleExerciseComplete(index, setIndex, completed)}
               onSetValueChange={(setIndex, field, value) => handleExerciseValueChange(index, setIndex, field, value)}
               onAlternativeSelect={() => {}}
+              isExerciseDataLoading={isExerciseDataLoading}
             />
           );
         })}
@@ -274,7 +301,11 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   completionOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: -500,
+    left: -50,
+    right: -50,
+    bottom: -500,
     backgroundColor: 'rgba(0, 0, 0, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -290,6 +321,7 @@ const styles = StyleSheet.create({
   },
   completionText: {
     ...typography.h1,
+    color: '#FFFFFF',
     textAlign: 'center',
     zIndex: 1,
   },

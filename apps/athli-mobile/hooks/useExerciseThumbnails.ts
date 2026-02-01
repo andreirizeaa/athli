@@ -30,6 +30,15 @@ const notifySubscribers = () => {
 // ============================================================================
 
 /**
+ * Check if URL is a direct/full URL (not a MuscleWiki path that needs processing)
+ */
+export const isDirectUrl = (url?: string): boolean => {
+  if (!url) return false;
+  // Direct URLs start with http/https and don't contain /og_images/
+  return (url.startsWith('http://') || url.startsWith('https://')) && !url.includes('/og_images/');
+};
+
+/**
  * Extract filename from MuscleWiki thumbnail URL
  */
 export const extractFilenameFromUrl = (thumbnailUrl?: string): string | null => {
@@ -40,9 +49,13 @@ export const extractFilenameFromUrl = (thumbnailUrl?: string): string | null => 
 
 /**
  * Get thumbnail URL from cache or return empty string (for loading state)
+ * Direct URLs (non-MuscleWiki) are returned as-is
  */
 export const getCachedThumbnailUrl = (thumbnailUrl?: string): string => {
   if (!thumbnailUrl) return '';
+
+  // If it's a direct URL, return it as-is
+  if (isDirectUrl(thumbnailUrl)) return thumbnailUrl;
 
   const filename = extractFilenameFromUrl(thumbnailUrl);
   if (!filename) return '';
@@ -55,10 +68,12 @@ export const getCachedThumbnailUrl = (thumbnailUrl?: string): string => {
 };
 
 /**
- * Check if a thumbnail is already cached
+ * Check if a thumbnail is already cached (or is a direct URL)
  */
 export const isThumbnailCached = (thumbnailUrl?: string): boolean => {
   if (!thumbnailUrl) return false;
+  // Direct URLs are always "cached" (ready to use)
+  if (isDirectUrl(thumbnailUrl)) return true;
   const filename = extractFilenameFromUrl(thumbnailUrl);
   return filename ? globalThumbnailCache.has(filename) : false;
 };
@@ -263,6 +278,9 @@ export const prefetchExerciseThumbnails = async <T extends ExerciseWithThumbnail
 export const fetchSingleThumbnail = async (rawThumbnailUrl?: string): Promise<string> => {
   if (!rawThumbnailUrl) return '';
 
+  // Direct URLs don't need fetching
+  if (isDirectUrl(rawThumbnailUrl)) return rawThumbnailUrl;
+
   const filename = extractFilenameFromUrl(rawThumbnailUrl);
   if (!filename) return '';
 
@@ -315,6 +333,9 @@ export const fetchSingleThumbnail = async (rawThumbnailUrl?: string): Promise<st
 export const getThumbnailWithFetch = (rawThumbnailUrl?: string): string => {
   if (!rawThumbnailUrl) return '';
 
+  // Direct URLs don't need fetching
+  if (isDirectUrl(rawThumbnailUrl)) return rawThumbnailUrl;
+
   const filename = extractFilenameFromUrl(rawThumbnailUrl);
   if (!filename) return '';
 
@@ -359,6 +380,9 @@ export const useSingleThumbnail = (rawThumbnailUrl?: string) => {
   // Fetch thumbnail if not cached
   useEffect(() => {
     if (!rawThumbnailUrl) return;
+
+    // Direct URLs don't need fetching
+    if (isDirectUrl(rawThumbnailUrl)) return;
 
     const filename = extractFilenameFromUrl(rawThumbnailUrl);
     if (!filename) return;

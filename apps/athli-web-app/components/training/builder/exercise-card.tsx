@@ -1706,7 +1706,7 @@ export const ExerciseCard = memo(function ExerciseCard({
                 <TableBody>
                   {sets.map((set, index) => (
                     <TableRow
-                      key={index}
+                      key={`set-${set.setNumber}`}
                       className="h-10 bg-background"
                     >
                       <TableCell className="py-0 px-0 w-[60px] pl-2">

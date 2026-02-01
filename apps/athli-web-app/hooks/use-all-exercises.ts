@@ -199,7 +199,7 @@ export function useAllExercises(
   // Track how many items to display
   const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
 
-  // Load ALL exercises once (cached for 30 minutes)
+  // Load ALL exercises once (cached for 14 days)
   const {
     data: allExercisesData,
     isLoading,
@@ -211,8 +211,8 @@ export function useAllExercises(
       const result = await getAllExercises();
       return result.exercises.map(transformMuscleWikiExercise);
     },
-    staleTime: 30 * 60 * 1000, // 30 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour (previously cacheTime)
+    staleTime: 14 * 24 * 60 * 60 * 1000, // 14 days - exercises change infrequently
+    gcTime: 14 * 24 * 60 * 60 * 1000, // 14 days
     enabled: options?.enabled !== false,
   });
 
@@ -255,6 +255,8 @@ export function useAllExercises(
   return {
     // Exercises to display (paginated)
     exercises: displayedExercises,
+    // All filtered exercises (full dataset for lookups)
+    allExercises: filteredExercises,
     // Total after filtering
     total: filteredExercises.length,
     // Total in cache
@@ -287,8 +289,8 @@ export function usePrefetchAllExercises(options?: { enabled?: boolean }) {
       const result = await getAllExercises();
       return result.exercises.map(transformMuscleWikiExercise);
     },
-    staleTime: 30 * 60 * 1000, // 30 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour
+    staleTime: 14 * 24 * 60 * 60 * 1000, // 14 days - exercises change infrequently
+    gcTime: 14 * 24 * 60 * 60 * 1000, // 14 days
     enabled: options?.enabled !== false,
   });
 }
@@ -309,11 +311,11 @@ export function usePrefetchAllExercises(options?: { enabled?: boolean }) {
  * ```
  */
 export function useExerciseLookup() {
-  const { exercises: allExercises, isLoading } = useAllExercises('');
+  const { allExercises, isLoading } = useAllExercises('');
 
-  // Create a memoized Map for O(1) lookups
+  // Create a memoized Map for O(1) lookups using full dataset
   const exerciseMap = useMemo(() => {
-    return new Map(allExercises.map((e) => [e.exerciseId, e]));
+    return new Map((allExercises || []).map((e) => [e.exerciseId, e]));
   }, [allExercises]);
 
   // Lookup single exercise by ID

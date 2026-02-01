@@ -5,7 +5,7 @@
  * All MuscleWiki API interactions are handled by the backend with caching.
  */
 
-import { apiFetch, type ApiResponse } from '@/lib/api-client';
+import { apiFetch, API_URL, type ApiResponse } from '@/lib/api-client';
 
 // ============================================================================
 // TYPES
@@ -89,6 +89,20 @@ export type ExerciseSearchResult = {
 // ============================================================================
 // HELPERS
 // ============================================================================
+
+/**
+ * Convert a MuscleWiki video URL to our proxy URL
+ * The backend proxy handles RapidAPI authentication headers
+ */
+const getProxiedVideoUrl = (videoUrl?: string): string | undefined => {
+  if (!videoUrl) return undefined;
+  // Extract filename from URL like: https://host/media/videos/branded/filename.mp4
+  const match = videoUrl.match(/\/branded\/([^/]+)$/);
+  if (match && match[1]) {
+    return `${API_URL}/exercises/videos/stream/${match[1]}`;
+  }
+  return undefined;
+};
 
 /**
  * Transform MuscleWiki exercise from API to app format
@@ -253,6 +267,7 @@ export const getExerciseById = async (musclewikiId: string): Promise<Exercise | 
 
 /**
  * Get exercise video URLs via backend API (lazy loading)
+ * Returns proxied URLs that handle RapidAPI authentication
  */
 export const getExerciseVideos = async (
   musclewikiId: string
@@ -276,7 +291,16 @@ export const getExerciseVideos = async (
       },
     });
 
-    return response.data?.videos || null;
+    const videos = response.data?.videos;
+    if (!videos) return null;
+
+    // Convert MuscleWiki video URLs to proxy URLs
+    return {
+      maleVideoFrontUrl: getProxiedVideoUrl(videos.maleVideoFrontUrl),
+      maleVideoSideUrl: getProxiedVideoUrl(videos.maleVideoSideUrl),
+      femaleVideoFrontUrl: getProxiedVideoUrl(videos.femaleVideoFrontUrl),
+      femaleVideoSideUrl: getProxiedVideoUrl(videos.femaleVideoSideUrl),
+    };
   } catch (error) {
     console.error('Failed to get exercise videos:', error);
     return null;

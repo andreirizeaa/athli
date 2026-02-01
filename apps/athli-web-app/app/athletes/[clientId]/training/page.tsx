@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -228,6 +228,12 @@ const ClientTrainingCalendarPage = () => {
 
   // Loading state for workout cards during API operations (duplicate, delete)
   const [loadingWorkoutIds, setLoadingWorkoutIds] = useState<Set<string>>(new Set());
+
+  // Track optimistic workout IDs (not yet persisted to server)
+  const [optimisticWorkoutIds, setOptimisticWorkoutIds] = useState<Set<string>>(new Set());
+  // Ref to access current optimistic IDs in effects without causing re-renders
+  const optimisticWorkoutIdsRef = useRef<Set<string>>(optimisticWorkoutIds);
+  optimisticWorkoutIdsRef.current = optimisticWorkoutIds;
 
   const [startDate] = useState<Date>(() => {
     // Start from the beginning of the current week (Monday)
@@ -820,11 +826,44 @@ const ClientTrainingCalendarPage = () => {
     };
 
     if (Object.keys(allData).length > 0) {
-      // Merge with existing data (existing data takes precedence for optimistic updates)
-      setWorkoutsByDate((prev) => ({
-        ...allData,
-        ...prev,
-      }));
+      // Use ref to get current optimistic IDs without adding to deps
+      const currentOptimisticIds = optimisticWorkoutIdsRef.current;
+
+      // Merge server data with only optimistic entries from local state
+      setWorkoutsByDate((prev) => {
+        const merged: typeof prev = {};
+
+        // Start with server data as source of truth
+        Object.keys(allData).forEach((dateKey) => {
+          merged[dateKey] = [...allData[dateKey]];
+        });
+
+        // Add back only entries that are still optimistic (pending server confirmation)
+        Object.keys(prev).forEach((dateKey) => {
+          const optimisticEntries = (prev[dateKey] || []).filter(
+            (w) => currentOptimisticIds.has(w.id)
+          );
+          if (optimisticEntries.length > 0) {
+            merged[dateKey] = [...(merged[dateKey] || []), ...optimisticEntries];
+          }
+        });
+
+        return merged;
+      });
+
+      // Clear optimistic IDs for dates that now have server data
+      setOptimisticWorkoutIds(prev => {
+        const next = new Set(prev);
+        // Remove any optimistic IDs for dates that are now in server data
+        Object.keys(allData).forEach(dateKey => {
+          prev.forEach(optId => {
+            if (optId.includes(`__${dateKey}__`)) {
+              next.delete(optId);
+            }
+          });
+        });
+        return next;
+      });
     }
 
     // Clear navigation loading state when data arrives
@@ -1463,11 +1502,12 @@ const ClientTrainingCalendarPage = () => {
       workoutsToDelete.map(async ({ dateKey, workout }) => {
         const loadingKey = `${dateKey}::${workout.id}`;
         try {
+          const realWorkoutId = workout.id.split('__')[0];
           await apiDeleteWorkoutByKey({
             clientId,
             coachId: coachUser?.id || '',
             sourceDate: dateKey,
-            workoutId: workout.id,
+            workoutId: realWorkoutId,
           });
 
           // Remove from local state
@@ -1857,6 +1897,14 @@ const ClientTrainingCalendarPage = () => {
           ];
         });
         return updated;
+      });
+
+      // Track optimistic IDs so we can handle delete correctly
+      const allOptimisticIds = Object.values(optimisticWorkouts).flat().map(w => w.id);
+      setOptimisticWorkoutIds(prev => {
+        const next = new Set(prev);
+        allOptimisticIds.forEach(id => next.add(id));
+        return next;
       });
 
       // 2. Perform API calls
@@ -2329,20 +2377,34 @@ const ClientTrainingCalendarPage = () => {
     setLoadingWorkoutIds((prev) => new Set(prev).add(loadingKey));
 
     try {
-      // Extract real workout ID if it's composite
-      const realWorkoutId = workoutId.split('__')[0];
+      // Check if this is an optimistic workout (not yet persisted to server)
+      if (optimisticWorkoutIds.has(workoutId)) {
+        // Just remove from local state - server doesn't have it yet
+        setWorkoutsByDate((prev) => {
+          const updated = { ...prev };
+          if (updated[dateKey]) {
+            updated[dateKey] = updated[dateKey].filter((w) => w.id !== workoutId);
+          }
+          return updated;
+        });
+        setOptimisticWorkoutIds((prev) => {
+          const next = new Set(prev);
+          next.delete(workoutId);
+          return next;
+        });
+        return;
+      }
 
-      console.log('handleDeleteWorkout - deleting:', { dateKey, workoutId, realWorkoutId });
-
-      // Call API using the new deleteWorkoutByKey
+      // For persisted workouts, workoutId IS the server key (workout_1, etc.)
+      // No need to extract - use it directly
       await apiDeleteWorkoutByKey({
         clientId,
         coachId: coachUser?.id || '',
         sourceDate: dateKey,
-        workoutId: realWorkoutId,
+        workoutId: workoutId,
       });
 
-      // Optimistically remove from local state after successful delete
+      // Remove from local state after successful delete
       setWorkoutsByDate((prev) => {
         const updated = { ...prev };
         if (updated[dateKey]) {
@@ -2570,7 +2632,7 @@ const ClientTrainingCalendarPage = () => {
           </div>
           <Separator className="absolute bottom-[-1px] left-0 right-0" />
         </div>
-        <div className="w-full flex-1 bg-background rounded-none px-4 pb-4 min-h-0 flex flex-col relative -mt-px">
+        <div className={cn("w-full flex-1 bg-background rounded-none px-4 pb-4 min-h-0 flex flex-col relative -mt-px transition-[padding] duration-300", (isMultiSelectMode || isMultiSelectCopyMode) && "pb-16")}>
           {isLoadingTraining && (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80">
               <Loader2 className="size-8 animate-spin text-primary" />
@@ -3398,11 +3460,6 @@ const ClientTrainingCalendarPage = () => {
           duration: 0,
           intensity: 0,
           volume: 0,
-          readiness: (() => {
-            const pre = fetchedInProgressWorkoutData?.workout_data?.pre || fetchedInProgressWorkoutData?.pre || inProgressSummaryWorkout?.workout.pre || {};
-            const values = [pre.sleep, pre.mood, pre.energy, pre.stress, pre.soreness].filter((v): v is number => v !== null && v !== undefined);
-            return values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length * 2) : 0;
-          })(),
           rating: 0
         }}
       />
@@ -3427,11 +3484,6 @@ const ClientTrainingCalendarPage = () => {
           duration: fetchedCompletedWorkoutData?.workout_data?.completedSummary?.totalDurationMin || fetchedCompletedWorkoutData?.completedSummary?.totalDurationMin || completedSummaryWorkout?.workout.completedSummary?.totalDurationMin || 0,
           intensity: fetchedCompletedWorkoutData?.workout_data?.post?.intensity || fetchedCompletedWorkoutData?.post?.intensity || completedSummaryWorkout?.workout.post?.intensity || 0,
           volume: fetchedCompletedWorkoutData?.workout_data?.completedSummary?.totalWeightLifted || fetchedCompletedWorkoutData?.completedSummary?.totalWeightLifted || completedSummaryWorkout?.workout.completedSummary?.totalWeightLifted || 0,
-          readiness: (() => {
-            const pre = fetchedCompletedWorkoutData?.workout_data?.pre || fetchedCompletedWorkoutData?.pre || completedSummaryWorkout?.workout.pre || {};
-            const values = [pre.sleep, pre.mood, pre.energy, pre.stress, pre.soreness].filter((v): v is number => v !== null && v !== undefined);
-            return values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length * 2) : 0;
-          })(),
           rating: fetchedCompletedWorkoutData?.workout_data?.post?.rating || fetchedCompletedWorkoutData?.post?.rating || completedSummaryWorkout?.workout.post?.rating || 0
         }}
       />

@@ -608,7 +608,7 @@ export default function TrainingScreen() {
 
     const status = workout.completedSummary?.status;
     const params = {
-      workoutId: workout.id,
+      workoutId: workout.instanceKey,
       date: dateStr,
       clientId,
       coachId,
@@ -696,8 +696,7 @@ export default function TrainingScreen() {
             const dayWorkouts = workoutsObj
               ? Object.entries(workoutsObj).map(([key, w]: [string, any]) => ({
                   ...w,
-                  id: key,
-                  templateId: w.id,
+                  instanceKey: key,
                 }))
               : [];
             const isCurrentPageLoading = isLoadingTraining && selectedDate.getTime() === date.getTime();

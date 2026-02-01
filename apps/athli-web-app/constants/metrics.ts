@@ -1,15 +1,11 @@
-import { type MetricScheduleData } from '@/api/client/client-metric-service';
+// Import shared types and re-export for backwards compatibility
+export type {
+  DefaultMetric,
+  MetricSection,
+  MetricScheduleData,
+} from '@athli/shared-types';
 
-export interface DefaultMetric {
-  name: string;
-  unit: string;
-  schedule?: MetricScheduleData;
-}
-
-export interface MetricSection {
-  label: string;
-  metrics: DefaultMetric[];
-}
+import type { MetricScheduleData, MetricSection } from '@athli/shared-types';
 
 // Helper schedules for common frequencies
 const dailyScheduleAllDays: MetricScheduleData = {

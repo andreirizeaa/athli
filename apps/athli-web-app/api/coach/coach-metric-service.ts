@@ -1,33 +1,16 @@
 import { apiFetch } from '@/api/api-client';
-import { type MetricScheduleData } from '@/api/client/client-metric-service';
 
-export interface Metric {
-  id: string;
-  coach_id: string;
-  name: string;
-  unit: string;
-  description?: string;
-  value_kind: 'number' | 'percent' | 'duration' | 'score';
-  min_value?: number;
-  max_value?: number;
-  schedule_config?: MetricScheduleData;
-  cron_expression?: string;
-  created_at: string;
-  updated_at: string;
-  client_id?: string;
-}
+// Import shared types and re-export for backwards compatibility
+export type {
+  Metric,
+  CreateMetricInput,
+  MetricScheduleData,
+} from '@athli/shared-types';
 
-export interface CreateMetricInput {
-  name: string;
-  unit?: string;
-  description?: string;
-  value_kind?: 'number' | 'percent' | 'duration' | 'score';
-  min_value?: number;
-  max_value?: number;
-  schedule_config?: MetricScheduleData;
-  cron_expression?: string;
-  client_id?: string;
-}
+import type {
+  Metric,
+  CreateMetricInput,
+} from '@athli/shared-types';
 
 /**
  * Service method to get all coach's metrics (library)

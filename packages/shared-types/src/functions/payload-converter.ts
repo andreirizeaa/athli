@@ -17,7 +17,7 @@ import type {
   CircuitExercisePayload,
   ExerciseGroupPayload,
   TrackableField,
-} from './workout-schema';
+} from '../schemas/workout-schema';
 
 // ============================================================================
 // Helper Functions

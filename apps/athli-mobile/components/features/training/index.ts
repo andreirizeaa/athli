@@ -12,3 +12,4 @@ export { CongratulationsPage } from './congratulations-page';
 export { SessionFeedbackPage } from './session-feedback-page';
 export { CircuitRoundPage } from './circuit-round-page';
 export { EmomRoundPage } from './emom-round-page';
+export { SessionOverlay } from './session-overlay';

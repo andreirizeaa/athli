@@ -46,7 +46,7 @@ export type MuscleWikiExercise = {
   stabilizerMuscles: string[];
   instructions: string[];
   tips: string[];
-  // Thumbnail fetched separately with 24h cache
+  // Thumbnail URL stored with exercise metadata (30-day TTL like other metadata)
   thumbnailUrl?: string;
   // Videos NOT stored - fetched fresh each time per Terms Section 3
   isCacheValid: boolean;
@@ -97,9 +97,10 @@ type ApiAuditLogParams = {
 const MUSCLEWIKI_API_BASE_URL = 'https://musclewiki-api.p.rapidapi.com';
 
 // Per MuscleWiki Terms Section 3:
-const METADATA_CACHE_DAYS = 7;      // Max allowed: 30 days
-const THUMBNAIL_CACHE_HOURS = 24;   // Max allowed: 24 hours
+// Metadata (text including URLs): 30 days max
+// Actual images: 24 hours (handled by HTTP Cache-Control in image proxy)
 // Videos: NO caching allowed - transient only
+const METADATA_CACHE_DAYS = 30;
 
 // ============================================================================
 // INTERNAL HELPERS
@@ -187,7 +188,7 @@ const transformApiExercise = (raw: any): Partial<MuscleWikiExercise> & { thumbna
     tips: Array.isArray(raw.tips)
       ? raw.tips
       : raw.tips?.split('\n').filter(Boolean) || [],
-    // Thumbnail extracted for caching (separate 24h cache per Terms)
+    // Thumbnail URL stored with exercise metadata
     thumbnailUrl,
   };
 };
@@ -208,8 +209,8 @@ const transformCachedExercise = (row: any): MuscleWikiExercise => {
     stabilizerMuscles: row.stabilizer_muscles || [],
     instructions: row.instructions || [],
     tips: row.tips || [],
-    // Use thumbnailUrl if present (from hydrateExerciseDetails), otherwise undefined
-    thumbnailUrl: row.thumbnailUrl || undefined,
+    // Thumbnail URL now stored directly in exercise cache
+    thumbnailUrl: row.thumbnail_url || row.thumbnailUrl || undefined,
     isCacheValid: new Date(row.cache_expires_at) > new Date(),
     cachedAt: row.cached_at,
   };
@@ -397,7 +398,6 @@ class MuscleWikiService {
         } as MuscleWikiExercise;
       });
 
-      await this.attachThumbnails(exercises);
       return { exercises, total };
     } catch (error) {
       logger.error({ error }, 'Failed to fetch from MuscleWiki API');
@@ -408,7 +408,6 @@ class MuscleWikiService {
   /**
    * Hydrate exercise details from cache or API
    * Uses cache for individual exercises when available, fetches from API otherwise
-   * Also fetches thumbnails from thumbnail cache for cached exercises
    */
   private async hydrateExerciseDetails(exerciseList: any[]): Promise<any[]> {
     const supabase = getSupabaseClient();
@@ -418,11 +417,11 @@ class MuscleWikiService {
     const BATCH_SIZE = 20;
     for (let i = 0; i < exerciseList.length; i += BATCH_SIZE) {
       const batch = exerciseList.slice(i, i + BATCH_SIZE);
-      
+
       const batchPromises = batch.map(async (ex: any) => {
         const exerciseId = ex.id.toString();
-        
-        // Check cache first
+
+        // Check cache first (now includes thumbnail_url)
         const { data: cached } = await supabase
           .from('musclewiki_exercise_cache')
           .select('*')
@@ -431,9 +430,7 @@ class MuscleWikiService {
           .single();
 
         if (cached) {
-          // Also fetch thumbnail from thumbnail cache
-          const thumbnailUrl = await this.getThumbnail(exerciseId);
-          return { ...cached, thumbnailUrl, fromCache: true };
+          return { ...cached, fromCache: true };
         }
 
         // Not in cache - fetch details from API
@@ -443,11 +440,11 @@ class MuscleWikiService {
             method: 'GET',
             headers: getApiHeaders(),
           });
-          
+
           if (detailResponse.ok) {
             return await detailResponse.json();
           }
-          
+
           // API failed, return minimal data from list
           return { id: ex.id, name: ex.name };
         } catch (err) {
@@ -465,6 +462,7 @@ class MuscleWikiService {
 
   /**
    * Cache exercises in background
+   * Stores all metadata including thumbnail_url with 30-day TTL
    */
   private async cacheExercises(rawExercises: any[], cacheExpiry: Date): Promise<void> {
     const supabase = getSupabaseClient();
@@ -490,16 +488,12 @@ class MuscleWikiService {
           stabilizer_muscles: transformed.stabilizerMuscles,
           instructions: transformed.instructions,
           tips: transformed.tips,
+          thumbnail_url: transformed.thumbnailUrl,
           cached_at: new Date().toISOString(),
           cache_expires_at: cacheExpiry.toISOString(),
         },
         { onConflict: 'musclewiki_id' }
       );
-
-      // Cache thumbnail separately with 24h TTL
-      if (transformed.thumbnailUrl) {
-        await this.cacheThumbnail(transformed.musclewikiId, transformed.thumbnailUrl);
-      }
     }
   }
 
@@ -540,8 +534,8 @@ class MuscleWikiService {
     }
 
     if (cachedData && cachedData.length > 0) {
+      // thumbnail_url is now included in the cache query directly
       const exercises = cachedData.map(transformCachedExercise);
-      await this.attachThumbnails(exercises);
       return { exercises, total: count || cachedData.length };
     }
 
@@ -582,7 +576,7 @@ class MuscleWikiService {
           userId,
           contentType: 'metadata',
         });
-        await this.attachThumbnails([exercise]);
+        // thumbnail_url is now included in cached exercise
         return exercise;
       }
     }
@@ -638,16 +632,12 @@ class MuscleWikiService {
           stabilizer_muscles: transformed.stabilizerMuscles,
           instructions: transformed.instructions,
           tips: transformed.tips,
+          thumbnail_url: transformed.thumbnailUrl,
           cached_at: new Date().toISOString(),
           cache_expires_at: cacheExpiry.toISOString(),
         },
         { onConflict: 'musclewiki_id' }
       );
-
-      // Cache thumbnail with 24h TTL
-      if (transformed.thumbnailUrl) {
-        await this.cacheThumbnail(transformed.musclewikiId!, transformed.thumbnailUrl);
-      }
 
       const exercise = {
         id: '',
@@ -725,51 +715,6 @@ class MuscleWikiService {
   }
 
   /**
-   * Cache thumbnail URL with strict 24-hour TTL per Terms Section 3
-   */
-  private async cacheThumbnail(musclewikiId: string, thumbnailUrl: string): Promise<void> {
-    try {
-      const supabase = getSupabaseClient();
-      await supabase.rpc('cache_musclewiki_thumbnail', {
-        p_musclewiki_id: musclewikiId,
-        p_thumbnail_url: thumbnailUrl,
-      });
-    } catch (error) {
-      logger.warn({ error, musclewikiId }, 'Failed to cache thumbnail');
-    }
-  }
-
-  /**
-   * Get thumbnail from 24-hour cache
-   */
-  private async getThumbnail(musclewikiId: string): Promise<string | null> {
-    try {
-      const supabase = getSupabaseClient();
-      const { data } = await supabase.rpc('get_musclewiki_thumbnail', {
-        p_musclewiki_id: musclewikiId,
-      });
-      return data || null;
-    } catch (error) {
-      return null;
-    }
-  }
-
-  /**
-   * Attach thumbnails to exercises from 24h cache
-   * Only attaches if the exercise doesn't already have a thumbnailUrl
-   */
-  private async attachThumbnails(exercises: MuscleWikiExercise[]): Promise<void> {
-    for (const exercise of exercises) {
-      // Skip if already has a thumbnail URL from the API response
-      if (exercise.thumbnailUrl) continue;
-      
-      if (exercise.musclewikiId) {
-        exercise.thumbnailUrl = await this.getThumbnail(exercise.musclewikiId) || undefined;
-      }
-    }
-  }
-
-  /**
    * Get ALL exercises from cache in a single optimized query
    * Returns all exercises with their cached thumbnail URLs
    * 
@@ -828,32 +773,7 @@ class MuscleWikiService {
       return { exercises: [], total: 0 };
     }
 
-    // Fetch thumbnails in batches as well
-    const allThumbnails: any[] = [];
-    const thumbnailBatchCount = Math.ceil(totalCount / BATCH_SIZE);
-
-    for (let i = 0; i < thumbnailBatchCount; i++) {
-      const from = i * BATCH_SIZE;
-      const to = from + BATCH_SIZE - 1;
-
-      const { data: batch } = await supabase
-        .from('musclewiki_thumbnail_cache')
-        .select('musclewiki_id, thumbnail_url')
-        .gt('cache_expires_at', new Date().toISOString())
-        .range(from, to);
-
-      if (batch) {
-        allThumbnails.push(...batch);
-      }
-    }
-
-    // Create a map for O(1) thumbnail lookup
-    const thumbnailMap = new Map<string, string>();
-    for (const t of allThumbnails) {
-      thumbnailMap.set(t.musclewiki_id, t.thumbnail_url);
-    }
-
-    // Transform exercises with their thumbnails
+    // Transform exercises - thumbnail_url is now included directly in the cache
     const now = new Date();
     const transformedExercises = allExercises.map((row: any) => {
       return {
@@ -871,16 +791,15 @@ class MuscleWikiService {
         stabilizerMuscles: row.stabilizer_muscles || [],
         instructions: row.instructions || [],
         tips: row.tips || [],
-        thumbnailUrl: thumbnailMap.get(row.musclewiki_id),
+        thumbnailUrl: row.thumbnail_url,
         isCacheValid: new Date(row.cache_expires_at) > now,
         cachedAt: row.cached_at,
       } as MuscleWikiExercise;
     });
 
-    logger.info({ 
+    logger.info({
       exerciseCount: transformedExercises.length,
-      thumbnailCount: thumbnailMap.size,
-      durationMs: Date.now() - startTime 
+      durationMs: Date.now() - startTime,
     }, 'Loaded all exercises from cache');
 
     return { exercises: transformedExercises, total: totalCount };
@@ -1004,37 +923,28 @@ class MuscleWikiService {
     totalCached: number;
     validCached: number;
     expiredCached: number;
-    thumbnails: {
-      total: number;
-      valid: number;
-      expired: number;
-    };
+    withThumbnails: number;
   }> {
     const supabase = getSupabaseClient();
     const now = new Date().toISOString();
 
-    const [totalResult, validResult, thumbnailTotalResult, thumbnailValidResult] = await Promise.all([
+    const [totalResult, validResult, withThumbnailsResult] = await Promise.all([
       supabase.from('musclewiki_exercise_cache').select('id', { count: 'exact', head: true }),
       supabase
         .from('musclewiki_exercise_cache')
         .select('id', { count: 'exact', head: true })
         .gt('cache_expires_at', now),
-      supabase.from('musclewiki_thumbnail_cache').select('id', { count: 'exact', head: true }),
       supabase
-        .from('musclewiki_thumbnail_cache')
+        .from('musclewiki_exercise_cache')
         .select('id', { count: 'exact', head: true })
-        .gt('cache_expires_at', now),
+        .not('thumbnail_url', 'is', null),
     ]);
 
     return {
       totalCached: totalResult.count || 0,
       validCached: validResult.count || 0,
       expiredCached: (totalResult.count || 0) - (validResult.count || 0),
-      thumbnails: {
-        total: thumbnailTotalResult.count || 0,
-        valid: thumbnailValidResult.count || 0,
-        expired: (thumbnailTotalResult.count || 0) - (thumbnailValidResult.count || 0),
-      },
+      withThumbnails: withThumbnailsResult.count || 0,
     };
   }
 
@@ -1199,8 +1109,6 @@ class MuscleWikiService {
         cachedAt: new Date().toISOString(),
       } as MuscleWikiExercise));
 
-      await this.attachThumbnails(exercises);
-
       return { exercises, total: exercises.length };
     } catch (error) {
       logger.error({ error }, 'Failed to quick search from MuscleWiki API');
@@ -1225,8 +1133,8 @@ class MuscleWikiService {
       .limit(limit);
 
     if (data && data.length > 0) {
+      // thumbnail_url is now included directly in the cache
       const exercises = data.map(transformCachedExercise);
-      await this.attachThumbnails(exercises);
       return { exercises, total: count || data.length };
     }
 
@@ -1341,15 +1249,12 @@ class MuscleWikiService {
                   stabilizer_muscles: transformed.stabilizerMuscles,
                   instructions: transformed.instructions,
                   tips: transformed.tips,
+                  thumbnail_url: transformed.thumbnailUrl,
                   cached_at: new Date().toISOString(),
                   cache_expires_at: cacheExpiry.toISOString(),
                 },
                 { onConflict: 'musclewiki_id' }
               );
-
-              if (transformed.thumbnailUrl) {
-                await this.cacheThumbnail(transformed.musclewikiId, transformed.thumbnailUrl);
-              }
 
               totalCached++;
             } catch (err) {

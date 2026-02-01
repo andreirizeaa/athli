@@ -1,35 +1,22 @@
 import { apiFetch } from '@/lib/api-client';
+import type {
+  Athlete,
+  UpdateClientData,
+  CoachingType,
+} from '@athli/shared-types';
 
+// Re-export types from shared-types for backwards compatibility
+export type {
+  Athlete,
+  UpdateClientData,
+};
+
+// Mobile-specific AddClientData with required firstName/lastName
 export interface AddClientData {
   firstName: string;
   lastName: string;
   email: string;
-  coachingType: 'online' | 'in-person' | 'hybrid';
-}
-
-export interface Athlete {
-  id: string;
-  publicId?: string;
-  name: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  coachingType: 'online' | 'in-person' | 'hybrid';
-  category: string;
-  status: 'invited' | 'accepted' | 'bounced' | 'connected' | 'archived';
-  avatarUrl: string;
-  createdAt: number;
-  phone: string;
-  country: string;
-  birthDate: string | null;
-  age: number | null;
-  height: string | null;
-  lastActivity: string;
-  last7DaysTraining: string;
-  last30DaysTraining: string;
-  clientFor: string;
-  connected: boolean | 'invitation-sent';
-  invitationToken?: string;
+  coachingType: CoachingType;
 }
 
 const calculateAge = (dateOfBirth: string | null): number | null => {
@@ -143,15 +130,6 @@ export const archiveClient = async (athleteId: string): Promise<void> => {
 /**
  * Service method to update a client
  */
-export interface UpdateClientData {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  coachingType?: 'online' | 'in-person' | 'hybrid';
-  avatarUrl?: string;
-  avatarUri?: string; // Local file URI for upload
-}
-
 export const updateClient = async (athleteId: string, data: UpdateClientData): Promise<void> => {
   const updatePayload: Record<string, any> = {
     id: athleteId,

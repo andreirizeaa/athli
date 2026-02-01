@@ -1,62 +1,32 @@
 import { apiFetch } from '@/lib/api-client';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import type {
+  AddFilesToClientData,
+  AddFilesToClientsData,
+  DeleteClientFilesData,
+  UpdateClientFileData,
+  UploadClientFileDataMobile,
+  ClientFile,
+  FileReference,
+} from '@athli/shared-types';
 
 /**
  * Client file service for file management
  * Mirrors apps/athli-web-app/api/client/client-file-service.ts
  */
 
-export interface AddFilesToClientData {
-  fileIds: string[];
-  clientId: string;
-  coachId: string;
-}
+// Re-export types from shared-types for backwards compatibility
+export type {
+  AddFilesToClientData,
+  AddFilesToClientsData,
+  DeleteClientFilesData,
+  UpdateClientFileData,
+  ClientFile,
+};
 
-export interface AddFilesToClientsData {
-  fileIds: string[];
-  clientIds: string[];
-  coachId: string;
-}
-
-export interface DeleteClientFilesData {
-  fileIds: string[];
-  clientId: string;
-  coachId: string;
-}
-
-export interface UpdateClientFileData {
-  fileId: string;
-  filename: string;
-  clientId: string;
-  coachId: string;
-}
-
-export interface UploadClientFileData {
-  fileUri: string;
-  fileName?: string;
-  mimeType?: string;
-  tags?: string[];
-  clientId: string;
-  coachId: string;
-}
-
-export interface ClientFile {
-  id: string;
-  // API returns different field names depending on source
-  name?: string;
-  filename?: string;
-  display_name?: string;
-  mime_type: string;
-  size: number;
-  url?: string;
-  created_at: string;
-  tags?: string[];
-  file_path?: string;
-  bucket_id?: string;
-  client_id?: string;
-  coach_id?: string;
-}
+// Mobile-specific upload type - uses URI instead of File
+export type UploadClientFileData = UploadClientFileDataMobile;
 
 /**
  * Get the display name for a client file
@@ -73,10 +43,8 @@ export const isMediaFile = (mimeType: string | null | undefined): boolean => {
   return mimeType.startsWith('image/') || mimeType.startsWith('video/');
 };
 
-export interface FileWithUrl {
-  id: string;
-  url: string;
-}
+// FileWithUrl is just FileReference from shared-types
+export type FileWithUrl = FileReference;
 
 /**
  * Add files to a client (from library)

@@ -13,6 +13,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { haptics } from '@/utils/haptics';
 import { getMyMetrics, type ClientMetric } from '@/services/client/client-metric-service';
 import { getMyHabits, getMyHabitStreaks, type ClientHabit } from '@/services/client/client-habit-service';
+import { getClientUniqueExercises } from '@/services/client/client-training-service';
 
 export default function ProgressScreen() {
   const router = useRouter();
@@ -30,6 +31,8 @@ export default function ProgressScreen() {
   const setStoreMetrics = useClientDetailStore((state) => state.setMetrics);
   const setStoreHabits = useClientDetailStore((state) => state.setHabits);
   const setStoreClientId = useClientDetailStore((state) => state.setClientId);
+  const setStoreCoachId = useClientDetailStore((state) => state.setCoachId);
+  const setStoreUniqueExercises = useClientDetailStore((state) => state.setUniqueExercises);
 
   // Fetch data
   useEffect(() => {
@@ -40,13 +43,18 @@ export default function ProgressScreen() {
       }
 
       try {
-        // Set client ID in store for detail pages
+        // Set client ID and coach ID in store for detail pages
         setStoreClientId(clientProfile.client_id);
+        setStoreCoachId(clientProfile.coach_id);
 
-        // Fetch athlete's own metrics and habits using self-access endpoints
-        const [metricsData, habitsData] = await Promise.all([
+        // Fetch athlete's own metrics, habits, and unique exercises
+        const [metricsData, habitsData, uniqueExercisesData] = await Promise.all([
           getMyMetrics(),
           getMyHabits(),
+          getClientUniqueExercises({
+            clientId: clientProfile.client_id,
+            coachId: clientProfile.coach_id,
+          }),
         ]);
 
         // Update local state
@@ -56,6 +64,7 @@ export default function ProgressScreen() {
         // Also update the store so detail pages can access the data
         setStoreMetrics(metricsData);
         setStoreHabits(habitsData);
+        setStoreUniqueExercises(uniqueExercisesData);
 
         // Fetch streaks for each habit
         const streaksMap: Record<string, number> = {};
@@ -78,7 +87,7 @@ export default function ProgressScreen() {
     };
 
     fetchData();
-  }, [clientProfile, setStoreMetrics, setStoreHabits, setStoreClientId]);
+  }, [clientProfile, setStoreMetrics, setStoreHabits, setStoreClientId, setStoreCoachId, setStoreUniqueExercises]);
 
   // Transform metrics to chart items (include all, filtering happens per-card)
   const metricsWithChartData = useMemo((): ChartCardItem[] => {
@@ -181,7 +190,7 @@ export default function ProgressScreen() {
     if (!clientProfile) return;
     haptics.medium();
     router.push({
-      pathname: '/client/[id]/exercise-history',
+      pathname: '/client/[id]/progress',
       params: { id: clientProfile.client_id },
     });
   }, [clientProfile, router]);

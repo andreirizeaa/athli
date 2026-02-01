@@ -4,25 +4,31 @@ import { View, StyleSheet, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSequence, withDelay, runOnJS } from 'react-native-reanimated';
-import LottieView from 'lottie-react-native';
+import { Star } from 'lucide-react-native';
 
 import { useTranslations, useThemePreference } from '@/stores';
 import { en } from '@/lib/i18n/en';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { Storage } from '@/lib/storage';
 import { typography } from '@/constants/typography';
-import { assignWorkout } from '@/services/client/client-training-service';
+import { assignWorkout, addExerciseHistory } from '@/services/client/client-training-service';
 import { ReadinessPage } from '@/components/features/training/readiness-page';
 import { ExerciseSessionCard } from '@/components/features/training/exercise-session-card';
 import { SectionInfoPage } from '@/components/features/training/section-info-page';
 import { CongratulationsPage } from '@/components/features/training/congratulations-page';
-import { SessionFeedbackPage } from '@/components/features/training/session-feedback-page';
 import { CircuitRoundPage } from '@/components/features/training/circuit-round-page';
 import { EmomRoundPage } from '@/components/features/training/emom-round-page';
 import { HiitRoundPage } from '@/components/features/training/hiit-round-page';
 import { TabataRoundPage } from '@/components/features/training/tabata-round-page';
 import { AmrapRoundPage } from '@/components/features/training/amrap-round-page';
 import { SupersetRoundPage } from '@/components/features/training/superset-round-page';
+import { SessionOverlay } from '@/components/features/training/session-overlay';
+import { RatingButton } from '@/components/features/training/rating-button';
+import { TextAreaInput } from '@/components/ui/form-inputs/text-area-input';
+import { FilledButton } from '@/components/ui/buttons/filled-button';
+import { Card } from '@/components/ui/card';
+import { PlatformIcon } from '@/components/ui/platform-icon';
+import { haptics } from '@/utils/haptics';
 import {
   WorkoutSessionHeader,
   WorkoutSessionBottomNav,
@@ -45,6 +51,8 @@ import {
   AmrapSectionPayload,
   CompletionStatus,
   SetCompletionStatus,
+  SectionType,
+  RoundExercisePayload,
   deriveExerciseStatus,
   deriveSectionStatus,
   deriveIntervalSectionStatus,
@@ -73,6 +81,125 @@ const SUPERSET_MESSAGES = [
 
 // Circuit section type union
 type CircuitSectionType = CircuitsSectionPayload | TabataSectionPayload | HiitSectionPayload | EmomSectionPayload;
+
+/**
+ * Normalize exercise IDs - set performedExerciseId to prescribedExerciseId when null
+ */
+const normalizeExerciseId = <T extends { prescribedExerciseId: string; performedExerciseId: string | null }>(
+  exercise: T
+): T => ({
+  ...exercise,
+  performedExerciseId: exercise.performedExerciseId ?? exercise.prescribedExerciseId,
+});
+
+/**
+ * Normalize all exercise IDs in workout items
+ */
+const normalizeWorkoutItems = (items: WorkoutItem[]): WorkoutItem[] => {
+  return items.map((item) => {
+    if (item.itemType === 'exercise') {
+      return {
+        ...item,
+        data: normalizeExerciseId(item.data),
+      };
+    }
+
+    if (item.itemType === 'section') {
+      const section = item.data;
+
+      // Handle AMRAP sections (exercises array directly)
+      if (section.type === 'amrap') {
+        return {
+          ...item,
+          data: {
+            ...section,
+            exercises: section.exercises.map(normalizeExerciseId),
+          },
+        };
+      }
+
+      // Handle interval sections (tabata, hiit, emom, circuits) with exercise groups
+      if (section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom' || section.type === 'circuits') {
+        return {
+          ...item,
+          data: {
+            ...section,
+            exercises: section.exercises.map((group) => ({
+              ...group,
+              exercises: group.exercises.map(normalizeExerciseId),
+            })),
+          },
+        };
+      }
+
+      // Handle regular and auxiliary sections with exercise groups
+      if (section.type === 'regular' || section.type === 'auxiliary') {
+        return {
+          ...item,
+          data: {
+            ...section,
+            exercises: section.exercises.map((group) => ({
+              ...group,
+              exercises: group.exercises.map(normalizeExerciseId),
+            })),
+          },
+        };
+      }
+    }
+
+    return item;
+  });
+};
+
+/**
+ * Clean workout payload to only include valid database fields
+ * Removes frontend-only fields like instanceKey, templateId, etc.
+ */
+const cleanWorkoutPayload = (data: any): WorkoutPayload => {
+  // Only pick fields that belong in the workout payload
+  const {
+    id,
+    name,
+    description,
+    type,
+    difficulty,
+    equipment,
+    totalExercises,
+    total_exercises,
+    items,
+    pre,
+    post,
+    completedSummary,
+    // Database metadata fields to preserve
+    coach_id,
+    created_at,
+    updated_at,
+    assigned_at,
+    assigned_by,
+    is_favourite,
+  } = data;
+
+  return {
+    id,
+    name,
+    description: description ?? '',
+    type: type ?? '',
+    difficulty: difficulty ?? 'all_levels',
+    equipment: equipment ?? [],
+    totalExercises: totalExercises ?? total_exercises ?? 0,
+    items: normalizeWorkoutItems(items ?? []),
+    pre: pre ?? DEFAULT_EXECUTION_FIELDS.pre,
+    post: post ?? DEFAULT_EXECUTION_FIELDS.post,
+    completedSummary: completedSummary ?? DEFAULT_EXECUTION_FIELDS.completedSummary,
+    // Preserve database metadata
+    ...(coach_id && { coach_id }),
+    ...(created_at && { created_at }),
+    ...(updated_at && { updated_at }),
+    ...(assigned_at && { assigned_at }),
+    ...(assigned_by && { assigned_by }),
+    ...(is_favourite !== undefined && { is_favourite }),
+  } as WorkoutPayload;
+};
 
 /**
  * Migrate workout payload from boolean completed to CompletionStatus
@@ -206,8 +333,9 @@ type WorkoutPage =
   | { type: 'tabata-round'; itemIndex: number; section: TabataSectionPayload; roundNumber: number; totalRounds: number; workSec: number; restSec: number }
   | { type: 'amrap-round'; itemIndex: number; section: AmrapSectionPayload; durationSec: number; initialRoundsCompleted: number }
   | { type: 'congratulations' }
-  | { type: 'feedback' }
-  | { type: 'summary' };
+  | { type: 'feedback-intensity' }
+  | { type: 'feedback-rating' }
+  | { type: 'feedback-comments' };
 
 export default function WorkoutSessionModal() {
   const router = useRouter();
@@ -227,6 +355,9 @@ export default function WorkoutSessionModal() {
   const [currentStep, setCurrentStep] = useState(1);
   const [hasUpdatedStatus, setHasUpdatedStatus] = useState(false);
 
+  // Debug logging
+  console.log('[RENDER] currentStep:', currentStep, 'hasUpdatedStatus:', hasUpdatedStatus, 'workoutData:', !!workoutData);
+
   // Track local completion state for circuit rounds (resets each round)
   const [circuitRoundCompletions, setCircuitRoundCompletions] = useState<Map<string, boolean[]>>(new Map());
 
@@ -245,8 +376,13 @@ export default function WorkoutSessionModal() {
   const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastCompletionMessageRef = useRef(-1);
 
+  // Phase overlay state (for WORK/REST transitions, next round, etc.)
+  const [showPhaseOverlay, setShowPhaseOverlay] = useState(false);
+  const [phaseOverlayText, setPhaseOverlayText] = useState('');
+  const phaseOverlayOpacity = useSharedValue(0);
+
   const { formattedTime, isPaused } = useWorkoutTimer(workoutData?.completedSummary ?? null);
-  const { findExerciseById, findExercisesByIds } = useExerciseLookup();
+  const { findExerciseById, findExercisesByIds, isLoading: isExerciseDataLoading } = useExerciseLookup();
 
   // Build the pages array based on workout items
   const pages = useMemo((): WorkoutPage[] => {
@@ -435,10 +571,11 @@ export default function WorkoutSessionModal() {
       }
     });
 
-    // Add end-of-workout pages: congratulations, feedback, then summary
+    // Add end-of-workout pages: congratulations, then 3 feedback pages
     pageList.push({ type: 'congratulations' });
-    pageList.push({ type: 'feedback' });
-    pageList.push({ type: 'summary' });
+    pageList.push({ type: 'feedback-intensity' });
+    pageList.push({ type: 'feedback-rating' });
+    pageList.push({ type: 'feedback-comments' });
 
     return pageList;
   }, [workoutData?.items]);
@@ -459,7 +596,7 @@ export default function WorkoutSessionModal() {
       if (page.type === 'section-info') continue;
 
       // Skip end-of-workout pages
-      if (page.type === 'congratulations' || page.type === 'feedback' || page.type === 'summary') {
+      if (page.type === 'congratulations' || page.type === 'feedback-intensity' || page.type === 'feedback-rating' || page.type === 'feedback-comments') {
         continue;
       }
 
@@ -539,33 +676,49 @@ export default function WorkoutSessionModal() {
 
   // Track if we've set the initial step for resume
   const hasSetInitialStep = useRef(false);
+  // Track the current workoutId to detect changes
+  const currentWorkoutIdRef = useRef<string | null>(null);
 
-  // Set initial step when resuming an in-progress workout
+  // Reset state when workoutId changes (new workout selected)
   useEffect(() => {
-    if (hasSetInitialStep.current) return;
-    if (!workoutData?.items || pages.length === 0) return;
-
-    const status = workoutData.completedSummary?.status;
-
-    // Only calculate resume position for in_progress workouts
-    if (status === 'in_progress') {
-      const initialStep = calculateInitialStep(pages, workoutData.items);
-      if (initialStep > 1) {
-        setCurrentStep(initialStep);
-      }
-      hasSetInitialStep.current = true;
-    } else if (status === 'not_started') {
-      // Fresh workout - start at readiness (step 1)
-      hasSetInitialStep.current = true;
+    console.log('[INIT] workoutId effect - params.workoutId:', params.workoutId, 'currentWorkoutIdRef:', currentWorkoutIdRef.current);
+    if (params.workoutId && params.workoutId !== currentWorkoutIdRef.current) {
+      // New workout - reset all state
+      console.log('[INIT] New workout detected - resetting state');
+      currentWorkoutIdRef.current = params.workoutId;
+      hasSetInitialStep.current = false;
+      setCurrentStep(1);
+      setHasUpdatedStatus(false);
+      setWorkoutData(null);
     }
-  }, [workoutData, pages, calculateInitialStep]);
+  }, [params.workoutId]);
+
+  // Set initial step - always start fresh at readiness
+  // Each workout session is a fresh start; resume functionality is not needed
+  useEffect(() => {
+    console.log('[INIT] Initial step effect - hasSetInitialStep:', hasSetInitialStep.current, 'workoutData:', !!workoutData, 'pages.length:', pages.length);
+    if (hasSetInitialStep.current) {
+      console.log('[INIT] Skipping - hasSetInitialStep is already true');
+      return;
+    }
+    if (!workoutData?.items || pages.length === 0) {
+      console.log('[INIT] Skipping - no workoutData.items or empty pages');
+      return;
+    }
+
+    // Always start fresh at readiness (step 1)
+    console.log('[INIT] Starting fresh workout at readiness');
+    setCurrentStep(1);
+    hasSetInitialStep.current = true;
+  }, [workoutData, pages]);
 
   // Parse workout on mount
   useEffect(() => {
+    console.log('[PARSE] Parse effect triggered - has payload:', !!params.workoutPayload);
     if (params.workoutPayload) {
       try {
         const parsed = JSON.parse(params.workoutPayload);
-        console.log('RAW WORKOUT PAYLOAD:', JSON.stringify(parsed, null, 2));
+        console.log('[PARSE] Parsed status:', parsed.completedSummary?.status, 'workout_data status:', parsed.workout_data?.completedSummary?.status);
 
         // The API returns workout_data nested - extract and merge
         // Note: items may be at top level (web-created) or inside workout_data (legacy)
@@ -575,15 +728,19 @@ export default function WorkoutSessionModal() {
         // Migrate items to use CompletionStatus (handles backward compatibility)
         const migratedItems = migrateWorkoutPayload(rawItems);
 
-        setWorkoutData({
+        // Clean the payload to remove frontend-only fields (instanceKey, templateId, etc.)
+        // Always start with fresh completedSummary - each workout session is a new start
+        const cleanedPayload = cleanWorkoutPayload({
           ...parsed,
           // Use top-level pre if set, otherwise use workout_data.pre
           pre: parsed.pre ?? nestedWorkoutData.pre ?? DEFAULT_EXECUTION_FIELDS.pre,
           // Use migrated items
           items: migratedItems,
-          // Use top-level completedSummary if set, otherwise use workout_data.completedSummary
-          completedSummary: parsed.completedSummary ?? nestedWorkoutData.completedSummary ?? DEFAULT_EXECUTION_FIELDS.completedSummary,
+          // Always start fresh - ignore stale completedSummary from previous sessions
+          completedSummary: DEFAULT_EXECUTION_FIELDS.completedSummary,
         });
+        console.log('[PARSE] Set workoutData with fresh completedSummary');
+        setWorkoutData(cleanedPayload);
       } catch (error) {
         console.error('Failed to parse workout payload:', error);
       }
@@ -593,12 +750,20 @@ export default function WorkoutSessionModal() {
   // Update workout status to in_progress on mount (or resume if paused)
   useEffect(() => {
     const updateStatus = async () => {
-      if (hasUpdatedStatus) return;
-      if (!params.clientId || !params.date || !workoutData) return;
+      console.log('[STATUS] updateStatus called - hasUpdatedStatus:', hasUpdatedStatus, 'workoutData:', !!workoutData);
+      if (hasUpdatedStatus) {
+        console.log('[STATUS] Skipping - hasUpdatedStatus is true');
+        return;
+      }
+      if (!params.clientId || !params.date || !workoutData) {
+        console.log('[STATUS] Skipping - missing params or workoutData');
+        return;
+      }
 
       try {
         const currentStatus = workoutData.completedSummary?.status;
         const isPausedNow = !!workoutData.completedSummary?.pausedAt;
+        console.log('[STATUS] Current status:', currentStatus, 'isPausedNow:', isPausedNow);
 
         let updatedSummary: WorkoutMeta;
 
@@ -626,7 +791,8 @@ export default function WorkoutSessionModal() {
           return;
         }
 
-        const updatedPayload = {
+        // Keep local state with items at top level, only transform for API
+        const localUpdate = {
           ...workoutData,
           completedSummary: updatedSummary,
         };
@@ -636,10 +802,11 @@ export default function WorkoutSessionModal() {
           clientId: params.clientId,
           ...(params.coachId && { coachId: params.coachId }),
           date: params.date,
-          workoutPayload: updatedPayload,
+          workoutPayload: cleanWorkoutPayload(localUpdate),
         });
 
-        setWorkoutData(updatedPayload);
+        console.log('[STATUS] Setting workoutData with new status:', localUpdate.completedSummary?.status);
+        setWorkoutData(localUpdate);
         setHasUpdatedStatus(true);
       } catch (error) {
         console.error('Failed to update workout status:', error);
@@ -661,8 +828,9 @@ export default function WorkoutSessionModal() {
       totalPausedMs: (workoutData.completedSummary.totalPausedMs || 0) + pausedDuration,
     };
 
-    const updated = { ...workoutData, completedSummary: updatedSummary };
-    setWorkoutData(updated);
+    // Keep local state with items at top level, only transform for API
+    const localUpdate = { ...workoutData, completedSummary: updatedSummary };
+    setWorkoutData(localUpdate);
 
     try {
       await assignWorkout({
@@ -670,7 +838,7 @@ export default function WorkoutSessionModal() {
         clientId: params.clientId,
         ...(params.coachId && { coachId: params.coachId }),
         date: params.date,
-        workoutPayload: updated,
+        workoutPayload: cleanWorkoutPayload(localUpdate),
       });
     } catch (error) {
       console.error('Failed to resume workout:', error);
@@ -686,8 +854,9 @@ export default function WorkoutSessionModal() {
       pausedAt: new Date().toISOString(),
     };
 
-    const updated = { ...workoutData, completedSummary: updatedSummary };
-    setWorkoutData(updated);
+    // Keep local state with items at top level, only transform for API
+    const localUpdate = { ...workoutData, completedSummary: updatedSummary };
+    setWorkoutData(localUpdate);
 
     try {
       await assignWorkout({
@@ -695,7 +864,7 @@ export default function WorkoutSessionModal() {
         clientId: params.clientId,
         ...(params.coachId && { coachId: params.coachId }),
         date: params.date,
-        workoutPayload: updated,
+        workoutPayload: cleanWorkoutPayload(localUpdate),
       });
     } catch (error) {
       console.error('Failed to pause workout:', error);
@@ -737,13 +906,26 @@ export default function WorkoutSessionModal() {
 
           // Update section completion status
           section.completed = deriveIntervalSectionStatus(roundNumber, totalRounds);
+
+          // If section is completed, mark all exercises inside as completed too
+          if (section.completed === 'completed') {
+            section.exercises.forEach((group: any) => {
+              group.exercises.forEach((ex: any) => {
+                ex.completed = 'completed';
+                if (ex.set) {
+                  ex.set.completed = 'completed';
+                }
+              });
+            });
+          }
         }
         break;
       }
     }
 
-    const updatedData = { ...workoutData, items: updatedItems };
-    setWorkoutData(updatedData);
+    // Keep local state with items at top level, only transform for API
+    const localUpdate = { ...workoutData, items: updatedItems };
+    setWorkoutData(localUpdate);
 
     try {
       await assignWorkout({
@@ -751,7 +933,7 @@ export default function WorkoutSessionModal() {
         clientId: params.clientId,
         ...(params.coachId && { coachId: params.coachId }),
         date: params.date,
-        workoutPayload: updatedData,
+        workoutPayload: cleanWorkoutPayload(localUpdate),
       });
     } catch (error) {
       console.error('Failed to save round completion:', error);
@@ -773,22 +955,68 @@ export default function WorkoutSessionModal() {
         await persistRoundCompletion(currentPage.section.id, currentPage.roundNumber);
       }
 
-      // If leaving feedback page, save the feedback data (including deferred sessionComments)
-      if (currentPage.type === 'feedback' && workoutData) {
-        try {
-          await assignWorkout({
-            workoutId: params.workoutId,
-            clientId: params.clientId,
-            ...(params.coachId && { coachId: params.coachId }),
-            date: params.date,
-            workoutPayload: workoutData,
-          });
-        } catch (error) {
-          console.error('Failed to save feedback:', error);
-        }
+      // Get the next page type to check if we're entering congratulations
+      const nextPageIndex = currentStep; // currentStep is 1-indexed, so currentStep points to next page
+      const nextPage = pages[nextPageIndex];
+
+      // If entering congratulations page, pause the timer
+      if (nextPage?.type === 'congratulations' && workoutData && !isPaused) {
+        await pauseWorkout();
       }
 
       setCurrentStep(currentStep + 1);
+    }
+  };
+
+  // Handle Complete button press - saves workout as completed and opens review modal
+  const handleComplete = async () => {
+    if (!workoutData) return;
+
+    try {
+      // Calculate total duration
+      const completedAt = new Date();
+      const startedAt = workoutData.completedSummary?.startedAt
+        ? new Date(workoutData.completedSummary.startedAt)
+        : completedAt;
+      const totalPausedMs = workoutData.completedSummary?.totalPausedMs || 0;
+      const totalDurationMs = completedAt.getTime() - startedAt.getTime() - totalPausedMs;
+      const totalDurationMin = Math.round(totalDurationMs / 60000);
+
+      // Mark workout as completed with duration
+      const completedSummary: WorkoutMeta = {
+        ...workoutData.completedSummary,
+        status: 'completed' as const,
+        completedAt: completedAt.toISOString(),
+        pausedAt: null, // Clear any pause state
+        totalDurationMin,
+      };
+      // Keep local state with items at top level, only transform for API
+      const localUpdate = { ...workoutData, completedSummary };
+
+      await assignWorkout({
+        workoutId: params.workoutId,
+        clientId: params.clientId,
+        ...(params.coachId && { coachId: params.coachId }),
+        date: params.date,
+        workoutPayload: cleanWorkoutPayload(localUpdate),
+      });
+
+      // Close this modal and open the review modal
+      router.dismiss();
+      setTimeout(() => {
+        router.push({
+          pathname: '/modals/training/workout-review-modal',
+          params: {
+            workoutId: params.workoutId,
+            date: params.date,
+            clientId: params.clientId,
+            coachId: params.coachId,
+            workoutPayload: JSON.stringify(cleanWorkoutPayload(localUpdate)),
+          },
+        });
+      }, 100);
+    } catch (error) {
+      console.error('Failed to complete workout:', error);
     }
   };
 
@@ -831,6 +1059,25 @@ export default function WorkoutSessionModal() {
     transform: [{ scale: completionTextScale.value }],
   }));
 
+  // Animated style for phase overlay
+  const phaseOverlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: phaseOverlayOpacity.value,
+  }));
+
+  // Show phase overlay (for WORK/REST transitions, next round, etc.)
+  const triggerPhaseOverlay = useCallback((text: string, durationMs: number = 1000) => {
+    setPhaseOverlayText(text);
+    setShowPhaseOverlay(true);
+    phaseOverlayOpacity.value = withTiming(1, { duration: 150 });
+
+    // Auto dismiss after duration
+    setTimeout(() => {
+      phaseOverlayOpacity.value = withTiming(0, { duration: 150 }, () => {
+        runOnJS(setShowPhaseOverlay)(false);
+      });
+    }, durationMs);
+  }, [phaseOverlayOpacity]);
+
   // Show completion celebration overlay and navigate after
   const showCompletionCelebration = useCallback(() => {
     // Get messages directly from translations object (t() only returns strings)
@@ -868,6 +1115,27 @@ export default function WorkoutSessionModal() {
     }, 1200);
   }, [completionOverlayOpacity, completionTextScale, currentStep, pages.length, isPaused]);
 
+  // Show completion celebration with a specific message (used by superset pages)
+  const showCompletionCelebrationWithMessage = useCallback((message: string) => {
+    setCompletionMessage(message);
+    setShowCompletionOverlay(true);
+
+    // Animate in
+    completionOverlayOpacity.value = withTiming(1, { duration: 200 });
+    completionTextScale.value = withSequence(
+      withTiming(1.1, { duration: 250 }),
+      withTiming(1, { duration: 150 })
+    );
+
+    // Auto dismiss after delay (superset page handles navigation via onSetComplete)
+    completionTimeoutRef.current = setTimeout(() => {
+      completionOverlayOpacity.value = withTiming(0, { duration: 200 });
+      setTimeout(() => {
+        setShowCompletionOverlay(false);
+      }, 200);
+    }, 1200);
+  }, [completionOverlayOpacity, completionTextScale]);
+
   // Cleanup completion timeout on unmount
   useEffect(() => {
     return () => {
@@ -881,11 +1149,12 @@ export default function WorkoutSessionModal() {
   const handleReadinessChange = async (field: keyof WorkoutPre, value: number) => {
     if (!workoutData) return;
 
-    const updatedData = {
+    // Keep local state with items at top level, only transform for API
+    const localUpdate = {
       ...workoutData,
       pre: { ...workoutData.pre, [field]: value },
     };
-    setWorkoutData(updatedData);
+    setWorkoutData(localUpdate);
 
     try {
       await assignWorkout({
@@ -893,41 +1162,46 @@ export default function WorkoutSessionModal() {
         clientId: params.clientId,
         ...(params.coachId && { coachId: params.coachId }),
         date: params.date,
-        workoutPayload: updatedData,
+        workoutPayload: cleanWorkoutPayload(localUpdate),
       });
     } catch (error) {
       console.error('Failed to save readiness value:', error);
     }
   };
 
-  // Feedback change handler - defers sessionComments save to Next button
-  const handleFeedbackChange = async (field: keyof WorkoutPost, value: number | string | null) => {
+  // Feedback change handler - auto-advances for intensity/rating
+  const handleFeedbackChange = (field: keyof WorkoutPost, value: number | string | null) => {
     if (!workoutData) return;
 
     const currentPost = workoutData.post || DEFAULT_EXECUTION_FIELDS.post;
-    const updatedData = {
+    // Keep local state with items at top level, only transform for API
+    const localUpdate = {
       ...workoutData,
       post: { ...currentPost, [field]: value },
     };
-    setWorkoutData(updatedData);
+    setWorkoutData(localUpdate);
 
-    // For sessionComments, only update local state (save on Next button)
+    // For sessionComments, only update local state (save on Complete button)
     if (field === 'sessionComments') {
       return;
     }
 
-    // For other fields (rating, intensity), save immediately
-    try {
-      await assignWorkout({
-        workoutId: params.workoutId,
-        clientId: params.clientId,
-        ...(params.coachId && { coachId: params.coachId }),
-        date: params.date,
-        workoutPayload: updatedData,
-      });
-    } catch (error) {
+    // For intensity and rating, advance after brief delay for visual feedback
+    const totalPages = pages.length;
+    setTimeout(() => {
+      setCurrentStep((prev) => (prev < totalPages ? prev + 1 : prev));
+    }, 100);
+
+    // Save in background (fire and forget)
+    assignWorkout({
+      workoutId: params.workoutId,
+      clientId: params.clientId,
+      ...(params.coachId && { coachId: params.coachId }),
+      date: params.date,
+      workoutPayload: cleanWorkoutPayload(localUpdate),
+    }).catch((error) => {
       console.error('Failed to save feedback value:', error);
-    }
+    });
   };
 
   // Pause toggle handler
@@ -941,8 +1215,56 @@ export default function WorkoutSessionModal() {
     }
   };
 
+  // Write exercise history entry (incremental)
+  // sectionType: null for normal exercises, section type for interval sections
+  // sectionCompletedRounds: only for interval sections (amrap, hiit, tabata, emom, circuits)
+  const writeExerciseHistory = async (
+    exercisePayload: RegularExercisePayload | CircuitExercisePayload | RoundExercisePayload,
+    sectionType?: SectionType | null,
+    sectionCompletedRounds?: number | null
+  ) => {
+    if (!params.clientId || !params.coachId || !params.date || !params.workoutId || !workoutData) {
+      return;
+    }
+
+    // Determine the exercise ID (use performedExerciseId if swapped, else prescribedExerciseId)
+    const exerciseId = exercisePayload.performedExerciseId || exercisePayload.prescribedExerciseId;
+
+    // Get workout name (workoutData may have additional fields from raw JSON)
+    const workoutName = workoutData.name || (workoutData as any).program || (workoutData as any).title || 'Untitled Workout';
+
+    // Only send section context for interval-based sections
+    const validIntervalTypes: SectionType[] = ['amrap', 'tabata', 'hiit', 'emom', 'circuits'];
+    const finalSectionType = sectionType && validIntervalTypes.includes(sectionType) ? sectionType : null;
+    const finalCompletedRounds = finalSectionType ? sectionCompletedRounds : null;
+
+    // Ensure performedExerciseId is set (default to prescribedExerciseId if null)
+    const exerciseDataWithPerformed = {
+      ...exercisePayload,
+      performedExerciseId: exercisePayload.performedExerciseId ?? exercisePayload.prescribedExerciseId,
+    };
+
+    try {
+      await addExerciseHistory({
+        clientId: params.clientId,
+        coachId: params.coachId,
+        date: params.date,
+        workoutId: params.workoutId,
+        workoutName,
+        exerciseId,
+        exerciseData: exerciseDataWithPerformed,
+        sectionType: finalSectionType as 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | null,
+        sectionCompletedRounds: finalCompletedRounds,
+      });
+    } catch (error) {
+      // Log but don't block workout progress
+      console.error('Failed to write exercise history:', error);
+    }
+  };
+
   // Get current page
   const currentPage = pages[currentStep - 1] || { type: 'readiness' };
+  console.log('[PAGE] currentStep:', currentStep, 'currentPage.type:', currentPage.type, 'pages.length:', pages.length);
 
   // Handle set completion toggle for regular exercises and supersets
   const handleSetComplete = async (setIndex: number, completed: boolean, exerciseIdxInSuperset?: number) => {
@@ -964,7 +1286,17 @@ export default function WorkoutSessionModal() {
         const exerciseItemIndex = exerciseIndices[actualExerciseIndex];
         const exerciseItem = updatedItems[exerciseItemIndex];
         if (exerciseItem.itemType === 'exercise' && exerciseItem.data.id === exercise.id) {
-          exerciseItem.data.sets[setIndex].completed = newSetStatus;
+          const set = exerciseItem.data.sets[setIndex];
+          set.completed = newSetStatus;
+          // Auto-populate trackable fields with prescribed values if completing and not already set
+          if (completed) {
+            if (set.trackableField1.completed === null) {
+              set.trackableField1.completed = set.trackableField1.prescribed;
+            }
+            if (set.trackableField2.completed === null) {
+              set.trackableField2.completed = set.trackableField2.prescribed;
+            }
+          }
           // Update exercise completion status
           exerciseItem.data.completed = deriveExerciseStatus(exerciseItem.data.sets);
         }
@@ -975,7 +1307,17 @@ export default function WorkoutSessionModal() {
           if (group.isSuperset) {
             const exIdx = group.exercises.findIndex((ex) => ex.id === exercise.id);
             if (exIdx !== -1) {
-              group.exercises[exIdx].sets[setIndex].completed = newSetStatus;
+              const set = group.exercises[exIdx].sets[setIndex];
+              set.completed = newSetStatus;
+              // Auto-populate trackable fields with prescribed values if completing and not already set
+              if (completed) {
+                if (set.trackableField1.completed === null) {
+                  set.trackableField1.completed = set.trackableField1.prescribed;
+                }
+                if (set.trackableField2.completed === null) {
+                  set.trackableField2.completed = set.trackableField2.prescribed;
+                }
+              }
               // Update exercise completion status
               group.exercises[exIdx].completed = deriveExerciseStatus(group.exercises[exIdx].sets);
               break;
@@ -994,8 +1336,9 @@ export default function WorkoutSessionModal() {
         item.data.completed = deriveSectionStatus(completedExercises, totalExercises);
       }
 
-      const updatedData = { ...workoutData, items: updatedItems };
-      setWorkoutData(updatedData);
+      // Keep local state with items at top level, only transform for API
+      const localUpdate = { ...workoutData, items: updatedItems };
+      setWorkoutData(localUpdate);
 
       try {
         await assignWorkout({
@@ -1003,7 +1346,7 @@ export default function WorkoutSessionModal() {
           clientId: params.clientId,
           ...(params.coachId && { coachId: params.coachId }),
           date: params.date,
-          workoutPayload: updatedData,
+          workoutPayload: cleanWorkoutPayload(localUpdate),
         });
       } catch (error) {
         console.error('Failed to save set completion:', error);
@@ -1019,12 +1362,32 @@ export default function WorkoutSessionModal() {
     const item = updatedItems[itemIndex];
 
     if (item.itemType === 'exercise') {
-      item.data.sets[setIndex].completed = newSetStatus;
+      const set = item.data.sets[setIndex];
+      set.completed = newSetStatus;
+      // Auto-populate trackable fields with prescribed values if completing and not already set
+      if (completed) {
+        if (set.trackableField1.completed === null) {
+          set.trackableField1.completed = set.trackableField1.prescribed;
+        }
+        if (set.trackableField2.completed === null) {
+          set.trackableField2.completed = set.trackableField2.prescribed;
+        }
+      }
       // Update exercise completion status
       item.data.completed = deriveExerciseStatus(item.data.sets);
     } else if (item.itemType === 'section' && (item.data.type === 'regular' || item.data.type === 'auxiliary')) {
       if (groupIndex !== undefined && exerciseIndex !== undefined) {
-        item.data.exercises[groupIndex].exercises[exerciseIndex].sets[setIndex].completed = newSetStatus;
+        const set = item.data.exercises[groupIndex].exercises[exerciseIndex].sets[setIndex];
+        set.completed = newSetStatus;
+        // Auto-populate trackable fields with prescribed values if completing and not already set
+        if (completed) {
+          if (set.trackableField1.completed === null) {
+            set.trackableField1.completed = set.trackableField1.prescribed;
+          }
+          if (set.trackableField2.completed === null) {
+            set.trackableField2.completed = set.trackableField2.prescribed;
+          }
+        }
         // Update exercise completion status
         item.data.exercises[groupIndex].exercises[exerciseIndex].completed = deriveExerciseStatus(
           item.data.exercises[groupIndex].exercises[exerciseIndex].sets
@@ -1042,26 +1405,41 @@ export default function WorkoutSessionModal() {
       }
     }
 
-    const updatedData = { ...workoutData, items: updatedItems };
-    setWorkoutData(updatedData);
+    // Keep local state with items at top level, only transform for API
+    const localUpdate = { ...workoutData, items: updatedItems };
+    setWorkoutData(localUpdate);
 
-    try {
-      await assignWorkout({
-        workoutId: params.workoutId,
-        clientId: params.clientId,
-        ...(params.coachId && { coachId: params.coachId }),
-        date: params.date,
-        workoutPayload: updatedData,
-      });
-    } catch (error) {
-      console.error('Failed to save set completion:', error);
-    }
-
-    // Show celebration and auto-advance when last set is completed
+    // Show celebration and auto-advance when last set is completed (before API save for instant feedback)
     const isLastSet = setIndex === exercise.sets.length - 1;
     if (completed && isLastSet) {
+      // Check if it's a standalone exercise (not part of a superset)
+      const isStandalone = !exercise.supersetId;
+      if (isStandalone) {
+        // Get the updated exercise data from updatedItems
+        let updatedExercise: RegularExercisePayload;
+        if (item.itemType === 'exercise') {
+          updatedExercise = item.data;
+        } else if (item.itemType === 'section' && (item.data.type === 'regular' || item.data.type === 'auxiliary')) {
+          updatedExercise = item.data.exercises[groupIndex!].exercises[exerciseIndex!];
+        } else {
+          updatedExercise = exercise;
+        }
+        // Write exercise history with section_type = null for normal exercises
+        writeExerciseHistory(updatedExercise, null, null);
+      }
       showCompletionCelebration();
     }
+
+    // Save to API in background (fire and forget for instant UI feedback)
+    assignWorkout({
+      workoutId: params.workoutId,
+      clientId: params.clientId,
+      ...(params.coachId && { coachId: params.coachId }),
+      date: params.date,
+      workoutPayload: cleanWorkoutPayload(localUpdate),
+    }).catch((error) => {
+      console.error('Failed to save set completion:', error);
+    });
   };
 
   // Handle set value change for regular exercises and supersets
@@ -1102,9 +1480,10 @@ export default function WorkoutSessionModal() {
           }
         }
       }
-      
-      const updatedData = { ...workoutData, items: updatedItems };
-      setWorkoutData(updatedData);
+
+      // Keep local state with items at top level, only transform for API
+      const localUpdate = { ...workoutData, items: updatedItems };
+      setWorkoutData(localUpdate);
 
       try {
         await assignWorkout({
@@ -1112,14 +1491,14 @@ export default function WorkoutSessionModal() {
           clientId: params.clientId,
           ...(params.coachId && { coachId: params.coachId }),
           date: params.date,
-          workoutPayload: updatedData,
+          workoutPayload: cleanWorkoutPayload(localUpdate),
         });
       } catch (error) {
         console.error('Failed to save set value:', error);
       }
       return;
     }
-    
+
     if (currentPage.type !== 'exercise') return;
     const { itemIndex, groupIndex, exerciseIndex } = currentPage;
 
@@ -1135,8 +1514,9 @@ export default function WorkoutSessionModal() {
       }
     }
 
-    const updatedData = { ...workoutData, items: updatedItems };
-    setWorkoutData(updatedData);
+    // Keep local state with items at top level, only transform for API
+    const localUpdate = { ...workoutData, items: updatedItems };
+    setWorkoutData(localUpdate);
 
     try {
       await assignWorkout({
@@ -1144,7 +1524,7 @@ export default function WorkoutSessionModal() {
         clientId: params.clientId,
         ...(params.coachId && { coachId: params.coachId }),
         date: params.date,
-        workoutPayload: updatedData,
+        workoutPayload: cleanWorkoutPayload(localUpdate),
       });
     } catch (error) {
       console.error('Failed to save set value:', error);
@@ -1193,8 +1573,9 @@ export default function WorkoutSessionModal() {
         }
       }
 
-      const updatedData = { ...workoutData, items: updatedItems };
-      setWorkoutData(updatedData);
+      // Keep local state with items at top level, only transform for API
+      const localUpdate = { ...workoutData, items: updatedItems };
+      setWorkoutData(localUpdate);
 
       try {
         await assignWorkout({
@@ -1202,14 +1583,14 @@ export default function WorkoutSessionModal() {
           clientId: params.clientId,
           ...(params.coachId && { coachId: params.coachId }),
           date: params.date,
-          workoutPayload: updatedData,
+          workoutPayload: cleanWorkoutPayload(localUpdate),
         });
       } catch (error) {
         console.error('Failed to swap exercise:', error);
       }
       return;
     }
-    
+
     if (currentPage.type !== 'exercise') return;
     const { itemIndex, groupIndex, exerciseIndex, exercise } = currentPage;
     const currentExerciseId = exercise.prescribedExerciseId;
@@ -1233,8 +1614,9 @@ export default function WorkoutSessionModal() {
       }
     }
 
-    const updatedData = { ...workoutData, items: updatedItems };
-    setWorkoutData(updatedData);
+    // Keep local state with items at top level, only transform for API
+    const localUpdate = { ...workoutData, items: updatedItems };
+    setWorkoutData(localUpdate);
 
     try {
       await assignWorkout({
@@ -1242,7 +1624,7 @@ export default function WorkoutSessionModal() {
         clientId: params.clientId,
         ...(params.coachId && { coachId: params.coachId }),
         date: params.date,
-        workoutPayload: updatedData,
+        workoutPayload: cleanWorkoutPayload(localUpdate),
       });
     } catch (error) {
       console.error('Failed to swap exercise:', error);
@@ -1287,8 +1669,9 @@ export default function WorkoutSessionModal() {
       item.data.exercises[groupIndex].exercises[exerciseIndex].set[field].completed = value;
     }
 
-    const updatedData = { ...workoutData, items: updatedItems };
-    setWorkoutData(updatedData);
+    // Keep local state with items at top level, only transform for API
+    const localUpdate = { ...workoutData, items: updatedItems };
+    setWorkoutData(localUpdate);
 
     try {
       await assignWorkout({
@@ -1296,7 +1679,7 @@ export default function WorkoutSessionModal() {
         clientId: params.clientId,
         ...(params.coachId && { coachId: params.coachId }),
         date: params.date,
-        workoutPayload: updatedData,
+        workoutPayload: cleanWorkoutPayload(localUpdate),
       });
     } catch (error) {
       console.error('Failed to save circuit exercise value:', error);
@@ -1319,8 +1702,9 @@ export default function WorkoutSessionModal() {
       item.data.completed = deriveSectionStatus(completedCount, item.data.exercises.length);
     }
 
-    const updatedData = { ...workoutData, items: updatedItems };
-    setWorkoutData(updatedData);
+    // Keep local state with items at top level, only transform for API
+    const localUpdate = { ...workoutData, items: updatedItems };
+    setWorkoutData(localUpdate);
 
     try {
       await assignWorkout({
@@ -1328,7 +1712,7 @@ export default function WorkoutSessionModal() {
         clientId: params.clientId,
         ...(params.coachId && { coachId: params.coachId }),
         date: params.date,
-        workoutPayload: updatedData,
+        workoutPayload: cleanWorkoutPayload(localUpdate),
       });
     } catch (error) {
       console.error('Failed to save AMRAP exercise completion:', error);
@@ -1351,8 +1735,9 @@ export default function WorkoutSessionModal() {
       item.data.exercises[exerciseIndex][field].completed = value;
     }
 
-    const updatedData = { ...workoutData, items: updatedItems };
-    setWorkoutData(updatedData);
+    // Keep local state with items at top level, only transform for API
+    const localUpdate = { ...workoutData, items: updatedItems };
+    setWorkoutData(localUpdate);
 
     try {
       await assignWorkout({
@@ -1360,7 +1745,7 @@ export default function WorkoutSessionModal() {
         clientId: params.clientId,
         ...(params.coachId && { coachId: params.coachId }),
         date: params.date,
-        workoutPayload: updatedData,
+        workoutPayload: cleanWorkoutPayload(localUpdate),
       });
     } catch (error) {
       console.error('Failed to save AMRAP exercise value:', error);
@@ -1389,7 +1774,17 @@ export default function WorkoutSessionModal() {
       const exerciseItemIndex = exerciseIndices[exerciseIndex];
       const exerciseItem = updatedItems[exerciseItemIndex];
       if (exerciseItem.itemType === 'exercise' && exerciseItem.data.id === exercise.id) {
-        exerciseItem.data.sets[setIndex].completed = newSetStatus;
+        const set = exerciseItem.data.sets[setIndex];
+        set.completed = newSetStatus;
+        // Auto-populate trackable fields with prescribed values if completing and not already set
+        if (completed) {
+          if (set.trackableField1.completed === null) {
+            set.trackableField1.completed = set.trackableField1.prescribed;
+          }
+          if (set.trackableField2.completed === null) {
+            set.trackableField2.completed = set.trackableField2.prescribed;
+          }
+        }
         // Update exercise completion status
         exerciseItem.data.completed = deriveExerciseStatus(exerciseItem.data.sets);
       }
@@ -1400,7 +1795,17 @@ export default function WorkoutSessionModal() {
         if (group.isSuperset) {
           const exIdx = group.exercises.findIndex((ex) => ex.id === exercise.id);
           if (exIdx !== -1) {
-            group.exercises[exIdx].sets[setIndex].completed = newSetStatus;
+            const set = group.exercises[exIdx].sets[setIndex];
+            set.completed = newSetStatus;
+            // Auto-populate trackable fields with prescribed values if completing and not already set
+            if (completed) {
+              if (set.trackableField1.completed === null) {
+                set.trackableField1.completed = set.trackableField1.prescribed;
+              }
+              if (set.trackableField2.completed === null) {
+                set.trackableField2.completed = set.trackableField2.prescribed;
+              }
+            }
             // Update exercise completion status
             group.exercises[exIdx].completed = deriveExerciseStatus(group.exercises[exIdx].sets);
             break;
@@ -1419,8 +1824,9 @@ export default function WorkoutSessionModal() {
       item.data.completed = deriveSectionStatus(completedExercises, totalExercises);
     }
 
-    const updatedData = { ...workoutData, items: updatedItems };
-    setWorkoutData(updatedData);
+    // Keep local state with items at top level, only transform for API
+    const localUpdate = { ...workoutData, items: updatedItems };
+    setWorkoutData(localUpdate);
 
     try {
       await assignWorkout({
@@ -1428,10 +1834,54 @@ export default function WorkoutSessionModal() {
         clientId: params.clientId,
         ...(params.coachId && { coachId: params.coachId }),
         date: params.date,
-        workoutPayload: updatedData,
+        workoutPayload: cleanWorkoutPayload(localUpdate),
       });
     } catch (error) {
       console.error('Failed to save superset exercise completion:', error);
+    }
+
+    // Check if ALL exercises in the superset are now completed
+    // If so, write exercise history for each exercise
+    if (completed) {
+      let allSupersetComplete = false;
+      const supersetExercisesData: RegularExercisePayload[] = [];
+
+      if (item.itemType === 'exercise') {
+        // Top-level superset - check all exercises in exerciseIndices
+        allSupersetComplete = exerciseIndices.every((idx) => {
+          const exItem = updatedItems[idx];
+          return exItem.itemType === 'exercise' && exItem.data.completed === 'completed';
+        });
+        if (allSupersetComplete) {
+          exerciseIndices.forEach((idx) => {
+            const exItem = updatedItems[idx];
+            if (exItem.itemType === 'exercise') {
+              supersetExercisesData.push(exItem.data);
+            }
+          });
+        }
+      } else if (item.itemType === 'section' && (item.data.type === 'regular' || item.data.type === 'auxiliary')) {
+        // Find the superset group containing this exercise
+        for (const group of item.data.exercises) {
+          if (group.isSuperset) {
+            const hasThisExercise = group.exercises.some((ex) => ex.id === exercise.id);
+            if (hasThisExercise) {
+              allSupersetComplete = group.exercises.every((ex) => ex.completed === 'completed');
+              if (allSupersetComplete) {
+                supersetExercisesData.push(...group.exercises);
+              }
+              break;
+            }
+          }
+        }
+      }
+
+      // Write history for each exercise in the superset (with section_type = null)
+      if (allSupersetComplete && supersetExercisesData.length > 0) {
+        for (const exData of supersetExercisesData) {
+          writeExerciseHistory(exData, null, null);
+        }
+      }
     }
   };
 
@@ -1472,8 +1922,9 @@ export default function WorkoutSessionModal() {
       }
     }
 
-    const updatedData = { ...workoutData, items: updatedItems };
-    setWorkoutData(updatedData);
+    // Keep local state with items at top level, only transform for API
+    const localUpdate = { ...workoutData, items: updatedItems };
+    setWorkoutData(localUpdate);
 
     try {
       await assignWorkout({
@@ -1481,10 +1932,72 @@ export default function WorkoutSessionModal() {
         clientId: params.clientId,
         ...(params.coachId && { coachId: params.coachId }),
         date: params.date,
-        workoutPayload: updatedData,
+        workoutPayload: cleanWorkoutPayload(localUpdate),
       });
     } catch (error) {
       console.error('Failed to save superset exercise value:', error);
+    }
+  };
+
+  // Handle AMRAP section completion (when timer finishes)
+  const handleAmrapSectionComplete = async (sectionId: string, roundsCompleted: number) => {
+    if (!workoutData) {
+      // Fallback: just advance
+      if (currentStep < pages.length) {
+        if (isPaused) resumeWorkout();
+        setCurrentStep(currentStep + 1);
+      }
+      return;
+    }
+
+    const updatedItems = JSON.parse(JSON.stringify(workoutData.items)) as WorkoutItem[];
+    let amrapExercises: RoundExercisePayload[] = [];
+
+    for (const item of updatedItems) {
+      if (item.itemType === 'section' && item.data.id === sectionId) {
+        const section = item.data;
+        if (section.type === 'amrap') {
+          // Store rounds completed and mark section as completed
+          section.roundsCompleted = roundsCompleted;
+          section.completed = 'completed';
+
+          // Mark all exercises inside as completed too
+          section.exercises.forEach((ex: any) => {
+            ex.completed = 'completed';
+          });
+
+          // Collect exercises for history write
+          amrapExercises = section.exercises;
+        }
+        break;
+      }
+    }
+
+    // Keep local state with items at top level, only transform for API
+    const localUpdate = { ...workoutData, items: updatedItems };
+    setWorkoutData(localUpdate);
+
+    try {
+      await assignWorkout({
+        workoutId: params.workoutId,
+        clientId: params.clientId,
+        ...(params.coachId && { coachId: params.coachId }),
+        date: params.date,
+        workoutPayload: cleanWorkoutPayload(localUpdate),
+      });
+    } catch (error) {
+      console.error('Failed to save AMRAP completion:', error);
+    }
+
+    // Write exercise history for each exercise in the AMRAP section
+    for (const exercise of amrapExercises) {
+      writeExerciseHistory(exercise, 'amrap', roundsCompleted);
+    }
+
+    // Advance to the next step
+    if (currentStep < pages.length) {
+      if (isPaused) resumeWorkout();
+      setCurrentStep(currentStep + 1);
     }
   };
 
@@ -1498,6 +2011,12 @@ export default function WorkoutSessionModal() {
       }
       return;
     }
+
+    // Track if section completed and exercises to write history for
+    let sectionJustCompleted = false;
+    let sectionTypeForHistory: SectionType | null = null;
+    let completedRoundsForHistory: number = 0;
+    let exercisesForHistory: CircuitExercisePayload[] = [];
 
     // If section info provided, persist completedRounds
     if (sectionId && roundNumber !== undefined) {
@@ -1520,13 +2039,32 @@ export default function WorkoutSessionModal() {
 
             // Update section completion status
             section.completed = deriveIntervalSectionStatus(roundNumber, totalRounds);
+
+            // If section is completed, mark all exercises inside as completed too
+            if (section.completed === 'completed') {
+              sectionJustCompleted = true;
+              sectionTypeForHistory = section.type;
+              completedRoundsForHistory = roundNumber;
+
+              section.exercises.forEach((group: any) => {
+                group.exercises.forEach((ex: any) => {
+                  ex.completed = 'completed';
+                  if (ex.set) {
+                    ex.set.completed = 'completed';
+                  }
+                  // Collect for history write
+                  exercisesForHistory.push(ex);
+                });
+              });
+            }
           }
           break;
         }
       }
 
-      const updatedData = { ...workoutData, items: updatedItems };
-      setWorkoutData(updatedData);
+      // Keep local state with items at top level, only transform for API
+      const localUpdate = { ...workoutData, items: updatedItems };
+      setWorkoutData(localUpdate);
 
       try {
         await assignWorkout({
@@ -1534,10 +2072,17 @@ export default function WorkoutSessionModal() {
           clientId: params.clientId,
           ...(params.coachId && { coachId: params.coachId }),
           date: params.date,
-          workoutPayload: updatedData,
+          workoutPayload: cleanWorkoutPayload(localUpdate),
         });
       } catch (error) {
         console.error('Failed to save round completion:', error);
+      }
+
+      // Write exercise history for each exercise when section completes
+      if (sectionJustCompleted && exercisesForHistory.length > 0 && sectionTypeForHistory) {
+        for (const exercise of exercisesForHistory) {
+          writeExerciseHistory(exercise, sectionTypeForHistory, completedRoundsForHistory);
+        }
       }
     }
 
@@ -1648,8 +2193,8 @@ export default function WorkoutSessionModal() {
 
     if (currentPage.type === 'circuit-round') {
       const { section, roundNumber } = currentPage;
-      // If round is already completed, allow navigation
-      if (roundNumber <= (section.completedRounds || 0)) {
+      // If section or round is already completed, allow navigation
+      if (section.completed === 'completed' || roundNumber <= (section.completedRounds || 0)) {
         return true;
       }
       // Get all exercises for this round
@@ -1665,8 +2210,8 @@ export default function WorkoutSessionModal() {
 
     if (currentPage.type === 'emom-round' || currentPage.type === 'hiit-round' || currentPage.type === 'tabata-round') {
       const { section, roundNumber } = currentPage;
-      // If round is already completed (persisted), allow navigation
-      if (roundNumber <= (section.completedRounds || 0)) {
+      // If section or round is already completed (persisted), allow navigation
+      if (section.completed === 'completed' || roundNumber <= (section.completedRounds || 0)) {
         return true;
       }
       // Check LOCAL completion state first
@@ -1692,11 +2237,15 @@ export default function WorkoutSessionModal() {
 
     if (currentPage.type === 'amrap-round') {
       const { section } = currentPage;
+      // If section is already completed, allow navigation
+      if (section.completed === 'completed') {
+        return true;
+      }
       // Check if all exercises are completed
       return section.exercises.every((ex) => ex.completed === 'completed');
     }
 
-    // For other page types (section-info, congratulations, feedback, summary), allow navigation
+    // For other page types (section-info, congratulations, feedback pages), allow navigation
     return true;
   };
 
@@ -1715,11 +2264,14 @@ export default function WorkoutSessionModal() {
     if (currentPage.type === 'congratulations') {
       return '';
     }
-    if (currentPage.type === 'feedback') {
-      return t('training.session.feedback.title' as any);
+    if (currentPage.type === 'feedback-intensity') {
+      return t('training.session.feedback.intensity' as any);
     }
-    if (currentPage.type === 'summary') {
-      return t('training.session.summary.title' as any);
+    if (currentPage.type === 'feedback-rating') {
+      return t('training.session.feedback.rating' as any);
+    }
+    if (currentPage.type === 'feedback-comments') {
+      return t('training.session.feedback.comments' as any);
     }
     // For exercise pages, return empty - the exercise name is shown in the card
     return '';
@@ -1807,6 +2359,7 @@ export default function WorkoutSessionModal() {
                   alternatives={exerciseAlternatives}
                   isSuperset={true}
                   supersetLabel={supersetLabel}
+                  isExerciseDataLoading={isExerciseDataLoading}
                   onSetComplete={(setIndex, completed) => {
                     handleSetComplete(setIndex, completed, idx);
                   }}
@@ -1835,6 +2388,7 @@ export default function WorkoutSessionModal() {
               onSetValueChange={handleSetValueChange}
               onAlternativeSelect={handleAlternativeSelect}
               sequentialSets
+              isExerciseDataLoading={isExerciseDataLoading}
             />
           </View>
         );
@@ -1854,6 +2408,7 @@ export default function WorkoutSessionModal() {
               onSetComplete={handleSetComplete}
               onSetValueChange={handleSetValueChange}
               onAlternativeSelect={handleAlternativeSelect}
+              isExerciseDataLoading={isExerciseDataLoading}
             />
           </View>
         );
@@ -1865,7 +2420,8 @@ export default function WorkoutSessionModal() {
         const roundKey = `${section.id}-${roundNumber}`;
 
         // Check if this round is already completed (for backward navigation)
-        const isRoundCompleted = roundNumber <= (section.completedRounds || 0);
+        // Also check if section is marked as completed (all rounds are complete)
+        const isRoundCompleted = section.completed === 'completed' || roundNumber <= (section.completedRounds || 0);
 
         // Get local completion state for this round, or use exercise set.completed as initial
         // If round is already completed, show all as completed
@@ -1900,6 +2456,9 @@ export default function WorkoutSessionModal() {
                 handleCircuitExerciseValueChange(itemIndex, groupIndex, exerciseIndex, field, value);
               }}
               onRoundComplete={() => handleCircuitRoundComplete(section.id, roundNumber)}
+              isExerciseDataLoading={isExerciseDataLoading}
+              onShowPhaseOverlay={triggerPhaseOverlay}
+              onShowCompletionOverlay={showCompletionCelebrationWithMessage}
             />
           </View>
         );
@@ -1912,7 +2471,8 @@ export default function WorkoutSessionModal() {
         const roundKey = `${section.id}-${roundNumber}`;
 
         // Check if this round is already completed (for backward navigation)
-        const isRoundCompleted = roundNumber <= (section.completedRounds || 0);
+        // Also check if section is marked as completed (all rounds are complete)
+        const isRoundCompleted = section.completed === 'completed' || roundNumber <= (section.completedRounds || 0);
 
         // Get local completion state for this round, or use exercise set.completed as initial
         // If round is already completed, show all as completed
@@ -1952,6 +2512,9 @@ export default function WorkoutSessionModal() {
               isPaused={isPaused}
               isRoundCompleted={isRoundCompleted}
               allExercisesComplete={localCompletions.every((c) => c === true)}
+              isExerciseDataLoading={isExerciseDataLoading}
+              onShowPhaseOverlay={triggerPhaseOverlay}
+              onShowCompletionOverlay={showCompletionCelebrationWithMessage}
             />
           </View>
         );
@@ -1964,7 +2527,8 @@ export default function WorkoutSessionModal() {
         const roundKey = `${section.id}-${roundNumber}`;
 
         // Check if this round is already completed (for backward navigation)
-        const isRoundCompleted = roundNumber <= (section.completedRounds || 0);
+        // Also check if section is marked as completed (all rounds are complete)
+        const isRoundCompleted = section.completed === 'completed' || roundNumber <= (section.completedRounds || 0);
 
         // Get local completion state for this round, or use exercise set.completed as initial
         // If round is already completed, show all as completed
@@ -2005,6 +2569,9 @@ export default function WorkoutSessionModal() {
               isPaused={isPaused}
               isRoundCompleted={isRoundCompleted}
               allExercisesComplete={localCompletions.every((c) => c === true)}
+              isExerciseDataLoading={isExerciseDataLoading}
+              onShowPhaseOverlay={triggerPhaseOverlay}
+              onShowCompletionOverlay={showCompletionCelebrationWithMessage}
             />
           </View>
         );
@@ -2017,7 +2584,8 @@ export default function WorkoutSessionModal() {
         const roundKey = `${section.id}-${roundNumber}`;
 
         // Check if this round is already completed (for backward navigation)
-        const isRoundCompleted = roundNumber <= (section.completedRounds || 0);
+        // Also check if section is marked as completed (all rounds are complete)
+        const isRoundCompleted = section.completed === 'completed' || roundNumber <= (section.completedRounds || 0);
 
         // Get local completion state for this round, or use exercise set.completed as initial
         // If round is already completed, show all as completed
@@ -2058,6 +2626,9 @@ export default function WorkoutSessionModal() {
               isPaused={isPaused}
               isRoundCompleted={isRoundCompleted}
               allExercisesComplete={localCompletions.every((c) => c === true)}
+              isExerciseDataLoading={isExerciseDataLoading}
+              onShowPhaseOverlay={triggerPhaseOverlay}
+              onShowCompletionOverlay={showCompletionCelebrationWithMessage}
             />
           </View>
         );
@@ -2066,6 +2637,7 @@ export default function WorkoutSessionModal() {
       case 'amrap-round': {
         const { section, itemIndex, durationSec, initialRoundsCompleted } = currentPage;
         const exerciseDataMap = getAmrapExerciseDataMap(section);
+        const isSectionCompleted = section.completed === 'completed';
 
         return (
           <View style={styles.exerciseContainer}>
@@ -2083,8 +2655,12 @@ export default function WorkoutSessionModal() {
               onExerciseValueChange={(exerciseIdx, field, value) => {
                 handleAmrapExerciseValueChange(itemIndex, exerciseIdx, field, value);
               }}
-              onRoundComplete={handleCircuitRoundComplete}
+              onSectionComplete={(roundsCompleted) => handleAmrapSectionComplete(section.id, roundsCompleted)}
               isPaused={isPaused}
+              isSectionCompleted={isSectionCompleted}
+              isExerciseDataLoading={isExerciseDataLoading}
+              onShowPhaseOverlay={triggerPhaseOverlay}
+              onShowCompletionOverlay={showCompletionCelebrationWithMessage}
             />
           </View>
         );
@@ -2121,7 +2697,11 @@ export default function WorkoutSessionModal() {
                 handleSupersetExerciseValueChange(itemIndex, exerciseIndex, setIndex, field, value, exercises, exerciseIndices);
               }}
               onSetComplete={handleCircuitRoundComplete}
+              onShowRestOverlay={() => triggerPhaseOverlay(`${t('training.session.rest' as any) || 'REST'} 😮‍💨`)}
+              onShowNextSetOverlay={() => triggerPhaseOverlay(`${t('training.session.nextSet' as any) || 'Next Set'} 💪`)}
+              onShowCompletionOverlay={showCompletionCelebrationWithMessage}
               isPaused={isPaused}
+              isExerciseDataLoading={isExerciseDataLoading}
             />
           </View>
         );
@@ -2134,24 +2714,97 @@ export default function WorkoutSessionModal() {
           </View>
         );
 
-      case 'feedback':
+      case 'feedback-intensity': {
+        const intensityLabels = en.training.session.feedback.intensityLabels;
+        const currentIntensity = workoutData.post?.intensity;
+
         return (
           <View style={styles.feedbackContainer}>
-            <SessionFeedbackPage
-              values={workoutData.post || DEFAULT_EXECUTION_FIELDS.post}
-              onValueChange={handleFeedbackChange}
-            />
+            <View style={styles.feedbackSection}>
+              <View style={styles.intensityButtonsRow}>
+                {[1, 2, 3, 4, 5].map((value, index) => (
+                  <RatingButton
+                    key={value}
+                    value={value}
+                    label={intensityLabels[index]}
+                    isSelected={currentIntensity === value}
+                    onPress={() => handleFeedbackChange('intensity', value)}
+                    colorIndex={index}
+                  />
+                ))}
+              </View>
+            </View>
           </View>
         );
+      }
 
-      case 'summary':
+      case 'feedback-rating': {
+        const ratingLabels = en.training.session.feedback.ratingLabels;
+        const currentRating = workoutData.post?.rating;
+
         return (
-          <View style={styles.summaryContainer}>
-            <Text style={[styles.summaryText, { color: themeColors.text }]}>
-              {t('training.session.summary.title' as any)}
-            </Text>
+          <View style={styles.feedbackContainer}>
+            <Card variant="form">
+              <View style={styles.starRatingContainer}>
+                <View style={styles.starsRow}>
+                  {[0, 1, 2, 3, 4].map((index) => {
+                    const isFilled = currentRating !== null && currentRating !== undefined && index < currentRating;
+                    return (
+                      <Pressable
+                        key={index}
+                        onPress={() => {
+                          haptics.medium();
+                          handleFeedbackChange('rating', index + 1);
+                        }}
+                        style={styles.starPressable}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Rate ${index + 1} stars`}
+                      >
+                        <PlatformIcon
+                          sf={isFilled ? 'star.fill' : 'star'}
+                          IconComponent={Star}
+                          size={40}
+                          color={isFilled ? '#FBBF24' : themeColors.border}
+                        />
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                {currentRating !== null && currentRating !== undefined && (
+                  <Text style={[styles.ratingLabel, { color: '#FBBF24' }]}>
+                    {ratingLabels[currentRating - 1]}
+                  </Text>
+                )}
+              </View>
+            </Card>
           </View>
         );
+      }
+
+      case 'feedback-comments': {
+        const currentComments = workoutData.post?.sessionComments || '';
+
+        return (
+          <View style={styles.feedbackContainer}>
+            <View style={styles.feedbackSection}>
+              <TextAreaInput
+                label=""
+                value={currentComments}
+                onChangeText={(text) => handleFeedbackChange('sessionComments', text || null)}
+                placeholder={t('training.session.feedback.commentsPlaceholder' as any)}
+                numberOfLines={4}
+                minHeight={120}
+              />
+            </View>
+            <View style={styles.completeButtonContainer}>
+              <FilledButton
+                label="Complete workout"
+                onPress={handleComplete}
+              />
+            </View>
+          </View>
+        );
+      }
 
       default:
         return null;
@@ -2175,6 +2828,7 @@ export default function WorkoutSessionModal() {
           onClose={handleClose}
           isPaused={isPaused}
           onTogglePause={handleTogglePause}
+          showPauseButton={!['congratulations', 'feedback-intensity', 'feedback-rating', 'feedback-comments'].includes(currentPage?.type || '')}
         />
 
         {getPageTitle() && <WorkoutSessionPageTitle title={getPageTitle()} />}
@@ -2191,30 +2845,28 @@ export default function WorkoutSessionModal() {
       <StatusBarBlur blurHeight={20} />
 
       {/* Superset announcement overlay */}
-      {showSupersetOverlay && (
-        <Animated.View style={[styles.supersetOverlay, supersetOverlayAnimatedStyle]}>
-          <Pressable style={styles.supersetOverlayPressable} onPress={dismissSupersetOverlay}>
-            <Text style={[styles.supersetText, { color: themeColors.text }]}>
-              {supersetMessage}
-            </Text>
-          </Pressable>
-        </Animated.View>
-      )}
+      <SessionOverlay
+        visible={showSupersetOverlay}
+        text={supersetMessage}
+        animatedStyle={supersetOverlayAnimatedStyle}
+        onPress={dismissSupersetOverlay}
+      />
+
+      {/* Phase transition overlay (WORK/REST, next round, etc.) */}
+      <SessionOverlay
+        visible={showPhaseOverlay}
+        text={phaseOverlayText}
+        animatedStyle={phaseOverlayAnimatedStyle}
+      />
 
       {/* Completion celebration overlay */}
-      {showCompletionOverlay && (
-        <Animated.View style={[styles.completionOverlay, completionOverlayAnimatedStyle]}>
-          <LottieView
-            source={require('@/assets/animations/confetti.json')}
-            autoPlay
-            loop={false}
-            style={styles.confettiAnimation}
-          />
-          <Animated.Text style={[styles.completionText, { color: themeColors.text }, completionTextAnimatedStyle]}>
-            {completionMessage}
-          </Animated.Text>
-        </Animated.View>
-      )}
+      <SessionOverlay
+        visible={showCompletionOverlay}
+        text={completionMessage}
+        animatedStyle={completionOverlayAnimatedStyle}
+        textAnimatedStyle={completionTextAnimatedStyle}
+        showConfetti
+      />
     </View>
   );
 }
@@ -2247,52 +2899,34 @@ const styles = StyleSheet.create({
     minHeight: 400,
   },
   feedbackContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
     paddingTop: 8,
   },
-  summaryContainer: {
-    flex: 1,
+  feedbackSection: {
+    gap: 12,
+  },
+  intensityButtonsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  starRatingContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    minHeight: 400,
+    gap: 8,
   },
-  summaryText: {
-    ...typography.h1,
-    textAlign: 'center',
+  starsRow: {
+    flexDirection: 'row',
+    gap: 8,
   },
-  supersetOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.98)',
-    zIndex: 100,
+  starPressable: {
+    padding: 4,
   },
-  supersetOverlayPressable: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
+  ratingLabel: {
+    ...typography.p2,
+    fontWeight: '600',
+    marginTop: 4,
   },
-  supersetText: {
-    ...typography.h2,
-    textAlign: 'center',
-  },
-  completionOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 100,
-  },
-  confettiAnimation: {
-    position: 'absolute',
-    top: -100,
-    left: -100,
-    right: -100,
-    bottom: -100,
-    zIndex: 0,
-  },
-  completionText: {
-    ...typography.h1,
-    textAlign: 'center',
-    zIndex: 1,
+  completeButtonContainer: {
+    marginTop: 32,
   },
 });

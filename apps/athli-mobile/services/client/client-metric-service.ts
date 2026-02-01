@@ -1,89 +1,33 @@
 import { apiFetch } from '@/lib/api-client';
+import type {
+  MetricScheduleData,
+  AssignMetricData,
+  AssignMetricsToClientsData,
+  RemoveMetricData,
+  LogMetricData,
+  UpdateMetricData,
+  UpdateMetricLogData,
+  ClientMetric,
+  MetricLog,
+} from '@athli/shared-types';
 
 /**
  * Client metric service for metric tracking
  * Mirrors apps/athli-web-app/api/client/client-metric-service.ts
  */
 
-export interface MetricScheduleData {
-  type: 'metric';
-  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
-  selectedDays?: string[];
-  monthlyOption?: 'first' | 'last' | 'specific';
-  specificDay?: number;
-}
-
-export interface AssignMetricData {
-  metricIds?: string[];
-  name?: string;
-  unit?: string;
-  description?: string;
-  value_kind?: 'number' | 'percent' | 'duration' | 'score';
-  schedule_config?: MetricScheduleData;
-  cron_expression?: string;
-  clientId: string;
-  coachId: string;
-}
-
-export interface AssignMetricsToClientsData {
-  metricIds: string[];
-  clientIds: string[];
-  coachId: string;
-  schedule_config?: MetricScheduleData;
-  cron_expression?: string;
-}
-
-export interface RemoveMetricData {
-  metricIds: string[];
-  clientId: string;
-  coachId: string;
-}
-
-export interface LogMetricData {
-  assignmentId: string;
-  value: number;
-  date: Date;
-  clientId: string;
-  coachId: string;
-}
-
-export interface UpdateMetricData {
-  assignmentId: string;
-  name?: string;
-  unit?: string;
-  description?: string;
-  schedule_config?: MetricScheduleData;
-  cron_expression?: string;
-  clientId: string;
-  coachId: string;
-}
-
-export interface UpdateMetricLogData {
-  logId: string;
-  value: number;
-  date?: Date;
-  clientId: string;
-  coachId: string;
-}
-
-export interface ClientMetric {
-  id: string;
-  assignment_id: string;
-  name: string;
-  unit: string;
-  description?: string;
-  value_kind: 'number' | 'percent' | 'duration' | 'score';
-  schedule_config?: MetricScheduleData;
-  cron_expression?: string;
-  logs?: MetricLog[];
-}
-
-export interface MetricLog {
-  id: string;
-  value: number;
-  date: string;
-  created_at: string;
-}
+// Re-export types from shared-types for backwards compatibility
+export type {
+  MetricScheduleData,
+  AssignMetricData,
+  AssignMetricsToClientsData,
+  RemoveMetricData,
+  LogMetricData,
+  UpdateMetricData,
+  UpdateMetricLogData,
+  ClientMetric,
+  MetricLog,
+};
 
 /**
  * Converts metric schedule data to cron expression

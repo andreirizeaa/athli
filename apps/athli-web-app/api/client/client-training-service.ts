@@ -199,6 +199,9 @@ export interface HistoryEntry {
   exercise_id: string;
   exercise_data: {
     sets?: Array<{
+      trackableField1?: { label?: string; prescribed?: number; completed?: number };
+      trackableField2?: { label?: string; prescribed?: number; completed?: number };
+      // Legacy fields for backwards compatibility
       weight?: number | { completed?: number; prescribed?: number };
       reps?: number | { completed?: number; prescribed?: number };
       distance?: number | { completed?: number; prescribed?: number };
@@ -232,4 +235,29 @@ export const getExerciseHistory = async (data: GetExerciseHistoryData): Promise<
     }),
   });
   return response.data?.history || [];
+};
+
+export interface UniqueExercise {
+  id: string;
+  name: string;
+  rawThumbnailUrl?: string;
+}
+
+export interface GetUniqueExercisesData {
+  clientId: string;
+  coachId: string;
+}
+
+/**
+ * Service method to get unique exercises that have history for a client
+ */
+export const getClientUniqueExercises = async (data: GetUniqueExercisesData): Promise<UniqueExercise[]> => {
+  const response = await apiFetch<ApiResponse<{ exercises: UniqueExercise[] }>>('/client/trainings/unique-exercises', {
+    method: 'POST',
+    headers: {
+      'x-client-id': data.clientId,
+      'x-coach-id': data.coachId
+    },
+  });
+  return response.data?.exercises || [];
 };
