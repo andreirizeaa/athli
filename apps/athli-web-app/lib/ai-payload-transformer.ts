@@ -24,6 +24,7 @@ export interface AISection {
 }
 
 export interface AIExercise {
+  prescribedExerciseId?: string;
   name: string;
   sets?: number;
   reps?: string;
@@ -42,71 +43,133 @@ export interface APIWorkoutPayload {
   difficulty: string;
   total_exercises: number;
   workout_data: {
-    items: APISection[];
+    items: APIWorkoutItem[];
     pre: Record<string, null>;
     post: Record<string, null | string>;
-    completedSummary: Record<string, null | string>;
+    completedSummary: Record<string, null | string | number>;
   };
 }
 
-export interface APISection {
+export interface APIWorkoutItem {
+  itemType: 'section';
+  data: APISectionData;
+}
+
+export interface APISectionData {
   id: string;
-  type: 'section';
   name: string;
-  sectionType: string;
+  type: string;
+  exercises: APIExerciseGroup[];
+  notes: string | null;
+  completed: 'not_started' | 'in_progress' | 'completed';
+}
+
+export interface APIExerciseGroup {
+  isSuperset: boolean;
   exercises: APIExercise[];
 }
 
 export interface APIExercise {
+  prescribedExerciseId: string | null;
+  performedExerciseId: string | null;
   id: string;
-  instanceId: string;
-  name: string;
-  exerciseId: null;
   sets: APISet[];
-  rest: number | null;
+  alternatives: string[];
   notes: string | null;
+  supersetId: string | null;
+  eachSide: boolean;
+  tempo: string | null;
+  column1Label: string;
+  column2Label: string;
+  completed: 'not_started' | 'in_progress' | 'completed';
 }
 
 export interface APISet {
-  id: string;
-  reps: string;
-  weight: string | null;
-  completed: boolean;
+  setNumber: number;
+  type: 'warmUp' | 'normal' | 'failure' | 'dropset';
+  restSec: number | null;
+  completed: 'not_started' | 'completed';
+  skipped: boolean;
+  trackableField1: {
+    label: string;
+    prescribed: string | null;
+    completed: string | null;
+  };
+  trackableField2: {
+    label: string;
+    prescribed: string | null;
+    completed: string | null;
+  };
+  dropset: null;
 }
 
 /**
  * Transform AI workout payload to full API format
  */
 export function transformWorkoutPayload(aiPayload: AIWorkoutPayload): APIWorkoutPayload {
-  const sections: APISection[] = aiPayload.sections.map((section) => ({
-    id: uuidv4(),
-    type: 'section',
-    name: section.name,
-    sectionType: section.type || 'regular',
-    exercises: section.exercises.map((exercise) => {
+  const items: APIWorkoutItem[] = aiPayload.sections.map((section) => {
+    const exerciseGroups: APIExerciseGroup[] = section.exercises.map((exercise) => {
       const numSets = exercise.sets || 3;
-      const sets: APISet[] = Array.from({ length: numSets }, () => ({
-        id: uuidv4(),
-        reps: exercise.reps || '10',
-        weight: exercise.weight || null,
-        completed: false,
+      const repsValue = exercise.reps || '10';
+      const weightValue = exercise.weight || null;
+      const restSeconds = exercise.rest ?? 90;
+
+      const sets: APISet[] = Array.from({ length: numSets }, (_, index) => ({
+        setNumber: index + 1,
+        type: 'normal' as const,
+        restSec: restSeconds,
+        completed: 'not_started' as const,
+        skipped: false,
+        trackableField1: {
+          label: 'Reps',
+          prescribed: repsValue,
+          completed: null,
+        },
+        trackableField2: {
+          label: 'kg',
+          prescribed: weightValue,
+          completed: null,
+        },
+        dropset: null,
       }));
 
-      return {
+      const apiExercise: APIExercise = {
+        prescribedExerciseId: exercise.prescribedExerciseId || null,
+        performedExerciseId: null,
         id: uuidv4(),
-        instanceId: uuidv4(),
-        name: exercise.name,
-        exerciseId: null, // Exercise name stored as string for v1
         sets,
-        rest: exercise.rest ?? 90,
+        alternatives: [],
         notes: exercise.notes || null,
+        supersetId: null,
+        eachSide: false,
+        tempo: null,
+        column1Label: 'Reps',
+        column2Label: 'kg',
+        completed: 'not_started',
       };
-    }),
-  }));
+
+      return {
+        isSuperset: false,
+        exercises: [apiExercise],
+      };
+    });
+
+    return {
+      itemType: 'section' as const,
+      data: {
+        id: uuidv4(),
+        name: section.name,
+        type: section.type || 'regular',
+        exercises: exerciseGroups,
+        notes: null,
+        completed: 'not_started' as const,
+      },
+    };
+  });
 
   // Count total exercises
-  const totalExercises = sections.reduce(
-    (sum, section) => sum + section.exercises.length,
+  const totalExercises = items.reduce(
+    (sum, item) => sum + item.data.exercises.length,
     0
   );
 
@@ -117,7 +180,7 @@ export function transformWorkoutPayload(aiPayload: AIWorkoutPayload): APIWorkout
     difficulty: aiPayload.difficulty || 'intermediate',
     total_exercises: totalExercises,
     workout_data: {
-      items: sections,
+      items,
       pre: {
         sleep: null,
         mood: null,
@@ -136,6 +199,8 @@ export function transformWorkoutPayload(aiPayload: AIWorkoutPayload): APIWorkout
         completedAt: null,
         totalDurationMin: null,
         totalWeightLifted: null,
+        pausedAt: null,
+        totalPausedMs: 0,
       },
     },
   };
@@ -156,28 +221,54 @@ export interface APISectionPayload {
   description: string;
   type: string;
   section_data: {
-    exercises: APIExercise[];
+    exercises: APIExerciseGroup[];
   };
 }
 
 export function transformSectionPayload(aiPayload: AISectionPayload): APISectionPayload {
-  const exercises: APIExercise[] = aiPayload.exercises.map((exercise) => {
+  const exerciseGroups: APIExerciseGroup[] = aiPayload.exercises.map((exercise) => {
     const numSets = exercise.sets || 3;
-    const sets: APISet[] = Array.from({ length: numSets }, () => ({
-      id: uuidv4(),
-      reps: exercise.reps || '10',
-      weight: exercise.weight || null,
-      completed: false,
+    const repsValue = exercise.reps || '10';
+    const weightValue = exercise.weight || null;
+    const restSeconds = exercise.rest ?? 90;
+
+    const sets: APISet[] = Array.from({ length: numSets }, (_, index) => ({
+      setNumber: index + 1,
+      type: 'normal' as const,
+      restSec: restSeconds,
+      completed: 'not_started' as const,
+      skipped: false,
+      trackableField1: {
+        label: 'Reps',
+        prescribed: repsValue,
+        completed: null,
+      },
+      trackableField2: {
+        label: 'kg',
+        prescribed: weightValue,
+        completed: null,
+      },
+      dropset: null,
     }));
 
-    return {
+    const apiExercise: APIExercise = {
+      prescribedExerciseId: exercise.prescribedExerciseId || null,
+      performedExerciseId: null,
       id: uuidv4(),
-      instanceId: uuidv4(),
-      name: exercise.name,
-      exerciseId: null,
       sets,
-      rest: exercise.rest ?? 90,
+      alternatives: [],
       notes: exercise.notes || null,
+      supersetId: null,
+      eachSide: false,
+      tempo: null,
+      column1Label: 'Reps',
+      column2Label: 'kg',
+      completed: 'not_started',
+    };
+
+    return {
+      isSuperset: false,
+      exercises: [apiExercise],
     };
   });
 
@@ -186,7 +277,7 @@ export function transformSectionPayload(aiPayload: AISectionPayload): APISection
     description: aiPayload.description || '',
     type: aiPayload.type || 'regular',
     section_data: {
-      exercises,
+      exercises: exerciseGroups,
     },
   };
 }

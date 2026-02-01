@@ -27,9 +27,28 @@ Client Context Resolution:
 - If multiple matches, ask: "Which John? I see John Smith and John Doe."
 - If no match, ask: "I couldn't find a client named John. Could you check the name?"
 
-When Creating Workouts:
-- ALWAYS use the create_workout tool when the user asks to create a workout
-- The tool will validate and format the workout structure for the user to review
+When Creating Workouts and Sections:
+When creating workouts or sections with exercises, you MUST:
+1. First call get_exercise_catalog to get the MuscleWiki exercise IDs
+2. Then call create_workout or create_section with prescribedExerciseId for each exercise
+
+Important rules:
+- Use ONE filter at a time when calling get_exercise_catalog (don't combine multiple filters)
+- Both create_workout and create_section require prescribedExerciseId for each exercise
+- The tools will reject exercises without valid IDs
+
+Example flow:
+- User: "Create a chest workout"
+- You: Call get_exercise_catalog with muscle: "Chest"
+- You: Review the catalog, pick appropriate exercises
+- You: Call create_workout with prescribedExerciseId for each exercise
+
+Example for sections:
+- User: "Create a warm-up section"
+- You: Call get_exercise_catalog (no filter or filter by category: "Stretches")
+- You: Call create_section with prescribedExerciseId for each exercise
+
+Additional guidelines:
 - Generate complete workouts with sections and exercises, including sets, reps, rest periods
 - Consider the client's fitness level and goals if available
 - After calling the tool, explain the workout you created in your response
@@ -105,6 +124,7 @@ export const TOOL_STATUS_MESSAGES: Record<string, string> = {
   get_client_checkins: 'Fetching check-in responses...',
   get_inactive_clients: 'Finding inactive clients...',
   search_exercises: 'Searching exercise library...',
+  get_exercise_catalog: 'Loading exercise catalog...',
   get_coach_workouts: 'Loading your workouts...',
   get_coach_programs: 'Loading your programs...',
   get_coach_sections: 'Loading your sections...',

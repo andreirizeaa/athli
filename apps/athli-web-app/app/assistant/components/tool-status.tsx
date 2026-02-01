@@ -24,6 +24,7 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   get_client_checkins: 'Fetching check-ins',
   get_inactive_clients: 'Finding inactive clients',
   search_exercises: 'Searching exercises',
+  get_exercise_catalog: 'Loading exercise catalog',
   get_coach_workouts: 'Loading your workouts',
   get_coach_programs: 'Loading your programs',
   get_coach_sections: 'Loading your sections',
