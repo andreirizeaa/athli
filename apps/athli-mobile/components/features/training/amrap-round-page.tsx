@@ -39,6 +39,9 @@ type AmrapRoundPageProps = {
   ) => void;
   onRoundComplete: () => void;
   isPaused: boolean;
+  isExerciseDataLoading?: boolean;
+  /** Callback to show phase overlay at modal level (covers entire screen) */
+  onShowPhaseOverlay?: (text: string, durationMs?: number) => void;
 };
 
 const AMRAP_COLOR = '#06B6D4'; // Cyan for AMRAP
@@ -54,6 +57,8 @@ export const AmrapRoundPage = ({
   onExerciseValueChange,
   onRoundComplete,
   isPaused,
+  isExerciseDataLoading = false,
+  onShowPhaseOverlay,
 }: AmrapRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -68,6 +73,7 @@ export const AmrapRoundPage = ({
   const onRoundCompleteRef = useRef(onRoundComplete);
   const pausedDurationRef = useRef(0);
   const pauseStartTimeRef = useRef<number | null>(null);
+  const onShowPhaseOverlayRef = useRef(onShowPhaseOverlay);
 
   // Keep refs updated
   useEffect(() => {
@@ -81,6 +87,10 @@ export const AmrapRoundPage = ({
   useEffect(() => {
     onRoundCompleteRef.current = onRoundComplete;
   }, [onRoundComplete]);
+
+  useEffect(() => {
+    onShowPhaseOverlayRef.current = onShowPhaseOverlay;
+  }, [onShowPhaseOverlay]);
 
   // Timer state
   const [timeRemaining, setTimeRemaining] = useState(Math.max(0, durationSec || 0));
@@ -250,6 +260,14 @@ export const AmrapRoundPage = ({
 
   // Show next round overlay
   const showNextRoundTransition = () => {
+    // Use parent overlay callback if available (covers entire screen)
+    if (onShowPhaseOverlayRef.current) {
+      onShowPhaseOverlayRef.current(t('training.session.circuit.nextRound' as any) || 'Next Round! 💪', 800);
+      setTimeout(completeRoundInternal, 1000);
+      return;
+    }
+
+    // Fallback to local overlay
     setShowNextRoundOverlay(true);
     nextRoundOverlayOpacity.value = withSequence(
       withTiming(1, { duration: 200 }),
@@ -363,7 +381,7 @@ export const AmrapRoundPage = ({
       {/* Next round overlay */}
       {showNextRoundOverlay && (
         <Animated.View style={[styles.nextRoundOverlay, nextRoundOverlayAnimatedStyle]}>
-          <Text style={[styles.nextRoundText, { color: themeColors.text }]}>
+          <Text style={styles.nextRoundText}>
             {t('training.session.circuit.nextRound' as any) || 'Next Round'} 💪
           </Text>
         </Animated.View>
@@ -444,6 +462,7 @@ export const AmrapRoundPage = ({
               onSetComplete={(setIndex, completed) => handleExerciseComplete(index, setIndex, completed)}
               onSetValueChange={(setIndex, field, value) => handleExerciseValueChange(index, setIndex, field, value)}
               onAlternativeSelect={() => {}}
+              isExerciseDataLoading={isExerciseDataLoading}
             />
           );
         })}
@@ -467,15 +486,21 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   nextRoundOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: 'absolute',
+    top: -500,
+    left: -50,
+    right: -50,
+    bottom: -500,
+    backgroundColor: 'rgba(0, 0, 0, 0.92)',
     zIndex: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   nextRoundText: {
     ...typography.h1,
+    color: '#FFFFFF',
     textAlign: 'center',
+    fontSize: 48,
   },
   roundCardContainer: {
     paddingHorizontal: 16,

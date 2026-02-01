@@ -48,6 +48,9 @@ type EmomRoundPageProps = {
   isRoundCompleted?: boolean;
   /** If true, all exercises are complete - don't auto-advance, let user use Next button */
   allExercisesComplete?: boolean;
+  isExerciseDataLoading?: boolean;
+  /** Callback to show phase overlay at modal level (covers entire screen) */
+  onShowPhaseOverlay?: (text: string, durationMs?: number) => void;
 };
 
 const EMOM_COLOR = '#10B981';
@@ -66,6 +69,8 @@ export const EmomRoundPage = ({
   isPaused,
   isRoundCompleted = false,
   allExercisesComplete = false,
+  isExerciseDataLoading = false,
+  onShowPhaseOverlay,
 }: EmomRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -77,6 +82,7 @@ export const EmomRoundPage = ({
   const intervalSecRef = useRef(intervalSec);
   const isPausedRef = useRef(isPaused);
   const onRoundCompleteRef = useRef(onRoundComplete);
+  const onShowPhaseOverlayRef = useRef(onShowPhaseOverlay);
 
   // Completion celebration overlay state
   const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
@@ -106,6 +112,10 @@ export const EmomRoundPage = ({
   useEffect(() => {
     allExercisesCompleteRef.current = allExercisesComplete;
   }, [allExercisesComplete]);
+
+  useEffect(() => {
+    onShowPhaseOverlayRef.current = onShowPhaseOverlay;
+  }, [onShowPhaseOverlay]);
 
   // Countdown timer state - initialize to intervalSec
   const [timeRemaining, setTimeRemaining] = useState(intervalSec);
@@ -170,6 +180,17 @@ export const EmomRoundPage = ({
       }
 
       // Show next round overlay
+      // Use parent overlay callback if available (covers entire screen)
+      if (onShowPhaseOverlayRef.current) {
+        const overlayText = currentRound < totalRounds
+          ? (t('training.session.emom.nextRound' as any) || 'Next Round!')
+          : (t('training.session.emom.complete' as any) || 'Complete!');
+        onShowPhaseOverlayRef.current(overlayText, 800);
+        setTimeout(() => onRoundCompleteRef.current(), 1000);
+        return;
+      }
+
+      // Fallback to local overlay
       setShowNextRoundOverlay(true);
       overlayOpacity.value = withSequence(
         withTiming(1, { duration: 200 }),
@@ -263,6 +284,16 @@ export const EmomRoundPage = ({
           if (allExercisesCompleteRef.current) {
             return;
           }
+          // Use parent overlay callback if available (covers entire screen)
+          if (onShowPhaseOverlayRef.current) {
+            const overlayText = currentRound < totalRounds
+              ? (t('training.session.emom.nextRound' as any) || 'Next Round!')
+              : (t('training.session.emom.complete' as any) || 'Complete!');
+            onShowPhaseOverlayRef.current(overlayText, 800);
+            setTimeout(() => onRoundCompleteRef.current(), 1000);
+            return;
+          }
+          // Fallback to local overlay
           setShowNextRoundOverlay(true);
           overlayOpacity.value = withSequence(
             withTiming(1, { duration: 200 }),
@@ -464,6 +495,7 @@ export const EmomRoundPage = ({
               onSetComplete={(setIndex, completed) => handleExerciseComplete(index, setIndex, completed)}
               onSetValueChange={(setIndex, field, value) => handleExerciseValueChange(index, setIndex, field, value)}
               onAlternativeSelect={() => {}}
+              isExerciseDataLoading={isExerciseDataLoading}
             />
           );
         })}

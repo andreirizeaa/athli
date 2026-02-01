@@ -245,8 +245,13 @@ export default function WorkoutSessionModal() {
   const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastCompletionMessageRef = useRef(-1);
 
+  // Phase overlay state (for WORK/REST transitions, next round, etc.)
+  const [showPhaseOverlay, setShowPhaseOverlay] = useState(false);
+  const [phaseOverlayText, setPhaseOverlayText] = useState('');
+  const phaseOverlayOpacity = useSharedValue(0);
+
   const { formattedTime, isPaused } = useWorkoutTimer(workoutData?.completedSummary ?? null);
-  const { findExerciseById, findExercisesByIds } = useExerciseLookup();
+  const { findExerciseById, findExercisesByIds, isLoading: isExerciseDataLoading } = useExerciseLookup();
 
   // Build the pages array based on workout items
   const pages = useMemo((): WorkoutPage[] => {
@@ -830,6 +835,25 @@ export default function WorkoutSessionModal() {
   const completionTextAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: completionTextScale.value }],
   }));
+
+  // Animated style for phase overlay
+  const phaseOverlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: phaseOverlayOpacity.value,
+  }));
+
+  // Show phase overlay (for WORK/REST transitions, next round, etc.)
+  const triggerPhaseOverlay = useCallback((text: string, durationMs: number = 1000) => {
+    setPhaseOverlayText(text);
+    setShowPhaseOverlay(true);
+    phaseOverlayOpacity.value = withTiming(1, { duration: 150 });
+
+    // Auto dismiss after duration
+    setTimeout(() => {
+      phaseOverlayOpacity.value = withTiming(0, { duration: 150 }, () => {
+        runOnJS(setShowPhaseOverlay)(false);
+      });
+    }, durationMs);
+  }, [phaseOverlayOpacity]);
 
   // Show completion celebration overlay and navigate after
   const showCompletionCelebration = useCallback(() => {
@@ -1807,6 +1831,7 @@ export default function WorkoutSessionModal() {
                   alternatives={exerciseAlternatives}
                   isSuperset={true}
                   supersetLabel={supersetLabel}
+                  isExerciseDataLoading={isExerciseDataLoading}
                   onSetComplete={(setIndex, completed) => {
                     handleSetComplete(setIndex, completed, idx);
                   }}
@@ -1835,6 +1860,7 @@ export default function WorkoutSessionModal() {
               onSetValueChange={handleSetValueChange}
               onAlternativeSelect={handleAlternativeSelect}
               sequentialSets
+              isExerciseDataLoading={isExerciseDataLoading}
             />
           </View>
         );
@@ -1854,6 +1880,7 @@ export default function WorkoutSessionModal() {
               onSetComplete={handleSetComplete}
               onSetValueChange={handleSetValueChange}
               onAlternativeSelect={handleAlternativeSelect}
+              isExerciseDataLoading={isExerciseDataLoading}
             />
           </View>
         );
@@ -1900,6 +1927,8 @@ export default function WorkoutSessionModal() {
                 handleCircuitExerciseValueChange(itemIndex, groupIndex, exerciseIndex, field, value);
               }}
               onRoundComplete={() => handleCircuitRoundComplete(section.id, roundNumber)}
+              isExerciseDataLoading={isExerciseDataLoading}
+              onShowPhaseOverlay={triggerPhaseOverlay}
             />
           </View>
         );
@@ -1952,6 +1981,8 @@ export default function WorkoutSessionModal() {
               isPaused={isPaused}
               isRoundCompleted={isRoundCompleted}
               allExercisesComplete={localCompletions.every((c) => c === true)}
+              isExerciseDataLoading={isExerciseDataLoading}
+              onShowPhaseOverlay={triggerPhaseOverlay}
             />
           </View>
         );
@@ -2005,6 +2036,8 @@ export default function WorkoutSessionModal() {
               isPaused={isPaused}
               isRoundCompleted={isRoundCompleted}
               allExercisesComplete={localCompletions.every((c) => c === true)}
+              isExerciseDataLoading={isExerciseDataLoading}
+              onShowPhaseOverlay={triggerPhaseOverlay}
             />
           </View>
         );
@@ -2058,6 +2091,8 @@ export default function WorkoutSessionModal() {
               isPaused={isPaused}
               isRoundCompleted={isRoundCompleted}
               allExercisesComplete={localCompletions.every((c) => c === true)}
+              isExerciseDataLoading={isExerciseDataLoading}
+              onShowPhaseOverlay={triggerPhaseOverlay}
             />
           </View>
         );
@@ -2085,6 +2120,8 @@ export default function WorkoutSessionModal() {
               }}
               onRoundComplete={handleCircuitRoundComplete}
               isPaused={isPaused}
+              isExerciseDataLoading={isExerciseDataLoading}
+              onShowPhaseOverlay={triggerPhaseOverlay}
             />
           </View>
         );
@@ -2122,6 +2159,7 @@ export default function WorkoutSessionModal() {
               }}
               onSetComplete={handleCircuitRoundComplete}
               isPaused={isPaused}
+              isExerciseDataLoading={isExerciseDataLoading}
             />
           </View>
         );
@@ -2201,6 +2239,13 @@ export default function WorkoutSessionModal() {
         </Animated.View>
       )}
 
+      {/* Phase transition overlay (WORK/REST, next round, etc.) */}
+      {showPhaseOverlay && (
+        <Animated.View style={[styles.phaseOverlay, phaseOverlayAnimatedStyle]}>
+          <Text style={styles.phaseOverlayText}>{phaseOverlayText}</Text>
+        </Animated.View>
+      )}
+
       {/* Completion celebration overlay */}
       {showCompletionOverlay && (
         <Animated.View style={[styles.completionOverlay, completionOverlayAnimatedStyle]}>
@@ -2274,6 +2319,19 @@ const styles = StyleSheet.create({
   supersetText: {
     ...typography.h2,
     textAlign: 'center',
+  },
+  phaseOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    zIndex: 1100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  phaseOverlayText: {
+    ...typography.h1,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    fontSize: 48,
   },
   completionOverlay: {
     ...StyleSheet.absoluteFillObject,
