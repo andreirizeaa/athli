@@ -14,44 +14,112 @@ This document outlines features and improvements deferred from Phase 1 of the AI
 
 ## 2. Deferred Features
 
-### 2.1 Exercise ID Resolution
+### 2.1 Exercise ID Resolution (MuscleWiki Integration)
 
-**Problem:** In Phase 1, the AI generates exercise names as strings. These need to be matched to actual exercise IDs in the database for proper workout functionality.
+**Problem:** When the AI creates a workout, it only provides exercise **names** as strings. The workout preview/execution doesn't work because exercises are missing MuscleWiki IDs.
 
-**Phase 2 Solution:**
-- Use Supabase `exercises` table to resolve exercise names to IDs
-- Implement fuzzy matching for exercise name variations (e.g., "Bench Press" → "Barbell Bench Press")
-- Build a lookup service that:
-  1. Searches coach's custom exercises first
-  2. Falls back to global exercise library
-  3. Returns closest match with confidence score
-  4. If confidence < threshold, asks user to confirm/select
+**Current Behavior (Phase 1):**
+```json
+// What AI generates
+{
+  "name": "Beginner Back Builder A",
+  "sections": [{
+    "name": "Main Lifts",
+    "exercises": [{
+      "name": "Lat Pulldown (Medium Grip)",  // Just a name, no ID
+      "sets": 3,
+      "reps": "8-12"
+    }]
+  }]
+}
+```
 
-**Technical Approach:**
+**What the Database Expects:**
 ```typescript
-// Example resolution flow
+// From packages/shared-types/src/workout-schema.ts
+export type ExerciseIdPair = {
+  prescribedExerciseId: string;  // MuscleWiki ID like "213"
+  performedExerciseId: string | null;
+};
+```
+
+**The Issue:**
+The `transformWorkoutPayload` function in `lib/ai-payload-transformer.ts` sets `exerciseId: null`, causing:
+1. Workout preview can't load exercises
+2. No exercise details (videos, instructions) available
+3. Training logs don't link to proper exercises
+
+**Additional Issue - Wrong Structure:**
+The transformer also creates an incompatible structure:
+```typescript
+// Current (Wrong)
+{ items: [{ id, type: "section", name, exercises: [...] }] }
+
+// Expected (Correct)
+{ items: [{ itemType: "section", data: { id, name, type, exercises: [{ isSuperset, exercises: [{ prescribedExerciseId, ... }] }] } }] }
+```
+
+---
+
+**Phase 2 Solutions:**
+
+**Option A: AI Provides MuscleWiki IDs**
+1. AI uses `search_exercises` tool before creating workout
+2. AI includes `prescribedExerciseId` in payload
+- Pros: Accurate matching
+- Cons: More tool calls (slower)
+
+**Option B: Backend Auto-Matching**
+1. Backend searches for each exercise name when saving
+2. Uses fuzzy matching to find MuscleWiki IDs
+- Pros: No AI changes
+- Cons: Fuzzy matching may be inaccurate
+
+**Option C: Hybrid Approach (Recommended)**
+1. AI generates workout with exercise names
+2. Frontend transformer searches exercise cache for matches
+3. Uses best match for `prescribedExerciseId`
+4. Falls back to name-only if no match
+- Pros: Fast (uses cached exercises), no AI changes
+- Cons: Requires exercise cache loaded
+
+**Option D: Deferred Linking**
+1. Save workout with names only
+2. Link exercises on-the-fly when opening workout
+- Pros: Works immediately
+- Cons: First open is slow
+
+---
+
+**Implementation (Option C):**
+```typescript
 interface ExerciseMatch {
   id: string;
+  musclewikiId: string;
   name: string;
-  confidence: number; // 0-1
+  confidence: number;
 }
 
 async function resolveExerciseName(
   name: string,
-  coachId: string
-): Promise<ExerciseMatch[]> {
-  // 1. Exact match in coach's library
-  // 2. Fuzzy match in coach's library
-  // 3. Exact match in global library
-  // 4. Fuzzy match in global library
-  // Return top 3 matches with confidence scores
+  exerciseCache: Exercise[]
+): Promise<ExerciseMatch | null> {
+  // 1. Exact match
+  // 2. Case-insensitive match
+  // 3. Fuzzy match (Levenshtein)
+  // Return best match with confidence score
 }
 ```
 
-**Open Questions for Phase 2:**
-- What fuzzy matching algorithm? (Levenshtein, trigram, embeddings?)
+**Files to Modify:**
+- `apps/athli-web-app/lib/ai-payload-transformer.ts` - Add exercise matching, fix structure
+- `apps/athli-web-app/app/assistant/components/ai-chat-interface.tsx` - Pass exercise cache
+- `packages/shared-types/src/workout-schema.ts` - Reference for correct structure
+
+**Open Questions:**
+- Fuzzy matching algorithm? (Levenshtein, trigram, embeddings?)
 - Confidence threshold for auto-accept vs ask user?
-- Should we pre-index exercises for faster search?
+- Pre-index exercises for faster search?
 
 ---
 
