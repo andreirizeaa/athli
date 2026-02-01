@@ -3,7 +3,14 @@
  * This ensures workouts created on mobile can be opened on web and vice versa
  */
 
-import { SectionType, getDefaultColumnsForCategory } from '@athli/shared-types';
+import {
+    SectionType,
+    getDefaultColumnsForCategory,
+    CATEGORY_COLUMN_DEFAULTS,
+    DEFAULT_COLUMN_CONFIG,
+    SetCompletionStatus,
+    CompletionStatus,
+} from '@athli/shared-types';
 
 // ============================================================================
 // Core Types (Re-export from shared package)
@@ -83,20 +90,40 @@ export type BuilderWorkoutState = {
 export const getDefaultColumns = (exerciseType: string, category?: string) => {
     // First try category-based defaults from shared package
     if (category) {
-        const categoryDefaults = getDefaultColumnsForCategory(category);
-        return { column1Type: categoryDefaults.column1, column2Type: categoryDefaults.column2 };
+        // Try exact match first
+        let categoryDefaults = CATEGORY_COLUMN_DEFAULTS[category];
+
+        // If no exact match, try case-insensitive match
+        if (!categoryDefaults) {
+            const lowerCategory = category.toLowerCase();
+            const matchingKey = Object.keys(CATEGORY_COLUMN_DEFAULTS).find(
+                key => key.toLowerCase() === lowerCategory
+            );
+            if (matchingKey) {
+                categoryDefaults = CATEGORY_COLUMN_DEFAULTS[matchingKey];
+            }
+        }
+
+        if (categoryDefaults) {
+            return {
+                column1Type: categoryDefaults.column1,
+                column2Type: categoryDefaults.column2,
+                column1Value: categoryDefaults.column1Value || '',
+                column2Value: categoryDefaults.column2Value || '',
+            };
+        }
     }
 
     // Fall back to exercise type-based defaults
     switch (exerciseType) {
         case 'weight_reps':
-            return { column1Type: 'Reps', column2Type: 'kg' };
+            return { column1Type: 'Reps', column2Type: 'kg', column1Value: '10', column2Value: '' };
         case 'reps':
-            return { column1Type: 'Reps', column2Type: 'Optional' };
+            return { column1Type: 'Reps', column2Type: 'Optional', column1Value: '10', column2Value: '' };
         case 'distance_duration':
-            return { column1Type: 'km', column2Type: 'minutes' };
+            return { column1Type: 'km', column2Type: 'minutes', column1Value: '', column2Value: '' };
         default:
-            return { column1Type: 'Reps', column2Type: 'kg' };
+            return { column1Type: 'Reps', column2Type: 'kg', column1Value: '10', column2Value: '' };
     }
 };
 
@@ -175,7 +202,7 @@ const mapBuilderSetToPayload = (
     setNumber: set.setNumber ?? (index + 1),
     type: mapSetTypeToPayload(set.type),
     restSec: parseNumber(set.rest) ?? exerciseRestSec ?? null,
-    completed: false,
+    completed: 'not_started' as SetCompletionStatus,
     skipped: false,
     trackableField1: createTrackableField(column1Type, set.column1 || null),
     trackableField2: createTrackableField(column2Type, set.column2 || null),
@@ -217,9 +244,8 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
                 id: ex.id, // Instance ID
                 prescribedExerciseId: ex.exerciseId,
                 performedExerciseId: null,
-                exerciseType: ex.exerciseType || 'weight_reps',
                 notes: ex.notes || null,
-                completed: false,
+                completed: 'not_started' as CompletionStatus,
                 eachSide: ex.eachSide || false,
                 tempo: ex.tempo || null,
                 trackableField1: createTrackableField(ex.column1Type, firstSet?.column1 || null),
@@ -237,44 +263,10 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
             name: section.name,
             type: 'amrap',
             durationSec: (parseNumber(section.duration) || 0) * 60, // Convert minutes to seconds
-            actualDurationSec: null,
             roundsCompleted: null,
             exercises,
             notes: section.notes || null,
-        };
-    }
-
-    if (sectionType === 'timed') {
-        const exercises: RoundExercisePayload[] = section.exercises.map((ex) => {
-            const firstSet = ex.sets[0];
-            return {
-                id: ex.id, // Instance ID
-                prescribedExerciseId: ex.exerciseId,
-                performedExerciseId: null,
-                exerciseType: ex.exerciseType || 'weight_reps',
-                notes: ex.notes || null,
-                completed: false,
-                eachSide: ex.eachSide || false,
-                tempo: ex.tempo || null,
-                trackableField1: createTrackableField(ex.column1Type, firstSet?.column1 || null),
-                trackableField2: createTrackableField(ex.column2Type, firstSet?.column2 || null),
-                restSec: parseNumber(firstSet?.rest),
-                alternatives: ex.alternatives.map((alt) => alt.id),
-                supersetId: ex.supersetGroupId || null,
-                column1Label: ex.column1Type,
-                column2Label: ex.column2Type,
-            };
-        });
-
-        return {
-            id: section.id,
-            name: section.name,
-            type: 'timed',
-            targetRounds: parseNumber(section.rounds) || 0,
-            actualRounds: null,
-            totalDurationSec: null,
-            exercises,
-            notes: section.notes || null,
+            completed: 'not_started' as CompletionStatus,
         };
     }
 
@@ -295,6 +287,7 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
                     column1Label: ex.column1Type,
                     column2Label: ex.column2Type,
                     set: mapBuilderSetToPayload(firstSet, 0, ex.column1Type, ex.column2Type, ex.setRestSec),
+                    completed: 'not_started' as CompletionStatus,
                 };
             }),
         }));
@@ -311,10 +304,10 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
             workSec: parseNumber(section.workSec) || defaults.workSec,
             restSec: parseNumber(section.restSec) ?? defaults.restSec,
             rounds: parseNumber(section.rounds) || defaults.rounds,
-            actualRounds: null,
-            totalDurationSec: null,
+            completedRounds: 0,
             exercises: exerciseGroups,
             notes: section.notes || null,
+            completed: 'not_started' as CompletionStatus,
         };
     }
 
@@ -335,6 +328,7 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
                     column1Label: ex.column1Type,
                     column2Label: ex.column2Type,
                     set: mapBuilderSetToPayload(firstSet, 0, ex.column1Type, ex.column2Type, ex.setRestSec),
+                    completed: 'not_started' as CompletionStatus,
                 };
             }),
         }));
@@ -345,9 +339,10 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
             type: 'emom',
             intervalSec: parseNumber(section.intervalSec) || 60,
             durationMin: parseNumber(section.durationMin) || 10,
-            actualDurationSec: null,
+            completedRounds: 0,
             exercises: exerciseGroups,
             notes: section.notes || null,
+            completed: 'not_started' as CompletionStatus,
         };
     }
 
@@ -368,6 +363,7 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
                     column1Label: ex.column1Type,
                     column2Label: ex.column2Type,
                     set: mapBuilderSetToPayload(firstSet, 0, ex.column1Type, ex.column2Type, ex.setRestSec),
+                    completed: 'not_started' as CompletionStatus,
                 };
             }),
         }));
@@ -377,9 +373,10 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
             name: section.name,
             type: 'circuits',
             rounds: parseNumber(section.rounds) || 3,
-            actualRounds: null,
+            completedRounds: 0,
             exercises: exerciseGroups,
             notes: section.notes || null,
+            completed: 'not_started' as CompletionStatus,
         };
     }
 
@@ -398,6 +395,7 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
             tempo: ex.tempo || null,
             column1Label: ex.column1Type,
             column2Label: ex.column2Type,
+            completed: 'not_started' as CompletionStatus,
         })),
     }));
 
@@ -407,6 +405,7 @@ export const buildSectionPayload = (section: BuilderSection): WorkoutSectionPayl
         type: 'regular',
         exercises: exerciseGroups,
         notes: section.notes || null,
+        completed: 'not_started' as CompletionStatus,
     };
 };
 

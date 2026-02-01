@@ -35,7 +35,7 @@ export const SelectInput = <T extends string>({
   placeholder = 'Select...',
   required,
   compact,
-  clearable,
+  clearable = true,
 }: SelectInputProps<T>) => {
   const { colors: themeColors } = useThemePreference();
 

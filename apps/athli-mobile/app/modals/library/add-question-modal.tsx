@@ -27,6 +27,7 @@ import { hexToRgba } from '@/utils/colorUtils';
 import { fuzzyMatch } from '@/utils/searchUtils';
 import { getAllMetrics, type Metric } from '@/services/coach/coach-metric-service';
 import type { Question } from '@/services/coach/coach-questionnaire-service';
+import { Dialog } from '@/components/ui/dialog';
 
 type QuestionFormat = {
   id: string;
@@ -90,6 +91,8 @@ export default function AddQuestionModal() {
   // Metric picker modal state
   const [metricModalVisible, setMetricModalVisible] = useState(false);
   const [metricSearchQuery, setMetricSearchQuery] = useState('');
+  // Discard dialog state
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   // Form state - initialize from params if in edit mode
   const [selectedFormat, setSelectedFormat] = useState<string | null>(
@@ -169,6 +172,17 @@ export default function AddQuestionModal() {
   }, [hasExistingProgressPhoto, isEditMode, params.questionFormat]);
 
   const handleClose = useCallback(() => {
+    if (isDirty) {
+      setShowDiscardDialog(true);
+      return;
+    }
+    if (router.canGoBack()) {
+      router.back();
+    }
+  }, [router, isDirty]);
+
+  const handleDiscard = useCallback(() => {
+    setShowDiscardDialog(false);
     if (router.canGoBack()) {
       router.back();
     }
@@ -240,6 +254,48 @@ export default function AddQuestionModal() {
     return true;
   }, [questionText, selectedFormat, options, scaleFrom, scaleTo, selectedMetricId]);
 
+  // Check if form has changed from original values (only relevant in edit mode)
+  const hasChanged = useMemo(() => {
+    if (!isEditMode) return true; // In add mode, always allow save if valid
+
+    // Compare current values with original params
+    if (questionText !== (params.questionText || '')) return true;
+    if (selectedFormat !== (params.questionFormat || null)) return true;
+    if (isRequired !== (params.questionRequired !== 'false')) return true;
+
+    // Compare format-specific fields
+    if (selectedFormat === 'multipleChoice') {
+      const originalOptions: string[] = params.questionOptions ? JSON.parse(params.questionOptions) : [''];
+      if (JSON.stringify(options) !== JSON.stringify(originalOptions)) return true;
+    }
+    if (selectedFormat === 'scale') {
+      if (scaleFrom !== (params.questionScaleFrom || '1')) return true;
+      if (scaleTo !== (params.questionScaleTo || '10')) return true;
+    }
+    if (selectedFormat === 'images' || selectedFormat === 'videos') {
+      const originalMediaCount = params.questionMediaCount ? parseInt(params.questionMediaCount, 10) : 1;
+      if (mediaCount !== originalMediaCount) return true;
+    }
+    if (selectedFormat === 'metrics') {
+      if (selectedMetricId !== (params.questionMetricId || null)) return true;
+    }
+
+    return false;
+  }, [isEditMode, questionText, selectedFormat, isRequired, options, scaleFrom, scaleTo, mediaCount, selectedMetricId, params]);
+
+  // Combine validation and change detection for save button
+  const canSave = isValid && hasChanged;
+
+  // Check if the form is dirty (has any unsaved changes)
+  const isDirty = useMemo(() => {
+    if (isEditMode) {
+      // In edit mode, dirty if something has changed from original
+      return hasChanged;
+    }
+    // In add mode, dirty if user has started filling the form
+    return selectedFormat !== null || questionText.trim() !== '';
+  }, [isEditMode, hasChanged, selectedFormat, questionText]);
+
   const selectedFormatInfo = useMemo(() => {
     if (!selectedFormat) return null;
     const allFormats = [...SYNCS_WITH_FORMATS, ...GENERAL_FORMATS];
@@ -247,7 +303,7 @@ export default function AddQuestionModal() {
   }, [selectedFormat]);
 
   const handleSave = useCallback(() => {
-    if (!isValid) return;
+    if (!canSave) return;
 
     // Create question object - preserve ID in edit mode, create temp ID for new
     const newQuestion: Question = {
@@ -278,7 +334,7 @@ export default function AddQuestionModal() {
     haptics.success();
     triggerQuestionSelect(newQuestion);
     handleClose();
-  }, [isValid, questionText, isRequired, selectedFormat, options, scaleFrom, scaleTo, mediaCount, selectedMetricId, triggerQuestionSelect, handleClose, isEditMode, params.questionId]);
+  }, [canSave, questionText, isRequired, selectedFormat, options, scaleFrom, scaleTo, mediaCount, selectedMetricId, selectedMetricName, triggerQuestionSelect, handleClose, isEditMode, params.questionId]);
 
   const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
   const gradientHeight = headerHeight + 12;
@@ -341,8 +397,8 @@ export default function AddQuestionModal() {
             icon={{ sf: 'checkmark', IconComponent: Check }}
             onPress={handleSave}
             size="md"
-            variant={isValid ? 'primary' : 'default'}
-            disabled={!isValid}
+            variant={canSave ? 'primary' : 'default'}
+            disabled={!canSave}
           />
         </View>
       </View>
@@ -711,6 +767,17 @@ export default function AddQuestionModal() {
           </View>
         </View>
       </Modal>
+
+      <Dialog
+        visible={showDiscardDialog}
+        onClose={() => setShowDiscardDialog(false)}
+        title={t('common.discardChanges')}
+        message={t('common.discardChangesMessage')}
+        buttons={[
+          { label: t('common.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+          { label: t('common.discard'), onPress: handleDiscard, variant: 'destructive' }
+        ]}
+      />
     </View>
   );
 }

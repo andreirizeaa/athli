@@ -113,6 +113,64 @@ export const handleTopLevelSupersetLink = (
     }
   }
 
+  // Sync sets, rest, and column labels: use top exercise as source
+  const topItem = items[start];
+  if (topItem.itemType === 'exercise') {
+    const topSets = topItem.exercise.sets || [];
+    const topSetCount = topSets.length;
+    const topRest = topSets[0]?.rest || '';
+    const topColumn1Label = topItem.exercise.column1Label;
+    const topColumn2Label = topItem.exercise.column2Label;
+
+    // Update all other exercises in the superset to match top exercise's sets
+    for (let i = start + 1; i <= end; i += 1) {
+      const item = items[i];
+      if (item.itemType === 'exercise') {
+        const currentSets = item.exercise.sets || [];
+        let newSets: SetData[];
+
+        if (currentSets.length < topSetCount) {
+          // Add sets
+          newSets = [...currentSets];
+          for (let j = currentSets.length; j < topSetCount; j++) {
+            const sourceSet = topSets[j];
+            newSets.push({
+              setNumber: j + 1,
+              type: sourceSet?.type || 'normal',
+              reps: sourceSet?.reps || '',
+              weight: '',
+              rest: sourceSet?.rest || '',
+              distance: sourceSet?.distance || '',
+              duration: sourceSet?.duration || '',
+            });
+          }
+        } else if (currentSets.length > topSetCount) {
+          // Remove excess sets
+          newSets = currentSets.slice(0, topSetCount);
+        } else {
+          newSets = currentSets;
+        }
+
+        // Also sync rest from top exercise to all sets
+        newSets = newSets.map((set, idx) => ({
+          ...set,
+          setNumber: idx + 1,
+          rest: topRest,
+        }));
+
+        items[i] = {
+          ...item,
+          exercise: {
+            ...item.exercise,
+            sets: newSets,
+            column1Label: topColumn1Label,
+            column2Label: topColumn2Label,
+          },
+        };
+      }
+    }
+  }
+
   return {
     ...currentSchema,
     items,
@@ -253,6 +311,56 @@ export const handleSupersetLink = (
             exercises[i] = {
               ...exercises[i],
               supersetGroupId,
+            };
+          }
+
+          // Sync sets, rest, and column labels: use top exercise as source
+          const topExercise = exercises[start];
+          const topSets = topExercise.sets || [];
+          const topSetCount = topSets.length;
+          const topRest = topSets[0]?.rest || '';
+          const topColumn1Label = topExercise.column1Label;
+          const topColumn2Label = topExercise.column2Label;
+
+          // Update all other exercises in the superset to match top exercise's sets
+          for (let i = start + 1; i <= end; i += 1) {
+            const currentSets = exercises[i].sets || [];
+            let newSets: SetData[];
+
+            if (currentSets.length < topSetCount) {
+              // Add sets
+              newSets = [...currentSets];
+              for (let j = currentSets.length; j < topSetCount; j++) {
+                const sourceSet = topSets[j];
+                newSets.push({
+                  setNumber: j + 1,
+                  type: sourceSet?.type || 'normal',
+                  reps: sourceSet?.reps || '',
+                  weight: '',
+                  rest: sourceSet?.rest || '',
+                  distance: sourceSet?.distance || '',
+                  duration: sourceSet?.duration || '',
+                });
+              }
+            } else if (currentSets.length > topSetCount) {
+              // Remove excess sets
+              newSets = currentSets.slice(0, topSetCount);
+            } else {
+              newSets = currentSets;
+            }
+
+            // Also sync rest from top exercise to all sets
+            newSets = newSets.map((set, idx) => ({
+              ...set,
+              setNumber: idx + 1,
+              rest: topRest,
+            }));
+
+            exercises[i] = {
+              ...exercises[i],
+              sets: newSets,
+              column1Label: topColumn1Label,
+              column2Label: topColumn2Label,
             };
           }
         }
@@ -508,6 +616,266 @@ export const syncSupersetSetsTopLevel = (
           sets: newSets,
         },
       };
+    }),
+  };
+};
+
+/**
+ * Syncs rest values across all exercises in a superset within a section.
+ * Updates ALL sets in ALL exercises with the same rest value.
+ */
+export const syncSupersetRestInSection = (
+  sectionId: string,
+  changedExerciseInstanceId: string,
+  restValue: string,
+  currentSchema: WorkoutSchema
+): WorkoutSchema => {
+  return {
+    ...currentSchema,
+    items: currentSchema.items.map((item) => {
+      if (item.itemType === 'section' && item.section.id === sectionId && item.section.exercises) {
+        const exercises = [...item.section.exercises];
+
+        // Find changed exercise to get supersetGroupId
+        const changedExercise = exercises.find(ex => ex.instanceId === changedExerciseInstanceId);
+        if (!changedExercise?.supersetGroupId) {
+          return item; // Not in superset
+        }
+
+        const supersetGroupId = changedExercise.supersetGroupId;
+
+        // Update rest for all exercises in the superset
+        const updatedExercises = exercises.map(exercise => {
+          if (exercise.supersetGroupId !== supersetGroupId) {
+            return exercise;
+          }
+
+          // Update all sets with new rest value
+          const updatedSets = (exercise.sets || []).map(set => ({
+            ...set,
+            rest: restValue,
+          }));
+
+          return { ...exercise, sets: updatedSets };
+        });
+
+        return {
+          ...item,
+          section: { ...item.section, exercises: updatedExercises },
+        };
+      }
+      return item;
+    }),
+  };
+};
+
+/**
+ * Syncs rest values across all top-level exercises in a superset.
+ */
+export const syncSupersetRestTopLevel = (
+  changedExerciseInstanceId: string,
+  restValue: string,
+  currentSchema: WorkoutSchema
+): WorkoutSchema => {
+  // Find changed exercise
+  const changedItem = currentSchema.items.find(
+    item => item.itemType === 'exercise' && item.exercise.instanceId === changedExerciseInstanceId
+  );
+  if (!changedItem || changedItem.itemType !== 'exercise' || !changedItem.exercise.supersetGroupId) {
+    return currentSchema;
+  }
+
+  const supersetGroupId = changedItem.exercise.supersetGroupId;
+
+  return {
+    ...currentSchema,
+    items: currentSchema.items.map((item) => {
+      if (item.itemType === 'exercise' && item.exercise.supersetGroupId === supersetGroupId) {
+        const updatedSets = (item.exercise.sets || []).map(set => ({
+          ...set,
+          rest: restValue,
+        }));
+        return { ...item, exercise: { ...item.exercise, sets: updatedSets } };
+      }
+      return item;
+    }),
+  };
+};
+
+// Helper to get field name from column label
+const getFieldNameFromLabel = (columnLabel: string): 'reps' | 'weight' | 'distance' | 'duration' | 'optional' | null => {
+  if (columnLabel === 'Reps') return 'reps';
+  if (columnLabel === 'kg' || columnLabel === 'lbs') return 'weight';
+  if (columnLabel === 'km' || columnLabel === 'm' || columnLabel === 'yards' || columnLabel === 'miles' || columnLabel === 'feet') return 'distance';
+  if (columnLabel === 'minutes' || columnLabel === 'seconds') return 'duration';
+  if (columnLabel === 'None' || columnLabel === 'Optional') return null;
+  // For optional columns (Tempo, RIR, RPE, etc.)
+  return 'optional';
+};
+
+// Helper to clear a specific field in sets based on column label
+const clearFieldInSets = (sets: SetData[], columnLabel: string): SetData[] => {
+  const fieldName = getFieldNameFromLabel(columnLabel);
+  if (!fieldName) return sets; // None/Optional has no field to clear
+
+  return sets.map(set => {
+    const newSet = { ...set };
+    if (fieldName === 'reps') {
+      newSet.reps = '';
+    } else if (fieldName === 'weight') {
+      newSet.weight = '';
+    } else if (fieldName === 'distance') {
+      newSet.distance = '';
+    } else if (fieldName === 'duration') {
+      newSet.duration = '';
+    } else if (fieldName === 'optional') {
+      if (newSet.optional) {
+        newSet.optional = { ...newSet.optional, prescribed: '' };
+      }
+    }
+    return newSet;
+  });
+};
+
+/**
+ * Syncs column labels across all exercises in a superset within a section.
+ * Also clears the corresponding field values when column labels change.
+ */
+export const syncSupersetColumnLabelsInSection = (
+  sectionId: string,
+  changedExerciseInstanceId: string,
+  column1Label: string | undefined,
+  column2Label: string | undefined,
+  currentSchema: WorkoutSchema
+): WorkoutSchema => {
+  return {
+    ...currentSchema,
+    items: currentSchema.items.map((item) => {
+      if (item.itemType === 'section' && item.section.id === sectionId && item.section.exercises) {
+        const exercises = [...item.section.exercises];
+
+        // Find changed exercise to get supersetGroupId
+        const changedExercise = exercises.find(ex => ex.instanceId === changedExerciseInstanceId);
+        if (!changedExercise?.supersetGroupId) {
+          return item; // Not in superset
+        }
+
+        const supersetGroupId = changedExercise.supersetGroupId;
+
+        // Update column labels for all exercises in the superset
+        const updatedExercises = exercises.map(exercise => {
+          if (exercise.supersetGroupId !== supersetGroupId) {
+            return exercise;
+          }
+
+          // Skip the exercise that triggered the change (already handled by caller)
+          if (exercise.instanceId === changedExerciseInstanceId) {
+            return {
+              ...exercise,
+              column1Label,
+              column2Label,
+            };
+          }
+
+          let updatedSets = exercise.sets || [];
+
+          // If column1 label changed, clear the old column1 field values
+          if (column1Label !== undefined && exercise.column1Label !== column1Label) {
+            // Clear old column values
+            if (exercise.column1Label) {
+              updatedSets = clearFieldInSets(updatedSets, exercise.column1Label);
+            }
+          }
+
+          // If column2 label changed, clear the old column2 field values
+          if (column2Label !== undefined && exercise.column2Label !== column2Label) {
+            // Clear old column values
+            if (exercise.column2Label) {
+              updatedSets = clearFieldInSets(updatedSets, exercise.column2Label);
+            }
+          }
+
+          return {
+            ...exercise,
+            sets: updatedSets,
+            column1Label,
+            column2Label,
+          };
+        });
+
+        return {
+          ...item,
+          section: { ...item.section, exercises: updatedExercises },
+        };
+      }
+      return item;
+    }),
+  };
+};
+
+/**
+ * Syncs column labels across all top-level exercises in a superset.
+ * Also clears the corresponding field values when column labels change.
+ */
+export const syncSupersetColumnLabelsTopLevel = (
+  changedExerciseInstanceId: string,
+  column1Label: string | undefined,
+  column2Label: string | undefined,
+  currentSchema: WorkoutSchema
+): WorkoutSchema => {
+  // Find changed exercise
+  const changedItem = currentSchema.items.find(
+    item => item.itemType === 'exercise' && item.exercise.instanceId === changedExerciseInstanceId
+  );
+  if (!changedItem || changedItem.itemType !== 'exercise' || !changedItem.exercise.supersetGroupId) {
+    return currentSchema;
+  }
+
+  const supersetGroupId = changedItem.exercise.supersetGroupId;
+
+  return {
+    ...currentSchema,
+    items: currentSchema.items.map((item) => {
+      if (item.itemType === 'exercise' && item.exercise.supersetGroupId === supersetGroupId) {
+        // Skip the exercise that triggered the change (already handled by caller)
+        if (item.exercise.instanceId === changedExerciseInstanceId) {
+          return {
+            ...item,
+            exercise: {
+              ...item.exercise,
+              column1Label,
+              column2Label,
+            },
+          };
+        }
+
+        let updatedSets = item.exercise.sets || [];
+
+        // If column1 label changed, clear the old column1 field values
+        if (column1Label !== undefined && item.exercise.column1Label !== column1Label) {
+          if (item.exercise.column1Label) {
+            updatedSets = clearFieldInSets(updatedSets, item.exercise.column1Label);
+          }
+        }
+
+        // If column2 label changed, clear the old column2 field values
+        if (column2Label !== undefined && item.exercise.column2Label !== column2Label) {
+          if (item.exercise.column2Label) {
+            updatedSets = clearFieldInSets(updatedSets, item.exercise.column2Label);
+          }
+        }
+
+        return {
+          ...item,
+          exercise: {
+            ...item.exercise,
+            sets: updatedSets,
+            column1Label,
+            column2Label,
+          },
+        };
+      }
+      return item;
     }),
   };
 };

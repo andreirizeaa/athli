@@ -426,6 +426,7 @@ export default function EditClientDetailsModal() {
               onChange={setCategory}
               options={categoryOptions}
               placeholder={t('clients.editClientModal.typePlaceholder')}
+              clearable={false}
             />
 
             <DateSelectInput

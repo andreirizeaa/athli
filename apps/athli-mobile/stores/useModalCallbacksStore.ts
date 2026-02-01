@@ -60,6 +60,7 @@ type ModalCallbacksStore = {
   questionsReorderCallback: ((questions: Question[]) => void) | null;
   metadataUpdateCallback: ((metadata: { name: string; description: string; type: string; difficulty: string }) => void) | null;
   filterSelectCallback: ((filters: ExerciseFilterData) => void) | null;
+  filterValuesSelectCallback: ((filterType: string, values: string[]) => void) | null;
 
   // Stored data
   storedRepeatData: RepeatData | null;
@@ -90,6 +91,7 @@ type ModalCallbacksStore = {
   setQuestionsReorderCallback: (callback: (questions: Question[]) => void) => void;
   setMetadataUpdateCallback: (callback: (metadata: { name: string; description: string; type: string; difficulty: string }) => void) => void;
   setFilterSelectCallback: (callback: (filters: ExerciseFilterData) => void) => void;
+  setFilterValuesSelectCallback: (callback: (filterType: string, values: string[]) => void) => void;
 
   // Actions - Trigger callbacks
   triggerClientSelect: (client: Client) => void;
@@ -112,6 +114,7 @@ type ModalCallbacksStore = {
   triggerQuestionsReorder: (questions: Question[]) => void;
   triggerMetadataUpdate: (metadata: { name: string; description: string; type: string; difficulty: string }) => void;
   triggerFilterSelect: (filters: ExerciseFilterData) => void;
+  triggerFilterValuesSelect: (filterType: string, values: string[]) => void;
 
   // Actions - Data management
   getRepeatData: () => RepeatData | null;
@@ -150,6 +153,7 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
   questionsReorderCallback: null,
   metadataUpdateCallback: null,
   filterSelectCallback: null,
+  filterValuesSelectCallback: null,
 
   storedRepeatData: null,
   storedHabitOptionsData: null,
@@ -180,6 +184,7 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
   setQuestionsReorderCallback: (callback) => set({ questionsReorderCallback: callback }),
   setMetadataUpdateCallback: (callback) => set({ metadataUpdateCallback: callback }),
   setFilterSelectCallback: (callback) => set({ filterSelectCallback: callback }),
+  setFilterValuesSelectCallback: (callback) => set({ filterValuesSelectCallback: callback }),
   setReorderQuestions: (questions) => set({ storedReorderQuestions: questions, reorderQuestions: questions }),
 
   // Trigger callback actions
@@ -301,6 +306,12 @@ export const useModalCallbacksStore = create<ModalCallbacksStore>((set, get) => 
     const { filterSelectCallback } = get();
     if (filterSelectCallback) {
       filterSelectCallback(filters);
+    }
+  },
+  triggerFilterValuesSelect: (filterType, values) => {
+    const { filterValuesSelectCallback } = get();
+    if (filterValuesSelectCallback) {
+      filterValuesSelectCallback(filterType, values);
     }
   },
 

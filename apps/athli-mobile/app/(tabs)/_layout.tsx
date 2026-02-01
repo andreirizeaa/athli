@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
-import { Platform, StyleSheet, Text, Pressable, View } from 'react-native';
+import { Platform, StyleSheet, Text, Pressable, View, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
@@ -12,11 +13,15 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import type { ComponentType } from 'react';
 
-import { useThemePreference, useColorScheme } from '@/stores';
+import { useThemePreference, useColorScheme, useAuth } from '@/stores';
 import { useAppView } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useTrainingOverlay } from '@/stores';
 import { useLibraryTab, type LibraryTab } from '@/stores';
+import { useAthleteDataStore, useCoachDataStore } from '@/stores';
+
+const darkBackground = require('@/assets/backgrounds/dark.png');
+const lightBackground = require('@/assets/backgrounds/light.png');
 import { iconSizes } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import {
@@ -130,7 +135,7 @@ type TabDefinition = {
 };
 
 export default function TabLayout() {
-  const { primaryColor } = useThemePreference();
+  const { primaryColor, colors: themeColors } = useThemePreference();
   const { appView } = useAppView();
   const { t } = useTranslations();
   const router = useRouter();
@@ -140,6 +145,32 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { showOverlay: showTrainingOverlay } = useTrainingOverlay();
   const { currentLibraryTab } = useLibraryTab();
+  const { clientProfile, coachProfile } = useAuth();
+
+  // Background image based on color scheme
+  const backgroundImage = colorScheme === 'dark' ? darkBackground : lightBackground;
+
+  // Athlete data store for loading state
+  const isAthleteDataInitialLoadComplete = useAthleteDataStore((state) => state.isInitialLoadComplete);
+  const loadAthleteData = useAthleteDataStore((state) => state.loadAthleteData);
+
+  // Coach data store for loading state
+  const isCoachDataInitialLoadComplete = useCoachDataStore((state) => state.isInitialLoadComplete);
+  const loadCoachData = useCoachDataStore((state) => state.loadCoachData);
+
+  // Load athlete data when in athlete view
+  useEffect(() => {
+    if (appView === 'athlete' && clientProfile && !isAthleteDataInitialLoadComplete) {
+      loadAthleteData(clientProfile.client_id, clientProfile.coach_id);
+    }
+  }, [appView, clientProfile, isAthleteDataInitialLoadComplete, loadAthleteData]);
+
+  // Load coach data when in coach view
+  useEffect(() => {
+    if (appView === 'coach' && coachProfile && !isCoachDataInitialLoadComplete) {
+      loadCoachData();
+    }
+  }, [appView, coachProfile, isCoachDataInitialLoadComplete, loadCoachData]);
 
   // Helper to get the correct modal route based on current library tab
   const getLibraryModalRoute = (): string => {
@@ -226,6 +257,25 @@ export default function TabLayout() {
       }
     }
   };
+
+  // Show loading screen while data is loading
+  const isDataLoading =
+    (appView === 'athlete' && !isAthleteDataInitialLoadComplete) ||
+    (appView === 'coach' && !isCoachDataInitialLoadComplete);
+
+  if (isDataLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Image
+          source={backgroundImage}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+        />
+        <ActivityIndicator size="large" color={primaryColor} />
+      </View>
+    );
+  }
 
   if (hasLiquidGlass) {
     if (appView === 'coach') {
@@ -658,5 +708,10 @@ const styles = StyleSheet.create({
     // Transparent to keep native pill visible
     backgroundColor: 'transparent',
     zIndex: 1000,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

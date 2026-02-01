@@ -329,12 +329,12 @@ export const convertCircuitExerciseToBuilderFormat = (
 export interface GenericSectionDataForBuilder {
   id: string;
   name: string;
-  type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'auxiliary';
+  type: 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary';
   exercises: GenericExerciseDataForBuilder[][];  // Grouped by superset
   notes: string;
   // For AMRAP
   durationSec?: number;
-  // For Tabata/HIIT
+  // For Tabata/HIIT/Circuits
   workSec?: number;
   restSec?: number;
   rounds?: number;
@@ -426,6 +426,21 @@ export const convertSectionToBuilderFormat = (
       notes: section.notes || '',
       intervalSec: section.intervalSec,
       durationMin: section.durationMin,
+    };
+  }
+
+  if (section.type === 'circuits') {
+    const exercises = section.exercises.map((group) =>
+      group.exercises.map((ex) => convertCircuitExerciseToBuilderFormat(ex))
+    );
+
+    return {
+      id: section.id,
+      name: section.name,
+      type: 'circuits',
+      exercises,
+      notes: section.notes || '',
+      rounds: section.rounds,
     };
   }
 

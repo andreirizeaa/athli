@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, ActivityIndicator, Modal, Pressable, ScrollView } from 'react-native';
 import { Check, Dumbbell, RefreshCw, X } from 'lucide-react-native';
 import { Image } from 'expo-image';
@@ -35,6 +35,8 @@ type ExerciseSessionCardProps = {
   onAlternativeSelect?: (alternativeId: string) => void;
   isSuperset?: boolean;
   supersetLabel?: string;
+  /** If true, only the first uncompleted set checkbox is enabled (sequential completion) */
+  sequentialSets?: boolean;
 };
 
 export const ExerciseSessionCard = ({
@@ -47,6 +49,7 @@ export const ExerciseSessionCard = ({
   onAlternativeSelect,
   isSuperset = false,
   supersetLabel,
+  sequentialSets = false,
 }: ExerciseSessionCardProps) => {
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
@@ -59,6 +62,10 @@ export const ExerciseSessionCard = ({
   });
   const [tempoDialogVisible, setTempoDialogVisible] = useState(false);
   const [alternativesModalVisible, setAlternativesModalVisible] = useState(false);
+  
+  // Rest timer state
+  const [activeRestTimer, setActiveRestTimer] = useState<{ setIndex: number; restSec: number; timeRemaining: number } | null>(null);
+  const restTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const hasAlternatives = alternatives.length > 0;
 
@@ -70,6 +77,99 @@ export const ExerciseSessionCard = ({
 
   const handleSetTypePress = (type: string) => {
     setSetTypeDialog({ visible: true, type });
+  };
+
+  // Handle set completion - start rest timer if restSec > 0
+  const handleSetCompleteWithRest = (setIndex: number, completed: boolean) => {
+    onSetComplete(setIndex, completed);
+    
+    // If set is completed and has rest time, start timer
+    if (completed && setIndex < exercise.sets.length - 1) {
+      const set = exercise.sets[setIndex];
+      const restSec = set.restSec || 0;
+      
+      if (restSec > 0) {
+        // Clear any existing timer
+        if (restTimerRef.current) {
+          clearInterval(restTimerRef.current);
+          restTimerRef.current = null;
+        }
+        
+        // Start new rest timer
+        setActiveRestTimer({ setIndex, restSec, timeRemaining: restSec });
+        
+        // Start countdown
+        restTimerRef.current = setInterval(() => {
+          setActiveRestTimer((prev) => {
+            if (!prev) return null;
+            
+            const newTimeRemaining = prev.timeRemaining - 1;
+            
+            if (newTimeRemaining <= 0) {
+              // Timer finished
+              if (restTimerRef.current) {
+                clearInterval(restTimerRef.current);
+                restTimerRef.current = null;
+              }
+              return null;
+            }
+            
+            return { ...prev, timeRemaining: newTimeRemaining };
+          });
+        }, 1000);
+      }
+    } else {
+      // Clear timer if set is unchecked or it's the last set
+      if (restTimerRef.current) {
+        clearInterval(restTimerRef.current);
+        restTimerRef.current = null;
+      }
+      setActiveRestTimer(null);
+    }
+  };
+
+  // Cleanup timer on unmount or when exercise changes
+  useEffect(() => {
+    return () => {
+      if (restTimerRef.current) {
+        clearInterval(restTimerRef.current);
+        restTimerRef.current = null;
+      }
+      setActiveRestTimer(null);
+    };
+  }, [exercise.prescribedExerciseId]);
+
+  // Format time as MM:SS
+  const formatRestTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getRestTimerColor = (timeRemaining: number, totalRestSec: number): string => {
+    // Handle edge cases
+    if (totalRestSec === 0) {
+      return '#22C55E'; // Default to green if duration is 0
+    }
+    
+    if (timeRemaining <= 0) {
+      return '#EF4444'; // Red when time is up
+    }
+    
+    // Ensure timeRemaining doesn't exceed totalRestSec
+    const clampedTime = Math.min(timeRemaining, totalRestSec);
+    const ratio = clampedTime / totalRestSec;
+    
+    // Green: > 40% remaining (ratio > 0.4)
+    if (ratio > 0.4) {
+      return '#22C55E';
+    }
+    // Amber: 20-40% remaining (ratio 0.2-0.4)
+    if (ratio > 0.2) {
+      return '#F59E0B';
+    }
+    // Red: < 20% remaining (ratio <= 0.2)
+    return '#EF4444';
   };
 
   const setTypeKey = getSetTypeKey(setTypeDialog.type);
@@ -99,6 +199,11 @@ export const ExerciseSessionCard = ({
   };
 
   const tempoValues = parseTempo(exercise.tempo);
+
+  // For sequential sets, find the first uncompleted set index
+  const nextSetToComplete = sequentialSets
+    ? exercise.sets.findIndex((set) => set.completed !== 'completed')
+    : -1; // -1 means all sets are enabled
 
   // Build tempo description message
   const buildTempoDescription = () => {
@@ -234,19 +339,55 @@ export const ExerciseSessionCard = ({
 
       {/* Set Rows */}
       {exercise.sets.map((set, index) => (
-        <SetRow
-          key={`set-${index}`}
-          set={set}
-          setIndex={index}
-          showColumn1={showColumn1}
-          showColumn2={showColumn2}
-          showBothColumns={showBothColumns}
-          showNoColumns={showNoColumns}
-          themeColors={themeColors}
-          onComplete={(completed) => onSetComplete(index, completed)}
-          onValueChange={(field, value) => onSetValueChange(index, field, value)}
-          onSetTypePress={handleSetTypePress}
-        />
+        <React.Fragment key={`set-${index}`}>
+          <SetRow
+            set={set}
+            setIndex={index}
+            showColumn1={showColumn1}
+            showColumn2={showColumn2}
+            showBothColumns={showBothColumns}
+            showNoColumns={showNoColumns}
+            themeColors={themeColors}
+            onComplete={(completed) => handleSetCompleteWithRest(index, completed)}
+            onValueChange={(field, value) => onSetValueChange(index, field, value)}
+            onSetTypePress={handleSetTypePress}
+            isCheckboxEnabled={nextSetToComplete === -1 || set.completed === 'completed' || index === nextSetToComplete}
+          />
+          {/* Rest Timer - always visible for non-superset exercises, show rest duration by default */}
+          {!isSuperset && index < exercise.sets.length - 1 && set.restSec > 0 && (
+            <View style={styles.restTimerCardContainer}>
+              {activeRestTimer?.setIndex === index ? (
+                <Card
+                  variant="form"
+                  style={[
+                    styles.restTimerCard,
+                    {
+                      borderColor: getRestTimerColor(activeRestTimer.timeRemaining, activeRestTimer.restSec),
+                      borderWidth: 1,
+                      backgroundColor: `${getRestTimerColor(activeRestTimer.timeRemaining, activeRestTimer.restSec)}20`,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.restTimerTime, { color: getRestTimerColor(activeRestTimer.timeRemaining, activeRestTimer.restSec) }]}>
+                    {formatRestTime(activeRestTimer.timeRemaining)}{' '}
+                    <Text style={[styles.restTimerSuffix, { color: getRestTimerColor(activeRestTimer.timeRemaining, activeRestTimer.restSec) }]}>
+                      Rest
+                    </Text>
+                  </Text>
+                </Card>
+              ) : (
+                <Card variant="form" style={styles.restTimerCard}>
+                  <Text style={[styles.restTimerTime, { color: themeColors.text }]}>
+                    {formatRestTime(set.restSec)}{' '}
+                    <Text style={[styles.restTimerSuffix, { color: themeColors.text }]}>
+                      Rest
+                    </Text>
+                  </Text>
+                </Card>
+              )}
+            </View>
+          )}
+        </React.Fragment>
       ))}
 
       {/* Set Type Info Dialog */}
@@ -344,6 +485,7 @@ type SetRowProps = {
   onComplete: (completed: boolean) => void;
   onValueChange: (field: 'trackableField1' | 'trackableField2', value: string) => void;
   onSetTypePress: (type: string) => void;
+  isCheckboxEnabled?: boolean;
 };
 
 // Map set type to display letter
@@ -379,9 +521,11 @@ const SetRow = ({
   onComplete,
   onValueChange,
   onSetTypePress,
+  isCheckboxEnabled = true,
 }: SetRowProps) => {
-  const isCompleted = set.completed;
+  const isCompleted = set.completed === 'completed';
   const setTypeLabel = getSetTypeLabel(set.type);
+  const canToggle = isCheckboxEnabled;
 
   return (
     <View style={[
@@ -441,10 +585,14 @@ const SetRow = ({
       {showNoColumns && <View style={styles.spacer} />}
 
       {/* Complete Button - Right Edge */}
-      <PressableScale onPress={() => {
-        haptics.success();
-        onComplete(!isCompleted);
-      }}>
+      <PressableScale
+        onPress={() => {
+          if (!canToggle) return;
+          haptics.success();
+          onComplete(!isCompleted);
+        }}
+        style={{ opacity: canToggle ? 1 : 0.4 }}
+      >
         <View style={[
           styles.completeCircle,
           {
@@ -702,5 +850,25 @@ const styles = StyleSheet.create({
     ...typography.p1,
     fontWeight: '600',
     flex: 1,
+  },
+  restTimerCardContainer: {
+    paddingRight: 16,
+    marginLeft: -16,
+    marginTop: 8,
+    marginBottom: 8,
+    alignItems: 'flex-end',
+  },
+  restTimerCard: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  restTimerTime: {
+    ...typography.p2,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  restTimerSuffix: {
+    ...typography.p2,
+    fontWeight: '500',
   },
 });
