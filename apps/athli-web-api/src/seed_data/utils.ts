@@ -138,6 +138,17 @@ export function generateUUID(): string {
 }
 
 /**
+ * Generate a composite exercise instance ID
+ * Format: {exerciseId}_{timestamp}_{randomSuffix}
+ * Example: "134_1769961953949_0ed6f0"
+ */
+export function generateExerciseInstanceId(exerciseId: string): string {
+  const timestamp = Date.now();
+  const randomSuffix = Math.random().toString(16).slice(2, 8);
+  return `${exerciseId}_${timestamp}_${randomSuffix}`;
+}
+
+/**
  * Test data prefix - used to identify and clean up test data
  */
 export const TEST_PREFIX = '[TEST]';

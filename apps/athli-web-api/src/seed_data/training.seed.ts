@@ -13,6 +13,7 @@ import {
   randomPick,
   formatDate,
   generateUUID,
+  generateExerciseInstanceId,
 } from './utils';
 
 type WorkoutStatus = 'not_started' | 'in_progress' | 'completed';
@@ -45,25 +46,26 @@ const createRegularSection = (name: string, exercises: Array<{ exerciseId: strin
     exercises: exercises.map(ex => ({
       isSuperset: false,
       exercises: [{
-        id: generateUUID(),
+        id: generateExerciseInstanceId(ex.exerciseId),
         prescribedExerciseId: ex.exerciseId,
         performedExerciseId: null,
+        completed: 'not_started',
         notes: null,
         tempo: null,
         eachSide: false,
         supersetId: null,
         alternatives: [],
         column1Label: 'Reps',
-        column2Label: 'kg',
+        column2Label: ex.weight ? 'kg' : 'Optional',
         sets: Array.from({ length: ex.sets }, (_, i) => ({
           setNumber: i + 1,
           type: 'normal',
           restSec: ex.rest,
-          completed: false,
+          completed: 'not_started',
           skipped: false,
           dropset: null,
           trackableField1: { label: 'Reps', prescribed: ex.reps, completed: null },
-          trackableField2: { label: 'kg', prescribed: ex.weight || null, completed: null },
+          trackableField2: { label: ex.weight ? 'kg' : 'Optional', prescribed: ex.weight || null, completed: null },
         })),
       }],
     })),
@@ -87,7 +89,7 @@ const createCircuitSection = (
     exercises: exercises.map(ex => ({
       isSuperset: false,
       exercises: [{
-        id: generateUUID(),
+        id: generateExerciseInstanceId(ex.exerciseId),
         prescribedExerciseId: ex.exerciseId,
         performedExerciseId: null,
         notes: null,
@@ -101,7 +103,7 @@ const createCircuitSection = (
           setNumber: 1,
           type: 'normal',
           restSec: ex.rest,
-          completed: false,
+          completed: 'not_started',
           skipped: false,
           dropset: null,
           trackableField1: { label: 'Reps', prescribed: ex.reps, completed: null },
@@ -148,14 +150,14 @@ const createAmrapSection = (
     roundsCompleted: null,
     actualDurationSec: null,
     exercises: exercises.map(ex => ({
-      id: generateUUID(),
+      id: generateExerciseInstanceId(ex.exerciseId),
       prescribedExerciseId: ex.exerciseId,
       performedExerciseId: null,
       notes: null,
       tempo: null,
       restSec: ex.rest,
       eachSide: false,
-      completed: false,
+      completed: 'not_started',
       supersetId: null,
       alternatives: [],
       column1Label: 'Reps',
@@ -551,7 +553,7 @@ function completeWorkout(workoutData: any) {
  * Helper to complete an AMRAP exercise (direct trackable fields, no sets array)
  */
 function completeAmrapExercise(exercise: any) {
-  exercise.completed = true;
+  exercise.completed = 'completed';
 
   // Fill in trackableField1 (e.g., reps)
   if (exercise.trackableField1) {
@@ -589,7 +591,7 @@ function completeCircuitExercise(exercise: any) {
   if (!exercise.set) return;
 
   const set = exercise.set;
-  set.completed = true;
+  set.completed = 'completed';
   set.skipped = false;
 
   // Fill in trackableField1
@@ -715,7 +717,7 @@ function partiallyCompleteCircuitExercise(exercise: any) {
   const set = exercise.set;
   // 50% chance of being completed for partial
   if (Math.random() < 0.5) {
-    set.completed = true;
+    set.completed = 'completed';
     set.skipped = false;
 
     if (set.trackableField1) {
@@ -736,6 +738,9 @@ function partiallyCompleteCircuitExercise(exercise: any) {
 function partiallyCompleteExercise(exercise: any) {
   if (!exercise.sets) return;
 
+  // Set exercise-level completed status to in_progress
+  exercise.completed = 'in_progress';
+
   // Complete 1-3 sets of the exercise
   const setsToComplete = Math.min(randomInRange(1, 3), exercise.sets.length);
 
@@ -743,7 +748,7 @@ function partiallyCompleteExercise(exercise: any) {
     const set = exercise.sets[i];
 
     if (i < setsToComplete) {
-      set.completed = true;
+      set.completed = 'completed';
       set.skipped = false;
 
       // Fill in completed reps
@@ -794,8 +799,11 @@ function partiallyCompleteExercise(exercise: any) {
 function completeExercise(exercise: any) {
   if (!exercise.sets) return;
 
+  // Set exercise-level completed status
+  exercise.completed = 'completed';
+
   for (const set of exercise.sets) {
-    set.completed = true;
+    set.completed = 'completed';
     set.skipped = false;
 
     // Fill in completed reps (trackableField1)

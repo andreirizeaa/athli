@@ -255,6 +255,8 @@ export function useAllExercises(
   return {
     // Exercises to display (paginated)
     exercises: displayedExercises,
+    // All filtered exercises (full dataset for lookups)
+    allExercises: filteredExercises,
     // Total after filtering
     total: filteredExercises.length,
     // Total in cache
@@ -309,11 +311,11 @@ export function usePrefetchAllExercises(options?: { enabled?: boolean }) {
  * ```
  */
 export function useExerciseLookup() {
-  const { exercises: allExercises, isLoading } = useAllExercises('');
+  const { allExercises, isLoading } = useAllExercises('');
 
-  // Create a memoized Map for O(1) lookups
+  // Create a memoized Map for O(1) lookups using full dataset
   const exerciseMap = useMemo(() => {
-    return new Map(allExercises.map((e) => [e.exerciseId, e]));
+    return new Map((allExercises || []).map((e) => [e.exerciseId, e]));
   }, [allExercises]);
 
   // Lookup single exercise by ID
