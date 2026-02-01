@@ -26,7 +26,7 @@ export function AppHeader({
 }: AppHeaderProps) {
   const t = useTranslations();
   const pathname = usePathname();
-  const { state, isHovered, setOpen, setIsHovered, setJustClosed } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const { toggle: toggleAIPanel } = useAIPanel();
   const [aiAnimationData, setAiAnimationData] = useState<object | null>(null);
 
@@ -40,34 +40,6 @@ export function AppHeader({
       .catch(err => console.error('Failed to load AI animation:', err));
   }, []);
 
-  const isHoverExpanded = state === 'collapsed' && isHovered;
-
-  const handlePinMenu = () => {
-    setOpen(true);
-    setJustClosed(false);
-  };
-
-  const handleUnpinMenu = () => {
-    setIsHovered(false);
-    setJustClosed(true);
-    setOpen(false);
-    // Reset the justClosed flag after a short delay to allow hover to work again
-    setTimeout(() => {
-      setJustClosed(false);
-    }, 300);
-  };
-
-  const handleToggleSidebar = () => {
-    if (isHoverExpanded) {
-      handlePinMenu();
-    } else if (state === 'expanded') {
-      handleUnpinMenu();
-    } else {
-      // Collapsed but not hovered - expand it
-      setOpen(true);
-    }
-  };
-
   return (
     <div className="flex flex-col gap-2 p-2 border-b flex-shrink-0 bg-background sticky top-0 z-10">
       <div className="flex items-center justify-between gap-2 px-2 py-0.5">
@@ -78,13 +50,11 @@ export function AppHeader({
                 type="button"
                 variant="ghost"
                 size="icon"
-                onClick={handleToggleSidebar}
+                onClick={toggleSidebar}
                 aria-label={
-                  isHoverExpanded
-                    ? t('sidebar.actions.keepMenuOpenAria')
-                    : state === 'expanded'
-                      ? t('sidebar.actions.closeSidebarAria')
-                      : t('sidebar.actions.openSidebarAria')
+                  state === 'expanded'
+                    ? t('sidebar.actions.closeSidebarAria')
+                    : t('sidebar.actions.openSidebarAria')
                 }
               >
                 {state === 'expanded' ? (
@@ -95,11 +65,9 @@ export function AppHeader({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {isHoverExpanded
-                ? t('sidebar.actions.keepMenuOpen')
-                : state === 'expanded'
-                  ? t('sidebar.actions.closeSidebar')
-                  : t('sidebar.actions.openSidebar')}
+              {state === 'expanded'
+                ? t('sidebar.actions.closeSidebar')
+                : t('sidebar.actions.openSidebar')}
             </TooltipContent>
           </Tooltip>
           <SearchComponent />
