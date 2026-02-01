@@ -4,7 +4,18 @@
 
 import { create } from 'zustand';
 
-export type ActionType = 'create_workout' | 'create_program' | 'create_section' | 'assign_workout';
+export type ActionType =
+  | 'create_workout'
+  | 'create_program'
+  | 'create_section'
+  | 'assign_workout'
+  | 'assign_metric_to_client'
+  | 'add_client_goal'
+  | 'add_client_injury'
+  | 'draft_message'
+  | 'update_client_profile'
+  | 'create_checkin_template'
+  | 'create_metric';
 
 export interface AIActionPayload {
   type: ActionType;
@@ -40,7 +51,7 @@ export const useAIActionStore = create<AIActionStore>((set) => ({
 /**
  * Helper to get redirect URL for an action type
  */
-export function getActionRedirectUrl(actionType: ActionType): string {
+export function getActionRedirectUrl(actionType: ActionType, payload?: any): string {
   switch (actionType) {
     case 'create_workout':
       return '/training/workouts';
@@ -50,6 +61,17 @@ export function getActionRedirectUrl(actionType: ActionType): string {
       return '/training/sections';
     case 'assign_workout':
       return '/training/calendar';
+    case 'assign_metric_to_client':
+    case 'add_client_goal':
+    case 'add_client_injury':
+    case 'update_client_profile':
+      return payload?.clientId ? `/clients/${payload.clientId}` : '/clients';
+    case 'create_checkin_template':
+      return '/checkins';
+    case 'create_metric':
+      return '/metrics';
+    case 'draft_message':
+      return ''; // No redirect for draft messages
     default:
       return '/training/workouts';
   }
@@ -68,6 +90,20 @@ export function getActionDisplayName(actionType: ActionType): string {
       return 'Add Section to Library';
     case 'assign_workout':
       return 'Assign Workout';
+    case 'assign_metric_to_client':
+      return 'Assign Metric';
+    case 'add_client_goal':
+      return 'Add Goal';
+    case 'add_client_injury':
+      return 'Record Injury';
+    case 'draft_message':
+      return 'Copy Message';
+    case 'update_client_profile':
+      return 'Update Profile';
+    case 'create_checkin_template':
+      return 'Create Check-in';
+    case 'create_metric':
+      return 'Create Metric';
     default:
       return 'Confirm';
   }
