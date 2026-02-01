@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCoachWorkouts } from '@/hooks/use-coach-workouts';
 import { useCoachPrograms } from '@/hooks/use-coach-programs';
@@ -92,7 +92,7 @@ export const TrainingDataProvider = ({ children }: TrainingDataProviderProps) =>
     await queryClient.invalidateQueries({ queryKey: ['coach-sections'] });
   };
 
-  const value = {
+  const value = useMemo(() => ({
     workouts,
     programs,
     exercises,
@@ -109,7 +109,20 @@ export const TrainingDataProvider = ({ children }: TrainingDataProviderProps) =>
     setPrograms,
     setExercises,
     setSections,
-  };
+  }), [
+    workouts,
+    programs,
+    exercises,
+    sections,
+    isWLoading,
+    isPLoading,
+    isELoading,
+    isSLoading,
+    refreshWorkouts,
+    refreshPrograms,
+    refreshExercises,
+    refreshSections,
+  ]);
 
   return (
     <TrainingDataContext.Provider value={value}>

@@ -1028,6 +1028,123 @@ export const clientTrainingsController = {
     },
 
     /**
+     * Get unique exercises that have history for a client.
+     * POST /api/v1/client/trainings/unique-exercises
+     * Returns: { exercises: [{ id, name, rawThumbnailUrl }] }
+     */
+    getUniqueExercises: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
+        const coachId = req.header('x-coach-id');
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const supabase = getSupabaseClient();
+
+        // Query distinct exercise_id from the history table
+        let query = supabase
+            .from('client_training_exercise_history')
+            .select('exercise_id, exercise_data')
+            .eq('client_id', targetClientId);
+
+        if (coachId) {
+            query = query.eq('coach_id', coachId);
+        } else if (req.header('x-client-id')) {
+            // Coach view
+            query = query.eq('coach_id', userId);
+        }
+
+        const { data: historyData, error } = await query;
+
+        if (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+
+        // Extract unique exercise IDs
+        const uniqueExerciseIds = new Set<string>();
+        const exerciseDataMap = new Map<string, any>();
+
+        (historyData || []).forEach((entry: any) => {
+            const exerciseId = entry.exercise_id;
+            uniqueExerciseIds.add(exerciseId);
+            // Keep the exercise_data for fallback
+            if (!exerciseDataMap.has(exerciseId)) {
+                exerciseDataMap.set(exerciseId, entry.exercise_data || {});
+            }
+        });
+
+        const exerciseIds = Array.from(uniqueExerciseIds);
+
+        if (exerciseIds.length === 0) {
+            success(res, {
+                message: 'Unique exercises retrieved successfully',
+                data: { exercises: [] },
+            });
+            return;
+        }
+
+        // Fetch exercise details from musclewiki_exercise_cache
+        const { data: cacheData, error: cacheError } = await supabase
+            .from('musclewiki_exercise_cache')
+            .select('musclewiki_id, name, thumbnail_url')
+            .in('musclewiki_id', exerciseIds);
+
+        // Also check coach_exercises for custom exercises
+        const { data: coachExercisesData, error: coachExercisesError } = await supabase
+            .from('coach_exercises')
+            .select('id, name, video_link')
+            .in('id', exerciseIds);
+
+        // Build exercise map from cache
+        const exerciseMap = new Map<string, { id: string; name: string; rawThumbnailUrl?: string }>();
+
+        // Add musclewiki exercises
+        (cacheData || []).forEach((cached: any) => {
+            exerciseMap.set(cached.musclewiki_id, {
+                id: cached.musclewiki_id,
+                name: cached.name,
+                rawThumbnailUrl: cached.thumbnail_url,
+            });
+        });
+
+        // Add coach exercises (custom exercises)
+        (coachExercisesData || []).forEach((exercise: any) => {
+            if (!exerciseMap.has(exercise.id)) {
+                exerciseMap.set(exercise.id, {
+                    id: exercise.id,
+                    name: exercise.name,
+                    rawThumbnailUrl: exercise.video_link, // Coach exercises use video_link as thumbnail
+                });
+            }
+        });
+
+        // Fallback for any exercise IDs not found in cache or coach_exercises
+        exerciseIds.forEach((exerciseId) => {
+            if (!exerciseMap.has(exerciseId)) {
+                const exerciseData = exerciseDataMap.get(exerciseId) || {};
+                exerciseMap.set(exerciseId, {
+                    id: exerciseId,
+                    name: exerciseData.name || 'Unknown Exercise',
+                    rawThumbnailUrl: exerciseData.rawThumbnailUrl || exerciseData.thumbnailUrl,
+                });
+            }
+        });
+
+        // Convert to array and sort by name
+        const exercises = Array.from(exerciseMap.values()).sort((a, b) =>
+            a.name.localeCompare(b.name)
+        );
+
+        success(res, {
+            message: 'Unique exercises retrieved successfully',
+            data: { exercises },
+        });
+    },
+
+    /**
      * Get exercise history for a specific exercise.
      * POST /api/v1/client/trainings/exercise-history
      * Body: { clientId, exerciseName }

@@ -41,7 +41,7 @@ export const SegmentedControl = React.memo(function SegmentedControl<T extends s
 
     // Track the visual index separately from the actual value
     // This allows the animation to complete before triggering expensive re-renders
-    const [visualIndex, setVisualIndex] = useState(() => 
+    const [visualIndex, setVisualIndex] = useState(() =>
         segments.findIndex((seg) => seg.value === value)
     );
 

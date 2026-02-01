@@ -477,11 +477,13 @@ export default function WorkoutReviewModal() {
     exercises: ExercisePreviewItem[],
     color: string,
     startLetterIndex: number,
-    hideSetCount?: boolean
+    hideSetCount?: boolean,
+    textColor?: string
   ) => {
     if (!exercises || exercises.length === 0) return null;
 
     const labels = calculateLabels(exercises, startLetterIndex);
+    const labelTextColor = textColor || '#FFFFFF';
 
     return (
       <View style={styles.exerciseList}>
@@ -496,7 +498,7 @@ export default function WorkoutReviewModal() {
               )}
               <View style={styles.exerciseRow}>
                 <View style={[styles.numberCircle, { backgroundColor: color }]}>
-                  <Text style={styles.numberText}>{labels[index]}</Text>
+                  <Text style={[styles.numberText, { color: labelTextColor }]}>{labels[index]}</Text>
                 </View>
                 <View style={styles.exerciseInfo}>
                   <Text style={[styles.exerciseName, { color: themeColors.text }]}>
@@ -781,7 +783,7 @@ export default function WorkoutReviewModal() {
                 return (
                   <Card key={`exercise-${index}`} style={styles.exerciseCard}>
                     <View style={styles.exerciseCardContent}>
-                      {renderExerciseList(exerciseItems, themeColors.primary, item.startLetterIndex)}
+                      {renderExerciseList(exerciseItems, themeColors.primary, item.startLetterIndex, false, themeColors.primaryForeground)}
                       {item.completed && (
                         <View style={[styles.completedBadge, { backgroundColor: '#22C55E20' }]}>
                           <PlatformIcon
@@ -942,7 +944,7 @@ const styles = StyleSheet.create({
     ...typography.p1,
   },
   section: {
-    marginTop: 24,
+    marginTop: 16,
   },
   sectionTitle: {
     ...typography.h6,

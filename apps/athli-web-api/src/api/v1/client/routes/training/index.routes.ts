@@ -293,6 +293,41 @@ clientTrainingRouter.post('/exercise-history/add', supabaseAuthenticate, clientT
 
 /**
  * @swagger
+ * /api/v1/client/trainings/unique-exercises:
+ *   post:
+ *     summary: Get unique exercises that have history for a client
+ *     tags: [Client Trainings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Unique exercises retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         exercises:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               name:
+ *                                 type: string
+ *                               rawThumbnailUrl:
+ *                                 type: string
+ */
+clientTrainingRouter.post('/unique-exercises', supabaseAuthenticate, clientTrainingsController.getUniqueExercises);
+
+/**
+ * @swagger
  * /api/v1/client/trainings/exercise-history:
  *   post:
  *     summary: Get exercise history for a specific exercise

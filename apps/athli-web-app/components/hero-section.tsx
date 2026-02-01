@@ -85,8 +85,10 @@ export default function HeroSection() {
                 src="https://ik.imagekit.io/lrigu76hy/tailark/night-background.jpg?updatedAt=1745733451120"
                 alt="background"
                 className="hidden size-full dark:block"
-                width="3276"
-                height="4095"
+                width={3276}
+                height={4095}
+                sizes="100vw"
+                priority
               />
             </AnimatedGroup>
 
@@ -200,15 +202,18 @@ export default function HeroSection() {
                     className="bg-background aspect-15/8 relative hidden rounded-2xl dark:block"
                     src="/mail2.png"
                     alt="app screen"
-                    width="2700"
-                    height="1440"
+                    width={2700}
+                    height={1440}
+                    sizes="(max-width: 1280px) 100vw, 1152px"
                   />
                   <Image
                     className="z-2 border-border/25 aspect-15/8 relative rounded-2xl border dark:hidden"
                     src="/mail2-light.png"
                     alt="app screen"
-                    width="2700"
-                    height="1440"
+                    width={2700}
+                    height={1440}
+                    sizes="(max-width: 1280px) 100vw, 1152px"
+                    priority
                   />
                 </div>
               </div>
