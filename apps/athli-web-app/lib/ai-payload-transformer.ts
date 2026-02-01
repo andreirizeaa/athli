@@ -35,19 +35,19 @@ export interface AIExercise {
 
 /**
  * Full API Workout Payload (what the backend expects)
+ * Note: items, pre, post, completedSummary are at TOP LEVEL, not wrapped in workout_data.
+ * The createWorkout function in coach-workout-service.ts extracts these and wraps them.
  */
 export interface APIWorkoutPayload {
   name: string;
   description: string;
   type: string;
   difficulty: string;
-  total_exercises: number;
-  workout_data: {
-    items: APIWorkoutItem[];
-    pre: Record<string, null>;
-    post: Record<string, null | string>;
-    completedSummary: Record<string, null | string | number>;
-  };
+  equipment: string[];
+  items: APIWorkoutItem[];
+  pre: Record<string, null>;
+  post: Record<string, null | string>;
+  completedSummary: Record<string, null | string | number>;
 }
 
 export interface APIWorkoutItem {
@@ -167,41 +167,33 @@ export function transformWorkoutPayload(aiPayload: AIWorkoutPayload): APIWorkout
     };
   });
 
-  // Count total exercises
-  const totalExercises = items.reduce(
-    (sum, item) => sum + item.data.exercises.length,
-    0
-  );
-
   return {
     name: aiPayload.name,
     description: aiPayload.description || '',
     type: aiPayload.type || 'strength',
     difficulty: aiPayload.difficulty || 'intermediate',
-    total_exercises: totalExercises,
-    workout_data: {
-      items,
-      pre: {
-        sleep: null,
-        mood: null,
-        energy: null,
-        stress: null,
-        soreness: null,
-      },
-      post: {
-        rating: null,
-        intensity: null,
-        sessionComments: '',
-      },
-      completedSummary: {
-        status: 'not_started',
-        startedAt: null,
-        completedAt: null,
-        totalDurationMin: null,
-        totalWeightLifted: null,
-        pausedAt: null,
-        totalPausedMs: 0,
-      },
+    equipment: [],
+    items,
+    pre: {
+      sleep: null,
+      mood: null,
+      energy: null,
+      stress: null,
+      soreness: null,
+    },
+    post: {
+      rating: null,
+      intensity: null,
+      sessionComments: '',
+    },
+    completedSummary: {
+      status: 'not_started',
+      startedAt: null,
+      completedAt: null,
+      totalDurationMin: null,
+      totalWeightLifted: null,
+      pausedAt: null,
+      totalPausedMs: 0,
     },
   };
 }
