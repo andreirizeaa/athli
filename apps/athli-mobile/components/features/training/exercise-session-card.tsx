@@ -202,7 +202,7 @@ export const ExerciseSessionCard = ({
 
   // For sequential sets, find the first uncompleted set index
   const nextSetToComplete = sequentialSets
-    ? exercise.sets.findIndex((set) => !set.completed)
+    ? exercise.sets.findIndex((set) => set.completed !== 'completed')
     : -1; // -1 means all sets are enabled
 
   // Build tempo description message
@@ -351,7 +351,7 @@ export const ExerciseSessionCard = ({
             onComplete={(completed) => handleSetCompleteWithRest(index, completed)}
             onValueChange={(field, value) => onSetValueChange(index, field, value)}
             onSetTypePress={handleSetTypePress}
-            isCheckboxEnabled={nextSetToComplete === -1 || set.completed || index === nextSetToComplete}
+            isCheckboxEnabled={nextSetToComplete === -1 || set.completed === 'completed' || index === nextSetToComplete}
           />
           {/* Rest Timer - always visible for non-superset exercises, show rest duration by default */}
           {!isSuperset && index < exercise.sets.length - 1 && set.restSec > 0 && (
@@ -523,7 +523,7 @@ const SetRow = ({
   onSetTypePress,
   isCheckboxEnabled = true,
 }: SetRowProps) => {
-  const isCompleted = set.completed;
+  const isCompleted = set.completed === 'completed';
   const setTypeLabel = getSetTypeLabel(set.type);
   const canToggle = isCheckboxEnabled;
 

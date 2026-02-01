@@ -137,7 +137,7 @@ export const CircuitRoundPage = ({
 
     // Check if this was the last exercise to be completed
     const willAllBeCompleted = exercises.every((ex, idx) =>
-      idx === exerciseIndex ? true : ex.set.completed
+      idx === exerciseIndex ? true : ex.set.completed === 'completed'
     );
 
     if (willAllBeCompleted) {

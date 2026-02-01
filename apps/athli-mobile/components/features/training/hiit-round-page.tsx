@@ -41,6 +41,8 @@ type HiitRoundPageProps = {
   ) => void;
   onRoundComplete: () => void;
   isPaused: boolean;
+  /** If true, this round is already completed - don't run timer, allow normal navigation */
+  isRoundCompleted?: boolean;
 };
 
 const HIIT_COLOR = '#8B5CF6'; // Purple for HIIT
@@ -62,6 +64,7 @@ export const HiitRoundPage = ({
   onExerciseValueChange,
   onRoundComplete,
   isPaused,
+  isRoundCompleted = false,
 }: HiitRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -131,6 +134,14 @@ export const HiitRoundPage = ({
 
   // Initialize timer on mount - runs once per component instance
   useEffect(() => {
+    // If round is already completed, don't start timer - allow normal navigation
+    if (isRoundCompleted) {
+      hasCompletedRef.current = true;
+      setCurrentPhase('work');
+      setTimeRemaining(workSec); // Show full work time
+      return;
+    }
+
     // Set up refs for this round
     hasCompletedRef.current = false;
     phaseStartTimeRef.current = Date.now();
@@ -353,7 +364,7 @@ export const HiitRoundPage = ({
 
     // Check if all exercises will be completed (accounting for the one just completed)
     const willAllBeCompleted = exercises.every((ex, idx) =>
-      idx === exerciseIndex ? true : ex.set.completed
+      idx === exerciseIndex ? true : ex.set.completed === 'completed'
     );
 
     if (willAllBeCompleted) {
@@ -368,16 +379,9 @@ export const HiitRoundPage = ({
         }
         hasCompletedRef.current = true;
         showCompletionCelebration();
-      } else if (currentRound < totalRounds) {
-        // Not the last round - just advance to next round without celebration
-        // Stop the timer if it's running
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
-        hasCompletedRef.current = true;
-        onRoundCompleteRef.current();
       }
+      // For non-last rounds: don't advance immediately - let the timer dictate navigation
+      // The timer's completeRound() function will handle advancing when work+rest phases complete
     }
   };
 
