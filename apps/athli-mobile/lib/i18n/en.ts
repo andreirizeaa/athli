@@ -156,6 +156,27 @@ export const en = {
         soreness: ['Wrecked', 'Sore', 'Tight', 'Mild', 'Fresh'],
       },
     },
+    review: {
+      summary: 'Summary',
+      duration: 'Duration',
+      exercises: 'Exercises',
+      exercise: 'exercise',
+      exercisesPlural: 'exercises',
+      sections: 'Sections',
+      sectionBreakdown: 'Section Breakdown',
+      workoutBreakdown: 'Workout Breakdown',
+      feedback: 'Feedback',
+    },
+    sections: {
+      regular: 'Regular',
+      auxiliary: 'Auxiliary',
+      circuits: 'Circuits',
+      tabata: 'Tabata',
+      hiit: 'HIIT',
+      emom: 'EMOM',
+      amrap: 'AMRAP',
+      supersets: 'Supersets',
+    },
     session: {
       set: 'SET',
       setTypes: {
@@ -281,7 +302,9 @@ export const en = {
       amrap: {
         roundOne: 'Round 1',
         roundX: 'Round {{round}}',
+        roundsCompleted: '{{count}} Rounds Completed',
         completeRound: 'Complete Round',
+        complete: 'Done',
       },
       exerciseComplete: [
         'One step closer! 💪',

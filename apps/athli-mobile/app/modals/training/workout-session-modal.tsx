@@ -742,6 +742,18 @@ export default function WorkoutSessionModal() {
 
           // Update section completion status
           section.completed = deriveIntervalSectionStatus(roundNumber, totalRounds);
+
+          // If section is completed, mark all exercises inside as completed too
+          if (section.completed === 'completed') {
+            section.exercises.forEach((group: any) => {
+              group.exercises.forEach((ex: any) => {
+                ex.completed = 'completed';
+                if (ex.set) {
+                  ex.set.completed = 'completed';
+                }
+              });
+            });
+          }
         }
         break;
       }
@@ -778,19 +790,48 @@ export default function WorkoutSessionModal() {
         await persistRoundCompletion(currentPage.section.id, currentPage.roundNumber);
       }
 
-      // If leaving feedback page, save the feedback data (including deferred sessionComments)
+      // If leaving feedback page, mark workout as completed and save
       if (currentPage.type === 'feedback' && workoutData) {
         try {
+          // Calculate total duration
+          const completedAt = new Date();
+          const startedAt = workoutData.completedSummary?.startedAt
+            ? new Date(workoutData.completedSummary.startedAt)
+            : completedAt;
+          const totalPausedMs = workoutData.completedSummary?.totalPausedMs || 0;
+          const totalDurationMs = completedAt.getTime() - startedAt.getTime() - totalPausedMs;
+          const totalDurationMin = Math.round(totalDurationMs / 60000);
+
+          // Mark workout as completed with duration
+          const completedSummary: WorkoutMeta = {
+            ...workoutData.completedSummary,
+            status: 'completed' as const,
+            completedAt: completedAt.toISOString(),
+            pausedAt: null, // Clear any pause state
+            totalDurationMin,
+          };
+          const updatedData = { ...workoutData, completedSummary };
+          setWorkoutData(updatedData);
+
           await assignWorkout({
             workoutId: params.workoutId,
             clientId: params.clientId,
             ...(params.coachId && { coachId: params.coachId }),
             date: params.date,
-            workoutPayload: workoutData,
+            workoutPayload: updatedData,
           });
         } catch (error) {
           console.error('Failed to save feedback:', error);
         }
+      }
+
+      // Get the next page type to check if we're entering congratulations
+      const nextPageIndex = currentStep; // currentStep is 1-indexed, so currentStep points to next page
+      const nextPage = pages[nextPageIndex];
+
+      // If entering congratulations page, pause the timer
+      if (nextPage?.type === 'congratulations' && workoutData && !isPaused) {
+        await pauseWorkout();
       }
 
       setCurrentStep(currentStep + 1);
@@ -1512,6 +1553,58 @@ export default function WorkoutSessionModal() {
     }
   };
 
+  // Handle AMRAP section completion (when timer finishes)
+  const handleAmrapSectionComplete = async (sectionId: string, roundsCompleted: number) => {
+    if (!workoutData) {
+      // Fallback: just advance
+      if (currentStep < pages.length) {
+        if (isPaused) resumeWorkout();
+        setCurrentStep(currentStep + 1);
+      }
+      return;
+    }
+
+    const updatedItems = JSON.parse(JSON.stringify(workoutData.items)) as WorkoutItem[];
+
+    for (const item of updatedItems) {
+      if (item.itemType === 'section' && item.data.id === sectionId) {
+        const section = item.data;
+        if (section.type === 'amrap') {
+          // Store rounds completed and mark section as completed
+          section.roundsCompleted = roundsCompleted;
+          section.completed = 'completed';
+
+          // Mark all exercises inside as completed too
+          section.exercises.forEach((ex: any) => {
+            ex.completed = 'completed';
+          });
+        }
+        break;
+      }
+    }
+
+    const updatedData = { ...workoutData, items: updatedItems };
+    setWorkoutData(updatedData);
+
+    try {
+      await assignWorkout({
+        workoutId: params.workoutId,
+        clientId: params.clientId,
+        ...(params.coachId && { coachId: params.coachId }),
+        date: params.date,
+        workoutPayload: updatedData,
+      });
+    } catch (error) {
+      console.error('Failed to save AMRAP completion:', error);
+    }
+
+    // Advance to the next step
+    if (currentStep < pages.length) {
+      if (isPaused) resumeWorkout();
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
   // Handle circuit round completion (persists completedRounds and advances)
   const handleCircuitRoundComplete = async (sectionId?: string, roundNumber?: number) => {
     if (!workoutData) {
@@ -1544,6 +1637,18 @@ export default function WorkoutSessionModal() {
 
             // Update section completion status
             section.completed = deriveIntervalSectionStatus(roundNumber, totalRounds);
+
+            // If section is completed, mark all exercises inside as completed too
+            if (section.completed === 'completed') {
+              section.exercises.forEach((group: any) => {
+                group.exercises.forEach((ex: any) => {
+                  ex.completed = 'completed';
+                  if (ex.set) {
+                    ex.set.completed = 'completed';
+                  }
+                });
+              });
+            }
           }
           break;
         }
@@ -1672,8 +1777,8 @@ export default function WorkoutSessionModal() {
 
     if (currentPage.type === 'circuit-round') {
       const { section, roundNumber } = currentPage;
-      // If round is already completed, allow navigation
-      if (roundNumber <= (section.completedRounds || 0)) {
+      // If section or round is already completed, allow navigation
+      if (section.completed === 'completed' || roundNumber <= (section.completedRounds || 0)) {
         return true;
       }
       // Get all exercises for this round
@@ -1689,8 +1794,8 @@ export default function WorkoutSessionModal() {
 
     if (currentPage.type === 'emom-round' || currentPage.type === 'hiit-round' || currentPage.type === 'tabata-round') {
       const { section, roundNumber } = currentPage;
-      // If round is already completed (persisted), allow navigation
-      if (roundNumber <= (section.completedRounds || 0)) {
+      // If section or round is already completed (persisted), allow navigation
+      if (section.completed === 'completed' || roundNumber <= (section.completedRounds || 0)) {
         return true;
       }
       // Check LOCAL completion state first
@@ -1716,6 +1821,10 @@ export default function WorkoutSessionModal() {
 
     if (currentPage.type === 'amrap-round') {
       const { section } = currentPage;
+      // If section is already completed, allow navigation
+      if (section.completed === 'completed') {
+        return true;
+      }
       // Check if all exercises are completed
       return section.exercises.every((ex) => ex.completed === 'completed');
     }
@@ -1892,7 +2001,8 @@ export default function WorkoutSessionModal() {
         const roundKey = `${section.id}-${roundNumber}`;
 
         // Check if this round is already completed (for backward navigation)
-        const isRoundCompleted = roundNumber <= (section.completedRounds || 0);
+        // Also check if section is marked as completed (all rounds are complete)
+        const isRoundCompleted = section.completed === 'completed' || roundNumber <= (section.completedRounds || 0);
 
         // Get local completion state for this round, or use exercise set.completed as initial
         // If round is already completed, show all as completed
@@ -1941,7 +2051,8 @@ export default function WorkoutSessionModal() {
         const roundKey = `${section.id}-${roundNumber}`;
 
         // Check if this round is already completed (for backward navigation)
-        const isRoundCompleted = roundNumber <= (section.completedRounds || 0);
+        // Also check if section is marked as completed (all rounds are complete)
+        const isRoundCompleted = section.completed === 'completed' || roundNumber <= (section.completedRounds || 0);
 
         // Get local completion state for this round, or use exercise set.completed as initial
         // If round is already completed, show all as completed
@@ -1995,7 +2106,8 @@ export default function WorkoutSessionModal() {
         const roundKey = `${section.id}-${roundNumber}`;
 
         // Check if this round is already completed (for backward navigation)
-        const isRoundCompleted = roundNumber <= (section.completedRounds || 0);
+        // Also check if section is marked as completed (all rounds are complete)
+        const isRoundCompleted = section.completed === 'completed' || roundNumber <= (section.completedRounds || 0);
 
         // Get local completion state for this round, or use exercise set.completed as initial
         // If round is already completed, show all as completed
@@ -2050,7 +2162,8 @@ export default function WorkoutSessionModal() {
         const roundKey = `${section.id}-${roundNumber}`;
 
         // Check if this round is already completed (for backward navigation)
-        const isRoundCompleted = roundNumber <= (section.completedRounds || 0);
+        // Also check if section is marked as completed (all rounds are complete)
+        const isRoundCompleted = section.completed === 'completed' || roundNumber <= (section.completedRounds || 0);
 
         // Get local completion state for this round, or use exercise set.completed as initial
         // If round is already completed, show all as completed
@@ -2101,6 +2214,7 @@ export default function WorkoutSessionModal() {
       case 'amrap-round': {
         const { section, itemIndex, durationSec, initialRoundsCompleted } = currentPage;
         const exerciseDataMap = getAmrapExerciseDataMap(section);
+        const isSectionCompleted = section.completed === 'completed';
 
         return (
           <View style={styles.exerciseContainer}>
@@ -2118,8 +2232,9 @@ export default function WorkoutSessionModal() {
               onExerciseValueChange={(exerciseIdx, field, value) => {
                 handleAmrapExerciseValueChange(itemIndex, exerciseIdx, field, value);
               }}
-              onRoundComplete={handleCircuitRoundComplete}
+              onSectionComplete={(roundsCompleted) => handleAmrapSectionComplete(section.id, roundsCompleted)}
               isPaused={isPaused}
+              isSectionCompleted={isSectionCompleted}
               isExerciseDataLoading={isExerciseDataLoading}
               onShowPhaseOverlay={triggerPhaseOverlay}
             />
@@ -2182,14 +2297,73 @@ export default function WorkoutSessionModal() {
           </View>
         );
 
-      case 'summary':
+      case 'summary': {
+        // Calculate workout stats
+        const totalExercises = workoutData.items.reduce((count, item) => {
+          if (item.itemType === 'exercise') return count + 1;
+          if (item.itemType === 'section') {
+            const section = item.data;
+            if (section.type === 'regular' || section.type === 'auxiliary') {
+              return count + section.exercises.reduce((c, g) => c + g.exercises.length, 0);
+            }
+            if (section.type === 'circuits' || section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom') {
+              return count + section.exercises.reduce((c, g) => c + g.exercises.length, 0);
+            }
+            if (section.type === 'amrap') {
+              return count + section.exercises.length;
+            }
+          }
+          return count;
+        }, 0);
+
+        const completedSections = workoutData.items.filter(
+          (item) => item.itemType === 'section' && item.data.completed === 'completed'
+        ).length;
+
+        const totalSections = workoutData.items.filter((item) => item.itemType === 'section').length;
+
         return (
           <View style={styles.summaryContainer}>
-            <Text style={[styles.summaryText, { color: themeColors.text }]}>
-              {t('training.session.summary.title' as any)}
+            <Text style={[styles.summaryTitle, { color: themeColors.text }]}>
+              {t('training.session.summary.title' as any) || 'Workout Complete!'}
             </Text>
+
+            <View style={styles.summaryStats}>
+              {/* Duration */}
+              <View style={styles.summaryStatRow}>
+                <Text style={[styles.summaryStatLabel, { color: themeColors.mutedText }]}>
+                  {t('training.session.summary.duration' as any) || 'Duration'}
+                </Text>
+                <Text style={[styles.summaryStatValue, { color: themeColors.text }]}>
+                  {formattedTime}
+                </Text>
+              </View>
+
+              {/* Exercises */}
+              <View style={styles.summaryStatRow}>
+                <Text style={[styles.summaryStatLabel, { color: themeColors.mutedText }]}>
+                  {t('training.session.summary.exercises' as any) || 'Exercises'}
+                </Text>
+                <Text style={[styles.summaryStatValue, { color: themeColors.text }]}>
+                  {totalExercises}
+                </Text>
+              </View>
+
+              {/* Sections */}
+              {totalSections > 0 && (
+                <View style={styles.summaryStatRow}>
+                  <Text style={[styles.summaryStatLabel, { color: themeColors.mutedText }]}>
+                    {t('training.session.summary.sections' as any) || 'Sections'}
+                  </Text>
+                  <Text style={[styles.summaryStatValue, { color: themeColors.text }]}>
+                    {completedSections}/{totalSections}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
         );
+      }
 
       default:
         return null;
@@ -2301,9 +2475,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     minHeight: 400,
   },
-  summaryText: {
+  summaryTitle: {
     ...typography.h1,
     textAlign: 'center',
+    marginBottom: 32,
+  },
+  summaryStats: {
+    width: '100%',
+    gap: 16,
+  },
+  summaryStatRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+  },
+  summaryStatLabel: {
+    ...typography.p1,
+  },
+  summaryStatValue: {
+    ...typography.h3,
+    fontWeight: '700',
   },
   supersetOverlay: {
     ...StyleSheet.absoluteFillObject,

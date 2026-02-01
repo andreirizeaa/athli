@@ -367,7 +367,7 @@ export const SupersetRoundPage = ({
             loop={false}
             style={styles.confettiAnimation}
           />
-          <Animated.Text style={[styles.completionText, { color: themeColors.text }, completionTextAnimatedStyle]}>
+          <Animated.Text style={[styles.completionText, completionTextAnimatedStyle]}>
             {completionMessage}
           </Animated.Text>
         </Animated.View>
@@ -377,7 +377,7 @@ export const SupersetRoundPage = ({
       {showRestOverlay && (
         <Animated.View style={[styles.overlay, restOverlayAnimatedStyle]}>
           <View style={styles.overlayContent}>
-            <Text style={[styles.overlayText, { color: themeColors.text }]}>
+            <Text style={styles.overlayText}>
               {t('training.session.rest' as any) || 'REST'} 😮‍💨
             </Text>
           </View>
@@ -388,7 +388,7 @@ export const SupersetRoundPage = ({
       {showNextSetOverlay && (
         <Animated.View style={[styles.overlay, nextSetOverlayAnimatedStyle]}>
           <View style={styles.overlayContent}>
-            <Text style={[styles.overlayText, { color: themeColors.text }]}>
+            <Text style={styles.overlayText}>
               {t('training.session.nextSet' as any) || 'Next Set'} 💪
             </Text>
           </View>
@@ -524,7 +524,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: -500,
+    left: -50,
+    right: -50,
+    bottom: -500,
     backgroundColor: 'rgba(0, 0, 0, 0.95)',
     zIndex: 100,
     justifyContent: 'center',
@@ -535,10 +539,15 @@ const styles = StyleSheet.create({
   },
   overlayText: {
     ...typography.h1,
+    color: '#FFFFFF',
     textAlign: 'center',
   },
   completionOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: -500,
+    left: -50,
+    right: -50,
+    bottom: -500,
     backgroundColor: 'rgba(0, 0, 0, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -554,6 +563,7 @@ const styles = StyleSheet.create({
   },
   completionText: {
     ...typography.h1,
+    color: '#FFFFFF',
     textAlign: 'center',
     zIndex: 1,
   },

@@ -426,7 +426,7 @@ export const EmomRoundPage = ({
             loop={false}
             style={styles.confettiAnimation}
           />
-          <Animated.Text style={[styles.completionText, { color: themeColors.text }, completionTextAnimatedStyle]}>
+          <Animated.Text style={[styles.completionText, completionTextAnimatedStyle]}>
             {completionMessage}
           </Animated.Text>
         </Animated.View>
@@ -466,10 +466,10 @@ export const EmomRoundPage = ({
                 }) || `Round ${currentRound} of ${totalRounds}`}
               </Text>
             </View>
-            {/* Countdown Timer */}
-            <View style={[styles.timerContainer, { backgroundColor: `${getTimerColor()}20` }]}>
-              <Text style={[styles.timerText, { color: getTimerColor() }]}>
-                {formatTime(timeRemaining)}
+            {/* Countdown Timer or Done badge */}
+            <View style={[styles.timerContainer, { backgroundColor: isRoundCompleted ? `${EMOM_COLOR}20` : `${getTimerColor()}20` }]}>
+              <Text style={[styles.timerText, { color: isRoundCompleted ? EMOM_COLOR : getTimerColor() }]}>
+                {isRoundCompleted ? t('training.session.emom.complete' as any) || 'Done' : formatTime(timeRemaining)}
               </Text>
             </View>
           </View>
@@ -510,7 +510,11 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   completionOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: -500,
+    left: -50,
+    right: -50,
+    bottom: -500,
     backgroundColor: 'rgba(0, 0, 0, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -526,6 +530,7 @@ const styles = StyleSheet.create({
   },
   completionText: {
     ...typography.h1,
+    color: '#FFFFFF',
     textAlign: 'center',
     zIndex: 1,
   },
