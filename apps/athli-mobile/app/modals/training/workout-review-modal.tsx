@@ -358,14 +358,26 @@ export default function WorkoutReviewModal() {
     let completedExercises = 0;
     let totalSections = 0;
     let completedSections = 0;
+    let totalSets = 0;
+    let completedSets = 0;
 
     breakdownItems.forEach((item) => {
       if (item.type === 'exercise') {
         totalExercises++;
         if (item.completed) completedExercises++;
+        // Count sets for regular exercises
+        const sets = item.exercise.sets || [];
+        totalSets += sets.length;
+        completedSets += sets.filter((s) => s.completed === 'completed').length;
       } else if (item.type === 'superset') {
         totalExercises += item.exercises.length;
         if (item.completed) completedExercises += item.exercises.length;
+        // Count sets for superset exercises
+        item.exercises.forEach((ex) => {
+          const sets = ex.sets || [];
+          totalSets += sets.length;
+          completedSets += sets.filter((s) => s.completed === 'completed').length;
+        });
       } else if (item.type === 'section') {
         totalSections++;
         totalExercises += item.exerciseItems.length;
@@ -394,6 +406,8 @@ export default function WorkoutReviewModal() {
       completedExercises,
       totalSections,
       completedSections,
+      totalSets,
+      completedSets,
       durationMinutes,
     };
   }, [workoutData, breakdownItems]);
@@ -567,7 +581,7 @@ export default function WorkoutReviewModal() {
             color={themeColors.text}
           />
           <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
-            {workoutData.name || t('training.title')}
+            Review {workoutData.name || t('training.title')}
           </Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -655,13 +669,22 @@ export default function WorkoutReviewModal() {
 
             <Card style={styles.statCard}>
               <View style={[styles.statIconCircle, { backgroundColor: '#8B5CF620' }]}>
-                <PlatformIcon sf="square.grid.2x2" IconComponent={LayoutGrid} size={20} color="#8B5CF6" />
+                <PlatformIcon
+                  sf={workoutStats.totalSections > 0 ? 'square.grid.2x2' : 'checkmark.circle'}
+                  IconComponent={workoutStats.totalSections > 0 ? LayoutGrid : CheckCircle2}
+                  size={20}
+                  color="#8B5CF6"
+                />
               </View>
               <Text style={[styles.statValue, { color: themeColors.text }]}>
-                {workoutStats.completedSections}/{workoutStats.totalSections}
+                {workoutStats.totalSections > 0
+                  ? `${workoutStats.completedSections}/${workoutStats.totalSections}`
+                  : `${workoutStats.completedSets}/${workoutStats.totalSets}`}
               </Text>
               <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
-                {t('training.review.sections' as any) || 'Sections'}
+                {workoutStats.totalSections > 0
+                  ? t('training.review.sections')
+                  : t('training.review.sets')}
               </Text>
             </Card>
           </View>

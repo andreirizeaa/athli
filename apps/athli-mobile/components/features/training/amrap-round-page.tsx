@@ -45,6 +45,8 @@ type AmrapRoundPageProps = {
   isExerciseDataLoading?: boolean;
   /** Callback to show phase overlay at modal level (covers entire screen) */
   onShowPhaseOverlay?: (text: string, durationMs?: number) => void;
+  /** Callback to show completion overlay at modal level (covers entire screen) */
+  onShowCompletionOverlay?: (message: string) => void;
 };
 
 const AMRAP_COLOR = '#06B6D4'; // Cyan for AMRAP
@@ -63,6 +65,7 @@ export const AmrapRoundPage = ({
   isSectionCompleted = false,
   isExerciseDataLoading = false,
   onShowPhaseOverlay,
+  onShowCompletionOverlay,
 }: AmrapRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -168,7 +171,19 @@ export const AmrapRoundPage = ({
       } while (messageIndex === lastCompletionMessageRef.current && messages.length > 1);
       lastCompletionMessageRef.current = messageIndex;
 
-      setCompletionMessage(messages[messageIndex]);
+      const message = messages[messageIndex];
+
+      // Use parent overlay callback if available (covers entire screen)
+      if (onShowCompletionOverlay) {
+        onShowCompletionOverlay(message);
+        setTimeout(() => {
+          onSectionCompleteRef.current(currentRoundRef.current - 1);
+        }, 1400);
+        return;
+      }
+
+      // Fallback to local overlay
+      setCompletionMessage(message);
       setShowCompletionOverlay(true);
 
       // Animate in
@@ -293,7 +308,20 @@ export const AmrapRoundPage = ({
                 messageIndex = Math.floor(Math.random() * messages.length);
               } while (messageIndex === lastCompletionMessageRef.current && messages.length > 1);
               lastCompletionMessageRef.current = messageIndex;
-              setCompletionMessage(messages[messageIndex]);
+
+              const message = messages[messageIndex];
+
+              // Use parent overlay callback if available (covers entire screen)
+              if (onShowCompletionOverlay) {
+                onShowCompletionOverlay(message);
+                setTimeout(() => {
+                  onSectionCompleteRef.current(currentRoundRef.current - 1);
+                }, 1400);
+                return;
+              }
+
+              // Fallback to local overlay
+              setCompletionMessage(message);
             }
             setShowCompletionOverlay(true);
             completionOverlayOpacity.value = withTiming(1, { duration: 200 });

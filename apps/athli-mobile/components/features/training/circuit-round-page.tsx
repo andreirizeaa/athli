@@ -41,6 +41,8 @@ type CircuitRoundPageProps = {
   isExerciseDataLoading?: boolean;
   /** Callback to show phase overlay at modal level (covers entire screen) */
   onShowPhaseOverlay?: (text: string, durationMs?: number) => void;
+  /** Callback to show completion overlay at modal level (covers entire screen) */
+  onShowCompletionOverlay?: (message: string) => void;
 };
 
 // Map section type to color
@@ -63,6 +65,7 @@ export const CircuitRoundPage = ({
   onRoundComplete,
   isExerciseDataLoading = false,
   onShowPhaseOverlay,
+  onShowCompletionOverlay,
 }: CircuitRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -95,7 +98,17 @@ export const CircuitRoundPage = ({
     } while (messageIndex === lastCompletionMessageRef.current && messages.length > 1);
     lastCompletionMessageRef.current = messageIndex;
 
-    setCompletionMessage(messages[messageIndex]);
+    const message = messages[messageIndex];
+
+    // Use parent overlay callback if available (covers entire screen)
+    if (onShowCompletionOverlay) {
+      onShowCompletionOverlay(message);
+      setTimeout(onRoundComplete, 1400);
+      return;
+    }
+
+    // Fallback to local overlay
+    setCompletionMessage(message);
     setShowCompletionOverlay(true);
 
     // Animate in
@@ -114,7 +127,7 @@ export const CircuitRoundPage = ({
         onRoundComplete();
       }, 200);
     }, 1200);
-  }, [completionOverlayOpacity, completionTextScale, onRoundComplete]);
+  }, [completionOverlayOpacity, completionTextScale, onRoundComplete, onShowCompletionOverlay]);
 
   // Show simple next round overlay (for intermediate rounds)
   const showNextRoundTransition = useCallback(() => {

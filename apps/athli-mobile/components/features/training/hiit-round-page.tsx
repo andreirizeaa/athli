@@ -48,6 +48,8 @@ type HiitRoundPageProps = {
   isExerciseDataLoading?: boolean;
   /** Callback to show phase overlay at modal level (covers entire screen) */
   onShowPhaseOverlay?: (text: string, durationMs?: number) => void;
+  /** Callback to show completion overlay at modal level (covers entire screen) */
+  onShowCompletionOverlay?: (message: string) => void;
 };
 
 const HIIT_COLOR = '#8B5CF6'; // Purple for HIIT
@@ -73,6 +75,7 @@ export const HiitRoundPage = ({
   allExercisesComplete = false,
   isExerciseDataLoading = false,
   onShowPhaseOverlay,
+  onShowCompletionOverlay,
 }: HiitRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -365,7 +368,17 @@ export const HiitRoundPage = ({
     } while (messageIndex === lastCompletionMessageRef.current && messages.length > 1);
     lastCompletionMessageRef.current = messageIndex;
 
-    setCompletionMessage(messages[messageIndex]);
+    const message = messages[messageIndex];
+
+    // Use parent overlay callback if available (covers entire screen)
+    if (onShowCompletionOverlay) {
+      onShowCompletionOverlay(message);
+      setTimeout(() => onRoundCompleteRef.current(), 1400);
+      return;
+    }
+
+    // Fallback to local overlay
+    setCompletionMessage(message);
     setShowCompletionOverlay(true);
 
     // Animate in
@@ -384,7 +397,7 @@ export const HiitRoundPage = ({
         onRoundCompleteRef.current();
       }, 200);
     }, 1200);
-  }, [completionOverlayOpacity, completionTextScale]);
+  }, [completionOverlayOpacity, completionTextScale, onShowCompletionOverlay]);
 
   // Handle exercise completion toggle
   const handleExerciseComplete = (exerciseIndex: number, setIndex: number, completed: boolean) => {
