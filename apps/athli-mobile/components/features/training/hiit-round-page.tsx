@@ -45,6 +45,9 @@ type HiitRoundPageProps = {
   isRoundCompleted?: boolean;
   /** If true, all exercises are complete - don't auto-advance, let user use Next button */
   allExercisesComplete?: boolean;
+  isExerciseDataLoading?: boolean;
+  /** Callback to show phase overlay at modal level (covers entire screen) */
+  onShowPhaseOverlay?: (text: string, durationMs?: number) => void;
 };
 
 const HIIT_COLOR = '#8B5CF6'; // Purple for HIIT
@@ -68,6 +71,8 @@ export const HiitRoundPage = ({
   isPaused,
   isRoundCompleted = false,
   allExercisesComplete = false,
+  isExerciseDataLoading = false,
+  onShowPhaseOverlay,
 }: HiitRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -84,6 +89,7 @@ export const HiitRoundPage = ({
   const currentRoundRef = useRef(currentRound);
   const totalRoundsRef = useRef(totalRounds);
   const tickFunctionRef = useRef<(() => void) | null>(null);
+  const onShowPhaseOverlayRef = useRef(onShowPhaseOverlay);
 
   // Completion celebration overlay state
   const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
@@ -125,6 +131,10 @@ export const HiitRoundPage = ({
   useEffect(() => {
     allExercisesCompleteRef.current = allExercisesComplete;
   }, [allExercisesComplete]);
+
+  useEffect(() => {
+    onShowPhaseOverlayRef.current = onShowPhaseOverlay;
+  }, [onShowPhaseOverlay]);
 
   // Timer state - ensure we have a valid initial value
   const [currentPhase, setCurrentPhase] = useState<TimerPhase>('work');
@@ -170,6 +180,15 @@ export const HiitRoundPage = ({
 
     // Helper to show phase transition overlay
     const showTransitionOverlay = (text: string, onComplete: () => void) => {
+      // Use parent overlay callback if available (covers entire screen)
+      if (onShowPhaseOverlayRef.current) {
+        onShowPhaseOverlayRef.current(text, 1000);
+        // Call onComplete after overlay duration
+        setTimeout(onComplete, 1200);
+        return;
+      }
+
+      // Fallback to local overlay
       setOverlayText(text);
       setShowPhaseOverlay(true);
       overlayOpacity.value = withSequence(
@@ -557,6 +576,7 @@ export const HiitRoundPage = ({
               onSetComplete={(setIndex, completed) => handleExerciseComplete(index, setIndex, completed)}
               onSetValueChange={(setIndex, field, value) => handleExerciseValueChange(index, setIndex, field, value)}
               onAlternativeSelect={() => {}}
+              isExerciseDataLoading={isExerciseDataLoading}
             />
           );
         })}

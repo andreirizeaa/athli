@@ -38,6 +38,9 @@ type CircuitRoundPageProps = {
     value: string
   ) => void;
   onRoundComplete: () => void;
+  isExerciseDataLoading?: boolean;
+  /** Callback to show phase overlay at modal level (covers entire screen) */
+  onShowPhaseOverlay?: (text: string, durationMs?: number) => void;
 };
 
 // Map section type to color
@@ -58,6 +61,8 @@ export const CircuitRoundPage = ({
   onExerciseComplete,
   onExerciseValueChange,
   onRoundComplete,
+  isExerciseDataLoading = false,
+  onShowPhaseOverlay,
 }: CircuitRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -113,6 +118,14 @@ export const CircuitRoundPage = ({
 
   // Show simple next round overlay (for intermediate rounds)
   const showNextRoundTransition = useCallback(() => {
+    // Use parent overlay callback if available (covers entire screen)
+    if (onShowPhaseOverlay) {
+      onShowPhaseOverlay(t('training.session.circuit.nextRound' as any) || 'Next Round! 💪', 800);
+      setTimeout(onRoundComplete, 1000);
+      return;
+    }
+
+    // Fallback to local overlay
     setShowNextRoundOverlay(true);
     nextRoundOverlayOpacity.value = withSequence(
       withTiming(1, { duration: 200 }),
@@ -122,7 +135,7 @@ export const CircuitRoundPage = ({
         runOnJS(onRoundComplete)();
       })
     );
-  }, [nextRoundOverlayOpacity, onRoundComplete]);
+  }, [nextRoundOverlayOpacity, onRoundComplete, onShowPhaseOverlay, t]);
 
   // Handle exercise completion toggle
   const handleExerciseComplete = (exerciseIndex: number, setIndex: number, completed: boolean) => {
@@ -260,6 +273,7 @@ export const CircuitRoundPage = ({
               onSetComplete={(setIndex, completed) => handleExerciseComplete(index, setIndex, completed)}
               onSetValueChange={(setIndex, field, value) => handleExerciseValueChange(index, setIndex, field, value)}
               onAlternativeSelect={() => {}}
+              isExerciseDataLoading={isExerciseDataLoading}
             />
           );
         })}

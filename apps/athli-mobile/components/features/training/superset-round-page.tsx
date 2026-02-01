@@ -41,6 +41,7 @@ type SupersetRoundPageProps = {
   ) => void;
   onSetComplete: () => void;
   isPaused: boolean;
+  isExerciseDataLoading?: boolean;
 };
 
 const SUPERSET_COLOR = '#F97316'; // Orange for superset
@@ -59,6 +60,7 @@ export const SupersetRoundPage = ({
   onExerciseValueChange,
   onSetComplete,
   isPaused,
+  isExerciseDataLoading = false,
 }: SupersetRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -459,6 +461,7 @@ export const SupersetRoundPage = ({
               onAlternativeSelect={(alternativeId) => {
                 // Handle alternative selection if needed
               }}
+              isExerciseDataLoading={isExerciseDataLoading}
             />
           );
         })}

@@ -158,14 +158,25 @@ export default function ExerciseDetailsModal() {
     const rawThumbnailUrl = exercise?.rawThumbnailUrl || cachedExercise?.rawThumbnailUrl || musclewikiExercise?.thumbnailUrl;
     const { thumbnailUrl, isLoading: isThumbnailLoading } = useSingleThumbnail(rawThumbnailUrl);
 
-    // Get musclewiki ID for video modal
-    const musclewikiIdForVideo = exercise?.musclewikiId || cachedExercise?.musclewikiId || musclewikiExercise?.musclewikiId || exerciseId;
+    // Get musclewiki ID for video modal - prioritize the param passed from caller
+    const musclewikiIdForVideo = musclewikiId || exercise?.musclewikiId || cachedExercise?.musclewikiId || musclewikiExercise?.musclewikiId || exerciseId;
 
     const handleClose = () => {
         router.back();
     };
 
     const handleOpenVideoModal = () => {
+        console.log('[DETAILS MODAL] Opening video modal with:', {
+            name: name || exercise?.name || '',
+            exerciseId: exerciseId || '',
+            musclewikiId_param: musclewikiId,
+            musclewikiIdForVideo,
+            isCustom: isCustomExercise ? 'true' : 'false',
+            videoLink: coachExercise?.video_link || '',
+            exercise_musclewikiId: exercise?.musclewikiId,
+            cached_musclewikiId: cachedExercise?.musclewikiId,
+            mwExercise_musclewikiId: musclewikiExercise?.musclewikiId,
+        });
         router.push({
             pathname: '/modals/workout/exercise-video-modal',
             params: {
