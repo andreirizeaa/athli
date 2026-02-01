@@ -180,6 +180,99 @@ Error: "AI service temporarily unavailable. Please try again."
 
 ---
 
+### 2.7 Advanced Workout Types
+
+**Current State:** AI can only create basic "regular" workouts with simple sets/reps. The workout schema supports much more.
+
+**Gap Analysis:**
+
+| Feature | Schema Supports | AI Can Create |
+|---------|-----------------|---------------|
+| Regular sections | Yes | Yes |
+| AMRAP (with duration) | Yes | No |
+| Tabata | Yes | No |
+| HIIT | Yes | No |
+| EMOM | Yes | No |
+| Circuits (with rounds) | Yes | No |
+| Auxiliary (warmup/cooldown) | Yes | No |
+| Supersets | Yes | No (wrong implementation) |
+| Warm-up/Failure/Drop sets | Yes | No |
+| Tempo prescriptions | Yes | No |
+| Unilateral (each side) | Yes | No |
+| Alternative exercises | Yes | No |
+| Custom column labels | Yes | No |
+
+**Phase 3 Scope:**
+- Expand AI tool schema to support advanced section types
+- Fix superset implementation (currently wrong - uses section type instead of exercise linking)
+- Add interval-based section fields (duration, work/rest, rounds)
+
+**Solution Options:**
+
+**Option A: Specialized Tools**
+Create focused tools for each workout type:
+```
+create_strength_workout    → Regular sections
+create_amrap_workout       → AMRAP with duration
+create_hiit_workout        → HIIT with intervals
+create_circuit_workout     → Circuits with rounds
+create_tabata_workout      → Tabata structure
+```
+
+**Option B: Rich Schema with Smart Defaults**
+Expand single `create_workout` tool to handle all types:
+```typescript
+const sectionSchema = z.object({
+  name: z.string(),
+  type: z.enum(['regular', 'amrap', 'tabata', 'hiit', 'emom', 'circuits', 'auxiliary']),
+
+  // Type-specific (optional, validated based on type)
+  durationSec: z.number().optional(),      // AMRAP
+  workSec: z.number().optional(),          // Tabata, HIIT
+  restSec: z.number().optional(),          // Tabata, HIIT
+  rounds: z.number().optional(),           // Circuits, Tabata, HIIT
+  intervalSec: z.number().optional(),      // EMOM
+  category: z.enum(['warmup', 'cooldown', 'mobility']).optional(),
+
+  exercises: z.array(exerciseSchema),
+});
+
+const exerciseSchema = z.object({
+  prescribedExerciseId: z.string(),
+  name: z.string(),
+  // ... existing fields ...
+
+  // Advanced (optional)
+  supersetWith: z.string().optional(),     // Exercise ID to superset with
+  eachSide: z.boolean().optional(),
+  tempo: z.string().optional(),            // e.g., "3-1-2-0"
+  alternatives: z.array(z.string()).optional(),
+});
+```
+
+**Option C: Builder Pattern**
+Break creation into composable steps:
+```
+create_workout_shell  → Base workout
+add_regular_section   → Add regular section
+add_amrap_section     → Add AMRAP section
+add_hiit_section      → Add HIIT section
+add_exercise          → Add exercise to section
+create_superset       → Link exercises
+finalize_workout      → Validate and confirm
+```
+
+**Recommendation:** Option B (Rich Schema) provides the best balance of flexibility and simplicity. The AI only specifies fields relevant to the workout type.
+
+**Priority within Phase 3:**
+1. AMRAP + Circuits (most requested)
+2. Supersets (fix the bug)
+3. Tabata/HIIT/EMOM
+4. Advanced set types (warmup, failure, dropset)
+5. Tempo, alternatives, each side
+
+---
+
 ## 3. Success Metrics
 
 | Metric | Target |
