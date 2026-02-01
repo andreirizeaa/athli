@@ -365,11 +365,26 @@ get_exercise_catalog({ muscle_group: "back" })
 - [ ] Exercise catalog is cached (regenerated daily) for performance
 - [ ] Catalog response is formatted for easy AI parsing (ID | Name | Muscles | Equipment)
 
-**Testing:**
-- [ ] Create workout via AI → exercises link correctly
-- [ ] Open AI-created workout → videos and instructions load
-- [ ] AI calls `create_workout` without IDs → receives helpful error
-- [ ] AI uses invalid ID → receives helpful error and retries
+**Testing (AI Agent-Driven):**
+
+Use Claude Code or similar AI agent to fully test the implementation:
+
+1. **End-to-End Workout Creation Test:**
+   - [ ] Agent calls `get_exercise_catalog` and verifies response format
+   - [ ] Agent calls `create_workout` with valid IDs from catalog
+   - [ ] Agent confirms the workout saves successfully
+   - [ ] Agent reads the saved workout from database and verifies `prescribedExerciseId` values are correct
+   - [ ] Agent opens the workout in the app and verifies exercises load with videos/instructions
+
+2. **Error Handling Test:**
+   - [ ] Agent calls `create_workout` WITHOUT IDs → verifies helpful error returned
+   - [ ] Agent calls `create_workout` with INVALID IDs (e.g., "99999") → verifies error message
+   - [ ] Agent verifies it can recover by calling `get_exercise_catalog` and retrying
+
+3. **Debug Any Issues:**
+   - [ ] If any test fails, agent inspects database, API responses, and logs
+   - [ ] Agent identifies root cause and fixes the issue
+   - [ ] Agent re-runs tests until all pass
 
 ---
 
@@ -386,11 +401,23 @@ get_exercise_catalog({ muscle_group: "back" })
 - [ ] Handle poor connectivity gracefully (loading states, retry)
 - [ ] Reduce payload size for mobile (optional fields)
 
-**Testing:**
-- [ ] Full conversation flow works on iOS
-- [ ] Full conversation flow works on Android
-- [ ] Create workout via mobile AI → saves correctly
-- [ ] Assign workout via mobile AI → appears on client calendar
+**Testing (AI Agent-Driven):**
+
+Use Claude Code or similar AI agent to test mobile integration:
+
+1. **API Compatibility Test:**
+   - [ ] Agent sends test request to `/ai/chat` endpoint with mobile headers
+   - [ ] Agent verifies SSE stream is received correctly
+   - [ ] Agent parses response and verifies format matches web app
+
+2. **Mobile-Specific Tests:**
+   - [ ] Agent creates workout via mobile → verifies saves correctly
+   - [ ] Agent assigns workout via mobile → verifies appears on client calendar
+   - [ ] Agent tests action card confirm/cancel flow
+
+3. **Debug Any Issues:**
+   - [ ] If API response differs from web, agent identifies and fixes
+   - [ ] Agent ensures mobile and web produce identical database records
 
 ---
 
@@ -408,11 +435,28 @@ get_exercise_catalog({ muscle_group: "back" })
 - [ ] Search/filter past conversations
 - [ ] Delete conversation option
 
-**Testing:**
-- [ ] Start conversation → refresh page → conversation persists
-- [ ] Multiple conversations → all appear in sidebar
-- [ ] Click old conversation → full history loads
-- [ ] New conversation → appears at top of sidebar
+**Testing (AI Agent-Driven):**
+
+Use Claude Code or similar AI agent to test persistence:
+
+1. **Database Verification:**
+   - [ ] Agent starts a conversation and sends a message
+   - [ ] Agent queries `ai_conversations` table → verifies record created
+   - [ ] Agent queries `ai_messages` table → verifies messages saved with correct roles
+
+2. **Persistence Test:**
+   - [ ] Agent simulates page refresh (new session)
+   - [ ] Agent loads conversation by ID → verifies full history returned
+   - [ ] Agent verifies conversation appears in sidebar list
+
+3. **Multi-Conversation Test:**
+   - [ ] Agent creates 3 different conversations
+   - [ ] Agent verifies all 3 appear in sidebar
+   - [ ] Agent switches between conversations → verifies correct history loads
+
+4. **Debug Any Issues:**
+   - [ ] If messages don't persist, agent inspects API calls and database
+   - [ ] Agent fixes any issues and re-runs tests until all pass
 
 ---
 
