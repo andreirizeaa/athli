@@ -383,39 +383,43 @@ export type OptionalColumn = typeof OPTIONAL_COLUMN_OPTIONS[number]['value'];
 export type CategoryColumnConfig = {
     column1: ColumnValue;
     column2: ColumnValue;
+    column1Value?: string;  // Default prescribed value for column1
+    column2Value?: string;  // Default prescribed value for column2
 };
 
 export const CATEGORY_COLUMN_DEFAULTS: Record<string, CategoryColumnConfig> = {
     // Weight-based exercises: Reps + Weight
-    'Barbell': { column1: 'Reps', column2: 'kg' },
-    'Cables': { column1: 'Reps', column2: 'kg' },
-    'Dumbbells': { column1: 'Reps', column2: 'kg' },
-    'Kettlebells': { column1: 'Reps', column2: 'kg' },
-    'Machine': { column1: 'Reps', column2: 'kg' },
-    'Medicine-Ball': { column1: 'Reps', column2: 'kg' },
-    'Plate': { column1: 'Reps', column2: 'kg' },
-    'Smith-Machine': { column1: 'Reps', column2: 'kg' },
-    'Vitruvian': { column1: 'Reps', column2: 'kg' },
+    'Barbell': { column1: 'Reps', column2: 'kg', column1Value: '10', column2Value: '' },
+    'Cables': { column1: 'Reps', column2: 'kg', column1Value: '12', column2Value: '' },
+    'Dumbbells': { column1: 'Reps', column2: 'kg', column1Value: '10', column2Value: '' },
+    'Kettlebells': { column1: 'Reps', column2: 'kg', column1Value: '10', column2Value: '' },
+    'Machine': { column1: 'Reps', column2: 'kg', column1Value: '12', column2Value: '' },
+    'Medicine-Ball': { column1: 'Reps', column2: 'kg', column1Value: '10', column2Value: '' },
+    'Plate': { column1: 'Reps', column2: 'kg', column1Value: '10', column2Value: '' },
+    'Smith-Machine': { column1: 'Reps', column2: 'kg', column1Value: '10', column2Value: '' },
+    'Vitruvian': { column1: 'Reps', column2: 'kg', column1Value: '10', column2Value: '' },
 
     // Bodyweight exercises: Reps only
-    'Bodyweight': { column1: 'Reps', column2: 'Optional' },
-    'Band': { column1: 'Reps', column2: 'Optional' },
-    'Bosu-Ball': { column1: 'Reps', column2: 'Optional' },
-    'TRX': { column1: 'Reps', column2: 'Optional' },
+    'Bodyweight': { column1: 'Reps', column2: 'Optional', column1Value: '10', column2Value: '' },
+    'Band': { column1: 'Reps', column2: 'Optional', column1Value: '12', column2Value: '' },
+    'Bosu-Ball': { column1: 'Reps', column2: 'Optional', column1Value: '10', column2Value: '' },
+    'TRX': { column1: 'Reps', column2: 'Optional', column1Value: '12', column2Value: '' },
 
     // Cardio exercises: Duration only
-    'Cardio': { column1: 'minutes', column2: 'Optional' },
+    'Cardio': { column1: 'minutes', column2: 'Optional', column1Value: '30', column2Value: '' },
 
     // Recovery/Flexibility
-    'Recovery': { column1: 'Reps', column2: 'Optional' },
-    'Stretches': { column1: 'Reps', column2: 'Optional' },
-    'Yoga': { column1: 'minutes', column2: 'Optional' },
+    'Recovery': { column1: 'Reps', column2: 'Optional', column1Value: '10', column2Value: '' },
+    'Stretches': { column1: 'Reps', column2: 'Optional', column1Value: '10', column2Value: '' },
+    'Yoga': { column1: 'minutes', column2: 'Optional', column1Value: '15', column2Value: '' },
 };
 
 // Default fallback for unknown categories
 export const DEFAULT_COLUMN_CONFIG: CategoryColumnConfig = {
     column1: 'Reps',
     column2: 'kg',
+    column1Value: '10',
+    column2Value: '',
 };
 
 /**

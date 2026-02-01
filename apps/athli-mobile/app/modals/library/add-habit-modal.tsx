@@ -610,6 +610,7 @@ export default function AddHabitModal() {
                                         options={unitOptions}
                                         placeholder={t('library.addHabit.unitPlaceholder')}
                                         required
+                                        clearable={false}
                                     />
                                 </View>
                             </View>
@@ -620,6 +621,7 @@ export default function AddHabitModal() {
                                 value={period}
                                 onChange={setPeriod}
                                 required
+                                clearable={false}
                             />
 
                             {/* Duration and Notification - Optional */}

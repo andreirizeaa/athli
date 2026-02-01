@@ -1,5 +1,6 @@
 import type { Exercise } from '@/api/exercise/exercise-search';
 import type { WorkoutSchema, WorkoutSchemaItem, ExerciseWithSuperset, WorkoutSection } from '@/components/training/shared/types/workout-builder.types';
+import { getDefaultColumnsForCategory } from '@athli/shared-types';
 
 /**
  * Handles dropping an exercise at the end of all items (top-level)
@@ -12,10 +13,13 @@ export const handleTopLevelDrop = (
   draggedExercise: Exercise,
   currentSchema: WorkoutSchema
 ): WorkoutSchema => {
+  const categoryDefaults = getDefaultColumnsForCategory(draggedExercise.category);
   const exerciseWithSuperset: ExerciseWithSuperset = {
     ...draggedExercise,
     supersetGroupId: null,
     instanceId: `${draggedExercise.exerciseId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    column1Label: categoryDefaults.column1,
+    column2Label: categoryDefaults.column2,
   };
 
   const newItem: WorkoutSchemaItem = {
@@ -42,10 +46,13 @@ export const handleTopLevelSlotDrop = (
   draggedExercise: Exercise,
   currentSchema: WorkoutSchema
 ): WorkoutSchema => {
+  const categoryDefaults = getDefaultColumnsForCategory(draggedExercise.category);
   const exerciseWithSuperset: ExerciseWithSuperset = {
     ...draggedExercise,
     supersetGroupId: null,
     instanceId: `${draggedExercise.exerciseId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    column1Label: categoryDefaults.column1,
+    column2Label: categoryDefaults.column2,
   };
 
   const newItem: WorkoutSchemaItem = {
@@ -69,13 +76,18 @@ export const handleTopLevelSlotDrop = (
  * @param sectionId - The ID of the section to drop into
  * @param draggedExercise - The exercise being dragged
  * @param currentSchema - The current workout schema
+ * @param sectionType - The type of section (optional, used for interval sections)
  * @returns Updated workout schema
  */
 export const handleDrop = (
   sectionId: string,
   draggedExercise: Exercise,
-  currentSchema: WorkoutSchema
+  currentSchema: WorkoutSchema,
+  sectionType?: string
 ): WorkoutSchema => {
+  const categoryDefaults = getDefaultColumnsForCategory(draggedExercise.category);
+  const isIntervalSection = sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'emom' || sectionType === 'circuits';
+
   return {
     ...currentSchema,
     items: currentSchema.items.map((item) => {
@@ -85,6 +97,8 @@ export const handleDrop = (
           ...draggedExercise,
           supersetGroupId: null,
           instanceId: `${draggedExercise.exerciseId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          column1Label: categoryDefaults.column1,
+          column2Label: isIntervalSection ? 'Optional' : categoryDefaults.column2,
         };
         return {
           ...item,
@@ -106,14 +120,19 @@ export const handleDrop = (
  * @param slotIndex - The index where the exercise should be inserted
  * @param draggedExercise - The exercise being dragged
  * @param currentSchema - The current workout schema
+ * @param sectionType - The type of section (optional, used for interval sections)
  * @returns Updated workout schema
  */
 export const handleSlotDrop = (
   sectionId: string,
   slotIndex: number,
   draggedExercise: Exercise,
-  currentSchema: WorkoutSchema
+  currentSchema: WorkoutSchema,
+  sectionType?: string
 ): WorkoutSchema => {
+  const categoryDefaults = getDefaultColumnsForCategory(draggedExercise.category);
+  const isIntervalSection = sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'emom' || sectionType === 'circuits';
+
   return {
     ...currentSchema,
     items: currentSchema.items.map((item) => {
@@ -124,6 +143,8 @@ export const handleSlotDrop = (
         ...draggedExercise,
         supersetGroupId: null,
         instanceId: `${draggedExercise.exerciseId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        column1Label: categoryDefaults.column1,
+        column2Label: isIntervalSection ? 'Optional' : categoryDefaults.column2,
       };
 
       const updatedExercises = [...exercises];

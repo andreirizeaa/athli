@@ -127,6 +127,11 @@ export const en = {
   home: {
     title: 'Home',
   },
+  athlete: {
+    loading: {
+      preparingData: 'Preparing your data...',
+    },
+  },
   training: {
     title: 'Training',
     athlete: {
@@ -172,6 +177,10 @@ export const en = {
         },
       },
       eachSide: 'Perform on each side',
+      rest: 'Rest',
+      superset: 'Superset',
+      setXOfY: 'Set {{current}} of {{total}}',
+      nextSet: 'Next Set',
       selectAlternative: 'Select Alternative',
       tempo: {
         label: 'Tempo',
@@ -186,6 +195,116 @@ export const en = {
         pause2: 'Pause',
         pause2Desc: '{{value}} seconds pause at the top',
       },
+      sectionTypes: {
+        regular: {
+          label: 'Regular',
+          description: 'Standard strength training with sets, reps, and rest periods. Complete each exercise with the prescribed sets before moving on.',
+        },
+        amrap: {
+          label: 'AMRAP',
+          description: 'As Many Rounds As Possible. Complete all exercises in order, then repeat. Keep going until the time runs out!',
+        },
+        tabata: {
+          label: 'Tabata',
+          description: 'Classic high-intensity protocol: 20 seconds of all-out effort followed by 10 seconds of rest. Push hard during work periods!',
+        },
+        hiit: {
+          label: 'HIIT',
+          description: 'High-Intensity Interval Training. Alternate between intense work periods and rest periods at your prescribed intervals.',
+        },
+        emom: {
+          label: 'EMOM',
+          description: 'Every Minute On the Minute. Start each exercise at the top of every minute. The faster you finish, the more rest you get!',
+        },
+        circuits: {
+          label: 'Circuit',
+          description: 'Move through all exercises with minimal rest between them. After completing one round, repeat for the prescribed number of rounds.',
+        },
+        auxiliary: {
+          label: 'Auxiliary',
+          description: 'Supplementary exercises for warm-up, cooldown, or mobility work. Focus on preparation and recovery.',
+        },
+        details: {
+          rounds: '{{count}} rounds',
+          roundsSingular: '1 round',
+          exercises: '{{count}} exercises',
+          exercisesSingular: '1 exercise',
+          exercisesPerRound: '{{count}} exercises per round',
+          timeCap: '{{time}} time cap',
+          workRest: '{{work}}s work / {{rest}}s rest',
+          duration: '{{time}} minutes',
+          intervals: '{{time}}s intervals',
+        },
+      },
+      congratulations: {
+        title: 'All Done!',
+        subtitle: 'Great work completing your workout',
+      },
+      feedback: {
+        title: 'How was your session?',
+        intensity: 'Session intensity',
+        intensityLabels: ['Easy', 'Light', 'Moderate', 'Hard', 'Brutal'],
+        rating: 'Rate your workout',
+        ratingLabels: ['Poor', 'Fair', 'Good', 'Great', 'Amazing'],
+        comments: 'Session comments',
+        commentsPlaceholder: 'How did you feel? Any notes for your coach...',
+      },
+      summary: {
+        title: 'Workout Summary',
+        duration: 'Duration',
+        exercises: 'Exercises',
+        setsCompleted: 'Sets Completed',
+        finishWorkout: 'Finish Workout',
+      },
+      circuit: {
+        roundOf: 'Round {{current}} of {{total}}',
+        nextRound: 'Next Round',
+      },
+      emom: {
+        nextRound: 'Next Round!',
+        complete: 'Complete!',
+      },
+      hiit: {
+        work: 'WORK 💪',
+        rest: 'REST 😮‍💨',
+        complete: 'Complete! 🎉',
+        workPhase: 'WORK',
+        restPhase: 'REST',
+      },
+      tabata: {
+        work: 'WORK 💪',
+        rest: 'REST 😮‍💨',
+        complete: 'Complete! 🎉',
+        workPhase: 'WORK',
+        restPhase: 'REST',
+      },
+      amrap: {
+        roundOne: 'Round 1',
+        roundX: 'Round {{round}}',
+        completeRound: 'Complete Round',
+      },
+      exerciseComplete: [
+        'One step closer! 💪',
+        'Crushed it! 🔥',
+        'Beast mode! 👊',
+        'Unstoppable! 🚀',
+        'Keep pushing! 💥',
+        'On fire! 🔥',
+        'Killing it! ⚡',
+        "Let's go! 🙌",
+        'Nailed it! 🎯',
+        'You got this! 💪',
+        'Smashed it! 💥',
+        'Making gains! 📈',
+        'Strong work! 🏋️',
+        'Champion! 🏆',
+        'Power move! ⚡',
+        'Impressive! 👏',
+        'Keep it up! 🔝',
+        'Dominating! 👑',
+        'No stopping you! 🛑',
+        'Pure strength! 💪',
+      ],
     },
     addOptions: {
       addFromLibrary: 'Add from library',

@@ -247,7 +247,7 @@ const WorkoutDayPage = React.memo(
                   <View style={[pageStyles.divider, { backgroundColor: themeColors.border }]} />
                   <View style={pageStyles.exerciseListContainer}>
                     <ExerciseListPreview
-                      exercises={extractExercisePreviewItems(workout.workout_data)}
+                      exercises={extractExercisePreviewItems(workout.workout_data?.items ? workout.workout_data : workout)}
                       themeColors={themeColors}
                     />
                   </View>

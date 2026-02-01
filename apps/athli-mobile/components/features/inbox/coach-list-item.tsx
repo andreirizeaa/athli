@@ -1,13 +1,12 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Archive, MailCheck, Send, CheckCircle } from 'lucide-react-native';
+import { Send, CheckCircle } from 'lucide-react-native';
 import SquircleView from 'react-native-fast-squircle';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference, useAuthSessionStore } from '@/stores';
 import { useTranslations } from '@/stores';
-import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { PressableScale } from 'pressto';
 import { type Coach } from '@/services/inbox-service';
@@ -86,37 +85,6 @@ export const CoachListItem = ({
       : colorScheme === 'dark'
         ? themeColors.border
         : themeColors.mutedText;
-
-  const dropdownOptions: DropdownMenuOption[] = [
-    ...(onMarkAsRead && (coach.unread_count ?? 0) > 0
-      ? [
-        {
-          label: t('chats.markAsRead'),
-          icon: {
-            sf: 'checkmark.message',
-            IconComponent: MailCheck,
-          },
-          onPress: () => {
-            onMarkAsRead(coach.id);
-          },
-        },
-      ]
-      : []),
-    ...(onArchive
-      ? [
-        {
-          label: t('chats.archive'),
-          icon: {
-            sf: 'archivebox',
-            IconComponent: Archive,
-          },
-          onPress: () => {
-            onArchive(coach.id);
-          },
-        },
-      ]
-      : []),
-  ];
 
   const content = (
     <PressableScale
@@ -264,16 +232,8 @@ export const CoachListItem = ({
     </PressableScale>
   );
 
-  // In edit mode, don't wrap with context menu
-  if (isEditMode || dropdownOptions.length === 0) {
-    return content;
-  }
-
-  return (
-    <ContextMenuWrapper options={dropdownOptions}>
-      {content}
-    </ContextMenuWrapper>
-  );
+  // Return content without context menu wrapper (long press disabled)
+  return content;
 };
 
 const styles = StyleSheet.create({

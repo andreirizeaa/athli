@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, memo } from 'react';
 import Image from 'next/image';
 import { ArrowDown, ArrowUp, Dumbbell, Ellipsis, Play, Plus, Trash2, X, Heart, Activity, Timer, Info, Loader2 } from 'lucide-react';
 import { useAllExercises, type Exercise } from '@/hooks/use-all-exercises';
@@ -537,7 +537,16 @@ type ExerciseCardProps = {
   hasSupersetError?: boolean;
 };
 
-export const ExerciseCard = ({
+// Helper to map column label to field name (used before component renders)
+const getFieldNameFromLabel = (label: string): 'reps' | 'weight' | 'distance' | 'duration' | null => {
+  if (label === 'Reps') return 'reps';
+  if (label === 'kg' || label === 'lbs') return 'weight';
+  if (label === 'km' || label === 'm' || label === 'yards' || label === 'miles' || label === 'feet') return 'distance';
+  if (label === 'minutes' || label === 'seconds') return 'duration';
+  return null; // Optional, None, or other non-data columns
+};
+
+export const ExerciseCard = memo(function ExerciseCard({
   exercise,
   onVideoClick,
   onExerciseChange,
@@ -552,7 +561,7 @@ export const ExerciseCard = ({
   validationErrors,
   onClearValidationField,
   hasSupersetError = false,
-}: ExerciseCardProps) => {
+}: ExerciseCardProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
@@ -568,29 +577,58 @@ export const ExerciseCard = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const isEmpty = !exercise.name || exercise.name === '';
   const isSingleSetOnly = sectionType === 'amrap' || sectionType === 'timed' || sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'emom' || sectionType === 'circuits';
+
+  // Helper to create a default set with category-aware values
+  const createDefaultSetWithCategoryValues = (setNumber: number, exerciseType: string, category?: string): SetData => {
+    const categoryDefaults = getDefaultColumnsForCategory(category);
+    const col1Label = categoryDefaults.column1;
+    const col2Label = categoryDefaults.column2;
+    const col1Value = categoryDefaults.column1Value || '';
+    const col2Value = categoryDefaults.column2Value || '';
+
+    // Start with empty set
+    const set: SetData = {
+      setNumber,
+      type: 'normal',
+      reps: '',
+      weight: '',
+      rest: '90',
+      distance: '',
+      duration: '',
+    };
+
+    // Map column1 value to correct field based on label
+    const field1 = getFieldNameFromLabel(col1Label);
+    if (field1 === 'reps') set.reps = col1Value;
+    else if (field1 === 'weight') set.weight = col1Value;
+    else if (field1 === 'distance') set.distance = col1Value;
+    else if (field1 === 'duration') set.duration = col1Value;
+
+    // Map column2 value to correct field based on label
+    const field2 = getFieldNameFromLabel(col2Label);
+    if (field2 === 'reps') set.reps = col2Value;
+    else if (field2 === 'weight') set.weight = col2Value;
+    else if (field2 === 'distance') set.distance = col2Value;
+    else if (field2 === 'duration') set.duration = col2Value;
+
+    return set;
+  };
+
   const [sets, setSets] = useState<SetData[]>(() => {
     // If parent already has sets (e.g. from restored state), use them.
     if (exercise.sets && exercise.sets.length > 0) {
       return exercise.sets;
     }
 
-    if (isSingleSetOnly) {
-      if (exercise.exerciseType === 'distance_duration') {
-        return [{ setNumber: 1, type: 'normal', reps: '', weight: '', rest: '90', distance: '', duration: '', other: '' }];
-      }
-      return [{ setNumber: 1, type: 'normal', reps: '12', weight: '', rest: '90' }];
-    }
+    const category = (exercise as any).category;
 
-    if (exercise.exerciseType === 'distance_duration') {
-      return [
-        { setNumber: 1, type: 'normal', reps: '', weight: '', rest: '90', distance: '', duration: '', other: '' },
-        { setNumber: 2, type: 'normal', reps: '', weight: '', rest: '90', distance: '', duration: '', other: '' },
-      ];
+    if (isSingleSetOnly) {
+      return [createDefaultSetWithCategoryValues(1, exercise.exerciseType, category)];
     }
 
     return [
-      { setNumber: 1, type: 'normal', reps: '', weight: '', rest: '90' },
-      { setNumber: 2, type: 'normal', reps: '', weight: '', rest: '90' },
+      createDefaultSetWithCategoryValues(1, exercise.exerciseType, category),
+      createDefaultSetWithCategoryValues(2, exercise.exerciseType, category),
     ];
   });
   const [alternativeSearchQuery, setAlternativeSearchQuery] = useState('');
@@ -741,57 +779,14 @@ export const ExerciseCard = ({
     setIsSearchOpen(false);
     setIsSelectOpen(false);
     setSearchQuery('');
-    // Reset sets to default values when exercise changes based on exercise type and section type
-    let nextSets: SetData[];
 
-    if (isSingleSetOnly) {
-      if (selectedExercise.exerciseType === 'distance_duration') {
-        nextSets = [
-          {
-            setNumber: 1,
-            type: 'normal',
-            reps: '',
-            weight: '',
-            rest: '90',
-            distance: '',
-            duration: '',
-            other: '',
-          },
+    // Reset sets to default values when exercise changes based on exercise type and category
+    const nextSets: SetData[] = isSingleSetOnly
+      ? [createDefaultSetWithCategoryValues(1, selectedExercise.exerciseType, selectedExercise.category)]
+      : [
+          createDefaultSetWithCategoryValues(1, selectedExercise.exerciseType, selectedExercise.category),
+          createDefaultSetWithCategoryValues(2, selectedExercise.exerciseType, selectedExercise.category),
         ];
-      } else {
-        nextSets = [{ setNumber: 1, type: 'normal', reps: '12', weight: '', rest: '90' }];
-      }
-    } else {
-      if (selectedExercise.exerciseType === 'distance_duration') {
-        nextSets = [
-          {
-            setNumber: 1,
-            type: 'normal',
-            reps: '',
-            weight: '',
-            rest: '90',
-            distance: '',
-            duration: '',
-            other: '',
-          },
-          {
-            setNumber: 2,
-            type: 'normal',
-            reps: '',
-            weight: '',
-            rest: '90',
-            distance: '',
-            duration: '',
-            other: '',
-          },
-        ];
-      } else {
-        nextSets = [
-          { setNumber: 1, type: 'normal', reps: '', weight: '', rest: '90' },
-          { setNumber: 2, type: 'normal', reps: '', weight: '', rest: '90' },
-        ];
-      }
-    }
 
     setSets(nextSets);
     // Clear alternatives when main exercise changes
@@ -848,6 +843,66 @@ export const ExerciseCard = ({
       hasSyncedParentSetsRef.current = true;
     }
   }, [exercise.sets]);
+
+  // Sync rest values from parent when they change externally (e.g., superset sync)
+  // This only updates rest, not other set properties, to avoid conflicts
+  useEffect(() => {
+    if (!exercise.sets || exercise.sets.length === 0) return;
+
+    const parentRest = exercise.sets[0]?.rest;
+    const localRest = sets[0]?.rest;
+
+    // Only sync if parent rest differs from local rest (external change)
+    if (parentRest !== undefined && parentRest !== localRest) {
+      setSets(prevSets => prevSets.map(s => ({ ...s, rest: parentRest })));
+    }
+  }, [exercise.sets?.[0]?.rest]);
+
+  // Sync column labels from parent when they change externally (e.g., superset sync)
+  // Also clear the old column's values when the label changes
+  useEffect(() => {
+    const parentColumn1 = (exercise as any).column1Label;
+    if (parentColumn1 !== undefined && parentColumn1 !== column1Label) {
+      // Clear the old column's values before updating the label
+      const oldFieldName = getFieldName(column1Label);
+      if (oldFieldName) {
+        setSets(prevSets => prevSets.map(set => {
+          const newSet = { ...set };
+          if (oldFieldName === 'reps') newSet.reps = '';
+          else if (oldFieldName === 'weight') newSet.weight = '';
+          else if (oldFieldName === 'distance') newSet.distance = '';
+          else if (oldFieldName === 'duration') newSet.duration = '';
+          else if (oldFieldName === 'optional' && newSet.optional) {
+            newSet.optional = { ...newSet.optional, prescribed: '' };
+          }
+          return newSet;
+        }));
+      }
+      setColumn1Label(parentColumn1);
+    }
+  }, [(exercise as any).column1Label]);
+
+  useEffect(() => {
+    const parentColumn2 = (exercise as any).column2Label;
+    if (parentColumn2 !== undefined && parentColumn2 !== column2Label) {
+      // Clear the old column's values before updating the label
+      const oldFieldName = getFieldName(column2Label);
+      if (oldFieldName) {
+        setSets(prevSets => prevSets.map(set => {
+          const newSet = { ...set };
+          if (oldFieldName === 'reps') newSet.reps = '';
+          else if (oldFieldName === 'weight') newSet.weight = '';
+          else if (oldFieldName === 'distance') newSet.distance = '';
+          else if (oldFieldName === 'duration') newSet.duration = '';
+          else if (oldFieldName === 'optional' && newSet.optional) {
+            newSet.optional = { ...newSet.optional, prescribed: '' };
+          }
+          return newSet;
+        }));
+      }
+      setColumn2Label(parentColumn2);
+    }
+  }, [(exercise as any).column2Label]);
 
   // Sync parent alternatives to local state when parent data arrives after initial mount
   // This handles the case where alternatives are loaded asynchronously
@@ -969,9 +1024,10 @@ export const ExerciseCard = ({
     return 'optional';
   };
 
-  const clearColumnValues = (columnLabel: string) => {
+  // Returns cleared sets without calling onExerciseChange - caller should combine with other changes
+  const clearColumnValues = (columnLabel: string): SetData[] => {
     const fieldName = getFieldName(columnLabel);
-    if (!fieldName) return; // None has no field to clear
+    if (!fieldName) return sets; // None has no field to clear, return unchanged
 
     const updated = sets.map(set => {
       const newSet = { ...set };
@@ -991,11 +1047,7 @@ export const ExerciseCard = ({
       return newSet;
     });
     setSets(updated);
-    onExerciseChange({
-      ...exercise,
-      sets: updated,
-      alternatives: exercise.alternatives || [],
-    });
+    return updated;
   };
 
   // Helper to get field value based on column label
@@ -1247,24 +1299,8 @@ export const ExerciseCard = ({
   const handleAddSet = (insertAfterIndex?: number) => {
     if (isSingleSetOnly) return; // Don't allow adding sets for AMRAP/Timed sections
 
-    const createNewSet = (): SetData => {
-      if (exercise.exerciseType === 'distance_duration') {
-        return {
-          setNumber: 0, // Will be renumbered
-          type: 'normal',
-          reps: '',
-          weight: '',
-          rest: '90',
-          distance: '',
-          duration: '',
-          other: '',
-        };
-      } else {
-        return { setNumber: 0, type: 'normal', reps: '12', weight: '', rest: '90' };
-      }
-    };
-
-    const newSet = createNewSet();
+    const category = (exercise as any).category;
+    const newSet = createDefaultSetWithCategoryValues(0, exercise.exerciseType, category); // setNumber will be renumbered
     let updatedSets: SetData[];
 
     if (insertAfterIndex !== undefined && insertAfterIndex >= 0 && insertAfterIndex < sets.length) {
@@ -1568,10 +1604,11 @@ export const ExerciseCard = ({
                         <Select
                           value={column1Label}
                           onValueChange={(value) => {
-                            clearColumnValues(column1Label);
+                            const clearedSets = clearColumnValues(column1Label);
                             setColumn1Label(value);
                             onExerciseChange({
                               ...exercise,
+                              sets: clearedSets,
                               column1Label: value,
                               alternatives: exercise.alternatives || [],
                             });
@@ -1618,10 +1655,11 @@ export const ExerciseCard = ({
                         <Select
                           value={column2Label}
                           onValueChange={(value) => {
-                            clearColumnValues(column2Label);
+                            const clearedSets = clearColumnValues(column2Label);
                             setColumn2Label(value);
                             onExerciseChange({
                               ...exercise,
+                              sets: clearedSets,
                               column2Label: value,
                               alternatives: exercise.alternatives || [],
                             });
@@ -1922,4 +1960,4 @@ export const ExerciseCard = ({
       </Dialog>
     </div>
   );
-};
+});

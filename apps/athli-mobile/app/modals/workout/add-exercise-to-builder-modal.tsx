@@ -194,6 +194,7 @@ export default function AddExerciseToBuilderModal() {
                 exerciseTips: exercise.exerciseTips,
                 variations: exercise.variations,
                 relatedExerciseIds: exercise.relatedExerciseIds,
+                category: exercise.category,
             });
             router.back();
         }
@@ -226,6 +227,7 @@ export default function AddExerciseToBuilderModal() {
                     exerciseTips: ex.exerciseTips,
                     variations: ex.variations,
                     relatedExerciseIds: ex.relatedExerciseIds,
+                    category: ex.category,
                 };
             });
         triggerExercisesSelect(selectedExercises);
