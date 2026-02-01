@@ -620,11 +620,132 @@ export const createListAllMetricsTool = (ctx: ToolContext) =>
   );
 
 // ============================================================================
+// EXERCISE CATALOG TOOL
+// ============================================================================
+
+// Valid filter values for get_exercise_catalog
+const VALID_MUSCLES = [
+  'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Forearms',
+  'Quadriceps', 'Hamstrings', 'Glutes', 'Calves', 'Abs',
+  'Lower Back', 'Traps', 'Lats'
+] as const;
+
+const VALID_CATEGORIES = [
+  'Band', 'Barbell', 'Bodyweight', 'Bosu-Ball', 'Cables', 'Cardio',
+  'Dumbbells', 'Kettlebells', 'Machine', 'Medicine-Ball', 'Plate',
+  'Recovery', 'Smith-Machine', 'Stretches', 'TRX', 'Vitruvian', 'Yoga'
+] as const;
+
+const VALID_DIFFICULTIES = ['Novice', 'Intermediate', 'Advanced'] as const;
+const VALID_FORCES = ['Push', 'Pull', 'Static'] as const;
+const VALID_MECHANICS = ['Compound', 'Isolation'] as const;
+
+export const createGetExerciseCatalogTool = (ctx: ToolContext) =>
+  tool(
+    async ({ muscle, category, difficulty, force, mechanic }) => {
+      const supabase = getSupabaseClient();
+
+      let query = supabase
+        .from('musclewiki_exercise_cache')
+        .select('musclewiki_id, name, target_muscles, category, difficulty, force, mechanic');
+
+      // Apply filters (use ONE at a time for best results)
+      if (muscle) {
+        query = query.contains('target_muscles', [muscle]);
+      }
+      if (category) {
+        query = query.eq('category', category);
+      }
+      if (difficulty) {
+        query = query.eq('difficulty', difficulty);
+      }
+      if (force) {
+        query = query.eq('force', force);
+      }
+      if (mechanic) {
+        query = query.eq('mechanic', mechanic);
+      }
+
+      const { data: exercises, error } = await query.order('name', { ascending: true });
+
+      if (error) {
+        return JSON.stringify({ error: error.message });
+      }
+
+      if (!exercises || exercises.length === 0) {
+        return JSON.stringify({
+          success: false,
+          count: 0,
+          exercises: [],
+          message: 'No exercises found matching the filters. Try using fewer filters or different values.',
+        });
+      }
+
+      // Format as a table for easy AI parsing
+      const header = 'ID   | Name                                    | Target Muscles              | Equipment';
+      const separator = '-----|----------------------------------------|-----------------------------|-----------';
+      const rows = exercises.map((e) => {
+        const id = String(e.musclewiki_id).padEnd(4);
+        const name = (e.name || '').substring(0, 40).padEnd(40);
+        const muscles = (Array.isArray(e.target_muscles) ? e.target_muscles.join(', ') : '').substring(0, 28).padEnd(28);
+        const equipment = e.category || '';
+        return `${id} | ${name} | ${muscles} | ${equipment}`;
+      });
+
+      const table = [header, separator, ...rows].join('\n');
+
+      return JSON.stringify({
+        success: true,
+        count: exercises.length,
+        catalog: table,
+        message: `Found ${exercises.length} exercises. Use the ID (first column) as prescribedExerciseId when creating workouts.`,
+      });
+    },
+    {
+      name: 'get_exercise_catalog',
+      description:
+        'Get the exercise catalog with MuscleWiki IDs. Call this BEFORE create_workout or create_section to get valid exercise IDs. Use ONE filter at a time for best results.',
+      schema: z.object({
+        muscle: z.enum(VALID_MUSCLES).optional()
+          .describe("Filter by target muscle (e.g., 'Chest', 'Back', 'Lats'). Use ONE filter at a time."),
+        category: z.enum(VALID_CATEGORIES).optional()
+          .describe("Filter by equipment (e.g., 'Barbell', 'Dumbbells', 'Machine'). Use ONE filter at a time."),
+        difficulty: z.enum(VALID_DIFFICULTIES).optional()
+          .describe("Filter by difficulty (Novice, Intermediate, Advanced). Use ONE filter at a time."),
+        force: z.enum(VALID_FORCES).optional()
+          .describe("Filter by force type (Push, Pull, Static). Use ONE filter at a time."),
+        mechanic: z.enum(VALID_MECHANICS).optional()
+          .describe("Filter by mechanic (Compound, Isolation). Use ONE filter at a time."),
+      }),
+    }
+  );
+
+// Helper function to validate exercise IDs exist in database
+async function validateExerciseIds(exerciseIds: string[]): Promise<{ valid: boolean; invalidIds: string[] }> {
+  const supabase = getSupabaseClient();
+
+  const { data: exercises, error } = await supabase
+    .from('musclewiki_exercise_cache')
+    .select('musclewiki_id')
+    .in('musclewiki_id', exerciseIds);
+
+  if (error) {
+    return { valid: false, invalidIds: exerciseIds };
+  }
+
+  const foundIds = new Set(exercises?.map(e => String(e.musclewiki_id)) || []);
+  const invalidIds = exerciseIds.filter(id => !foundIds.has(id));
+
+  return { valid: invalidIds.length === 0, invalidIds };
+}
+
+// ============================================================================
 // WORKOUT CREATION TOOLS
 // ============================================================================
 
 const workoutExerciseSchema = z.object({
-  name: z.string().describe('Exercise name'),
+  prescribedExerciseId: z.string().describe('MuscleWiki exercise ID (required). Get this from get_exercise_catalog.'),
+  name: z.string().describe('Exercise name (for display)'),
   sets: z.number().default(3).describe('Number of sets'),
   reps: z.string().describe('Rep target (e.g., "8", "8-12", "AMRAP")'),
   weight: z.string().optional().describe('Weight prescription (e.g., "80kg", "RPE 8")'),
@@ -661,6 +782,41 @@ export const createCreateWorkoutTool = (ctx: ToolContext) =>
         }
       }
 
+      // Collect all exercises and validate prescribedExerciseId
+      const allExercises: { name: string; prescribedExerciseId?: string }[] = [];
+      const errors: string[] = [];
+
+      for (const section of sections) {
+        for (const ex of section.exercises) {
+          allExercises.push(ex);
+          if (!ex.prescribedExerciseId) {
+            errors.push(`"${ex.name}" is missing prescribedExerciseId. Call get_exercise_catalog first.`);
+          }
+        }
+      }
+
+      if (errors.length > 0) {
+        return JSON.stringify({
+          success: false,
+          error: 'Invalid exercise IDs:\n' + errors.join('\n') + '\n\nCall get_exercise_catalog to get valid IDs.',
+        });
+      }
+
+      // Validate that all exercise IDs exist in the database
+      const exerciseIds = allExercises.map(ex => ex.prescribedExerciseId!);
+      const { valid, invalidIds } = await validateExerciseIds(exerciseIds);
+
+      if (!valid) {
+        const invalidErrors = invalidIds.map(id => {
+          const ex = allExercises.find(e => e.prescribedExerciseId === id);
+          return `ID "${id}" for "${ex?.name || 'Unknown'}" not found. Check the exercise catalog for correct IDs.`;
+        });
+        return JSON.stringify({
+          success: false,
+          error: 'Invalid exercise IDs:\n' + invalidErrors.join('\n') + '\n\nCall get_exercise_catalog to get valid IDs.',
+        });
+      }
+
       // Count total exercises
       const totalExercises = sections.reduce(
         (sum: number, section: any) => sum + section.exercises.length,
@@ -681,6 +837,7 @@ export const createCreateWorkoutTool = (ctx: ToolContext) =>
             name: section.name,
             type: section.type || 'regular',
             exercises: section.exercises.map((ex: any) => ({
+              prescribedExerciseId: ex.prescribedExerciseId,
               name: ex.name,
               sets: ex.sets || 3,
               reps: ex.reps || '10',
@@ -696,7 +853,7 @@ export const createCreateWorkoutTool = (ctx: ToolContext) =>
     {
       name: 'create_workout',
       description:
-        'Create a new workout template. Returns a payload that the user must confirm before saving to their library.',
+        'Create a new workout template. Requires prescribedExerciseId for each exercise (get IDs from get_exercise_catalog first). Returns a payload that the user must confirm before saving.',
       schema: z.object({
         name: z.string().describe('Workout name'),
         description: z.string().optional().describe('Workout description'),
@@ -725,6 +882,36 @@ export const createCreateSectionTool = (ctx: ToolContext) =>
         });
       }
 
+      // Validate prescribedExerciseId for each exercise
+      const errors: string[] = [];
+      for (const ex of exercises) {
+        if (!ex.prescribedExerciseId) {
+          errors.push(`"${ex.name}" is missing prescribedExerciseId. Call get_exercise_catalog first.`);
+        }
+      }
+
+      if (errors.length > 0) {
+        return JSON.stringify({
+          success: false,
+          error: 'Invalid exercise IDs:\n' + errors.join('\n') + '\n\nCall get_exercise_catalog to get valid IDs.',
+        });
+      }
+
+      // Validate that all exercise IDs exist in the database
+      const exerciseIds = exercises.map((ex: any) => ex.prescribedExerciseId);
+      const { valid, invalidIds } = await validateExerciseIds(exerciseIds);
+
+      if (!valid) {
+        const invalidErrors = invalidIds.map(id => {
+          const ex = exercises.find((e: any) => e.prescribedExerciseId === id);
+          return `ID "${id}" for "${ex?.name || 'Unknown'}" not found. Check the exercise catalog for correct IDs.`;
+        });
+        return JSON.stringify({
+          success: false,
+          error: 'Invalid exercise IDs:\n' + invalidErrors.join('\n') + '\n\nCall get_exercise_catalog to get valid IDs.',
+        });
+      }
+
       return JSON.stringify({
         success: true,
         action: 'create_section',
@@ -733,6 +920,7 @@ export const createCreateSectionTool = (ctx: ToolContext) =>
           description: description || '',
           type: type || 'regular',
           exercises: exercises.map((ex: any) => ({
+            prescribedExerciseId: ex.prescribedExerciseId,
             name: ex.name,
             sets: ex.sets || 3,
             reps: ex.reps || '10',
@@ -747,7 +935,7 @@ export const createCreateSectionTool = (ctx: ToolContext) =>
     {
       name: 'create_section',
       description:
-        'Create a reusable section template. Returns a payload that the user must confirm before saving.',
+        'Create a reusable section template. Requires prescribedExerciseId for each exercise (get IDs from get_exercise_catalog first). Returns a payload that the user must confirm before saving.',
       schema: z.object({
         name: z.string().describe('Section name'),
         description: z.string().optional().describe('Section description'),
@@ -909,6 +1097,7 @@ export const createAllTools = (ctx: ToolContext) => [
 
   // Exercise tools
   createSearchExercisesTool(ctx),
+  createGetExerciseCatalogTool(ctx),
 
   // Coach training tools
   createGetCoachWorkoutsTool(ctx),
