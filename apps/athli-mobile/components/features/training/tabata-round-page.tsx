@@ -43,6 +43,8 @@ type TabataRoundPageProps = {
   isPaused: boolean;
   /** If true, this round is already completed - don't run timer, allow normal navigation */
   isRoundCompleted?: boolean;
+  /** If true, all exercises are complete - don't auto-advance, let user use Next button */
+  allExercisesComplete?: boolean;
 };
 
 const TABATA_COLOR = '#F43F5E'; // Rose/pink-red for Tabata (distinct from timer red)
@@ -63,6 +65,7 @@ export const TabataRoundPage = ({
   onRoundComplete,
   isPaused,
   isRoundCompleted = false,
+  allExercisesComplete = false,
 }: TabataRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -89,6 +92,9 @@ export const TabataRoundPage = ({
   const lastCompletionMessageRef = useRef(-1);
   const hasShownCompletionRef = useRef(false);
 
+  // Ref to track allExercisesComplete
+  const allExercisesCompleteRef = useRef(allExercisesComplete);
+
   // Keep refs updated with latest prop values
   useEffect(() => {
     workSecRef.current = workSec;
@@ -113,6 +119,10 @@ export const TabataRoundPage = ({
   useEffect(() => {
     totalRoundsRef.current = totalRounds;
   }, [totalRounds]);
+
+  useEffect(() => {
+    allExercisesCompleteRef.current = allExercisesComplete;
+  }, [allExercisesComplete]);
 
   // Timer state - ensure we have a valid initial value
   const [currentPhase, setCurrentPhase] = useState<TimerPhase>('work');
@@ -181,9 +191,14 @@ export const TabataRoundPage = ({
         timerRef.current = null;
       }
 
+      // If all exercises are complete, don't auto-advance - let user use Next button
+      if (allExercisesCompleteRef.current) {
+        return;
+      }
+
       // Check if this is the last round
       const isLastRound = currentRoundRef.current >= totalRoundsRef.current;
-      
+
       if (isLastRound) {
         // Last round - show complete overlay
         showTransitionOverlay(
