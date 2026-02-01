@@ -139,7 +139,7 @@ export const mapSetDataToPayload = (
     setNumber: set.setNumber,
     type: setType,
     restSec: set.rest ? (parseNumber(set.rest, 'null') ?? null) : null,
-    completed: false,
+    completed: 'not_started',
     skipped: false,
     trackableField1: createTrackableField(col1Label, field1Value),
     trackableField2: createTrackableField(col2Label, field2Value),
@@ -159,7 +159,7 @@ export const mapSetDataToPayload = (
         return {
           trackableField1: createTrackableField(col1Label, field1Prescribed),
           trackableField2: createTrackableField(col2Label, field2Prescribed),
-          completed: false,
+          completed: 'not_started' as const,
         };
       }
     ).filter((s) => s.trackableField1.prescribed != null || s.trackableField2.prescribed != null);
@@ -226,6 +226,7 @@ export const buildRegularExercisePayload = (
     tempo: exercise.tempo || null,
     column1Label: col1Label,
     column2Label: col2Label,
+    completed: 'not_started',
   };
 };
 
@@ -249,7 +250,7 @@ export const buildRoundExercisePayload = (
     prescribedExerciseId: exercise.exerciseId,
     performedExerciseId: null,
     notes: exercise.notes || null,
-    completed: false,
+    completed: 'not_started',
     eachSide: exercise.eachSide || false,
     tempo: exercise.tempo || null,
     trackableField1: createTrackableField(col1Label, field1Value),
@@ -292,6 +293,7 @@ export const buildCircuitExercisePayload = (
     tempo: exercise.tempo || null,
     column1Label: col1Label,
     column2Label: col2Label,
+    completed: 'not_started',
   };
 };
 
@@ -340,6 +342,7 @@ export const buildSectionPayload = (
       type: 'regular',
       exercises,
       notes: section.notes || null,
+      completed: 'not_started',
     };
   }
 
@@ -355,10 +358,10 @@ export const buildSectionPayload = (
       name: section.name,
       type: 'amrap',
       durationSec: section.durationSec || 0,
-      actualDurationSec: null,
       roundsCompleted: null,
       exercises,
       notes: section.notes || null,
+      completed: 'not_started',
     };
   }
 
@@ -375,10 +378,10 @@ export const buildSectionPayload = (
       workSec: section.workSec || 20,
       restSec: section.restSec || 10,
       rounds: section.rounds || 8,
-      actualRounds: null,
-      totalDurationSec: null,
+      completedRounds: 0,
       exercises,
       notes: section.notes || null,
+      completed: 'not_started',
     };
   }
 
@@ -395,10 +398,10 @@ export const buildSectionPayload = (
       workSec: section.workSec || 40,
       restSec: section.restSec || 20,
       rounds: section.rounds || 10,
-      actualRounds: null,
-      totalDurationSec: null,
+      completedRounds: 0,
       exercises,
       notes: section.notes || null,
+      completed: 'not_started',
     };
   }
 
@@ -414,9 +417,10 @@ export const buildSectionPayload = (
       type: 'emom',
       intervalSec: section.intervalSec || 60,
       durationMin: section.durationMin || 10,
-      actualDurationSec: null,
+      completedRounds: 0,
       exercises,
       notes: section.notes || null,
+      completed: 'not_started',
     };
   }
 
@@ -431,9 +435,10 @@ export const buildSectionPayload = (
       name: section.name,
       type: 'circuits',
       rounds: section.rounds || 3,
-      actualRounds: null,
+      completedRounds: 0,
       exercises,
       notes: section.notes || null,
+      completed: 'not_started',
     };
   }
 
@@ -450,6 +455,7 @@ export const buildSectionPayload = (
     category: section.category || 'warmup',
     exercises,
     notes: section.notes || null,
+    completed: 'not_started',
   };
 };
 
@@ -519,7 +525,7 @@ export const buildWorkoutPayload = (
         section.exercises.forEach((group) => {
           totalExercises += group.exercises.length;
         });
-      } else if (section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom') {
+      } else if (section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom' || section.type === 'circuits') {
         section.exercises.forEach((group) => {
           totalExercises += group.exercises.length;
         });

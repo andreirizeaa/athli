@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, startTransition, useDeferredValue, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
@@ -104,6 +104,10 @@ import {
   handleTopLevelSupersetUnlink as unlinkTopLevelSuperset,
   syncSupersetSetsInSection,
   syncSupersetSetsTopLevel,
+  syncSupersetRestInSection,
+  syncSupersetRestTopLevel,
+  syncSupersetColumnLabelsInSection,
+  syncSupersetColumnLabelsTopLevel,
 } from '@/components/training/shared/utils/superset-handlers';
 import {
   handleDrop as dropExercise,
@@ -128,6 +132,696 @@ type WorkoutBuilderProps = {
   onDelete?: () => Promise<void> | void;
   initialAiMode?: boolean; // If true, open with AI builder mode active
 };
+
+// Handlers type for the ref-based pattern (avoids recreating functions on every render)
+type SectionItemHandlers = {
+  onToggleCollapse: (sectionId: string) => void;
+  onSectionNameChange: (sectionId: string, newName: string) => void;
+  onSetEditingSectionNameId: (id: string | null) => void;
+  onSetWorkoutTitle: (title: string) => void;
+  onSectionConfigChange: (sectionId: string, config: Partial<WorkoutSection>) => void;
+  onSectionNotesChange: (sectionId: string, notes: string) => void;
+  onMoveTopLevelUp: (itemIndex: number) => void;
+  onMoveTopLevelDown: (itemIndex: number) => void;
+  onSaveSectionToLibrary: (section: WorkoutSection) => void;
+  onSetSectionToDelete: (section: WorkoutSection) => void;
+  onSectionDragOver: (e: React.DragEvent, sectionId: string, exerciseCount: number) => void;
+  onSectionDragLeave: (e: React.DragEvent) => void;
+  onSectionDrop: (e: React.DragEvent, sectionId: string) => void;
+  onRegisterSectionRef: (sectionId: string, el: HTMLDivElement | null) => void;
+  onAddExercise: (sectionId: string) => void;
+  onExerciseChange: (sectionId: string, exerciseIndex: number, newExercise: ExerciseWithSuperset, oldExercise: ExerciseWithSuperset) => void;
+  onDeleteExercise: (sectionId: string, exerciseIndex: number) => void;
+  onMoveExerciseUp: (sectionId: string, exerciseIndex: number) => void;
+  onMoveExerciseDown: (sectionId: string, exerciseIndex: number, totalExercises: number) => void;
+  onSupersetLink: (sectionId: string, exerciseIndex: number) => void;
+  onSupersetUnlink: (sectionId: string, exerciseIndex: number) => void;
+  onClearSetValidationField: (exerciseInstanceId: string, setIndex: number, field: keyof SetFieldValidation) => void;
+  onVideoClick: (exercise: Exercise) => void;
+  onClearMissingConfigError: (sectionId: string) => void;
+};
+
+// Props for the memoized SectionItem component
+// Uses a ref for handlers to keep props stable and avoid defeating memo
+type SectionItemProps = {
+  section: WorkoutSection;
+  itemIndex: number;
+  isCollapsed: boolean;
+  isSectionMode: boolean;
+  workoutTitle: string;
+  workoutSchemaItemsLength: number;
+  editingSectionNameId: string | null;
+  sectionNameInputRef: React.RefObject<HTMLInputElement | null>;
+  savingSectionId: string | null;
+  draggedExercise: any;
+  draggedSection: any;
+  dragOverSectionId: string | null;
+  dragOverSlot: { sectionId: string; slotIndex: number } | null;
+  focusedExerciseId: string | null;
+  focusedSupersetGroupId: string | null;
+  validationErrors: ValidationErrors;
+  sectionValidationErrors: SectionValidationErrors;
+  exerciseRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
+  // Single stable ref containing all handlers - this is the key to making memo work
+  handlersRef: React.RefObject<SectionItemHandlers>;
+};
+
+// Memoized SectionItem component to prevent unnecessary re-renders when collapsing/expanding
+// Uses handlersRef pattern - the ref is stable, so memo() works properly
+const SectionItem = memo(function SectionItem({
+  section,
+  itemIndex,
+  isCollapsed,
+  isSectionMode,
+  workoutTitle,
+  workoutSchemaItemsLength,
+  editingSectionNameId,
+  sectionNameInputRef,
+  savingSectionId,
+  draggedExercise,
+  draggedSection,
+  dragOverSectionId,
+  dragOverSlot,
+  focusedExerciseId,
+  focusedSupersetGroupId,
+  validationErrors,
+  sectionValidationErrors,
+  exerciseRefs,
+  handlersRef,
+}: SectionItemProps) {
+  // Destructure handlers from ref - the ref is stable so memo works, but we get convenient access to handlers
+  const {
+    onToggleCollapse,
+    onSectionNameChange,
+    onSetEditingSectionNameId,
+    onSetWorkoutTitle,
+    onSectionConfigChange,
+    onSectionNotesChange,
+    onMoveTopLevelUp,
+    onMoveTopLevelDown,
+    onSaveSectionToLibrary,
+    onSetSectionToDelete,
+    onSectionDragOver,
+    onSectionDragLeave,
+    onSectionDrop,
+    onRegisterSectionRef,
+    onAddExercise,
+    onExerciseChange,
+    onDeleteExercise,
+    onMoveExerciseUp,
+    onMoveExerciseDown,
+    onSupersetLink,
+    onSupersetUnlink,
+    onClearSetValidationField,
+    onVideoClick,
+    onClearMissingConfigError,
+  } = handlersRef.current!;
+
+  return (
+    <div key={section.id} data-top-level-item className="relative flex w-full items-stretch flex-shrink-0 min-w-0">
+      <Card
+        className={cn(
+          "bg-sidebar w-full flex flex-col relative min-w-0 border-primary p-0 rounded-xl transition-all",
+          isCollapsed && draggedExercise && dragOverSectionId === section.id && "ring-2 ring-primary bg-primary/5"
+        )}
+        onDragOver={(e) => {
+          if (isCollapsed) {
+            onSectionDragOver(e, section.id, section.exercises?.length || 0);
+          }
+        }}
+        onDragLeave={(e) => {
+          if (isCollapsed) {
+            onSectionDragLeave(e);
+          }
+        }}
+        onDrop={(e) => {
+          if (isCollapsed) {
+            onSectionDrop(e, section.id);
+          }
+        }}
+      >
+        <CardHeader className={cn(
+          "p-0 bg-primary/10 rounded-t-xl",
+          isCollapsed && "rounded-b-xl",
+          !isCollapsed && "border-b border-primary"
+        )}>
+          <div className="flex items-center justify-between px-3 py-2 pb-0 gap-1">
+            <div className="flex items-center gap-1 flex-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 text-foreground bg-background border-input shadow-none shrink-0"
+                    onClick={() => onToggleCollapse(section.id)}
+                    aria-label={isCollapsed ? 'Expand section' : 'Collapse section'}
+                  >
+                    {isCollapsed ? <ChevronDown className="size-4" /> : <ChevronUp className="size-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isCollapsed ? 'Expand section' : 'Collapse section'}
+                </TooltipContent>
+              </Tooltip>
+              {editingSectionNameId === section.id ? (
+                <Input
+                  ref={sectionNameInputRef}
+                  autoFocus
+                  className="h-7 flex-1 min-w-0 border-input bg-background text-sm focus-visible:ring-primary shadow-none"
+                  placeholder={section.type ? (section.type.charAt(0).toUpperCase() + section.type.slice(1)) : 'Section'}
+                  value={isSectionMode ? workoutTitle : (section.name || '')}
+                  onChange={(e) => {
+                    const newName = e.target.value;
+                    onSectionNameChange(section.id, newName);
+                    if (isSectionMode) {
+                      onSetWorkoutTitle(newName);
+                    }
+                  }}
+                  onBlur={() => onSetEditingSectionNameId(null)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === 'Escape') {
+                      onSetEditingSectionNameId(null);
+                    }
+                  }}
+                />
+              ) : (
+                <span
+                  className="text-sm font-medium cursor-pointer hover:text-primary transition-colors truncate max-w-[300px] pl-[3px]"
+                  onClick={() => onSetEditingSectionNameId(section.id)}
+                >
+                  {(isSectionMode ? workoutTitle : section.name) || (
+                    <span className="text-muted-foreground">
+                      {section.type ? (section.type.charAt(0).toUpperCase() + section.type.slice(1)) : 'Section'}
+                    </span>
+                  )}
+                </span>
+              )}
+              {section.type && (
+                <Badge variant="outline" className="ml-2 px-2 py-0.5 text-[10px] font-medium capitalize bg-transparent text-primary border-primary rounded-full shadow-none">
+                  {section.type}
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              {section.type === 'amrap' && (
+                <div className="relative flex items-center">
+                  <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">
+                    minutes
+                  </span>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={section.roundDurationSec ? Math.round(section.roundDurationSec / 60).toString() : ''}
+                    onChange={(e) => {
+                      const rawValue = e.target.value;
+                      const value = rawValue.replace(/\D/g, '');
+                      onSectionConfigChange(section.id, { roundDurationSec: value ? parseInt(value, 10) * 60 : undefined });
+                      if (value && value.trim() !== '') {
+                        onClearMissingConfigError(section.id);
+                      }
+                    }}
+                    className={cn(
+                      'h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14',
+                      sectionValidationErrors[section.id]?.missingConfig && 'border-destructive focus-visible:ring-destructive'
+                    )}
+                    placeholder="-"
+                  />
+                </div>
+              )}
+              {/* Tabata - Static text display (fixed 20s work, 10s rest, 8 rounds) */}
+              {section.type === 'tabata' && (
+                <span className="text-sm">
+                  {section.workSec ?? 20}s work - {section.restSec ?? 10}s rest - {section.rounds ?? 8} rounds
+                </span>
+              )}
+              {/* HIIT - Editable inputs */}
+              {section.type === 'hiit' && (
+                <div className="flex items-center gap-1">
+                  <div className="relative flex items-center">
+                    <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">work (s)</span>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      value={section.workSec?.toString() || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        onSectionConfigChange(section.id, { workSec: value ? parseInt(value, 10) : undefined });
+                      }}
+                      className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14"
+                      placeholder="40"
+                    />
+                  </div>
+                  <div className="relative flex items-center">
+                    <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">rest (s)</span>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      value={section.restSec?.toString() || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        onSectionConfigChange(section.id, { restSec: value ? parseInt(value, 10) : undefined });
+                      }}
+                      className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14"
+                      placeholder="20"
+                    />
+                  </div>
+                  <div className="relative flex items-center">
+                    <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">rounds</span>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      value={section.rounds?.toString() || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        onSectionConfigChange(section.id, { rounds: value ? parseInt(value, 10) : undefined });
+                      }}
+                      className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-12"
+                      placeholder="10"
+                    />
+                  </div>
+                </div>
+              )}
+              {section.type === 'emom' && (
+                <div className="flex items-center gap-1">
+                  <div className="relative flex items-center">
+                    <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">interval (s)</span>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      value={section.intervalSec?.toString() || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        onSectionConfigChange(section.id, { intervalSec: value ? parseInt(value, 10) : undefined });
+                      }}
+                      className="h-7 w-28 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-16"
+                      placeholder="60"
+                    />
+                  </div>
+                  <div className="relative flex items-center">
+                    <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">duration (m)</span>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      value={section.durationMin?.toString() || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        onSectionConfigChange(section.id, { durationMin: value ? parseInt(value, 10) : undefined });
+                      }}
+                      className="h-7 w-28 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-16"
+                      placeholder="10"
+                    />
+                  </div>
+                </div>
+              )}
+              {section.type === 'circuits' && (
+                <div className="relative flex items-center">
+                  <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">rounds</span>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={section.rounds?.toString() || ''}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      onSectionConfigChange(section.id, { rounds: value ? parseInt(value, 10) : undefined });
+                      if (value && value.trim() !== '') {
+                        onClearMissingConfigError(section.id);
+                      }
+                    }}
+                    className={cn(
+                      'h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-12',
+                      sectionValidationErrors[section.id]?.missingConfig && 'border-destructive focus-visible:ring-destructive'
+                    )}
+                    placeholder="3"
+                  />
+                </div>
+              )}
+              {/* Hide actions in section mode */}
+              {!isSectionMode && (
+                <DropdownMenu open={savingSectionId === section.id ? false : undefined}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7 text-foreground bg-background border-input shadow-none shrink-0"
+                      disabled={savingSectionId === section.id}
+                    >
+                      {savingSectionId === section.id ? (
+                        <Loader2 className="size-3 animate-spin" />
+                      ) : (
+                        <Ellipsis className="size-3" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {itemIndex > 0 && (
+                      <DropdownMenuItem onClick={() => onMoveTopLevelUp(itemIndex)}>
+                        <ArrowUp className="size-4 mr-2" />
+                        Move up
+                      </DropdownMenuItem>
+                    )}
+                    {itemIndex < workoutSchemaItemsLength - 1 && (
+                      <DropdownMenuItem onClick={() => onMoveTopLevelDown(itemIndex)}>
+                        <ArrowDown className="size-4 mr-2" />
+                        Move down
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem
+                      onClick={() => onSaveSectionToLibrary(section)}
+                    >
+                      <Save className="size-4 mr-2" />
+                      Save to library
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => onSetSectionToDelete(section)}
+                    >
+                      <Trash2 className="size-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          </div>
+
+        </CardHeader>
+        {!isCollapsed && (
+          <>
+            <div className="overflow-hidden transition-all duration-300 ease-in-out" style={{ maxHeight: '10000px', opacity: 1 }}>
+              <CardContent
+              ref={(el) => onRegisterSectionRef(section.id, el)}
+              data-workout-section
+              className="flex-1 flex flex-col px-3 pt-0.5 pb-0"
+              onDragOver={(e) => onSectionDragOver(e, section.id, section.exercises?.length || 0)}
+              onDragLeave={onSectionDragLeave}
+              onDrop={(e) => onSectionDrop(e, section.id)}
+            >
+              {/* Section Notes - Moved to Top of Content */}
+              <div className="w-full relative mb-3 pt-1">
+                <Input
+                  placeholder="Notes"
+                  value={section.notes || ''}
+                  className="w-full pr-8 border-input bg-background shadow-none"
+                  onChange={(e) => {
+                    const newNotes = e.target.value;
+                    onSectionNotesChange(section.id, newNotes);
+                  }}
+                />
+                {section.notes && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSectionNotesChange(section.id, '');
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Clear notes"
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
+              </div>
+              <div className={cn(
+                'flex-1 w-full',
+                section.exercises && section.exercises.length > 0 ? 'flex flex-col gap-0' : 'flex items-center justify-center',
+                section.isLoading ? 'min-h-[200px]' : ''
+              )}>
+                {section.isLoading ? (
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground">Loading section...</p>
+                  </div>
+                ) : section.exercises && section.exercises.length > 0 ? (
+                  <div className="w-full flex flex-col gap-0">
+                    {/* Drop zone before first exercise */}
+                    <div
+                      className={cn(
+                        'w-full',
+                        draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === 0
+                          ? 'my-1 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm'
+                          : 'h-0'
+                      )}
+                    >
+                      {draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === 0 && (
+                        <span>Drop your exercise here</span>
+                      )}
+                    </div>
+
+                    {(() => {
+                      // Group exercises by superset for unified flashing
+                      const exerciseGroups = groupExercisesBySuperset(section.exercises || []);
+                      let globalExerciseIndex = 0;
+
+                      return exerciseGroups.map((group, groupIndex) => {
+                        const isSuperset = group.length > 1;
+                        const supersetGroupId = group[0]?.supersetGroupId;
+                        const isSupersetFocused = isSuperset && focusedSupersetGroupId && focusedSupersetGroupId === supersetGroupId;
+
+                        const groupContent = group.map((exercise, indexInGroup) => {
+                          const exerciseIndex = globalExerciseIndex;
+                          globalExerciseIndex++;
+
+                          const nextExercise = section.exercises?.[exerciseIndex + 1];
+                          const prevExercise = exerciseIndex > 0 ? section.exercises?.[exerciseIndex - 1] : null;
+
+                          const isLinkedToNext = !!(
+                            exercise.supersetGroupId &&
+                            nextExercise?.supersetGroupId === exercise.supersetGroupId
+                          );
+
+                          const isLinkedToPrev = !!(
+                            exercise.supersetGroupId &&
+                            prevExercise?.supersetGroupId === exercise.supersetGroupId
+                          );
+
+                          const wrapperClasses = cn(
+                            'flex flex-col',
+                            isLinkedToNext ? 'gap-0' : 'gap-2',
+                            indexInGroup === 0 ? '' : isLinkedToPrev ? 'mt-3' : isLinkedToNext ? 'mt-0' : 'mt-1'
+                          );
+
+                          // Only apply individual flash if NOT part of a superset, or if it's a single exercise being focused
+                          const shouldFlashIndividually = !isSuperset && focusedExerciseId === exercise.instanceId;
+
+                          return (
+                            <div
+                              key={exercise.instanceId}
+                              ref={(el) => {
+                                if (el) {
+                                  exerciseRefs.current.set(exercise.instanceId, el);
+                                } else {
+                                  exerciseRefs.current.delete(exercise.instanceId);
+                                }
+                              }}
+                              className={wrapperClasses}
+                            >
+                              <div
+                                data-exercise-card
+                                className={cn(shouldFlashIndividually && "[&>div]:outline [&>div]:outline-1 [&>div]:rounded-lg [&>div]:animate-border-flash")}
+                              >
+                                <ExerciseCard
+                                  key={`${exercise.instanceId}-${exercise.sets?.length || 0}`}
+                                  exercise={exercise}
+                                  isLinkedToPrev={isLinkedToPrev}
+                                  isLinkedToNext={isLinkedToNext}
+                                  onVideoClick={onVideoClick}
+                                  sectionType={section.type}
+                                  validationErrors={validationErrors[exercise.instanceId]}
+                                  hasSupersetError={validationErrors[exercise.instanceId]?.supersetMismatch}
+                                  onClearValidationField={(setIndex, field) =>
+                                    onClearSetValidationField(exercise.instanceId, setIndex, field)
+                                  }
+                                  onMoveUp={exerciseIndex > 0 ? () => onMoveExerciseUp(section.id, exerciseIndex) : undefined}
+                                  onMoveDown={exerciseIndex < (section.exercises?.length || 0) - 1 ? () => onMoveExerciseDown(section.id, exerciseIndex, section.exercises?.length || 0) : undefined}
+                                  canMoveUp={exerciseIndex > 0}
+                                  canMoveDown={exerciseIndex < (section.exercises?.length || 0) - 1}
+                                  onExerciseChange={(newExercise) => {
+                                    onExerciseChange(section.id, exerciseIndex, newExercise as ExerciseWithSuperset, exercise);
+                                  }}
+                                  onDelete={() => {
+                                    onDeleteExercise(section.id, exerciseIndex);
+                                  }}
+                                />
+                              </div>
+
+                              {/* Gap between exercises for non-regular sections */}
+                              {section.type !== 'regular' && exerciseIndex < section.exercises.length - 1 && (
+                                <div className="h-2" />
+                              )}
+
+                              {/* Drop zone between exercises OR superset button */}
+                              {section.type === 'regular' && section.exercises && exerciseIndex < section.exercises.length - 1 && (
+                                <>
+                                  {isLinkedToNext ? (
+                                    // Linked superset - show unlink button (no drop zone even when dragging)
+                                    <div className={cn(
+                                      "relative flex items-center justify-center bg-background mt-2 mb-4",
+                                      // Add red borders on left/right if superset has error
+                                      validationErrors[exercise.instanceId]?.supersetMismatch
+                                        ? "border-x-2 border-x-destructive"
+                                        : "border-x"
+                                    )}>
+                                      <Separator className="absolute w-full" />
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-1.5 bg-background z-10 text-xs h-7 px-2"
+                                        onClick={() => onSupersetUnlink(section.id, exerciseIndex)}
+                                      >
+                                        <Link2Off className="size-3" />
+                                        Unlink
+                                      </Button>
+                                    </div>
+                                  ) : draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === exerciseIndex + 1 ? (
+                                    // Dragging and this is the drop slot - show drop zone
+                                    <div className="my-2 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
+                                      <span>Drop your exercise here</span>
+                                    </div>
+                                  ) : (
+                                    // Show superset button (visible even when dragging, unless drop zone is showing here)
+                                    <div className="flex justify-center my-2">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-1.5 text-xs h-7 px-2"
+                                        onClick={() => onSupersetLink(section.id, exerciseIndex)}
+                                      >
+                                        <Link2 className="size-3" />
+                                        Superset
+                                      </Button>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+
+                              {/* Drop zone after the last exercise */}
+                              {section.exercises && exerciseIndex === section.exercises.length - 1 && draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === exerciseIndex + 1 && (
+                                <div className="my-2 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
+                                  <span>Drop your exercise here</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        });
+
+                        // Wrap superset groups in a container for unified flashing
+                        if (isSuperset) {
+                          return (
+                            <div
+                              key={`superset-${supersetGroupId}`}
+                              className={cn(
+                                "flex flex-col",
+                                groupIndex > 0 && "mt-1",
+                                isSupersetFocused && "outline outline-1 rounded-lg animate-border-flash"
+                              )}
+                            >
+                              {groupContent}
+                            </div>
+                          );
+                        }
+
+                        // Single exercise - render directly (already has its own wrapper)
+                        return (
+                          <div key={group[0]?.instanceId} className={cn(groupIndex > 0 && "mt-1")}>
+                            {groupContent}
+                          </div>
+                        );
+                      });
+                    })()}
+                    <div className="flex justify-center py-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onAddExercise(section.id)}
+                        className="gap-1.5 text-xs h-7 px-2"
+                      >
+                        <Plus className="size-3" />
+                        Add Exercise
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className={cn(
+                      'flex flex-col items-center justify-center w-full transition-all duration-200 my-4 py-2 border-2 border-dashed rounded-lg min-h-[120px] gap-3',
+                      dragOverSectionId === section.id
+                        ? 'border-primary bg-primary/5'
+                        : sectionValidationErrors[section.id]?.emptyExercises
+                          ? 'border-destructive bg-destructive/5'
+                          : 'border-muted-foreground/30 hover:border-primary/50'
+                    )}
+                  >
+                    {dragOverSectionId === section.id ? (
+                      <p className="text-primary font-medium text-sm text-center">
+                        Drop your exercise here
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-muted-foreground text-sm text-center">
+                          Drag exercises from the left or
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 h-8 px-3"
+                          onClick={() => onAddExercise(section.id)}
+                        >
+                          <Plus className="size-3.5" />
+                          Add Exercise
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+            </div>
+          </>
+        )}
+      </Card>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison function for memo - only re-render when necessary
+  // This prevents re-renders when only irrelevant props change (like drag state when not dragging)
+
+  // Always re-render if section data or collapse state changes
+  if (prevProps.section !== nextProps.section) return false;
+  if (prevProps.isCollapsed !== nextProps.isCollapsed) return false;
+  if (prevProps.itemIndex !== nextProps.itemIndex) return false;
+
+  // Re-render if validation state changes
+  if (prevProps.validationErrors !== nextProps.validationErrors) return false;
+  if (prevProps.sectionValidationErrors !== nextProps.sectionValidationErrors) return false;
+
+  // Re-render if editing state changes
+  if (prevProps.editingSectionNameId !== nextProps.editingSectionNameId) return false;
+  if (prevProps.savingSectionId !== nextProps.savingSectionId) return false;
+  if (prevProps.workoutTitle !== nextProps.workoutTitle) return false;
+
+  // Re-render if drag state changes (for drop targets)
+  if (prevProps.draggedExercise !== nextProps.draggedExercise) return false;
+  if (prevProps.draggedSection !== nextProps.draggedSection) return false;
+  if (prevProps.dragOverSectionId !== nextProps.dragOverSectionId) return false;
+  if (prevProps.dragOverSlot !== nextProps.dragOverSlot) return false;
+
+  // Re-render if focus state changes (for highlighting)
+  if (prevProps.focusedExerciseId !== nextProps.focusedExerciseId) return false;
+  if (prevProps.focusedSupersetGroupId !== nextProps.focusedSupersetGroupId) return false;
+
+  // Re-render if items length changes (for move up/down availability)
+  if (prevProps.workoutSchemaItemsLength !== nextProps.workoutSchemaItemsLength) return false;
+
+  // handlersRef, exerciseRefs, sectionNameInputRef are stable refs - don't compare
+  // isSectionMode is constant - don't compare
+
+  // Props are effectively equal - skip re-render
+  return true;
+});
 
 export const WorkoutBuilder = ({
   meta,
@@ -237,6 +931,8 @@ export const WorkoutBuilder = ({
   );
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  // Use deferred value to keep UI responsive during collapse/expand
+  const deferredCollapsedSections = useDeferredValue(collapsedSections);
   const [focusedExerciseId, setFocusedExerciseId] = useState<string | null>(null);
   const [focusedSupersetGroupId, setFocusedSupersetGroupId] = useState<string | null>(null);
   const [isLoadingAiWorkout, setIsLoadingAiWorkout] = useState(false);
@@ -530,10 +1226,12 @@ export const WorkoutBuilder = ({
   } = useExerciseDragDrop({
     onExpandSection: (sectionId) => {
       // Expand the section when dragging over it
-      setCollapsedSections((prev) => {
-        const next = new Set(prev);
-        next.delete(sectionId);
-        return next;
+      startTransition(() => {
+        setCollapsedSections((prev) => {
+          const next = new Set(prev);
+          next.delete(sectionId);
+          return next;
+        });
       });
     },
   });
@@ -1440,9 +2138,14 @@ Focus on proper form and progressive overload.`;
   const handleDrop = (e: React.DragEvent, sectionId: string) => {
     e.preventDefault();
     if (draggedExercise) {
-      setWorkoutSchema((prev) =>
-        dropExercise(sectionId, draggedExercise, prev)
-      );
+      setWorkoutSchema((prev) => {
+        // Find the section to get its type
+        const sectionItem = prev.items.find(
+          (item) => item.itemType === 'section' && item.section.id === sectionId
+        );
+        const sectionType = sectionItem?.itemType === 'section' ? sectionItem.section.type : undefined;
+        return dropExercise(sectionId, draggedExercise, prev, sectionType);
+      });
       markDirty();
       setSectionValidationErrors((prev) => clearEmptyExercisesError(sectionId, prev));
     }
@@ -1488,9 +2191,14 @@ Focus on proper form and progressive overload.`;
     e.stopPropagation();
     if (!draggedExercise) return;
 
-    setWorkoutSchema((prev) =>
-      handleSlotDrop(sectionId, slotIndex, draggedExercise, prev)
-    );
+    setWorkoutSchema((prev) => {
+      // Find the section to get its type
+      const sectionItem = prev.items.find(
+        (item) => item.itemType === 'section' && item.section.id === sectionId
+      );
+      const sectionType = sectionItem?.itemType === 'section' ? sectionItem.section.type : undefined;
+      return handleSlotDrop(sectionId, slotIndex, draggedExercise, prev, sectionType);
+    });
 
     setSectionValidationErrors((prev) => clearEmptyExercisesError(sectionId, prev));
 
@@ -1607,712 +2315,210 @@ Focus on proper form and progressive overload.`;
   // Get sections for equipment and overview panels
   const sectionsForPanels = getSectionsFromItems();
 
-  // Render a section item
+  // Memoized callbacks for SectionItem to prevent unnecessary re-renders
+  const handleToggleCollapse = useCallback((sectionId: string) => {
+    startTransition(() => {
+      setCollapsedSections((prev) => {
+        const next = new Set(prev);
+        if (next.has(sectionId)) {
+          next.delete(sectionId);
+        } else {
+          next.add(sectionId);
+        }
+        return next;
+      });
+    });
+  }, []);
+
+  const handleSectionNameChange = useCallback((sectionId: string, newName: string) => {
+    markDirty();
+    setWorkoutSchema((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => {
+        if (item.itemType === 'section' && item.section.id === sectionId) {
+          return {
+            ...item,
+            section: { ...item.section, name: newName },
+          };
+        }
+        return item;
+      }),
+    }));
+  }, []);
+
+  const handleSectionConfigChange = useCallback((sectionId: string, config: Partial<WorkoutSection>) => {
+    markDirty();
+    setWorkoutSchema((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => {
+        if (item.itemType === 'section' && item.section.id === sectionId) {
+          return {
+            ...item,
+            section: { ...item.section, ...config },
+          };
+        }
+        return item;
+      }),
+    }));
+  }, []);
+
+  const handleSectionNotesChange = useCallback((sectionId: string, notes: string) => {
+    markDirty();
+    setWorkoutSchema((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => {
+        if (item.itemType === 'section' && item.section.id === sectionId) {
+          return {
+            ...item,
+            section: { ...item.section, notes },
+          };
+        }
+        return item;
+      }),
+    }));
+  }, []);
+
+  const handleExerciseChangeInSection = useCallback((
+    sectionId: string,
+    exerciseIndex: number,
+    newExercise: ExerciseWithSuperset,
+    oldExercise: ExerciseWithSuperset
+  ) => {
+    markDirty();
+    handleRecomputeExerciseValidation(
+      oldExercise.instanceId,
+      newExercise.exerciseType as 'weight_reps' | 'reps' | 'distance_duration',
+      newExercise.sets || [],
+      newExercise.eachSide
+    );
+
+    const newSetCount = newExercise.sets?.length || 0;
+    const oldSetCount = oldExercise.sets?.length || 0;
+
+    setWorkoutSchema((prev) => {
+      // First, update the changed exercise
+      let updated = {
+        ...prev,
+        items: prev.items.map((item) => {
+          if (item.itemType === 'section' && item.section.id === sectionId && item.section.exercises) {
+            const updatedExercises: ExerciseWithSuperset[] = [...item.section.exercises];
+            updatedExercises[exerciseIndex] = {
+              ...newExercise,
+              supersetGroupId: oldExercise.supersetGroupId,
+            };
+            return {
+              ...item,
+              section: { ...item.section, exercises: updatedExercises },
+            };
+          }
+          return item;
+        }),
+      };
+
+      // If set count changed and exercise is in a superset, sync other exercises
+      if (newSetCount !== oldSetCount && oldExercise.supersetGroupId) {
+        updated = syncSupersetSetsInSection(sectionId, oldExercise.instanceId, newSetCount, updated);
+      }
+
+      // If rest changed and exercise is in a superset, sync rest to all exercises
+      const newRest = newExercise.sets?.[0]?.rest || '';
+      const oldRest = oldExercise.sets?.[0]?.rest || '';
+      if (newRest !== oldRest && oldExercise.supersetGroupId) {
+        updated = syncSupersetRestInSection(sectionId, oldExercise.instanceId, newRest, updated);
+      }
+
+      // If column labels changed and exercise is in a superset, sync to all exercises
+      const newColumn1 = newExercise.column1Label;
+      const newColumn2 = newExercise.column2Label;
+      const oldColumn1 = oldExercise.column1Label;
+      const oldColumn2 = oldExercise.column2Label;
+      if ((newColumn1 !== oldColumn1 || newColumn2 !== oldColumn2) && oldExercise.supersetGroupId) {
+        updated = syncSupersetColumnLabelsInSection(sectionId, oldExercise.instanceId, newColumn1, newColumn2, updated);
+      }
+
+      return updated;
+    });
+  }, [handleRecomputeExerciseValidation]);
+
+  const handleDeleteExerciseInSection = useCallback((sectionId: string, exerciseIndex: number) => {
+    markDirty();
+    setWorkoutSchema((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => {
+        if (item.itemType === 'section' && item.section.id === sectionId && item.section.exercises) {
+          const updatedExercises = item.section.exercises.filter((_, idx) => idx !== exerciseIndex);
+          return {
+            ...item,
+            section: { ...item.section, exercises: updatedExercises },
+          };
+        }
+        return item;
+      }),
+    }));
+  }, []);
+
+  const handleClearMissingConfigError = useCallback((sectionId: string) => {
+    setSectionValidationErrors((prev) => clearMissingConfigError(sectionId, prev));
+  }, []);
+
+  // Stable ref for section item handlers - the ref object never changes, only its contents
+  // This allows SectionItem to be properly memoized while still having access to current handlers
+  const sectionItemHandlersRef = useRef<SectionItemHandlers>(null!);
+
+  // Update the handlers ref on every render so it always has the latest handlers
+  sectionItemHandlersRef.current = {
+    onToggleCollapse: handleToggleCollapse,
+    onSectionNameChange: handleSectionNameChange,
+    onSetEditingSectionNameId: setEditingSectionNameId,
+    onSetWorkoutTitle: setWorkoutTitle,
+    onSectionConfigChange: handleSectionConfigChange,
+    onSectionNotesChange: handleSectionNotesChange,
+    onMoveTopLevelUp: handleMoveTopLevelExerciseUp,
+    onMoveTopLevelDown: handleMoveTopLevelExerciseDown,
+    onSaveSectionToLibrary: handleSaveSectionToLibrary,
+    onSetSectionToDelete: setSectionToDelete,
+    onSectionDragOver: handleSectionDragOver,
+    onSectionDragLeave: handleSectionDragLeave,
+    onSectionDrop: handleSectionDrop,
+    onRegisterSectionRef: registerSectionRef,
+    onAddExercise: handleAddExercise,
+    onExerciseChange: handleExerciseChangeInSection,
+    onDeleteExercise: handleDeleteExerciseInSection,
+    onMoveExerciseUp: handleMoveExerciseUp,
+    onMoveExerciseDown: handleMoveExerciseDown,
+    onSupersetLink: handleSupersetLink,
+    onSupersetUnlink: handleSupersetUnlink,
+    onClearSetValidationField: handleClearSetValidationField,
+    onVideoClick: handleExerciseClick,
+    onClearMissingConfigError: handleClearMissingConfigError,
+  };
+
+  // Render a section item using the memoized SectionItem component
   const renderSectionItem = (section: WorkoutSection, itemIndex: number) => {
-    const isCollapsed = collapsedSections.has(section.id);
+    const isCollapsed = deferredCollapsedSections.has(section.id);
     return (
-      <div key={section.id} data-top-level-item className="relative flex w-full items-stretch flex-shrink-0 min-w-0">
-        <Card
-          className={cn(
-            "bg-sidebar w-full flex flex-col relative min-w-0 border-primary p-0 rounded-xl transition-all",
-            isCollapsed && draggedExercise && dragOverSectionId === section.id && "ring-2 ring-primary bg-primary/5"
-          )}
-          onDragOver={(e) => {
-            if (isCollapsed) {
-              handleSectionDragOver(e, section.id, section.exercises?.length || 0);
-            }
-          }}
-          onDragLeave={(e) => {
-            if (isCollapsed) {
-              handleSectionDragLeave(e);
-            }
-          }}
-          onDrop={(e) => {
-            if (isCollapsed) {
-              handleSectionDrop(e, section.id);
-            }
-          }}
-        >
-          <CardHeader className={cn(
-            "p-0 bg-primary/10 rounded-t-xl",
-            isCollapsed && "rounded-b-xl",
-            !isCollapsed && "border-b border-primary"
-          )}>
-            <div className="flex items-center justify-between px-3 py-2 pb-0 gap-1">
-              <div className="flex items-center gap-1 flex-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7 text-foreground bg-background border-input shadow-none shrink-0"
-                      onClick={() => {
-                        setCollapsedSections((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(section.id)) {
-                            next.delete(section.id);
-                          } else {
-                            next.add(section.id);
-                          }
-                          return next;
-                        });
-                      }}
-                      aria-label={isCollapsed ? 'Expand section' : 'Collapse section'}
-                    >
-                      {isCollapsed ? <ChevronDown className="size-4" /> : <ChevronUp className="size-4" />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {isCollapsed ? 'Expand section' : 'Collapse section'}
-                  </TooltipContent>
-                </Tooltip>
-                {editingSectionNameId === section.id ? (
-                  <Input
-                    ref={sectionNameInputRef}
-                    autoFocus
-                    className="h-7 flex-1 min-w-0 border-input bg-background text-sm focus-visible:ring-primary shadow-none"
-                    placeholder={section.type ? (section.type.charAt(0).toUpperCase() + section.type.slice(1)) : 'Section'}
-                    value={isSectionMode ? workoutTitle : (section.name || '')}
-                    onChange={(e) => {
-                      const newName = e.target.value;
-                      markDirty();
-                      setWorkoutSchema((prev) => ({
-                        ...prev,
-                        items: prev.items.map((item) => {
-                          if (item.itemType === 'section' && item.section.id === section.id) {
-                            return {
-                              ...item,
-                              section: { ...item.section, name: newName },
-                            };
-                          }
-                          return item;
-                        }),
-                      }));
-                      // Sync to Top Title if in Section Mode
-                      if (isSectionMode) {
-                        setWorkoutTitle(newName);
-                      }
-                    }}
-                    onBlur={() => setEditingSectionNameId(null)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === 'Escape') {
-                        setEditingSectionNameId(null);
-                      }
-                    }}
-                  />
-                ) : (
-                  <span
-                    className="text-sm font-medium cursor-pointer hover:text-primary transition-colors truncate max-w-[300px] pl-[3px]"
-                    onClick={() => setEditingSectionNameId(section.id)}
-                  >
-                    {(isSectionMode ? workoutTitle : section.name) || (
-                      <span className="text-muted-foreground">
-                        {section.type ? (section.type.charAt(0).toUpperCase() + section.type.slice(1)) : 'Section'}
-                      </span>
-                    )}
-                  </span>
-                )}
-                {section.type && (
-                  <Badge variant="outline" className="ml-2 px-2 py-0.5 text-[10px] font-medium capitalize bg-transparent text-primary border-primary rounded-full shadow-none">
-                    {section.type}
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                {section.type === 'amrap' && (
-                  <div className="relative flex items-center">
-                    <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">
-                      minutes
-                    </span>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      value={section.roundDurationSec ? Math.round(section.roundDurationSec / 60).toString() : ''}
-                      onChange={(e) => {
-                        const rawValue = e.target.value;
-                        const value = rawValue.replace(/\D/g, '');
-
-                        markDirty();
-                        setWorkoutSchema((prev) => ({
-                          ...prev,
-                          items: prev.items.map((item) => {
-                            if (item.itemType === 'section' && item.section.id === section.id) {
-                              return {
-                                ...item,
-                                section: {
-                                  ...item.section,
-                                  roundDurationSec: value ? parseInt(value, 10) * 60 : undefined,
-                                },
-                              };
-                            }
-                            return item;
-                          }),
-                        }));
-                        if (value && value.trim() !== '') {
-                          setSectionValidationErrors((prev) => clearMissingConfigError(section.id, prev));
-                        }
-                      }}
-                      className={cn(
-                        'h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14',
-                        sectionValidationErrors[section.id]?.missingConfig && 'border-destructive focus-visible:ring-destructive'
-                      )}
-                      placeholder="-"
-                    />
-                  </div>
-                )}
-                {(section.type === 'tabata' || section.type === 'hiit') && (
-                  <div className="flex items-center gap-1">
-                    <div className="relative flex items-center">
-                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">work (s)</span>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={section.workSec?.toString() || ''}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          markDirty();
-                          setWorkoutSchema((prev) => ({
-                            ...prev,
-                            items: prev.items.map((item) => {
-                              if (item.itemType === 'section' && item.section.id === section.id) {
-                                return { ...item, section: { ...item.section, workSec: value ? parseInt(value, 10) : undefined } };
-                              }
-                              return item;
-                            }),
-                          }));
-                        }}
-                        className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14"
-                        placeholder={section.type === 'tabata' ? '20' : '40'}
-                      />
-                    </div>
-                    <div className="relative flex items-center">
-                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">rest (s)</span>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={section.restSec?.toString() || ''}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          markDirty();
-                          setWorkoutSchema((prev) => ({
-                            ...prev,
-                            items: prev.items.map((item) => {
-                              if (item.itemType === 'section' && item.section.id === section.id) {
-                                return { ...item, section: { ...item.section, restSec: value ? parseInt(value, 10) : undefined } };
-                              }
-                              return item;
-                            }),
-                          }));
-                        }}
-                        className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-14"
-                        placeholder={section.type === 'tabata' ? '10' : '20'}
-                      />
-                    </div>
-                    <div className="relative flex items-center">
-                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">rounds</span>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={section.rounds?.toString() || ''}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          markDirty();
-                          setWorkoutSchema((prev) => ({
-                            ...prev,
-                            items: prev.items.map((item) => {
-                              if (item.itemType === 'section' && item.section.id === section.id) {
-                                return { ...item, section: { ...item.section, rounds: value ? parseInt(value, 10) : undefined } };
-                              }
-                              return item;
-                            }),
-                          }));
-                        }}
-                        className="h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-12"
-                        placeholder={section.type === 'tabata' ? '8' : '10'}
-                      />
-                    </div>
-                  </div>
-                )}
-                {section.type === 'emom' && (
-                  <div className="flex items-center gap-1">
-                    <div className="relative flex items-center">
-                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">interval (s)</span>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={section.intervalSec?.toString() || ''}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          markDirty();
-                          setWorkoutSchema((prev) => ({
-                            ...prev,
-                            items: prev.items.map((item) => {
-                              if (item.itemType === 'section' && item.section.id === section.id) {
-                                return { ...item, section: { ...item.section, intervalSec: value ? parseInt(value, 10) : undefined } };
-                              }
-                              return item;
-                            }),
-                          }));
-                        }}
-                        className="h-7 w-28 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-16"
-                        placeholder="60"
-                      />
-                    </div>
-                    <div className="relative flex items-center">
-                      <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">duration (m)</span>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={section.durationMin?.toString() || ''}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          markDirty();
-                          setWorkoutSchema((prev) => ({
-                            ...prev,
-                            items: prev.items.map((item) => {
-                              if (item.itemType === 'section' && item.section.id === section.id) {
-                                return { ...item, section: { ...item.section, durationMin: value ? parseInt(value, 10) : undefined } };
-                              }
-                              return item;
-                            }),
-                          }));
-                        }}
-                        className="h-7 w-28 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-16"
-                        placeholder="10"
-                      />
-                    </div>
-                  </div>
-                )}
-                {section.type === 'circuits' && (
-                  <div className="relative flex items-center">
-                    <span className="absolute right-2 text-[10px] font-medium text-muted-foreground pointer-events-none">rounds</span>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      value={section.rounds?.toString() || ''}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '');
-                        markDirty();
-                        setWorkoutSchema((prev) => ({
-                          ...prev,
-                          items: prev.items.map((item) => {
-                            if (item.itemType === 'section' && item.section.id === section.id) {
-                              return { ...item, section: { ...item.section, rounds: value ? parseInt(value, 10) : undefined } };
-                            }
-                            return item;
-                          }),
-                        }));
-                        if (value && value.trim() !== '') {
-                          setSectionValidationErrors((prev) => clearMissingConfigError(section.id, prev));
-                        }
-                      }}
-                      className={cn(
-                        'h-7 w-24 text-left text-[11px] bg-background border-input shadow-none pl-2 pr-12',
-                        sectionValidationErrors[section.id]?.missingConfig && 'border-destructive focus-visible:ring-destructive'
-                      )}
-                      placeholder="3"
-                    />
-                  </div>
-                )}
-                {/* Hide actions in section mode */}
-                {!isSectionMode && (
-                  <DropdownMenu open={savingSectionId === section.id ? false : undefined}>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7 text-foreground bg-background border-input shadow-none shrink-0"
-                        disabled={savingSectionId === section.id}
-                      >
-                        {savingSectionId === section.id ? (
-                          <Loader2 className="size-3 animate-spin" />
-                        ) : (
-                          <Ellipsis className="size-3" />
-                        )}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {itemIndex > 0 && (
-                        <DropdownMenuItem onClick={() => handleMoveTopLevelExerciseUp(itemIndex)}>
-                          <ArrowUp className="size-4 mr-2" />
-                          Move up
-                        </DropdownMenuItem>
-                      )}
-                      {itemIndex < workoutSchema.items.length - 1 && (
-                        <DropdownMenuItem onClick={() => handleMoveTopLevelExerciseDown(itemIndex)}>
-                          <ArrowDown className="size-4 mr-2" />
-                          Move down
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem
-                        onClick={() => handleSaveSectionToLibrary(section)}
-                      >
-                        <Save className="size-4 mr-2" />
-                        Save to library
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setSectionToDelete(section)}
-                      >
-                        <Trash2 className="size-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-            </div>
-
-          </CardHeader>
-          {!isCollapsed && (
-            <>
-              <div className="overflow-hidden transition-all duration-300 ease-in-out" style={{ maxHeight: '10000px', opacity: 1 }}>
-                <CardContent
-                ref={(el) => registerSectionRef(section.id, el)}
-                data-workout-section
-                className="flex-1 flex flex-col px-3 pt-0.5 pb-0"
-                onDragOver={(e) => handleSectionDragOver(e, section.id, section.exercises?.length || 0)}
-                onDragLeave={handleSectionDragLeave}
-                onDrop={(e) => handleSectionDrop(e, section.id)}
-              >
-                {/* Section Notes - Moved to Top of Content */}
-                <div className="w-full relative mb-3 pt-1">
-                  <Input
-                    placeholder="Notes"
-                    value={section.notes || ''}
-                    className="w-full pr-8 border-input bg-background shadow-none"
-                    onChange={(e) => {
-                      const newNotes = e.target.value;
-                      markDirty();
-                      setWorkoutSchema((prev) => ({
-                        ...prev,
-                        items: prev.items.map((item) => {
-                          if (item.itemType === 'section' && item.section.id === section.id) {
-                            return {
-                              ...item,
-                              section: { ...item.section, notes: newNotes },
-                            };
-                          }
-                          return item;
-                        }),
-                      }));
-                    }}
-                  />
-                  {section.notes && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        markDirty();
-                        setWorkoutSchema((prev) => ({
-                          ...prev,
-                          items: prev.items.map((item) => {
-                            if (item.itemType === 'section' && item.section.id === section.id) {
-                              return {
-                                ...item,
-                                section: { ...item.section, notes: '' },
-                              };
-                            }
-                            return item;
-                          }),
-                        }));
-                      }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label="Clear notes"
-                    >
-                      <X className="size-3" />
-                    </button>
-                  )}
-                </div>
-                <div className={cn(
-                  'flex-1 w-full',
-                  section.exercises && section.exercises.length > 0 ? 'flex flex-col gap-0' : 'flex items-center justify-center',
-                  section.isLoading ? 'min-h-[200px]' : ''
-                )}>
-                  {section.isLoading ? (
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                      <p className="text-sm text-muted-foreground">Loading section...</p>
-                    </div>
-                  ) : section.exercises && section.exercises.length > 0 ? (
-                    <div className="w-full flex flex-col gap-0">
-                      {/* Drop zone before first exercise */}
-                      <div
-                        className={cn(
-                          'w-full',
-                          draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === 0
-                            ? 'my-1 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm'
-                            : 'h-0'
-                        )}
-                      >
-                        {draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === 0 && (
-                          <span>Drop your exercise here</span>
-                        )}
-                      </div>
-
-                      {(() => {
-                        // Group exercises by superset for unified flashing
-                        const exerciseGroups = groupExercisesBySuperset(section.exercises || []);
-                        let globalExerciseIndex = 0;
-
-                        return exerciseGroups.map((group, groupIndex) => {
-                          const isSuperset = group.length > 1;
-                          const supersetGroupId = group[0]?.supersetGroupId;
-                          const isSupersetFocused = isSuperset && focusedSupersetGroupId && focusedSupersetGroupId === supersetGroupId;
-
-                          const groupContent = group.map((exercise, indexInGroup) => {
-                            const exerciseIndex = globalExerciseIndex;
-                            globalExerciseIndex++;
-
-                            const nextExercise = section.exercises?.[exerciseIndex + 1];
-                            const prevExercise = exerciseIndex > 0 ? section.exercises?.[exerciseIndex - 1] : null;
-
-                            const isLinkedToNext = !!(
-                              exercise.supersetGroupId &&
-                              nextExercise?.supersetGroupId === exercise.supersetGroupId
-                            );
-
-                            const isLinkedToPrev = !!(
-                              exercise.supersetGroupId &&
-                              prevExercise?.supersetGroupId === exercise.supersetGroupId
-                            );
-
-                            const wrapperClasses = cn(
-                              'flex flex-col',
-                              isLinkedToNext ? 'gap-0' : 'gap-2',
-                              indexInGroup === 0 ? '' : isLinkedToPrev ? '-mt-px' : isLinkedToNext ? 'mt-0' : 'mt-1'
-                            );
-
-                            // Only apply individual flash if NOT part of a superset, or if it's a single exercise being focused
-                            const shouldFlashIndividually = !isSuperset && focusedExerciseId === exercise.instanceId;
-
-                            return (
-                              <div
-                                key={exercise.instanceId}
-                                ref={(el) => {
-                                  if (el) {
-                                    exerciseRefs.current.set(exercise.instanceId, el);
-                                  } else {
-                                    exerciseRefs.current.delete(exercise.instanceId);
-                                  }
-                                }}
-                                className={wrapperClasses}
-                              >
-                                <div
-                                  data-exercise-card
-                                  className={cn(shouldFlashIndividually && "[&>div]:outline [&>div]:outline-1 [&>div]:rounded-lg [&>div]:animate-border-flash")}
-                                >
-                                  <ExerciseCard
-                                    key={`${exercise.instanceId}-${exercise.sets?.length || 0}`}
-                                    exercise={exercise}
-                                    isLinkedToPrev={isLinkedToPrev}
-                                    isLinkedToNext={isLinkedToNext}
-                                    onVideoClick={handleExerciseClick}
-                                    sectionType={section.type}
-                                    validationErrors={validationErrors[exercise.instanceId]}
-                                    hasSupersetError={validationErrors[exercise.instanceId]?.supersetMismatch}
-                                    onClearValidationField={(setIndex, field) =>
-                                      handleClearSetValidationField(exercise.instanceId, setIndex, field)
-                                    }
-                                    onMoveUp={exerciseIndex > 0 ? () => handleMoveExerciseUp(section.id, exerciseIndex) : undefined}
-                                    onMoveDown={exerciseIndex < (section.exercises?.length || 0) - 1 ? () => handleMoveExerciseDown(section.id, exerciseIndex, section.exercises?.length || 0) : undefined}
-                                    canMoveUp={exerciseIndex > 0}
-                                    canMoveDown={exerciseIndex < (section.exercises?.length || 0) - 1}
-                                    onExerciseChange={(newExercise) => {
-                                      markDirty();
-                                      const castExercise = newExercise as ExerciseWithSuperset;
-                                      handleRecomputeExerciseValidation(
-                                        exercise.instanceId,
-                                        castExercise.exerciseType as 'weight_reps' | 'reps' | 'distance_duration',
-                                        castExercise.sets || [],
-                                        castExercise.eachSide
-                                      );
-
-                                      const newSetCount = castExercise.sets?.length || 0;
-                                      const oldSetCount = exercise.sets?.length || 0;
-
-                                      setWorkoutSchema((prev) => {
-                                        // First, update the changed exercise
-                                        let updated = {
-                                          ...prev,
-                                          items: prev.items.map((item) => {
-                                            if (item.itemType === 'section' && item.section.id === section.id && item.section.exercises) {
-                                              const updatedExercises: ExerciseWithSuperset[] = [...item.section.exercises];
-                                              updatedExercises[exerciseIndex] = {
-                                                ...castExercise,
-                                                supersetGroupId: exercise.supersetGroupId,
-                                              };
-                                              return {
-                                                ...item,
-                                                section: { ...item.section, exercises: updatedExercises },
-                                              };
-                                            }
-                                            return item;
-                                          }),
-                                        };
-
-                                        // If set count changed and exercise is in a superset, sync other exercises
-                                        if (newSetCount !== oldSetCount && exercise.supersetGroupId) {
-                                          updated = syncSupersetSetsInSection(section.id, exercise.instanceId, newSetCount, updated);
-                                        }
-
-                                        return updated;
-                                      });
-                                    }}
-                                    onDelete={() => {
-                                      markDirty();
-                                      setWorkoutSchema((prev) => ({
-                                        ...prev,
-                                        items: prev.items.map((item) => {
-                                          if (item.itemType === 'section' && item.section.id === section.id && item.section.exercises) {
-                                            const updatedExercises = item.section.exercises.filter((_, idx) => idx !== exerciseIndex);
-                                            return {
-                                              ...item,
-                                              section: { ...item.section, exercises: updatedExercises },
-                                            };
-                                          }
-                                          return item;
-                                        }),
-                                      }));
-                                    }}
-                                  />
-                                </div>
-
-                                {/* Drop zone between exercises OR superset button */}
-                                {section.exercises && exerciseIndex < section.exercises.length - 1 && (
-                                  <>
-                                    {isLinkedToNext ? (
-                                      // Linked superset - show unlink button (no drop zone even when dragging)
-                                      <div className={cn(
-                                        "relative flex items-center justify-center bg-background py-1",
-                                        // Add red borders on left/right if superset has error
-                                        validationErrors[exercise.instanceId]?.supersetMismatch
-                                          ? "border-x-2 border-x-destructive"
-                                          : "border-x"
-                                      )}>
-                                        <Separator className="absolute w-full" />
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          className="gap-1.5 bg-background z-10 text-xs h-7 px-2"
-                                          onClick={() => handleSupersetUnlink(section.id, exerciseIndex)}
-                                        >
-                                          <Link2Off className="size-3" />
-                                          Unlink
-                                        </Button>
-                                      </div>
-                                    ) : draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === exerciseIndex + 1 ? (
-                                      // Dragging and this is the drop slot - show drop zone
-                                      <div className="my-2 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                                        <span>Drop your exercise here</span>
-                                      </div>
-                                    ) : (
-                                      // Show superset button (visible even when dragging, unless drop zone is showing here)
-                                      <div className="flex justify-center my-2">
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          className="gap-1.5 text-xs h-7 px-2"
-                                          onClick={() => handleSupersetLink(section.id, exerciseIndex)}
-                                        >
-                                          <Link2 className="size-3" />
-                                          Superset
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </>
-                                )}
-
-                                {/* Drop zone after the last exercise */}
-                                {section.exercises && exerciseIndex === section.exercises.length - 1 && draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === exerciseIndex + 1 && (
-                                  <div className="my-2 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                                    <span>Drop your exercise here</span>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          });
-
-                          // Wrap superset groups in a container for unified flashing
-                          if (isSuperset) {
-                            return (
-                              <div
-                                key={`superset-${supersetGroupId}`}
-                                className={cn(
-                                  "flex flex-col",
-                                  groupIndex > 0 && "mt-1",
-                                  isSupersetFocused && "outline outline-1 rounded-lg animate-border-flash"
-                                )}
-                              >
-                                {groupContent}
-                              </div>
-                            );
-                          }
-
-                          // Single exercise - render directly (already has its own wrapper)
-                          return (
-                            <div key={group[0]?.instanceId} className={cn(groupIndex > 0 && "mt-1")}>
-                              {groupContent}
-                            </div>
-                          );
-                        });
-                      })()}
-                      <div className="flex justify-center py-3">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleAddExercise(section.id)}
-                          className="gap-1.5 text-xs h-7 px-2"
-                        >
-                          <Plus className="size-3" />
-                          Add Exercise
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      className={cn(
-                        'flex flex-col items-center justify-center w-full transition-all duration-200 my-4 py-2 border-2 border-dashed rounded-lg min-h-[120px] gap-3',
-                        dragOverSectionId === section.id
-                          ? 'border-primary bg-primary/5'
-                          : sectionValidationErrors[section.id]?.emptyExercises
-                            ? 'border-destructive bg-destructive/5'
-                            : 'border-muted-foreground/30 hover:border-primary/50'
-                      )}
-                    >
-                      {dragOverSectionId === section.id ? (
-                        <p className="text-primary font-medium text-sm text-center">
-                          Drop your exercise here
-                        </p>
-                      ) : (
-                        <>
-                          <p className="text-muted-foreground text-sm text-center">
-                            Drag exercises from the left or
-                          </p>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5 h-8 px-3"
-                            onClick={() => handleAddExercise(section.id)}
-                          >
-                            <Plus className="size-3.5" />
-                            Add Exercise
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-              </div>
-            </>
-          )}
-        </Card>
-      </div>
+      <SectionItem
+        key={section.id}
+        section={section}
+        itemIndex={itemIndex}
+        isCollapsed={isCollapsed}
+        isSectionMode={isSectionMode}
+        workoutTitle={workoutTitle}
+        workoutSchemaItemsLength={workoutSchema.items.length}
+        editingSectionNameId={editingSectionNameId}
+        sectionNameInputRef={sectionNameInputRef}
+        savingSectionId={savingSectionId}
+        draggedExercise={draggedExercise}
+        draggedSection={draggedSection}
+        dragOverSectionId={dragOverSectionId}
+        dragOverSlot={dragOverSlot}
+        focusedExerciseId={focusedExerciseId}
+        focusedSupersetGroupId={focusedSupersetGroupId}
+        validationErrors={validationErrors}
+        sectionValidationErrors={sectionValidationErrors}
+        exerciseRefs={exerciseRefs}
+        handlersRef={sectionItemHandlersRef}
+      />
     );
   };
 
@@ -2414,6 +2620,22 @@ Focus on proper form and progressive overload.`;
                 // If set count changed and exercise is in a superset, sync other exercises
                 if (newSetCount !== oldSetCount && exercise.supersetGroupId) {
                   updated = syncSupersetSetsTopLevel(exercise.instanceId, newSetCount, updated);
+                }
+
+                // If rest changed and exercise is in a superset, sync rest to all exercises
+                const newRest = castExercise.sets?.[0]?.rest || '';
+                const oldRest = exercise.sets?.[0]?.rest || '';
+                if (newRest !== oldRest && exercise.supersetGroupId) {
+                  updated = syncSupersetRestTopLevel(exercise.instanceId, newRest, updated);
+                }
+
+                // If column labels changed and exercise is in a superset, sync to all exercises
+                const newColumn1 = castExercise.column1Label;
+                const newColumn2 = castExercise.column2Label;
+                const oldColumn1 = exercise.column1Label;
+                const oldColumn2 = exercise.column2Label;
+                if ((newColumn1 !== oldColumn1 || newColumn2 !== oldColumn2) && exercise.supersetGroupId) {
+                  updated = syncSupersetColumnLabelsTopLevel(exercise.instanceId, newColumn1, newColumn2, updated);
                 }
 
                 return updated;

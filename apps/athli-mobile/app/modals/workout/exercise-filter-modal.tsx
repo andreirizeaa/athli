@@ -1,10 +1,11 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { Platform, StyleSheet, Text, View, ScrollView } from 'react-native';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check } from 'lucide-react-native';
-import { PressableOpacity } from 'pressto';
+import { X, Check, ChevronRight } from 'lucide-react-native';
+import { PressableOpacity, PressableScale } from 'pressto';
+import SquircleView from 'react-native-fast-squircle';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
@@ -14,11 +15,6 @@ import { useModalCallbacksStore, type ExerciseFilterData } from '@/stores/useMod
 import { IconButton } from '@/components/ui/icon-button';
 import { Dialog } from '@/components/ui/dialog';
 import { hexToRgba } from '@/utils/colorUtils';
-import {
-    MUSCLEWIKI_MUSCLE_OPTIONS,
-    MUSCLEWIKI_CATEGORY_OPTIONS,
-    MUSCLEWIKI_DIFFICULTY_OPTIONS,
-} from '@athli/shared-types';
 
 export default function ExerciseFilterModal() {
     const router = useRouter();
@@ -48,7 +44,21 @@ export default function ExerciseFilterModal() {
     // Dialog state
     const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
-    const { triggerFilterSelect } = useModalCallbacksStore();
+    const { triggerFilterSelect, setFilterValuesSelectCallback } = useModalCallbacksStore();
+
+    // Set up callback to receive selections from filter values modal
+    useEffect(() => {
+        setFilterValuesSelectCallback((filterType: string, values: string[]) => {
+            setPendingFilters(prev => ({
+                ...prev,
+                [filterType]: values,
+            }));
+        });
+
+        return () => {
+            setFilterValuesSelectCallback(() => {});
+        };
+    }, [setFilterValuesSelectCallback]);
 
     // Check if there are changes
     const hasChanges = useMemo(() => {
@@ -82,108 +92,41 @@ export default function ExerciseFilterModal() {
         handleClose();
     }, [pendingFilters, triggerFilterSelect, handleClose]);
 
-    const toggleMuscle = useCallback((muscle: string) => {
-        setPendingFilters(prev => {
-            const currentMuscles = prev.muscles || [];
-            const isSelected = currentMuscles.includes(muscle);
-            return {
-                ...prev,
-                muscles: isSelected
-                    ? currentMuscles.filter(m => m !== muscle)
-                    : [...currentMuscles, muscle],
-            };
-        });
-    }, []);
-
-    const toggleCategory = useCallback((category: string) => {
-        setPendingFilters(prev => {
-            const currentCategories = prev.categories || [];
-            const isSelected = currentCategories.includes(category);
-            return {
-                ...prev,
-                categories: isSelected
-                    ? currentCategories.filter(c => c !== category)
-                    : [...currentCategories, category],
-            };
-        });
-    }, []);
-
-    const toggleDifficulty = useCallback((difficulty: string) => {
-        setPendingFilters(prev => {
-            const currentDifficulties = prev.difficulties || [];
-            const isSelected = currentDifficulties.includes(difficulty);
-            return {
-                ...prev,
-                difficulties: isSelected
-                    ? currentDifficulties.filter(d => d !== difficulty)
-                    : [...currentDifficulties, difficulty],
-            };
-        });
-    }, []);
-
-    const clearMuscles = useCallback(() => {
-        setPendingFilters(prev => ({ ...prev, muscles: [] }));
-    }, []);
-
-    const clearCategories = useCallback(() => {
-        setPendingFilters(prev => ({ ...prev, categories: [] }));
-    }, []);
-
-    const clearDifficulties = useCallback(() => {
-        setPendingFilters(prev => ({ ...prev, difficulties: [] }));
-    }, []);
-
     const clearAllFilters = useCallback(() => {
         setPendingFilters({ muscles: [], categories: [], difficulties: [] });
     }, []);
 
+    const handleOpenFilterValues = useCallback((filterType: 'muscles' | 'categories' | 'difficulties') => {
+        const currentValues = pendingFilters[filterType] || [];
+        router.push({
+            pathname: '/modals/workout/exercise-filter-values-modal',
+            params: {
+                filterType,
+                initialSelected: currentValues.join(','),
+            },
+        });
+    }, [router, pendingFilters]);
+
     const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
     const gradientHeight = headerHeight + 12;
 
-    const renderFilterChip = (
-        label: string,
-        isSelected: boolean,
-        onPress: () => void
-    ) => (
-        <PressableOpacity
-            key={label}
-            onPress={onPress}
-            style={[
-                styles.filterChip,
-                {
-                    backgroundColor: isSelected ? themeColors.primary : themeColors.surfacePrimary,
-                },
-            ]}
-        >
-            <Text
-                style={[
-                    styles.filterChipText,
-                    { color: isSelected ? themeColors.primaryForeground : themeColors.text },
-                ]}
-            >
-                {label}
-            </Text>
-        </PressableOpacity>
-    );
-
-    const renderSectionHeader = (
-        title: string,
-        count: number,
-        onClear: () => void
-    ) => (
-        <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
-                {title}
-            </Text>
-            {count > 0 && (
-                <PressableOpacity onPress={onClear}>
-                    <Text style={[styles.clearButton, { color: themeColors.primary }]}>
-                        {t('exerciseFilter.clear')}
-                    </Text>
-                </PressableOpacity>
-            )}
-        </View>
-    );
+    const filterOptions = [
+        {
+            key: 'muscles' as const,
+            label: t('exerciseFilter.muscleGroup'),
+            count: pendingFilters.muscles?.length || 0,
+        },
+        {
+            key: 'categories' as const,
+            label: t('exerciseFilter.equipment'),
+            count: pendingFilters.categories?.length || 0,
+        },
+        {
+            key: 'difficulties' as const,
+            label: t('exerciseFilter.difficulty'),
+            count: pendingFilters.difficulties?.length || 0,
+        },
+    ];
 
     return (
         <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
@@ -227,71 +170,51 @@ export default function ExerciseFilterModal() {
             </View>
 
             {/* Content */}
-            <ScrollView
-                style={styles.scrollView}
-                contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
-                showsVerticalScrollIndicator={false}
-            >
-                {/* Clear All Button - under header */}
+            <View style={[styles.content, { paddingTop: headerHeight + 16 }]}>
+                {/* Clear All Button */}
                 {activeFilterCount > 0 && (
-                    <PressableOpacity
+                    <PressableScale
                         onPress={clearAllFilters}
-                        style={[styles.clearAllButton, { borderColor: themeColors.border }]}
+                        style={[styles.clearButton, { backgroundColor: themeColors.surfaceSecondary }]}
                     >
-                        <Text style={[styles.clearAllText, { color: themeColors.mutedText }]}>
+                        <Text style={[styles.clearButtonText, { color: themeColors.text }]}>
                             {t('exerciseFilter.clearAll')}
                         </Text>
-                    </PressableOpacity>
+                    </PressableScale>
                 )}
 
-                {/* Muscle Group Section */}
-                {renderSectionHeader(
-                    t('exerciseFilter.muscleGroup'),
-                    pendingFilters.muscles?.length || 0,
-                    clearMuscles
-                )}
-                <View style={styles.filterChipsContainer}>
-                    {MUSCLEWIKI_MUSCLE_OPTIONS.map(option =>
-                        renderFilterChip(
-                            option.label,
-                            pendingFilters.muscles?.includes(option.value) || false,
-                            () => toggleMuscle(option.value)
-                        )
-                    )}
-                </View>
-
-                {/* Equipment Section */}
-                {renderSectionHeader(
-                    t('exerciseFilter.equipment'),
-                    pendingFilters.categories?.length || 0,
-                    clearCategories
-                )}
-                <View style={styles.filterChipsContainer}>
-                    {MUSCLEWIKI_CATEGORY_OPTIONS.map(option =>
-                        renderFilterChip(
-                            option.label,
-                            pendingFilters.categories?.includes(option.value) || false,
-                            () => toggleCategory(option.value)
-                        )
-                    )}
-                </View>
-
-                {/* Difficulty Section */}
-                {renderSectionHeader(
-                    t('exerciseFilter.difficulty'),
-                    pendingFilters.difficulties?.length || 0,
-                    clearDifficulties
-                )}
-                <View style={styles.filterChipsContainer}>
-                    {MUSCLEWIKI_DIFFICULTY_OPTIONS.map(option =>
-                        renderFilterChip(
-                            option.label,
-                            pendingFilters.difficulties?.includes(option.value) || false,
-                            () => toggleDifficulty(option.value)
-                        )
-                    )}
-                </View>
-            </ScrollView>
+                {/* Filter Options Card */}
+                <SquircleView
+                    cornerSmoothing={1}
+                    style={[styles.card, { backgroundColor: themeColors.surfacePrimary }]}
+                >
+                    {filterOptions.map((option, index) => (
+                        <View key={option.key}>
+                            <PressableOpacity
+                                style={styles.filterRow}
+                                onPress={() => handleOpenFilterValues(option.key)}
+                            >
+                                <Text style={[styles.filterLabel, { color: themeColors.text }]}>
+                                    {option.label}
+                                </Text>
+                                <View style={styles.rowRight}>
+                                    {option.count > 0 && (
+                                        <View style={[styles.countBadge, { backgroundColor: themeColors.primary }]}>
+                                            <Text style={[styles.countBadgeText, { color: themeColors.primaryForeground }]}>
+                                                {option.count}
+                                            </Text>
+                                        </View>
+                                    )}
+                                    <ChevronRight {...({ size: 18, color: themeColors.mutedText } as any)} />
+                                </View>
+                            </PressableOpacity>
+                            {index < filterOptions.length - 1 && (
+                                <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
+                            )}
+                        </View>
+                    ))}
+                </SquircleView>
+            </View>
 
             <Dialog
                 visible={showDiscardDialog}
@@ -336,51 +259,57 @@ const styles = StyleSheet.create({
         flex: 1,
         textAlign: 'center',
     },
-    scrollView: {
+    content: {
         flex: 1,
-    },
-    scrollContent: {
         paddingHorizontal: 16,
-        paddingBottom: 40,
     },
-    sectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    clearButton: {
+        width: '100%',
+        height: 44,
+        borderRadius: 22,
         alignItems: 'center',
-        marginTop: 20,
-        marginBottom: 12,
+        justifyContent: 'center',
+        marginBottom: 16,
     },
-    sectionTitle: {
+    clearButtonText: {
         ...typography.p1,
         fontWeight: '600',
     },
-    clearButton: {
-        ...typography.p2,
-        fontWeight: '500',
+    card: {
+        borderRadius: 16,
+        overflow: 'hidden',
     },
-    filterChipsContainer: {
+    filterRow: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-    },
-    filterChip: {
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 20,
-    },
-    filterChipText: {
-        ...typography.p2,
-        fontWeight: '500',
-    },
-    clearAllButton: {
-        marginBottom: 8,
-        paddingVertical: 14,
-        borderRadius: 12,
-        borderWidth: 1,
         alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
     },
-    clearAllText: {
+    filterLabel: {
         ...typography.p1,
         fontWeight: '500',
+    },
+    rowRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    countBadge: {
+        minWidth: 22,
+        height: 22,
+        borderRadius: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 6,
+    },
+    countBadgeText: {
+        ...typography.p2,
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    divider: {
+        height: 1,
+        marginHorizontal: 16,
     },
 });
