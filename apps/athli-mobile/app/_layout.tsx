@@ -288,6 +288,10 @@ function RootLayoutNav() {
           useCoachCompanyStore.getState().clearCompany();
           useChatsStore.getState().clearChats();
           clearClientProfile();
+          // Reset data stores
+          const { useAthleteDataStore, useCoachDataStore } = require('@/stores');
+          useAthleteDataStore.getState().reset();
+          useCoachDataStore.getState().reset();
           router.replace('/welcome');
         } else if (event === 'TOKEN_REFRESHED') {
           // Token was refreshed in background - update session
@@ -392,7 +396,7 @@ function RootLayoutNav() {
             name="welcome"
             options={{
               headerShown: false,
-              animation: 'none',
+              animation: 'fade',
               contentStyle: {
                 backgroundColor: '#090909',
               },
@@ -1195,6 +1199,19 @@ function RootLayoutNav() {
             options={{
               presentation: 'modal',
               headerShown: false,
+              gestureEnabled: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/workout/exercise-filter-values-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
                 gestureDirection: 'vertical',

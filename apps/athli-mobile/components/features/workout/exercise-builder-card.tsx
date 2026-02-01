@@ -380,18 +380,8 @@ export const ExerciseBuilderCard = ({
 
             <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
 
-            {/* Secondary Controls: Tempo & Each Side */}
+            {/* Secondary Controls: Each Side & Tempo */}
             <View style={styles.secondaryControls}>
-                <View style={styles.secondaryControlItem}>
-                    <Text style={[styles.secondaryControlLabel, { color: themeColors.mutedText }]}>Tempo</Text>
-                    <TempoInput
-                        value={exercise.tempo || ''}
-                        onChange={(val) => onUpdateExercise({ tempo: val })}
-                        themeColors={themeColors}
-                        hasError={hasTempoError(validationErrors, exercise.id)}
-                    />
-                </View>
-
                 <View style={styles.secondaryControlItem}>
                     <Text style={[styles.secondaryControlLabel, { color: themeColors.mutedText }]}>Each side</Text>
                     <Switch
@@ -401,6 +391,16 @@ export const ExerciseBuilderCard = ({
                         thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
                         ios_backgroundColor={preset === 'default' ? undefined : themeColors.border}
                         style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+                    />
+                </View>
+
+                <View style={styles.secondaryControlItem}>
+                    <Text style={[styles.secondaryControlLabel, { color: themeColors.mutedText }]}>Tempo</Text>
+                    <TempoInput
+                        value={exercise.tempo || ''}
+                        onChange={(val) => onUpdateExercise({ tempo: val })}
+                        themeColors={themeColors}
+                        hasError={hasTempoError(validationErrors, exercise.id)}
                     />
                 </View>
             </View>
@@ -565,32 +565,32 @@ export const ExerciseBuilderCard = ({
                     );
                 })}
 
-                {/* Add Set Button + Rest Timer */}
-                <View style={styles.addSetRow}>
-                    <View style={styles.setNumberContainer}>
-                        {!hideSetControls && (
+                {/* Add Set Button + Rest Timer (hidden for non-regular sections) */}
+                {!hideSetControls && (
+                    <View style={styles.addSetRow}>
+                        <View style={styles.setNumberContainer}>
                             <PressableScale
                                 onPress={handleAddSet}
                                 style={[styles.addSetCircle, { borderColor: themeColors.primary }]}
                             >
                                 <Plus {...({ size: 16, color: themeColors.primary } as any)} />
                             </PressableScale>
-                        )}
+                        </View>
+                        <View style={styles.inputsRow}>
+                            {/* Empty space to match the layout */}
+                        </View>
+                        <View style={styles.restTimerContainer}>
+                            <DropdownMenuWrapper options={getRestTimerOptions()}>
+                                <View style={[styles.restTimerButton, { backgroundColor: themeColors.backgroundTertiary }]}>
+                                    <Timer {...({ size: 16, color: themeColors.primary } as any)} />
+                                    <Text style={[styles.restTimerText, { color: themeColors.primary }]}>
+                                        {formatRestTime(exercise.setRestSec)}
+                                    </Text>
+                                </View>
+                            </DropdownMenuWrapper>
+                        </View>
                     </View>
-                    <View style={styles.inputsRow}>
-                        {/* Empty space to match the layout */}
-                    </View>
-                    <View style={styles.restTimerContainer}>
-                        <DropdownMenuWrapper options={getRestTimerOptions()}>
-                            <View style={[styles.restTimerButton, { backgroundColor: themeColors.backgroundTertiary }]}>
-                                <Timer {...({ size: 16, color: themeColors.primary } as any)} />
-                                <Text style={[styles.restTimerText, { color: themeColors.primary }]}>
-                                    {formatRestTime(exercise.setRestSec)}
-                                </Text>
-                            </View>
-                        </DropdownMenuWrapper>
-                    </View>
-                </View>
+                )}
 
                 <View style={styles.notesContainer}>
                     <InputBox
