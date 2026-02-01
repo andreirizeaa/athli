@@ -347,77 +347,98 @@ get_exercise_catalog({ muscle_group: "back" })
 
 ---
 
-### 2.4 File/PDF Processing
+## 3. Acceptance Criteria
 
-**Phase 1:** UI exists but no backend processing
+### 3.1 Exercise ID Resolution (MuscleWiki Integration)
 
-**Phase 2 Scope:**
-- Accept PDF uploads of workout programs
-- Parse PDF content (OCR if needed)
-- Extract workout structure from unstructured text
-- Convert to Athli workout format
+**Must Have:**
+- [ ] `get_exercise_catalog` tool returns all exercises with MuscleWiki IDs
+- [ ] `get_exercise_catalog` supports optional `muscle_group` filter
+- [ ] `create_workout` rejects exercises without `prescribedExerciseId`
+- [ ] `create_workout` validates that exercise IDs exist in database
+- [ ] `create_workout` returns helpful error messages for invalid IDs
+- [ ] System prompt instructs AI to call `get_exercise_catalog` before `create_workout`
+- [ ] AI-created workouts save with correct `prescribedExerciseId` values
+- [ ] Saved workouts open correctly with exercise videos and instructions
 
-**Technical Considerations:**
-- PDF parsing library (pdf-parse, pdfjs)
-- OCR for scanned documents (Tesseract, cloud OCR)
-- LLM to interpret unstructured workout text
-- Cost implications of processing large PDFs
+**Should Have:**
+- [ ] Exercise catalog is cached (regenerated daily) for performance
+- [ ] Catalog response is formatted for easy AI parsing (ID | Name | Muscles | Equipment)
 
----
-
-### 2.5 Voice Input
-
-**Phase 1:** Text input only
-
-**Phase 2 Scope:**
-- Add microphone button to chat interface
-- Speech-to-text conversion
-- Consider voice output for responses (text-to-speech)
-
-**Technical Options:**
-- Web Speech API (browser native, free)
-- OpenAI Whisper API (more accurate, paid)
-- Hybrid: browser API with Whisper fallback
+**Testing:**
+- [ ] Create workout via AI → exercises link correctly
+- [ ] Open AI-created workout → videos and instructions load
+- [ ] AI calls `create_workout` without IDs → receives helpful error
+- [ ] AI uses invalid ID → receives helpful error and retries
 
 ---
 
-### 2.6 Advanced Streaming
+### 3.2 Mobile App Integration
 
-**Phase 1:** Basic streaming with tool call indicators
+**Must Have:**
+- [ ] Mobile app connects to same `/ai/chat` API endpoint
+- [ ] SSE streaming works on mobile (iOS and Android)
+- [ ] Action cards render correctly on mobile screen sizes
+- [ ] User can confirm/cancel AI actions on mobile
 
-**Phase 2 Enhancements:**
-- Show intermediate reasoning steps
-- Display partial results as tools complete
-- Cancel button for long-running requests
-- Progress indicator for multi-step operations
+**Should Have:**
+- [ ] Touch-friendly UI (larger tap targets, swipe gestures)
+- [ ] Handle poor connectivity gracefully (loading states, retry)
+- [ ] Reduce payload size for mobile (optional fields)
 
----
-
-### 2.7 Auto-Retry & Resilience
-
-**Phase 1:** Basic error messages
-
-**Phase 2 Scope:**
-- Automatic retry with exponential backoff
-- Fallback to alternative LLM provider (Claude if OpenAI fails)
-- Queue long-running requests
-- Resume interrupted conversations
+**Testing:**
+- [ ] Full conversation flow works on iOS
+- [ ] Full conversation flow works on Android
+- [ ] Create workout via mobile AI → saves correctly
+- [ ] Assign workout via mobile AI → appears on client calendar
 
 ---
 
-## 3. Success Metrics for Phase 2
+### 3.3 Conversation Persistence
+
+**Must Have:**
+- [ ] Conversations saved to `ai_conversations` table
+- [ ] Messages saved to `ai_messages` table
+- [ ] Page refresh preserves conversation
+- [ ] Past conversations appear in sidebar
+- [ ] Clicking past conversation loads full history
+
+**Should Have:**
+- [ ] Auto-generated conversation titles from first message
+- [ ] Search/filter past conversations
+- [ ] Delete conversation option
+
+**Testing:**
+- [ ] Start conversation → refresh page → conversation persists
+- [ ] Multiple conversations → all appear in sidebar
+- [ ] Click old conversation → full history loads
+- [ ] New conversation → appears at top of sidebar
+
+---
+
+## 4. Success Metrics
 
 | Metric | Target |
 |--------|--------|
-| Exercise name resolution accuracy | > 95% |
-| Mobile adoption rate | 30% of active coaches |
-| Conversation continuation rate | 40% return to past conversations |
-| PDF processing success rate | > 80% |
+| Exercise ID resolution accuracy | > 95% of AI-created exercises have valid IDs |
+| Workout creation success rate | > 90% of AI workouts save and open correctly |
+| Mobile adoption rate | 30% of active coaches use AI on mobile |
+| Conversation continuation rate | 40% of coaches return to past conversations |
 
 ---
 
-## 4. Dependencies
+## 5. Dependencies
 
 - Phase 1 must be stable and in production
-- User feedback from Phase 1 to prioritize Phase 2 features
-- Cost analysis of Phase 1 to budget for Phase 2 additions
+- `musclewiki_exercise_cache` table must be populated
+- User feedback from Phase 1 to validate priorities
+
+---
+
+## 6. Out of Scope (See Phase 3)
+
+The following features are deferred to Phase 3:
+- File/PDF processing
+- Voice input
+- Advanced streaming UI
+- Auto-retry and resilience
