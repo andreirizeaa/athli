@@ -12,11 +12,11 @@ This document outlines features and improvements deferred from Phase 1 of the AI
 
 ---
 
-## 2. Deferred Features
+## 2. Exercise ID Resolution (MuscleWiki Integration)
 
-### 2.1 Exercise ID Resolution (MuscleWiki Integration)
+### 2.1 Problem Statement
 
-**Problem:** When the AI creates a workout, it only provides exercise **names** as strings. The workout preview/execution doesn't work because exercises are missing MuscleWiki IDs.
+When the AI creates a workout, it only provides exercise **names** as strings. The workout preview/execution doesn't work because exercises are missing MuscleWiki IDs.
 
 **Current Behavior (Phase 1):**
 ```json
@@ -61,6 +61,77 @@ The transformer also creates an incompatible structure:
 
 ---
 
+### 2.2 Current Architecture: Tools vs Transformer
+
+Understanding the separation between AI tools (backend) and the transformer (frontend) is critical:
+
+**AI Tools (Backend - `apps/athli-web-api/src/api/v1/ai/tools/index.ts`):**
+
+| Tool | Purpose | Output |
+|------|---------|--------|
+| `create_workout` | Creates full workout with multiple sections | `{ name, sections: [{ name, type, exercises: [...] }] }` |
+| `create_section` | Creates reusable section template (single section) | `{ name, type, exercises: [...] }` |
+
+Both tools share the same `workoutExerciseSchema`:
+```typescript
+// Current schema - NO prescribedExerciseId!
+const workoutExerciseSchema = z.object({
+  name: z.string(),
+  sets: z.number().default(3),
+  reps: z.string(),
+  weight: z.string().optional(),
+  rest: z.number().optional(),
+  notes: z.string().optional(),
+});
+```
+
+**Transformer (Frontend - `apps/athli-web-app/lib/ai-payload-transformer.ts`):**
+
+The transformer takes the AI's simplified payload and converts it to the full API format:
+
+| Responsibility | What It Does |
+|----------------|--------------|
+| Generate UUIDs | Adds `id` and `instanceId` for exercises and sections |
+| Create sets array | Converts `sets: 3` to array of set objects |
+| Add defaults | `rest: 90`, `exerciseId: null` (BUG!) |
+| Add metadata | `pre`, `post`, `completedSummary` objects |
+
+**Current Flow (Broken):**
+```
+AI Tool → Simplified payload (no IDs)
+    ↓
+Tool validates → Returns action
+    ↓
+Frontend shows confirm card
+    ↓
+User confirms
+    ↓
+Transformer runs → Sets exerciseId: null (BUG)
+    ↓
+Saved to DB → Exercise has no MuscleWiki ID
+```
+
+**Phase 2 Flow (Fixed):**
+```
+AI calls get_exercise_catalog → Gets IDs
+    ↓
+AI Tool → Payload WITH prescribedExerciseId
+    ↓
+Tool validates → Checks IDs exist in DB
+    ↓
+Frontend shows confirm card
+    ↓
+User confirms
+    ↓
+Transformer runs → Passes through prescribedExerciseId
+    ↓
+Saved to DB → Exercise has valid MuscleWiki ID
+```
+
+**Key Insight:** The AI must provide `prescribedExerciseId`. The transformer should NOT be responsible for ID resolution - it just passes through what the AI provides.
+
+---
+
 ## Chosen Solution: On-Demand Catalog + Validation
 
 **Approach:**
@@ -86,6 +157,8 @@ Returns the full MuscleWiki exercise list for the AI to reference.
 
 #### Tool Schema with Zod Validation
 
+**Filter Constraint:** The AI should use **one filter at a time** to keep results focused and manageable. Multiple filters can narrow results too much, potentially returning an empty catalog.
+
 ```typescript
 // Valid filter values (from musclewiki_filter_cache)
 const VALID_MUSCLES = [
@@ -105,9 +178,10 @@ const VALID_FORCES = ['Push', 'Pull', 'Static'] as const;
 const VALID_MECHANICS = ['Compound', 'Isolation'] as const;
 
 // Tool definition with validated filters
+// NOTE: Use ONE filter at a time for best results
 {
   name: "get_exercise_catalog",
-  description: "Get the exercise catalog with MuscleWiki IDs. Call this BEFORE create_workout.",
+  description: "Get the exercise catalog with MuscleWiki IDs. Call this BEFORE create_workout or create_section. Use ONE filter at a time.",
   schema: z.object({
     muscle: z.enum(VALID_MUSCLES).optional()
       .describe("Filter by target muscle (e.g., 'Chest', 'Back', 'Lats')"),
@@ -180,19 +254,27 @@ async function validateExercises(exercises: Exercise[]): Promise<ValidationResul
 Add to `prompts.ts`:
 
 ```typescript
-## Creating Workouts
+## Creating Workouts and Sections
 
-When creating workouts with exercises, you MUST:
+When creating workouts or sections with exercises, you MUST:
 1. First call \`get_exercise_catalog\` to get the MuscleWiki exercise IDs
-2. Then call \`create_workout\` with \`prescribedExerciseId\` for each exercise
+2. Then call \`create_workout\` or \`create_section\` with \`prescribedExerciseId\` for each exercise
 
-The create_workout tool will reject exercises without valid IDs.
+Important rules:
+- Use ONE filter at a time when calling get_exercise_catalog (don't combine multiple filters)
+- Both create_workout and create_section require prescribedExerciseId for each exercise
+- The tools will reject exercises without valid IDs
 
 Example flow:
 - User: "Create a chest workout"
-- You: Call get_exercise_catalog (optionally filter by muscle_group: "chest")
+- You: Call get_exercise_catalog with muscle: "Chest"
 - You: Review the catalog, pick appropriate exercises
 - You: Call create_workout with prescribedExerciseId for each exercise
+
+Example for sections:
+- User: "Create a warm-up section"
+- You: Call get_exercise_catalog (no filter or filter by category: "Stretches")
+- You: Call create_section with prescribedExerciseId for each exercise
 ```
 
 ---
@@ -269,6 +351,21 @@ Tool returns:
 AI calls get_exercise_catalog → finds correct ID → retries
 ```
 
+**Empty Catalog (Over-filtered):**
+```
+AI calls get_exercise_catalog({ muscle: "Chest", category: "TRX", difficulty: "Advanced" })
+                ↓
+Tool returns:
+{
+  success: false,
+  exercises: [],
+  count: 0,
+  message: "No exercises found matching the filters. Try using fewer filters or different values."
+}
+                ↓
+AI removes some filters and retries with broader criteria
+```
+
 ---
 
 ### Size Estimate
@@ -298,23 +395,44 @@ get_exercise_catalog({ muscle_group: "back" })
 
 1. `apps/athli-web-api/src/api/v1/ai/tools/index.ts`
    - Add `get_exercise_catalog` tool
+   - Update `workoutExerciseSchema` to include `prescribedExerciseId`
    - Update `create_workout` with ID validation
+   - Update `create_section` with same ID validation (both tools share schema)
 
 2. `apps/athli-web-api/src/services/ai/exercise-catalog.ts` (new)
-   - `getExerciseCatalog(muscleGroup?: string)` - fetch and format exercises
+   - `getExerciseCatalog(filter?: FilterOptions)` - fetch and format exercises
    - `validateExerciseIds(ids: string[])` - check IDs exist in DB
    - Cache the formatted catalog (regenerate daily)
 
 3. `apps/athli-web-api/src/services/ai/prompts.ts`
    - Add workout creation instructions to system prompt
+   - Instruct AI to use ONE filter at a time
 
 4. `apps/athli-web-app/lib/ai-payload-transformer.ts`
-   - Update to expect `prescribedExerciseId` in payload
-   - Fix structure to match workout schema
+   - Update to pass through `prescribedExerciseId` from AI payload
+   - Fix structure to match workout schema (`itemType: "section"`, nested exercises)
+
+5. `apps/athli-web-app/app/assistant/components/tool-status.tsx`
+   - Add display name for `get_exercise_catalog` tool
+
+**Schema Changes:**
+
+```typescript
+// Updated workoutExerciseSchema (shared by create_workout and create_section)
+const workoutExerciseSchema = z.object({
+  prescribedExerciseId: z.string().describe('MuscleWiki exercise ID (required)'),
+  name: z.string().describe('Exercise name (for display)'),
+  sets: z.number().default(3),
+  reps: z.string(),
+  weight: z.string().optional(),
+  rest: z.number().optional(),
+  notes: z.string().optional(),
+});
+```
 
 **Database:**
 - Read from existing `musclewiki_exercise_cache` table
-- Fields: `musclewiki_id`, `name`, `target_muscles`, `category`
+- Fields: `musclewiki_id`, `name`, `target_muscles`, `category`, `difficulty`, `force`, `mechanic`
 
 ---
 
@@ -338,17 +456,23 @@ get_exercise_catalog({ muscle_group: "back" })
 
 **Must Have:**
 - [ ] `get_exercise_catalog` tool returns all exercises with MuscleWiki IDs
-- [ ] `get_exercise_catalog` supports optional `muscle_group` filter
+- [ ] `get_exercise_catalog` supports single filter at a time (muscle, category, difficulty, force, mechanic)
+- [ ] `get_exercise_catalog` returns helpful error when no exercises match filters
 - [ ] `create_workout` rejects exercises without `prescribedExerciseId`
 - [ ] `create_workout` validates that exercise IDs exist in database
 - [ ] `create_workout` returns helpful error messages for invalid IDs
-- [ ] System prompt instructs AI to call `get_exercise_catalog` before `create_workout`
+- [ ] `create_section` has same validation as `create_workout` (both share schema)
+- [ ] System prompt instructs AI to call `get_exercise_catalog` before `create_workout` or `create_section`
+- [ ] System prompt instructs AI to use ONE filter at a time
 - [ ] AI-created workouts save with correct `prescribedExerciseId` values
+- [ ] AI-created sections save with correct `prescribedExerciseId` values
 - [ ] Saved workouts open correctly with exercise videos and instructions
+- [ ] Transformer passes through `prescribedExerciseId` (does NOT set null)
 
 **Should Have:**
 - [ ] Exercise catalog is cached (regenerated daily) for performance
 - [ ] Catalog response is formatted for easy AI parsing (ID | Name | Muscles | Equipment)
+- [ ] Full catalog (~1700 exercises) loads in < 5 seconds
 
 **Testing (AI Agent-Driven):**
 
@@ -414,18 +538,22 @@ Verify:
 - Sets/reps display correctly
 ```
 
-### Test 3: Filtered Catalog
+### Test 3: Filtered Catalog (One Filter at a Time)
 
 ```
 Input: "Create a back workout using only dumbbells"
 
 Expected:
-1. AI calls get_exercise_catalog with filters:
-   - muscle: "Back" OR category: "Dumbbells" (either is valid)
-2. AI creates workout with exercises matching the filter
-3. All prescribedExerciseId values are valid
+1. AI calls get_exercise_catalog with ONE filter:
+   - Either: muscle: "Back"
+   - Or: category: "Dumbbells"
+   - NOT both at once (to avoid over-filtering)
+2. AI mentally filters the returned list for dumbbell back exercises
+3. AI creates workout with exercises matching both criteria
+4. All prescribedExerciseId values are valid
 
 Verify:
+- AI uses single filter in get_exercise_catalog call
 - Exercises in workout are appropriate for the request
 - No validation errors on create_workout
 ```
@@ -498,6 +626,57 @@ After workout is saved, verify workout_data matches schema:
 }
 ```
 
+### Test 7: Full Catalog Load (No Filter)
+
+```
+Input: "Create a full body workout with exercises from different muscle groups"
+
+Expected:
+1. AI calls get_exercise_catalog() with NO filters
+2. Tool returns full catalog (~1700 exercises, ~85KB)
+3. AI successfully processes the response
+4. AI creates workout with exercises from multiple muscle groups
+5. Workout saves correctly
+
+Verify:
+- Full catalog returns in < 5 seconds
+- AI context window handles ~20-25k tokens from catalog
+- Response is formatted correctly for AI parsing
+- No timeout or memory errors
+```
+
+### Test 8: Empty Catalog Recovery
+
+```
+Input: AI calls get_exercise_catalog with over-restrictive filters
+
+Scenario:
+1. AI calls get_exercise_catalog({ muscle: "Chest", category: "TRX" })
+2. No exercises match this combination
+
+Expected:
+- Tool returns: { success: false, count: 0, message: "No exercises found..." }
+- AI recognizes the issue
+- AI retries with fewer filters (just muscle: "Chest" OR just category: "TRX")
+- AI gets results on retry
+```
+
+### Test 9: Section Creation with IDs
+
+```
+Input: "Create a reusable warm-up section"
+
+Expected:
+1. AI calls get_exercise_catalog
+2. AI calls create_section (NOT create_workout) with prescribedExerciseId for each exercise
+3. Tool validates IDs
+4. Section saves to coach_sections table
+
+Verify:
+- Section saved with correct exercise IDs
+- Section can be reused in multiple workouts
+```
+
 ---
 
 ## 5. Success Metrics
@@ -506,7 +685,9 @@ After workout is saved, verify workout_data matches schema:
 |--------|--------|
 | Exercise ID resolution accuracy | > 95% of AI-created exercises have valid IDs |
 | Workout creation success rate | > 90% of AI workouts save and open correctly |
-| E2E tests passing | 100% of tests 1-6 pass |
+| Section creation success rate | > 90% of AI sections save correctly |
+| Full catalog load time | < 5 seconds |
+| E2E tests passing | 100% of tests 1-9 pass |
 
 ---
 
@@ -516,13 +697,3 @@ After workout is saved, verify workout_data matches schema:
 - `musclewiki_exercise_cache` table must be populated
 
 ---
-
-## 7. Out of Scope (See Phase 3)
-
-The following features are deferred to Phase 3:
-- Mobile app integration
-- Conversation persistence
-- File/PDF processing
-- Voice input
-- Advanced streaming UI
-- Auto-retry and resilience
