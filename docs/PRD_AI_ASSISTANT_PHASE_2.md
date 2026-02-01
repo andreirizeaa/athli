@@ -4,6 +4,10 @@
 **Status:** Draft
 **Last Updated:** January 2025
 
+**Completion Promise:** `PHASE2COMPLETE`
+
+When all acceptance criteria are met and verification passes, output: `<promise>PHASE2COMPLETE</promise>`
+
 ---
 
 ## 1. Overview
@@ -697,3 +701,24 @@ Verify:
 - `musclewiki_exercise_cache` table must be populated
 
 ---
+
+## 7. Verification Steps
+
+1. Start the dev server
+2. Go to `/assistant` page
+3. Ask: "Create a chest workout with 3 exercises"
+4. Verify AI calls `get_exercise_catalog` first
+5. Verify AI calls `create_workout` with `prescribedExerciseId` for each exercise
+6. Confirm the workout
+7. Check database: `workout_data.items[].data.exercises[].exercises[].prescribedExerciseId` should be valid
+8. Open the workout in `/training/workouts` - exercises should display with videos
+
+---
+
+## 8. Completion
+
+When all acceptance criteria in Section 3 pass and verification succeeds, output:
+
+```
+<promise>PHASE2COMPLETE</promise>
+```
