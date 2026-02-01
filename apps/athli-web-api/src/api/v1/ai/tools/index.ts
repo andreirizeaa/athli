@@ -1084,6 +1084,260 @@ export const createAnalyzeClientProgressTool = (ctx: ToolContext) =>
   );
 
 // ============================================================================
+// CLIENT MODIFICATION TOOLS (require confirmation)
+// ============================================================================
+
+export const createAssignMetricToClientTool = (ctx: ToolContext) =>
+  tool(
+    async ({ clientId, clientName, metricId, metricName }) => {
+      // Validate the metric exists
+      const supabase = getSupabaseClient();
+      const { data: metric, error } = await supabase
+        .from('coach_metrics')
+        .select('id, name, metric_type, unit')
+        .eq('coach_id', ctx.coachId)
+        .eq('id', metricId)
+        .single();
+
+      if (error || !metric) {
+        return JSON.stringify({
+          success: false,
+          error: `Metric with ID "${metricId}" not found. Use list_all_metrics to see available metrics.`,
+        });
+      }
+
+      return JSON.stringify({
+        success: true,
+        action: 'assign_metric_to_client',
+        payload: {
+          clientId,
+          clientName: clientName || 'Client',
+          metricId,
+          metricName: metric.name,
+          metricType: metric.metric_type,
+          metricUnit: metric.unit,
+        },
+        message: `Ready to assign "${metric.name}" metric to ${clientName || 'client'}.`,
+      });
+    },
+    {
+      name: 'assign_metric_to_client',
+      description:
+        'Assign a tracked metric to a client so they can log it. Returns a payload that the user must confirm. Use list_all_metrics first to get available metric IDs.',
+      schema: z.object({
+        clientId: z.string().describe('The client ID (UUID)'),
+        clientName: z.string().optional().describe('Client name for display'),
+        metricId: z.string().describe('The metric ID (UUID) to assign'),
+        metricName: z.string().optional().describe('Metric name for display'),
+      }),
+    }
+  );
+
+export const createAddClientGoalTool = (ctx: ToolContext) =>
+  tool(
+    async ({ clientId, clientName, goalType, targetValue, targetDate, description }) => {
+      return JSON.stringify({
+        success: true,
+        action: 'add_client_goal',
+        payload: {
+          clientId,
+          clientName: clientName || 'Client',
+          goalType,
+          targetValue: targetValue || null,
+          targetDate: targetDate || null,
+          description: description || '',
+        },
+        message: `Ready to add "${goalType}" goal for ${clientName || 'client'}${targetValue ? ` (target: ${targetValue})` : ''}.`,
+      });
+    },
+    {
+      name: 'add_client_goal',
+      description:
+        'Add a new goal for a client. Returns a payload that the user must confirm before saving.',
+      schema: z.object({
+        clientId: z.string().describe('The client ID (UUID)'),
+        clientName: z.string().optional().describe('Client name for display'),
+        goalType: z.string().describe('Type of goal (e.g., "Weight Loss", "Strength", "Muscle Gain", "Endurance")'),
+        targetValue: z.string().optional().describe('Target value (e.g., "75kg", "100kg squat", "Run 5k")'),
+        targetDate: z.string().optional().describe('Target date (ISO format)'),
+        description: z.string().optional().describe('Additional details about the goal'),
+      }),
+    }
+  );
+
+export const createAddClientInjuryTool = (ctx: ToolContext) =>
+  tool(
+    async ({ clientId, clientName, injuryType, bodyPart, severity, notes, dateOccurred }) => {
+      return JSON.stringify({
+        success: true,
+        action: 'add_client_injury',
+        payload: {
+          clientId,
+          clientName: clientName || 'Client',
+          injuryType,
+          bodyPart,
+          severity: severity || 'moderate',
+          notes: notes || '',
+          dateOccurred: dateOccurred || null,
+        },
+        message: `Ready to add "${injuryType}" injury (${bodyPart}) for ${clientName || 'client'}.`,
+      });
+    },
+    {
+      name: 'add_client_injury',
+      description:
+        'Record an injury for a client. Returns a payload that the user must confirm before saving.',
+      schema: z.object({
+        clientId: z.string().describe('The client ID (UUID)'),
+        clientName: z.string().optional().describe('Client name for display'),
+        injuryType: z.string().describe('Type of injury (e.g., "Strain", "Sprain", "Tendinitis", "Pain")'),
+        bodyPart: z.string().describe('Affected body part (e.g., "Lower Back", "Right Knee", "Left Shoulder")'),
+        severity: z.enum(['mild', 'moderate', 'severe']).optional().describe('Injury severity'),
+        notes: z.string().optional().describe('Additional notes about the injury, limitations, or rehab'),
+        dateOccurred: z.string().optional().describe('When the injury occurred (ISO format)'),
+      }),
+    }
+  );
+
+export const createDraftMessageTool = (ctx: ToolContext) =>
+  tool(
+    async ({ clientId, clientName, subject, message, messageType }) => {
+      return JSON.stringify({
+        success: true,
+        action: 'draft_message',
+        payload: {
+          clientId,
+          clientName: clientName || 'Client',
+          subject: subject || '',
+          message,
+          messageType: messageType || 'general',
+        },
+        message: `Message drafted for ${clientName || 'client'}. You can copy and send it via your preferred channel.`,
+      });
+    },
+    {
+      name: 'draft_message_for_client',
+      description:
+        'Draft a message for a client. The coach can then copy and send it via their preferred messaging channel (email, WhatsApp, etc.).',
+      schema: z.object({
+        clientId: z.string().describe('The client ID (UUID)'),
+        clientName: z.string().optional().describe('Client name for display'),
+        subject: z.string().optional().describe('Message subject (for email)'),
+        message: z.string().describe('The message content'),
+        messageType: z.enum(['check_in', 'motivation', 'reminder', 'feedback', 'general']).optional()
+          .describe('Type of message'),
+      }),
+    }
+  );
+
+export const createUpdateClientProfileTool = (ctx: ToolContext) =>
+  tool(
+    async ({ clientId, clientName, updates }) => {
+      const updatesList = Object.entries(updates)
+        .filter(([_, value]) => value !== undefined && value !== null)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(', ');
+
+      return JSON.stringify({
+        success: true,
+        action: 'update_client_profile',
+        payload: {
+          clientId,
+          clientName: clientName || 'Client',
+          updates,
+        },
+        message: `Ready to update ${clientName || 'client'}'s profile: ${updatesList}`,
+      });
+    },
+    {
+      name: 'update_client_profile',
+      description:
+        'Update a client\'s profile information. Returns a payload that the user must confirm before saving.',
+      schema: z.object({
+        clientId: z.string().describe('The client ID (UUID)'),
+        clientName: z.string().optional().describe('Client name for display'),
+        updates: z.object({
+          category: z.enum(['general', 'athlete', 'rehabilitation', 'weight_loss', 'strength']).optional()
+            .describe('Client category'),
+          status: z.enum(['active', 'inactive', 'on_hold']).optional()
+            .describe('Client status'),
+          notes: z.string().optional().describe('Coach notes about the client'),
+        }).describe('Fields to update'),
+      }),
+    }
+  );
+
+export const createCreateCheckinTemplateTool = (ctx: ToolContext) =>
+  tool(
+    async ({ name, description, questions }) => {
+      if (!questions || questions.length === 0) {
+        return JSON.stringify({
+          success: false,
+          error: 'Check-in template must have at least one question',
+        });
+      }
+
+      return JSON.stringify({
+        success: true,
+        action: 'create_checkin_template',
+        payload: {
+          name,
+          description: description || '',
+          questions: questions.map((q: any, index: number) => ({
+            id: `q${index + 1}`,
+            ...q,
+          })),
+        },
+        message: `Ready to create "${name}" check-in template with ${questions.length} question(s).`,
+      });
+    },
+    {
+      name: 'create_checkin_template',
+      description:
+        'Create a new check-in form template. Returns a payload that the user must confirm before saving.',
+      schema: z.object({
+        name: z.string().describe('Check-in template name'),
+        description: z.string().optional().describe('Description of the check-in'),
+        questions: z.array(z.object({
+          question: z.string().describe('The question text'),
+          type: z.enum(['text', 'number', 'rating', 'yes_no', 'multiple_choice']).describe('Question type'),
+          required: z.boolean().optional().describe('Whether the question is required'),
+          options: z.array(z.string()).optional().describe('Options for multiple choice questions'),
+        })).describe('List of questions'),
+      }),
+    }
+  );
+
+export const createCreateMetricTool = (ctx: ToolContext) =>
+  tool(
+    async ({ name, metricType, unit, description }) => {
+      return JSON.stringify({
+        success: true,
+        action: 'create_metric',
+        payload: {
+          name,
+          metricType,
+          unit: unit || '',
+          description: description || '',
+        },
+        message: `Ready to create "${name}" metric (${metricType}${unit ? `, unit: ${unit}` : ''}).`,
+      });
+    },
+    {
+      name: 'create_metric',
+      description:
+        'Create a new trackable metric. Returns a payload that the user must confirm before saving.',
+      schema: z.object({
+        name: z.string().describe('Metric name (e.g., "Body Weight", "Waist Circumference", "1RM Squat")'),
+        metricType: z.enum(['weight', 'measurement', 'percentage', 'count', 'time', 'custom'])
+          .describe('Type of metric'),
+        unit: z.string().optional().describe('Unit of measurement (e.g., "kg", "cm", "lbs", "minutes")'),
+        description: z.string().optional().describe('Description of what this metric tracks'),
+      }),
+    }
+  );
+
+// ============================================================================
 // TOOL REGISTRY
 // ============================================================================
 
@@ -1116,6 +1370,15 @@ export const createAllTools = (ctx: ToolContext) => [
 
   // Assignment tools
   createAssignWorkoutTool(ctx),
+
+  // Client modification tools (require confirmation)
+  createAssignMetricToClientTool(ctx),
+  createAddClientGoalTool(ctx),
+  createAddClientInjuryTool(ctx),
+  createDraftMessageTool(ctx),
+  createUpdateClientProfileTool(ctx),
+  createCreateCheckinTemplateTool(ctx),
+  createCreateMetricTool(ctx),
 
   // Analytics tools
   createAnalyzeClientProgressTool(ctx),

@@ -49,6 +49,10 @@ import { useCoachWorkouts } from "@/hooks/use-coach-workouts";
 import { transformWorkoutPayload, transformSectionPayload } from "@/lib/ai-payload-transformer";
 import { ActionType, getActionRedirectUrl } from "@/stores/ai-action-store";
 import { assignWorkout } from "@/api/client/client-training-service";
+import { assignMetric } from "@/api/client/client-metric-service";
+import { saveAthleteGoals, saveAthleteInjuries, getAthleteGoals, getAthleteInjuries } from "@/api/client/client-service";
+import { createMetric } from "@/api/coach/coach-metric-service";
+import { addCheckIn } from "@/api/coach/coach-check-in-service";
 
 interface AIChatInterfaceProps {
     chatId?: string;
@@ -116,16 +120,14 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                 const apiPayload = transformWorkoutPayload(payload);
                 await createWorkout(apiPayload as any);
                 toast.success('Workout added to your library!');
-                // Navigate after a brief delay to let the toast show
                 setTimeout(() => {
-                    router.push(getActionRedirectUrl(actionType));
+                    router.push(getActionRedirectUrl(actionType, payload));
                 }, 500);
             } else if (actionType === 'create_section') {
                 // TODO: Implement section creation
                 const apiPayload = transformSectionPayload(payload);
                 toast.info('Section creation coming soon');
             } else if (actionType === 'assign_workout') {
-                // Assign workout to client's calendar
                 await assignWorkout({
                     workoutId: payload.workoutId,
                     clientId: payload.clientId,
@@ -133,9 +135,103 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                     coachId: user?.id,
                 });
                 toast.success(`Workout assigned to ${payload.clientName || 'client'}!`);
-                // Navigate to client's calendar
                 setTimeout(() => {
                     router.push(`/client/${payload.clientId}/calendar`);
+                }, 500);
+            } else if (actionType === 'assign_metric_to_client') {
+                await assignMetric({
+                    clientId: payload.clientId,
+                    coachId: user?.id!,
+                    metricIds: [payload.metricId],
+                    schedule_config: { type: 'metric', frequency: 'daily' },
+                });
+                toast.success(`${payload.metricName} assigned to ${payload.clientName}!`);
+                setTimeout(() => {
+                    router.push(getActionRedirectUrl(actionType, payload));
+                }, 500);
+            } else if (actionType === 'add_client_goal') {
+                // Get existing goals and add new one
+                const existingGoals = await getAthleteGoals(payload.clientId, user?.id!);
+                const newGoal = {
+                    goal: payload.goalType,
+                    target_date: payload.targetDate || null,
+                    achieved: false,
+                    details: payload.description || '',
+                };
+                await saveAthleteGoals(payload.clientId, user?.id!, [...existingGoals, newGoal]);
+                toast.success(`Goal added for ${payload.clientName}!`);
+                setTimeout(() => {
+                    router.push(getActionRedirectUrl(actionType, payload));
+                }, 500);
+            } else if (actionType === 'add_client_injury') {
+                // Get existing injuries and add new one
+                const existingInjuries = await getAthleteInjuries(payload.clientId, user?.id!);
+                const newInjury = {
+                    injury: `${payload.injuryType} - ${payload.bodyPart}`,
+                    date: payload.dateOccurred || null,
+                    details: `Severity: ${payload.severity || 'moderate'}${payload.notes ? `. ${payload.notes}` : ''}`,
+                };
+                await saveAthleteInjuries(payload.clientId, user?.id!, [...existingInjuries, newInjury]);
+                toast.success(`Injury recorded for ${payload.clientName}!`);
+                setTimeout(() => {
+                    router.push(getActionRedirectUrl(actionType, payload));
+                }, 500);
+            } else if (actionType === 'draft_message') {
+                // Draft message is handled by the ActionCard itself (copy button)
+                // This should not be called, but just in case
+                return;
+            } else if (actionType === 'update_client_profile') {
+                // TODO: Implement profile update API call
+                toast.info('Profile update coming soon');
+            } else if (actionType === 'create_checkin_template') {
+                // First create the check-in
+                const checkIn = await addCheckIn({
+                    name: payload.name,
+                    description: payload.description || '',
+                });
+                // Then add questions one by one if any
+                if (payload.questions && payload.questions.length > 0) {
+                    const { addQuestion } = await import('@/api/coach/coach-check-in-service');
+                    for (const q of payload.questions) {
+                        const formatMap: Record<string, string> = {
+                            'text': 'text',
+                            'number': 'number',
+                            'rating': 'rating',
+                            'yes_no': 'yes/no',
+                            'multiple_choice': 'multi-select',
+                        };
+                        await addQuestion({
+                            formId: checkIn.id,
+                            question: q.question,
+                            required: q.required || false,
+                            format: formatMap[q.type] || 'text',
+                            options: q.options || [],
+                        });
+                    }
+                }
+                toast.success(`Check-in "${payload.name}" created!`);
+                setTimeout(() => {
+                    router.push(getActionRedirectUrl(actionType, payload));
+                }, 500);
+            } else if (actionType === 'create_metric') {
+                // Map AI metric types to API value_kind
+                const valueKindMap: Record<string, 'number' | 'percent' | 'duration' | 'score'> = {
+                    'weight': 'number',
+                    'measurement': 'number',
+                    'percentage': 'percent',
+                    'count': 'number',
+                    'time': 'duration',
+                    'custom': 'number',
+                };
+                await createMetric({
+                    name: payload.name,
+                    value_kind: valueKindMap[payload.metricType] || 'number',
+                    unit: payload.unit || '',
+                    description: payload.description || '',
+                });
+                toast.success(`Metric "${payload.name}" created!`);
+                setTimeout(() => {
+                    router.push(getActionRedirectUrl(actionType, payload));
                 }, 500);
             } else {
                 toast.info('This action type is not yet supported');
