@@ -910,6 +910,124 @@ export const clientTrainingsController = {
     },
 
     /**
+     * Add a single exercise history entry (incremental write during workout).
+     * Uses exercise instance ID for idempotency - updates if exists, inserts if not.
+     * POST /api/v1/client/trainings/exercise-history/add
+     * Body: { date, workout_id, workout_name, exercise_id, exercise_data, section_type, section_completed_rounds }
+     */
+    addExerciseHistoryEntry: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
+        const coachId = req.header('x-coach-id') ? String(req.header('x-coach-id')) : userId;
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const { date, workout_id, workout_name, exercise_id, exercise_data, section_type, section_completed_rounds } = req.body;
+
+        if (!targetClientId || !date || !workout_id || !exercise_id || !exercise_data) {
+            return res.status(400).json({
+                success: false,
+                message: 'date, workout_id, exercise_id, and exercise_data are required'
+            });
+        }
+
+        // Validate section_type if provided
+        const validSectionTypes = ['amrap', 'tabata', 'hiit', 'emom', 'circuits'];
+        if (section_type && !validSectionTypes.includes(section_type)) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid section_type. Must be one of: ${validSectionTypes.join(', ')}`
+            });
+        }
+
+        const supabase = getSupabaseClient();
+
+        // 1. Upsert training history record first (FK requirement)
+        const { error: historyError } = await supabase
+            .from('client_training_history')
+            .upsert({
+                client_id: targetClientId,
+                coach_id: coachId,
+                date: date,
+                workout_id: workout_id,
+                status: 'in_progress',
+                updated_at: new Date().toISOString(),
+            }, { onConflict: 'client_id, coach_id, date, workout_id' });
+
+        if (historyError) {
+            console.error('Error upserting training history:', historyError);
+            return res.status(500).json({ success: false, message: historyError.message });
+        }
+
+        // 2. Extract exercise instance ID for idempotency
+        const exerciseInstanceId = exercise_data.id;
+        if (!exerciseInstanceId) {
+            return res.status(400).json({
+                success: false,
+                message: 'exercise_data must contain an id field for idempotency'
+            });
+        }
+
+        // 3. Check if entry already exists for this exercise instance
+        const { data: existingEntry, error: fetchError } = await supabase
+            .from('client_training_exercise_history')
+            .select('row_id')
+            .eq('client_id', targetClientId)
+            .eq('coach_id', coachId)
+            .eq('date', date)
+            .eq('workout_id', workout_id)
+            .eq('exercise_id', exercise_id)
+            .eq('exercise_data->>id', exerciseInstanceId)
+            .single();
+
+        if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "not found"
+            console.error('Error checking existing exercise history:', fetchError);
+            return res.status(500).json({ success: false, message: fetchError.message });
+        }
+
+        const exerciseRecord = {
+            client_id: targetClientId,
+            coach_id: coachId,
+            date: date,
+            workout_id: workout_id,
+            workout_name: workout_name || 'Untitled Workout',
+            exercise_id: exercise_id,
+            exercise_data: exercise_data,
+            section_type: section_type || null,
+            section_completed_rounds: section_completed_rounds ?? null,
+            updated_at: new Date().toISOString(),
+        };
+
+        if (existingEntry) {
+            // 4a. Update existing entry
+            const { error: updateError } = await supabase
+                .from('client_training_exercise_history')
+                .update(exerciseRecord)
+                .eq('row_id', existingEntry.row_id);
+
+            if (updateError) {
+                console.error('Error updating exercise history:', updateError);
+                return res.status(500).json({ success: false, message: updateError.message });
+            }
+        } else {
+            // 4b. Insert new entry
+            const { error: insertError } = await supabase
+                .from('client_training_exercise_history')
+                .insert(exerciseRecord);
+
+            if (insertError) {
+                console.error('Error inserting exercise history:', insertError);
+                return res.status(500).json({ success: false, message: insertError.message });
+            }
+        }
+
+        success(res, { message: 'Exercise history entry added successfully' });
+    },
+
+    /**
      * Get exercise history for a specific exercise.
      * POST /api/v1/client/trainings/exercise-history
      * Body: { clientId, exerciseName }

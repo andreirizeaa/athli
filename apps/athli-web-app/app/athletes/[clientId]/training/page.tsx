@@ -1463,11 +1463,12 @@ const ClientTrainingCalendarPage = () => {
       workoutsToDelete.map(async ({ dateKey, workout }) => {
         const loadingKey = `${dateKey}::${workout.id}`;
         try {
+          const realWorkoutId = workout.id.split('__')[0];
           await apiDeleteWorkoutByKey({
             clientId,
             coachId: coachUser?.id || '',
             sourceDate: dateKey,
-            workoutId: workout.id,
+            workoutId: realWorkoutId,
           });
 
           // Remove from local state
@@ -2570,7 +2571,7 @@ const ClientTrainingCalendarPage = () => {
           </div>
           <Separator className="absolute bottom-[-1px] left-0 right-0" />
         </div>
-        <div className="w-full flex-1 bg-background rounded-none px-4 pb-4 min-h-0 flex flex-col relative -mt-px">
+        <div className={cn("w-full flex-1 bg-background rounded-none px-4 pb-4 min-h-0 flex flex-col relative -mt-px transition-[padding] duration-300", (isMultiSelectMode || isMultiSelectCopyMode) && "pb-16")}>
           {isLoadingTraining && (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80">
               <Loader2 className="size-8 animate-spin text-primary" />

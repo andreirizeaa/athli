@@ -166,6 +166,7 @@ export const en = {
       sectionBreakdown: 'Section Breakdown',
       workoutBreakdown: 'Workout Breakdown',
       feedback: 'Feedback',
+      sets: 'Sets',
     },
     sections: {
       regular: 'Regular',
