@@ -1870,6 +1870,7 @@ export const enMessages = {
       habits: 'Habits',
       bookings: 'Bookings',
       trainingCalendar: 'Training',
+      progress: 'Progress',
       updates: 'Updates',
       appSettings: 'App Settings',
       clientNotFound: 'Client not found',

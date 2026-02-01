@@ -1,59 +1,25 @@
 import { apiFetch } from '@/api/api-client';
 
-export interface AddQuestionnaireData {
-  name: string;
-  description?: string;
-}
+// Import shared types and re-export for backwards compatibility
+export type {
+  AddQuestionnaireData,
+  Questionnaire,
+  EditQuestionnaireDetailsData,
+  Question,
+  AddQuestionData,
+  ReorderQuestionsData,
+  DeleteQuestionData,
+} from '@athli/shared-types';
 
-export interface Questionnaire {
-  id: string;
-  name: string;
-  description?: string;
-  questions: Question[];
-  questionCount?: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface EditQuestionnaireDetailsData {
-  id: string;
-  name: string;
-  description?: string;
-}
-
-export interface Question {
-  id: string;
-  question: string;
-  required: boolean;
-  format: string;
-  options?: string[];
-  scaleFrom?: string;
-  scaleTo?: string;
-  mediaCount?: number;
-  metricId?: string;
-}
-
-export interface AddQuestionData {
-  formId: string;
-  question: string;
-  required: boolean;
-  format: string;
-  options?: string[];
-  scaleFrom?: string;
-  scaleTo?: string;
-  mediaCount?: number;
-  metricId?: string;
-}
-
-export interface ReorderQuestionsData {
-  formId: string;
-  questions: Question[];
-}
-
-export interface DeleteQuestionData {
-  formId: string;
-  questionId: string;
-}
+import type {
+  AddQuestionnaireData,
+  Questionnaire,
+  EditQuestionnaireDetailsData,
+  Question,
+  AddQuestionData,
+  ReorderQuestionsData,
+  DeleteQuestionData,
+} from '@athli/shared-types';
 
 /**
  * Service method to get all questionnaires from coach's library

@@ -1,37 +1,20 @@
 import { apiFetch } from '../api-client';
 
-export interface YourListTask {
-    id: string;
-    title: string;
-    information?: string;
-    type: 'client' | 'general';
-    clientId?: string;
-    clientName?: string;
-    clientAvatar?: string;
-    dueDate: string; // ISO string
-    completed: boolean;
-}
+// Import shared types and re-export for backwards compatibility
+export type {
+  YourListTask,
+  AthliAssistantTask,
+  CreateTaskData,
+  UpdateTaskData,
+  TaskType,
+} from '@athli/shared-types';
 
-export interface AthliAssistantTask {
-    id: string;
-    title: string;
-    type: 'client' | 'general';
-    clientName?: string; // Potential context
-    clientAvatar?: string;
-    completed: boolean;
-}
-
-export interface CreateTaskData {
-    title: string;
-    information?: string;
-    type: 'client' | 'general';
-    client_id?: string;
-    due_date: string;
-}
-
-export interface UpdateTaskData extends Partial<CreateTaskData> {
-    completed?: boolean;
-}
+import type {
+  YourListTask,
+  AthliAssistantTask,
+  CreateTaskData,
+  UpdateTaskData,
+} from '@athli/shared-types';
 
 /**
  * Service for "Your List" (coach_own_todolist)

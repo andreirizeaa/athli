@@ -247,6 +247,87 @@ clientTrainingRouter.post('/calendar/delete', supabaseAuthenticate, clientTraini
 
 /**
  * @swagger
+ * /api/v1/client/trainings/exercise-history/add:
+ *   post:
+ *     summary: Add a single exercise history entry (incremental write during workout)
+ *     tags: [Client Trainings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - date
+ *               - workout_id
+ *               - exercise_id
+ *               - exercise_data
+ *             properties:
+ *               date:
+ *                 type: string
+ *                 format: date
+ *                 description: Date in YYYY-MM-DD format
+ *               workout_id:
+ *                 type: string
+ *               workout_name:
+ *                 type: string
+ *               exercise_id:
+ *                 type: string
+ *               exercise_data:
+ *                 type: object
+ *                 description: The complete exercise payload with id field for idempotency
+ *               section_type:
+ *                 type: string
+ *                 enum: [amrap, tabata, hiit, emom, circuits]
+ *                 nullable: true
+ *               section_completed_rounds:
+ *                 type: integer
+ *                 nullable: true
+ *     responses:
+ *       200:
+ *         description: Exercise history entry added successfully
+ */
+clientTrainingRouter.post('/exercise-history/add', supabaseAuthenticate, clientTrainingsController.addExerciseHistoryEntry);
+
+/**
+ * @swagger
+ * /api/v1/client/trainings/unique-exercises:
+ *   post:
+ *     summary: Get unique exercises that have history for a client
+ *     tags: [Client Trainings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Unique exercises retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         exercises:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               name:
+ *                                 type: string
+ *                               rawThumbnailUrl:
+ *                                 type: string
+ */
+clientTrainingRouter.post('/unique-exercises', supabaseAuthenticate, clientTrainingsController.getUniqueExercises);
+
+/**
+ * @swagger
  * /api/v1/client/trainings/exercise-history:
  *   post:
  *     summary: Get exercise history for a specific exercise

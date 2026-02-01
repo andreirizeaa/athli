@@ -110,11 +110,9 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
 };
 
 const SidebarInsetWithBorder = ({ children }: { children: ReactNode }) => {
-  const { state, isHovered, setOpen } = useSidebar();
+  const { state, setOpen } = useSidebar();
   const { isOpen: isAIPanelOpen } = useAIPanel();
-  const isHoverExpanded = state === 'collapsed' && isHovered;
-  const shouldShowBorder = state === 'collapsed';
-  const showBorder = shouldShowBorder && !isHoverExpanded;
+  const showBorder = state === 'collapsed';
 
   // Close sidebar when AI panel opens to make more space
   React.useEffect(() => {

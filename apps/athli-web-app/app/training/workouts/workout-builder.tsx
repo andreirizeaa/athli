@@ -645,7 +645,7 @@ const SectionItem = memo(function SectionItem({
                               </div>
 
                               {/* Gap between exercises for non-regular sections */}
-                              {section.type !== 'regular' && exerciseIndex < section.exercises.length - 1 && (
+                              {section.type !== 'regular' && section.exercises && exerciseIndex < section.exercises.length - 1 && (
                                 <div className="h-2" />
                               )}
 
@@ -905,7 +905,9 @@ export const WorkoutBuilder = ({
             startedAt: null,
             completedAt: null,
             totalDurationMin: null,
-            totalWeightLifted: null
+            totalWeightLifted: null,
+            pausedAt: null,
+            totalPausedMs: 0
           }
         } as WorkoutProgramPayload;
 
@@ -1037,7 +1039,9 @@ export const WorkoutBuilder = ({
             startedAt: null,
             completedAt: null,
             totalDurationMin: null,
-            totalWeightLifted: null
+            totalWeightLifted: null,
+            pausedAt: null,
+            totalPausedMs: 0
           }
         } as WorkoutProgramPayload;
 
@@ -1104,7 +1108,9 @@ export const WorkoutBuilder = ({
           startedAt: null,
           completedAt: null,
           totalDurationMin: null,
-          totalWeightLifted: null
+          totalWeightLifted: null,
+          pausedAt: null,
+          totalPausedMs: 0
         }
       } as WorkoutProgramPayload;
 
@@ -2703,7 +2709,7 @@ Focus on proper form and progressive overload.`;
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           showCloseButton={false}
-          className="!max-w-[95vw] sm:!max-w-[95vw] !w-[95vw] !h-[90vh] flex flex-col p-0 overflow-hidden ring-0 border-none outline-none bg-transparent shadow-none"
+          className="!max-w-[95vw] sm:!max-w-[95vw] !w-[95vw] !h-[95vh] flex flex-col p-0 overflow-hidden ring-0 border-none outline-none bg-transparent shadow-none"
           onInteractOutside={(e) => {
             e.preventDefault();
             // Don't trigger discard dialog if we're showing delete confirmation

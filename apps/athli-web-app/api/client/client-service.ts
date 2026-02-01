@@ -1,32 +1,21 @@
 import { apiFetch } from '../api-client';
 
-export interface AthleteDetails {
-  name: string;
-  email: string;
-  birthDate: string | null;
-  category: 'online' | 'in-person' | 'hybrid';
-  gender: 'male' | 'female' | 'prefer-not-to-say' | null;
-  phone: string;
-  country: string;
-  height: string | null;
-  avatarUrl?: string | null;
-  avatarFile?: File | null;
-}
+// Import shared types and re-export for backwards compatibility
+export type {
+  AthleteDetails,
+  AthleteGoal,
+  AthleteInjury,
+  ClientWorkoutCompletionLog,
+  ClientSetCompletionLog,
+  ClientSectionCompletionLog,
+  TrainingCalendarCompletionLogs,
+} from '@athli/shared-types';
 
-export interface AthleteGoal {
-  id: string;
-  goal: string;
-  target_date: string | null;
-  achieved: boolean;
-  details?: string;
-}
-
-export interface AthleteInjury {
-  id: string;
-  injury: string;
-  date: string | null;
-  details?: string;
-}
+import type {
+  AthleteDetails,
+  AthleteGoal,
+  AthleteInjury,
+} from '@athli/shared-types';
 
 /**
  * Service method to get athlete bio
@@ -206,34 +195,13 @@ export interface TrainingCalendarSchema {
   }>;
 }
 
-export interface WorkoutCompletionStatus {
-  workoutId: string;
-  status: 'not_started' | 'in_progress' | 'completed';
-  completedAt?: number; // timestamp in milliseconds (only present when status is 'completed')
-  startedAt?: number; // timestamp in milliseconds (only present when status is 'in_progress' or 'completed')
-}
-
-export interface SetCompletionStatus {
-  workoutId: string;
-  exerciseInstanceId: string;
-  setNumber: number;
-  status: 'not_started' | 'completed';
-  completedAt?: number; // timestamp in milliseconds (only present when status is 'completed')
-}
-
-export interface SectionCompletionStatus {
-  workoutId: string;
-  sectionId: string;
-  status: 'not_started' | 'in_progress' | 'completed';
-  completedAt?: number; // timestamp in milliseconds (only present when status is 'completed')
-  startedAt?: number; // timestamp in milliseconds (only present when status is 'in_progress' or 'completed')
-}
-
-export interface TrainingCalendarCompletionLogs {
-  workouts: WorkoutCompletionStatus[];
-  sets: SetCompletionStatus[];
-  sections: SectionCompletionStatus[]; // For AMRAP and timed sections
-}
+// Import types for local use
+import type {
+  ClientWorkoutCompletionLog as WorkoutCompletionStatus,
+  ClientSetCompletionLog as SetCompletionStatus,
+  ClientSectionCompletionLog as SectionCompletionStatus,
+  TrainingCalendarCompletionLogs,
+} from '@athli/shared-types';
 
 /**
  * Service method to get the training calendar for a client within a date range

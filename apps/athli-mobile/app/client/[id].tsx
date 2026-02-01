@@ -31,7 +31,7 @@ import {
 
 import { PressableScale, PressableOpacity } from 'pressto';
 
-import { typography } from '@/constants/typography';
+import { typography, iconSizes } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
@@ -156,10 +156,10 @@ export default function ClientProfileScreen() {
       section: 'coaching',
     },
     {
-      id: 'training',
-      icon: { sf: 'figure.run', IconComponent: Dumbbell },
-      title: t('clientDetail.sections.training'),
-      route: `/client/${id}/training`,
+      id: 'progress',
+      icon: { sf: 'dumbbell', IconComponent: Dumbbell },
+      title: t('clientDetail.sections.progress'),
+      route: `/client/${id}/progress`,
       section: 'coaching',
     },
     // Data
@@ -407,6 +407,33 @@ export default function ClientProfileScreen() {
         </PressableOpacity>
       </Card>
 
+      {/* Training Card */}
+      <View style={styles.trainingCardContainer}>
+        <PressableScale onPress={() => router.push(`/client/${id}/training`)}>
+          <Card style={styles.trainingCard}>
+            <View style={styles.trainingCardRow}>
+              <View style={styles.trainingCardIcon}>
+                <PlatformIcon
+                  sf="figure.run"
+                  IconComponent={Dumbbell}
+                  size={iconSizes.tabBarIcons}
+                  color={iconColor}
+                />
+              </View>
+              <Text style={[styles.trainingCardText, { color: themeColors.text }]}>
+                {t('clientDetail.sections.training')}
+              </Text>
+              <PlatformIcon
+                sf="chevron.right"
+                IconComponent={ChevronRight}
+                size={iconSizes.extraSmallIcons}
+                color={themeColors.mutedText}
+              />
+            </View>
+          </Card>
+        </PressableScale>
+      </View>
+
       {/* Menu Items */}
       <View style={styles.menuContainer}>
         {menuItems.map((item) => (
@@ -509,6 +536,29 @@ const styles = StyleSheet.create({
   editButtonText: {
     ...typography.p2,
     fontWeight: '500',
+  },
+  trainingCardContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  trainingCard: {
+    marginBottom: 0,
+  },
+  trainingCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  trainingCardIcon: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4,
+  },
+  trainingCardText: {
+    ...typography.p1,
+    flex: 1,
   },
   menuContainer: {
     paddingBottom: 40,

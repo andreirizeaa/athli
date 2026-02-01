@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,26 @@ import { useTranslations } from '@/stores';
 import { typography } from '@/constants/typography';
 import { IconButton } from '@/components/ui/icon-button';
 import { getExerciseVideos } from '@/services/musclewiki-service';
+
+// Separate component that only mounts when we have a valid video URL
+// This ensures useVideoPlayer is called with a valid source
+const NativeVideoPlayer = ({ videoUrl }: { videoUrl: string }) => {
+    const player = useVideoPlayer(videoUrl, (p) => {
+        p.loop = true;
+        p.muted = false;
+        p.play();
+    });
+
+    return (
+        <VideoView
+            player={player}
+            style={styles.video}
+            allowsFullscreen
+            allowsPictureInPicture
+            nativeControls
+        />
+    );
+};
 
 // Extract video ID from YouTube/Vimeo URLs
 const extractVideoId = (url: string): { id: string; type: 'youtube' | 'vimeo' | null } => {
@@ -61,6 +81,7 @@ export default function ExerciseVideoModal() {
     });
 
     // Determine video URL based on source
+    // MuscleWiki URLs are already proxied by the service
     const videoUrl = isCustomExercise && videoLink
         ? videoLink
         : musclewikiVideos?.maleVideoFrontUrl || null;
@@ -69,19 +90,8 @@ export default function ExerciseVideoModal() {
     const videoInfo = videoUrl ? extractVideoId(videoUrl) : { id: '', type: null };
     const isExternalVideo = Boolean(videoInfo.id && videoInfo.type);
 
-    // Video player for non-external videos
-    const videoSource = videoUrl && !isExternalVideo ? videoUrl : '';
-    const videoPlayer = useVideoPlayer(videoSource, (player) => {
-        player.loop = true;
-        player.muted = true;
-    });
-
-    // Auto-play video when source becomes available
-    useEffect(() => {
-        if (videoPlayer && videoSource) {
-            videoPlayer.play();
-        }
-    }, [videoPlayer, videoSource]);
+    // Native video URL (non-YouTube/Vimeo)
+    const nativeVideoUrl = videoUrl && !isExternalVideo ? videoUrl : null;
 
     const handleClose = () => {
         router.back();
@@ -167,14 +177,12 @@ export default function ExerciseVideoModal() {
                                 javaScriptEnabled
                                 domStorageEnabled
                             />
+                        ) : nativeVideoUrl ? (
+                            <NativeVideoPlayer videoUrl={nativeVideoUrl} />
                         ) : (
-                            <VideoView
-                                player={videoPlayer}
-                                style={styles.video}
-                                allowsFullscreen
-                                allowsPictureInPicture
-                                nativeControls
-                            />
+                            <View style={styles.videoPlaceholder}>
+                                <ActivityIndicator size="large" color={themeColors.primary} />
+                            </View>
                         )
                     ) : (
                         <View style={styles.videoPlaceholder}>

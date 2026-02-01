@@ -349,7 +349,7 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
 
                 <div className="space-y-2">
                     <Label htmlFor="phone"><span>{t('athletes.profile.phone')}</span></Label>
-                    <PhoneInput value={convertPhoneToE164(formData.phone)} onChange={(value) => setFormData({ ...formData, phone: value || '' })} />
+                    <PhoneInput value={convertPhoneToE164(formData.phone || '')} onChange={(value) => setFormData({ ...formData, phone: value || '' })} />
                 </div>
 
                 <div className="space-y-2">

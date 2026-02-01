@@ -6,9 +6,22 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./workout-schema": "./src/workout-schema.ts",
-    "./payload-builder": "./src/payload-builder.ts",
-    "./payload-converter": "./src/payload-converter.ts"
+    "./schemas": "./src/schemas/index.ts",
+    "./functions": "./src/functions/index.ts",
+    "./constants": "./src/constants/index.ts",
+    "./workout-schema": "./src/schemas/workout-schema.ts",
+    "./payload-builder": "./src/functions/payload-builder.ts",
+    "./payload-converter": "./src/functions/payload-converter.ts",
+    "./form-schema": "./src/schemas/form-schema.ts",
+    "./metric-schema": "./src/schemas/metric-schema.ts",
+    "./habit-schema": "./src/schemas/habit-schema.ts",
+    "./todo-schema": "./src/schemas/todo-schema.ts",
+    "./file-schema": "./src/schemas/file-schema.ts",
+    "./client-schema": "./src/schemas/client-schema.ts",
+    "./messaging-schema": "./src/schemas/messaging-schema.ts",
+    "./messaging-constants": "./src/constants/messaging-constants.ts",
+    "./messaging-utils": "./src/functions/messaging-utils.ts",
+    "./training-constants": "./src/constants/training-constants.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit"

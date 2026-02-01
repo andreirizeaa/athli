@@ -10,6 +10,7 @@ type WorkoutSessionHeaderProps = {
   onClose: () => void;
   isPaused: boolean;
   onTogglePause: () => void;
+  showPauseButton?: boolean;
 };
 
 export const WorkoutSessionHeader = ({
@@ -17,6 +18,7 @@ export const WorkoutSessionHeader = ({
   onClose,
   isPaused,
   onTogglePause,
+  showPauseButton = true,
 }: WorkoutSessionHeaderProps) => {
   const { colors: themeColors } = useThemePreference();
 
@@ -46,15 +48,17 @@ export const WorkoutSessionHeader = ({
           />
         </View>
       </View>
-      <IconButton
-        icon={{
-          sf: isPaused ? 'play' : 'pause',
-          IconComponent: isPaused ? Play : Pause,
-        }}
-        onPress={onTogglePause}
-        size="md"
-        color={themeColors.text}
-      />
+      {showPauseButton && (
+        <IconButton
+          icon={{
+            sf: isPaused ? 'play' : 'pause',
+            IconComponent: isPaused ? Play : Pause,
+          }}
+          onPress={onTogglePause}
+          size="md"
+          color={themeColors.text}
+        />
+      )}
     </View>
   );
 };
