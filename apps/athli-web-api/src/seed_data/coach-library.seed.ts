@@ -4,7 +4,7 @@
  * questionnaires, exercises, workouts, programs, and sections
  */
 
-import { TEST_PREFIX, generateUUID } from './utils';
+import { TEST_PREFIX, generateUUID, generateExerciseInstanceId } from './utils';
 
 /**
  * Coach Metrics - 5 test metrics
@@ -326,20 +326,21 @@ export const EXISTING_EXERCISE_IDS = {
  */
 export function getCoachWorkouts(coachId: string) {
   // Helper to create a basic exercise item
-  const createExerciseItem = (exerciseId: string, sets: number, reps: string, restSec: number) => ({
+  const createExerciseItem = (exerciseId: string, sets: number, reps: string, restSec: number, weight?: string) => ({
     itemType: 'exercise' as const,
     data: {
-      id: generateUUID(),
+      id: generateExerciseInstanceId(exerciseId),
       prescribedExerciseId: exerciseId,
       performedExerciseId: null,
+      completed: 'not_started',
       sets: Array.from({ length: sets }, (_, i) => ({
         setNumber: i + 1,
         type: 'normal' as const,
         restSec,
-        completed: false,
+        completed: 'not_started',
         skipped: false,
         trackableField1: { label: 'Reps', prescribed: reps, completed: null },
-        trackableField2: { label: 'kg', prescribed: null, completed: null },
+        trackableField2: { label: weight ? 'kg' : 'Optional', prescribed: weight || null, completed: null },
         dropset: null,
       })),
       alternatives: [],
@@ -348,7 +349,7 @@ export function getCoachWorkouts(coachId: string) {
       eachSide: false,
       tempo: null,
       column1Label: 'Reps',
-      column2Label: 'kg',
+      column2Label: weight ? 'kg' : 'Optional',
     },
   });
 
@@ -365,9 +366,9 @@ export function getCoachWorkouts(coachId: string) {
       total_exercises: 3,
       workout_data: {
         items: [
-          createExerciseItem(BARBELL_BENCH_PRESS, 4, '8-10', 120),
-          createExerciseItem(DUMBBELL_SEATED_OVERHEAD_PRESS, 4, '8-10', 90),
-          createExerciseItem(DUMBBELL_SEATED_OVERHEAD_PRESS, 3, '10-12', 90),
+          createExerciseItem(BARBELL_BENCH_PRESS, 4, '8-10', 120, '60'),
+          createExerciseItem(DUMBBELL_SEATED_OVERHEAD_PRESS, 4, '8-10', 90, '20'),
+          createExerciseItem(DUMBBELL_SEATED_OVERHEAD_PRESS, 3, '10-12', 90, '15'),
         ],
         pre: { sleep: null, mood: null, energy: null, stress: null, soreness: null },
         post: { rating: null, intensity: null, sessionComments: null },
@@ -384,9 +385,9 @@ export function getCoachWorkouts(coachId: string) {
       total_exercises: 3,
       workout_data: {
         items: [
-          createExerciseItem(BARBELL_DEADLIFT, 4, '5', 180),
-          createExerciseItem(BARBELL_BENT_OVER_ROW, 4, '8-10', 90),
-          createExerciseItem(PULL_UPS, 4, '6-10', 90),
+          createExerciseItem(BARBELL_DEADLIFT, 4, '5', 180, '100'),
+          createExerciseItem(BARBELL_BENT_OVER_ROW, 4, '8-10', 90, '60'),
+          createExerciseItem(PULL_UPS, 4, '6-10', 90), // Bodyweight - no weight
         ],
         pre: { sleep: null, mood: null, energy: null, stress: null, soreness: null },
         post: { rating: null, intensity: null, sessionComments: null },
@@ -403,8 +404,8 @@ export function getCoachWorkouts(coachId: string) {
       total_exercises: 2,
       workout_data: {
         items: [
-          createExerciseItem(BARBELL_SQUAT, 4, '6-8', 180),
-          createExerciseItem(BARBELL_DEADLIFT, 4, '10-12', 90),
+          createExerciseItem(BARBELL_SQUAT, 4, '6-8', 180, '80'),
+          createExerciseItem(BARBELL_DEADLIFT, 4, '10-12', 90, '70'),
         ],
         pre: { sleep: null, mood: null, energy: null, stress: null, soreness: null },
         post: { rating: null, intensity: null, sessionComments: null },
@@ -421,10 +422,10 @@ export function getCoachWorkouts(coachId: string) {
       total_exercises: 4,
       workout_data: {
         items: [
-          createExerciseItem(BARBELL_SQUAT, 3, '8-10', 120),
-          createExerciseItem(BARBELL_BENCH_PRESS, 3, '8-10', 120),
-          createExerciseItem(BARBELL_BENT_OVER_ROW, 3, '8-10', 90),
-          createExerciseItem(DUMBBELL_SEATED_OVERHEAD_PRESS, 3, '8-10', 90),
+          createExerciseItem(BARBELL_SQUAT, 3, '8-10', 120, '60'),
+          createExerciseItem(BARBELL_BENCH_PRESS, 3, '8-10', 120, '50'),
+          createExerciseItem(BARBELL_BENT_OVER_ROW, 3, '8-10', 90, '50'),
+          createExerciseItem(DUMBBELL_SEATED_OVERHEAD_PRESS, 3, '8-10', 90, '15'),
         ],
         pre: { sleep: null, mood: null, energy: null, stress: null, soreness: null },
         post: { rating: null, intensity: null, sessionComments: null },
@@ -441,8 +442,8 @@ export function getCoachWorkouts(coachId: string) {
       total_exercises: 2,
       workout_data: {
         items: [
-          createExerciseItem(BARBELL_SQUAT, 4, '15', 30),
-          createExerciseItem(PULL_UPS, 3, '10', 30),
+          createExerciseItem(BARBELL_SQUAT, 4, '15', 30, '40'),
+          createExerciseItem(PULL_UPS, 3, '10', 30), // Bodyweight - no weight
         ],
         pre: { sleep: null, mood: null, energy: null, stress: null, soreness: null },
         post: { rating: null, intensity: null, sessionComments: null },
@@ -522,18 +523,19 @@ export function getCoachSections(coachId: string) {
             isSuperset: false,
             exercises: [
               {
-                id: generateUUID(),
+                id: generateExerciseInstanceId(BARBELL_SQUAT),
                 prescribedExerciseId: BARBELL_SQUAT,
                 performedExerciseId: null,
+                completed: 'not_started',
                 sets: [
                   {
                     setNumber: 1,
                     type: 'warmUp',
                     restSec: 30,
-                    completed: false,
+                    completed: 'not_started',
                     skipped: false,
                     trackableField1: { label: 'Reps', prescribed: '10', completed: null },
-                    trackableField2: { label: 'kg', prescribed: null, completed: null },
+                    trackableField2: { label: 'kg', prescribed: '20', completed: null },
                     dropset: null,
                   },
                 ],
@@ -565,18 +567,19 @@ export function getCoachSections(coachId: string) {
             isSuperset: false,
             exercises: [
               {
-                id: generateUUID(),
+                id: generateExerciseInstanceId(BARBELL_SQUAT),
                 prescribedExerciseId: BARBELL_SQUAT,
                 performedExerciseId: null,
+                completed: 'not_started',
                 sets: [
                   {
                     setNumber: 1,
                     type: 'normal',
                     restSec: 120,
-                    completed: false,
+                    completed: 'not_started',
                     skipped: false,
                     trackableField1: { label: 'Reps', prescribed: '8', completed: null },
-                    trackableField2: { label: 'kg', prescribed: null, completed: null },
+                    trackableField2: { label: 'kg', prescribed: '60', completed: null },
                     dropset: null,
                   },
                 ],
@@ -609,18 +612,19 @@ export function getCoachSections(coachId: string) {
             isSuperset: false,
             exercises: [
               {
-                id: generateUUID(),
+                id: generateExerciseInstanceId(PULL_UPS),
                 prescribedExerciseId: PULL_UPS,
                 performedExerciseId: null,
+                completed: 'not_started',
                 sets: [
                   {
                     setNumber: 1,
                     type: 'normal',
                     restSec: 0,
-                    completed: false,
+                    completed: 'not_started',
                     skipped: false,
                     trackableField1: { label: 'Reps', prescribed: '5', completed: null },
-                    trackableField2: { label: '', prescribed: null, completed: null },
+                    trackableField2: { label: 'Optional', prescribed: null, completed: null },
                     dropset: null,
                   },
                 ],
@@ -630,7 +634,7 @@ export function getCoachSections(coachId: string) {
                 eachSide: false,
                 tempo: null,
                 column1Label: 'Reps',
-                column2Label: '',
+                column2Label: 'Optional',
               },
             ],
           },
