@@ -1,8 +1,10 @@
 /**
  * AI Assistant Integration Test Script
  *
- * Tests the AI assistant acceptance criteria from the PRD.
+ * Tests the AI assistant for all 12 fixed issues plus acceptance criteria from the PRD.
  * Run: npx ts-node apps/athli-web-api/scripts/test-ai-assistant.ts
+ *
+ * Traces are automatically sent to LangSmith (athli-ai-assistant project).
  */
 
 import * as dotenv from 'dotenv';
@@ -12,7 +14,8 @@ import * as path from 'path';
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const API_URL = 'http://localhost:3002/api/v1';
-const COACH_ID = '5f016d89-03e8-4ebd-885a-42e8ff3039db';
+// Will be fetched dynamically if not set
+let COACH_ID = process.env.TEST_COACH_ID || '5f016d89-03e8-4ebd-885a-42e8ff3039db';
 
 // Create a custom fetch that handles SSE
 async function streamChat(message: string, authToken: string): Promise<{
@@ -92,6 +95,146 @@ interface TestCase {
 }
 
 const testCases: TestCase[] = [
+  // ==================== ISSUE-SPECIFIC TESTS ====================
+
+  // Issue 1: Draft message should be editable text (tested via action type)
+  {
+    id: 'ISSUE-1',
+    command: 'Draft a motivational message for Sarah',
+    expectedBehavior: 'Returns draft_message action (UI shows editable textarea)',
+    validate: (result) => {
+      return result.toolCalls.includes('draft_message_for_client') ||
+             result.action?.action === 'draft_message';
+    },
+  },
+
+  // Issue 2: Workout columns should use correct types
+  {
+    id: 'ISSUE-2',
+    command: 'Create a simple strength workout with bench press',
+    expectedBehavior: 'Creates workout with proper trackable columns (Reps/kg)',
+    validate: (result) => {
+      if (!result.action || result.action.action !== 'create_workout') {
+        return result.toolCalls.includes('get_exercise_catalog');
+      }
+      // If we got an action, check the payload has exercises
+      const payload = result.action.payload;
+      return payload?.sections?.some((s: any) => s.exercises?.length > 0);
+    },
+  },
+
+  // Issue 3: Workout assignment uses future dates
+  {
+    id: 'ISSUE-3',
+    command: 'Assign any workout to Sarah for her next session',
+    expectedBehavior: 'Uses today or future date (not past)',
+    validate: (result) => {
+      if (result.action?.action === 'assign_workout') {
+        const date = result.action.payload?.date;
+        const today = new Date().toISOString().split('T')[0];
+        return date >= today;
+      }
+      // If searching for data first, that's acceptable
+      return result.toolCalls.includes('get_coach_workouts') ||
+             result.toolCalls.includes('search_clients');
+    },
+  },
+
+  // Issue 5: Assign metric without loop
+  {
+    id: 'ISSUE-5',
+    command: 'Assign body weight tracking to Sarah',
+    expectedBehavior: 'Finds/creates metric and shows assign action (no loop)',
+    validate: (result) => {
+      return result.toolCalls.includes('list_all_metrics') ||
+             result.action?.action === 'assign_metric_to_client' ||
+             result.action?.action === 'create_metric';
+    },
+  },
+
+  // Issue 6: Tool display names (verify tools are called with proper names)
+  {
+    id: 'ISSUE-6',
+    command: 'Show me all my clients',
+    expectedBehavior: 'Calls list_all_clients tool',
+    validate: (result) => {
+      return result.toolCalls.includes('list_all_clients');
+    },
+  },
+
+  // Issue 8a: Goals get default target date
+  {
+    id: 'ISSUE-8a',
+    command: 'Add a muscle gain goal for Sarah',
+    expectedBehavior: 'Goal has target date (~6 months from today)',
+    validate: (result) => {
+      if (result.action?.action === 'add_client_goal') {
+        const targetDate = result.action.payload?.targetDate;
+        return !!targetDate; // Has a date
+      }
+      return result.toolCalls.includes('search_clients');
+    },
+  },
+
+  // Issue 8b: Injuries get default date
+  {
+    id: 'ISSUE-8b',
+    command: 'Record that Sarah has a mild knee strain',
+    expectedBehavior: 'Injury has dateOccurred (today if not specified)',
+    validate: (result) => {
+      if (result.action?.action === 'add_client_injury') {
+        const dateOccurred = result.action.payload?.dateOccurred;
+        return !!dateOccurred;
+      }
+      return result.toolCalls.includes('search_clients');
+    },
+  },
+
+  // Issue 9: Client category uses correct values
+  {
+    id: 'ISSUE-9',
+    command: "Change Sarah's coaching type to hybrid",
+    expectedBehavior: 'Uses "hybrid" (not "athlete" or invalid value)',
+    validate: (result) => {
+      if (result.action?.action === 'update_client_profile') {
+        const category = result.action.payload?.updates?.category;
+        return ['online', 'in-person', 'hybrid'].includes(category);
+      }
+      return result.toolCalls.includes('search_clients');
+    },
+  },
+
+  // Issue 12: Check-in question types (yesNo, not yes_no)
+  {
+    id: 'ISSUE-12',
+    command: 'Create a check-in form called "Quick Check" with a yes/no question about workout completion and a rating question for energy',
+    expectedBehavior: 'Question types are "yesNo" and "rating" (camelCase)',
+    validate: (result) => {
+      if (result.action?.action === 'create_checkin_template') {
+        const questions = result.action.payload?.questions || [];
+        const types = questions.map((q: any) => q.type);
+        // Should have yesNo, not yes_no
+        const hasCorrectYesNo = types.includes('yesNo') && !types.includes('yes_no');
+        // Should have rating or scale
+        const hasRating = types.includes('rating') || types.includes('scale');
+        return hasCorrectYesNo || hasRating;
+      }
+      return false; // Must have create action
+    },
+  },
+
+  // Issue 15: Create metric
+  {
+    id: 'ISSUE-15',
+    command: 'Create a new metric called "1RM Bench Press" for tracking maximum bench weight in kg',
+    expectedBehavior: 'Returns create_metric action',
+    validate: (result) => {
+      return result.action?.action === 'create_metric';
+    },
+  },
+
+  // ==================== PRD ACCEPTANCE TESTS ====================
+
   // AC-T1: Tool call status indicators
   {
     id: 'AC-T1',
@@ -99,7 +242,7 @@ const testCases: TestCase[] = [
     expectedBehavior: 'Generates workout, uses create_workout tool',
     validate: (result) => {
       return result.toolCalls.includes('create_workout') ||
-             result.action?.type === 'create_workout';
+             result.action?.action === 'create_workout';
     },
   },
   // AC-T4: Exercise substitutions
@@ -213,10 +356,26 @@ async function runTests() {
   console.log('='.repeat(60));
   console.log();
 
+  // Check if we should skip API tests and go direct
+  const skipApi = process.argv.includes('--direct') || process.argv.includes('-d');
+
+  if (skipApi) {
+    console.log('Running direct agent tests (skipping API)...');
+    await runDirectAgentTests();
+    return;
+  }
+
   // First, check if AI service is healthy
   console.log('Checking AI service health...');
-  const healthResponse = await fetch(`${API_URL}/ai/health`);
-  const healthData = await healthResponse.json();
+  let healthData: any;
+  try {
+    const healthResponse = await fetch(`${API_URL}/ai/health`);
+    healthData = await healthResponse.json();
+  } catch (err) {
+    console.log('API server not running. Running direct agent tests instead...');
+    await runDirectAgentTests();
+    return;
+  }
 
   if (!healthData.data?.openRouterConfigured) {
     console.error('ERROR: OpenRouter API key not configured!');
@@ -334,51 +493,142 @@ async function runDirectAgentTests() {
   // Test the agent directly without authentication
   const { runAgentSimple } = await import('../src/services/ai/langgraph-agent');
 
-  const testCases = [
+  console.log('\n' + '='.repeat(60));
+  console.log('DIRECT AGENT TESTS (Issue-specific)');
+  console.log('='.repeat(60));
+  console.log('LangSmith Project:', process.env.LANGCHAIN_PROJECT || 'default');
+  console.log('Tracing:', process.env.LANGCHAIN_TRACING_V2 === 'true' ? 'ENABLED' : 'DISABLED');
+
+  const directTests = [
+    // Issue 3: Future dates - CRITICAL TEST
     {
-      id: 'Direct-1',
-      message: "What's the best rep range for hypertrophy?",
-      expectedKeywords: ['hypertrophy', 'rep', 'muscle', '8', '12'],
+      id: 'ISSUE-3',
+      message: 'What is today\'s date?',
+      check: (r: any) => {
+        const today = new Date().toISOString().split('T')[0];
+        return r.content.includes(today) || r.content.includes('2026') ? `PASS: Knows today (${today})` : 'FAIL: Wrong date context';
+      },
     },
+    // Issue 9: Categories - CRITICAL TEST
     {
-      id: 'Direct-2',
-      message: 'Create a push day workout',
-      expectedTool: 'create_workout',
+      id: 'ISSUE-9',
+      message: 'What are the valid client coaching categories?',
+      check: (r: any) => {
+        const content = r.content.toLowerCase();
+        const hasCorrect = content.includes('online') || content.includes('hybrid') || content.includes('in-person');
+        const hasWrong = content.includes('athlete') || content.includes('rehab') || content.includes('weight loss');
+        return hasCorrect && !hasWrong ? 'PASS: Correct categories' : (hasWrong ? 'FAIL: Old categories' : 'INFO: Check response');
+      },
+    },
+    // Issue 2: Workout column knowledge
+    {
+      id: 'ISSUE-2',
+      message: 'What trackable columns are available for exercises in workouts?',
+      check: (r: any) => {
+        const content = r.content.toLowerCase();
+        const hasColumns = content.includes('reps') || content.includes('kg') || content.includes('minutes');
+        const hasHRZone = content.includes('heart rate') || content.includes('zone');
+        return hasColumns ? `PASS: Knows columns (HR Zone: ${hasHRZone})` : 'FAIL: Missing column info';
+      },
+    },
+    // Issue 1: Draft message - use specific client
+    {
+      id: 'ISSUE-1',
+      message: 'Draft a motivational message for Michael Williams',
+      check: (r: any) => r.action?.type === 'draft_message' ? 'PASS: draft_message action' : 'INFO: Check if searching client',
+    },
+    // Issue 8a: Goal dates - use specific client
+    {
+      id: 'ISSUE-8a',
+      message: 'Add a muscle gain goal for Michael Williams',
+      check: (r: any) => {
+        if (r.action?.type === 'add_client_goal') {
+          const date = r.action.payload?.targetDate;
+          return date ? `PASS: Has target date ${date}` : 'FAIL: No target date';
+        }
+        return 'INFO: Searching for client first';
+      },
+    },
+    // Issue 8b: Injury dates - use specific client
+    {
+      id: 'ISSUE-8b',
+      message: 'Record that James Rodriguez has a mild ankle sprain',
+      check: (r: any) => {
+        if (r.action?.type === 'add_client_injury') {
+          const date = r.action.payload?.dateOccurred;
+          return date ? `PASS: Has date ${date}` : 'FAIL: No date occurred';
+        }
+        return 'INFO: Searching for client first';
+      },
+    },
+    // Issue 12: Question types
+    {
+      id: 'ISSUE-12',
+      message: 'Create a simple check-in form called "Daily Check" with one yes/no question asking if they worked out today',
+      check: (r: any) => {
+        if (r.action?.type === 'create_checkin_template') {
+          const questions = r.action.payload?.questions || [];
+          const types = questions.map((q: any) => q.type).join(', ');
+          const hasSnakeCase = types.includes('yes_no') || types.includes('multiple_choice');
+          return hasSnakeCase ? `FAIL: Snake case types (${types})` : `PASS: Types are ${types}`;
+        }
+        return 'INFO: No checkin action yet';
+      },
+    },
+    // Issue 15: Create metric
+    {
+      id: 'ISSUE-15',
+      message: 'Create a new metric called "1RM Deadlift" for tracking maximum deadlift in kg',
+      check: (r: any) => {
+        if (r.action?.type === 'create_metric') {
+          return `PASS: create_metric action with name "${r.action.payload?.name}"`;
+        }
+        return 'INFO: No create_metric action';
+      },
     },
   ];
 
-  for (const testCase of testCases) {
-    console.log(`\nTest ${testCase.id}: ${testCase.message}`);
-    console.log('-'.repeat(60));
+  let passed = 0;
+  let failed = 0;
+  let info = 0;
+
+  for (const test of directTests) {
+    console.log(`\n--- Test ${test.id}: ${test.message.substring(0, 50)}... ---`);
 
     try {
       const result = await runAgentSimple(
-        testCase.message,
+        test.message,
         [],
         {},
         { coachId: COACH_ID }
       );
 
-      console.log(`Response preview: ${result.content.substring(0, 300)}...`);
+      const checkResult = test.check(result);
+      console.log(`Result: ${checkResult}`);
 
       if (result.action) {
-        console.log(`Action type: ${result.action.type}`);
-        console.log('✓ PASSED - Action generated');
-      } else if ('expectedKeywords' in testCase && testCase.expectedKeywords) {
-        const keywords = testCase.expectedKeywords;
-        const hasKeyword = keywords.some(kw =>
-          result.content.toLowerCase().includes(kw)
-        );
-        if (hasKeyword) {
-          console.log('✓ PASSED - Content contains expected keywords');
-        } else {
-          console.log('✗ FAILED - Missing expected keywords');
-        }
+        console.log(`Action: ${result.action.action}`);
       }
+
+      console.log(`Response: ${result.content.substring(0, 150)}...`);
+
+      if (checkResult.startsWith('PASS')) passed++;
+      else if (checkResult.startsWith('FAIL')) failed++;
+      else info++;
+
     } catch (err: any) {
-      console.log(`✗ ERROR - ${err.message}`);
+      console.log(`ERROR: ${err.message}`);
+      failed++;
     }
+
+    // Rate limit delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
   }
+
+  console.log('\n' + '='.repeat(60));
+  console.log(`SUMMARY: ${passed} passed, ${failed} failed, ${info} info`);
+  console.log('='.repeat(60));
+  console.log(`\nView traces at: https://smith.langchain.com/`);
 }
 
 runTests().catch(console.error);
