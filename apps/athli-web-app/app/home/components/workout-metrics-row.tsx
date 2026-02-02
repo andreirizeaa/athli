@@ -1,142 +1,186 @@
 'use client';
 
 import React from 'react';
-import { CircleCheck, Clock, Gauge, Weight, Activity, Star } from 'lucide-react';
+import { CircleCheck, Clock, Gauge, Star, Moon, Sun, Zap, Brain, Dumbbell } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { cn } from '@/lib/general/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
+// Rating colors matching the mobile app (1-5 scale)
+const RATING_COLORS = [
+    '#EF4444', // 1 - red
+    '#F97316', // 2 - orange
+    '#FBBF24', // 3 - amber/yellow
+    '#84CC16', // 4 - lime
+    '#22C55E', // 5 - green
+];
+
+const getRatingColor = (value: number) => RATING_COLORS[value - 1] || RATING_COLORS[2];
+const getRatingColorInverted = (value: number) => RATING_COLORS[5 - value] || RATING_COLORS[2];
+
+interface ReadinessMetrics {
+    sleep?: number | null;
+    mood?: number | null;
+    energy?: number | null;
+    stress?: number | null;
+    soreness?: number | null;
+}
 
 interface WorkoutMetricsRowProps {
     exercisesCompleted: number;
     exercisesTotal: number;
     minutes: number;
-    volume: number;
-    intensity: number; // 0-10
-    readiness: number; // 0-10
+    intensity: number; // 1-5
     rating: number; // 1-5
+    readiness: ReadinessMetrics;
 }
+
+// Readiness icon component matching the dialog style
+const ReadinessIcon = ({
+    value,
+    icon: Icon,
+    label,
+    inverted = false,
+}: {
+    value: number | null | undefined;
+    icon: React.ElementType;
+    label: string;
+    inverted?: boolean;
+}) => {
+    const hasValue = value !== null && value !== undefined;
+    const color = hasValue
+        ? (inverted ? getRatingColorInverted(value) : getRatingColor(value))
+        : undefined;
+
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <div className="flex items-center gap-2">
+                    <div
+                        className={`p-2.5 rounded-xl ${!hasValue ? 'bg-muted/50' : ''}`}
+                        style={hasValue ? { backgroundColor: `${color}15` } : undefined}
+                    >
+                        <Icon
+                            className={`size-6 ${!hasValue ? 'text-muted-foreground/30' : ''}`}
+                            style={hasValue ? { color } : undefined}
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className={`text-sm font-bold tabular-nums ${!hasValue ? 'text-muted-foreground/30' : ''}`}>
+                            {hasValue ? `${value}/5` : '-'}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</span>
+                    </div>
+                </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+                <span className="font-medium">{label}:</span> {hasValue ? `${value}/5` : 'No data'}
+            </TooltipContent>
+        </Tooltip>
+    );
+};
 
 export const WorkoutMetricsRow = ({
     exercisesCompleted,
     exercisesTotal,
     minutes,
-    volume,
     intensity,
-    readiness,
     rating,
+    readiness,
 }: WorkoutMetricsRowProps) => {
     const t = useTranslations();
 
     return (
-        <div className="flex items-center justify-between w-full px-2 gap-4">
-            {/* Exercises */}
-            <div className="flex flex-col items-center gap-1 text-center">
-                <div className="p-2 rounded-xl bg-green-500/10 dark:bg-green-500/20">
-                    <CircleCheck className="size-5 text-green-600 dark:text-green-500 shrink-0" />
-                </div>
-                <div className="flex flex-col items-center gap-0">
-                    <span className="text-sm font-bold leading-tight tabular-nums">
-                        {exercisesCompleted}/{exercisesTotal}
-                    </span>
-                    <span className="text-[9px] text-muted-foreground/80 uppercase tracking-[0.05em] font-bold">
-                        {t('home.exercises')}
-                    </span>
-                </div>
-            </div>
-
-            {/* Duration */}
-            <div className="flex flex-col items-center gap-1 text-center">
-                <div className="p-2 rounded-xl bg-foreground/5 dark:bg-foreground/10">
-                    <Clock className="size-5 text-foreground shrink-0" />
-                </div>
-                <div className="flex flex-col items-center gap-0">
-                    <span className="text-sm font-bold leading-tight tabular-nums">{minutes}</span>
-                    <span className="text-[9px] text-muted-foreground/80 uppercase tracking-[0.05em] font-bold">
-                        {t('home.minutes')}
-                    </span>
+        <div className="flex flex-col gap-4 w-full">
+            {/* Readiness Section */}
+            <div className="flex flex-col gap-2">
+                <span className="text-[10px] text-muted-foreground/70 uppercase tracking-[0.15em] font-bold text-center">
+                    Readiness
+                </span>
+                <div className="flex items-center justify-center gap-5">
+                    <ReadinessIcon value={readiness.sleep} icon={Moon} label="Sleep" />
+                    <ReadinessIcon value={readiness.mood} icon={Sun} label="Mood" />
+                    <ReadinessIcon value={readiness.energy} icon={Zap} label="Energy" />
+                    <ReadinessIcon value={readiness.stress} icon={Brain} label="Stress" inverted />
+                    <ReadinessIcon value={readiness.soreness} icon={Dumbbell} label="Soreness" inverted />
                 </div>
             </div>
 
-            {/* Readiness */}
-            <div className="flex flex-col items-center gap-1 text-center">
-                <div className={cn(
-                    "p-2 rounded-xl",
-                    readiness <= 3 ? "bg-red-500/10 dark:bg-red-500/20" :
-                        readiness <= 7 ? "bg-amber-500/10 dark:bg-amber-500/20" :
-                            "bg-green-500/10 dark:bg-green-500/20"
-                )}>
-                    <Activity
-                        className={cn(
-                            'size-5 shrink-0',
-                            readiness <= 3 ? 'text-red-600 dark:text-red-500' :
-                                readiness <= 7 ? 'text-amber-600 dark:text-amber-500' :
-                                    'text-green-600 dark:text-green-500'
-                        )}
-                    />
-                </div>
-                <div className="flex flex-col items-center gap-0">
-                    <span className="text-sm font-bold leading-tight tabular-nums">{readiness}</span>
-                    <span className="text-[9px] text-muted-foreground/80 uppercase tracking-[0.05em] font-bold">
-                        Readiness
-                    </span>
-                </div>
-            </div>
-
-            {/* Intensity */}
-            <div className="flex flex-col items-center gap-1 text-center">
-                <div className={cn(
-                    "p-2 rounded-xl",
-                    intensity <= 3 ? "bg-red-500/10 dark:bg-red-500/20" :
-                        intensity <= 7 ? "bg-amber-500/10 dark:bg-amber-500/20" :
-                            "bg-green-500/10 dark:bg-green-500/20"
-                )}>
-                    <Gauge
-                        className={cn(
-                            'size-5 shrink-0',
-                            intensity <= 3 ? 'text-red-600 dark:text-red-500' :
-                                intensity <= 7 ? 'text-amber-600 dark:text-amber-500' :
-                                    'text-green-600 dark:text-green-500'
-                        )}
-                    />
-                </div>
-                <div className="flex flex-col items-center gap-0">
-                    <span className="text-sm font-bold leading-tight tabular-nums">{intensity}</span>
-                    <span className="text-[9px] text-muted-foreground/80 uppercase tracking-[0.05em] font-bold">
-                        {t('home.intensity')}
-                    </span>
-                </div>
-            </div>
-
-            {/* Volume */}
-            <div className="flex flex-col items-center gap-1 text-center">
-                <div className="p-2 rounded-xl bg-foreground/5 dark:bg-foreground/10">
-                    <Weight className="size-5 text-foreground shrink-0" />
-                </div>
-                <div className="flex flex-col items-center gap-0">
-                    <span className="text-sm font-bold leading-tight tabular-nums">{volume}kg</span>
-                    <span className="text-[9px] text-muted-foreground/80 uppercase tracking-[0.05em] font-bold">
-                        {t('home.weight')}
-                    </span>
-                </div>
-            </div>
-
-            {/* Rating */}
-            <div className="flex flex-col items-center gap-1 text-center">
-                <div className="relative p-2 rounded-xl bg-primary/10">
-                    <div className="relative size-5 shrink-0">
-                        <Star className="size-5 text-primary" strokeWidth={2} />
+            {/* Summary Section */}
+            <div className="flex flex-col gap-2">
+                <span className="text-[10px] text-muted-foreground/70 uppercase tracking-[0.15em] font-bold text-center">
+                    Summary
+                </span>
+                <div className="flex items-center justify-center gap-5">
+                    {/* Intensity */}
+                    <div className="flex items-center gap-2">
                         <div
-                            className="absolute inset-y-0 left-0 overflow-hidden"
-                            style={{ width: `${(rating / 5) * 100}%` }}
+                            className="p-2.5 rounded-xl"
+                            style={{ backgroundColor: intensity > 0 ? `${getRatingColor(intensity)}15` : 'var(--muted)' }}
                         >
-                            <Star className="size-5 text-primary fill-primary" strokeWidth={2} />
+                            <Gauge
+                                className="size-6"
+                                style={{ color: intensity > 0 ? getRatingColor(intensity) : 'var(--muted-foreground)' }}
+                            />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-bold tabular-nums">{intensity > 0 ? `${intensity}/5` : '-'}</span>
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Intensity</span>
                         </div>
                     </div>
-                </div>
-                <div className="flex flex-col items-center gap-0">
-                    <span className="text-sm font-bold leading-tight tabular-nums">{rating}</span>
-                    <span className="text-[9px] text-muted-foreground/80 uppercase tracking-[0.05em] font-bold">
-                        Rating
-                    </span>
+
+                    {/* Rating */}
+                    <div className="flex items-center gap-2">
+                        <div
+                            className="p-2.5 rounded-xl"
+                            style={{ backgroundColor: rating > 0 ? `${getRatingColor(rating)}15` : 'var(--muted)' }}
+                        >
+                            <div className="relative size-6">
+                                <Star
+                                    className="size-6"
+                                    style={{ color: rating > 0 ? getRatingColor(rating) : 'var(--muted-foreground)' }}
+                                    strokeWidth={2}
+                                />
+                                {rating > 0 && (
+                                    <div
+                                        className="absolute inset-0 overflow-hidden"
+                                        style={{ width: `${(rating / 5) * 100}%` }}
+                                    >
+                                        <Star
+                                            className="size-6"
+                                            style={{ color: getRatingColor(rating), fill: getRatingColor(rating) }}
+                                            strokeWidth={2}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-bold tabular-nums">{rating > 0 ? `${rating}/5` : '-'}</span>
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Rating</span>
+                        </div>
+                    </div>
+
+                    {/* Exercises */}
+                    <div className="flex items-center gap-2">
+                        <div className="p-2.5 rounded-xl bg-primary/10">
+                            <CircleCheck className="size-6 text-primary" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-bold tabular-nums">{exercisesCompleted}/{exercisesTotal}</span>
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Exercises</span>
+                        </div>
+                    </div>
+
+                    {/* Duration */}
+                    <div className="flex items-center gap-2">
+                        <div className="p-2.5 rounded-xl bg-primary/10">
+                            <Clock className="size-6 text-primary" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-bold tabular-nums">{minutes} min</span>
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Duration</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
