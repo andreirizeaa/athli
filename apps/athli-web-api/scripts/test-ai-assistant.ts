@@ -531,6 +531,50 @@ async function runDirectAgentTests() {
         return hasColumns ? `PASS: Knows columns (HR Zone: ${hasHRZone})` : 'FAIL: Missing column info';
       },
     },
+    // Issue 2b: Cardio workout columns
+    {
+      id: 'ISSUE-2b',
+      message: 'Create a simple cardio workout with treadmill running for 30 minutes',
+      check: (r: any) => {
+        if (r.action?.type === 'create_workout') {
+          const sections = r.action.payload?.sections || [];
+          for (const section of sections) {
+            for (const ex of section.exercises || []) {
+              // Check if cardio uses minutes
+              if (ex.column1Label === 'minutes') {
+                return `PASS: Cardio uses minutes column (column1Label=${ex.column1Label})`;
+              }
+            }
+          }
+          return 'FAIL: Cardio not using minutes column';
+        }
+        return 'INFO: Fetching exercise catalog first';
+      },
+    },
+    // Issue 2c: Weight values are numeric
+    {
+      id: 'ISSUE-2c',
+      message: 'Create a simple strength workout with barbell bench press for 3 sets of 10 reps',
+      check: (r: any) => {
+        if (r.action?.type === 'create_workout') {
+          const sections = r.action.payload?.sections || [];
+          for (const section of sections) {
+            for (const ex of section.exercises || []) {
+              const weightVal = ex.column2Value;
+              // Check if weight is a number (or null for Optional)
+              if (weightVal !== null && weightVal !== undefined && isNaN(Number(weightVal))) {
+                return `FAIL: Weight value is not numeric: "${weightVal}"`;
+              }
+              if (ex.column2Label === 'kg' && weightVal) {
+                return `PASS: Weight is numeric: ${weightVal}kg`;
+              }
+            }
+          }
+          return 'INFO: Check payload structure';
+        }
+        return 'INFO: Fetching exercise catalog first';
+      },
+    },
     // Issue 1: Draft message - use specific client
     {
       id: 'ISSUE-1',
@@ -607,7 +651,7 @@ async function runDirectAgentTests() {
       console.log(`Result: ${checkResult}`);
 
       if (result.action) {
-        console.log(`Action: ${result.action.action}`);
+        console.log(`Action: ${result.action.type}`);
       }
 
       console.log(`Response: ${result.content.substring(0, 150)}...`);

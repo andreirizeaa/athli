@@ -26,11 +26,17 @@ export interface AISection {
 export interface AIExercise {
   prescribedExerciseId?: string;
   name: string;
+  category?: string;
   sets?: number;
-  reps?: string;
-  weight?: string | null;
+  column1Label?: string;
+  column1Value?: string;
+  column2Label?: string;
+  column2Value?: string | null;
   rest?: number | null;
   notes?: string | null;
+  // Legacy fields (for backwards compatibility)
+  reps?: string;
+  weight?: string | null;
 }
 
 /**
@@ -110,9 +116,13 @@ export function transformWorkoutPayload(aiPayload: AIWorkoutPayload): APIWorkout
   const items: APIWorkoutItem[] = aiPayload.sections.map((section) => {
     const exerciseGroups: APIExerciseGroup[] = section.exercises.map((exercise) => {
       const numSets = exercise.sets || 3;
-      const repsValue = exercise.reps || '10';
-      const weightValue = exercise.weight || null;
       const restSeconds = exercise.rest ?? 90;
+
+      // Use new column fields if provided, fall back to legacy reps/weight fields
+      const col1Label = exercise.column1Label || 'Reps';
+      const col1Value = exercise.column1Value || exercise.reps || '10';
+      const col2Label = exercise.column2Label || 'kg';
+      const col2Value = exercise.column2Value !== undefined ? exercise.column2Value : (exercise.weight || null);
 
       const sets: APISet[] = Array.from({ length: numSets }, (_, index) => ({
         setNumber: index + 1,
@@ -121,13 +131,13 @@ export function transformWorkoutPayload(aiPayload: AIWorkoutPayload): APIWorkout
         completed: 'not_started' as const,
         skipped: false,
         trackableField1: {
-          label: 'Reps',
-          prescribed: repsValue,
+          label: col1Label,
+          prescribed: col1Value,
           completed: null,
         },
         trackableField2: {
-          label: 'kg',
-          prescribed: weightValue,
+          label: col2Label,
+          prescribed: col2Value,
           completed: null,
         },
         dropset: null,
@@ -143,8 +153,8 @@ export function transformWorkoutPayload(aiPayload: AIWorkoutPayload): APIWorkout
         supersetId: null,
         eachSide: false,
         tempo: null,
-        column1Label: 'Reps',
-        column2Label: 'kg',
+        column1Label: col1Label,
+        column2Label: col2Label,
         completed: 'not_started',
       };
 
@@ -220,9 +230,13 @@ export interface APISectionPayload {
 export function transformSectionPayload(aiPayload: AISectionPayload): APISectionPayload {
   const exerciseGroups: APIExerciseGroup[] = aiPayload.exercises.map((exercise) => {
     const numSets = exercise.sets || 3;
-    const repsValue = exercise.reps || '10';
-    const weightValue = exercise.weight || null;
     const restSeconds = exercise.rest ?? 90;
+
+    // Use new column fields if provided, fall back to legacy reps/weight fields
+    const col1Label = exercise.column1Label || 'Reps';
+    const col1Value = exercise.column1Value || exercise.reps || '10';
+    const col2Label = exercise.column2Label || 'kg';
+    const col2Value = exercise.column2Value !== undefined ? exercise.column2Value : (exercise.weight || null);
 
     const sets: APISet[] = Array.from({ length: numSets }, (_, index) => ({
       setNumber: index + 1,
@@ -231,13 +245,13 @@ export function transformSectionPayload(aiPayload: AISectionPayload): APISection
       completed: 'not_started' as const,
       skipped: false,
       trackableField1: {
-        label: 'Reps',
-        prescribed: repsValue,
+        label: col1Label,
+        prescribed: col1Value,
         completed: null,
       },
       trackableField2: {
-        label: 'kg',
-        prescribed: weightValue,
+        label: col2Label,
+        prescribed: col2Value,
         completed: null,
       },
       dropset: null,
@@ -253,8 +267,8 @@ export function transformSectionPayload(aiPayload: AISectionPayload): APISection
       supersetId: null,
       eachSide: false,
       tempo: null,
-      column1Label: 'Reps',
-      column2Label: 'kg',
+      column1Label: col1Label,
+      column2Label: col2Label,
       completed: 'not_started',
     };
 

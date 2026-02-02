@@ -138,28 +138,58 @@ export const buildSystemPromptWithContext = (context: {
   }
 
   // Add workout column configuration context
-  prompt += `\n\nWorkout Exercise Trackable Fields:
-When creating workouts, each exercise has TWO trackable columns that clients fill in during their workout.
-The column types available are:
-- 'Reps' - for rep count (numeric input)
-- 'kg' or 'lbs' - for weight (numeric input)
-- 'km', 'm', 'yards', 'miles', 'feet' - for distance (numeric input)
-- 'minutes', 'seconds' - for duration (numeric input)
-- 'Tempo' - for tempo notation
-- 'RIR' - Reps In Reserve (numeric 0-5)
-- 'RPE' - Rate of Perceived Exertion (numeric 1-10)
-- 'Heart Rate Zone' - select from Zone 1-5 (dropdown, not numeric)
-- 'Calories', 'Watts', 'Pace', 'Speed', 'Incline', 'Height', 'RPM' - numeric inputs
-- 'Optional' - disables the column
+  prompt += `\n\nWorkout Exercise Column Configuration:
 
-Default column configurations by exercise category:
-- Barbell/Dumbbells/Machine/Cables: column1='Reps', column2='kg'
-- Bodyweight/Band/TRX: column1='Reps', column2='Optional'
-- Cardio: column1='minutes', column2='Optional'
-- Stretches/Yoga: column1='minutes' or 'Reps', column2='Optional'
+CRITICAL: When creating workouts/sections, you MUST set column1Label, column1Value, column2Label, and column2Value for EACH exercise based on its CATEGORY.
 
-For reps, you CAN use ranges like "8-12" but for automated creation, prefer single values unless specifically asked for ranges.
-All trackable fields expect NUMERIC inputs except Heart Rate Zone which is a dropdown selector.`;
+Column Label Options:
+- column1Label: 'Reps' (default for strength), 'minutes' (for cardio/yoga), 'seconds', 'km', 'm'
+- column2Label: 'kg' (for weighted exercises), 'lbs', 'Optional' (for bodyweight/cardio), 'Heart Rate Zone', 'RPE', 'RIR'
+
+MANDATORY column configuration by exercise CATEGORY (get category from get_exercise_catalog):
+| Category    | column1Label | column1Value | column2Label | column2Value |
+|-------------|--------------|--------------|--------------|--------------|
+| Barbell     | Reps         | "10"         | kg           | "60"         |
+| Dumbbells   | Reps         | "10"         | kg           | "20"         |
+| Machine     | Reps         | "12"         | kg           | "40"         |
+| Cables      | Reps         | "12"         | kg           | "30"         |
+| Kettlebells | Reps         | "10"         | kg           | "16"         |
+| Bodyweight  | Reps         | "10"         | Optional     | (leave empty)|
+| Band        | Reps         | "12"         | Optional     | (leave empty)|
+| TRX         | Reps         | "12"         | Optional     | (leave empty)|
+| Cardio      | minutes      | "30"         | Optional     | (leave empty)|
+| Stretches   | Reps         | "10"         | Optional     | (leave empty)|
+| Yoga        | minutes      | "15"         | Optional     | (leave empty)|
+
+*** ABSOLUTELY CRITICAL - READ THIS ***
+1. column1Value and column2Value MUST ALWAYS be NUMBERS or numeric ranges:
+   - CORRECT: "10", "12", "8-12", "60", "30"
+   - WRONG: "moderate", "heavy", "light", "high intensity", "challenging"
+2. For Cardio/Yoga exercises: ALWAYS use column1Label='minutes' (NOT 'Reps')
+3. For Bodyweight/Band/TRX: ALWAYS use column2Label='Optional' (NOT 'kg')
+4. For weighted exercises (Barbell, Dumbbells, etc.): ALWAYS provide a numeric weight like "60" not "moderate"
+
+Example - CORRECT cardio exercise:
+{
+  "name": "Treadmill Running",
+  "category": "Cardio",
+  "sets": 1,
+  "column1Label": "minutes",
+  "column1Value": "30",
+  "column2Label": "Optional",
+  "column2Value": null
+}
+
+Example - CORRECT barbell exercise:
+{
+  "name": "Bench Press",
+  "category": "Barbell",
+  "sets": 4,
+  "column1Label": "Reps",
+  "column1Value": "8-12",
+  "column2Label": "kg",
+  "column2Value": "60"
+}`;
 
   return prompt;
 };
