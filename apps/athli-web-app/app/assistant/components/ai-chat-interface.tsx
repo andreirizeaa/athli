@@ -53,6 +53,7 @@ import { assignMetric } from "@/api/client/client-metric-service";
 import { saveAthleteGoals, saveAthleteInjuries, getAthleteGoals, getAthleteInjuries } from "@/api/client/client-service";
 import { createMetric } from "@/api/coach/coach-metric-service";
 import { addCheckIn } from "@/api/coach/coach-check-in-service";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface AIChatInterfaceProps {
     chatId?: string;
@@ -88,6 +89,9 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
 
     // Get user profile for coach ID
     const { user } = useUserProfile();
+
+    // Query client for cache invalidation
+    const queryClient = useQueryClient();
 
     // Load animation
     useEffect(() => {
@@ -193,12 +197,16 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                 if (payload.questions && payload.questions.length > 0) {
                     const { addQuestion } = await import('@/api/coach/coach-check-in-service');
                     for (const q of payload.questions) {
+                        // Map AI question types to the exact format values used in the app
+                        // These must match the format IDs in add-question-side-panel.tsx
                         const formatMap: Record<string, string> = {
                             'text': 'text',
                             'number': 'number',
                             'rating': 'rating',
-                            'yes_no': 'yes/no',
-                            'multiple_choice': 'multi-select',
+                            'yesNo': 'yesNo',
+                            'multipleChoice': 'multipleChoice',
+                            'scale': 'scale',
+                            'date': 'date',
                         };
                         await addQuestion({
                             formId: checkIn.id,
@@ -206,9 +214,14 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                             required: q.required || false,
                             format: formatMap[q.type] || 'text',
                             options: q.options || [],
+                            scaleFrom: q.scaleFrom,
+                            scaleTo: q.scaleTo,
                         });
                     }
                 }
+                // Invalidate check-ins cache
+                queryClient.invalidateQueries({ queryKey: ['coach_checkins'] });
+                queryClient.invalidateQueries({ queryKey: ['checkins'] });
                 toast.success(`Check-in "${payload.name}" created!`);
                 setTimeout(() => {
                     router.push(getActionRedirectUrl(actionType, payload));
@@ -229,6 +242,9 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                     unit: payload.unit || '',
                     description: payload.description || '',
                 });
+                // Invalidate metrics cache so the new metric shows up without refresh
+                queryClient.invalidateQueries({ queryKey: ['coach_metrics'] });
+                queryClient.invalidateQueries({ queryKey: ['metrics'] });
                 toast.success(`Metric "${payload.name}" created!`);
                 setTimeout(() => {
                     router.push(getActionRedirectUrl(actionType, payload));

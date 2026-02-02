@@ -1136,6 +1136,14 @@ export const createAssignMetricToClientTool = (ctx: ToolContext) =>
 export const createAddClientGoalTool = (ctx: ToolContext) =>
   tool(
     async ({ clientId, clientName, goalType, targetValue, targetDate, description }) => {
+      // If no target date provided, suggest a date 6 months from now
+      let suggestedDate = targetDate;
+      if (!suggestedDate) {
+        const sixMonthsFromNow = new Date();
+        sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+        suggestedDate = sixMonthsFromNow.toISOString().split('T')[0];
+      }
+
       return JSON.stringify({
         success: true,
         action: 'add_client_goal',
@@ -1144,22 +1152,22 @@ export const createAddClientGoalTool = (ctx: ToolContext) =>
           clientName: clientName || 'Client',
           goalType,
           targetValue: targetValue || null,
-          targetDate: targetDate || null,
+          targetDate: suggestedDate,
           description: description || '',
         },
-        message: `Ready to add "${goalType}" goal for ${clientName || 'client'}${targetValue ? ` (target: ${targetValue})` : ''}.`,
+        message: `Ready to add "${goalType}" goal for ${clientName || 'client'}${targetValue ? ` (target: ${targetValue})` : ''}${suggestedDate ? ` by ${suggestedDate}` : ''}.`,
       });
     },
     {
       name: 'add_client_goal',
       description:
-        'Add a new goal for a client. Returns a payload that the user must confirm before saving.',
+        'Add a new goal for a client. Returns a payload that the user must confirm before saving. If no target date is specified, defaults to 6 months from today.',
       schema: z.object({
         clientId: z.string().describe('The client ID (UUID)'),
         clientName: z.string().optional().describe('Client name for display'),
         goalType: z.string().describe('Type of goal (e.g., "Weight Loss", "Strength", "Muscle Gain", "Endurance")'),
         targetValue: z.string().optional().describe('Target value (e.g., "75kg", "100kg squat", "Run 5k")'),
-        targetDate: z.string().optional().describe('Target date (ISO format)'),
+        targetDate: z.string().optional().describe('Target date (ISO format, e.g., 2026-08-02). If not provided, defaults to 6 months from today.'),
         description: z.string().optional().describe('Additional details about the goal'),
       }),
     }
@@ -1168,6 +1176,9 @@ export const createAddClientGoalTool = (ctx: ToolContext) =>
 export const createAddClientInjuryTool = (ctx: ToolContext) =>
   tool(
     async ({ clientId, clientName, injuryType, bodyPart, severity, notes, dateOccurred }) => {
+      // If no date provided, use today as default
+      const injuryDate = dateOccurred || new Date().toISOString().split('T')[0];
+
       return JSON.stringify({
         success: true,
         action: 'add_client_injury',
@@ -1178,15 +1189,15 @@ export const createAddClientInjuryTool = (ctx: ToolContext) =>
           bodyPart,
           severity: severity || 'moderate',
           notes: notes || '',
-          dateOccurred: dateOccurred || null,
+          dateOccurred: injuryDate,
         },
-        message: `Ready to add "${injuryType}" injury (${bodyPart}) for ${clientName || 'client'}.`,
+        message: `Ready to add "${injuryType}" injury (${bodyPart}) for ${clientName || 'client'}, occurred on ${injuryDate}.`,
       });
     },
     {
       name: 'add_client_injury',
       description:
-        'Record an injury for a client. Returns a payload that the user must confirm before saving.',
+        'Record an injury for a client. Returns a payload that the user must confirm before saving. If no date is specified, defaults to today.',
       schema: z.object({
         clientId: z.string().describe('The client ID (UUID)'),
         clientName: z.string().optional().describe('Client name for display'),
@@ -1194,7 +1205,7 @@ export const createAddClientInjuryTool = (ctx: ToolContext) =>
         bodyPart: z.string().describe('Affected body part (e.g., "Lower Back", "Right Knee", "Left Shoulder")'),
         severity: z.enum(['mild', 'moderate', 'severe']).optional().describe('Injury severity'),
         notes: z.string().optional().describe('Additional notes about the injury, limitations, or rehab'),
-        dateOccurred: z.string().optional().describe('When the injury occurred (ISO format)'),
+        dateOccurred: z.string().optional().describe('When the injury occurred (ISO format, e.g., 2026-01-15). If not provided, defaults to today.'),
       }),
     }
   );
@@ -1252,15 +1263,13 @@ export const createUpdateClientProfileTool = (ctx: ToolContext) =>
     {
       name: 'update_client_profile',
       description:
-        'Update a client\'s profile information. Returns a payload that the user must confirm before saving.',
+        'Update a client\'s profile information. Returns a payload that the user must confirm before saving. Note: Only category and notes can be updated via AI.',
       schema: z.object({
         clientId: z.string().describe('The client ID (UUID)'),
         clientName: z.string().optional().describe('Client name for display'),
         updates: z.object({
-          category: z.enum(['general', 'athlete', 'rehabilitation', 'weight_loss', 'strength']).optional()
-            .describe('Client category'),
-          status: z.enum(['active', 'inactive', 'on_hold']).optional()
-            .describe('Client status'),
+          category: z.enum(['online', 'in-person', 'hybrid']).optional()
+            .describe('Client coaching type: online (remote coaching), in-person (face-to-face), or hybrid (mix of both)'),
           notes: z.string().optional().describe('Coach notes about the client'),
         }).describe('Fields to update'),
       }),
@@ -1300,9 +1309,11 @@ export const createCreateCheckinTemplateTool = (ctx: ToolContext) =>
         description: z.string().optional().describe('Description of the check-in'),
         questions: z.array(z.object({
           question: z.string().describe('The question text'),
-          type: z.enum(['text', 'number', 'rating', 'yes_no', 'multiple_choice']).describe('Question type'),
+          type: z.enum(['text', 'number', 'rating', 'yesNo', 'multipleChoice', 'scale', 'date']).describe('Question type: text (free text), number (numeric input), rating (1-5 stars), yesNo (yes/no toggle), multipleChoice (select from options), scale (custom range like 1-10), date (date picker)'),
           required: z.boolean().optional().describe('Whether the question is required'),
-          options: z.array(z.string()).optional().describe('Options for multiple choice questions'),
+          options: z.array(z.string()).optional().describe('Options for multipleChoice questions'),
+          scaleFrom: z.string().optional().describe('Start of scale range for scale type (e.g., "1" or "Low")'),
+          scaleTo: z.string().optional().describe('End of scale range for scale type (e.g., "10" or "High")'),
         })).describe('List of questions'),
       }),
     }

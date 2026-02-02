@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Check,
   Loader2,
@@ -32,7 +33,6 @@ interface ActionCardProps {
 export function ActionCard({ actionType, payload, onConfirm, className }: ActionCardProps) {
   const [isConfirming, setIsConfirming] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
 
   const handleConfirm = async () => {
     if (isConfirming || isConfirmed) return;
@@ -48,24 +48,27 @@ export function ActionCard({ actionType, payload, onConfirm, className }: Action
     }
   };
 
-  const handleCopyMessage = async () => {
-    if (actionType !== 'draft_message') return;
-
-    const messageText = payload.subject
-      ? `Subject: ${payload.subject}\n\n${payload.message}`
-      : payload.message;
-
-    await navigator.clipboard.writeText(messageText);
-    setIsCopied(true);
-    toast.success('Message copied to clipboard!');
-
-    // Reset after 3 seconds
-    setTimeout(() => setIsCopied(false), 3000);
-  };
-
   const buttonLabel = getActionDisplayName(actionType);
   const Icon = getActionIcon(actionType);
   const isDraftMessage = actionType === 'draft_message';
+
+  // Draft message has its own UI with editable textarea and copy button
+  if (isDraftMessage) {
+    return (
+      <Card className={cn('mt-3 border-primary/20 bg-primary/5', className)}>
+        <CardContent className="pt-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-primary/10 p-2">
+              <Icon className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <DraftMessageCard payload={payload} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className={cn('mt-3 border-primary/20 bg-primary/5', className)}>
@@ -80,51 +83,28 @@ export function ActionCard({ actionType, payload, onConfirm, className }: Action
         </div>
       </CardContent>
       <CardFooter className="pt-0 pb-4">
-        {isDraftMessage ? (
-          <Button
-            onClick={handleCopyMessage}
-            variant={isCopied ? 'secondary' : 'default'}
-            className={cn(
-              'w-full',
-              isCopied && 'bg-green-600 hover:bg-green-600 text-white'
-            )}
-          >
-            {isCopied ? (
-              <>
-                <Check className="mr-2 h-4 w-4" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy Message
-              </>
-            )}
-          </Button>
-        ) : (
-          <Button
-            onClick={handleConfirm}
-            disabled={isConfirming || isConfirmed}
-            className={cn(
-              'w-full',
-              isConfirmed && 'bg-green-600 hover:bg-green-600'
-            )}
-          >
-            {isConfirming ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : isConfirmed ? (
-              <>
-                <Check className="mr-2 h-4 w-4" />
-                Done
-              </>
-            ) : (
-              buttonLabel
-            )}
-          </Button>
-        )}
+        <Button
+          onClick={handleConfirm}
+          disabled={isConfirming || isConfirmed}
+          className={cn(
+            'w-full',
+            isConfirmed && 'bg-green-600 hover:bg-green-600'
+          )}
+        >
+          {isConfirming ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : isConfirmed ? (
+            <>
+              <Check className="mr-2 h-4 w-4" />
+              Done
+            </>
+          ) : (
+            buttonLabel
+          )}
+        </Button>
       </CardFooter>
     </Card>
   );
@@ -157,6 +137,64 @@ function getActionIcon(actionType: ActionType) {
     default:
       return Dumbbell;
   }
+}
+
+// Self-contained component for draft message with editable textarea and copy button
+function DraftMessageCard({ payload }: { payload: any }) {
+  const [editedMessage, setEditedMessage] = useState(payload.message || '');
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopyMessage = async () => {
+    await navigator.clipboard.writeText(editedMessage);
+    setIsCopied(true);
+    toast.success('Message copied to clipboard!');
+    setTimeout(() => setIsCopied(false), 3000);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="font-medium text-foreground">
+          Message for {payload.clientName}
+        </h4>
+        <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs capitalize">
+          {payload.messageType || 'general'}
+        </span>
+      </div>
+      <Textarea
+        value={editedMessage}
+        onChange={(e) => setEditedMessage(e.target.value)}
+        className="min-h-[120px] text-sm resize-y bg-background"
+        placeholder="Edit your message..."
+      />
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          Edit above, then copy to send via WhatsApp, email, etc.
+        </p>
+        <Button
+          onClick={handleCopyMessage}
+          size="sm"
+          variant={isCopied ? 'default' : 'outline'}
+          className={cn(
+            'shrink-0',
+            isCopied && 'bg-green-600 hover:bg-green-600 text-white'
+          )}
+        >
+          {isCopied ? (
+            <>
+              <Check className="mr-1.5 h-3.5 w-3.5" />
+              Copied!
+            </>
+          ) : (
+            <>
+              <Copy className="mr-1.5 h-3.5 w-3.5" />
+              Copy Message
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 interface ActionSummaryProps {
@@ -317,27 +355,9 @@ function ActionSummary({ actionType, payload }: ActionSummaryProps) {
     );
   }
 
+  // draft_message is handled by DraftMessageCard directly in ActionCard
   if (actionType === 'draft_message') {
-    return (
-      <div className="space-y-1">
-        <h4 className="font-medium text-foreground">
-          Message for {payload.clientName}
-        </h4>
-        {payload.subject && (
-          <p className="text-sm font-medium text-muted-foreground">
-            Subject: {payload.subject}
-          </p>
-        )}
-        <div className="mt-2 p-3 bg-muted/50 rounded-lg text-sm whitespace-pre-wrap max-h-32 overflow-y-auto">
-          {payload.message}
-        </div>
-        <div className="flex flex-wrap gap-2 pt-1">
-          <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs capitalize">
-            {payload.messageType || 'general'}
-          </span>
-        </div>
-      </div>
-    );
+    return null; // Handled separately
   }
 
   if (actionType === 'update_client_profile') {

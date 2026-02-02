@@ -110,6 +110,22 @@ export const buildSystemPromptWithContext = (context: {
 }) => {
   let prompt = SYSTEM_PROMPT;
 
+  // Add current date context - critical for workout assignments
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const formattedDate = today.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  prompt += `\n\nCurrent Date Context:
+- Today's date: ${todayStr} (${formattedDate})
+- IMPORTANT: When assigning workouts, always use dates in the future (today or later). Never use past dates.
+- When adding client goals, suggest a target date roughly 3-6 months from today unless specified.
+- When recording injuries, if no date is given, use today's date or ask when it occurred.`;
+
   if (context.coachName) {
     prompt += `\n\nCoach Information:
 - Name: ${context.coachName}
@@ -120,6 +136,30 @@ export const buildSystemPromptWithContext = (context: {
   if (context.startupContext) {
     prompt += context.startupContext;
   }
+
+  // Add workout column configuration context
+  prompt += `\n\nWorkout Exercise Trackable Fields:
+When creating workouts, each exercise has TWO trackable columns that clients fill in during their workout.
+The column types available are:
+- 'Reps' - for rep count (numeric input)
+- 'kg' or 'lbs' - for weight (numeric input)
+- 'km', 'm', 'yards', 'miles', 'feet' - for distance (numeric input)
+- 'minutes', 'seconds' - for duration (numeric input)
+- 'Tempo' - for tempo notation
+- 'RIR' - Reps In Reserve (numeric 0-5)
+- 'RPE' - Rate of Perceived Exertion (numeric 1-10)
+- 'Heart Rate Zone' - select from Zone 1-5 (dropdown, not numeric)
+- 'Calories', 'Watts', 'Pace', 'Speed', 'Incline', 'Height', 'RPM' - numeric inputs
+- 'Optional' - disables the column
+
+Default column configurations by exercise category:
+- Barbell/Dumbbells/Machine/Cables: column1='Reps', column2='kg'
+- Bodyweight/Band/TRX: column1='Reps', column2='Optional'
+- Cardio: column1='minutes', column2='Optional'
+- Stretches/Yoga: column1='minutes' or 'Reps', column2='Optional'
+
+For reps, you CAN use ranges like "8-12" but for automated creation, prefer single values unless specifically asked for ranges.
+All trackable fields expect NUMERIC inputs except Heart Rate Zone which is a dropdown selector.`;
 
   return prompt;
 };
