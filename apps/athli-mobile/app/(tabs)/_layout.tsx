@@ -346,7 +346,7 @@ export default function TabLayout() {
         <FAB
           onPress={handleFabPress}
           variant={fabVariant}
-          bottom={Platform.OS === 'android' ? insets.bottom + 72 : insets.bottom + 60}
+          bottom={Platform.OS === 'android' ? insets.bottom + 72 : insets.bottom + 66}
         />
       )}
     </>
@@ -359,8 +359,12 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   const insets = useSafeAreaInsets();
   const activeRouteName = state.routes[state.index]?.name;
   const { colors: themeColors } = useThemePreference();
+  const colorScheme = useColorScheme();
   const { appView } = useAppView();
   const { t } = useTranslations();
+
+  const tabBarBackground =
+    colorScheme === 'dark' ? '#0A0A0A' : themeColors.backgroundSecondary;
 
   const handleTabPress = (name: string) => {
     haptics.medium();
@@ -468,12 +472,12 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   const tabs = appView === 'coach' ? coachTabs : athleteTabs;
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
+    <View style={[styles.container, { backgroundColor: tabBarBackground }]}>
       <View style={[styles.separator, { backgroundColor: themeColors.border }]} />
       <View
         style={[
           styles.navigationBar,
-          { paddingBottom: insets.bottom + 8, backgroundColor: themeColors.backgroundSecondary },
+          { paddingBottom: insets.bottom + 8, backgroundColor: tabBarBackground },
         ]}
       >
         <View style={styles.tabsContainer}>
@@ -506,7 +510,7 @@ const styles = StyleSheet.create({
   },
   navigationBar: {
     position: 'relative',
-    paddingHorizontal: 24,
+    paddingHorizontal: 8,
     paddingTop: 4,
     marginBottom: Platform.OS === 'android' ? -8 : -12,
     shadowColor: '#000000',
@@ -521,6 +525,7 @@ const styles = StyleSheet.create({
   tabsContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
+    justifyContent: 'space-evenly',
     width: '100%',
   },
   tabSection: {

@@ -275,7 +275,7 @@ export const ChatToolbar = ({
                       <PlatformIcon
                         sf="camera"
                         IconComponent={Camera}
-                        size={iconSizes.tabBarIcons + 2}
+                        size={iconSizes.tabBarIcons - 2}
                         color={iconColor}
                       />
                     </PressableOpacity>
