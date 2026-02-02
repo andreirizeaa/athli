@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
   fileItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     gap: 12,
   },

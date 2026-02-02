@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Check, Megaphone, Archive } from 'lucide-react-native';
+import { Check, Archive } from 'lucide-react-native';
 import { FlashList } from '@shopify/flash-list';
 
 
@@ -347,17 +347,10 @@ export default function ChatsScreen() {
             <Text style={[styles.title, { color: themeColors.text }]}>{t('chats.title')}</Text>
             <View style={styles.headerButtonContainer}>
 
-              {isEditMode ? (
+              {isEditMode && (
                 <IconButton
                   icon={{ sf: 'checkmark', IconComponent: Check }}
                   onPress={handleEllipsisPress}
-                  size="md"
-                  color={themeColors.text}
-                />
-              ) : (
-                <IconButton
-                  icon={{ sf: 'megaphone', IconComponent: Megaphone }}
-                  onPress={() => router.push('/modals/message/broadcast-modal')}
                   size="md"
                   color={themeColors.text}
                 />
