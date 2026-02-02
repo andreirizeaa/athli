@@ -775,6 +775,13 @@ function isNumericValue(value: string | null | undefined): boolean {
   return /^[\d.]+(-[\d.]+)?$/.test(value.trim());
 }
 
+// Helper to check if a value is a single number (no ranges allowed - for weight)
+function isSingleNumericValue(value: string | null | undefined): boolean {
+  if (!value) return true; // null/undefined is ok for Optional columns
+  // Only allow single numbers like "10", "60.5" - NO ranges
+  return /^[\d.]+$/.test(value.trim());
+}
+
 // Helper to apply category defaults and fix non-numeric values
 function normalizeExercise(ex: any): any {
   const categoryDefaults = ex.category ? CATEGORY_COLUMN_DEFAULTS[ex.category] : null;
@@ -805,10 +812,11 @@ function normalizeExercise(ex: any): any {
     column1Value = defaults.column1Value;
   }
 
-  // If column2Value is not numeric and column2 is a weight column, use default
+  // If column2Value is not a single number and column2 is a weight column, use default
+  // Weight values should NOT use ranges (e.g., "60" is ok, "60-80" is not)
   if (column2Label === 'kg' || column2Label === 'lbs') {
-    if (!isNumericValue(column2Value)) {
-      console.warn(`Non-numeric column2Value "${column2Value}" for "${ex.name}", using default "${defaults.column2Value}"`);
+    if (!isSingleNumericValue(column2Value)) {
+      console.warn(`Invalid column2Value "${column2Value}" for "${ex.name}" (weight must be a single number, not a range), using default "${defaults.column2Value}"`);
       column2Value = defaults.column2Value;
     }
   } else if (column2Label === 'Optional') {
@@ -831,10 +839,10 @@ const workoutExerciseSchema = z.object({
   sets: z.number().default(3).describe('Number of sets'),
   column1Label: z.enum(['Reps', 'minutes', 'seconds', 'km', 'm']).default('Reps')
     .describe('Column 1 type. IMPORTANT: For Cardio/Yoga use "minutes". For strength exercises use "Reps".'),
-  column1Value: z.string().describe('MUST be a NUMBER like "10" or "30" or a range like "8-12". NEVER use text like "moderate".'),
+  column1Value: z.string().describe('MUST be a NUMBER like "10" or "30", or a range like "8-12" for reps. NEVER use text like "moderate".'),
   column2Label: z.enum(['kg', 'lbs', 'Optional', 'Calories', 'Heart Rate Zone', 'RPE', 'RIR']).default('kg')
     .describe('Column 2 type. IMPORTANT: For Cardio/Bodyweight use "Optional". For weighted exercises use "kg" or "lbs".'),
-  column2Value: z.string().optional().describe('MUST be a NUMBER like "60" for weight. NEVER use text like "moderate" or "heavy". Leave empty for Optional.'),
+  column2Value: z.string().optional().describe('MUST be a SINGLE NUMBER like "60" for weight. NO ranges allowed for weight (use "60" not "60-80"). Leave empty for Optional.'),
   rest: z.number().optional().describe('Rest in seconds between sets'),
   notes: z.string().optional().describe('Exercise-specific notes or cues'),
 });

@@ -162,12 +162,15 @@ MANDATORY column configuration by exercise CATEGORY (get category from get_exerc
 | Yoga        | minutes      | "15"         | Optional     | (leave empty)|
 
 *** ABSOLUTELY CRITICAL - READ THIS ***
-1. column1Value and column2Value MUST ALWAYS be NUMBERS or numeric ranges:
-   - CORRECT: "10", "12", "8-12", "60", "30"
-   - WRONG: "moderate", "heavy", "light", "high intensity", "challenging"
-2. For Cardio/Yoga exercises: ALWAYS use column1Label='minutes' (NOT 'Reps')
-3. For Bodyweight/Band/TRX: ALWAYS use column2Label='Optional' (NOT 'kg')
-4. For weighted exercises (Barbell, Dumbbells, etc.): ALWAYS provide a numeric weight like "60" not "moderate"
+1. column1Value (reps/minutes): Can be a NUMBER or RANGE
+   - CORRECT: "10", "12", "8-12", "30"
+   - WRONG: "moderate", "high intensity"
+2. column2Value (weight): Must be a SINGLE NUMBER, NO RANGES
+   - CORRECT: "60", "22.5"
+   - WRONG: "60-80", "moderate", "heavy"
+3. For Cardio/Yoga exercises: ALWAYS use column1Label='minutes' (NOT 'Reps')
+4. For Bodyweight/Band/TRX: ALWAYS use column2Label='Optional' (NOT 'kg')
+5. For weighted exercises (Barbell, Dumbbells, etc.): ALWAYS provide a single numeric weight like "60"
 
 Example - CORRECT cardio exercise:
 {
