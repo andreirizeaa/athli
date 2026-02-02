@@ -98,7 +98,9 @@
       "Bash(adb devices:*)",
       "Bash(adb install:*)",
       "Bash(adb shell:*)",
-      "Bash(keytool:*)"
+      "Bash(keytool:*)",
+      "Bash(xargs cat:*)",
+      "Bash(expo run:android)"
     ]
   }
 }
