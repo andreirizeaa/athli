@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
@@ -191,6 +191,14 @@ export default function TabLayout() {
     return modalRoutes[currentLibraryTab];
   };
 
+  // Helper to check if pathname matches the current app view
+  const isValidRouteForView = useCallback((path: string, view: 'coach' | 'athlete') => {
+    const coachRoutes = ['/clients', '/chats', '/library', '/settings'];
+    const athleteRoutes = ['/home', '/training', '/progress', '/inbox', '/profile'];
+    const validRoutes = view === 'coach' ? coachRoutes : athleteRoutes;
+    return validRoutes.some(route => path.startsWith(route));
+  }, []);
+
   // Use useEffect for initial mount to prevent navigation before layout is ready
   useEffect(() => {
     if (!isInitialMount.current) {
@@ -200,21 +208,21 @@ export default function TabLayout() {
     isInitialMount.current = false;
     previousAppView.current = appView;
 
-    // On initial mount with NativeTabs, ensure we navigate to the correct initial route
-    // This prevents add-modal from being shown on app load
-    if (hasLiquidGlass) {
-      const initialRoute = appView === 'athlete' ? '/home' : '/clients';
-      // Navigate to initial route if we're on index or any unexpected route (but not on a valid tab)
-      if (
-        pathname === '/' ||
-        pathname === '/(tabs)' ||
-        (pathname !== initialRoute && !pathname.startsWith('/clients') && !pathname.startsWith('/chats') && !pathname.startsWith('/library') && !pathname.startsWith('/settings') && !pathname.startsWith('/home') && !pathname.startsWith('/training') && !pathname.startsWith('/progress') && !pathname.startsWith('/inbox') && !pathname.startsWith('/profile') && !pathname.startsWith('/add-modal'))
-      ) {
-        // Delay navigation to ensure layout is mounted
-        setTimeout(() => {
-          router.replace(initialRoute);
-        }, 50);
-      }
+    // On initial mount, ensure we navigate to the correct initial route
+    // This prevents showing wrong view's content (e.g., athlete route with coach tab bar)
+    const initialRoute = appView === 'athlete' ? '/home' : '/clients';
+    // Navigate if: on index, or on wrong view's route, or on add-modal
+    const needsNavigation =
+      pathname === '/' ||
+      pathname === '/(tabs)' ||
+      pathname.startsWith('/add-modal') ||
+      !isValidRouteForView(pathname, appView);
+
+    if (needsNavigation) {
+      // Delay navigation to ensure layout is mounted
+      setTimeout(() => {
+        router.replace(initialRoute);
+      }, 50);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run on mount - pathname and router are stable
@@ -222,12 +230,9 @@ export default function TabLayout() {
   useEffect(() => {
     if (previousAppView.current !== appView) {
       previousAppView.current = appView;
-      // For liquid glass, navigate explicitly
-      // For non-liquid glass, the key prop on Tabs will handle remounting with correct initialRouteName
-      if (hasLiquidGlass) {
-        const initialRoute = appView === 'athlete' ? '/home' : '/clients';
-        router.replace(initialRoute);
-      }
+      // Navigate to the correct initial route when app view changes
+      const initialRoute = appView === 'athlete' ? '/home' : '/clients';
+      router.replace(initialRoute);
     }
   }, [appView, router]);
 
