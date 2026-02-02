@@ -2,11 +2,15 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
-import { Platform, StyleSheet, View, ActivityIndicator } from 'react-native';
+import { Platform, StyleSheet, View, ActivityIndicator, Text } from 'react-native';
 import { Image } from 'expo-image';
+import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
 import { MaterialIcons } from '@expo/vector-icons';
+
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import type { ComponentType } from 'react';
 
 import { useThemePreference, useColorScheme, useAuth } from '@/stores';
 import { useAppView } from '@/stores';
@@ -17,6 +21,27 @@ import { useAthleteDataStore, useCoachDataStore } from '@/stores';
 const darkBackground = require('@/assets/backgrounds/dark.png');
 const lightBackground = require('@/assets/backgrounds/light.png');
 import { FAB } from '@/components/ui';
+import { iconSizes } from '@/constants/typography';
+import { haptics } from '@/utils/haptics';
+import {
+  ChartNoAxesColumn,
+  FileText,
+  Home,
+  Cog,
+  Dumbbell,
+  Mail,
+  MessagesSquare,
+  User,
+  Users,
+} from 'lucide-react-native';
+
+type TabDefinition = {
+  name: string;
+  label: string;
+  sf: string;
+  mdi: string;
+  IconComponent: ComponentType<{ size?: number; color?: string }>;
+};
 
 const hasLiquidGlass = isLiquidGlassAvailable();
 
@@ -243,66 +268,19 @@ export default function TabLayout() {
     return <NativeTabsAthleteView primaryColor={primaryColor} />;
   }
 
-  // Tab bar icon helper for fallback (non-liquid glass) view
-  const renderTabBarIcon = (routeName: string, color: string, size: number) => {
-    const iconSize = Platform.OS === 'ios' ? size : size;
-    const sfIconMap: Record<string, string> = {
-      clients: 'person.2.fill',
-      chats: 'bubble.left.and.text.bubble.right.fill',
-      library: 'folder.fill',
-      settings: 'gear',
-      home: 'house.fill',
-      training: 'dumbbell.fill',
-      progress: 'chart.bar.fill',
-      inbox: 'envelope.fill',
-      profile: 'person.fill',
-    };
-    const mdiIconMap: Record<string, string> = {
-      clients: 'people',
-      chats: 'forum',
-      library: 'folder',
-      settings: 'settings',
-      home: 'home',
-      training: 'fitness-center',
-      progress: 'bar-chart',
-      inbox: 'mail',
-      profile: 'person',
-    };
-
-    if (Platform.OS === 'ios') {
-      return (
-        <SymbolView
-          name={sfIconMap[routeName] as any}
-          tintColor={color}
-          size={iconSize}
-          type="monochrome"
-        />
-      );
-    }
-    return <MaterialIcons name={mdiIconMap[routeName] as any} size={iconSize} color={color} />;
-  };
-
   return (
-    <View style={{ flex: 1 }}>
+    <>
       <Tabs
         key={appView}
         initialRouteName={appView === 'athlete' ? 'home' : 'clients'}
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: primaryColor,
-          tabBarInactiveTintColor: themeColors.mutedText,
-          tabBarStyle: {
-            backgroundColor: themeColors.backgroundSecondary,
-            borderTopColor: themeColors.border,
-          },
-        }}
+        tabBar={(props) => <FallbackTabBar {...props} />}
+        screenOptions={{ headerShown: false }}
       >
         <Tabs.Screen
           name="clients"
           options={{
             title: t('clients.title'),
             href: appView === 'coach' ? '/clients' : null,
-            tabBarIcon: ({ color, size }) => renderTabBarIcon('clients', color, size),
           }}
         />
         <Tabs.Screen
@@ -310,7 +288,6 @@ export default function TabLayout() {
           options={{
             title: t('chats.title'),
             href: appView === 'coach' ? '/chats' : null,
-            tabBarIcon: ({ color, size }) => renderTabBarIcon('chats', color, size),
           }}
         />
         <Tabs.Screen
@@ -318,7 +295,6 @@ export default function TabLayout() {
           options={{
             title: t('library.title'),
             href: appView === 'coach' ? '/library' : null,
-            tabBarIcon: ({ color, size }) => renderTabBarIcon('library', color, size),
           }}
         />
         <Tabs.Screen
@@ -326,7 +302,6 @@ export default function TabLayout() {
           options={{
             title: t('settings.title'),
             href: appView === 'coach' ? '/settings' : appView === 'athlete' ? '/settings' : null,
-            tabBarIcon: ({ color, size }) => renderTabBarIcon('settings', color, size),
           }}
         />
         <Tabs.Screen
@@ -334,7 +309,6 @@ export default function TabLayout() {
           options={{
             title: t('home.title'),
             href: appView === 'athlete' ? '/home' : null,
-            tabBarIcon: ({ color, size }) => renderTabBarIcon('home', color, size),
           }}
         />
         <Tabs.Screen
@@ -342,7 +316,6 @@ export default function TabLayout() {
           options={{
             title: t('training.title'),
             href: appView === 'athlete' ? '/training' : null,
-            tabBarIcon: ({ color, size }) => renderTabBarIcon('training', color, size),
           }}
         />
         <Tabs.Screen
@@ -350,7 +323,6 @@ export default function TabLayout() {
           options={{
             title: t('progress.title'),
             href: appView === 'athlete' ? '/progress' : null,
-            tabBarIcon: ({ color, size }) => renderTabBarIcon('progress', color, size),
           }}
         />
         <Tabs.Screen
@@ -358,7 +330,6 @@ export default function TabLayout() {
           options={{
             title: t('inbox.title'),
             href: appView === 'athlete' ? '/inbox' : null,
-            tabBarIcon: ({ color, size }) => renderTabBarIcon('inbox', color, size),
           }}
         />
         <Tabs.Screen
@@ -366,7 +337,6 @@ export default function TabLayout() {
           options={{
             title: t('profile.title'),
             href: appView === 'athlete' ? '/profile' : null,
-            tabBarIcon: ({ color, size }) => renderTabBarIcon('profile', color, size),
           }}
         />
         <Tabs.Screen name="index" options={{ href: null }} />
@@ -376,9 +346,144 @@ export default function TabLayout() {
         <FAB
           onPress={handleFabPress}
           variant={fabVariant}
-          bottom={insets.bottom + 60}
+          bottom={Platform.OS === 'android' ? insets.bottom + 72 : insets.bottom + 60}
         />
       )}
+    </>
+  );
+}
+
+type FallbackTabBarProps = BottomTabBarProps;
+
+function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
+  const insets = useSafeAreaInsets();
+  const activeRouteName = state.routes[state.index]?.name;
+  const { colors: themeColors } = useThemePreference();
+  const { appView } = useAppView();
+  const { t } = useTranslations();
+
+  const handleTabPress = (name: string) => {
+    haptics.medium();
+    if (name === activeRouteName) {
+      return;
+    }
+    navigation.navigate(name as never);
+  };
+
+  const renderTab = (tab: TabDefinition) => {
+    const isActive = activeRouteName === tab.name;
+    const color = isActive ? themeColors.text : themeColors.mutedText;
+    const iconSize = Platform.OS === 'ios' ? iconSizes.tabBarIconsIOS : iconSizes.tabBarIcons;
+
+    const iconNode =
+      Platform.OS === 'ios' ? (
+        <SymbolView name={tab.sf as any} tintColor={color} size={iconSize} type="monochrome" />
+      ) : (
+        <MaterialIcons name={tab.mdi as any} size={iconSize} color={color} />
+      );
+
+    return (
+      <PressableOpacity
+        key={tab.name}
+        style={styles.tab}
+        onPress={() => handleTabPress(tab.name)}
+      >
+        {iconNode}
+        <Text style={[styles.tabText, { color }]} numberOfLines={1}>
+          {tab.label}
+        </Text>
+      </PressableOpacity>
+    );
+  };
+
+  const coachTabs: TabDefinition[] = [
+    {
+      name: 'clients',
+      label: t('clients.title'),
+      sf: 'person.2.fill',
+      mdi: 'people',
+      IconComponent: Users,
+    },
+    {
+      name: 'chats',
+      label: t('chats.title'),
+      sf: 'bubble.left.and.text.bubble.right.fill',
+      mdi: 'forum',
+      IconComponent: MessagesSquare,
+    },
+    {
+      name: 'library',
+      label: t('library.title'),
+      sf: 'folder.fill',
+      mdi: 'folder',
+      IconComponent: FileText,
+    },
+    {
+      name: 'settings',
+      label: t('settings.title'),
+      sf: 'gear',
+      mdi: 'settings',
+      IconComponent: Cog,
+    },
+  ];
+
+  const athleteTabs: TabDefinition[] = [
+    {
+      name: 'home',
+      label: t('home.title'),
+      sf: 'house.fill',
+      mdi: 'home',
+      IconComponent: Home,
+    },
+    {
+      name: 'training',
+      label: t('training.title'),
+      sf: 'dumbbell.fill',
+      mdi: 'fitness-center',
+      IconComponent: Dumbbell,
+    },
+    {
+      name: 'progress',
+      label: t('progress.title'),
+      sf: 'chart.bar.fill',
+      mdi: 'bar-chart',
+      IconComponent: ChartNoAxesColumn,
+    },
+    {
+      name: 'inbox',
+      label: t('inbox.title'),
+      sf: 'envelope.fill',
+      mdi: 'mail',
+      IconComponent: Mail,
+    },
+    {
+      name: 'profile',
+      label: t('profile.title'),
+      sf: 'person.fill',
+      mdi: 'person',
+      IconComponent: User,
+    },
+  ];
+
+  const tabs = appView === 'coach' ? coachTabs : athleteTabs;
+
+  return (
+    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
+      <View style={[styles.separator, { backgroundColor: themeColors.border }]} />
+      <View
+        style={[
+          styles.navigationBar,
+          { paddingBottom: insets.bottom + 8, backgroundColor: themeColors.backgroundSecondary },
+        ]}
+      >
+        <View style={styles.tabsContainer}>
+          {tabs.map((tab) => (
+            <View key={tab.name} style={styles.tabSection}>
+              {renderTab(tab)}
+            </View>
+          ))}
+        </View>
+      </View>
     </View>
   );
 }
@@ -388,5 +493,50 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  container: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'transparent',
+  },
+  separator: {
+    height: 0.5,
+  },
+  navigationBar: {
+    position: 'relative',
+    paddingHorizontal: 24,
+    paddingTop: 4,
+    marginBottom: Platform.OS === 'android' ? -8 : -12,
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    width: '100%',
+  },
+  tabSection: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 0,
+  },
+  tab: {
+    alignItems: 'center',
+    paddingTop: 4,
+    paddingBottom: Platform.OS === 'android' ? 12 : 4,
+    width: '100%',
+  },
+  tabText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
