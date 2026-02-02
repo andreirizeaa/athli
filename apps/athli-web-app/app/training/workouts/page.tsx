@@ -1,55 +1,36 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
-import { Separator } from '@/components/ui/separator';
-import { SidePanel } from '@/components/app/side-panel';
+import { ButtonGroup } from '@/components/ui/button-group';
 import { AssignTrainingToClientSidePanel } from '@/components/training/assign-training-to-client-side-panel';
 import { SelectClientSidePanel } from '@/components/training/select-client-side-panel';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { Spinner } from '@/components/ui/spinner';
-import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { cn } from '@/lib/general/utils';
-import { exportToCSV } from '@/lib/general/csv-export';
 import {
-  Search,
   X,
   Check,
   ArrowUpNarrowWide,
   ArrowDownWideNarrow,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
   Plus,
   FileText,
   Tag,
-  Clock,
   Wrench,
-  Calendar,
   Hash,
   UserPlus,
-  HelpCircle,
-  BrainCog,
-  Download,
-  Settings,
   Star,
   User,
   Trash2,

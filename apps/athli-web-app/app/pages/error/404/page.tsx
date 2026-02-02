@@ -17,7 +17,7 @@ export default function Page() {
   }, []);
 
   return (
-    <div className="from-background to-secondary/10 fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b p-4">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-3xl space-y-4 lg:space-y-8">
         <div className="bg-primary/5 border-primary/10 relative flex h-64 items-center justify-center overflow-hidden rounded-lg border sm:h-80">
           <div className="absolute inset-0 grid grid-cols-10 grid-rows-10 opacity-10">

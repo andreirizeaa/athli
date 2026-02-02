@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/supabase/client';
 import { authService } from '@/api/auth/auth-service';
 import { Spinner } from '@/components/ui/spinner';

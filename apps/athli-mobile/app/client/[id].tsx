@@ -159,7 +159,7 @@ export default function ClientProfileScreen() {
       id: 'progress',
       icon: { sf: 'dumbbell', IconComponent: Dumbbell },
       title: t('clientDetail.sections.progress'),
-      route: `/client/${id}/progress`,
+      route: `/client/${id}/exercise-history`,
       section: 'coaching',
     },
     // Data

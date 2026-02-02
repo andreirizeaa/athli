@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Reply, FileText, Video, Mic, Play } from 'lucide-react';
+import { Reply, FileText, Mic, Play } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import type { AttachmentType } from '@/components/app/types';
 

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Plus, FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Check, X, Trash2, UserPlus, Copy, Loader2 } from 'lucide-react';
+import { Plus, FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Check, X, Trash2, UserPlus, Copy } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,9 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { SidePanel } from '@/components/app/side-panel';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddCheckInFormSidePanel } from '@/components/forms/add-check-in-form-side-panel';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { deleteCheckIn, duplicateCheckIn, type CheckIn as Form } from '@/api/coach/coach-check-in-service';
@@ -200,14 +198,6 @@ const CheckInsPage = () => {
       console.error('Failed to assign forms to clients:', error);
     }
   };
-
-  const handleCloseAssignToClients = () => {
-    setIsAssignToClientsOpen(false);
-    setFormsToAssign([]);
-    setSelectedClientIds(new Set());
-  };
-
-
 
   const checkInForms = useMemo(() => {
     // Return all forms - backend filters by type

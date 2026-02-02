@@ -597,10 +597,8 @@ const ClientHabitsPage = () => {
                   <span className="text-sm text-muted-foreground">No habits found</span>
                 </div>
               ) : (
-                filteredHabits.map((habit: any, index: number) => {
+                filteredHabits.map((habit: any) => {
                   const isSelected = selectedHabitId === habit.id;
-                  const isLast = index === filteredHabits.length - 1;
-                  const isOnlyItem = filteredHabits.length === 1;
 
                   return (
                     <React.Fragment key={habit.id}>

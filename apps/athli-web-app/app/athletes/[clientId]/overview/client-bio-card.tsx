@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/app/side-panel';
-import { Edit, Check, Loader2 } from 'lucide-react';
+import { Edit, Check } from 'lucide-react';
 import { useClientProfileContext } from '../client-profile-context';
 import { useUpdateClientBio } from '@/hooks/use-client-bio';
 

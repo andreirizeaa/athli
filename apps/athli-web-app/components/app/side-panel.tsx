@@ -1,9 +1,11 @@
 'use client';
 
 import * as React from 'react';
+import { X } from 'lucide-react';
 
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/general/utils';
 
 type SidePanelProps = {
@@ -34,8 +36,7 @@ export const SidePanel = ({
       <SheetContent
         side={side}
         className={cn(
-          'w-full sm:w-[500px] sm:max-w-[500px] px-0 pb-0 flex flex-col',
-          hideCloseButton && '[&>button]:hidden',
+          'w-full sm:w-[500px] sm:max-w-[500px] px-0 pb-0 flex flex-col [&>button]:hidden',
           contentClassName
         )}
         onOpenAutoFocus={onOpenAutoFocus}
@@ -44,8 +45,19 @@ export const SidePanel = ({
           borderBottomLeftRadius: '22px',
         }}
       >
-        <div className="px-4 pt-3">
+        <div className="px-4 pt-3 flex items-center justify-between">
           <h2 className="text-base font-semibold">{title}</h2>
+          {!hideCloseButton && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onOpenChange(false)}
+              aria-label="Close"
+              className="size-8"
+            >
+              <X className="size-4" />
+            </Button>
+          )}
         </div>
         <Separator className="-mt-[3px] -mb-[2px]" />
         {children && (

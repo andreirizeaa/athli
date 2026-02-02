@@ -70,8 +70,6 @@ export function AssistantSidebar() {
         return pathname === `/assistant/${id}`;
     };
 
-    const isNewChat = pathname === "/assistant";
-
     return (
         <div className="flex h-full w-full flex-col">
             {/* Header */}

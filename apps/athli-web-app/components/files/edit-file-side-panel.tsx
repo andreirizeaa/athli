@@ -6,36 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Check, Loader2, Trash2 } from 'lucide-react';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
-import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
-
-const TAG_OPTIONS: Option[] = [
-  { label: 'Training', value: 'Training' },
-  { label: 'Nutrition', value: 'Nutrition' },
-  { label: 'Recovery', value: 'Recovery' },
-  { label: 'Mobility', value: 'Mobility' },
-  { label: 'Rehab', value: 'Rehab' },
-  { label: 'Technique', value: 'Technique' },
-  { label: 'Mindset', value: 'Mindset' },
-  { label: 'Education', value: 'Education' },
-  { label: 'Assessment', value: 'Assessment' },
-  { label: 'Progress', value: 'Progress' },
-  { label: 'Checkin', value: 'Checkin' },
-  { label: 'Program', value: 'Program' },
-  { label: 'Workout', value: 'Workout' },
-  { label: 'Warmup', value: 'Warmup' },
-  { label: 'Cooldown', value: 'Cooldown' },
-  { label: 'Cardio', value: 'Cardio' },
-  { label: 'Strength', value: 'Strength' },
-  { label: 'Hypertrophy', value: 'Hypertrophy' },
-  { label: 'Conditioning', value: 'Conditioning' },
-  { label: 'Power', value: 'Power' },
-  { label: 'Endurance', value: 'Endurance' },
-  { label: 'Flexibility', value: 'Flexibility' },
-  { label: 'Lifestyle', value: 'Lifestyle' },
-  { label: 'Supplements', value: 'Supplements' },
-  { label: 'Template', value: 'Template' },
-];
-
 type EditFileSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -113,38 +83,37 @@ export const EditFileSidePanel = ({
       onOpenChange={onOpenChange}
       title={t('files.editFile.title')}
       footer={
-        <div className="flex w-full justify-between items-center">
+        <div className="flex w-full justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving || isDeleting}>
+            {t('general.cancel')}
+          </Button>
           <Button
             type="button"
-            variant="destructive"
+            variant="outline"
             onClick={handleDelete}
             disabled={isSaving || isDeleting}
+            className="gap-2"
           >
             {isDeleting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Trash2 className="mr-2 h-4 w-4" />
+              <Trash2 className="h-4 w-4" />
             )}
             {t('general.delete')}
           </Button>
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving || isDeleting}>
-              {t('general.cancel')}
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSave}
-              disabled={!hasEditChanges || isSaving || isDeleting}
-              className="gap-2"
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="h-4 w-4" />
-              )}
-              {t('general.save')}
-            </Button>
-          </div>
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={!hasEditChanges || isSaving || isDeleting}
+            className="gap-2"
+          >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
+            {t('general.save')}
+          </Button>
         </div>
       }
     >

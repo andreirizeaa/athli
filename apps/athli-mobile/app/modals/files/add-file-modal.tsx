@@ -5,7 +5,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
-import { X, Check, Image as ImageIcon, Video, FileText, Play } from 'lucide-react-native';
+import { X, Check, Image as ImageIcon, Video, FileText, Play, Link as LinkIcon } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -19,21 +19,21 @@ import { IconButton } from '@/components/ui/icon-button';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { InputBox } from '@/components/ui/form-inputs';
 import { Card } from '@/components/ui/card';
-import { uploadFile, updateFile } from '@/services/coach/coach-file-service';
+import { uploadFile, updateFile, createLink } from '@/services/coach/coach-file-service';
 import { uploadClientFile, updateClientFile } from '@/services/client/client-file-service';
 import { hexToRgba } from '@/utils/colorUtils';
 import { Dialog } from '@/components/ui/dialog';
 
 type SelectedFile = {
     uri: string;
-    type: 'photo' | 'video' | 'pdf';
+    type: 'photo' | 'video' | 'pdf' | 'link';
     name?: string;
     size?: number;
     mimeType?: string;
 };
 
 // Helper functions
-const getMimeTypeFromFileType = (type: 'photo' | 'video' | 'pdf'): string => {
+const getMimeTypeFromFileType = (type: 'photo' | 'video' | 'pdf' | 'link'): string => {
     switch (type) {
         case 'photo':
             return 'image/jpeg';
@@ -41,12 +41,14 @@ const getMimeTypeFromFileType = (type: 'photo' | 'video' | 'pdf'): string => {
             return 'video/mp4';
         case 'pdf':
             return 'application/pdf';
+        case 'link':
+            return 'link';
         default:
             return 'application/octet-stream';
     }
 };
 
-const getExtensionFromType = (type: 'photo' | 'video' | 'pdf'): string => {
+const getExtensionFromType = (type: 'photo' | 'video' | 'pdf' | 'link'): string => {
     switch (type) {
         case 'photo':
             return 'jpg';
@@ -54,12 +56,14 @@ const getExtensionFromType = (type: 'photo' | 'video' | 'pdf'): string => {
             return 'mp4';
         case 'pdf':
             return 'pdf';
+        case 'link':
+            return '';
         default:
             return 'bin';
     }
 };
 
-const getFormattedFileTypeLabel = (type: 'photo' | 'video' | 'pdf'): string => {
+const getFormattedFileTypeLabel = (type: 'photo' | 'video' | 'pdf' | 'link'): string => {
     switch (type) {
         case 'photo':
             return 'Image';
@@ -67,6 +71,8 @@ const getFormattedFileTypeLabel = (type: 'photo' | 'video' | 'pdf'): string => {
             return 'Video';
         case 'pdf':
             return 'PDF';
+        case 'link':
+            return 'Link';
         default:
             return 'File';
     }
@@ -117,6 +123,10 @@ export default function AddFileModal() {
         }
         return null;
     });
+
+    // Link mode state
+    const [isLinkMode, setIsLinkMode] = useState(false);
+    const [linkUrl, setLinkUrl] = useState('');
 
     // Upload mutation (for coach library)
     const uploadMutation = useMutation({
@@ -184,6 +194,21 @@ export default function AddFileModal() {
         },
     });
 
+    // Create link mutation
+    const createLinkMutation = useMutation({
+        mutationFn: createLink,
+        onSuccess: async () => {
+            await queryClient.refetchQueries({ queryKey: ['files'] });
+            haptics.success();
+            handleClose();
+        },
+        onError: (error: Error) => {
+            haptics.error();
+            setErrorMessage(error.message || t('general.errorSaving'));
+            setShowErrorDialog(true);
+        },
+    });
+
     const handleDismissKeyboard = () => {
         Keyboard.dismiss();
     };
@@ -191,26 +216,35 @@ export default function AddFileModal() {
     // Form validation and change detection
     const { hasChanges, canComplete } = useMemo(() => {
         const trimmedName = fileName.trim();
+        const trimmedUrl = linkUrl.trim();
 
         // For editing (name only or full edit), only name is required
-        // For creating, both name and file are required
-        const formValid = isEditing || isEditNameOnly
-            ? trimmedName.length > 0
-            : trimmedName.length > 0 && selectedFile !== null;
+        // For creating link mode, name and URL are required
+        // For creating file mode, name and file are required
+        let formValid = false;
+        if (isEditing || isEditNameOnly) {
+            formValid = trimmedName.length > 0;
+        } else if (isLinkMode) {
+            formValid = trimmedName.length > 0 && trimmedUrl.length > 0 && (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://'));
+        } else {
+            formValid = trimmedName.length > 0 && selectedFile !== null;
+        }
 
         // Check if any field has been modified
         let changes = false;
         if (isEditing || isEditNameOnly) {
             changes = trimmedName !== (params.name || '').trim();
+        } else if (isLinkMode) {
+            changes = trimmedName.length > 0 || trimmedUrl.length > 0;
         } else {
             changes = trimmedName.length > 0 || selectedFile !== null;
         }
 
         return {
             hasChanges: changes,
-            canComplete: formValid && changes && !uploadMutation.isPending && !updateMutation.isPending && !uploadClientMutation.isPending && !updateClientMutation.isPending,
+            canComplete: formValid && changes && !uploadMutation.isPending && !updateMutation.isPending && !uploadClientMutation.isPending && !updateClientMutation.isPending && !createLinkMutation.isPending,
         };
-    }, [fileName, selectedFile, uploadMutation.isPending, updateMutation.isPending, uploadClientMutation.isPending, updateClientMutation.isPending, isEditing, isEditNameOnly, params]);
+    }, [fileName, selectedFile, linkUrl, isLinkMode, uploadMutation.isPending, updateMutation.isPending, uploadClientMutation.isPending, updateClientMutation.isPending, createLinkMutation.isPending, isEditing, isEditNameOnly, params]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -246,6 +280,12 @@ export default function AddFileModal() {
                     fileName: fileName.trim(),
                 });
             }
+        } else if (isLinkMode) {
+            // Create link
+            createLinkMutation.mutate({
+                filename: fileName.trim(),
+                url: linkUrl.trim(),
+            });
         } else if (selectedFile) {
             const finalFileName = selectedFile.name || `${fileName.trim()}.${getExtensionFromType(selectedFile.type)}`;
             const mimeType = selectedFile.mimeType || getMimeTypeFromFileType(selectedFile.type);
@@ -279,7 +319,7 @@ export default function AddFileModal() {
                 });
             }
         }
-    }, [canComplete, isEditing, isEditNameOnly, isClientEdit, params.editingId, params.clientId, fileName, selectedFile, uploadMutation, updateMutation, updateClientMutation, uploadClientMutation, isClientUpload, coachProfile?.id]);
+    }, [canComplete, isEditing, isEditNameOnly, isClientEdit, params.editingId, params.clientId, fileName, selectedFile, linkUrl, isLinkMode, uploadMutation, updateMutation, updateClientMutation, uploadClientMutation, createLinkMutation, isClientUpload, coachProfile?.id]);
 
     const handlePhotoPress = async () => {
         try {
@@ -299,6 +339,8 @@ export default function AddFileModal() {
             if (!result.canceled && result.assets && result.assets.length > 0) {
                 const asset = result.assets[0];
                 if (asset.uri) {
+                    setIsLinkMode(false);
+                    setLinkUrl('');
                     setSelectedFile({
                         uri: asset.uri,
                         type: 'photo',
@@ -333,6 +375,8 @@ export default function AddFileModal() {
             if (!result.canceled && result.assets && result.assets.length > 0) {
                 const asset = result.assets[0];
                 if (asset.uri) {
+                    setIsLinkMode(false);
+                    setLinkUrl('');
                     setSelectedFile({
                         uri: asset.uri,
                         type: 'video',
@@ -359,6 +403,8 @@ export default function AddFileModal() {
 
             if (!result.canceled && result.assets && result.assets.length > 0) {
                 const asset = result.assets[0];
+                setIsLinkMode(false);
+                setLinkUrl('');
                 setSelectedFile({
                     uri: asset.uri,
                     type: 'pdf',
@@ -421,7 +467,7 @@ export default function AddFileModal() {
                                 size="md"
                                 variant={canComplete ? 'primary' : 'default'}
                                 disabled={!canComplete}
-                                loading={uploadMutation.isPending || updateMutation.isPending || uploadClientMutation.isPending || updateClientMutation.isPending}
+                                loading={uploadMutation.isPending || updateMutation.isPending || uploadClientMutation.isPending || updateClientMutation.isPending || createLinkMutation.isPending}
                             />
                         </View>
                     </View>
@@ -502,7 +548,7 @@ export default function AddFileModal() {
                                 <PressableOpacity
                                     style={[
                                         styles.attachmentButton,
-                                        selectedFile?.type === 'pdf' && [
+                                        selectedFile?.type === 'pdf' && !isLinkMode && [
                                             styles.attachmentButtonSelected,
                                             { borderColor: themeColors.primary },
                                         ],
@@ -521,10 +567,64 @@ export default function AddFileModal() {
                                         {t('files.addFile.pdfs')}
                                     </Text>
                                 </PressableOpacity>
+
+                                <PressableOpacity
+                                    style={[
+                                        styles.attachmentButton,
+                                        isLinkMode && [
+                                            styles.attachmentButtonSelected,
+                                            { borderColor: themeColors.primary },
+                                        ],
+                                    ]}
+                                    onPress={isEditing ? undefined : () => {
+                                        setIsLinkMode(true);
+                                        setSelectedFile(null);
+                                    }}
+                                >
+                                    <View style={[styles.iconCircle, { backgroundColor: themeColors.surfacePrimary }]}>
+                                        <PlatformIcon
+                                            sf="link"
+                                            IconComponent={LinkIcon}
+                                            size={iconSizes.tabBarIcons}
+                                            color={themeColors.primary}
+                                        />
+                                    </View>
+                                    <Text style={[styles.attachmentLabel, { color: themeColors.text }]}>
+                                        Link
+                                    </Text>
+                                </PressableOpacity>
                             </View>
 
+                            {/* Link URL Input */}
+                            {isLinkMode && (
+                                <View style={styles.linkSection}>
+                                    <InputBox
+                                        label="URL"
+                                        value={linkUrl}
+                                        onChangeText={setLinkUrl}
+                                        placeholder="https://..."
+                                        required
+                                        keyboardType="url"
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                    />
+                                    <PressableOpacity
+                                        style={styles.clearLinkButton}
+                                        onPress={() => {
+                                            setIsLinkMode(false);
+                                            setLinkUrl('');
+                                        }}
+                                        hitSlop={8}
+                                    >
+                                        <Text style={[styles.clearLinkText, { color: themeColors.mutedText }]}>
+                                            Clear
+                                        </Text>
+                                    </PressableOpacity>
+                                </View>
+                            )}
+
                             {/* Selected file display with preview */}
-                            {selectedFile && (
+                            {selectedFile && !isLinkMode && (
                                 <View style={styles.selectedFileSection}>
                                     {/* Preview Thumbnail for images and videos */}
                                     {(selectedFile.type === 'photo' || selectedFile.type === 'video') && selectedFile.uri !== 'existing' && (
@@ -727,5 +827,19 @@ const styles = StyleSheet.create({
         borderRadius: 11,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    linkSection: {
+        marginTop: 12,
+        paddingTop: 12,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: 'rgba(128, 128, 128, 0.3)',
+        gap: 12,
+    },
+    clearLinkButton: {
+        alignSelf: 'flex-start',
+        paddingVertical: 4,
+    },
+    clearLinkText: {
+        ...typography.p3,
     },
 });

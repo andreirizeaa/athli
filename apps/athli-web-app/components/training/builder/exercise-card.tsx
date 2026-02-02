@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect, memo } from 'react';
-import Image from 'next/image';
-import { ArrowDown, ArrowUp, Dumbbell, Ellipsis, Play, Plus, Trash2, X, Heart, Activity, Timer, Info, Loader2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Dumbbell, Ellipsis, Play, Plus, Trash2, X, Heart, Loader2 } from 'lucide-react';
 import { useAllExercises, type Exercise } from '@/hooks/use-all-exercises';
 import { useExerciseThumbnails, useSingleThumbnail } from '@/hooks/use-exercise-thumbnails';
 import { Input } from '@/components/ui/input';
