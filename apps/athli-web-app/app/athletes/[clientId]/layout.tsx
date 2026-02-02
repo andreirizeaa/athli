@@ -378,7 +378,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
                           : t('athletes.filters.uncategorized', { defaultValue: 'Not set' })}
                   </Badge>
                   <Badge variant="outline" className="h-6 px-1.5 text-xs rounded-sm border-muted-foreground/30 font-medium">
-                    +3
+                    Edit +3
                   </Badge>
                 </div>
               </div>
