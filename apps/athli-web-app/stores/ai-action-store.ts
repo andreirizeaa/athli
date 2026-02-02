@@ -65,13 +65,13 @@ export function getActionRedirectUrl(actionType: ActionType, payload?: any): str
     case 'add_client_goal':
     case 'add_client_injury':
     case 'update_client_profile':
-      return payload?.clientId ? `/athletes/${payload.clientId}` : '/athletes';
+      return payload?.clientId ? `/athletes/${payload.clientId}/overview` : '/athletes';
     case 'create_checkin_template':
       return '/forms/check-ins';
     case 'create_metric':
       return '/metrics';
     case 'draft_message':
-      return ''; // No redirect for draft messages
+      return '/inbox';
     default:
       return '/training/workouts';
   }
