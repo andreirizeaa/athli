@@ -231,10 +231,11 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
                         className="gap-2"
                     >
                         {updateDetailsMutation.isPending ? (
-                            <><Loader2 className="size-4 animate-spin" />{t('general.saving')}</>
+                            <Loader2 className="size-4 animate-spin" />
                         ) : (
-                            <><Check className="size-4" />{t('general.save')}</>
+                            <Check className="size-4" />
                         )}
+                        {t('general.save')}
                     </Button>
                 </div>
             }

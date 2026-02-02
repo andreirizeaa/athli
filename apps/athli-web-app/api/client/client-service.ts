@@ -134,12 +134,14 @@ export const saveAthleteDetails = async (athleteId: string, details: AthleteDeta
   // Map AthleteDetails back to DB structure
   const updatePayload: any = {
     name: details.name,
+    email: details.email,
     phone: details.phone,
     gender: details.gender,
     country: details.country,
     birth_date: details.birthDate,
     height_cm: details.height ? parseInt(details.height, 10) : null,
     height: details.height ? parseInt(details.height, 10) : null,
+    coaching_type: details.category,
   };
 
   if (details.avatarUrl) {
