@@ -53,6 +53,11 @@ type NativeTabsCoachViewProps = {
 const NativeTabsCoachView = ({ primaryColor }: NativeTabsCoachViewProps) => {
   return (
     <NativeTabs tintColor={primaryColor}>
+      <NativeTabs.Trigger name="home">
+        <Icon sf="house.fill" />
+        <Label>Home</Label>
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="clients">
         <Icon sf="person.2.fill" />
         <Label>Clients</Label>
@@ -162,7 +167,7 @@ export default function TabLayout() {
 
   // Helper to check if pathname matches the current app view
   const isValidRouteForView = useCallback((path: string, view: 'coach' | 'athlete') => {
-    const coachRoutes = ['/clients', '/chats', '/library', '/settings'];
+    const coachRoutes = ['/home', '/clients', '/chats', '/library', '/settings'];
     const athleteRoutes = ['/home', '/training', '/progress', '/inbox', '/profile'];
     const validRoutes = view === 'coach' ? coachRoutes : athleteRoutes;
     return validRoutes.some(route => path.startsWith(route));
@@ -179,7 +184,7 @@ export default function TabLayout() {
 
     // On initial mount, ensure we navigate to the correct initial route
     // This prevents showing wrong view's content (e.g., athlete route with coach tab bar)
-    const initialRoute = appView === 'athlete' ? '/home' : '/clients';
+    const initialRoute = '/home';
     // Navigate if: on index, or on wrong view's route, or on add-modal
     const needsNavigation =
       pathname === '/' ||
@@ -200,8 +205,8 @@ export default function TabLayout() {
     if (previousAppView.current !== appView) {
       previousAppView.current = appView;
       // Navigate to the correct initial route when app view changes
-      const initialRoute = appView === 'athlete' ? '/home' : '/clients';
-      router.replace(initialRoute);
+      // Both views now start at /home
+      router.replace('/home');
     }
   }, [appView, router]);
 
@@ -269,10 +274,10 @@ export default function TabLayout() {
   }
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <Tabs
         key={appView}
-        initialRouteName={appView === 'athlete' ? 'home' : 'clients'}
+        initialRouteName="home"
         tabBar={(props) => <FallbackTabBar {...props} />}
         screenOptions={{ headerShown: false }}
       >
@@ -308,7 +313,7 @@ export default function TabLayout() {
           name="home"
           options={{
             title: t('home.title'),
-            href: appView === 'athlete' ? '/home' : null,
+            href: '/home',
           }}
         />
         <Tabs.Screen
@@ -346,10 +351,10 @@ export default function TabLayout() {
         <FAB
           onPress={handleFabPress}
           variant={fabVariant}
-          bottom={Platform.OS === 'android' ? insets.bottom + 72 : insets.bottom + 66}
+          bottom={Platform.OS === 'android' ? 100 : insets.bottom + 66}
         />
       )}
-    </>
+    </View>
   );
 }
 
@@ -401,6 +406,13 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   };
 
   const coachTabs: TabDefinition[] = [
+    {
+      name: 'home',
+      label: t('home.title'),
+      sf: 'house.fill',
+      mdi: 'home',
+      IconComponent: Home,
+    },
     {
       name: 'clients',
       label: t('clients.title'),
