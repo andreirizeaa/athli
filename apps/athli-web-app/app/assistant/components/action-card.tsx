@@ -145,9 +145,11 @@ function DraftMessageCard({ payload }: { payload: any }) {
   const [isCopied, setIsCopied] = useState(false);
 
   const handleSendMessage = async () => {
+    // TODO: Implement actual sending via /messaging/send API
+    // For now, copy to clipboard as fallback
     await navigator.clipboard.writeText(editedMessage);
     setIsCopied(true);
-    toast.success('Message copied! Paste it in your messaging app to send.');
+    toast.success('Message copied to clipboard');
     setTimeout(() => setIsCopied(false), 3000);
   };
 
@@ -169,7 +171,7 @@ function DraftMessageCard({ payload }: { payload: any }) {
       />
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
-          Edit above, then send via WhatsApp, email, etc.
+          Edit above, then send via messaging platform
         </p>
         <Button
           onClick={handleSendMessage}
