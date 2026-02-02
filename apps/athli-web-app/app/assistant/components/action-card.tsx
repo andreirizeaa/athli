@@ -21,12 +21,11 @@ import {
 import { cn } from '@/lib/general/utils';
 import { ActionType, getActionDisplayName } from '@/stores/ai-action-store';
 import { AIWorkoutPayload, getWorkoutSummary } from '@/lib/ai-payload-transformer';
-import { toast } from 'sonner';
 
 interface ActionCardProps {
   actionType: ActionType;
   payload: any;
-  onConfirm: () => Promise<void>;
+  onConfirm: (modifiedPayload?: any) => Promise<void>;
   className?: string;
 }
 
@@ -52,7 +51,7 @@ export function ActionCard({ actionType, payload, onConfirm, className }: Action
   const Icon = getActionIcon(actionType);
   const isDraftMessage = actionType === 'draft_message';
 
-  // Draft message has its own UI with editable textarea and copy button
+  // Draft message has its own UI with editable textarea
   if (isDraftMessage) {
     return (
       <Card className={cn('mt-3 border-primary/20 bg-primary/5', className)}>
@@ -62,7 +61,14 @@ export function ActionCard({ actionType, payload, onConfirm, className }: Action
               <Icon className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1">
-              <DraftMessageCard payload={payload} />
+              <DraftMessageCard
+                payload={payload}
+                onConfirm={onConfirm}
+                isConfirming={isConfirming}
+                isConfirmed={isConfirmed}
+                setIsConfirming={setIsConfirming}
+                setIsConfirmed={setIsConfirmed}
+              />
             </div>
           </div>
         </CardContent>
@@ -139,18 +145,39 @@ function getActionIcon(actionType: ActionType) {
   }
 }
 
-// Self-contained component for draft message with editable textarea and copy button
-function DraftMessageCard({ payload }: { payload: any }) {
+// Draft message component with editable textarea - calls onConfirm with edited message
+interface DraftMessageCardProps {
+  payload: any;
+  onConfirm: (modifiedPayload?: any) => Promise<void>;
+  isConfirming: boolean;
+  isConfirmed: boolean;
+  setIsConfirming: (v: boolean) => void;
+  setIsConfirmed: (v: boolean) => void;
+}
+
+function DraftMessageCard({
+  payload,
+  onConfirm,
+  isConfirming,
+  isConfirmed,
+  setIsConfirming,
+  setIsConfirmed,
+}: DraftMessageCardProps) {
   const [editedMessage, setEditedMessage] = useState(payload.message || '');
-  const [isCopied, setIsCopied] = useState(false);
 
   const handleSendMessage = async () => {
-    // TODO: Implement actual sending via /messaging/send API
-    // For now, copy to clipboard as fallback
-    await navigator.clipboard.writeText(editedMessage);
-    setIsCopied(true);
-    toast.success('Message copied to clipboard');
-    setTimeout(() => setIsCopied(false), 3000);
+    if (isConfirming || isConfirmed) return;
+
+    setIsConfirming(true);
+    try {
+      // Pass the edited message back through onConfirm
+      await onConfirm({ ...payload, message: editedMessage });
+      setIsConfirmed(true);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    } finally {
+      setIsConfirming(false);
+    }
   };
 
   return (
@@ -171,21 +198,27 @@ function DraftMessageCard({ payload }: { payload: any }) {
       />
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
-          Edit above, then send via messaging platform
+          Edit above, then send directly to client
         </p>
         <Button
           onClick={handleSendMessage}
           size="sm"
           variant="default"
+          disabled={isConfirming || isConfirmed}
           className={cn(
             'shrink-0',
-            isCopied && 'bg-green-600 hover:bg-green-600 text-white'
+            isConfirmed && 'bg-green-600 hover:bg-green-600 text-white'
           )}
         >
-          {isCopied ? (
+          {isConfirming ? (
+            <>
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              Sending...
+            </>
+          ) : isConfirmed ? (
             <>
               <Check className="mr-1.5 h-3.5 w-3.5" />
-              Copied!
+              Sent!
             </>
           ) : (
             <>
@@ -269,7 +302,7 @@ function ActionSummary({ actionType, payload }: ActionSummaryProps) {
         </h4>
         <div className="flex flex-wrap gap-2 pt-1">
           <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-            {new Date(payload.date).toLocaleDateString()}
+            {new Date(payload.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
           </span>
           {payload.time && (
             <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs">
@@ -321,7 +354,7 @@ function ActionSummary({ actionType, payload }: ActionSummaryProps) {
         <div className="flex flex-wrap gap-2 pt-1">
           {payload.targetDate && (
             <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-              Target: {new Date(payload.targetDate).toLocaleDateString()}
+              Target: {new Date(payload.targetDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
             </span>
           )}
         </div>

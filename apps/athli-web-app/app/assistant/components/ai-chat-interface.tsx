@@ -50,7 +50,7 @@ import { transformWorkoutPayload, transformSectionPayload } from "@/lib/ai-paylo
 import { ActionType, getActionRedirectUrl } from "@/stores/ai-action-store";
 import { assignWorkout } from "@/api/client/client-training-service";
 import { assignMetric } from "@/api/client/client-metric-service";
-import { saveAthleteGoals, saveAthleteInjuries, getAthleteGoals, getAthleteInjuries } from "@/api/client/client-service";
+import { saveAthleteGoals, saveAthleteInjuries, getAthleteGoals, getAthleteInjuries, updateAthleteProfile } from "@/api/client/client-service";
 import { createMetric } from "@/api/coach/coach-metric-service";
 import { addCheckIn } from "@/api/coach/coach-check-in-service";
 import { useQueryClient } from "@tanstack/react-query";
@@ -118,7 +118,9 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
     }, [prompt, isStreaming, sendMessage]);
 
     // Handle confirming an action
-    const handleConfirmAction = useCallback(async (actionType: ActionType, payload: any) => {
+    const handleConfirmAction = useCallback(async (actionType: ActionType, payload: any, modifiedPayload?: any) => {
+        // Use modified payload if provided (e.g., edited draft message)
+        const finalPayload = modifiedPayload || payload;
         try {
             if (actionType === 'create_workout') {
                 const apiPayload = transformWorkoutPayload(payload);
@@ -140,7 +142,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                 });
                 toast.success(`Workout assigned to ${payload.clientName || 'client'}!`);
                 setTimeout(() => {
-                    router.push(`/client/${payload.clientId}/calendar`);
+                    router.push(`/athletes/${payload.clientId}/training`);
                 }, 500);
             } else if (actionType === 'assign_metric_to_client') {
                 await assignMetric({
@@ -181,12 +183,31 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                     router.push(getActionRedirectUrl(actionType, payload));
                 }, 500);
             } else if (actionType === 'draft_message') {
-                // Draft message is handled by the ActionCard itself (copy button)
-                // This should not be called, but just in case
-                return;
+                // Send message via messaging API
+                const { default: axiosInstance } = await import('@/lib/axios');
+                await axiosInstance.post('/coach/messaging/broadcast', {
+                    clientIds: [finalPayload.clientId],
+                    content: finalPayload.message,
+                });
+                toast.success(`Message sent to ${finalPayload.clientName}!`);
+                setTimeout(() => {
+                    router.push(`/inbox/${finalPayload.clientId}/overview`);
+                }, 500);
             } else if (actionType === 'update_client_profile') {
-                // TODO: Implement profile update API call
-                toast.info('Profile update coming soon');
+                // Update client profile (category and/or notes)
+                await updateAthleteProfile(payload.clientId, user?.id!, payload.updates);
+                // Completely remove cached data so fresh data is fetched on navigation
+                // Use removeQueries instead of resetQueries to fully clear cache
+                queryClient.removeQueries({
+                    predicate: (query) => {
+                        const key = query.queryKey[0] as string;
+                        return key?.startsWith('client-') || key === 'coach-clients';
+                    },
+                });
+                toast.success(`Updated ${payload.clientName}'s profile!`);
+                setTimeout(() => {
+                    router.push(getActionRedirectUrl(actionType, payload));
+                }, 500);
             } else if (actionType === 'create_checkin_template') {
                 // First create the check-in
                 const checkIn = await addCheckIn({
@@ -197,22 +218,31 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                 if (payload.questions && payload.questions.length > 0) {
                     const { addQuestion } = await import('@/api/coach/coach-check-in-service');
                     for (const q of payload.questions) {
-                        // Map AI question types to the exact format values used in the app
-                        // These must match the format IDs in add-question-side-panel.tsx
-                        const formatMap: Record<string, string> = {
-                            'text': 'text',
-                            'number': 'number',
-                            'rating': 'rating',
-                            'yesNo': 'yesNo',
-                            'multipleChoice': 'multipleChoice',
-                            'scale': 'scale',
-                            'date': 'date',
+                        // Normalize the type to handle variations from the AI model
+                        // The model might return 'yes/no', 'Yes/No', 'multiple_choice', etc.
+                        const normalizeType = (type: string): string => {
+                            const lowered = type?.toLowerCase().replace(/[^a-z]/g, '') || '';
+                            const typeMap: Record<string, string> = {
+                                'text': 'text',
+                                'number': 'number',
+                                'rating': 'rating',
+                                'yesno': 'yesNo',
+                                'multiplechoice': 'multipleChoice',
+                                'scale': 'scale',
+                                'date': 'date',
+                                'images': 'images',
+                                'videos': 'videos',
+                                'signature': 'signature',
+                                'progressphoto': 'progressPhoto',
+                                'metrics': 'metrics',
+                            };
+                            return typeMap[lowered] || 'text';
                         };
                         await addQuestion({
                             formId: checkIn.id,
                             question: q.question,
                             required: q.required || false,
-                            format: formatMap[q.type] || 'text',
+                            format: normalizeType(q.type),
                             options: q.options || [],
                             scaleFrom: q.scaleFrom,
                             scaleTo: q.scaleTo,
@@ -220,8 +250,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                     }
                 }
                 // Invalidate check-ins cache
-                queryClient.invalidateQueries({ queryKey: ['coach_checkins'] });
-                queryClient.invalidateQueries({ queryKey: ['checkins'] });
+                queryClient.invalidateQueries({ queryKey: ['coach-check-ins'] });
                 toast.success(`Check-in "${payload.name}" created!`);
                 setTimeout(() => {
                     router.push(getActionRedirectUrl(actionType, payload));
@@ -243,8 +272,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                     description: payload.description || '',
                 });
                 // Invalidate metrics cache so the new metric shows up without refresh
-                queryClient.invalidateQueries({ queryKey: ['coach_metrics'] });
-                queryClient.invalidateQueries({ queryKey: ['metrics'] });
+                queryClient.invalidateQueries({ queryKey: ['coach-metrics'] });
                 toast.success(`Metric "${payload.name}" created!`);
                 setTimeout(() => {
                     router.push(getActionRedirectUrl(actionType, payload));
@@ -345,9 +373,10 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                                             <ActionCard
                                                 actionType={message.action.type as ActionType}
                                                 payload={message.action.payload}
-                                                onConfirm={() => handleConfirmAction(
+                                                onConfirm={(modifiedPayload) => handleConfirmAction(
                                                     message.action!.type as ActionType,
-                                                    message.action!.payload
+                                                    message.action!.payload,
+                                                    modifiedPayload
                                                 )}
                                             />
                                         )}

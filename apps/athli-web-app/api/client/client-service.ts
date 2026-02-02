@@ -98,6 +98,32 @@ export const saveAthleteInjuries = async (athleteId: string, coachId: string, in
   });
 };
 
+/**
+ * Service method to update athlete profile (category and/or notes)
+ * Used by AI assistant to update client profiles
+ */
+export const updateAthleteProfile = async (
+  athleteId: string,
+  coachId: string,
+  updates: { category?: 'online' | 'in-person' | 'hybrid'; notes?: string }
+): Promise<void> => {
+  // Update category via /clients endpoint
+  if (updates.category) {
+    await apiFetch('/clients', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        id: athleteId,
+        category: updates.category,
+      }),
+    });
+  }
+
+  // Update notes/bio using the existing saveAthleteBio function
+  if (updates.notes !== undefined) {
+    await saveAthleteBio(athleteId, coachId, updates.notes);
+  }
+};
+
 export const getAthleteDetails = async (athleteId?: string): Promise<AthleteDetails> => {
   // Use x-client-id header if athleteId is provided (coach viewing client)
   // Otherwise fetch authenticated user's profile (client viewing own profile)

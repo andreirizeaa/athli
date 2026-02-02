@@ -204,7 +204,7 @@ export const createGetClientMetricsTool = (ctx: ToolContext) =>
           assignments?.map((a) => ({
             metricId: a.metric_id,
             metricName: a.coach_metrics?.name,
-            metricType: a.coach_metrics?.metric_type,
+            metricType: a.coach_metrics?.value_kind,
           })) || [],
         recentEntries:
           entries?.map((e) => ({
@@ -590,7 +590,7 @@ export const createListAllMetricsTool = (ctx: ToolContext) =>
 
       const { data: metrics, error } = await supabase
         .from('coach_metrics')
-        .select('id, name, metric_type, unit, is_active, created_at')
+        .select('id, name, value_kind, unit, description, created_at')
         .eq('coach_id', ctx.coachId)
         .order('name', { ascending: true });
 
@@ -604,9 +604,9 @@ export const createListAllMetricsTool = (ctx: ToolContext) =>
           metrics?.map((m) => ({
             id: m.id,
             name: m.name,
-            type: m.metric_type,
+            type: m.value_kind,
             unit: m.unit,
-            isActive: m.is_active,
+            description: m.description,
             createdAt: m.created_at,
           })) || [],
       });
@@ -1200,7 +1200,7 @@ export const createAssignMetricToClientTool = (ctx: ToolContext) =>
       const supabase = getSupabaseClient();
       const { data: metric, error } = await supabase
         .from('coach_metrics')
-        .select('id, name, metric_type, unit')
+        .select('id, name, value_kind, unit')
         .eq('coach_id', ctx.coachId)
         .eq('id', metricId)
         .single();
@@ -1220,7 +1220,7 @@ export const createAssignMetricToClientTool = (ctx: ToolContext) =>
           clientName: clientName || 'Client',
           metricId,
           metricName: metric.name,
-          metricType: metric.metric_type,
+          metricType: metric.value_kind,
           metricUnit: metric.unit,
         },
         message: `Ready to assign "${metric.name}" metric to ${clientName || 'client'}.`,
@@ -1318,29 +1318,27 @@ export const createAddClientInjuryTool = (ctx: ToolContext) =>
 
 export const createDraftMessageTool = (ctx: ToolContext) =>
   tool(
-    async ({ clientId, clientName, subject, message, messageType }) => {
+    async ({ clientId, clientName, message, messageType }) => {
       return JSON.stringify({
         success: true,
         action: 'draft_message',
         payload: {
           clientId,
           clientName: clientName || 'Client',
-          subject: subject || '',
           message,
           messageType: messageType || 'general',
         },
-        message: `Message drafted for ${clientName || 'client'}. You can copy and send it via your preferred channel.`,
+        message: `Message drafted for ${clientName || 'client'}. Review and send it directly through the in-app messaging.`,
       });
     },
     {
       name: 'draft_message_for_client',
       description:
-        'Draft a message for a client. The coach can then copy and send it via their preferred messaging channel (email, WhatsApp, etc.).',
+        'Draft a short chat message for a client. This is for in-app messaging (like WhatsApp/SMS style), NOT email. Keep messages brief, friendly, and conversational - typically 1-3 sentences. The coach can review, edit, and send it directly.',
       schema: z.object({
         clientId: z.string().describe('The client ID (UUID)'),
         clientName: z.string().optional().describe('Client name for display'),
-        subject: z.string().optional().describe('Message subject (for email)'),
-        message: z.string().describe('The message content'),
+        message: z.string().describe('A short, friendly chat message (1-3 sentences). Keep it conversational like a text message, not formal like an email. No subject line needed.'),
         messageType: z.enum(['check_in', 'motivation', 'reminder', 'feedback', 'general']).optional()
           .describe('Type of message'),
       }),
