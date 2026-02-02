@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Platform } from 'react-native';
-import { PressableOpacity } from 'pressto';
+import { PressableScale } from 'pressto';
 import { SymbolView } from 'expo-symbols';
 import { Plus, Megaphone } from 'lucide-react-native';
 
@@ -53,7 +53,7 @@ export const FAB = ({ onPress, variant = 'plus', bottom = 90 }: FABProps) => {
   };
 
   return (
-    <PressableOpacity
+    <PressableScale
       style={[
         styles.fab,
         {
@@ -64,7 +64,7 @@ export const FAB = ({ onPress, variant = 'plus', bottom = 90 }: FABProps) => {
       onPress={handlePress}
     >
       {renderIcon()}
-    </PressableOpacity>
+    </PressableScale>
   );
 };
 
@@ -80,11 +80,11 @@ const styles = StyleSheet.create({
     shadowColor: '#000000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
     zIndex: 1000,
   },
 });
