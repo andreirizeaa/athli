@@ -24,13 +24,36 @@ interface GroupedHistory {
     exercises: HistoryEntry[];
 }
 
+/**
+ * Parse a value that may be a range like "8-10" and return the midpoint,
+ * or a Heart Rate Zone like "Zone 1" and return the zone number
+ */
+const parseNumericValue = (val: any): number => {
+    if (typeof val === 'number') return val;
+    if (val == null) return 0;
+    const str = String(val).trim();
+    // Check for Heart Rate Zone format like "Zone 1", "Zone 2", etc.
+    const zoneMatch = str.match(/^Zone\s*(\d+)$/i);
+    if (zoneMatch) {
+        return parseInt(zoneMatch[1], 10);
+    }
+    // Check for range format like "8-10"
+    if (str.includes('-')) {
+        const parts = str.split('-').map(p => parseFloat(p.trim()));
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+            return (parts[0] + parts[1]) / 2;
+        }
+    }
+    return Number(str) || 0;
+};
+
 // Helper to safely extract numeric value from potentially complex object
 const extractValue = (val: any): number => {
     if (typeof val === 'number') return val;
     if (typeof val === 'object' && val !== null) {
-        return Number(val.completed ?? val.prescribed ?? 0);
+        return parseNumericValue(val.completed ?? val.prescribed ?? 0);
     }
-    return Number(val ?? 0);
+    return parseNumericValue(val ?? 0);
 };
 
 // Format label for display (value -> nice label)
@@ -237,8 +260,8 @@ export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coach
                 // Process trackable fields
                 [set.trackableField1, set.trackableField2].forEach((field) => {
                     if (!field?.label) return;
-                    // Parse as number since values may be stored as strings
-                    const val = Number(field.completed ?? field.prescribed ?? 0);
+                    // Parse as number since values may be stored as strings or ranges
+                    const val = parseNumericValue(field.completed ?? field.prescribed ?? 0);
                     if (isNaN(val) || val <= 0) return;
 
                     processedTrackableField = true;
@@ -306,16 +329,16 @@ export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coach
     const formatSetValue = (set: any): string => {
         const parts: string[] = [];
 
-        // Use trackable fields if available (parse as number since values may be strings)
+        // Use trackable fields if available (parse as number since values may be strings or ranges)
         if (set.trackableField1) {
-            const val = Number(set.trackableField1.completed ?? set.trackableField1.prescribed);
+            const val = parseNumericValue(set.trackableField1.completed ?? set.trackableField1.prescribed);
             if (!isNaN(val) && val > 0) {
                 parts.push(`${val} ${set.trackableField1.label || ''}`);
             }
         }
 
         if (set.trackableField2) {
-            const val = Number(set.trackableField2.completed ?? set.trackableField2.prescribed);
+            const val = parseNumericValue(set.trackableField2.completed ?? set.trackableField2.prescribed);
             if (!isNaN(val) && val > 0) {
                 parts.push(`${val} ${set.trackableField2.label || ''}`);
             }
