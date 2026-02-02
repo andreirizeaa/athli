@@ -45,7 +45,7 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   // Client modification tools
   add_client_goal: 'Adding client goal',
   add_client_injury: 'Recording injury',
-  draft_message_for_client: 'Drafting message',
+  draft_message_for_client: 'Writing message',
   update_client_profile: 'Updating profile',
   // Analytics tools
   analyze_client_progress: 'Analyzing progress',

@@ -16,7 +16,7 @@ import {
   User,
   ClipboardList,
   BarChart3,
-  Copy
+  Send
 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { ActionType, getActionDisplayName } from '@/stores/ai-action-store';
@@ -144,10 +144,10 @@ function DraftMessageCard({ payload }: { payload: any }) {
   const [editedMessage, setEditedMessage] = useState(payload.message || '');
   const [isCopied, setIsCopied] = useState(false);
 
-  const handleCopyMessage = async () => {
+  const handleSendMessage = async () => {
     await navigator.clipboard.writeText(editedMessage);
     setIsCopied(true);
-    toast.success('Message copied to clipboard!');
+    toast.success('Message copied! Paste it in your messaging app to send.');
     setTimeout(() => setIsCopied(false), 3000);
   };
 
@@ -169,12 +169,12 @@ function DraftMessageCard({ payload }: { payload: any }) {
       />
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
-          Edit above, then copy to send via WhatsApp, email, etc.
+          Edit above, then send via WhatsApp, email, etc.
         </p>
         <Button
-          onClick={handleCopyMessage}
+          onClick={handleSendMessage}
           size="sm"
-          variant={isCopied ? 'default' : 'outline'}
+          variant="default"
           className={cn(
             'shrink-0',
             isCopied && 'bg-green-600 hover:bg-green-600 text-white'
@@ -187,8 +187,8 @@ function DraftMessageCard({ payload }: { payload: any }) {
             </>
           ) : (
             <>
-              <Copy className="mr-1.5 h-3.5 w-3.5" />
-              Copy Message
+              <Send className="mr-1.5 h-3.5 w-3.5" />
+              Send Message
             </>
           )}
         </Button>

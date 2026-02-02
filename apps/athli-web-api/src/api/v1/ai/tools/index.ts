@@ -684,14 +684,14 @@ export const createGetExerciseCatalogTool = (ctx: ToolContext) =>
       }
 
       // Format as a table for easy AI parsing
-      const header = 'ID   | Name                                    | Target Muscles              | Equipment';
-      const separator = '-----|----------------------------------------|-----------------------------|-----------';
+      const header = 'ID   | Name                                    | Target Muscles              | Category';
+      const separator = '-----|----------------------------------------|-----------------------------|------------';
       const rows = exercises.map((e) => {
         const id = String(e.musclewiki_id).padEnd(4);
         const name = (e.name || '').substring(0, 40).padEnd(40);
         const muscles = (Array.isArray(e.target_muscles) ? e.target_muscles.join(', ') : '').substring(0, 28).padEnd(28);
-        const equipment = e.category || '';
-        return `${id} | ${name} | ${muscles} | ${equipment}`;
+        const category = (e.category || '').padEnd(11);
+        return `${id} | ${name} | ${muscles} | ${category}`;
       });
 
       const table = [header, separator, ...rows].join('\n');
@@ -700,7 +700,7 @@ export const createGetExerciseCatalogTool = (ctx: ToolContext) =>
         success: true,
         count: exercises.length,
         catalog: table,
-        message: `Found ${exercises.length} exercises. Use the ID (first column) as prescribedExerciseId when creating workouts.`,
+        message: `Found ${exercises.length} exercises. Use the ID as prescribedExerciseId. IMPORTANT: Use the Category column to determine column1Label/column2Label (e.g., Cardio→minutes, Barbell→Reps+kg).`,
       });
     },
     {
@@ -745,12 +745,96 @@ async function validateExerciseIds(exerciseIds: string[]): Promise<{ valid: bool
 // WORKOUT CREATION TOOLS
 // ============================================================================
 
+// Category to default columns mapping (must match CATEGORY_COLUMN_DEFAULTS in training-constants.ts)
+const CATEGORY_COLUMN_DEFAULTS: Record<string, { column1: string; column2: string; column1Value: string; column2Value: string | null }> = {
+  'Barbell': { column1: 'Reps', column2: 'kg', column1Value: '10', column2Value: '60' },
+  'Cables': { column1: 'Reps', column2: 'kg', column1Value: '12', column2Value: '30' },
+  'Dumbbells': { column1: 'Reps', column2: 'kg', column1Value: '10', column2Value: '20' },
+  'Kettlebells': { column1: 'Reps', column2: 'kg', column1Value: '10', column2Value: '16' },
+  'Machine': { column1: 'Reps', column2: 'kg', column1Value: '12', column2Value: '40' },
+  'Medicine-Ball': { column1: 'Reps', column2: 'kg', column1Value: '10', column2Value: '5' },
+  'Plate': { column1: 'Reps', column2: 'kg', column1Value: '10', column2Value: '20' },
+  'Smith-Machine': { column1: 'Reps', column2: 'kg', column1Value: '10', column2Value: '40' },
+  'Vitruvian': { column1: 'Reps', column2: 'kg', column1Value: '10', column2Value: '40' },
+  'Bodyweight': { column1: 'Reps', column2: 'Optional', column1Value: '10', column2Value: null },
+  'Band': { column1: 'Reps', column2: 'Optional', column1Value: '12', column2Value: null },
+  'Bosu-Ball': { column1: 'Reps', column2: 'Optional', column1Value: '10', column2Value: null },
+  'TRX': { column1: 'Reps', column2: 'Optional', column1Value: '12', column2Value: null },
+  'Cardio': { column1: 'minutes', column2: 'Optional', column1Value: '30', column2Value: null },
+  'Recovery': { column1: 'Reps', column2: 'Optional', column1Value: '10', column2Value: null },
+  'Stretches': { column1: 'Reps', column2: 'Optional', column1Value: '10', column2Value: null },
+  'Yoga': { column1: 'minutes', column2: 'Optional', column1Value: '15', column2Value: null },
+};
+
+const DEFAULT_COLUMN_CONFIG = { column1: 'Reps', column2: 'kg', column1Value: '10', column2Value: '60' };
+
+// Helper to check if a value is numeric (allows ranges like "8-12")
+function isNumericValue(value: string | null | undefined): boolean {
+  if (!value) return true; // null/undefined is ok for Optional columns
+  // Allow numbers like "10", "60.5" or ranges like "8-12"
+  return /^[\d.]+(-[\d.]+)?$/.test(value.trim());
+}
+
+// Helper to apply category defaults and fix non-numeric values
+function normalizeExercise(ex: any): any {
+  const categoryDefaults = ex.category ? CATEGORY_COLUMN_DEFAULTS[ex.category] : null;
+  const defaults = categoryDefaults || DEFAULT_COLUMN_CONFIG;
+
+  // Apply category-based column labels if not correctly set
+  let column1Label = ex.column1Label || defaults.column1;
+  let column2Label = ex.column2Label || defaults.column2;
+
+  // For Cardio, force minutes column
+  if (ex.category === 'Cardio' || ex.category === 'Yoga') {
+    column1Label = 'minutes';
+    column2Label = 'Optional';
+  }
+
+  // For Bodyweight/Band/TRX, force Optional for column2
+  if (['Bodyweight', 'Band', 'TRX', 'Bosu-Ball', 'Stretches', 'Recovery'].includes(ex.category)) {
+    column2Label = 'Optional';
+  }
+
+  // Validate and fix column values
+  let column1Value = ex.column1Value || defaults.column1Value;
+  let column2Value = ex.column2Value;
+
+  // If column1Value is not numeric, use default
+  if (!isNumericValue(column1Value)) {
+    console.warn(`Non-numeric column1Value "${column1Value}" for "${ex.name}", using default "${defaults.column1Value}"`);
+    column1Value = defaults.column1Value;
+  }
+
+  // If column2Value is not numeric and column2 is a weight column, use default
+  if (column2Label === 'kg' || column2Label === 'lbs') {
+    if (!isNumericValue(column2Value)) {
+      console.warn(`Non-numeric column2Value "${column2Value}" for "${ex.name}", using default "${defaults.column2Value}"`);
+      column2Value = defaults.column2Value;
+    }
+  } else if (column2Label === 'Optional') {
+    column2Value = null; // Clear value for Optional columns
+  }
+
+  return {
+    ...ex,
+    column1Label,
+    column1Value,
+    column2Label,
+    column2Value,
+  };
+}
+
 const workoutExerciseSchema = z.object({
   prescribedExerciseId: z.string().describe('MuscleWiki exercise ID (required). Get this from get_exercise_catalog.'),
   name: z.string().describe('Exercise name (for display)'),
+  category: z.string().optional().describe('Exercise category from catalog (e.g., "Barbell", "Cardio", "Bodyweight"). CRITICAL: Use this to determine columns.'),
   sets: z.number().default(3).describe('Number of sets'),
-  reps: z.string().describe('Rep target (e.g., "8", "8-12", "AMRAP")'),
-  weight: z.string().optional().describe('Weight prescription (e.g., "80kg", "RPE 8")'),
+  column1Label: z.enum(['Reps', 'minutes', 'seconds', 'km', 'm']).default('Reps')
+    .describe('Column 1 type. IMPORTANT: For Cardio/Yoga use "minutes". For strength exercises use "Reps".'),
+  column1Value: z.string().describe('MUST be a NUMBER like "10" or "30" or a range like "8-12". NEVER use text like "moderate".'),
+  column2Label: z.enum(['kg', 'lbs', 'Optional', 'Calories', 'Heart Rate Zone', 'RPE', 'RIR']).default('kg')
+    .describe('Column 2 type. IMPORTANT: For Cardio/Bodyweight use "Optional". For weighted exercises use "kg" or "lbs".'),
+  column2Value: z.string().optional().describe('MUST be a NUMBER like "60" for weight. NEVER use text like "moderate" or "heavy". Leave empty for Optional.'),
   rest: z.number().optional().describe('Rest in seconds between sets'),
   notes: z.string().optional().describe('Exercise-specific notes or cues'),
 });
@@ -826,6 +910,7 @@ export const createCreateWorkoutTool = (ctx: ToolContext) =>
       );
 
       // Return the validated payload for the frontend to save
+      // Apply normalization to ensure correct column labels and numeric values
       return JSON.stringify({
         success: true,
         action: 'create_workout',
@@ -838,15 +923,21 @@ export const createCreateWorkoutTool = (ctx: ToolContext) =>
           sections: sections.map((section: any) => ({
             name: section.name,
             type: section.type || 'regular',
-            exercises: section.exercises.map((ex: any) => ({
-              prescribedExerciseId: ex.prescribedExerciseId,
-              name: ex.name,
-              sets: ex.sets || 3,
-              reps: ex.reps || '10',
-              weight: ex.weight || null,
-              rest: ex.rest || 90,
-              notes: ex.notes || null,
-            })),
+            exercises: section.exercises.map((ex: any) => {
+              const normalized = normalizeExercise(ex);
+              return {
+                prescribedExerciseId: normalized.prescribedExerciseId,
+                name: normalized.name,
+                category: normalized.category || null,
+                sets: normalized.sets || 3,
+                column1Label: normalized.column1Label,
+                column1Value: normalized.column1Value,
+                column2Label: normalized.column2Label,
+                column2Value: normalized.column2Value,
+                rest: normalized.rest || 90,
+                notes: normalized.notes || null,
+              };
+            }),
           })),
         },
         message: `Workout "${name}" ready to save with ${totalExercises} exercises in ${sections.length} section(s).`,
@@ -914,6 +1005,7 @@ export const createCreateSectionTool = (ctx: ToolContext) =>
         });
       }
 
+      // Apply normalization to ensure correct column labels and numeric values
       return JSON.stringify({
         success: true,
         action: 'create_section',
@@ -921,15 +1013,21 @@ export const createCreateSectionTool = (ctx: ToolContext) =>
           name,
           description: description || '',
           type: type || 'regular',
-          exercises: exercises.map((ex: any) => ({
-            prescribedExerciseId: ex.prescribedExerciseId,
-            name: ex.name,
-            sets: ex.sets || 3,
-            reps: ex.reps || '10',
-            weight: ex.weight || null,
-            rest: ex.rest || 90,
-            notes: ex.notes || null,
-          })),
+          exercises: exercises.map((ex: any) => {
+            const normalized = normalizeExercise(ex);
+            return {
+              prescribedExerciseId: normalized.prescribedExerciseId,
+              name: normalized.name,
+              category: normalized.category || null,
+              sets: normalized.sets || 3,
+              column1Label: normalized.column1Label,
+              column1Value: normalized.column1Value,
+              column2Label: normalized.column2Label,
+              column2Value: normalized.column2Value,
+              rest: normalized.rest || 90,
+              notes: normalized.notes || null,
+            };
+          }),
         },
         message: `Section "${name}" ready to save with ${exercises.length} exercise(s).`,
       });
