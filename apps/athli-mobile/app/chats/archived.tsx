@@ -1,15 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { PressableScale } from 'pressto';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Check } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 
-import { typography, iconSizes } from '@/constants/typography';
+import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useChatsStore } from '@/stores/useChatsStore';
-import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { ChatListItem } from '@/components/features/chats/chat-list-item';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
@@ -27,7 +24,6 @@ export default function ArchivedChatsScreen() {
   }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const insets = useSafeAreaInsets();
 
   // Get store state and actions
   const storeArchivedChats = useChatsStore((state) => state.archivedChats);
@@ -52,8 +48,6 @@ export default function ArchivedChatsScreen() {
 
   const [archivedChats, setArchivedChats] = useState<Chat[]>(initialChats);
   const [isLoading, setIsLoading] = useState(!archivedChatsParam); // Only show loading if no initial data
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
   const [openRowCloseFn, setOpenRowCloseFn] = useState<(() => void) | null>(null);
   const isRowOpen = openRowCloseFn !== null;
 
@@ -71,7 +65,6 @@ export default function ArchivedChatsScreen() {
     }
   }, [openRowCloseFn]);
 
-  const mutedSurfaceColor = themeColors.backgroundTertiary;
   const iconColor = themeColors.text;
 
   // Only fetch if no initial data was provided
@@ -111,15 +104,6 @@ export default function ArchivedChatsScreen() {
     router.back();
   };
 
-  const handleEditPress = () => {
-    if (isEditMode) {
-      setIsEditMode(false);
-      setSelectedChatIds(new Set());
-    } else {
-      setIsEditMode(true);
-    }
-  };
-
   const handleChatPress = async (chatId: string) => {
     // If a row is open, just close it and prevent navigation/action
     if (isRowOpen) {
@@ -127,43 +111,22 @@ export default function ArchivedChatsScreen() {
       return;
     }
 
-    if (isEditMode) {
-      const newSelected = new Set(selectedChatIds);
-      if (newSelected.has(chatId)) {
-        newSelected.delete(chatId);
-      } else {
-        newSelected.add(chatId);
-      }
-      setSelectedChatIds(newSelected);
+    // Find the chat object
+    const chat = archivedChats.find((c) => c.id === chatId);
+    if (chat) {
+      // Load messages before navigating
+      const messages = await getChatMessages(chatId);
+      router.push({
+        pathname: `/chats/[id]`,
+        params: {
+          id: chatId,
+          chat: JSON.stringify(chat),
+          messages: JSON.stringify(messages),
+        },
+      });
     } else {
-      // Find the chat object
-      const chat = archivedChats.find((c) => c.id === chatId);
-      if (chat) {
-        // Load messages before navigating
-        const messages = await getChatMessages(chatId);
-        router.push({
-          pathname: `/chats/[id]`,
-          params: {
-            id: chatId,
-            chat: JSON.stringify(chat),
-            messages: JSON.stringify(messages),
-          },
-        });
-      } else {
-        // Fallback to just id if chat not found
-        router.push(`/chats/${chatId}`);
-      }
-    }
-  };
-
-  const handleUnarchivePress = async () => {
-    const selectedIds = Array.from(selectedChatIds);
-    setIsEditMode(false);
-    setSelectedChatIds(new Set());
-
-    // Use store action which handles optimistic updates
-    for (const chatId of selectedIds) {
-      await storeUnarchiveChat(chatId);
+      // Fallback to just id if chat not found
+      router.push(`/chats/${chatId}`);
     }
   };
 
@@ -184,29 +147,8 @@ export default function ArchivedChatsScreen() {
 
   return (
     <ScreenWrapper
-      contentContainerStyle={isEditMode ? styles.scrollViewContentEdit : styles.scrollViewContent}
+      contentContainerStyle={styles.scrollViewContent}
       scrollEnabled={!isRowOpen}
-      overlay={
-        isEditMode ? (
-          <View
-            style={[
-              styles.bottomActions,
-              {
-                paddingBottom: insets.bottom + 60,
-              },
-            ]}
-          >
-            <PressableScale
-              style={[styles.actionButton, { backgroundColor: themeColors.surfacePrimary }]}
-              onPress={handleUnarchivePress}
-            >
-              <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
-                {t('chats.archived.unarchive')}
-              </Text>
-            </PressableScale>
-          </View>
-        ) : undefined
-      }
     >
       <View style={styles.header}>
         <View style={styles.backButtonContainer}>
@@ -220,23 +162,7 @@ export default function ArchivedChatsScreen() {
         <Text style={[styles.headerTitle, { color: themeColors.text }]} pointerEvents="none">
           {t('chats.archived.title')}
         </Text>
-        {isEditMode ? (
-          <IconButton
-            icon={{ sf: 'checkmark', IconComponent: Check }}
-            onPress={handleEditPress}
-            size="md"
-            color={iconColor}
-          />
-        ) : (
-          <PressableScale
-            style={[styles.editButton, { backgroundColor: themeColors.surfacePrimary }]}
-            onPress={handleEditPress}
-          >
-            <Text style={[styles.editButtonText, { color: iconColor }]}>
-              {t('chats.archived.edit')}
-            </Text>
-          </PressableScale>
-        )}
+        <View style={styles.headerPlaceholder} />
       </View>
 
       <View style={styles.dividerContainer}>
@@ -270,8 +196,6 @@ export default function ArchivedChatsScreen() {
               key={chat.id}
               chat={chat}
               onPress={handleChatPress}
-              isEditMode={isEditMode}
-              isSelected={selectedChatIds.has(chat.id)}
               onViewProfile={handleViewProfile}
               onMarkAsRead={handleChatMarkAsRead}
               onUnarchive={handleChatUnarchive}
@@ -305,16 +229,8 @@ const styles = StyleSheet.create({
     right: 0,
     textAlign: 'center',
   },
-  editButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-    paddingHorizontal: 16,
-    borderRadius: 22,
-  },
-  editButtonText: {
-    ...typography.p2,
-    fontWeight: '500',
+  headerPlaceholder: {
+    width: 44,
   },
   dividerContainer: {
     width: '100%',
@@ -336,9 +252,6 @@ const styles = StyleSheet.create({
   scrollViewContent: {
     paddingBottom: 40,
   },
-  scrollViewContentEdit: {
-    paddingBottom: 140,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -352,26 +265,5 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...typography.p2,
-  },
-  bottomActions: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    justifyContent: 'space-between',
-  },
-  actionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionButtonText: {
-    ...typography.p2,
-    fontWeight: '500',
   },
 });

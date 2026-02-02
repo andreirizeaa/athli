@@ -31,9 +31,10 @@ import {
   Cog,
   Dumbbell,
   Mail,
+  Megaphone,
   MessagesSquare,
-  Plus,
   User,
+  UserPlus,
   Users,
 } from 'lucide-react-native';
 
@@ -41,11 +42,14 @@ const hasLiquidGlass = isLiquidGlassAvailable();
 
 type NativeTabsCoachViewProps = {
   primaryColor: string;
+  isOnChats?: boolean;
+  isOnSettings?: boolean;
 };
 
 // Pure layout component with overlay button
-const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewProps & { onAddPress: () => void }) => {
+const NativeTabsCoachView = ({ primaryColor, onAddPress, isOnChats, isOnSettings }: NativeTabsCoachViewProps & { onAddPress: () => void }) => {
   const insets = useSafeAreaInsets();
+  const { colors: themeColors } = useThemePreference();
 
   const handleAddPressWithHaptic = () => {
     haptics.medium();
@@ -77,8 +81,8 @@ const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewPr
 
         {/* Keep this for layout - touch will be intercepted by overlay */}
         <NativeTabs.Trigger name="add-modal" role="search">
-          <Icon sf="plus" />
-          <Label>Add</Label>
+          <Icon sf={isOnChats ? 'megaphone.fill' : isOnSettings ? 'person.fill.badge.plus' : 'plus'} />
+          <Label>{isOnChats ? 'Broadcast' : isOnSettings ? 'Add' : 'Add'}</Label>
         </NativeTabs.Trigger>
       </NativeTabs>
 
@@ -240,10 +244,7 @@ export default function TabLayout() {
           params: { route: 'clients' },
         });
       } else if (pathname.includes('/chats')) {
-        router.push({
-          pathname: '/add-modal-content',
-          params: { route: 'chats' },
-        });
+        router.push('/modals/message/broadcast-modal');
       } else if (pathname.includes('/settings')) {
         router.push({
           pathname: '/add-modal-content',
@@ -282,7 +283,7 @@ export default function TabLayout() {
       return (
         <>
           {/* Native iOS tab bar (full width, includes search pill) */}
-          <NativeTabsCoachView primaryColor={primaryColor} onAddPress={handleNativeTabsAddPress} />
+          <NativeTabsCoachView primaryColor={primaryColor} onAddPress={handleNativeTabsAddPress} isOnChats={pathname.includes('/chats')} isOnSettings={pathname.includes('/settings')} />
         </>
       );
     }
@@ -420,10 +421,7 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
           params: { route: activeRouteName },
         });
       } else if (activeRouteName === 'chats') {
-        router.push({
-          pathname: '/add-modal-content',
-          params: { route: 'chats' },
-        });
+        router.push('/modals/message/broadcast-modal');
       } else if (activeRouteName === 'library') {
         router.push(getLibraryModalRoute() as any);
       } else if (activeRouteName === 'settings') {
@@ -551,6 +549,22 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   const renderAddIcon = () => {
     const size = Platform.OS === 'ios' ? iconSizes.tabBarIconsIOS : iconSizes.tabBarIcons;
     const iconColor = themeColors.primaryForeground;
+
+    // Show megaphone icon when on chats tab
+    if (activeRouteName === 'chats') {
+      if (Platform.OS === 'ios') {
+        return <SymbolView name={'megaphone.fill' as any} tintColor={iconColor} size={size} type="monochrome" />;
+      }
+      return <Megaphone size={size + 8}/>;
+    }
+
+    // Show user add icon when on settings tab
+    if (activeRouteName === 'settings') {
+      if (Platform.OS === 'ios') {
+        return <SymbolView name={'person.fill.badge.plus' as any} tintColor={iconColor} size={size} type="monochrome" />;
+      }
+      return <UserPlus size={size + 8}/>;
+    }
 
     if (Platform.OS === 'ios') {
       return <SymbolView name={'plus' as any} tintColor={iconColor} size={size} type="monochrome" />;
