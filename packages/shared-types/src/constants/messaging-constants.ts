@@ -10,7 +10,7 @@ import type {
   MessageType,
   ReactionEmoji,
   UploadStatus,
-} from './messaging-schema';
+} from '../schemas/messaging-schema';
 
 // ================================================
 // MESSAGE CONSTANTS

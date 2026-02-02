@@ -54,7 +54,7 @@ export const MultiSelectActionBar = ({
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            transition={{ type: 'tween', duration: 0.25, ease: 'easeOut' }}
             className="fixed bottom-0 z-50 bg-background border-t border-border shadow-lg"
             style={{
               left: isInboxView ? 'auto' : (isMobile ? '0' : (state === 'expanded' ? '16rem' : '3rem')),

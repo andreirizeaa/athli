@@ -1,113 +1,39 @@
 import { apiFetch } from '@/lib/api-client';
+import type {
+  Question,
+  QuestionAnswer,
+  ClientCheckIn,
+  ClientQuestionnaire,
+  ClientQuestionnaireDetail,
+  CheckInInstance,
+  AssignClientCheckInData,
+  AssignClientQuestionnaireData,
+  DeleteClientCheckInsData,
+  DeleteClientQuestionnairesData,
+  AssignFormScheduleData,
+  AssignFormsToClientsData,
+} from '@athli/shared-types';
 
 /**
  * Client form service for check-ins and questionnaires
  * Mirrors apps/athli-web-app/api/client/client-form-service.ts
  */
 
-export interface Question {
-  id: string;
-  question: string;
-  required: boolean;
-  format: string;
-  options?: string[];
-  scaleFrom?: string;
-  scaleTo?: string;
-  mediaCount?: number;
-}
-
-export interface QuestionAnswer {
-  questionId: string;
-  answer: string | string[] | number | Date | null;
-}
-
-export interface ClientCheckIn {
-  id: string;
-  name: string;
-  questionCount: number;
-  schedule: string;
-  nextScheduledAt: Date;
-  description?: string;
-}
-
-export interface ClientQuestionnaire {
-  id: string;
-  name: string;
-  questionCount: number;
-  status: 'pending' | 'completed';
-  sentAt: Date;
-  completedAt?: Date;
-  description?: string;
-}
-
-export interface ClientQuestionnaireDetail {
-  id: string;
-  name: string;
-  description?: string;
-  status: 'pending' | 'completed';
-  sentAt: Date;
-  completedAt?: Date;
-  questions: Question[];
-  answers: QuestionAnswer[];
-}
-
-export interface CheckInInstance {
-  id: string;
-  formId: string;
-  formName: string;
-  scheduledDate: Date;
-  status: 'assigned' | 'completed' | 'review' | 'reviewed';
-  completedAt?: Date;
-  questions?: Question[];
-  answers?: QuestionAnswer[];
-}
-
-export interface AssignClientCheckInData {
-  checkInIds: string[];
-  clientId: string;
-  coachId: string;
-  schedule_config?: any;
-  cron_expression?: string;
-}
-
-export interface AssignClientQuestionnaireData {
-  questionnaireIds: string[];
-  clientId: string;
-  coachId: string;
-  schedule_config?: any;
-  cron_expression?: string;
-}
-
-export interface DeleteClientCheckInsData {
-  checkInIds: string[];
-  clientId: string;
-  coachId: string;
-}
-
-export interface DeleteClientQuestionnairesData {
-  questionnaireIds: string[];
-  clientId: string;
-  coachId: string;
-}
-
-export interface AssignFormScheduleData {
-  type: 'check-in' | 'one-time';
-  frequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly';
-  selectedDays?: string[];
-  monthlyOption?: 'first' | 'last' | 'specific';
-  specificDay?: number;
-  sendNow?: boolean;
-  scheduledDate?: Date;
-}
-
-export interface AssignFormsToClientsData {
-  formIds: string[];
-  clientIds: string[];
-  coachId: string;
-  formType: 'check-in' | 'questionnaire';
-  cronExpression: string;
-  scheduleData: AssignFormScheduleData;
-}
+// Re-export types from shared-types for backwards compatibility
+export type {
+  Question,
+  QuestionAnswer,
+  ClientCheckIn,
+  ClientQuestionnaire,
+  ClientQuestionnaireDetail,
+  CheckInInstance,
+  AssignClientCheckInData,
+  AssignClientQuestionnaireData,
+  DeleteClientCheckInsData,
+  DeleteClientQuestionnairesData,
+  AssignFormScheduleData,
+  AssignFormsToClientsData,
+};
 
 /**
  * Get check-ins for a client
@@ -213,7 +139,7 @@ export const assignClientQuestionnaire = async (
 /**
  * Delete check-ins from a client
  */
-export const deleteClientCheckIns = async (data: DeleteClientCheckInsData): Promise<void> => {
+export const deleteClientCheckIns = async (data: DeleteClientCheckInsData & { coachId: string }): Promise<void> => {
   await apiFetch('/client/forms/check-ins', {
     method: 'DELETE',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
@@ -225,7 +151,7 @@ export const deleteClientCheckIns = async (data: DeleteClientCheckInsData): Prom
  * Delete questionnaires from a client
  */
 export const deleteClientQuestionnaires = async (
-  data: DeleteClientQuestionnairesData
+  data: DeleteClientQuestionnairesData & { coachId: string }
 ): Promise<void> => {
   await apiFetch('/client/forms/questionnaires', {
     method: 'DELETE',

@@ -20,6 +20,9 @@ type ReadinessPageProps = {
 
 const READINESS_FIELDS: ReadinessField[] = ['sleep', 'mood', 'energy', 'stress', 'soreness'];
 
+// Fields where lower is better (inverted color scale)
+const INVERTED_FIELDS: ReadinessField[] = ['stress', 'soreness'];
+
 const FIELD_ICONS: Record<ReadinessField, { sf: string; IconComponent: LucideIcon }> = {
   sleep: { sf: 'moon.zzz', IconComponent: Moon },
   mood: { sf: 'sun.max.fill', IconComponent: Sun },
@@ -56,7 +59,10 @@ export const ReadinessPage = ({ values, onValueChange }: ReadinessPageProps) => 
         const labels = getLabels(field);
         const currentValue = values[field];
         const iconConfig = FIELD_ICONS[field];
-        const iconColor = currentValue ? RATING_COLORS[currentValue - 1] : themeColors.mutedText;
+        const isInverted = INVERTED_FIELDS.includes(field);
+        // For inverted fields (stress, soreness), lower is better: 1=green, 5=red
+        const iconColorIndex = currentValue ? (isInverted ? 5 - currentValue : currentValue - 1) : -1;
+        const iconColor = iconColorIndex >= 0 ? RATING_COLORS[iconColorIndex] : themeColors.mutedText;
         const sfIcon = field === 'mood' ? getMoodSfIcon(currentValue) : iconConfig.sf;
 
         return (
@@ -73,14 +79,14 @@ export const ReadinessPage = ({ values, onValueChange }: ReadinessPageProps) => 
               />
             </View>
             <View style={styles.buttonsRow}>
-              {[1, 2, 3, 4, 5].map((value, index) => (
+              {(isInverted ? [5, 4, 3, 2, 1] : [1, 2, 3, 4, 5]).map((value) => (
                 <RatingButton
                   key={value}
                   value={value}
-                  label={labels[index]}
+                  label={labels[value - 1]}
                   isSelected={currentValue === value}
                   onPress={() => onValueChange(field, value)}
-                  colorIndex={index}
+                  colorIndex={isInverted ? 5 - value : value - 1}
                 />
               ))}
             </View>

@@ -17,9 +17,9 @@ import type {
   RoundExercisePayload,
   CircuitExerciseGroupPayload,
   CircuitExercisePayload,
-} from './workout-schema';
-import { DEFAULT_EXECUTION_FIELDS, createTrackableField } from './workout-schema';
-import type { ExerciseType } from './training-constants';
+} from '../schemas/workout-schema';
+import { DEFAULT_EXECUTION_FIELDS, createTrackableField } from '../schemas/workout-schema';
+import type { ExerciseType } from '../constants/training-constants';
 
 // ============================================================================
 // Helper Types and Functions

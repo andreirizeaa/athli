@@ -48,6 +48,11 @@ type EmomRoundPageProps = {
   isRoundCompleted?: boolean;
   /** If true, all exercises are complete - don't auto-advance, let user use Next button */
   allExercisesComplete?: boolean;
+  isExerciseDataLoading?: boolean;
+  /** Callback to show phase overlay at modal level (covers entire screen) */
+  onShowPhaseOverlay?: (text: string, durationMs?: number) => void;
+  /** Callback to show completion overlay at modal level (covers entire screen) */
+  onShowCompletionOverlay?: (message: string) => void;
 };
 
 const EMOM_COLOR = '#10B981';
@@ -66,6 +71,9 @@ export const EmomRoundPage = ({
   isPaused,
   isRoundCompleted = false,
   allExercisesComplete = false,
+  isExerciseDataLoading = false,
+  onShowPhaseOverlay,
+  onShowCompletionOverlay,
 }: EmomRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -77,6 +85,7 @@ export const EmomRoundPage = ({
   const intervalSecRef = useRef(intervalSec);
   const isPausedRef = useRef(isPaused);
   const onRoundCompleteRef = useRef(onRoundComplete);
+  const onShowPhaseOverlayRef = useRef(onShowPhaseOverlay);
 
   // Completion celebration overlay state
   const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
@@ -106,6 +115,10 @@ export const EmomRoundPage = ({
   useEffect(() => {
     allExercisesCompleteRef.current = allExercisesComplete;
   }, [allExercisesComplete]);
+
+  useEffect(() => {
+    onShowPhaseOverlayRef.current = onShowPhaseOverlay;
+  }, [onShowPhaseOverlay]);
 
   // Countdown timer state - initialize to intervalSec
   const [timeRemaining, setTimeRemaining] = useState(intervalSec);
@@ -170,6 +183,17 @@ export const EmomRoundPage = ({
       }
 
       // Show next round overlay
+      // Use parent overlay callback if available (covers entire screen)
+      if (onShowPhaseOverlayRef.current) {
+        const overlayText = currentRound < totalRounds
+          ? (t('training.session.emom.nextRound' as any) || 'Next Round!')
+          : (t('training.session.emom.complete' as any) || 'Complete!');
+        onShowPhaseOverlayRef.current(overlayText, 800);
+        setTimeout(() => onRoundCompleteRef.current(), 1000);
+        return;
+      }
+
+      // Fallback to local overlay
       setShowNextRoundOverlay(true);
       overlayOpacity.value = withSequence(
         withTiming(1, { duration: 200 }),
@@ -263,6 +287,16 @@ export const EmomRoundPage = ({
           if (allExercisesCompleteRef.current) {
             return;
           }
+          // Use parent overlay callback if available (covers entire screen)
+          if (onShowPhaseOverlayRef.current) {
+            const overlayText = currentRound < totalRounds
+              ? (t('training.session.emom.nextRound' as any) || 'Next Round!')
+              : (t('training.session.emom.complete' as any) || 'Complete!');
+            onShowPhaseOverlayRef.current(overlayText, 800);
+            setTimeout(() => onRoundCompleteRef.current(), 1000);
+            return;
+          }
+          // Fallback to local overlay
           setShowNextRoundOverlay(true);
           overlayOpacity.value = withSequence(
             withTiming(1, { duration: 200 }),
@@ -290,7 +324,17 @@ export const EmomRoundPage = ({
     } while (messageIndex === lastCompletionMessageRef.current && messages.length > 1);
     lastCompletionMessageRef.current = messageIndex;
 
-    setCompletionMessage(messages[messageIndex]);
+    const message = messages[messageIndex];
+
+    // Use parent overlay callback if available (covers entire screen)
+    if (onShowCompletionOverlay) {
+      onShowCompletionOverlay(message);
+      setTimeout(() => onRoundCompleteRef.current(), 1400);
+      return;
+    }
+
+    // Fallback to local overlay
+    setCompletionMessage(message);
     setShowCompletionOverlay(true);
 
     // Animate in
@@ -309,7 +353,7 @@ export const EmomRoundPage = ({
         onRoundCompleteRef.current();
       }, 200);
     }, 1200);
-  }, [completionOverlayOpacity, completionTextScale]);
+  }, [completionOverlayOpacity, completionTextScale, onShowCompletionOverlay]);
 
   // Handle exercise completion toggle (local only for EMOM)
   const handleExerciseComplete = (exerciseIndex: number, setIndex: number, completed: boolean) => {
@@ -395,7 +439,7 @@ export const EmomRoundPage = ({
             loop={false}
             style={styles.confettiAnimation}
           />
-          <Animated.Text style={[styles.completionText, { color: themeColors.text }, completionTextAnimatedStyle]}>
+          <Animated.Text style={[styles.completionText, completionTextAnimatedStyle]}>
             {completionMessage}
           </Animated.Text>
         </Animated.View>
@@ -435,10 +479,10 @@ export const EmomRoundPage = ({
                 }) || `Round ${currentRound} of ${totalRounds}`}
               </Text>
             </View>
-            {/* Countdown Timer */}
-            <View style={[styles.timerContainer, { backgroundColor: `${getTimerColor()}20` }]}>
-              <Text style={[styles.timerText, { color: getTimerColor() }]}>
-                {formatTime(timeRemaining)}
+            {/* Countdown Timer or Done badge */}
+            <View style={[styles.timerContainer, { backgroundColor: isRoundCompleted ? `${EMOM_COLOR}20` : `${getTimerColor()}20` }]}>
+              <Text style={[styles.timerText, { color: isRoundCompleted ? EMOM_COLOR : getTimerColor() }]}>
+                {isRoundCompleted ? t('training.session.emom.complete' as any) || 'Done' : formatTime(timeRemaining)}
               </Text>
             </View>
           </View>
@@ -464,6 +508,7 @@ export const EmomRoundPage = ({
               onSetComplete={(setIndex, completed) => handleExerciseComplete(index, setIndex, completed)}
               onSetValueChange={(setIndex, field, value) => handleExerciseValueChange(index, setIndex, field, value)}
               onAlternativeSelect={() => {}}
+              isExerciseDataLoading={isExerciseDataLoading}
             />
           );
         })}
@@ -478,7 +523,11 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   completionOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: -500,
+    left: -50,
+    right: -50,
+    bottom: -500,
     backgroundColor: 'rgba(0, 0, 0, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -494,6 +543,7 @@ const styles = StyleSheet.create({
   },
   completionText: {
     ...typography.h1,
+    color: '#FFFFFF',
     textAlign: 'center',
     zIndex: 1,
   },

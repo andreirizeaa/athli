@@ -37,6 +37,8 @@ type ExerciseSessionCardProps = {
   supersetLabel?: string;
   /** If true, only the first uncompleted set checkbox is enabled (sequential completion) */
   sequentialSets?: boolean;
+  /** If true, show loading state for thumbnail (exercise data is being fetched) */
+  isExerciseDataLoading?: boolean;
 };
 
 export const ExerciseSessionCard = ({
@@ -50,6 +52,7 @@ export const ExerciseSessionCard = ({
   isSuperset = false,
   supersetLabel,
   sequentialSets = false,
+  isExerciseDataLoading = false,
 }: ExerciseSessionCardProps) => {
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
@@ -226,6 +229,8 @@ export const ExerciseSessionCard = ({
       params: {
         name: exerciseName,
         exerciseId: exercise.prescribedExerciseId || '',
+        // For MuscleWiki exercises, prescribedExerciseId IS the musclewikiId
+        musclewikiId: isCustomExercise ? '' : (exercise.prescribedExerciseId || ''),
         isCustom: isCustomExercise ? 'true' : 'false',
       },
     });
@@ -237,7 +242,7 @@ export const ExerciseSessionCard = ({
       <View style={styles.header}>
         <PressableScale onPress={handleThumbnailPress}>
           <View style={styles.thumbnailContainer}>
-            {isThumbnailLoading && !displayThumbnailUrl ? (
+            {(isExerciseDataLoading || isThumbnailLoading) && !displayThumbnailUrl ? (
               <View style={[styles.thumbnail, { backgroundColor: themeColors.surfacePrimary, alignItems: 'center', justifyContent: 'center' }]}>
                 <ActivityIndicator size="small" color={themeColors.primary} />
               </View>

@@ -868,6 +868,20 @@ export const clientTrainingsController = {
             return res.status(404).json({ success: false, message: 'Workout not found in this date' });
         }
 
+        // Delete training history (cascades to exercise history via FK)
+        const { error: historyDeleteError } = await supabase
+            .from('client_training_history')
+            .delete()
+            .eq('client_id', clientId)
+            .eq('coach_id', existingEntry.coach_id)
+            .eq('date', sourceDate)
+            .eq('workout_id', workoutId);
+
+        if (historyDeleteError) {
+            console.error('Failed to delete training history:', historyDeleteError);
+            // Continue with workout deletion even if history deletion fails
+        }
+
         const remainingCount = Object.keys(trainingData).length;
 
         // 2. Update or delete row
@@ -893,6 +907,241 @@ export const clientTrainingsController = {
         }
 
         success(res, { message: 'Workout deleted successfully' });
+    },
+
+    /**
+     * Add a single exercise history entry (incremental write during workout).
+     * Uses exercise instance ID for idempotency - updates if exists, inserts if not.
+     * POST /api/v1/client/trainings/exercise-history/add
+     * Body: { date, workout_id, workout_name, exercise_id, exercise_data, section_type, section_completed_rounds }
+     */
+    addExerciseHistoryEntry: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
+        const coachId = req.header('x-coach-id') ? String(req.header('x-coach-id')) : userId;
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const { date, workout_id, workout_name, exercise_id, exercise_data, section_type, section_completed_rounds } = req.body;
+
+        if (!targetClientId || !date || !workout_id || !exercise_id || !exercise_data) {
+            return res.status(400).json({
+                success: false,
+                message: 'date, workout_id, exercise_id, and exercise_data are required'
+            });
+        }
+
+        // Validate section_type if provided
+        const validSectionTypes = ['amrap', 'tabata', 'hiit', 'emom', 'circuits'];
+        if (section_type && !validSectionTypes.includes(section_type)) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid section_type. Must be one of: ${validSectionTypes.join(', ')}`
+            });
+        }
+
+        const supabase = getSupabaseClient();
+
+        // 1. Upsert training history record first (FK requirement)
+        const { error: historyError } = await supabase
+            .from('client_training_history')
+            .upsert({
+                client_id: targetClientId,
+                coach_id: coachId,
+                date: date,
+                workout_id: workout_id,
+                status: 'in_progress',
+                updated_at: new Date().toISOString(),
+            }, { onConflict: 'client_id, coach_id, date, workout_id' });
+
+        if (historyError) {
+            console.error('Error upserting training history:', historyError);
+            return res.status(500).json({ success: false, message: historyError.message });
+        }
+
+        // 2. Extract exercise instance ID for idempotency
+        const exerciseInstanceId = exercise_data.id;
+        if (!exerciseInstanceId) {
+            return res.status(400).json({
+                success: false,
+                message: 'exercise_data must contain an id field for idempotency'
+            });
+        }
+
+        // 3. Check if entry already exists for this exercise instance
+        const { data: existingEntry, error: fetchError } = await supabase
+            .from('client_training_exercise_history')
+            .select('row_id')
+            .eq('client_id', targetClientId)
+            .eq('coach_id', coachId)
+            .eq('date', date)
+            .eq('workout_id', workout_id)
+            .eq('exercise_id', exercise_id)
+            .eq('exercise_data->>id', exerciseInstanceId)
+            .single();
+
+        if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "not found"
+            console.error('Error checking existing exercise history:', fetchError);
+            return res.status(500).json({ success: false, message: fetchError.message });
+        }
+
+        const exerciseRecord = {
+            client_id: targetClientId,
+            coach_id: coachId,
+            date: date,
+            workout_id: workout_id,
+            workout_name: workout_name || 'Untitled Workout',
+            exercise_id: exercise_id,
+            exercise_data: exercise_data,
+            section_type: section_type || null,
+            section_completed_rounds: section_completed_rounds ?? null,
+            updated_at: new Date().toISOString(),
+        };
+
+        if (existingEntry) {
+            // 4a. Update existing entry
+            const { error: updateError } = await supabase
+                .from('client_training_exercise_history')
+                .update(exerciseRecord)
+                .eq('row_id', existingEntry.row_id);
+
+            if (updateError) {
+                console.error('Error updating exercise history:', updateError);
+                return res.status(500).json({ success: false, message: updateError.message });
+            }
+        } else {
+            // 4b. Insert new entry
+            const { error: insertError } = await supabase
+                .from('client_training_exercise_history')
+                .insert(exerciseRecord);
+
+            if (insertError) {
+                console.error('Error inserting exercise history:', insertError);
+                return res.status(500).json({ success: false, message: insertError.message });
+            }
+        }
+
+        success(res, { message: 'Exercise history entry added successfully' });
+    },
+
+    /**
+     * Get unique exercises that have history for a client.
+     * POST /api/v1/client/trainings/unique-exercises
+     * Returns: { exercises: [{ id, name, rawThumbnailUrl }] }
+     */
+    getUniqueExercises: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
+        const coachId = req.header('x-coach-id');
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const supabase = getSupabaseClient();
+
+        // Query distinct exercise_id from the history table
+        let query = supabase
+            .from('client_training_exercise_history')
+            .select('exercise_id, exercise_data')
+            .eq('client_id', targetClientId);
+
+        if (coachId) {
+            query = query.eq('coach_id', coachId);
+        } else if (req.header('x-client-id')) {
+            // Coach view
+            query = query.eq('coach_id', userId);
+        }
+
+        const { data: historyData, error } = await query;
+
+        if (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+
+        // Extract unique exercise IDs
+        const uniqueExerciseIds = new Set<string>();
+        const exerciseDataMap = new Map<string, any>();
+
+        (historyData || []).forEach((entry: any) => {
+            const exerciseId = entry.exercise_id;
+            uniqueExerciseIds.add(exerciseId);
+            // Keep the exercise_data for fallback
+            if (!exerciseDataMap.has(exerciseId)) {
+                exerciseDataMap.set(exerciseId, entry.exercise_data || {});
+            }
+        });
+
+        const exerciseIds = Array.from(uniqueExerciseIds);
+
+        if (exerciseIds.length === 0) {
+            success(res, {
+                message: 'Unique exercises retrieved successfully',
+                data: { exercises: [] },
+            });
+            return;
+        }
+
+        // Fetch exercise details from musclewiki_exercise_cache
+        const { data: cacheData, error: cacheError } = await supabase
+            .from('musclewiki_exercise_cache')
+            .select('musclewiki_id, name, thumbnail_url')
+            .in('musclewiki_id', exerciseIds);
+
+        // Also check coach_exercises for custom exercises
+        const { data: coachExercisesData, error: coachExercisesError } = await supabase
+            .from('coach_exercises')
+            .select('id, name, video_link')
+            .in('id', exerciseIds);
+
+        // Build exercise map from cache
+        const exerciseMap = new Map<string, { id: string; name: string; rawThumbnailUrl?: string }>();
+
+        // Add musclewiki exercises
+        (cacheData || []).forEach((cached: any) => {
+            exerciseMap.set(cached.musclewiki_id, {
+                id: cached.musclewiki_id,
+                name: cached.name,
+                rawThumbnailUrl: cached.thumbnail_url,
+            });
+        });
+
+        // Add coach exercises (custom exercises)
+        (coachExercisesData || []).forEach((exercise: any) => {
+            if (!exerciseMap.has(exercise.id)) {
+                exerciseMap.set(exercise.id, {
+                    id: exercise.id,
+                    name: exercise.name,
+                    rawThumbnailUrl: exercise.video_link, // Coach exercises use video_link as thumbnail
+                });
+            }
+        });
+
+        // Fallback for any exercise IDs not found in cache or coach_exercises
+        exerciseIds.forEach((exerciseId) => {
+            if (!exerciseMap.has(exerciseId)) {
+                const exerciseData = exerciseDataMap.get(exerciseId) || {};
+                exerciseMap.set(exerciseId, {
+                    id: exerciseId,
+                    name: exerciseData.name || 'Unknown Exercise',
+                    rawThumbnailUrl: exerciseData.rawThumbnailUrl || exerciseData.thumbnailUrl,
+                });
+            }
+        });
+
+        // Convert to array and sort by name
+        const exercises = Array.from(exerciseMap.values()).sort((a, b) =>
+            a.name.localeCompare(b.name)
+        );
+
+        success(res, {
+            message: 'Unique exercises retrieved successfully',
+            data: { exercises },
+        });
     },
 
     /**

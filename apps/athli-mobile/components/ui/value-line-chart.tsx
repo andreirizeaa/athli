@@ -24,6 +24,7 @@ type ValueLineChartProps = {
     name?: string;
     delta?: { value: number; isUp: boolean };
     renderFooter?: () => React.ReactNode;
+    renderHeaderRight?: () => React.ReactNode;
 };
 
 type ChartDataPoint = {
@@ -41,7 +42,7 @@ const formatDate = (dateStr: string): string => {
     return `${day} ${month}, ${year}`;
 };
 
-export const ValueLineChart = ({ data, name, delta, renderFooter }: ValueLineChartProps) => {
+export const ValueLineChart = ({ data, name, delta, renderFooter, renderHeaderRight }: ValueLineChartProps) => {
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const font = useFont(require('../../assets/fonts/SpaceMono-Regular.ttf'), 12);
@@ -115,6 +116,7 @@ export const ValueLineChart = ({ data, name, delta, renderFooter }: ValueLineCha
                             </Text>
                         </View>
                     )}
+                    {renderHeaderRight?.()}
                 </View>
                 <View style={styles.emptyState}>
                     <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
@@ -147,6 +149,7 @@ export const ValueLineChart = ({ data, name, delta, renderFooter }: ValueLineCha
                         </Text>
                     </View>
                 )}
+                {renderHeaderRight?.()}
             </View>
             <View style={[styles.chartWrapper, { width: chartWidth, height: chartHeight }]}>
                 <CartesianChart

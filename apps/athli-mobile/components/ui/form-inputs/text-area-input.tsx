@@ -39,14 +39,16 @@ export const TextAreaInput = forwardRef<TextAreaInputRef, TextAreaInputProps>(
 
     return (
       <Card variant="form">
-        <View style={styles.labelRow}>
-          <View style={styles.labelLeft}>
-            <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
-              {label}
-            </Text>
-            {required && <Text style={styles.requiredAsterisk}>*</Text>}
+        {label ? (
+          <View style={styles.labelRow}>
+            <View style={styles.labelLeft}>
+              <Text style={[styles.inputBoxLabel, { color: themeColors.mutedText }]}>
+                {label}
+              </Text>
+              {required && <Text style={styles.requiredAsterisk}>*</Text>}
+            </View>
           </View>
-        </View>
+        ) : null}
         <TextInput
           ref={inputRef}
           style={[styles.inputBoxInput, { color: themeColors.text, minHeight }]}

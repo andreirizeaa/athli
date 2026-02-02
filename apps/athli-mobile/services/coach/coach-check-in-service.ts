@@ -1,85 +1,26 @@
 import { apiFetch } from '@/lib/api-client';
+import type {
+  AddCheckInData,
+  CheckIn,
+  EditCheckInDetailsData,
+  Question,
+  AddQuestionData,
+  ReorderQuestionsData,
+  DeleteQuestionData,
+  CheckInReview,
+} from '@athli/shared-types';
 
-export interface AddCheckInData {
-  name: string;
-  description?: string;
-  cron_expression?: string;
-}
-
-export interface CheckIn {
-  id: string;
-  name: string;
-  description?: string;
-  cron_expression?: string;
-  schedule_config?: {
-    type: 'check-in' | 'questionnaire';
-    frequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly';
-    selectedDays?: string[];
-    monthlyOption?: 'first' | 'last' | 'specific';
-    specificDay?: number;
-  };
-  questions: Question[];
-  questionCount?: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface EditCheckInDetailsData {
-  id: string;
-  name: string;
-  description?: string;
-  cron_expression?: string;
-  schedule_config?: Record<string, any>;
-}
-
-export interface Question {
-  id: string;
-  question: string;
-  required: boolean;
-  format: string;
-  options?: string[];
-  scaleFrom?: string;
-  scaleTo?: string;
-  mediaCount?: number;
-  metricId?: string;
-}
-
-export interface AddQuestionData {
-  formId: string;
-  question: string;
-  required: boolean;
-  format: string;
-  options?: string[];
-  scaleFrom?: string;
-  scaleTo?: string;
-  mediaCount?: number;
-  metricId?: string;
-}
-
-export interface ReorderQuestionsData {
-  formId: string;
-  questions: Question[];
-}
-
-export interface DeleteQuestionData {
-  formId: string;
-  questionId: string;
-}
-
-export interface CheckInReview {
-  checkin_log_id: string;
-  client_id: string;
-  coach_checkin_id: string;
-  client_name: string;
-  client_avatar?: string;
-  client_email: string;
-  checkin_name: string;
-  checkin_description?: string;
-  submission_date: string;
-  status: string;
-  updated_at: string;
-  coach_id: string;
-}
+// Re-export types from shared-types for backwards compatibility
+export type {
+  AddCheckInData,
+  CheckIn,
+  EditCheckInDetailsData,
+  Question,
+  AddQuestionData,
+  ReorderQuestionsData,
+  DeleteQuestionData,
+  CheckInReview,
+};
 
 /**
  * Service method to get all check-ins from coach's library

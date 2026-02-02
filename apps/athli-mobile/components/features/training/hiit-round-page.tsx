@@ -45,6 +45,11 @@ type HiitRoundPageProps = {
   isRoundCompleted?: boolean;
   /** If true, all exercises are complete - don't auto-advance, let user use Next button */
   allExercisesComplete?: boolean;
+  isExerciseDataLoading?: boolean;
+  /** Callback to show phase overlay at modal level (covers entire screen) */
+  onShowPhaseOverlay?: (text: string, durationMs?: number) => void;
+  /** Callback to show completion overlay at modal level (covers entire screen) */
+  onShowCompletionOverlay?: (message: string) => void;
 };
 
 const HIIT_COLOR = '#8B5CF6'; // Purple for HIIT
@@ -68,6 +73,9 @@ export const HiitRoundPage = ({
   isPaused,
   isRoundCompleted = false,
   allExercisesComplete = false,
+  isExerciseDataLoading = false,
+  onShowPhaseOverlay,
+  onShowCompletionOverlay,
 }: HiitRoundPageProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -84,6 +92,7 @@ export const HiitRoundPage = ({
   const currentRoundRef = useRef(currentRound);
   const totalRoundsRef = useRef(totalRounds);
   const tickFunctionRef = useRef<(() => void) | null>(null);
+  const onShowPhaseOverlayRef = useRef(onShowPhaseOverlay);
 
   // Completion celebration overlay state
   const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
@@ -125,6 +134,10 @@ export const HiitRoundPage = ({
   useEffect(() => {
     allExercisesCompleteRef.current = allExercisesComplete;
   }, [allExercisesComplete]);
+
+  useEffect(() => {
+    onShowPhaseOverlayRef.current = onShowPhaseOverlay;
+  }, [onShowPhaseOverlay]);
 
   // Timer state - ensure we have a valid initial value
   const [currentPhase, setCurrentPhase] = useState<TimerPhase>('work');
@@ -170,6 +183,15 @@ export const HiitRoundPage = ({
 
     // Helper to show phase transition overlay
     const showTransitionOverlay = (text: string, onComplete: () => void) => {
+      // Use parent overlay callback if available (covers entire screen)
+      if (onShowPhaseOverlayRef.current) {
+        onShowPhaseOverlayRef.current(text, 1000);
+        // Call onComplete after overlay duration
+        setTimeout(onComplete, 1200);
+        return;
+      }
+
+      // Fallback to local overlay
       setOverlayText(text);
       setShowPhaseOverlay(true);
       overlayOpacity.value = withSequence(
@@ -346,7 +368,17 @@ export const HiitRoundPage = ({
     } while (messageIndex === lastCompletionMessageRef.current && messages.length > 1);
     lastCompletionMessageRef.current = messageIndex;
 
-    setCompletionMessage(messages[messageIndex]);
+    const message = messages[messageIndex];
+
+    // Use parent overlay callback if available (covers entire screen)
+    if (onShowCompletionOverlay) {
+      onShowCompletionOverlay(message);
+      setTimeout(() => onRoundCompleteRef.current(), 1400);
+      return;
+    }
+
+    // Fallback to local overlay
+    setCompletionMessage(message);
     setShowCompletionOverlay(true);
 
     // Animate in
@@ -365,7 +397,7 @@ export const HiitRoundPage = ({
         onRoundCompleteRef.current();
       }, 200);
     }, 1200);
-  }, [completionOverlayOpacity, completionTextScale]);
+  }, [completionOverlayOpacity, completionTextScale, onShowCompletionOverlay]);
 
   // Handle exercise completion toggle
   const handleExerciseComplete = (exerciseIndex: number, setIndex: number, completed: boolean) => {
@@ -489,7 +521,7 @@ export const HiitRoundPage = ({
             loop={false}
             style={styles.confettiAnimation}
           />
-          <Animated.Text style={[styles.completionText, { color: themeColors.text }, completionTextAnimatedStyle]}>
+          <Animated.Text style={[styles.completionText, completionTextAnimatedStyle]}>
             {completionMessage}
           </Animated.Text>
         </Animated.View>
@@ -525,13 +557,15 @@ export const HiitRoundPage = ({
                 }) || `Round ${currentRound} of ${totalRounds}`}
               </Text>
             </View>
-            {/* Countdown Timer */}
-            <View style={[styles.timerContainer, { backgroundColor: `${getTimerColor()}20` }]}>
-              <Text style={[styles.timerPhaseLabel, { color: getTimerColor() }]}>
-                {getPhaseLabel()}
-              </Text>
-              <Text style={[styles.timerText, { color: getTimerColor() }]}>
-                {formatTime(timeRemaining)}
+            {/* Countdown Timer or Done badge */}
+            <View style={[styles.timerContainer, { backgroundColor: isRoundCompleted ? `${HIIT_COLOR}20` : `${getTimerColor()}20` }]}>
+              {!isRoundCompleted && (
+                <Text style={[styles.timerPhaseLabel, { color: getTimerColor() }]}>
+                  {getPhaseLabel()}
+                </Text>
+              )}
+              <Text style={[styles.timerText, { color: isRoundCompleted ? HIIT_COLOR : getTimerColor() }]}>
+                {isRoundCompleted ? t('training.session.hiit.done' as any) || 'Done' : formatTime(timeRemaining)}
               </Text>
             </View>
           </View>
@@ -557,6 +591,7 @@ export const HiitRoundPage = ({
               onSetComplete={(setIndex, completed) => handleExerciseComplete(index, setIndex, completed)}
               onSetValueChange={(setIndex, field, value) => handleExerciseValueChange(index, setIndex, field, value)}
               onAlternativeSelect={() => {}}
+              isExerciseDataLoading={isExerciseDataLoading}
             />
           );
         })}
@@ -571,7 +606,11 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   completionOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: -500,
+    left: -50,
+    right: -50,
+    bottom: -500,
     backgroundColor: 'rgba(0, 0, 0, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -587,6 +626,7 @@ const styles = StyleSheet.create({
   },
   completionText: {
     ...typography.h1,
+    color: '#FFFFFF',
     textAlign: 'center',
     zIndex: 1,
   },

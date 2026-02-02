@@ -14,7 +14,7 @@ import type {
   MessageType,
   OptimisticMessage,
   ReadReceipt,
-} from './messaging-schema';
+} from '../schemas/messaging-schema';
 
 // ================================================
 // UI MESSAGE TYPE (for rendering)

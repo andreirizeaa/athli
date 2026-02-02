@@ -1,36 +1,36 @@
 import { apiFetch } from '../api-client';
 
-export interface AssignHabitData {
-  habitIds?: string[];
-  name?: string;
-  amount?: number;
-  unit?: string;
-  period?: 'daily' | 'weekly';
-  description?: string;
-  custom_schedule?: any;
-}
+// Import shared types and re-export for backwards compatibility
+export type {
+  AssignHabitData,
+  AssignHabitsToClientsData,
+  DeleteClientHabitsData,
+  LogHabitData,
+  UpdateHabitData,
+  UpdateHabitLogData,
+  HabitStreaks,
+} from '@athli/shared-types';
 
-export interface DeleteClientHabitsData {
-  habitIds: string[];
-  clientId: string;
-}
+import type {
+  AssignHabitData,
+  AssignHabitsToClientsData,
+  DeleteClientHabitsData,
+  LogHabitData,
+  UpdateHabitData,
+  UpdateHabitLogData,
+  HabitStreaks,
+} from '@athli/shared-types';
 
 /**
  * Service method to assign habits to clients (or create new private ones)
  */
-export const assignHabit = async (data: AssignHabitData & { clientId: string; coachId: string }): Promise<void> => {
+export const assignHabit = async (data: AssignHabitData): Promise<void> => {
   await apiFetch(`/client/habits`, {
     method: 'POST',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify(data),
   });
 };
-
-export interface AssignHabitsToClientsData {
-  habitIds: string[];
-  clientIds: string[];
-  coachId: string;
-}
 
 export const assignHabitsToClients = async (data: AssignHabitsToClientsData): Promise<void> => {
   await apiFetch(`/client/habits`, {
@@ -50,23 +50,13 @@ export const addHabit = async (data: Omit<AssignHabitData, 'habitIds'> & { clien
 /**
  * Service method to delete habits from a client
  */
-export const deleteClientHabits = async (data: DeleteClientHabitsData & { coachId: string }): Promise<void> => {
+export const deleteClientHabits = async (data: DeleteClientHabitsData): Promise<void> => {
   await apiFetch(`/client/habits`, {
     method: 'DELETE',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify({ habitIds: data.habitIds }),
   });
 };
-
-export interface LogHabitData {
-  assignmentId: string;
-  status: 'completed' | 'skipped' | 'partial';
-  value?: number;
-  date: Date;
-  // Context needed for headers
-  clientId: string;
-  coachId: string;
-}
 
 /**
  * Service method to log a habit for a client
@@ -94,17 +84,7 @@ export const getClientHabits = async (clientId: string, coachId: string): Promis
   return response.data.habits;
 };
 
-export interface UpdateHabitData {
-  assignmentId: string;
-  name?: string;
-  description?: string;
-  period?: 'daily' | 'weekly';
-  custom_schedule?: any;
-  clientId: string;
-  coachId: string;
-}
-
-export const updateHabit = async (data: UpdateHabitData): Promise<void> => {
+export const updateClientHabit = async (data: UpdateHabitData): Promise<void> => {
   await apiFetch(`/client/habits`, {
     method: 'PUT',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
@@ -118,6 +98,9 @@ export const updateHabit = async (data: UpdateHabitData): Promise<void> => {
   });
 };
 
+// Backwards compatible alias
+export const updateHabit = updateClientHabit;
+
 export const deleteHabitLog = async (logId: string, clientId: string, coachId: string): Promise<void> => {
   await apiFetch(`/client/habits/logs`, {
     method: 'DELETE',
@@ -125,15 +108,6 @@ export const deleteHabitLog = async (logId: string, clientId: string, coachId: s
     body: JSON.stringify({ logId }),
   });
 };
-
-export interface UpdateHabitLogData {
-  logId: string;
-  status: 'completed' | 'skipped' | 'partial';
-  value?: number;
-  date?: Date;
-  clientId: string;
-  coachId: string;
-}
 
 export const updateHabitLog = async (data: UpdateHabitLogData): Promise<void> => {
   await apiFetch(`/client/habits/logs`, {
@@ -147,11 +121,6 @@ export const updateHabitLog = async (data: UpdateHabitLogData): Promise<void> =>
     }),
   });
 };
-
-export interface HabitStreaks {
-  longest_streak: number;
-  current_streak: number;
-}
 
 export const getHabitStreaks = async (
   assignmentId: string,
