@@ -39,10 +39,9 @@ import {
 export function AppSidebar() {
   const t = useTranslations();
   const pathname = usePathname();
-  const { state, isHovered } = useSidebar();
+  const { state } = useSidebar();
 
-  const isCollapsed = state === 'collapsed' && !isHovered;
-  const isHoverExpanded = state === 'collapsed' && isHovered;
+  const isCollapsed = state === 'collapsed';
 
   // Normalize pathname by removing trailing slashes (except for root)
   const normalizedPathname = pathname && pathname !== '/' ? pathname.replace(/\/$/, '') : pathname;
@@ -139,11 +138,12 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   asChild
                   isActive={activePath === '/get-started'}
+                  tooltip={t('sidebar.links.getStarted')}
                   className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
                 >
                   <Link href="/get-started">
                     <Rocket className="shrink-0" />
-                    {!isCollapsed && <span>{t('sidebar.links.getStarted')}</span>}
+                    <span>{t('sidebar.links.getStarted')}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -151,11 +151,12 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   asChild
                   isActive={activePath === '/home'}
+                  tooltip={t('sidebar.links.home')}
                   className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
                 >
                   <Link href="/home">
                     <Home className="shrink-0" />
-                    {!isCollapsed && <span>{t('sidebar.links.home')}</span>}
+                    <span>{t('sidebar.links.home')}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -195,11 +196,12 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
+                      tooltip={label}
                       className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
                     >
                       <Link href={item.href}>
                         <Icon className="shrink-0" />
-                        {!isCollapsed && <span>{label}</span>}
+                        <span>{label}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -245,11 +247,12 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
+                      tooltip={label as string}
                       className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
                     >
                       <Link href={item.href}>
                         <Icon className="shrink-0" />
-                        {!isCollapsed && <span>{label as string}</span>}
+                        <span>{label as string}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -284,11 +287,12 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
+                      tooltip={label}
                       className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
                     >
                       <Link href={item.href}>
                         <Icon className="shrink-0" />
-                        {!isCollapsed && <span>{label}</span>}
+                        <span>{label}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -304,11 +308,12 @@ export function AppSidebar() {
             <SidebarMenuButton
               asChild
               isActive={activePath === '/settings' || activePath.startsWith('/settings/')}
+              tooltip={t('sidebar.settings.label') || 'Settings'}
               className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
             >
               <Link href="/settings">
                 <Settings className="shrink-0" />
-                {!isCollapsed && <span>{t('sidebar.settings.label') || 'Settings'}</span>}
+                <span>{t('sidebar.settings.label') || 'Settings'}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

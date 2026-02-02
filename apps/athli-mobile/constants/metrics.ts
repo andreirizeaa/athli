@@ -1,5 +1,6 @@
 import type { ScheduleData } from '@/stores';
 
+// DefaultMetric uses local ScheduleData type (different from MetricScheduleData which requires 'type')
 export interface DefaultMetric {
     name: string;
     unit: string;

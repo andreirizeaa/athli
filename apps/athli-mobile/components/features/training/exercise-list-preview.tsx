@@ -90,10 +90,7 @@ export const ExerciseListPreview = ({
                   {labels[index]}
                 </Text>
               </View>
-              <Text
-                style={[styles.exerciseName, { color: themeColors.text }]}
-                numberOfLines={1}
-              >
+              <Text style={[styles.exerciseName, { color: themeColors.text }]}>
                 {exercise?.name || `Exercise ${index + 1}`}
               </Text>
             </View>
@@ -115,26 +112,27 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   numberCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   numberText: {
-    fontSize: 19,
+    fontSize: 15,
     fontWeight: '700',
   },
   exerciseName: {
-    fontSize: 19,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
     flex: 1,
+    flexWrap: 'wrap',
   },
   connectorLine: {
     width: 2,
-    height: 12,
+    height: 10,
     marginTop: -4,
     marginBottom: -4,
-    marginLeft: 17, // Center under 36px circle: (36/2) - (2/2) = 17
+    marginLeft: 15, // Center under 32px circle: (32/2) - (2/2) = 15
   },
 });

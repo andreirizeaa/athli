@@ -101,15 +101,15 @@ export const VideoModal = ({ open, onOpenChange, exercise }: VideoModalProps) =>
                         className="w-full h-full object-cover"
                       />
                       {/* Play button overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
-                        <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center">
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+                        <div className="bg-black/60 rounded-full p-3">
                           <Play className="h-6 w-6 text-white fill-white" />
                         </div>
                       </div>
                     </>
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                      <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center">
+                      <div className="bg-black/60 rounded-full p-3">
                         <Play className="h-6 w-6 text-white fill-white" />
                       </div>
                       <span className="text-sm">Tap to play video</span>
@@ -124,7 +124,7 @@ export const VideoModal = ({ open, onOpenChange, exercise }: VideoModalProps) =>
               </div>
 
               {/* Details Section - Instructions and Muscles side by side */}
-              <ScrollArea className="border-l bg-muted/30 h-full">
+              <ScrollArea className="h-full">
                 <div className="p-6 space-y-6">
                   {/* Instructions Section */}
                   <div>

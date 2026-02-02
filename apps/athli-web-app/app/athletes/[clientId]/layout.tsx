@@ -85,6 +85,10 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
       label: t('athletes.profile.trainingCalendar'),
     },
     {
+      value: 'progress',
+      label: t('athletes.profile.progress'),
+    },
+    {
       value: 'metrics',
       label: t('athletes.profile.metrics'),
     },
@@ -128,6 +132,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
   const isSettingsRoute = segments.includes('settings');
   const isUpdatesRoute = segments.includes('updates');
   const isTrainingCalendarRoute = segments.includes('training');
+  const isProgressRoute = segments.includes('progress');
 
   // Determine active tab (use prop if provided, otherwise use segments)
   const activeTabFromSegments = isCheckInRoute
@@ -142,7 +147,9 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
             ? 'updates'
             : isTrainingCalendarRoute
               ? 'training'
-              : (lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'overview');
+              : isProgressRoute
+                ? 'progress'
+                : (lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'overview');
 
   const activeTab = activeTabProp || activeTabFromSegments;
 

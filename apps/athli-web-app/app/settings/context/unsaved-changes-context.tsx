@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useMemo, ReactNode } from 'react';
 
 interface UnsavedChangesContextType {
   hasUnsavedChanges: boolean;
@@ -12,8 +12,13 @@ const UnsavedChangesContext = createContext<UnsavedChangesContextType | undefine
 export const UnsavedChangesProvider = ({ children }: { children: ReactNode }) => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  const value = useMemo(() => ({
+    hasUnsavedChanges,
+    setHasUnsavedChanges,
+  }), [hasUnsavedChanges]);
+
   return (
-    <UnsavedChangesContext.Provider value={{ hasUnsavedChanges, setHasUnsavedChanges }}>
+    <UnsavedChangesContext.Provider value={value}>
       {children}
     </UnsavedChangesContext.Provider>
   );

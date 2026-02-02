@@ -3,7 +3,7 @@
  * Shared across mobile and web applications
  */
 
-import type { SectionType as WorkoutSchemaSectionType } from './workout-schema';
+import type { SectionType as WorkoutSchemaSectionType } from '../schemas/workout-schema';
 
 // Re-export types from workout-schema to avoid duplication
 export type SectionType = WorkoutSchemaSectionType;

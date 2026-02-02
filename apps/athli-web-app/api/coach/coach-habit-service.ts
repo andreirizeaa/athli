@@ -1,62 +1,21 @@
 import { apiFetch } from '../api-client';
 
-export interface AddHabitData {
-  name: string;
-  description?: string;
-  amount: number;
-  unit: string;
-  period: 'daily' | 'weekly';
-  duration?: number;
-  reminderTime?: string;
-  reminderMessage?: string;
-  clientId?: string;
-}
+// Import shared types and re-export for backwards compatibility
+export type {
+  AddHabitData,
+  EditHabitData,
+  DeleteHabitData,
+  Habit,
+  DBHabit,
+} from '@athli/shared-types';
 
-export interface EditHabitData extends AddHabitData {
-  id: string;
-}
-
-export interface DeleteHabitData {
-  id: string;
-}
-
-export interface Habit {
-  id: string;
-  name: string;
-  description?: string;
-  amount: number;
-  unit: string;
-  period: 'daily' | 'weekly';
-  duration?: number;
-  reminderTime?: string;
-  reminderMessage?: string;
-  createdAt: number;
-  clientId?: string;
-}
-
-// Database response type
-interface DBHabit {
-  id: string;
-  coach_id: string;
-  name: string;
-  description: string | null;
-  schedule_type: 'daily' | 'weekly' | 'custom';
-  days_of_week: number[] | null;
-  times_of_day: string[] | null;
-  timezone: string;
-  start_date: string | null;
-  end_date: string | null;
-  schedule_config: {
-    amount?: number;
-    unit?: string;
-    duration?: number;
-    reminder_message?: string;
-    [key: string]: any;
-  };
-  created_at: string;
-  updated_at: string;
-  client_id: string | null;
-}
+import type {
+  AddHabitData,
+  EditHabitData,
+  DeleteHabitData,
+  Habit,
+  DBHabit,
+} from '@athli/shared-types';
 
 const mapDBHabitToHabit = (dbHabit: DBHabit): Habit => {
   return {

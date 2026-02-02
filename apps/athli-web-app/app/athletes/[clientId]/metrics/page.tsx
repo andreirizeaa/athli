@@ -542,7 +542,7 @@ const ClientMetricsPage = () => {
                           </span>
                         </div>
                       </button>
-                      {(!isLast || isOnlyItem) && <Separator className="w-full" />}
+                      <Separator className="w-full" />
                     </React.Fragment>
                   );
                 })

@@ -50,6 +50,29 @@ export interface GetExerciseHistoryData {
   exerciseName?: string;
 }
 
+export interface AddExerciseHistoryData {
+  clientId: string;
+  coachId: string;
+  date: string;
+  workoutId: string;
+  workoutName: string;
+  exerciseId: string;
+  exerciseData: any;
+  sectionType?: 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | null;
+  sectionCompletedRounds?: number | null;
+}
+
+export interface UniqueExercise {
+  id: string;
+  name: string;
+  rawThumbnailUrl?: string;
+}
+
+export interface GetUniqueExercisesData {
+  clientId: string;
+  coachId: string;
+}
+
 export interface HistoryEntry {
   date: string;
   workout_id: string;
@@ -257,4 +280,44 @@ export const getCoachClientHistory = async (
     }
   );
   return response.data?.history || [];
+};
+
+/**
+ * Add a single exercise history entry (incremental write during workout)
+ * Uses exercise instance ID for idempotency - updates if exists, inserts if not
+ */
+export const addExerciseHistory = async (data: AddExerciseHistoryData): Promise<void> => {
+  await apiFetch('/client/trainings/exercise-history/add', {
+    method: 'POST',
+    headers: {
+      'x-client-id': data.clientId,
+      'x-coach-id': data.coachId,
+    },
+    body: JSON.stringify({
+      date: data.date,
+      workout_id: data.workoutId,
+      workout_name: data.workoutName,
+      exercise_id: data.exerciseId,
+      exercise_data: data.exerciseData,
+      section_type: data.sectionType ?? null,
+      section_completed_rounds: data.sectionCompletedRounds ?? null,
+    }),
+  });
+};
+
+/**
+ * Get unique exercises that have history for a client
+ */
+export const getClientUniqueExercises = async (data: GetUniqueExercisesData): Promise<UniqueExercise[]> => {
+  const response = await apiFetch<{ success: boolean; data: { exercises: UniqueExercise[] } }>(
+    '/client/trainings/unique-exercises',
+    {
+      method: 'POST',
+      headers: {
+        'x-client-id': data.clientId,
+        'x-coach-id': data.coachId,
+      },
+    }
+  );
+  return response.data?.exercises || [];
 };

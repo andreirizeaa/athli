@@ -63,11 +63,7 @@ const ProfilePage = () => {
 
   // Check if there are unsaved changes
   useEffect(() => {
-    const currentData = {
-      name,
-      profilePictureUrl,
-    };
-    const hasChanges = JSON.stringify(currentData) !== JSON.stringify(savedData);
+    const hasChanges = name !== savedData.name || profilePictureUrl !== savedData.profilePictureUrl;
     setHasUnsavedChanges(hasChanges);
     setContextHasUnsavedChanges(hasChanges);
 

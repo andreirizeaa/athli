@@ -1,31 +1,29 @@
 import { apiFetch } from '../api-client';
 
-export interface AddFilesToClientData {
-  fileIds: string[];
-  clientId: string;
-}
+// Import shared types and re-export for backwards compatibility
+export type {
+  AddFilesToClientData,
+  AddFilesToClientsData,
+  DeleteClientFilesData,
+  FileReference,
+} from '@athli/shared-types';
 
-export interface DeleteClientFilesData {
-  fileIds: string[];
-  clientId: string;
-}
+import type {
+  AddFilesToClientData,
+  AddFilesToClientsData,
+  DeleteClientFilesData,
+} from '@athli/shared-types';
 
 /**
  * Service method to add files to a client
  */
-export const addFilesToClient = async (data: AddFilesToClientData & { coachId: string }): Promise<void> => {
+export const addFilesToClient = async (data: AddFilesToClientData): Promise<void> => {
   await apiFetch(`/client/files`, {
     method: 'POST',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify({ fileIds: data.fileIds }),
   });
 };
-
-export interface AddFilesToClientsData {
-  fileIds: string[];
-  clientIds: string[];
-  coachId: string;
-}
 
 export const addFilesToClients = async (data: AddFilesToClientsData): Promise<void> => {
   await apiFetch(`/client/files`, {
@@ -38,24 +36,20 @@ export const addFilesToClients = async (data: AddFilesToClientsData): Promise<vo
 /**
  * Service method to delete files from a client
  */
-export const deleteClientFiles = async (data: DeleteClientFilesData & { coachId: string }): Promise<void> => {
+export const deleteClientFiles = async (data: DeleteClientFilesData): Promise<void> => {
   await apiFetch(`/client/files`, {
     method: 'DELETE',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify({ fileIds: data.fileIds }),
   });
 };
-export interface UploadClientFileData {
-  file: File;
-  fileName?: string;
-  tags?: string[];
-  clientId: string;
-}
+export { type UploadClientFileDataWeb as UploadClientFileData } from '@athli/shared-types';
+import type { UploadClientFileDataWeb as UploadClientFileData } from '@athli/shared-types';
 
 /**
  * Service method to upload file directly for a client
  */
-export const uploadClientFile = async (data: UploadClientFileData & { coachId: string }): Promise<any> => {
+export const uploadClientFile = async (data: UploadClientFileData & { clientId: string; coachId: string }): Promise<any> => {
   const formData = new FormData();
   formData.append('file', data.file);
   if (data.fileName) formData.append('filename', data.fileName);
@@ -70,15 +64,10 @@ export const uploadClientFile = async (data: UploadClientFileData & { coachId: s
   return response.data.file;
 };
 
-export interface FileWithUrl {
-  id: string;
-  url: string;
-}
-
 /**
  * Get a signed URL for a client file
  */
-export const getClientFileUrl = async (fileId: string, clientId: string, coachId: string): Promise<FileWithUrl> => {
+export const getClientFileUrl = async (fileId: string, clientId: string, coachId: string): Promise<{ id: string; url: string }> => {
   const response = await apiFetch<{ data: { url: string } }>(`/client/files/${fileId}/url`, {
     method: 'GET',
     headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
