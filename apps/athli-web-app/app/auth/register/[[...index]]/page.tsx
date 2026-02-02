@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,6 @@ import { isWeakPasswordError, getPasswordErrorMessage } from '@/lib/utils/auth-e
 
 export default function SignUpPage() {
   const { signUp, signInWithGoogle, signInWithApple } = useSupabaseAuth();
-  const router = useRouter();
   const pathname = usePathname();
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);

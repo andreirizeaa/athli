@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { success, unauthorized, notFound, created, noContent, forbidden } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
+import { isExternalLink } from '@athli/shared-types';
 
 export const clientFilesController = {
     /**
@@ -111,12 +112,21 @@ export const clientFilesController = {
             return forbidden(res, { message: 'Coach ID mismatch' });
         }
 
+        // If it's an external link, return the URL directly
+        if (isExternalLink(assignment.file_path)) {
+            success(res, {
+                message: 'File URL retrieved successfully',
+                data: { url: assignment.file_path },
+            });
+            return;
+        }
+
         // 2. Generate signed URL
         // client_files usually stored in 'coach_files' bucket (or 'client_files'?)
         // The migration didn't specify bucket change, but usage says 'coach_files'.
         // Let's assume 'coach_files' if migrated from there. But wait, new detached files might be elsewhere?
         // Migration 037 removed coach_file_path.
-        // We should check where files are actually stored. 
+        // We should check where files are actually stored.
         // Existing logic used 'coach_files' bucket.
         const bucket = 'coach_files'; // Or 'client_files'? keeping 'coach_files' for now as per prev code.
 
@@ -396,6 +406,65 @@ export const clientFilesController = {
         created(res, {
             message: 'File uploaded successfully',
             data: { file: record }
+        });
+    },
+
+    /**
+     * Create a new link (external URL) for a client
+     */
+    createLink: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+        const { filename, url } = req.body;
+
+        if (!coachIdHeader || coachIdHeader !== userId) return unauthorized(res, { message: 'Unauthorized' });
+        if (!clientIdHeader) return forbidden(res, { message: 'x-client-id required' });
+        if (!filename) return res.status(400).json({ success: false, message: 'Filename is required' });
+        if (!url) return res.status(400).json({ success: false, message: 'URL is required' });
+
+        // Validate URL format
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            return res.status(400).json({ success: false, message: 'URL must start with http:// or https://' });
+        }
+
+        const targetCoachId = coachIdHeader as string;
+        const targetClientId = clientIdHeader as string;
+
+        const supabase = getSupabaseClient();
+
+        // Verify Relation
+        const { data: relation } = await supabase
+            .from('coach_client_assignments')
+            .select('client_id')
+            .eq('coach_id', targetCoachId)
+            .eq('client_id', targetClientId)
+            .single();
+
+        if (!relation) return forbidden(res, { message: 'Forbidden' });
+
+        // Store link in database with URL in file_path
+        const { data: fileRecord, error: dbError } = await supabase
+            .from('client_files')
+            .insert({
+                client_id: targetClientId,
+                coach_id: targetCoachId,
+                filename: filename,
+                display_name: filename,
+                file_path: url,
+                mime_type: 'link',
+                size: null
+            })
+            .select()
+            .single();
+
+        if (dbError) {
+            return res.status(500).json({ success: false, message: dbError.message });
+        }
+
+        created(res, {
+            message: 'Link created successfully',
+            data: { file: fileRecord },
         });
     },
 };

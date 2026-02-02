@@ -1315,7 +1315,7 @@ export const en = {
       assistant: 'Assistant',
       notes: 'Notes',
       training: 'Training',
-      progress: 'Progress',
+      progress: 'Exercise History',
       metrics: 'Metrics',
       habits: 'Habits',
       photos: 'Photos',

@@ -64,6 +64,7 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
     const firstNameInputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const dragCounterRef = useRef(0);
+    const wasOpenRef = useRef(false);
 
     const clientName = details?.name || athlete?.name || '';
     const clientEmail = details?.email || athlete?.email || '';
@@ -97,7 +98,9 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
     }, [open]);
 
     useEffect(() => {
-        if (open && (details || athlete)) {
+        // Only initialize form when panel opens (transitions from closed to open)
+        // This prevents resetting user's changes when context updates
+        if (open && !wasOpenRef.current && (details || athlete)) {
             setFormData({
                 name: clientName,
                 email: clientEmail,
@@ -112,6 +115,7 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
             setUploadedFile(null);
             setPreviewUrl(null);
         }
+        wasOpenRef.current = open;
     }, [open, details, athlete, clientName, clientEmail, clientCategory, clientGender, clientPhone, clientCountry, clientHeight]);
 
     useEffect(() => {
@@ -231,10 +235,11 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
                         className="gap-2"
                     >
                         {updateDetailsMutation.isPending ? (
-                            <><Loader2 className="size-4 animate-spin" />{t('general.saving')}</>
+                            <Loader2 className="size-4 animate-spin" />
                         ) : (
-                            <><Check className="size-4" />{t('general.save')}</>
+                            <Check className="size-4" />
                         )}
+                        {t('general.save')}
                     </Button>
                 </div>
             }

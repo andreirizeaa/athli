@@ -22,7 +22,7 @@ import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group'
 import { Spinner } from '@/components/ui/spinner';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { archiveUser, archiveUser as archiveClient, type Athlete } from '@/api/coach/coach-client-service';
+import { archiveUser as archiveClient, type Athlete } from '@/api/coach/coach-client-service';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { cn } from '@/lib/general/utils';
 import { exportToCSV } from '@/lib/general/csv-export';

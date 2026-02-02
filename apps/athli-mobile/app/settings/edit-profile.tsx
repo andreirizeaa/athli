@@ -1,13 +1,10 @@
 import React, { useEffect, useMemo, useCallback } from 'react';
-import { Platform, StyleSheet, Text, View, ScrollView, Linking } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Building2, ChevronLeft, ChevronRight, Lock, Mail, User } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { PressableScale } from 'pressto';
-import { LinearGradient } from 'expo-linear-gradient';
-
-import { hexToRgba } from '@/utils/colorUtils';
 
 import { typography, iconSizes } from '@/constants/typography';
 import {
@@ -148,43 +145,36 @@ export default function EditProfileScreen() {
   // Get the appropriate profile based on view
   const currentProfile = isAthleteView ? clientProfile : coachProfile;
 
-  const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
-  const gradientHeight = headerHeight + 12;
-
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
-      {/* Fixed gradient header overlay */}
-      <View style={[styles.fixedHeader, { height: headerHeight }]}>
-        <LinearGradient
-          colors={[
-            hexToRgba(themeColors.backgroundPrimary, 1),
-            hexToRgba(themeColors.backgroundPrimary, 0.85),
-            hexToRgba(themeColors.backgroundPrimary, 0.5),
-            hexToRgba(themeColors.backgroundPrimary, 0),
-          ]}
-          locations={[0, 0.5, 0.8, 1]}
-          style={[styles.headerGradient, { height: gradientHeight }]}
-          pointerEvents="none"
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: themeColors.backgroundPrimary,
+          paddingTop: insets.top,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
+      <View style={styles.header}>
+        <IconButton
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+          onPress={handleGoBack}
+          size="md"
+          color={themeColors.text}
         />
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+          {t('profile.title')}
+        </Text>
+        <View style={styles.headerPlaceholder} />
       </View>
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <IconButton
-            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-            onPress={handleGoBack}
-            size="md"
-            color={themeColors.text}
-          />
-          <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-            {t('profile.title')}
-          </Text>
-          <View style={styles.headerPlaceholder} />
-        </View>
         {/* Personal Details */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>
           {t('profile.personalDetails')}
@@ -348,37 +338,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  fixedHeader: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  headerGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-  },
-  scrollView: {
-    flex: 1,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 12,
-    marginBottom: 16,
-    height: 56,
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
   headerTitle: {
     ...typography.h5,
-    flex: 1,
-    textAlign: 'center',
   },
   headerPlaceholder: {
     width: 44,
+  },
+  scrollView: {
+    flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 16,

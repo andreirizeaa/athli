@@ -134,12 +134,14 @@ export const saveAthleteDetails = async (athleteId: string, details: AthleteDeta
   // Map AthleteDetails back to DB structure
   const updatePayload: any = {
     name: details.name,
+    email: details.email,
     phone: details.phone,
     gender: details.gender,
     country: details.country,
     birth_date: details.birthDate,
     height_cm: details.height ? parseInt(details.height, 10) : null,
     height: details.height ? parseInt(details.height, 10) : null,
+    category: details.category,  // Use 'category' for coach_client_assignments table
   };
 
   if (details.avatarUrl) {
@@ -172,8 +174,10 @@ export const saveAthleteDetails = async (athleteId: string, details: AthleteDeta
     }
   }
 
-  // call /client instead of /clients/:id
-  await apiFetch(`/client`, {
+  // Use /clients endpoint for coach updating client (supports category)
+  // Use /client endpoint for client updating own profile
+  const endpoint = athleteId ? '/clients' : '/client';
+  await apiFetch(endpoint, {
     method: 'PATCH',
     headers,
     body,

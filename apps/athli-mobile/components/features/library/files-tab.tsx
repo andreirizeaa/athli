@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
-import { FileText, File, Play, UserPlus, Trash2, Pencil } from 'lucide-react-native';
+import { StyleSheet, Text, View, ActivityIndicator, Linking } from 'react-native';
+import { FileText, File, Play, UserPlus, Trash2, Pencil, Link as LinkIcon } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
@@ -18,7 +18,7 @@ import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
 import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
-import { getAllFiles, getFileTypeFromMime, getFileUrl, deleteFile } from '@/services/coach/coach-file-service';
+import { getAllFiles, getFileTypeFromMime, getFileUrl, deleteFile, isExternalLink, isYouTubeUrl, isVimeoUrl, getYouTubeThumbnail } from '@/services/coach/coach-file-service';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Dialog } from '@/components/ui/dialog';
 
@@ -122,6 +122,13 @@ export const FilesTab = () => {
     }
 
     closeOpenRow();
+
+    // Handle external links - open in browser
+    if (isExternalLink(item.file_path)) {
+      Linking.openURL(item.file_path);
+      return;
+    }
+
     // Open file viewer
     router.push({
       pathname: '/modals/files/file-viewer-modal',
@@ -192,9 +199,11 @@ export const FilesTab = () => {
     });
   };
 
-  // Get files that need thumbnail URLs (images and videos only)
+  // Get files that need thumbnail URLs (images and videos only, not external links)
   const filesNeedingThumbnails = useMemo(() => {
     return filteredFiles.filter(file => {
+      // External links don't need signed URLs
+      if (isExternalLink(file.file_path)) return false;
       const fileType = getFileTypeFromMime(file.mime_type);
       return fileType === 'image' || fileType === 'video';
     });
@@ -250,6 +259,47 @@ export const FilesTab = () => {
   }, [filesNeedingThumbnails, thumbnailQueries]);
 
   const renderThumbnail = (item: typeof filteredFiles[0]) => {
+    // Handle external links first
+    if (isExternalLink(item.file_path)) {
+      const linkUrl = item.file_path;
+
+      // YouTube thumbnail
+      if (isYouTubeUrl(linkUrl)) {
+        const ytThumbnail = getYouTubeThumbnail(linkUrl);
+        if (ytThumbnail) {
+          return (
+            <View style={styles.thumbnailContainer}>
+              <Image
+                source={{ uri: ytThumbnail }}
+                style={styles.thumbnailImage}
+                contentFit="cover"
+                transition={200}
+              />
+              <View style={styles.playOverlay}>
+                <Play {...({ color: "#FFFFFF", size: 16 } as any)} />
+              </View>
+            </View>
+          );
+        }
+      }
+
+      // Vimeo icon
+      if (isVimeoUrl(linkUrl)) {
+        return (
+          <SquircleView cornerSmoothing={1} style={[styles.fileIconContainer, { backgroundColor: '#1ab7ea15' }]}>
+            <Text style={{ color: '#1ab7ea', fontSize: 12, fontWeight: '600' }}>Vimeo</Text>
+          </SquircleView>
+        );
+      }
+
+      // Generic link icon
+      return (
+        <SquircleView cornerSmoothing={1} style={[styles.fileIconContainer, { backgroundColor: `${themeColors.primary}15` }]}>
+          <LinkIcon {...({ color: themeColors.primary, size: 24 } as any)} />
+        </SquircleView>
+      );
+    }
+
     const fileType = getFileTypeFromMime(item.mime_type);
     const isMedia = fileType === 'image' || fileType === 'video';
     const isVideo = fileType === 'video';
@@ -410,7 +460,7 @@ const styles = StyleSheet.create({
   fileItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     gap: 12,
   },

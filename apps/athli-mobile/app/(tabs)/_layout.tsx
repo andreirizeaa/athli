@@ -1,14 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
-import { Platform, StyleSheet, Text, Pressable, View, ActivityIndicator } from 'react-native';
+import { Platform, StyleSheet, View, ActivityIndicator, Text } from 'react-native';
 import { Image } from 'expo-image';
 import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
 import { MaterialIcons } from '@expo/vector-icons';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import type { ComponentType } from 'react';
@@ -16,12 +15,12 @@ import type { ComponentType } from 'react';
 import { useThemePreference, useColorScheme, useAuth } from '@/stores';
 import { useAppView } from '@/stores';
 import { useTranslations } from '@/stores';
-import { useTrainingOverlay } from '@/stores';
 import { useLibraryTab, type LibraryTab } from '@/stores';
 import { useAthleteDataStore, useCoachDataStore } from '@/stores';
 
 const darkBackground = require('@/assets/backgrounds/dark.png');
 const lightBackground = require('@/assets/backgrounds/light.png');
+import { FAB } from '@/components/ui';
 import { iconSizes } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import {
@@ -32,98 +31,9 @@ import {
   Dumbbell,
   Mail,
   MessagesSquare,
-  Plus,
   User,
   Users,
 } from 'lucide-react-native';
-
-const hasLiquidGlass = isLiquidGlassAvailable();
-
-type NativeTabsCoachViewProps = {
-  primaryColor: string;
-};
-
-// Pure layout component with overlay button
-const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewProps & { onAddPress: () => void }) => {
-  const insets = useSafeAreaInsets();
-
-  const handleAddPressWithHaptic = () => {
-    haptics.medium();
-    onAddPress();
-  };
-
-  return (
-    <View style={{ flex: 1 }}>
-      <NativeTabs tintColor={primaryColor}>
-        <NativeTabs.Trigger name="clients">
-          <Icon sf="person.2.fill" />
-          <Label>Clients</Label>
-        </NativeTabs.Trigger>
-
-        <NativeTabs.Trigger name="chats">
-          <Icon sf="bubble.left.and.text.bubble.right.fill" />
-          <Label>Chats</Label>
-        </NativeTabs.Trigger>
-
-        <NativeTabs.Trigger name="library">
-          <Icon sf="folder.fill" />
-          <Label>Library</Label>
-        </NativeTabs.Trigger>
-
-        <NativeTabs.Trigger name="settings">
-          <Icon sf="gear" />
-          <Label>Settings</Label>
-        </NativeTabs.Trigger>
-
-        {/* Keep this for layout - touch will be intercepted by overlay */}
-        <NativeTabs.Trigger name="add-modal" role="search">
-          <Icon sf="plus" />
-          <Label>Add</Label>
-        </NativeTabs.Trigger>
-      </NativeTabs>
-
-      {/* Transparent overlay button on top of search pill */}
-      <Pressable
-        style={[styles.addButtonOverlay, { bottom: insets.bottom - 16 }]}
-        onPress={handleAddPressWithHaptic}
-      />
-    </View>
-  );
-};
-
-// Pure layout component for athlete view
-const NativeTabsAthleteView = ({ primaryColor }: NativeTabsCoachViewProps) => {
-  return (
-    <View style={{ flex: 1 }}>
-      <NativeTabs tintColor={primaryColor}>
-        <NativeTabs.Trigger name="home">
-          <Icon sf="house.fill"/>
-          <Label>Home</Label>
-        </NativeTabs.Trigger>
-
-        <NativeTabs.Trigger name="training">
-          <Icon sf="dumbbell.fill" />
-          <Label>Training</Label>
-        </NativeTabs.Trigger>
-
-        <NativeTabs.Trigger name="progress">
-          <Icon sf="chart.bar.fill" />
-          <Label>Progress</Label>
-        </NativeTabs.Trigger>
-
-        <NativeTabs.Trigger name="inbox">
-          <Icon sf="envelope.fill" />
-          <Label>Inbox</Label>
-        </NativeTabs.Trigger>
-
-        <NativeTabs.Trigger name="profile">
-          <Icon sf="person.fill" />
-          <Label>Profile</Label>
-        </NativeTabs.Trigger>
-      </NativeTabs>
-    </View>
-  );
-};
 
 type TabDefinition = {
   name: string;
@@ -131,7 +41,76 @@ type TabDefinition = {
   sf: string;
   mdi: string;
   IconComponent: ComponentType<{ size?: number; color?: string }>;
-  width: number;
+};
+
+const hasLiquidGlass = isLiquidGlassAvailable();
+
+type NativeTabsCoachViewProps = {
+  primaryColor: string;
+};
+
+// Pure layout component for coach view
+const NativeTabsCoachView = ({ primaryColor }: NativeTabsCoachViewProps) => {
+  return (
+    <NativeTabs tintColor={primaryColor}>
+      <NativeTabs.Trigger name="home">
+        <Icon sf="house.fill" />
+        <Label>Home</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="clients">
+        <Icon sf="person.2.fill" />
+        <Label>Clients</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="chats">
+        <Icon sf="bubble.left.and.text.bubble.right.fill" />
+        <Label>Chats</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="library">
+        <Icon sf="folder.fill" />
+        <Label>Library</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="settings">
+        <Icon sf="gear" />
+        <Label>Settings</Label>
+      </NativeTabs.Trigger>
+    </NativeTabs>
+  );
+};
+
+// Pure layout component for athlete view
+const NativeTabsAthleteView = ({ primaryColor }: NativeTabsCoachViewProps) => {
+  return (
+    <NativeTabs tintColor={primaryColor}>
+      <NativeTabs.Trigger name="home">
+        <Icon sf="house.fill"/>
+        <Label>Home</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="training">
+        <Icon sf="dumbbell.fill" />
+        <Label>Training</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="progress">
+        <Icon sf="chart.bar.fill" />
+        <Label>Progress</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="inbox">
+        <Icon sf="envelope.fill" />
+        <Label>Inbox</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="profile">
+        <Icon sf="person.fill" />
+        <Label>Profile</Label>
+      </NativeTabs.Trigger>
+    </NativeTabs>
+  );
 };
 
 export default function TabLayout() {
@@ -143,7 +122,6 @@ export default function TabLayout() {
   const previousAppView = useRef(appView);
   const isInitialMount = useRef(true);
   const colorScheme = useColorScheme();
-  const { showOverlay: showTrainingOverlay } = useTrainingOverlay();
   const { currentLibraryTab } = useLibraryTab();
   const { clientProfile, coachProfile } = useAuth();
 
@@ -187,6 +165,14 @@ export default function TabLayout() {
     return modalRoutes[currentLibraryTab];
   };
 
+  // Helper to check if pathname matches the current app view
+  const isValidRouteForView = useCallback((path: string, view: 'coach' | 'athlete') => {
+    const coachRoutes = ['/home', '/clients', '/chats', '/library', '/settings'];
+    const athleteRoutes = ['/home', '/training', '/progress', '/inbox', '/profile'];
+    const validRoutes = view === 'coach' ? coachRoutes : athleteRoutes;
+    return validRoutes.some(route => path.startsWith(route));
+  }, []);
+
   // Use useEffect for initial mount to prevent navigation before layout is ready
   useEffect(() => {
     if (!isInitialMount.current) {
@@ -196,21 +182,21 @@ export default function TabLayout() {
     isInitialMount.current = false;
     previousAppView.current = appView;
 
-    // On initial mount with NativeTabs, ensure we navigate to the correct initial route
-    // This prevents add-modal from being shown on app load
-    if (hasLiquidGlass) {
-      const initialRoute = appView === 'athlete' ? '/home' : '/clients';
-      // Navigate to initial route if we're on index or any unexpected route (but not on a valid tab)
-      if (
-        pathname === '/' ||
-        pathname === '/(tabs)' ||
-        (pathname !== initialRoute && !pathname.startsWith('/clients') && !pathname.startsWith('/chats') && !pathname.startsWith('/library') && !pathname.startsWith('/settings') && !pathname.startsWith('/home') && !pathname.startsWith('/training') && !pathname.startsWith('/progress') && !pathname.startsWith('/inbox') && !pathname.startsWith('/profile') && !pathname.startsWith('/add-modal'))
-      ) {
-        // Delay navigation to ensure layout is mounted
-        setTimeout(() => {
-          router.replace(initialRoute);
-        }, 50);
-      }
+    // On initial mount, ensure we navigate to the correct initial route
+    // This prevents showing wrong view's content (e.g., athlete route with coach tab bar)
+    const initialRoute = '/home';
+    // Navigate if: on index, or on wrong view's route, or on add-modal
+    const needsNavigation =
+      pathname === '/' ||
+      pathname === '/(tabs)' ||
+      pathname.startsWith('/add-modal') ||
+      !isValidRouteForView(pathname, appView);
+
+    if (needsNavigation) {
+      // Delay navigation to ensure layout is mounted
+      setTimeout(() => {
+        router.replace(initialRoute);
+      }, 50);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run on mount - pathname and router are stable
@@ -218,43 +204,25 @@ export default function TabLayout() {
   useEffect(() => {
     if (previousAppView.current !== appView) {
       previousAppView.current = appView;
-      // For liquid glass, navigate explicitly
-      // For non-liquid glass, the key prop on Tabs will handle remounting with correct initialRouteName
-      if (hasLiquidGlass) {
-        const initialRoute = appView === 'athlete' ? '/home' : '/clients';
-        router.replace(initialRoute);
-      }
+      // Navigate to the correct initial route when app view changes
+      // Both views now start at /home
+      router.replace('/home');
     }
   }, [appView, router]);
 
   const insets = useSafeAreaInsets();
 
-  const handleNativeTabsAddPress = () => {
-    if (appView === 'coach') {
-      // Check for library first, then clients/chats/settings
-      if (pathname.includes('/library')) {
-        router.push(getLibraryModalRoute() as any);
-      } else if (pathname.includes('/clients')) {
-        router.push({
-          pathname: '/add-modal-content',
-          params: { route: 'clients' },
-        });
-      } else if (pathname.includes('/chats')) {
-        router.push({
-          pathname: '/add-modal-content',
-          params: { route: 'chats' },
-        });
-      } else if (pathname.includes('/settings')) {
-        router.push({
-          pathname: '/add-modal-content',
-          params: { route: 'clients' },
-        });
-      }
-    } else if (appView === 'athlete') {
-      // Show training overlay if on training tab
-      if (pathname.includes('/training')) {
-        showTrainingOverlay();
-      }
+  const handleFabPress = () => {
+    // Check for library first, then clients/chats
+    if (pathname.includes('/library')) {
+      router.push(getLibraryModalRoute() as any);
+    } else if (pathname.includes('/clients')) {
+      router.push({
+        pathname: '/add-modal-content',
+        params: { route: 'clients' },
+      });
+    } else if (pathname.includes('/chats')) {
+      router.push('/modals/message/broadcast-modal');
     }
   };
 
@@ -277,29 +245,39 @@ export default function TabLayout() {
     );
   }
 
+  // Determine if FAB should be visible (coach view, on clients/chats/library tabs)
+  const showFab = appView === 'coach' && (
+    pathname.includes('/clients') ||
+    pathname.includes('/chats') ||
+    pathname.includes('/library')
+  );
+  const fabVariant = pathname.includes('/chats') ? 'megaphone' : 'plus';
+
   if (hasLiquidGlass) {
     if (appView === 'coach') {
       return (
-        <>
-          {/* Native iOS tab bar (full width, includes search pill) */}
-          <NativeTabsCoachView primaryColor={primaryColor} onAddPress={handleNativeTabsAddPress} />
-        </>
+        <View style={{ flex: 1 }}>
+          <NativeTabsCoachView primaryColor={primaryColor} />
+          {showFab && (
+            <FAB
+              onPress={handleFabPress}
+              variant={fabVariant}
+              bottom={insets.bottom + 70}
+            />
+          )}
+        </View>
       );
     }
 
     // Athlete view (default)
-    return (
-      <>
-        <NativeTabsAthleteView primaryColor={primaryColor} />
-      </>
-    );
+    return <NativeTabsAthleteView primaryColor={primaryColor} />;
   }
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <Tabs
         key={appView}
-        initialRouteName={appView === 'athlete' ? 'home' : 'clients'}
+        initialRouteName="home"
         tabBar={(props) => <FallbackTabBar {...props} />}
         screenOptions={{ headerShown: false }}
       >
@@ -335,7 +313,7 @@ export default function TabLayout() {
           name="home"
           options={{
             title: t('home.title'),
-            href: appView === 'athlete' ? '/home' : null,
+            href: '/home',
           }}
         />
         <Tabs.Screen
@@ -369,7 +347,14 @@ export default function TabLayout() {
         <Tabs.Screen name="index" options={{ href: null }} />
         <Tabs.Screen name="add-modal" options={{ href: null }} />
       </Tabs>
-    </>
+      {showFab && (
+        <FAB
+          onPress={handleFabPress}
+          variant={fabVariant}
+          bottom={Platform.OS === 'android' ? 100 : insets.bottom + 66}
+        />
+      )}
+    </View>
   );
 }
 
@@ -378,66 +363,20 @@ type FallbackTabBarProps = BottomTabBarProps;
 function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   const insets = useSafeAreaInsets();
   const activeRouteName = state.routes[state.index]?.name;
-  const { primaryColor, colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useThemePreference();
+  const colorScheme = useColorScheme();
   const { appView } = useAppView();
   const { t } = useTranslations();
-  const colorScheme = useColorScheme();
-  const router = useRouter();
-  const { showOverlay: showTrainingOverlay } = useTrainingOverlay();
-  const { currentLibraryTab } = useLibraryTab();
 
-  // Helper to get the correct modal route based on current library tab
-  const getLibraryModalRoute = (): string => {
-    const modalRoutes: Record<LibraryTab, string> = {
-      workouts: '/modals/library/add-workout-modal',
-      sections: '/modals/library/add-section-modal',
-      exercises: '/modals/library/add-exercise-modal',
-      checkIns: '/modals/library/add-check-in-modal',
-      questionnaires: '/modals/library/add-questionnaire-modal',
-      metrics: '/modals/library/add-metric-modal',
-      habits: '/modals/library/add-habit-modal',
-      files: '/modals/files/add-file-modal',
-    };
-    return modalRoutes[currentLibraryTab];
-  };
+  const tabBarBackground =
+    colorScheme === 'dark' ? '#0A0A0A' : themeColors.backgroundSecondary;
 
   const handleTabPress = (name: string) => {
     haptics.medium();
     if (name === activeRouteName) {
       return;
     }
-
     navigation.navigate(name as never);
-  };
-
-  const handleAddPress = () => {
-    haptics.medium();
-    if (appView === 'coach') {
-      // Navigate to appropriate modal based on route
-      if (activeRouteName === 'clients') {
-        router.push({
-          pathname: '/add-modal-content',
-          params: { route: activeRouteName },
-        });
-      } else if (activeRouteName === 'chats') {
-        router.push({
-          pathname: '/add-modal-content',
-          params: { route: 'chats' },
-        });
-      } else if (activeRouteName === 'library') {
-        router.push(getLibraryModalRoute() as any);
-      } else if (activeRouteName === 'settings') {
-        router.push({
-          pathname: '/add-modal-content',
-          params: { route: 'clients' },
-        });
-      }
-    } else if (appView === 'athlete') {
-      // Show training overlay if on training tab
-      if (activeRouteName === 'training') {
-        showTrainingOverlay();
-      }
-    }
   };
 
   const renderTab = (tab: TabDefinition) => {
@@ -455,7 +394,7 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
     return (
       <PressableOpacity
         key={tab.name}
-        style={[styles.tab, { width: tab.width }]}
+        style={styles.tab}
         onPress={() => handleTabPress(tab.name)}
       >
         {iconNode}
@@ -466,15 +405,20 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
     );
   };
 
-  // Coach view: match NativeTabs SF icons
   const coachTabs: TabDefinition[] = [
+    {
+      name: 'home',
+      label: t('home.title'),
+      sf: 'house.fill',
+      mdi: 'home',
+      IconComponent: Home,
+    },
     {
       name: 'clients',
       label: t('clients.title'),
       sf: 'person.2.fill',
       mdi: 'people',
       IconComponent: Users,
-      width: 70,
     },
     {
       name: 'chats',
@@ -482,7 +426,6 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       sf: 'bubble.left.and.text.bubble.right.fill',
       mdi: 'forum',
       IconComponent: MessagesSquare,
-      width: 60,
     },
     {
       name: 'library',
@@ -490,7 +433,6 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       sf: 'folder.fill',
       mdi: 'folder',
       IconComponent: FileText,
-      width: 60,
     },
     {
       name: 'settings',
@@ -498,11 +440,9 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       sf: 'gear',
       mdi: 'settings',
       IconComponent: Cog,
-      width: 70,
     },
   ];
 
-  // Athlete view: match NativeTabs SF icons
   const athleteTabs: TabDefinition[] = [
     {
       name: 'home',
@@ -510,7 +450,6 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       sf: 'house.fill',
       mdi: 'home',
       IconComponent: Home,
-      width: 60,
     },
     {
       name: 'training',
@@ -518,7 +457,6 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       sf: 'dumbbell.fill',
       mdi: 'fitness-center',
       IconComponent: Dumbbell,
-      width: 70,
     },
     {
       name: 'progress',
@@ -526,7 +464,6 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       sf: 'chart.bar.fill',
       mdi: 'bar-chart',
       IconComponent: ChartNoAxesColumn,
-      width: 75,
     },
     {
       name: 'inbox',
@@ -534,7 +471,6 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       sf: 'envelope.fill',
       mdi: 'mail',
       IconComponent: Mail,
-      width: 60,
     },
     {
       name: 'profile',
@@ -542,85 +478,26 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       sf: 'person.fill',
       mdi: 'person',
       IconComponent: User,
-      width: 60,
     },
   ];
 
   const tabs = appView === 'coach' ? coachTabs : athleteTabs;
 
-  const renderAddIcon = () => {
-    const size = Platform.OS === 'ios' ? iconSizes.tabBarIconsIOS : iconSizes.tabBarIcons;
-    const iconColor = themeColors.primaryForeground;
-
-    if (Platform.OS === 'ios') {
-      return <SymbolView name={'plus' as any} tintColor={iconColor} size={size} type="monochrome" />;
-    }
-
-    return <Ionicons name="add-outline" size={size + 14} color={iconColor} />;
-  };
-
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
+    <View style={[styles.container, { backgroundColor: tabBarBackground }]}>
       <View style={[styles.separator, { backgroundColor: themeColors.border }]} />
       <View
         style={[
           styles.navigationBar,
-          { paddingBottom: insets.bottom + 8, backgroundColor: themeColors.backgroundSecondary },
+          { paddingBottom: insets.bottom + 8, backgroundColor: tabBarBackground },
         ]}
       >
         <View style={styles.tabsContainer}>
-          {appView === 'coach' ? (
-            <>
-              {/* Section 1: First tab */}
-              <View style={styles.tabSection}>
-                {renderTab(tabs[0])}
-              </View>
-
-              {/* Section 2: Second tab */}
-              <View style={styles.tabSection}>
-                {renderTab(tabs[1])}
-              </View>
-
-              {/* Section 3: Add button */}
-              <View style={[styles.tabSection, styles.addButtonSection]}>
-                <PressableOpacity
-                  style={[styles.addButton, { backgroundColor: primaryColor }]}
-                  onPress={handleAddPress}
-                >
-                  {renderAddIcon()}
-                </PressableOpacity>
-              </View>
-
-              {/* Section 4: Third tab */}
-              <View style={styles.tabSection}>
-                {renderTab(tabs[2])}
-              </View>
-
-              {/* Section 5: Fourth tab */}
-              <View style={styles.tabSection}>
-                {renderTab(tabs[3])}
-              </View>
-            </>
-          ) : (
-            <>
-              {/* Athlete view: No add button, just tabs */}
-              <View style={styles.tabSection}>
-                {renderTab(tabs[0])}
-              </View>
-              <View style={styles.tabSection}>
-                {renderTab(tabs[1])}
-              </View>
-              <View style={styles.tabSection}>
-                {renderTab(tabs[2])}
-              </View>
-              <View style={styles.tabSection}>
-                {renderTab(tabs[3])}
-              </View>
-              <View style={styles.tabSection}>
-                {renderTab(tabs[4])}
-              </View>
-            </>
-          )}
+          {tabs.map((tab) => (
+            <View key={tab.name} style={styles.tabSection}>
+              {renderTab(tab)}
+            </View>
+          ))}
         </View>
       </View>
     </View>
@@ -628,6 +505,11 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   container: {
     position: 'absolute',
     bottom: 0,
@@ -639,13 +521,10 @@ const styles = StyleSheet.create({
     height: 0.5,
   },
   navigationBar: {
-    // Needed so the add button can be absolutely centered within this bar
     position: 'relative',
-    paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingHorizontal: 8,
+    paddingTop: 4,
     marginBottom: Platform.OS === 'android' ? -8 : -12,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
     shadowColor: '#000000',
     shadowOffset: {
       width: 0,
@@ -658,6 +537,7 @@ const styles = StyleSheet.create({
   tabsContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
+    justifyContent: 'space-evenly',
     width: '100%',
   },
   tabSection: {
@@ -666,52 +546,14 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingBottom: 0,
   },
-  addButtonSection: {
-    paddingHorizontal: 10,
-  },
   tab: {
     alignItems: 'center',
     paddingTop: 4,
-    paddingBottom: 0,
+    paddingBottom: Platform.OS === 'android' ? 12 : 4,
     width: '100%',
   },
   tabText: {
     fontSize: 12,
     fontWeight: '600',
-  },
-  addButton: {
-    alignSelf: 'center',
-    marginTop: -20,
-    transform: [{ translateY: -12 }],
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  addButtonOverlay: {
-    position: 'absolute',
-    // Position over the search pill (top-right area on iOS)
-    right: 16,
-    bottom: 0, // Will be adjusted with insets.bottom - 16 in component
-    width: 66,
-    height: 66,
-    borderRadius: 40,
-    // Transparent to keep native pill visible
-    backgroundColor: 'transparent',
-    zIndex: 1000,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

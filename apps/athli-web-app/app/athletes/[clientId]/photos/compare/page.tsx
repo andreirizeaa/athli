@@ -21,7 +21,6 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Separator } from '@/components/ui/separator';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
-import { useClientProfileContext } from '../../client-profile-context';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 const PhotoComparisonPage = () => {
@@ -167,16 +166,6 @@ const PhotoComparisonPage = () => {
   const leftGroup = hasOnlyOneDate ? null : groupedPhotos[leftIndex];
   const rightGroup = groupedPhotos[rightIndex];
   const availableDates = groupedPhotos.map(g => g.date);
-
-  const { athlete } = useClientProfileContext();
-
-  const handleNavigateToAthletes = () => {
-    router.push('/athletes');
-  };
-
-  const handleNavigateToClient = () => {
-    router.push(`/athletes/${clientId}`);
-  };
 
   const handleNavigateToPhotos = () => {
     router.push(`/athletes/${clientId}/photos`);

@@ -21,7 +21,7 @@ import { THEMES, DEFAULT_THEME } from '@/lib/theme';
 import { useGlobalData } from '@/providers/global-data-provider';
 import { useUnsavedChanges } from '@/app/settings/context/unsaved-changes-context';
 import { toast } from 'sonner';
-import { Loader2, Check } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 const CustomisationsPage = () => {
   const t = useTranslations();

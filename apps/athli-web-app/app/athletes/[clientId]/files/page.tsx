@@ -1,15 +1,13 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import { Plus, FileText, X, Tag as TagIcon, MoreHorizontal, Edit, Trash2 as Trash2Icon } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { type Option } from '@/components/ui/multi-async-select';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
@@ -17,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { uploadFile, updateFile, deleteFile, getFileTypeFromMime } from '@/api/coach/coach-file-service';
+import { uploadFile, updateFile, deleteFile, getFileTypeFromMime, isExternalLink } from '@/api/coach/coach-file-service';
 import { deleteClientFiles, addFilesToClient, uploadClientFile, getClientFileUrl, downloadClientFile, isPreviewable } from '@/api/client/client-file-service';
 import { getClientFiles } from '@/api/coach/coach-client-service';
 import { AddFileSidePanel } from '@/components/files/add-file-side-panel';
@@ -40,41 +38,10 @@ type FileItem = {
   pinned: boolean;
   mime_type?: string;
   size?: number;
+  file_path?: string;
 };
 
 // Mock data removed
-
-const TAG_OPTIONS: Option[] = [
-  { label: 'Training', value: 'Training' },
-  { label: 'Nutrition', value: 'Nutrition' },
-  { label: 'Recovery', value: 'Recovery' },
-  { label: 'Mobility', value: 'Mobility' },
-  { label: 'Rehab', value: 'Rehab' },
-  { label: 'Technique', value: 'Technique' },
-  { label: 'Mindset', value: 'Mindset' },
-  { label: 'Education', value: 'Education' },
-  { label: 'Assessment', value: 'Assessment' },
-  { label: 'Progress', value: 'Progress' },
-  { label: 'Checkin', value: 'Checkin' },
-  { label: 'Program', value: 'Program' },
-  { label: 'Workout', value: 'Workout' },
-  { label: 'Warmup', value: 'Warmup' },
-  { label: 'Cooldown', value: 'Cooldown' },
-  { label: 'Cardio', value: 'Cardio' },
-  { label: 'Strength', value: 'Strength' },
-  { label: 'Hypertrophy', value: 'Hypertrophy' },
-  { label: 'Conditioning', value: 'Conditioning' },
-  { label: 'Power', value: 'Power' },
-  { label: 'Endurance', value: 'Endurance' },
-  { label: 'Flexibility', value: 'Flexibility' },
-  { label: 'Lifestyle', value: 'Lifestyle' },
-  { label: 'Supplements', value: 'Supplements' },
-  { label: 'Recipes', value: 'Recipes' },
-  { label: 'Tracking', value: 'Tracking' },
-  { label: 'Form', value: 'Form' },
-  { label: 'Template', value: 'Template' },
-  { label: 'Admin', value: 'Admin' },
-];
 
 const ClientFilesPage = () => {
   const t = useTranslations();
@@ -130,7 +97,8 @@ const ClientFilesPage = () => {
         pinned: item.is_pinned || false,
         url: item.url,
         mime_type: item.mime_type,
-        size: item.size
+        size: item.size,
+        file_path: item.file_path,
       };
     });
   }, [rawFiles]);
@@ -225,6 +193,12 @@ const ClientFilesPage = () => {
   const handleFileClick = async (file: FileItem) => {
     if (!clientId || !user?.id) return;
 
+    // Handle external links - open in new tab
+    if (isExternalLink(file.file_path)) {
+      window.open(file.file_path, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
     const fileType = getFileTypeFromMime(file.mime_type || null);
 
     // For PDFs, open in new tab
@@ -315,18 +289,6 @@ const ClientFilesPage = () => {
     });
   };
 
-  const getFileTypeLabel = (type: FileType): string => {
-    const labels: Record<FileType, string> = {
-      pdf: 'PDF',
-      image: 'Image',
-      video: 'Video',
-      document: 'Document',
-      spreadsheet: 'Spreadsheet',
-      other: 'Other',
-    };
-    return labels[type] || 'Other';
-  };
-
   // Create column definitions
   const columns: ColumnDefinition<FileItem>[] = [
     {
@@ -374,6 +336,14 @@ const ClientFilesPage = () => {
       icon: <FileText className="size-3" />,
       width: { class: 'min-w-[150px]', pixel: '150px' },
       renderCell: (row) => {
+        // Check for external link first
+        if (isExternalLink(row.file_path)) {
+          return (
+            <div className="flex items-center w-full">
+              <span className="text-sm text-muted-foreground">Link</span>
+            </div>
+          );
+        }
         const fileType = getFileTypeFromMime(row.mime_type || null);
         const typeLabels = {
           pdf: 'PDF',
@@ -387,8 +357,8 @@ const ClientFilesPage = () => {
           </div>
         );
       },
-      getSortValue: (row) => getFileTypeFromMime(row.mime_type || null),
-      getSearchValue: (row) => getFileTypeFromMime(row.mime_type || null),
+      getSortValue: (row) => isExternalLink(row.file_path) ? 'link' : getFileTypeFromMime(row.mime_type || null),
+      getSearchValue: (row) => isExternalLink(row.file_path) ? 'link' : getFileTypeFromMime(row.mime_type || null),
     },
     {
       id: 'actions',
@@ -428,7 +398,7 @@ const ClientFilesPage = () => {
                 }}
                 className="text-destructive focus:text-destructive"
               >
-                <Trash2Icon className="size-4 mr-2" />
+                <Trash2Icon className="size-4 mr-2 text-destructive" />
                 <span>{t('general.delete')}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -439,7 +409,21 @@ const ClientFilesPage = () => {
   ];
 
   // Create filter definitions
-  const filters: FilterDefinition<FileItem>[] = [];
+  const filters: FilterDefinition<FileItem>[] = [
+    {
+      id: 'type',
+      label: t('files.columns.type'),
+      icon: <FileText className="size-4" />,
+      options: [
+        { value: 'pdf', label: 'PDF' },
+        { value: 'image', label: 'Image' },
+        { value: 'video', label: 'Video' },
+        { value: 'link', label: 'Link' },
+        { value: 'other', label: 'Other' },
+      ],
+      getFilterValue: (row) => isExternalLink(row.file_path) ? 'link' : getFileTypeFromMime(row.mime_type || null),
+    },
+  ];
 
   // Sort files - pinned first, then by fileName
   const sortedFiles = useMemo(() => {
@@ -549,6 +533,10 @@ const ClientFilesPage = () => {
         onOpenChange={setIsAddFileOpen}
         onUpload={handleSaveFile}
         onSave={handleAssignExistingFiles}
+        onLinkCreated={() => {
+          refetch();
+          refreshData?.();
+        }}
         clientName={clientName}
         clientId={clientId}
       />

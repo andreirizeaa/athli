@@ -1,58 +1,30 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Upload, Check, FileText, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Info } from 'lucide-react';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import Link from 'next/link';
 import { cn } from '@/lib/general/utils';
-import { getAllFiles, type CoachFile } from '@/api/coach/coach-file-service';
-import { addFilesToClient } from '@/api/client/client-file-service';
+import { getAllFiles, type CoachFile, createLink } from '@/api/coach/coach-file-service';
+import { addFilesToClient, createClientLink } from '@/api/client/client-file-service';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { FileThumbnail } from '@/components/files/file-thumbnail';
-
-const TAG_OPTIONS: Option[] = [
-  { label: 'Training', value: 'Training' },
-  { label: 'Nutrition', value: 'Nutrition' },
-  { label: 'Recovery', value: 'Recovery' },
-  { label: 'Mobility', value: 'Mobility' },
-  { label: 'Rehab', value: 'Rehab' },
-  { label: 'Technique', value: 'Technique' },
-  { label: 'Mindset', value: 'Mindset' },
-  { label: 'Education', value: 'Education' },
-  { label: 'Assessment', value: 'Assessment' },
-  { label: 'Progress', value: 'Progress' },
-  { label: 'Checkin', value: 'Checkin' },
-  { label: 'Program', value: 'Program' },
-  { label: 'Workout', value: 'Workout' },
-  { label: 'Warmup', value: 'Warmup' },
-  { label: 'Cooldown', value: 'Cooldown' },
-  { label: 'Cardio', value: 'Cardio' },
-  { label: 'Strength', value: 'Strength' },
-  { label: 'Hypertrophy', value: 'Hypertrophy' },
-  { label: 'Conditioning', value: 'Conditioning' },
-  { label: 'Power', value: 'Power' },
-  { label: 'Endurance', value: 'Endurance' },
-  { label: 'Flexibility', value: 'Flexibility' },
-  { label: 'Lifestyle', value: 'Lifestyle' },
-  { label: 'Supplements', value: 'Supplements' },
-  { label: 'Template', value: 'Template' },
-];
 
 type AddFileSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpload: (file: File, fileName: string, tags: string[]) => Promise<void>;
   onSave?: (fileIds: string[]) => Promise<void>;
+  onLinkCreated?: () => void;
   isUploading?: boolean;
   clientName?: string;
   clientId?: string;
@@ -63,6 +35,7 @@ export const AddFileSidePanel = ({
   onOpenChange,
   onUpload,
   onSave,
+  onLinkCreated,
   isUploading = false,
   clientName,
   clientId,
@@ -80,6 +53,9 @@ export const AddFileSidePanel = ({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
+
+  // Link state
+  const [linkUrl, setLinkUrl] = useState<string>('');
 
   useEffect(() => {
     if (open && activeTab === 'yourLibrary') {
@@ -107,6 +83,7 @@ export const AddFileSidePanel = ({
     setIsDragging(false);
     setActiveTab('yourLibrary');
     setSelectedLibraryFiles(new Set());
+    setLinkUrl('');
     dragCounterRef.current = 0;
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -115,7 +92,6 @@ export const AddFileSidePanel = ({
 
   const handleSaveFromYourLibrary = async () => {
     if (selectedLibraryFiles.size > 0 && clientId) {
-      // Assign files from library to client
       setIsSaving(true);
       try {
         const fileIds = Array.from(selectedLibraryFiles);
@@ -137,7 +113,41 @@ export const AddFileSidePanel = ({
     }
   };
 
+  // Determine if we're in link mode (link URL entered) or file mode
+  const isLinkMode = linkUrl.trim().length > 0;
+  const isFileMode = selectedFile !== null;
+
   const handleSave = async () => {
+    // Handle link mode - when link URL is entered
+    if (isLinkMode && !isFileMode) {
+      if (!fileName.trim() || !linkUrl.trim()) return;
+      // Validate URL
+      if (!linkUrl.startsWith('http://') && !linkUrl.startsWith('https://')) return;
+
+      setIsSaving(true);
+      try {
+        // Use createClientLink when in client context, otherwise use createLink for coach library
+        if (clientId && user?.id) {
+          await createClientLink({
+            filename: fileName.trim(),
+            url: linkUrl.trim(),
+            clientId: clientId,
+            coachId: user.id,
+          });
+        } else {
+          await createLink({ filename: fileName.trim(), url: linkUrl.trim() });
+        }
+        onLinkCreated?.();
+        handleClose();
+      } catch (error) {
+        console.error('Failed to create link:', error);
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    // Handle file upload mode
     if (!fileName.trim() || !selectedFile) return;
     setIsSaving(true);
     try {
@@ -190,14 +200,14 @@ export const AddFileSidePanel = ({
   const columns: ColumnDefinition<CoachFile>[] = [];
 
   const handleFileSelect = (file: File) => {
-    // Validate file size (50MB limit)
-    const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+    const maxSize = 50 * 1024 * 1024;
     if (file.size > maxSize) {
       alert('File size exceeds 50MB limit. Please select a smaller file.');
       return;
     }
-
     setSelectedFile(file);
+    // Clear link when file is selected
+    setLinkUrl('');
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -243,9 +253,12 @@ export const AddFileSidePanel = ({
   };
 
   const showAlert = !!clientName;
+
+  // Validation: either valid link or valid file
+  const isValidLink = linkUrl.trim() !== '' && (linkUrl.startsWith('http://') || linkUrl.startsWith('https://'));
   const isValid = clientId && activeTab === 'yourLibrary'
     ? selectedLibraryFiles.size > 0
-    : fileName.trim() !== '' && selectedFile !== null;
+    : fileName.trim() !== '' && (isValidLink || selectedFile !== null);
 
   const getButtonText = () => {
     if (activeTab === 'yourLibrary') {
@@ -254,6 +267,150 @@ export const AddFileSidePanel = ({
     }
     return 'Add';
   };
+
+  // Render the new file form content (shared between clientId and non-clientId views)
+  const renderNewFileForm = () => (
+    <div
+      className="flex flex-col gap-6 flex-1 min-h-0 relative"
+      onDragEnter={!isLinkMode ? handleDragEnter : undefined}
+      onDragLeave={!isLinkMode ? handleDragLeave : undefined}
+      onDragOver={!isLinkMode ? handleDragOver : undefined}
+      onDrop={!isLinkMode ? handleDrop : undefined}
+    >
+      {/* Drag Overlay */}
+      {isDragging && !isLinkMode && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
+          <p className="text-lg font-semibold text-primary">Drop file here</p>
+        </div>
+      )}
+
+      {/* Form Content - hidden when dragging */}
+      <div className={cn('flex flex-col gap-6 flex-1 min-h-0', isDragging && 'opacity-0 pointer-events-none')}>
+        {showAlert && (
+          <Alert className="bg-primary/5 border-primary/20 text-primary mb-6">
+            <Info className="size-4" />
+            <AlertDescription className="min-w-0 line-clamp-4">
+              Files added here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general file, navigate to the respective main page in <Link href="/files" className="underline hover:no-underline"><strong>Library</strong></Link>.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* File Name Input */}
+        <div className="flex flex-col gap-2">
+          <label htmlFor="file-name" className="text-sm font-medium">
+            {t('files.form.fileName')}
+            <RequiredAsterisk />
+          </label>
+          <Input
+            id="file-name"
+            value={fileName}
+            onChange={(e) => setFileName(e.target.value)}
+            placeholder={t('files.form.fileNamePlaceholder')}
+          />
+        </div>
+
+        {/* Link URL Input - shown when no file is selected */}
+        {!selectedFile && (
+          <div className="flex flex-col gap-2">
+            <label htmlFor="link-url" className="text-sm font-medium">
+              Link URL
+            </label>
+            <div className="relative">
+              <Input
+                id="link-url"
+                type="text"
+                placeholder="https://youtube.com/watch?v=... or any URL"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                className="w-full pr-8"
+              />
+              {linkUrl && (
+                <button
+                  type="button"
+                  onClick={() => setLinkUrl('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  aria-label="Clear link"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* OR divider - shown when neither link nor file is selected */}
+        {!linkUrl.trim() && !selectedFile && (
+          <div className="flex items-center gap-2 -my-1">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-sm text-muted-foreground">OR</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+        )}
+
+        {/* File Drop Area - shown when no link is entered */}
+        {!linkUrl.trim() && (
+          <div className="flex flex-col gap-2 flex-1 min-h-0">
+            <label className="text-sm font-medium">
+              {t('files.form.file')}
+            </label>
+            <div
+              className={cn(
+                'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors flex-1 min-h-0',
+                'border-muted-foreground/30 hover:border-primary',
+                selectedFile && 'border-primary bg-primary/5'
+              )}
+            >
+              {selectedFile ? (
+                <>
+                  <Check className="size-10 text-green-500" />
+                  <div className="text-center">
+                    <p className="text-sm font-medium mb-1">{selectedFile.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(selectedFile.size / 1024).toFixed(2)} KB
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                      }
+                    }}
+                  >
+                    {t('files.form.changeFile')}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Upload className="size-10 text-muted-foreground" />
+                  <div className="text-center">
+                    <p className="text-sm font-medium mb-1">{t('files.form.dropFileHere')}</p>
+                    <p className="text-xs text-muted-foreground">{t('files.form.orClickToSelect')}</p>
+                  </div>
+                  <Input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileInputChange}
+                    accept="*/*"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {t('files.form.selectFile')}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <SidePanel
@@ -291,7 +448,7 @@ export const AddFileSidePanel = ({
               ) : (
                 <Check className="h-4 w-4" />
               )}
-              {isUploading || isSaving ? t('general.uploading') : 'Add'}
+              Add
             </Button>
           </div>
         )
@@ -361,218 +518,12 @@ export const AddFileSidePanel = ({
           </TabsContent>
 
           <TabsContent value="new" className="mt-0 flex-1 flex flex-col min-h-0">
-            <div
-              className="flex flex-col gap-6 flex-1 min-h-0 relative"
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-            >
-              {/* Drag Overlay */}
-              {isDragging && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
-                  <p className="text-lg font-semibold text-primary">Drop file here</p>
-                </div>
-              )}
-
-              {/* Form Content - hidden when dragging */}
-              <div className={cn('flex flex-col gap-6 flex-1 min-h-0', isDragging && 'opacity-0 pointer-events-none')}>
-                {showAlert && (
-                  <Alert className="bg-primary/5 border-primary/20 text-primary mb-6">
-                    <Info className="size-4" />
-                    <AlertDescription className="min-w-0 line-clamp-4">
-                      Files added here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general file, navigate to the respective main page in <Link href="/files" className="underline hover:no-underline"><strong>Library</strong></Link>.
-                    </AlertDescription>
-                  </Alert>
-                )}
-                {/* File Name Input */}
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="file-name" className="text-sm font-medium">
-                    {t('files.form.fileName')}
-                    <RequiredAsterisk />
-                  </label>
-                  <Input
-                    id="file-name"
-                    value={fileName}
-                    onChange={(e) => setFileName(e.target.value)}
-                    placeholder={t('files.form.fileNamePlaceholder')}
-                  />
-                </div>
-
-                {/* File Drop Area */}
-                <div className="flex flex-col gap-2 flex-1 min-h-0">
-                  <label className="text-sm font-medium">
-                    {t('files.form.file')}
-                    <RequiredAsterisk />
-                  </label>
-                  <div
-                    className={cn(
-                      'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors flex-1 min-h-0',
-                      'border-muted-foreground/30 hover:border-primary',
-                      selectedFile && 'border-primary bg-primary/5'
-                    )}
-                  >
-                    {selectedFile ? (
-                      <>
-                        <Check className="size-10 text-green-500" />
-                        <div className="text-center">
-                          <p className="text-sm font-medium mb-1">{selectedFile.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {(selectedFile.size / 1024).toFixed(2)} KB
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedFile(null);
-                            if (fileInputRef.current) {
-                              fileInputRef.current.value = '';
-                            }
-                          }}
-                        >
-                          {t('files.form.changeFile')}
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="size-10 text-muted-foreground" />
-                        <div className="text-center">
-                          <p className="text-sm font-medium mb-1">{t('files.form.dropFileHere')}</p>
-                          <p className="text-xs text-muted-foreground">{t('files.form.orClickToSelect')}</p>
-                        </div>
-                        <Input
-                          ref={fileInputRef}
-                          type="file"
-                          className="hidden"
-                          onChange={handleFileInputChange}
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => fileInputRef.current?.click()}
-                        >
-                          {t('files.form.selectFile')}
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Tags Dropdown - only for non-client files */}
-                {!clientId && (
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium">{t('files.form.tags')}</label>
-                    <MultiAsyncSelect
-                      options={TAG_OPTIONS}
-                      value={selectedTags}
-                      onValueChange={setSelectedTags}
-                      placeholder={t('files.form.selectTags')}
-                      searchPlaceholder={t('files.form.searchTags')}
-                      maxCount={3}
-                      clearText={t('general.clear')}
-                      closeText={t('general.close')}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
+            {renderNewFileForm()}
           </TabsContent>
         </Tabs>
       ) : (
-        <div
-          className="flex flex-col gap-6 flex-1 min-h-0 relative"
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        >
-          {/* Drag Overlay */}
-          {isDragging && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
-              <p className="text-lg font-semibold text-primary">Drop file here</p>
-            </div>
-          )}
-
-          {/* Form Content - hidden when dragging */}
-          <div className={cn('flex flex-col gap-6 flex-1 min-h-0', isDragging && 'opacity-0 pointer-events-none')}>
-            {/* File Name Input */}
-            <div className="flex flex-col gap-2">
-              <label htmlFor="file-name" className="text-sm font-medium">
-                {t('files.form.fileName')}
-                <RequiredAsterisk />
-              </label>
-              <Input
-                id="file-name"
-                value={fileName}
-                onChange={(e) => setFileName(e.target.value)}
-                placeholder={t('files.form.fileNamePlaceholder')}
-              />
-            </div>
-
-            {/* File Drop Area */}
-            <div className="flex flex-col gap-2 flex-1 min-h-0">
-              <label className="text-sm font-medium">
-                {t('files.form.file')}
-                <RequiredAsterisk />
-              </label>
-              <div
-                className={cn(
-                  'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors flex-1 min-h-0',
-                  'border-muted-foreground/30 hover:border-primary',
-                  selectedFile && 'border-primary bg-primary/5'
-                )}
-              >
-                {selectedFile ? (
-                  <>
-                    <Check className="size-10 text-green-500" />
-                    <div className="text-center">
-                      <p className="text-sm font-medium mb-1">{selectedFile.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(selectedFile.size / 1024).toFixed(2)} KB
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedFile(null);
-                        if (fileInputRef.current) {
-                          fileInputRef.current.value = '';
-                        }
-                      }}
-                    >
-                      {t('files.form.changeFile')}
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="size-10 text-muted-foreground" />
-                    <div className="text-center">
-                      <p className="text-sm font-medium mb-1">{t('files.form.dropFileHere')}</p>
-                      <p className="text-xs text-muted-foreground">{t('files.form.orClickToSelect')}</p>
-                    </div>
-                    <Input
-                      ref={fileInputRef}
-                      type="file"
-                      className="hidden"
-                      onChange={handleFileInputChange}
-                      accept="*/*"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      {t('files.form.selectFile')}
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div >
+        renderNewFileForm()
       )}
-    </SidePanel >
+    </SidePanel>
   );
 };

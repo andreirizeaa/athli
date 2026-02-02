@@ -49,12 +49,12 @@ export const WorkoutCard = ({
 
     const isMissed = workoutType === 'missed';
 
-    // Parse metrics from workout_data (structure: workout_data.workout_data.*)
+    // Parse metrics from workout_data (matching client-training-day-summary pattern)
     const metrics = useMemo(() => {
-        const wd = workout.workout_data?.workout_data || {};
+        const wd = workout.workout_data?.workout_data || workout.workout_data || {};
         const items = wd.items || [];
-        const pre = wd.pre || {};
-        const post = wd.post || {};
+        const pre = workout.workout_data?.workout_data?.pre || workout.workout_data?.pre || {};
+        const post = workout.workout_data?.workout_data?.post || workout.workout_data?.post || {};
         const completedSummary = wd.completedSummary || {};
 
         // Count exercises
@@ -98,13 +98,15 @@ export const WorkoutCard = ({
             exercisesCompleted: completedExercises,
             exercisesTotal: totalExercises || workout.workout_data?.total_exercises || 0,
             minutes: completedSummary.totalDurationMin || 0,
-            volume: completedSummary.totalWeightLifted || 0,
             intensity: post.intensity || 0,
-            readiness: (() => {
-              const values = [pre.sleep, pre.mood, pre.energy, pre.stress, pre.soreness].filter((v): v is number => v !== null && v !== undefined);
-              return values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length * 2) : 0; // Scale 1-5 to 1-10
-            })(),
             rating: post.rating || 0,
+            readiness: {
+                sleep: pre.sleep,
+                mood: pre.mood,
+                energy: pre.energy,
+                stress: pre.stress,
+                soreness: pre.soreness,
+            },
         };
     }, [workout.workout_data]);
 
@@ -180,10 +182,9 @@ export const WorkoutCard = ({
                             exercisesCompleted={metrics.exercisesCompleted}
                             exercisesTotal={metrics.exercisesTotal}
                             minutes={metrics.minutes}
-                            volume={metrics.volume}
                             intensity={metrics.intensity}
-                            readiness={metrics.readiness}
                             rating={metrics.rating}
+                            readiness={metrics.readiness}
                         />
                     )}
                 </div>

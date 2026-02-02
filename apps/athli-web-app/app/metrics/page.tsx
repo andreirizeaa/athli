@@ -7,21 +7,17 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, FileText, Trash2, X, UserPlus, Copy, Loader2 } from 'lucide-react';
-import { Button as UIButton } from '@/components/ui/button';
+import { Plus, FileText, Trash2, X, UserPlus, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { PageHeader } from '@/components/app/page-header';
-import { SidePanel } from '@/components/app/side-panel';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddMetricSidePanel } from '@/components/metrics/add-metric-side-panel';
 import { EditMetricSidePanel } from '@/components/metrics/edit-metric-side-panel';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { useCoachMetrics } from '@/hooks/use-coach-metrics';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { Metric } from '@/api/coach/coach-metric-service';
-import { cn } from '@/lib/general/utils';
 import { AssignToClientsSidePanel } from '@/components/app/assign-to-clients-side-panel';
 import { assignMetricsToClients } from '@/api/client/client-metric-service';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -311,14 +307,6 @@ const MetricsPage = () => {
     }
   };
 
-  const handleDeleteKeyDown = (metricId: string, e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      e.stopPropagation();
-      handleDeleteMetric(metricId, e);
-    }
-  };
-
   const handleClearSelected = () => {
     setSelectedMetrics(new Set());
   };
@@ -399,14 +387,6 @@ const MetricsPage = () => {
       console.error('Failed to assign metrics to clients:', error);
     }
   };
-
-  const handleCloseAssignToClients = () => {
-    setIsAssignToClientsOpen(false);
-    setMetricsToAssign([]);
-    setSelectedClientIds(new Set());
-  };
-
-
 
 
 

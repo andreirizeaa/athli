@@ -104,7 +104,6 @@ const HabitsPage = () => {
 
   const [selectedHabits, setSelectedHabits] = useState<Set<string>>(new Set());
   const { user } = useUserProfile();
-  const [filteredCount, setFilteredCount] = useState<number>(0);
 
   // Add habit side panel state
   const [isAddHabitOpen, setIsAddHabitOpen] = useState<boolean>(false);
@@ -501,14 +500,6 @@ const HabitsPage = () => {
       console.error('Failed to assign habits to clients:', error);
     }
   };
-
-  const handleCloseAssignToClients = () => {
-    setIsAssignToClientsOpen(false);
-    setHabitsToAssign([]);
-    setSelectedClientIds(new Set());
-  };
-
-
 
   const getAimText = (habit: Habit): string => {
     const unitLabel = t(`habits.form.units.${habit.unit as string}`);

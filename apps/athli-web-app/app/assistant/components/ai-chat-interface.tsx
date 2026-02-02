@@ -112,8 +112,6 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
         return [];
     });
 
-    const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
     const streamResponse = async () => {
         if (isStreaming) return;
 
@@ -135,7 +133,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
             setPrompt("");
             setFiles([]);
 
-            await delay(2000);
+            await new Promise((resolve) => setTimeout(resolve, 2000));
 
             const fullResponse =
                 "I'm here to help you with your training and coaching needs! Here's a quick example of what I can do:\n\n```ts\n// Example workout plan\nconst workout = {\n  name: 'Full Body Strength',\n  exercises: [\n    { name: 'Squats', sets: 4, reps: 8 },\n    { name: 'Bench Press', sets: 4, reps: 8 },\n    { name: 'Deadlifts', sets: 3, reps: 6 }\n  ]\n};\n```\n\nWould you like me to help you create a training plan, analyze client progress, or something else?";
@@ -271,13 +269,11 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                                                 <FileListItem key={index} index={index} file={file} dismiss={false} />
                                             ))}
                                         </div>
-                                        {message.content ? (
-                                            <>
-                                                <MessageContent className="bg-primary text-primary-foreground inline-flex">
-                                                    {message.content}
-                                                </MessageContent>
-                                            </>
-                                        ) : null}
+                                        {message.content && (
+                                            <MessageContent className="bg-primary text-primary-foreground inline-flex">
+                                                {message.content}
+                                            </MessageContent>
+                                        )}
                                     </div>
                                 ) : (
                                     <MessageContent className="bg-primary text-primary-foreground inline-flex text-start">

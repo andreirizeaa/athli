@@ -462,7 +462,7 @@ export default function ClientAssistantScreen() {
                     />
                 </View>
 
-                <KeyboardAwareWrapper style={{ flex: 1 }} extraBottomInset={0}>
+                <KeyboardAwareWrapper style={{ flex: 1 }} extraBottomInset={composerHeight}>
                     <ScrollView
                         style={[styles.scrollView, { backgroundColor: themeColors.backgroundPrimary }]}
                         contentContainerStyle={styles.scrollContent}
@@ -582,10 +582,6 @@ const styles = StyleSheet.create({
         ...typography.p2,
     },
     composerContainer: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: 0,
         paddingHorizontal: 16,
     },
     composerWrapper: {

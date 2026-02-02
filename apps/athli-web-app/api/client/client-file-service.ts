@@ -65,6 +65,19 @@ export const uploadClientFile = async (data: UploadClientFileData & { clientId: 
 };
 
 /**
+ * Create a link (external URL) for a client
+ */
+export const createClientLink = async (data: { filename: string; url: string; clientId: string; coachId: string }): Promise<any> => {
+  const response = await apiFetch<{ data: { file: any } }>(`/client/files/link`, {
+    method: 'POST',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({ filename: data.filename, url: data.url }),
+  });
+
+  return response.data.file;
+};
+
+/**
  * Get a signed URL for a client file
  */
 export const getClientFileUrl = async (fileId: string, clientId: string, coachId: string): Promise<{ id: string; url: string }> => {

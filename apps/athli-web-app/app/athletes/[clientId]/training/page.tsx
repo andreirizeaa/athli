@@ -7,12 +7,6 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { SidePanel } from '@/components/app/side-panel';
 import {
   DropdownMenu,
@@ -61,7 +55,6 @@ import {
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/general/utils';
 import type { Program, Workout, Exercise } from '@/components/app/app-shell';
-import { mockPrograms, mockWorkouts, mockExercises } from '@/components/app/app-shell';
 import { SaveAsWorkout } from './save-as-workout-side-panel';
 import { SaveAsProgram } from './save-as-program-side-panel';
 import {

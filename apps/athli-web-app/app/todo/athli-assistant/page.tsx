@@ -22,7 +22,6 @@ import { AthliAssistantTask } from '@/api/coach/coach-todo-service';
 const AthliAssistantPage = () => {
   const t = useTranslations();
   const { autoTodos: athliAssistantTasks, completeAutoTodo } = useCoachTodo();
-  const [athliFilteredCount, setAthliFilteredCount] = useState(0);
   const [athliTaskTypeFilter, setAthliTaskTypeFilter] = useState<'all' | 'client' | 'general'>('all');
 
   const handleToggleAthliAssistantComplete = async (taskId: string) => {
@@ -115,7 +114,6 @@ const AthliAssistantPage = () => {
         getRowId={(row) => row.id}
         gridKey="todo-athli-assistant"
         itemsPerPage={25}
-        onFilteredDataChange={setAthliFilteredCount}
         enableSearch={true}
         searchPlaceholder={t('general.search')}
         searchFields={['title']}
