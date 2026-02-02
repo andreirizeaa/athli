@@ -17,6 +17,7 @@ export { SwipeableRow } from './swipeable-row';
 export { PlatformIcon } from './platform-icon';
 export { DarkModeWrapper } from './dark-mode-wrapper';
 export { ChartCardCarousel, type ChartCardItem } from './chart-card-carousel';
+export { FAB } from './fab';
 
 // Re-export button components
 export * from './buttons';

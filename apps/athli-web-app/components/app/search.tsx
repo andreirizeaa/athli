@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Archive, CommandIcon, Search, FileText, BarChart, Activity, Dumbbell, Calendar, Layout, Layers, CheckSquare, MessageCircle } from 'lucide-react';
+import { CommandIcon, Search, FileText, BarChart, Activity, Dumbbell, Calendar, Layout, Layers, CheckSquare, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';

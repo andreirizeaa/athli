@@ -4,10 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ChevronDown,
-  HelpCircle,
-  Smartphone,
-  Sparkles,
-  Laptop,
   Dumbbell,
   ClipboardList,
   BarChart3,
@@ -22,11 +18,9 @@ import {
   Copy,
   Zap,
   FileCheck,
-  CalendarCheck,
   Check,
   ArrowUpRight,
   Loader2,
-  ArrowDown,
 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { Button } from '@/components/ui/button';
@@ -233,17 +227,10 @@ const GetStartedPage = () => {
     setOpenAccordion(openAccordion === index ? null : index);
   };
 
-  const handleScrollClick = () => {
-    window.scrollTo({
-      top: window.scrollY + window.innerHeight,
-      behavior: 'smooth'
-    });
-  };
-
   return (
     <div className="relative h-full w-full overflow-auto bg-background p-6">
-      {/* Background Decorative Bubbles */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {/* Background Decorative Bubbles - hidden in dark mode for cleaner appearance */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden dark:hidden">
         <div className="absolute -left-[10%] -top-[10%] h-[500px] w-[500px] rounded-full bg-primary/[0.08] blur-[100px]" />
         <div className="absolute -right-[5%] top-[20%] h-[400px] w-[400px] rounded-full bg-primary/[0.08] blur-[100px]" />
         <div className="absolute bottom-[10%] left-[20%] h-[600px] w-[600px] rounded-full bg-primary/[0.08] blur-[100px]" />

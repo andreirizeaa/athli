@@ -129,38 +129,37 @@ export const EditHabitSidePanel = ({
       onOpenAutoFocus={(e) => e.preventDefault()}
       contentClassName="w-full sm:w-[600px] sm:max-w-[600px]"
       footer={
-        <div className="flex w-full justify-between gap-2">
+        <div className="flex w-full justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isDeleting || isSaving}>
+            {t('general.cancel')}
+          </Button>
           <Button
             type="button"
             variant="outline"
             onClick={handleDelete}
-            className="gap-2 text-destructive hover:bg-destructive/10"
             disabled={isDeleting || isSaving}
+            className="gap-2"
           >
             {isDeleting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Trash2 className="size-4" />
+              <Trash2 className="h-4 w-4" />
             )}
             {t('general.delete')}
           </Button>
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isDeleting || isSaving}>
-              {t('general.cancel')}
-            </Button>
-            <Button
-              type="button"
-              onClick={form.handleSubmit(handleSave)}
-              disabled={!form.formState.isValid || isDeleting || isSaving}
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="h-4 w-4" />
-              )}
-              {t('general.save')}
-            </Button>
-          </div>
+          <Button
+            type="button"
+            onClick={form.handleSubmit(handleSave)}
+            disabled={!form.formState.isValid || isDeleting || isSaving}
+            className="gap-2"
+          >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
+            {t('general.save')}
+          </Button>
         </div>
       }
     >

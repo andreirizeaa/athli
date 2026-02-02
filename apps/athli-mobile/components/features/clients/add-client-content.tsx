@@ -124,6 +124,7 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
           options={categoryOptions}
           placeholder={t('clients.editClientModal.typePlaceholder')}
           required
+          clearable={false}
         />
 
         <Dialog

@@ -196,8 +196,6 @@ const ReferAndEarnPage = () => {
         <div className="w-1/2 flex-shrink-0 h-full flex justify-center">
           <div className="relative ml-6 h-full flex flex-col justify-between">
             {steps.map(({ title, description }, index) => {
-              const isLast = index === steps.length - 1;
-              const isFirst = index === 0;
               return (
                 <div key={index} className="relative pl-10 flex-1 flex flex-col justify-center">
                   {/* Timeline Icon */}

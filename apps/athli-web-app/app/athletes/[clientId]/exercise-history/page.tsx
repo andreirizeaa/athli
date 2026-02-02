@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { format } from 'date-fns';
-import { Search, X, ArrowUpDown, TrendingUp, HelpCircle, Play } from 'lucide-react';
+import { Search, X, ArrowUpDown, TrendingUp, HelpCircle, Play, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,14 +18,39 @@ import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { VideoModal } from '@/components/training/builder/video-modal';
 import { getExerciseById, type Exercise } from '@/api/exercise/exercise-search';
+import { useExerciseThumbnails } from '@/hooks/use-exercise-thumbnails';
 
 // Helper functions
+
+/**
+ * Parse a value that may be a range like "8-10" and return the midpoint,
+ * or a Heart Rate Zone like "Zone 1" and return the zone number
+ */
+const parseNumericValue = (val: any): number => {
+  if (typeof val === 'number') return val;
+  if (val == null) return 0;
+  const str = String(val).trim();
+  // Check for Heart Rate Zone format like "Zone 1", "Zone 2", etc.
+  const zoneMatch = str.match(/^Zone\s*(\d+)$/i);
+  if (zoneMatch) {
+    return parseInt(zoneMatch[1], 10);
+  }
+  // Check for range format like "8-10"
+  if (str.includes('-')) {
+    const parts = str.split('-').map(p => parseFloat(p.trim()));
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      return (parts[0] + parts[1]) / 2;
+    }
+  }
+  return Number(str) || 0;
+};
+
 const extractValue = (val: any): number => {
   if (typeof val === 'number') return val;
   if (typeof val === 'object' && val !== null) {
-    return Number(val.completed ?? val.prescribed ?? 0);
+    return parseNumericValue(val.completed ?? val.prescribed ?? 0);
   }
-  return Number(val ?? 0);
+  return parseNumericValue(val ?? 0);
 };
 
 const LABEL_MAP: Record<string, string> = {
@@ -69,6 +94,9 @@ const ClientProgressPage = () => {
 
   const { user } = useUserProfile();
   const { uniqueExercises: exercises, athlete } = useClientProfileContext();
+
+  // Load exercise thumbnails
+  const { getThumbnailUrl } = useExerciseThumbnails(exercises);
 
   // UI state
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -294,7 +322,7 @@ const ClientProgressPage = () => {
 
         [set.trackableField1, set.trackableField2].forEach((field) => {
           if (!field?.label || field.label === 'Optional') return;
-          const val = Number(field.completed ?? field.prescribed ?? 0);
+          const val = parseNumericValue(field.completed ?? field.prescribed ?? 0);
           if (isNaN(val) || val <= 0) return;
 
           processedTrackableField = true;
@@ -413,8 +441,8 @@ const ClientProgressPage = () => {
 
         if (!matchesCombo) return;
 
-        const field1Val = Number(set.trackableField1?.completed ?? set.trackableField1?.prescribed);
-        const field2Val = Number(set.trackableField2?.completed ?? set.trackableField2?.prescribed);
+        const field1Val = parseNumericValue(set.trackableField1?.completed ?? set.trackableField1?.prescribed);
+        const field2Val = parseNumericValue(set.trackableField2?.completed ?? set.trackableField2?.prescribed);
 
         let value: number;
         if (isDualField) {
@@ -490,14 +518,14 @@ const ClientProgressPage = () => {
     const parts: string[] = [];
 
     if (set.trackableField1) {
-      const val = Number(set.trackableField1.completed ?? set.trackableField1.prescribed);
+      const val = parseNumericValue(set.trackableField1.completed ?? set.trackableField1.prescribed);
       if (!isNaN(val) && val > 0) {
         parts.push(`${val} ${set.trackableField1.label || ''}`);
       }
     }
 
     if (set.trackableField2) {
-      const val = Number(set.trackableField2.completed ?? set.trackableField2.prescribed);
+      const val = parseNumericValue(set.trackableField2.completed ?? set.trackableField2.prescribed);
       if (!isNaN(val) && val > 0) {
         parts.push(`${val} ${set.trackableField2.label || ''}`);
       }
@@ -575,10 +603,8 @@ const ClientProgressPage = () => {
                   <span className="text-sm text-muted-foreground">No exercises found</span>
                 </div>
               ) : (
-                filteredExercises.map((exercise, index) => {
+                filteredExercises.map((exercise) => {
                   const isSelected = selectedExerciseId === exercise.id;
-                  const isLast = index === filteredExercises.length - 1;
-                  const isOnlyItem = filteredExercises.length === 1;
 
                   return (
                     <React.Fragment key={exercise.id}>
@@ -596,7 +622,7 @@ const ClientProgressPage = () => {
                           onClick={(e) => handleThumbnailClick(exercise, e)}
                         >
                           <Avatar className="h-9 w-9 rounded-md">
-                            <AvatarImage src={exercise.rawThumbnailUrl} alt={exercise.name} className="object-cover" />
+                            <AvatarImage src={getThumbnailUrl(exercise.rawThumbnailUrl)} alt={exercise.name} className="object-cover" />
                             <AvatarFallback className="rounded-md text-xs">
                               {exercise.name.charAt(0).toUpperCase()}
                             </AvatarFallback>
@@ -825,7 +851,7 @@ const ClientProgressPage = () => {
             </div>
           ) : selectedExercise && isLoadingHistory ? (
             <div className="flex-1 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <Loader2 className="h-10 w-10 animate-spin text-foreground" />
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center text-muted-foreground">

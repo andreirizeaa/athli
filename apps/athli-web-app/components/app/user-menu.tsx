@@ -38,7 +38,6 @@ export function UserMenu({
 }: UserMenuProps) {
   const t = useTranslations();
   const { triggerLogout } = useLogout();
-  const { user } = useGlobalData();
   const { resolvedTheme, setTheme, theme } = useTheme();
   const { theme: themeConfig, setTheme: setThemeConfig } = useThemeConfig();
   const { user: globalUser, preferences, updatePreferences } = useGlobalData();

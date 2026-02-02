@@ -9,7 +9,24 @@
 // Core File Types
 // =============================================================================
 
-export type FileType = 'photo' | 'video' | 'pdf' | 'image' | 'audio';
+export type FileType = 'photo' | 'video' | 'pdf' | 'image' | 'audio' | 'link';
+
+// =============================================================================
+// Link Types
+// =============================================================================
+
+export interface AddLinkData {
+  filename: string;
+  url: string;
+}
+
+/**
+ * Check if a file_path represents an external link
+ */
+export const isExternalLink = (filePath: string | null | undefined): boolean => {
+  if (!filePath) return false;
+  return filePath.startsWith('http://') || filePath.startsWith('https://');
+};
 
 export interface CoachFile {
   id: string;

@@ -2,19 +2,16 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { GestureResponderEvent } from 'react-native';
 import {
   Keyboard,
-  Platform,
   StyleSheet,
   Text,
   TouchableWithoutFeedback,
   View,
-  ActionSheetIOS,
 } from 'react-native';
 import { Dialog } from '@/components/ui/dialog';
 import { useRouter } from 'expo-router';
 import { Check, ChevronLeft } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import * as ImagePicker from 'expo-image-picker';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { typography } from '@/constants/typography';
@@ -22,7 +19,6 @@ import { useAuthSessionStore, useClientProfileStore, useThemePreference, useTran
 import { haptics } from '@/utils/haptics';
 import { IconButton } from '@/components/ui/icon-button';
 import { supabase } from '@/lib/supabase';
-import { hexToRgba } from '@/utils/colorUtils';
 import {
   CountrySelectorInput,
   DateSelectInput,
@@ -253,30 +249,10 @@ export default function ClientDetailsScreen() {
     }
   };
 
-  // Show action sheet for profile picture options
+  // Show dialog for profile picture options
   const handleEditProfilePicture = useCallback(() => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: [
-            t('general.cancel'),
-            t('settings.personalDetails.chooseFromLibrary'),
-            t('settings.personalDetails.takePhoto'),
-          ],
-          cancelButtonIndex: 0,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) {
-            pickImage(false);
-          } else if (buttonIndex === 2) {
-            pickImage(true);
-          }
-        }
-      );
-    } else {
-      setShowPhotoSourceDialog(true);
-    }
-  }, [t, pickImage]);
+    setShowPhotoSourceDialog(true);
+  }, []);
 
   const { canSave } = useMemo(() => {
     const trimmedName = name.trim();
@@ -335,57 +311,46 @@ export default function ClientDetailsScreen() {
   // Current image to display (selected or original)
   const currentImage = selectedImage || profile?.profile_picture_url || null;
 
-  const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
-  const gradientHeight = headerHeight + 12;
-
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
-      {/* Fixed gradient header overlay */}
-      <View style={[styles.fixedHeader, { height: headerHeight }]}>
-        <LinearGradient
-          colors={[
-            hexToRgba(themeColors.backgroundPrimary, 1),
-            hexToRgba(themeColors.backgroundPrimary, 0.85),
-            hexToRgba(themeColors.backgroundPrimary, 0.5),
-            hexToRgba(themeColors.backgroundPrimary, 0),
-          ]}
-          locations={[0, 0.5, 0.8, 1]}
-          style={[styles.headerGradient, { height: gradientHeight }]}
-          pointerEvents="none"
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: themeColors.backgroundPrimary,
+          paddingTop: insets.top,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
+      <View style={styles.header}>
+        <IconButton
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+          onPress={handleBackPress}
+          size="md"
+          color={themeColors.text}
+        />
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+          {t('profile.editTitle')}
+        </Text>
+        <IconButton
+          icon={{ sf: 'checkmark', IconComponent: Check }}
+          onPress={handleSave}
+          size="md"
+          variant={canSave ? 'primary' : 'default'}
+          disabled={!canSave}
+          loading={isLoadingProfile}
         />
       </View>
 
       <TouchableWithoutFeedback onPress={handleDismissKeyboard} accessible={false}>
         <KeyboardAwareScrollView
           style={styles.scrollView}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingTop: insets.top }
-          ]}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           bottomOffset={40}
         >
-          {/* Header - scrolls with content */}
-          <View style={styles.header}>
-            <IconButton
-              icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-              onPress={handleBackPress}
-              size="md"
-              color={themeColors.text}
-            />
-            <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-              {t('profile.editTitle')}
-            </Text>
-            <IconButton
-              icon={{ sf: 'checkmark', IconComponent: Check }}
-              onPress={handleSave}
-              size="md"
-              variant={canSave ? 'primary' : 'default'}
-              disabled={!canSave}
-              loading={isLoadingProfile}
-            />
-          </View>
 
             <ProfilePictureInput
               label={t('settings.personalDetails.profilePicture')}
@@ -488,31 +453,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  fixedHeader: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  headerGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 12,
-    marginBottom: 16,
-    height: 56,
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
   headerTitle: {
     ...typography.h5,
-    flex: 1,
-    textAlign: 'center',
   },
   scrollView: {
     flex: 1,

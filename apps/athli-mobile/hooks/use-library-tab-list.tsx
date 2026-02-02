@@ -53,7 +53,7 @@ export const useLibraryTabList = ({
         placeholder={t(searchPlaceholderKey)}
       />
     </View>
-  ), [searchQuery, searchPlaceholderKey, t, isRowOpen]);
+  ), [searchQuery, searchPlaceholderKey, t]);
 
   const refreshControl = useMemo(() => (
     <RefreshControl

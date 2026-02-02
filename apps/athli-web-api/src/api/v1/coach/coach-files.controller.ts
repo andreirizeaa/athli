@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { success, unauthorized, created } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
 import { randomUUID } from 'crypto';
+import { isExternalLink } from '@athli/shared-types';
 
 export const coachFilesController = {
     /**
@@ -101,6 +102,60 @@ export const coachFilesController = {
     },
 
     /**
+     * Create a new link (external URL)
+     */
+    createLink: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const { filename, url } = req.body;
+        if (!filename) {
+            return res.status(400).json({ success: false, message: 'Filename is required' });
+        }
+        if (!url) {
+            return res.status(400).json({ success: false, message: 'URL is required' });
+        }
+
+        // Validate URL format
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            return res.status(400).json({ success: false, message: 'URL must start with http:// or https://' });
+        }
+
+        try {
+            const supabase = getSupabaseClient();
+
+            // Store link in database with URL in file_path
+            // Use 'coach_files' as bucket_id to satisfy check constraint (file_path being a URL distinguishes it)
+            const { data: fileRecord, error: dbError } = await supabase
+                .from('coach_files')
+                .insert({
+                    coach_id: userId,
+                    bucket_id: 'coach_files',
+                    file_path: url,
+                    filename: filename,
+                    mime_type: 'link',
+                    size: null
+                })
+                .select()
+                .single();
+
+            if (dbError) {
+                return res.status(500).json({ success: false, message: dbError.message });
+            }
+
+            created(res, {
+                message: 'Link created successfully',
+                data: { file: fileRecord },
+            });
+        } catch (error: any) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    /**
      * Update file metadata (filename, tags)
      */
     updateFile: async (req: Request, res: Response) => {
@@ -175,14 +230,16 @@ export const coachFilesController = {
             return res.status(404).json({ success: false, message: 'File not found' });
         }
 
-        // Delete from storage
-        const { error: storageError } = await supabase.storage
-            .from('coach_files')
-            .remove([fileToDelete.file_path]);
+        // Only delete from storage if it's not an external link
+        if (!isExternalLink(fileToDelete.file_path)) {
+            const { error: storageError } = await supabase.storage
+                .from('coach_files')
+                .remove([fileToDelete.file_path]);
 
-        if (storageError) {
-            console.error('Storage deletion error:', storageError);
-            // Continue with database deletion even if storage deletion fails
+            if (storageError) {
+                console.error('Storage deletion error:', storageError);
+                // Continue with database deletion even if storage deletion fails
+            }
         }
 
         // Delete from database
@@ -225,6 +282,15 @@ export const coachFilesController = {
 
         if (fetchError || !file) {
             return res.status(404).json({ success: false, message: 'File not found' });
+        }
+
+        // If it's an external link, return the URL directly
+        if (isExternalLink(file.file_path)) {
+            success(res, {
+                message: 'File URL retrieved successfully',
+                data: { url: file.file_path, file },
+            });
+            return;
         }
 
         // Generate signed URL (valid for 1 hour)

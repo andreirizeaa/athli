@@ -10,13 +10,11 @@ import { OTPInput } from '@/components/auth/otp-input';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { AuthLayout } from '@/components/auth/auth-layout';
 import { toast } from 'sonner';
-import { createClient } from '@/supabase/client';
 import { Spinner } from '@/components/ui/spinner';
 
 export default function VerifyEmailPage() {
   const { verifyOTP, resendOTP } = useSupabaseAuth();
   const router = useRouter();
-  const supabase = createClient();
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);

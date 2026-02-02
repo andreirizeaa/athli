@@ -3,9 +3,10 @@ import { supabase } from '@/lib/supabase';
 import { Platform } from 'react-native';
 
 // Configure Google Sign-In
+// webClientId is required on Android to receive an ID token
 GoogleSignin.configure({
   iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS,
-  // Don't specify webClientId - not needed for basic native sign-in
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB,
   offlineAccess: false,
 });
 

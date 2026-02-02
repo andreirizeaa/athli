@@ -13,19 +13,13 @@ import {
   BreadcrumbSeparator,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
-import { ChevronRight, Pencil } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { FlowEditor } from '@/components/flows/flow-editor';
 import { EditFlowSidePanel } from '@/components/flows/edit-flow-side-panel';
 import { getFlowById, updateFlowDetails, updateFlowStatus, type Flow } from '@/api/coach/coach-flow-service';
-import type { Node, Edge } from 'reactflow';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-
-
-// Empty initial nodes and edges
-const initialNodes: Node[] = [];
-const initialEdges: Edge[] = [];
 
 const FlowDetailPage = () => {
   const t = useTranslations();
@@ -35,7 +29,6 @@ const FlowDetailPage = () => {
 
   const [flow, setFlow] = useState<Flow | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [isEditFlowOpen, setIsEditFlowOpen] = useState(false);
 
   useEffect(() => {
@@ -56,14 +49,6 @@ const FlowDetailPage = () => {
 
   const handleBreadcrumbClick = (path: string) => {
     router.push(path);
-  };
-
-  const handleNodeClick = (_node: Node) => {
-    setIsSidePanelOpen(true);
-  };
-
-  const handleCloseSidePanel = () => {
-    setIsSidePanelOpen(false);
   };
 
   const handleEditFlow = async (data: { name: string; description?: string }) => {

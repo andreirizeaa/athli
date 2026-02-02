@@ -5,7 +5,10 @@ import type {
   CoachFile,
   FileWithUrl,
   ClientFileAssignment,
+  AddLinkData,
 } from '@athli/shared-types';
+
+export { isExternalLink } from '@athli/shared-types';
 
 // Re-export types from shared-types for backwards compatibility
 export type {
@@ -14,6 +17,7 @@ export type {
   CoachFile,
   FileWithUrl,
   ClientFileAssignment,
+  AddLinkData,
 };
 
 // Mobile-specific AddFileData with required file field
@@ -142,4 +146,47 @@ export const getClientFiles = async (clientId: string, coachId: string): Promise
     ...f,
     display_name: f.fileName || f.filename,
   }));
+};
+
+/**
+ * Service method to create a link (external URL)
+ */
+export const createLink = async (data: AddLinkData): Promise<CoachFile> => {
+  const response = await apiFetch<{ data: { file: CoachFile } }>('/coach/files/link', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+  return response.data.file;
+};
+
+/**
+ * Check if a URL is a YouTube video
+ */
+export const isYouTubeUrl = (url: string): boolean => {
+  return /^https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)/.test(url);
+};
+
+/**
+ * Check if a URL is a Vimeo video
+ */
+export const isVimeoUrl = (url: string): boolean => {
+  return /^https?:\/\/(www\.)?vimeo\.com\/\d+/.test(url);
+};
+
+/**
+ * Extract YouTube video ID from URL
+ */
+export const getYouTubeVideoId = (url: string): string | null => {
+  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return match ? match[1] : null;
+};
+
+/**
+ * Get YouTube thumbnail URL from video URL
+ */
+export const getYouTubeThumbnail = (url: string): string | null => {
+  const videoId = getYouTubeVideoId(url);
+  if (!videoId) return null;
+  return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
 };

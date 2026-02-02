@@ -39,7 +39,7 @@ export const VideoModal = ({ open, onOpenChange, exercise }: VideoModalProps) =>
         musclewikiId={exercise?.musclewikiId}
       />
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90vw] max-w-[1400px] sm:max-w-[1400px] h-[85vh] flex flex-col p-0" showCloseButton={false}>
+      <DialogContent className="w-[90vw] max-w-[1400px] sm:max-w-[1400px] max-h-[85vh] flex flex-col p-0" showCloseButton={false}>
         <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4 border-b">
           <div className="flex items-start justify-between gap-4">
             <DialogTitle className="text-left text-xl">{exercise?.name}</DialogTitle>

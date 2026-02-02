@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, Pressable, Modal, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, Pressable, Modal, ActivityIndicator, Platform } from 'react-native';
 import { PressableScale } from 'pressto';
 import { X } from 'lucide-react-native';
 import SquircleView from 'react-native-fast-squircle';
@@ -73,10 +73,12 @@ export function Dialog({
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <Pressable style={styles.container} onPress={onClose}>
-        <Pressable style={styles.cardWrapper} onPress={(e) => e.stopPropagation()}>
+      <View style={styles.container}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View style={styles.cardWrapper}>
           <SquircleView
             cornerSmoothing={1}
+            pointerEvents="box-none"
             style={[styles.card, { backgroundColor: themeColors.cardPrimary }]}
           >
             <View style={styles.header}>
@@ -99,36 +101,66 @@ export function Dialog({
             <View style={[styles.buttonContainer, buttonLayout === 'horizontal' && styles.buttonContainerHorizontal]}>
               {buttons.map((button, index) => {
                 const btnStyles = getButtonStyles(button.variant);
-                return (
-                  <PressableScale
-                    key={index}
-                    style={[styles.buttonWrapper, buttonLayout === 'horizontal' && styles.buttonHorizontal]}
-                    onPress={button.loading ? undefined : button.onPress}
-                  >
-                    <SquircleView
-                      cornerSmoothing={1}
-                      style={[
-                        styles.button,
-                        {
-                          backgroundColor: btnStyles.backgroundColor,
-                          borderWidth: btnStyles.borderWidth,
-                          borderColor: btnStyles.borderColor,
-                        },
-                      ]}
+                return Platform.OS === 'ios' ? (
+                    <PressableScale
+                      key={index}
+                      style={[styles.buttonWrapper, buttonLayout === 'horizontal' && styles.buttonHorizontal]}
+                      onPress={button.onPress}
+                      enabled={!button.loading}
                     >
-                      {button.loading ? (
-                        <ActivityIndicator size="small" color={btnStyles.textColor} />
-                      ) : (
-                        <Text style={[styles.buttonText, { color: btnStyles.textColor }]}>{button.label}</Text>
-                      )}
-                    </SquircleView>
-                  </PressableScale>
+                      <SquircleView
+                        cornerSmoothing={1}
+                        style={[
+                          styles.button,
+                          {
+                            backgroundColor: btnStyles.backgroundColor,
+                            borderWidth: btnStyles.borderWidth,
+                            borderColor: btnStyles.borderColor,
+                          },
+                        ]}
+                      >
+                        {button.loading ? (
+                          <ActivityIndicator size="small" color={btnStyles.textColor} />
+                        ) : (
+                          <Text style={[styles.buttonText, { color: btnStyles.textColor }]}>{button.label}</Text>
+                        )}
+                      </SquircleView>
+                    </PressableScale>
+                  ) : (
+                    <Pressable
+                      key={index}
+                      style={({ pressed }) => [
+                        styles.buttonWrapper,
+                        buttonLayout === 'horizontal' && styles.buttonHorizontal,
+                        { opacity: pressed ? 0.7 : 1 },
+                      ]}
+                      onPress={button.onPress}
+                      disabled={button.loading}
+                    >
+                      <SquircleView
+                        cornerSmoothing={1}
+                        style={[
+                          styles.button,
+                          {
+                            backgroundColor: btnStyles.backgroundColor,
+                            borderWidth: btnStyles.borderWidth,
+                            borderColor: btnStyles.borderColor,
+                          },
+                        ]}
+                      >
+                        {button.loading ? (
+                          <ActivityIndicator size="small" color={btnStyles.textColor} />
+                        ) : (
+                          <Text style={[styles.buttonText, { color: btnStyles.textColor }]}>{button.label}</Text>
+                        )}
+                      </SquircleView>
+                    </Pressable>
                 );
               })}
             </View>
           </SquircleView>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
