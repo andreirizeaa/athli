@@ -23,7 +23,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { ChevronDownIcon, Trash2, Check } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
-import { format } from 'date-fns';
 import { YourListTask } from '@/api/coach/coach-todo-service';
 import { Combobox } from '@/components/ui/combobox';
 import { useCoachClients } from '@/hooks/use-coach-clients';

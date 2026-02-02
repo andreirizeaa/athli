@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useRouter, useSelectedLayoutSegments, usePathname } from 'next/navigation';
+import { useRouter, useSelectedLayoutSegments } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { PageTabs } from '@/components/page-tabs';
 
@@ -13,7 +13,6 @@ const TodoLayout = ({ children }: TodoLayoutProps) => {
   const t = useTranslations();
   const router = useRouter();
   const segments = useSelectedLayoutSegments();
-  const pathname = usePathname();
 
   const tabs = [
     {

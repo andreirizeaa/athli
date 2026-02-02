@@ -217,40 +217,38 @@ export const EditMetricSidePanel = ({
       onOpenAutoFocus={(e) => e.preventDefault()}
       contentClassName={allowSchedule ? "w-full sm:w-[600px] sm:max-w-[600px]" : "w-full sm:w-[400px] sm:max-w-[400px]"}
       footer={
-        <div className="flex w-full justify-between gap-2">
+        <div className="flex w-full justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isDeleting || isSaving}>
+            {t('general.cancel')}
+          </Button>
           <Button
             type="button"
             variant="outline"
             onClick={handleDelete}
-            className="gap-2 text-destructive hover:bg-destructive/10"
             disabled={isDeleting || isSaving}
+            className="gap-2"
             aria-label={t('metrics.actions.deleteAria', { name: metric.name })}
           >
             {isDeleting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Trash2 className="size-4" />
+              <Trash2 className="h-4 w-4" />
             )}
-            <span>{t('general.delete')}</span>
+            {t('general.delete')}
           </Button>
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isDeleting || isSaving}>
-              {t('general.cancel')}
-            </Button>
-            <Button
-              type="button"
-              onClick={form.handleSubmit(handleSave)}
-              disabled={!form.formState.isValid || !hasChanges || isDeleting || isSaving}
-              className="gap-2"
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="h-4 w-4" />
-              )}
-              {t('general.save')}
-            </Button>
-          </div>
+          <Button
+            type="button"
+            onClick={form.handleSubmit(handleSave)}
+            disabled={!form.formState.isValid || !hasChanges || isDeleting || isSaving}
+            className="gap-2"
+          >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
+            {t('general.save')}
+          </Button>
         </div>
       }
     >

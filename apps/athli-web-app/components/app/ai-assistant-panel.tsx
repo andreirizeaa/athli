@@ -139,7 +139,7 @@ export function AIAssistantPanel({ isOpen }: AIAssistantPanelProps) {
   return (
     <div
       className={cn(
-        'h-full bg-background border-l border-sidebar-border transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0',
+        'h-full bg-background border-l border-sidebar-border overflow-hidden flex-shrink-0',
         isOpen ? 'w-[28rem]' : 'w-0 border-l-0'
       )}
     >

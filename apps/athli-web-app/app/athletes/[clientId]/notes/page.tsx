@@ -206,11 +206,6 @@ const ClientNotesPage = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const truncateText = (text: string, maxLength: number = 100): string => {
-    if (text.length <= maxLength) return text;
-    return text.slice(0, maxLength).trim() + '...';
-  };
-
   const formatCreatedDate = (timestamp: number): string => {
     return format(new Date(timestamp), 'MMM d, yyyy');
   };

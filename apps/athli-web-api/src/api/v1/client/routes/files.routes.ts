@@ -54,6 +54,7 @@ export const clientFileRouter = Router();
 clientFileRouter.get('/', supabaseAuthenticate, clientFilesController.getFiles);
 clientFileRouter.post('/', supabaseAuthenticate, clientFilesController.assignFile);
 clientFileRouter.post('/upload', supabaseAuthenticate, upload.single('file'), clientFilesController.uploadFile);
+clientFileRouter.post('/link', supabaseAuthenticate, clientFilesController.createLink);
 clientFileRouter.delete('/', supabaseAuthenticate, clientFilesController.deleteAssignment);
 
 /**

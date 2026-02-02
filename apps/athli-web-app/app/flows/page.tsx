@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Plus, FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Check, X, Copy, Trash2, Power } from 'lucide-react';
+import { FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Power, Plus } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,15 +13,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
-import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/general/utils';
-import { AddFlowSidePanel } from '@/components/flows/add-flow-side-panel';
 import { type Flow, updateFlowStatus } from '@/api/coach/coach-flow-service';
 import { useCoachFlows } from '@/hooks/use-coach-flows';
 import { Loader2 } from 'lucide-react';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
-import { Button as UIButton } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import {
@@ -189,7 +185,14 @@ const FlowsPage = () => {
       <div className="w-full relative flex-shrink-0">
         <div className="pl-4 pr-4 flex items-center justify-between mb-2 mt-2">
           <h1 className="text-[22px] font-semibold">{t('flows.title')}</h1>
-          {/* Add Flow button removed */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push('/features')}
+          >
+            <Plus className="size-4" />
+            Request a new flow
+          </Button>
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>

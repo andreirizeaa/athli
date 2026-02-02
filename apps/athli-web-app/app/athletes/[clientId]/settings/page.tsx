@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Archive, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { mockAthletes } from '@/components/app/app-shell';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { useClientProfileContext } from '../client-profile-context';

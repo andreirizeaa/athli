@@ -575,10 +575,8 @@ const ClientProgressPage = () => {
                   <span className="text-sm text-muted-foreground">No exercises found</span>
                 </div>
               ) : (
-                filteredExercises.map((exercise, index) => {
+                filteredExercises.map((exercise) => {
                   const isSelected = selectedExerciseId === exercise.id;
-                  const isLast = index === filteredExercises.length - 1;
-                  const isOnlyItem = filteredExercises.length === 1;
 
                   return (
                     <React.Fragment key={exercise.id}>

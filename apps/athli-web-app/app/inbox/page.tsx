@@ -39,8 +39,6 @@ import { searchNotes } from '@/api/coach/coach-client-service';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import type { Athlete } from '@/api/coach/coach-client-service';
 import {
-  mockMessages,
-  mockAthletes,
   type Contact,
   type Message,
 } from '@/components/app/app-shell';
@@ -51,7 +49,6 @@ import { useRealtimeConversations, useRealtimeMessages, useSyncReadReceipt, useM
 import { sendMessage as sendMessageAPI, markConversationAsRead, addReaction, removeReaction, deleteMessage as deleteMessageAPI } from '@/lib/messaging/messaging-api-client';
 import type { Conversation, OptimisticMessage, ReadReceipt } from '@athli/shared-types';
 import { createOptimisticMessage } from '@athli/shared-types';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ContactListItem } from './components/contact-list-item';
 import { format } from 'date-fns';
 import { SidePanel } from '@/components/app/side-panel';

@@ -190,7 +190,7 @@ export default function ProgressScreen() {
     if (!clientProfile) return;
     haptics.medium();
     router.push({
-      pathname: '/client/[id]/progress',
+      pathname: '/client/[id]/exercise-history',
       params: { id: clientProfile.client_id },
     });
   }, [clientProfile, router]);

@@ -8,7 +8,7 @@ import { Plus, Loader2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
+import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { PageHeader } from '@/components/app/page-header';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import {
@@ -17,12 +17,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Edit, Trash2, UserPlus } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, UserPlus, FileText } from 'lucide-react';
 import { useCoachFiles } from '@/hooks/use-coach-files';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { AddFileSidePanel } from '@/components/files/add-file-side-panel';
 import { FilePreviewDialog } from '@/components/files/file-preview-dialog';
-import { getFileUrl, downloadFile, isPreviewable, getFileTypeFromMime, type CoachFile } from '@/api/coach/coach-file-service';
+import { getFileUrl, downloadFile, isPreviewable, getFileTypeFromMime, isExternalLink, type CoachFile } from '@/api/coach/coach-file-service';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
 import { FileThumbnail } from '@/components/files/file-thumbnail';
@@ -89,6 +89,12 @@ const FilesPage = () => {
   };
 
   const handleFileClick = async (file: CoachFile) => {
+    // Handle external links - open in new tab
+    if (isExternalLink(file.file_path)) {
+      window.open(file.file_path, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
     if (isPreviewable(file.mime_type)) {
       // Open preview dialog
       setPreviewFile(file);
@@ -307,8 +313,12 @@ const FilesPage = () => {
       label: t('files.columns.type'),
       width: { class: 'w-[150px]', pixel: '150px' },
       renderCell: (row) => {
+        // Check for external link first
+        if (isExternalLink(row.file_path)) {
+          return <span className="text-sm text-muted-foreground">Link</span>;
+        }
         const fileType = getFileTypeFromMime(row.mime_type);
-        const typeLabels = {
+        const typeLabels: Record<string, string> = {
           pdf: 'PDF',
           image: 'Image',
           video: 'Video',
@@ -316,8 +326,8 @@ const FilesPage = () => {
         };
         return <span className="text-sm text-muted-foreground">{typeLabels[fileType]}</span>;
       },
-      getSortValue: (row) => getFileTypeFromMime(row.mime_type),
-      getSearchValue: (row) => getFileTypeFromMime(row.mime_type),
+      getSortValue: (row) => isExternalLink(row.file_path) ? 'link' : getFileTypeFromMime(row.mime_type),
+      getSearchValue: (row) => isExternalLink(row.file_path) ? 'link' : getFileTypeFromMime(row.mime_type),
     },
     {
       id: 'size',
@@ -366,7 +376,7 @@ const FilesPage = () => {
                 }}
                 className="text-destructive focus:text-destructive"
               >
-                <Trash2 className="size-4 mr-2" />
+                <Trash2 className="size-4 mr-2 text-destructive" />
                 <span>{t('general.delete')}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -376,7 +386,22 @@ const FilesPage = () => {
     },
   ];
 
-
+  // Create filter definitions
+  const filters: FilterDefinition<CoachFile>[] = [
+    {
+      id: 'type',
+      label: t('files.columns.type'),
+      icon: <FileText className="size-4" />,
+      options: [
+        { value: 'pdf', label: 'PDF' },
+        { value: 'image', label: 'Image' },
+        { value: 'video', label: 'Video' },
+        { value: 'link', label: 'Link' },
+        { value: 'other', label: 'Other' },
+      ],
+      getFilterValue: (row) => isExternalLink(row.file_path) ? 'link' : getFileTypeFromMime(row.mime_type),
+    },
+  ];
 
   return (
     <div className="h-full w-full flex flex-col bg-background overflow-auto">
@@ -398,6 +423,7 @@ const FilesPage = () => {
         searchPlaceholder={t('files.searchPlaceholder')}
         enableSearch={true}
         searchFields={['filename']}
+        filters={filters}
         enableEditColumns={false}
         enableExport={false}
         enableRowSelection={true}
@@ -475,6 +501,7 @@ const FilesPage = () => {
         open={isAddFileOpen}
         onOpenChange={setIsAddFileOpen}
         onUpload={handleFileUpload}
+        onLinkCreated={() => queryClient.invalidateQueries({ queryKey: ['coach-files'] })}
         isUploading={isUploading}
       />
 

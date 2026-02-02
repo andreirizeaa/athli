@@ -86,6 +86,46 @@ coachFileRouter.post('/', supabaseAuthenticate, upload.single('file'), coachFile
 
 /**
  * @swagger
+ * /api/v1/coach/files/link:
+ *   post:
+ *     summary: Create a new link (external URL)
+ *     tags: [Coach Files]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - filename
+ *               - url
+ *             properties:
+ *               filename:
+ *                 type: string
+ *               url:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Link created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         file:
+ *                           $ref: '#/components/schemas/CoachFile'
+ */
+coachFileRouter.post('/link', supabaseAuthenticate, coachFilesController.createLink);
+
+/**
+ * @swagger
  * /api/v1/coach/files/{id}:
  *   patch:
  *     summary: Update file metadata

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -9,38 +9,26 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Spinner } from '@/components/ui/spinner';
-import { SidePanel } from '@/components/app/side-panel';
 import { AssignTrainingToClientSidePanel } from '@/components/training/assign-training-to-client-side-panel';
 import { SelectClientSidePanel } from '@/components/training/select-client-side-panel';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { cn } from '@/lib/general/utils';
-import { exportToCSV } from '@/lib/general/csv-export';
 import {
-  Search,
   X,
   Check,
   ArrowUpNarrowWide,
   ArrowDownWideNarrow,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
   Plus,
   FileText,
   Tag,
-  Wrench,
-  HelpCircle,
   Download,
-  Settings,
   User,
   UserPlus,
   Star,

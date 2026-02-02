@@ -42,7 +42,6 @@ const YourListPage = () => {
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<YourListTask | null>(null);
-  const [yourListFilteredCount, setYourListFilteredCount] = useState(0);
   const [yourListTaskTypeFilter, setYourListTaskTypeFilter] = useState<'all' | 'client' | 'general'>('all');
   const [yourListSortOrder, setYourListSortOrder] = useState<'earliest' | 'latest'>('earliest');
 
@@ -235,7 +234,6 @@ const YourListPage = () => {
         getRowId={(row) => row.id}
         gridKey="todo-your-list"
         itemsPerPage={25}
-        onFilteredDataChange={setYourListFilteredCount}
         enableSearch={true}
         searchPlaceholder={t('general.search')}
         searchFields={['title', 'information', 'clientName']}

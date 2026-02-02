@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter, usePathname } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
@@ -19,7 +19,6 @@ import { isWeakPasswordError, getPasswordErrorMessage } from '@/lib/utils/auth-e
 
 export default function ClientInvitePage() {
   const params = useParams<{ code: string }>();
-  const router = useRouter();
   const pathname = usePathname();
   const { signIn, signInWithGoogle, signInWithApple } = useSupabaseAuth();
   const supabase = createClient();

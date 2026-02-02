@@ -251,9 +251,8 @@ const ClientPhotosPage = () => {
           </div>
           <div className="flex-1 overflow-y-auto">
             <div className="space-y-0">
-              {filteredGroupedPhotos.map((group, index) => {
+              {filteredGroupedPhotos.map((group) => {
                 const isSelected = selectedGroupDate === format(group.date, 'yyyy-MM-dd');
-                const isLast = index === filteredGroupedPhotos.length - 1;
 
                 return (
                   <React.Fragment key={format(group.date, 'yyyy-MM-dd')}>
