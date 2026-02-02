@@ -436,6 +436,13 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="assistant"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
             name="client/[id]"
             options={{
               headerShown: false,
