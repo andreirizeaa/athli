@@ -1,42 +1,41 @@
 {
   "project_info": {
-    "project_number": "935546880873",
-    "project_id": "athli-cf7f5",
-    "storage_bucket": "athli-cf7f5.firebasestorage.app"
+    "project_number": "678116485718",
+    "project_id": "athli-484012",
+    "storage_bucket": "athli-484012.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:935546880873:android:377870fea27930fff6b3f8",
+        "mobilesdk_app_id": "1:678116485718:android:bdd2e4c103bb8b4980a9f7",
         "android_client_info": {
           "package_name": "com.athli.mobile"
         }
       },
       "oauth_client": [
         {
-          "client_id": "935546880873-u4qf0u0fvp8t9tv70ejcak1de0a45f3u.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.athli.mobile",
-            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
-          }
-        },
-        {
-          "client_id": "935546880873-oa7g593ceeqqmivfnj4s0c40nhgufh4r.apps.googleusercontent.com",
+          "client_id": "678116485718-r21l4n703drhpb42ae7i5oi1k1av44ou.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBzUvK55nJzkY2xyYk_tdJkICzj6uz9EPU"
+          "current_key": "AIzaSyB9KBGiRAZ5LHnbSTkL_lfDhv9Y3e_G70c"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "935546880873-oa7g593ceeqqmivfnj4s0c40nhgufh4r.apps.googleusercontent.com",
+              "client_id": "678116485718-r21l4n703drhpb42ae7i5oi1k1av44ou.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "678116485718-t3q4aabl1k4l1m9is7teavj3gns2r8a2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.athli.mobile"
+              }
             }
           ]
         }
@@ -44,36 +43,35 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:935546880873:android:7b718e626977b42ff6b3f8",
+        "mobilesdk_app_id": "1:678116485718:android:737daa849e39318b80a9f7",
         "android_client_info": {
           "package_name": "com.athli.mobile.dev"
         }
       },
       "oauth_client": [
         {
-          "client_id": "935546880873-nsed38pf69q2l9cqflhphvket1ih51ug.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.athli.mobile.dev",
-            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
-          }
-        },
-        {
-          "client_id": "935546880873-oa7g593ceeqqmivfnj4s0c40nhgufh4r.apps.googleusercontent.com",
+          "client_id": "678116485718-r21l4n703drhpb42ae7i5oi1k1av44ou.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBzUvK55nJzkY2xyYk_tdJkICzj6uz9EPU"
+          "current_key": "AIzaSyB9KBGiRAZ5LHnbSTkL_lfDhv9Y3e_G70c"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "935546880873-oa7g593ceeqqmivfnj4s0c40nhgufh4r.apps.googleusercontent.com",
+              "client_id": "678116485718-r21l4n703drhpb42ae7i5oi1k1av44ou.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "678116485718-t3q4aabl1k4l1m9is7teavj3gns2r8a2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.athli.mobile"
+              }
             }
           ]
         }
@@ -81,36 +79,35 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:935546880873:android:d8b7ec423945ec62f6b3f8",
+        "mobilesdk_app_id": "1:678116485718:android:5ce2756f4301537b80a9f7",
         "android_client_info": {
           "package_name": "com.athli.mobile.preview"
         }
       },
       "oauth_client": [
         {
-          "client_id": "935546880873-6bgkohemjvd6ju0githtkmnb050e28cj.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.athli.mobile.preview",
-            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
-          }
-        },
-        {
-          "client_id": "935546880873-oa7g593ceeqqmivfnj4s0c40nhgufh4r.apps.googleusercontent.com",
+          "client_id": "678116485718-r21l4n703drhpb42ae7i5oi1k1av44ou.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBzUvK55nJzkY2xyYk_tdJkICzj6uz9EPU"
+          "current_key": "AIzaSyB9KBGiRAZ5LHnbSTkL_lfDhv9Y3e_G70c"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "935546880873-oa7g593ceeqqmivfnj4s0c40nhgufh4r.apps.googleusercontent.com",
+              "client_id": "678116485718-r21l4n703drhpb42ae7i5oi1k1av44ou.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "678116485718-t3q4aabl1k4l1m9is7teavj3gns2r8a2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.athli.mobile"
+              }
             }
           ]
         }
