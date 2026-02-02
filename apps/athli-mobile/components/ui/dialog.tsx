@@ -73,8 +73,9 @@ export function Dialog({
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <Pressable style={styles.container} onPress={onClose}>
-        <Pressable style={styles.cardWrapper} onPress={(e) => e.stopPropagation()}>
+      <View style={styles.container}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View style={styles.cardWrapper}>
           <SquircleView
             cornerSmoothing={1}
             style={[styles.card, { backgroundColor: themeColors.cardPrimary }]}
@@ -103,7 +104,8 @@ export function Dialog({
                   <PressableScale
                     key={index}
                     style={[styles.buttonWrapper, buttonLayout === 'horizontal' && styles.buttonHorizontal]}
-                    onPress={button.loading ? undefined : button.onPress}
+                    onPress={button.onPress}
+                    enabled={!button.loading}
                   >
                     <SquircleView
                       cornerSmoothing={1}
@@ -127,8 +129,8 @@ export function Dialog({
               })}
             </View>
           </SquircleView>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }

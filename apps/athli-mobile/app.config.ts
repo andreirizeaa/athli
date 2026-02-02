@@ -150,7 +150,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           }
         }
       ],
-      "expo-dynamic-app-icon",
       // Temporarily disabled due to ajv dependency conflict
       // [
       //   "expo-quick-actions",

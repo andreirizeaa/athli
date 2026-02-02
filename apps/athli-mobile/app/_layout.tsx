@@ -7,6 +7,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Platform, View as RNView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
+import { Asset } from 'expo-asset';
+import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import 'react-native-reanimated';
 import { PressablesConfig } from 'pressto';
 
@@ -49,22 +51,21 @@ SplashScreen.setOptions({
   fade: true,
 });
 
-// Background images to prefetch (using expo-image for proper caching)
+// Background images to preload (using expo-asset for local bundled assets)
 const darkBackground = require('../assets/backgrounds/dark.png');
 const lightBackground = require('../assets/backgrounds/light.png');
 
-// Prefetch background images using expo-image to prevent flash on screen load
+// Preload background images using expo-asset to prevent flash on screen load
 const prefetchBackgroundImages = async () => {
   try {
-    await Promise.all([
-      Image.prefetch(darkBackground),
-      Image.prefetch(lightBackground),
-    ]);
-    console.log('[RootLayout] Background images prefetched');
+    await Asset.loadAsync([darkBackground, lightBackground]);
+    console.log('[RootLayout] Background images preloaded');
   } catch (error) {
-    console.warn('[RootLayout] Failed to prefetch background images:', error);
+    console.warn('[RootLayout] Failed to preload background images:', error);
   }
 };
+
+const hasLiquidGlass = isLiquidGlassAvailable();
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -714,6 +715,7 @@ function RootLayoutNav() {
               ...(Platform.OS === 'ios' && {
                 sheetAllowedDetents: [0.35],
                 sheetGrabberVisible: true,
+                contentStyle: { backgroundColor: hasLiquidGlass ? 'transparent' : themeColors.backgroundSecondary },
               }),
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -757,7 +759,7 @@ function RootLayoutNav() {
               ...(Platform.OS === 'ios' && {
                 sheetAllowedDetents: [0.50],
                 sheetGrabberVisible: true,
-                contentStyle: { backgroundColor: 'transparent' },
+                contentStyle: { backgroundColor: hasLiquidGlass ? 'transparent' : themeColors.backgroundSecondary },
               }),
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
@@ -773,6 +775,7 @@ function RootLayoutNav() {
               ...(Platform.OS === 'ios' && {
                 sheetAllowedDetents: [0.35],
                 sheetGrabberVisible: true,
+                contentStyle: { backgroundColor: hasLiquidGlass ? 'transparent' : themeColors.backgroundSecondary },
               }),
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',
