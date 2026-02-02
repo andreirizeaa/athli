@@ -65,9 +65,9 @@ export function getActionRedirectUrl(actionType: ActionType, payload?: any): str
     case 'add_client_goal':
     case 'add_client_injury':
     case 'update_client_profile':
-      return payload?.clientId ? `/clients/${payload.clientId}` : '/clients';
+      return payload?.clientId ? `/athletes/${payload.clientId}` : '/athletes';
     case 'create_checkin_template':
-      return '/checkins';
+      return '/forms/check-ins';
     case 'create_metric':
       return '/metrics';
     case 'draft_message':

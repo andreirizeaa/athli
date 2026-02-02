@@ -16,24 +16,38 @@ interface ToolStatusProps {
 }
 
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
+  // Client tools
   list_all_clients: 'Loading your clients',
   search_clients: 'Searching clients',
   get_client_profile: 'Loading client profile',
   get_client_workouts: 'Fetching workout history',
-  get_client_metrics: 'Loading metrics',
+  get_client_metrics: 'Loading client metrics',
   get_client_checkins: 'Fetching check-ins',
   get_inactive_clients: 'Finding inactive clients',
+  // Exercise tools
   search_exercises: 'Searching exercises',
   get_exercise_catalog: 'Loading exercise catalog',
+  // Coach library tools
   get_coach_workouts: 'Loading your workouts',
   get_coach_programs: 'Loading your programs',
   get_coach_sections: 'Loading your sections',
   list_all_checkin_templates: 'Loading check-in templates',
   list_all_metrics: 'Loading tracked metrics',
+  // Creation tools
   create_workout: 'Creating workout',
   create_program: 'Creating program',
   create_section: 'Creating section',
+  create_checkin_template: 'Creating check-in form',
+  create_metric: 'Creating metric',
+  // Assignment tools
   assign_workout: 'Preparing workout assignment',
+  assign_metric_to_client: 'Assigning metric to client',
+  // Client modification tools
+  add_client_goal: 'Adding client goal',
+  add_client_injury: 'Recording injury',
+  draft_message_for_client: 'Drafting message',
+  update_client_profile: 'Updating profile',
+  // Analytics tools
   analyze_client_progress: 'Analyzing progress',
 };
 
