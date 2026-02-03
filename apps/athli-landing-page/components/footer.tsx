@@ -26,6 +26,14 @@ const links = [
     title: 'About',
     href: '#',
   },
+  {
+    title: 'Privacy Policy',
+    href: '/privacy-policy',
+  },
+  {
+    title: 'Terms of Use',
+    href: '/terms-of-use',
+  },
 ];
 
 export default function FooterSection() {
@@ -176,7 +184,7 @@ export default function FooterSection() {
         </div>
         <span className="text-muted-foreground block text-center text-sm">
           {' '}
-          © {new Date().getFullYear()} Tailark, All rights reserved
+          © {new Date().getFullYear()} Athli. All rights reserved
         </span>
       </div>
     </footer>
