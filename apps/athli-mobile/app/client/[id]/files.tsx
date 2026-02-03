@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dialog } from '@/components/ui/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -12,7 +13,7 @@ import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useThemePreference, useTranslations, useClientDetailStore, useCoachProfileStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { DropdownMenuWrapper, ContextMenuWrapper } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SearchBar } from '@/components/ui/search-bar';
@@ -39,6 +40,8 @@ export default function ClientFilesScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const insets = useSafeAreaInsets();
+  const HEADER_HEIGHT = 52;
   const iconColor = themeColors.text;
 
   // Get files from store (already loaded by parent screen)
@@ -236,8 +239,126 @@ export default function ClientFilesScreen() {
   };
 
   return (
-    <ScreenWrapper useImageBackground={false}>
-      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+      >
+        {/* Search bar */}
+        <View style={styles.searchContainer}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('general.searchPlaceholder')}
+          />
+        </View>
+
+        <Pressable
+          style={styles.contentContainer}
+          onPressIn={() => {
+            if (openRowRef.current) {
+              hadOpenRowRef.current = true;
+              closeOpenRow();
+            } else {
+              hadOpenRowRef.current = false;
+            }
+          }}
+        >
+          {/* Loading state */}
+          {isLoadingFiles && files.length === 0 ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={themeColors.primary} />
+            </View>
+          ) : files.length === 0 ? (
+            /* Empty state */
+            <View style={styles.emptyContainer}>
+              <PlatformIcon sf="doc" IconComponent={File} size={48} color={themeColors.mutedText} />
+              <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
+                {t('clientDetail.files.emptyTitle')}
+              </Text>
+              <Text style={[styles.emptyDescription, { color: themeColors.mutedText }]}>
+                {t('clientDetail.files.emptyDescription')}
+              </Text>
+            </View>
+          ) : filteredFiles.length === 0 && searchQuery.trim() ? (
+            /* No search results */
+            <View style={styles.emptyContainer}>
+              <Text style={[styles.emptyDescription, { color: themeColors.mutedText }]}>
+                {t('general.noResults')}
+              </Text>
+            </View>
+          ) : (
+            /* Files list */
+            <View>
+              {filteredFiles.map((file, index) => {
+                const fileName = getClientFileName(file);
+                const isLastItem = index === filteredFiles.length - 1;
+                return (
+                  <View key={file.id}>
+                    <ContextMenuWrapper
+                      options={[
+                        {
+                          label: t('clientDetail.files.editFilename'),
+                          icon: { sf: 'pencil', IconComponent: Pencil },
+                          onPress: () => handleEditFilename(file),
+                        },
+                        {
+                          label: t('general.delete'),
+                          icon: { sf: 'trash', IconComponent: Trash2 },
+                          destructive: true,
+                          onPress: () => handleDeleteFileWithConfirmation(file),
+                        },
+                      ]}
+                    >
+                      <SwipeableRow
+                        onDelete={() => handleDeleteFile(file.id)}
+                        onOpen={registerOpenRow}
+                        deleteConfirmTitle={`${t('general.delete')} ${fileName}?`}
+                      >
+                        <PressableScale onPress={() => handleFilePress(file.id)}>
+                          <View style={[styles.fileItem, { backgroundColor: themeColors.backgroundPrimary }]}>
+                            {renderThumbnail(file)}
+                            <View style={styles.fileInfo}>
+                              <Text style={[styles.fileName, { color: themeColors.text }]} numberOfLines={1}>
+                                {fileName}
+                              </Text>
+                              {file.created_at && (
+                                <Text style={[styles.fileDate, { color: themeColors.mutedText }]}>
+                                  {formatDate(file.created_at)}
+                                </Text>
+                              )}
+                            </View>
+                          </View>
+                        </PressableScale>
+                      </SwipeableRow>
+                    </ContextMenuWrapper>
+                    {!isLastItem && (
+                      <View style={styles.separatorContainer}>
+                        <View
+                          style={[
+                            styles.separator,
+                            { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+                          ]}
+                        />
+                      </View>
+                    )}
+                    {isLastItem && <View style={{ height: 24 }} />}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </Pressable>
+      </ScrollView>
+
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+      <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
         <IconButton
           icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}
@@ -269,118 +390,6 @@ export default function ClientFilesScreen() {
           />
         </DropdownMenuWrapper>
       </View>
-
-      {/* Search bar */}
-      <View style={styles.searchContainer}>
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder={t('general.searchPlaceholder')}
-        />
-      </View>
-
-      <Pressable
-        style={styles.contentContainer}
-        onPressIn={() => {
-          if (openRowRef.current) {
-            hadOpenRowRef.current = true;
-            closeOpenRow();
-          } else {
-            hadOpenRowRef.current = false;
-          }
-        }}
-      >
-        {/* Loading state */}
-        {isLoadingFiles && files.length === 0 ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={themeColors.primary} />
-          </View>
-        ) : files.length === 0 ? (
-          /* Empty state */
-          <View style={styles.emptyContainer}>
-            <PlatformIcon sf="doc" IconComponent={File} size={48} color={themeColors.mutedText} />
-            <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
-              {t('clientDetail.files.emptyTitle')}
-            </Text>
-            <Text style={[styles.emptyDescription, { color: themeColors.mutedText }]}>
-              {t('clientDetail.files.emptyDescription')}
-            </Text>
-          </View>
-        ) : filteredFiles.length === 0 && searchQuery.trim() ? (
-          /* No search results */
-          <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyDescription, { color: themeColors.mutedText }]}>
-              {t('general.noResults')}
-            </Text>
-          </View>
-        ) : (
-          /* Files list */
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardDismissMode="on-drag"
-            bounces={false}
-          >
-            {filteredFiles.map((file, index) => {
-              const fileName = getClientFileName(file);
-              const isLastItem = index === filteredFiles.length - 1;
-              return (
-                <View key={file.id}>
-                  <ContextMenuWrapper
-                    options={[
-                      {
-                        label: t('clientDetail.files.editFilename'),
-                        icon: { sf: 'pencil', IconComponent: Pencil },
-                        onPress: () => handleEditFilename(file),
-                      },
-                      {
-                        label: t('general.delete'),
-                        icon: { sf: 'trash', IconComponent: Trash2 },
-                        destructive: true,
-                        onPress: () => handleDeleteFileWithConfirmation(file),
-                      },
-                    ]}
-                  >
-                    <SwipeableRow
-                      onDelete={() => handleDeleteFile(file.id)}
-                      onOpen={registerOpenRow}
-                      deleteConfirmTitle={`${t('general.delete')} ${fileName}?`}
-                    >
-                      <PressableScale onPress={() => handleFilePress(file.id)}>
-                        <View style={[styles.fileItem, { backgroundColor: themeColors.backgroundPrimary }]}>
-                          {renderThumbnail(file)}
-                          <View style={styles.fileInfo}>
-                            <Text style={[styles.fileName, { color: themeColors.text }]} numberOfLines={1}>
-                              {fileName}
-                            </Text>
-                            {file.created_at && (
-                              <Text style={[styles.fileDate, { color: themeColors.mutedText }]}>
-                                {formatDate(file.created_at)}
-                              </Text>
-                            )}
-                          </View>
-                        </View>
-                      </PressableScale>
-                    </SwipeableRow>
-                  </ContextMenuWrapper>
-                  {!isLastItem && (
-                    <View style={styles.separatorContainer}>
-                      <View
-                        style={[
-                          styles.separator,
-                          { backgroundColor: themeColors.mutedText, opacity: 0.2 },
-                        ]}
-                      />
-                    </View>
-                  )}
-                  {isLastItem && <View style={{ height: 24 }} />}
-                </View>
-              );
-            })}
-          </ScrollView>
-        )}
-      </Pressable>
 
       <Dialog
         visible={showErrorDialog}
@@ -421,18 +430,32 @@ export default function ClientFilesScreen() {
           },
         ]}
       />
-    </ScreenWrapper>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
+  screen: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 4,
-    paddingBottom: 8,
     paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h5,

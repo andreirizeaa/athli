@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dialog } from '@/components/ui/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -9,7 +10,7 @@ import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { Card } from '@/components/ui/card';
 import { SettingsOption } from '@/components/ui/settings-option';
 import { PlatformIcon } from '@/components/ui/platform-icon';
@@ -18,6 +19,8 @@ import { getClients, type Client } from '@/services/client-service';
 
 export default function ClientSettingsScreen() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
+    const HEADER_HEIGHT = 52;
     const { id } = useLocalSearchParams<{ id: string }>();
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
@@ -54,8 +57,51 @@ export default function ClientSettingsScreen() {
     };
 
     return (
-        <ScreenWrapper contentContainerStyle={styles.scrollContent} useImageBackground={false}>
-            <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+        <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={[
+                    styles.scrollContent,
+                    { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
+                ]}
+                showsVerticalScrollIndicator={false}
+            >
+                <View style={styles.contentContainer}>
+                    <Card>
+                        <SettingsOption
+                            icon={
+                                <PlatformIcon
+                                    sf="archivebox"
+                                    IconComponent={Archive}
+                                    size={iconSize}
+                                    color={iconColor}
+                                />
+                            }
+                            title={t('clientDetail.settings.archiveClient')}
+                            onPress={handleArchiveClient}
+                            showChevron
+                        />
+                        <Separator />
+                        <SettingsOption
+                            icon={
+                                <PlatformIcon
+                                    sf="person.badge.minus"
+                                    IconComponent={UserMinus}
+                                    size={iconSize}
+                                    color={iconColor}
+                                />
+                            }
+                            title={t('clientDetail.settings.deleteClient')}
+                            onPress={handleDeleteClient}
+                            showChevron
+                        />
+                    </Card>
+                </View>
+            </ScrollView>
+
+            <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+            <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
                 <IconButton
                     icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                     onPress={handleBackPress}
@@ -66,38 +112,6 @@ export default function ClientSettingsScreen() {
                     {t('clientDetail.settings.title')}
                 </Text>
                 <View style={styles.headerRightPlaceholder} />
-            </View>
-
-            <View style={styles.contentContainer}>
-                <Card>
-                    <SettingsOption
-                        icon={
-                            <PlatformIcon
-                                sf="archivebox"
-                                IconComponent={Archive}
-                                size={iconSize}
-                                color={iconColor}
-                            />
-                        }
-                        title={t('clientDetail.settings.archiveClient')}
-                        onPress={handleArchiveClient}
-                        showChevron
-                    />
-                    <Separator />
-                    <SettingsOption
-                        icon={
-                            <PlatformIcon
-                                sf="person.badge.minus"
-                                IconComponent={UserMinus}
-                                size={iconSize}
-                                color={iconColor}
-                            />
-                        }
-                        title={t('clientDetail.settings.deleteClient')}
-                        onPress={handleDeleteClient}
-                        showChevron
-                    />
-                </Card>
             </View>
 
             <Dialog
@@ -143,21 +157,32 @@ export default function ClientSettingsScreen() {
                     },
                 ]}
             />
-        </ScreenWrapper>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    scrollContent: {
-        paddingBottom: 60,
+    screen: {
+        flex: 1,
     },
-    header: {
+    scrollView: {
+        flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
+    },
+    fixedHeader: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingTop: 4,
-        paddingBottom: 8,
         paddingHorizontal: 16,
+        paddingBottom: 8,
+        gap: 8,
+        zIndex: 1001,
     },
     headerTitle: {
         ...typography.h6,

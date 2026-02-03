@@ -21,7 +21,7 @@ import {
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { ChevronDownIcon } from 'lucide-react';
+import { ChevronDownIcon, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { Combobox } from '@/components/ui/combobox';
 import { useCoachClients } from '@/hooks/use-coach-clients';
@@ -56,15 +56,6 @@ export const AddTaskSidePanel = ({ open, onOpenChange, onSave }: AddTaskSidePane
           clientId: z.string().optional(),
           completeBy: z.date().optional(),
         })
-        .refine(
-          (data) => {
-            return data.completeBy !== undefined;
-          },
-          {
-            message: t('home.completeByRequiredError'),
-            path: ['completeBy'],
-          }
-        )
         .refine(
           (data) => {
             if (data.taskType === 'client') {
@@ -102,9 +93,16 @@ export const AddTaskSidePanel = ({ open, onOpenChange, onSave }: AddTaskSidePane
 
   const taskType = form.watch('taskType');
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const handleSave = async (values: TaskFormValues) => {
-    await onSave(values);
-    handleClose();
+    setIsSaving(true);
+    try {
+      await onSave(values);
+      handleClose();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleClose = () => {
@@ -133,10 +131,15 @@ export const AddTaskSidePanel = ({ open, onOpenChange, onSave }: AddTaskSidePane
           <Button
             type="button"
             onClick={form.handleSubmit(handleSave)}
-            disabled={!form.formState.isValid}
+            disabled={!form.formState.isValid || isSaving}
             aria-label={t('general.save')}
             className="gap-2"
           >
+            {isSaving ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Check className="size-4" />
+            )}
             {t('general.save')}
           </Button>
         </div>
@@ -278,10 +281,7 @@ export const AddTaskSidePanel = ({ open, onOpenChange, onSave }: AddTaskSidePane
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  <span>
-                    {t('home.completeBy')}
-                    <RequiredAsterisk />
-                  </span>
+                  <span>{t('home.completeBy')}</span>
                 </FormLabel>
                 <FormControl>
                   <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>

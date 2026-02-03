@@ -436,6 +436,20 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="todos"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="check-ins"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
             name="assistant"
             options={{
               headerShown: false,
@@ -531,6 +545,28 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="library/file-preview"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/todo/add-todo-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/todo/edit-todo-modal"
             options={{
               presentation: 'modal',
               headerShown: false,
@@ -1316,6 +1352,14 @@ function RootLayoutNav() {
               animation: 'slide_from_bottom',
               animationDuration: 200,
               gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="modals/training/workout-preview-modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              animation: 'slide_from_bottom',
             }}
           />
           {/* Profile is now a tab, so profile/profile route is no longer needed */}

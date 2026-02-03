@@ -168,6 +168,8 @@ const calculateLabels = (
   return result;
 };
 
+const HEADER_HEIGHT = 52;
+
 export default function WorkoutReviewModal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -521,30 +523,32 @@ export default function WorkoutReviewModal() {
   if (!workoutData || !workoutStats) {
     return (
       <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
-        <StatusBarBlur blurHeight={20} />
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 32 },
+            { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 32 },
           ]}
         >
-          <View style={styles.scrollingHeader}>
-            <IconButton
-              icon={{ sf: 'xmark', IconComponent: X }}
-              onPress={handleClose}
-              size="md"
-              color={themeColors.text}
-            />
-            <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('training.title')}</Text>
-            <View style={styles.headerSpacer} />
-          </View>
           <View style={styles.emptyContent}>
             <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
               {t('general.noData' as any) || 'No data available'}
             </Text>
           </View>
         </ScrollView>
+
+        <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+        <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
+          <IconButton
+            icon={{ sf: 'xmark', IconComponent: X }}
+            onPress={handleClose}
+            size="md"
+            color={themeColors.text}
+          />
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('training.title')}</Text>
+          <View style={styles.headerSpacer} />
+        </View>
       </View>
     );
   }
@@ -567,30 +571,14 @@ export default function WorkoutReviewModal() {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
-      <StatusBarBlur blurHeight={20} />
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 32 },
+          { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 32 },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header - scrolls with content */}
-        <View style={styles.scrollingHeader}>
-          <IconButton
-            icon={{ sf: 'xmark', IconComponent: X }}
-            onPress={handleClose}
-            size="md"
-            color={themeColors.text}
-          />
-          <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
-            Review {workoutData.name || t('training.title')}
-          </Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
         {/* Readiness Summary */}
         {readinessData && (
           <View style={styles.section}>
@@ -907,6 +895,21 @@ export default function WorkoutReviewModal() {
         </View>
 
       </ScrollView>
+
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+      <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
+        <IconButton
+          icon={{ sf: 'xmark', IconComponent: X }}
+          onPress={handleClose}
+          size="md"
+          color={themeColors.text}
+        />
+        <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
+          Review {workoutData.name || t('training.title')}
+        </Text>
+        <View style={styles.headerSpacer} />
+      </View>
     </View>
   );
 }
@@ -915,11 +918,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollingHeader: {
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h6,

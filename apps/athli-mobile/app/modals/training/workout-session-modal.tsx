@@ -2842,7 +2842,7 @@ export default function WorkoutSessionModal() {
       {bottomNavBar}
 
       {/* Status bar blur overlay */}
-      <StatusBarBlur blurHeight={20} />
+      <StatusBarBlur blurHeight={20} largeHeader />
 
       {/* Superset announcement overlay */}
       <SessionOverlay

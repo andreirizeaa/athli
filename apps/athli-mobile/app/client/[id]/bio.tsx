@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dialog } from '@/components/ui/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -9,7 +10,7 @@ import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { TextAreaInput } from '@/components/ui/form-inputs';
 import { saveAthleteBio } from '@/services/client/client-service';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,6 +21,8 @@ export default function ClientBioScreen() {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const { userId } = useAuth();
+  const insets = useSafeAreaInsets();
+  const HEADER_HEIGHT = 52;
   const iconColor = themeColors.text;
 
   // Get bio from store
@@ -65,8 +68,30 @@ export default function ClientBioScreen() {
   };
 
   return (
-    <ScreenWrapper scrollable={false} useImageBackground={false}>
-      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.content}>
+          <TextAreaInput
+            label={t('clientDetail.overview.bio')}
+            value={editingBio}
+            onChangeText={setEditingBio}
+            placeholder={t('clientDetail.bio.placeholder')}
+            numberOfLines={10}
+            minHeight={250}
+          />
+        </View>
+      </ScrollView>
+
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+      <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
         <IconButton
           icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}
@@ -83,17 +108,6 @@ export default function ClientBioScreen() {
           variant={hasChanges ? 'primary' : 'default'}
           disabled={!hasChanges || isSaving}
           loading={isSaving}
-        />
-      </View>
-
-      <View style={styles.content}>
-        <TextAreaInput
-          label={t('clientDetail.overview.bio')}
-          value={editingBio}
-          onChangeText={setEditingBio}
-          placeholder={t('clientDetail.bio.placeholder')}
-          numberOfLines={10}
-          minHeight={250}
         />
       </View>
 
@@ -118,18 +132,32 @@ export default function ClientBioScreen() {
           },
         ]}
       />
-    </ScreenWrapper>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
+  screen: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 4,
-    paddingBottom: 8,
     paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h5,

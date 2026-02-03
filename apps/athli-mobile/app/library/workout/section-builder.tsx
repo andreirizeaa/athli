@@ -3,13 +3,13 @@ import { StyleSheet, Text, View, Platform, ActivityIndicator } from 'react-nativ
 import { Dialog } from '@/components/ui/dialog';
 import { ChevronLeft, Check, Plus, Repeat, Link as LinkIcon } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference, useColorScheme } from '@/stores';
+import { useThemePreference } from '@/stores';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SectionTypeSelect } from '@/components/ui/form-inputs';
@@ -109,7 +109,6 @@ export default function SectionBuilderScreen() {
     }>();
 
     const { colors: themeColors } = useThemePreference();
-    const colorScheme = useColorScheme();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
     const { triggerSectionSelect, setExercisesSelectCallback, setExerciseSelectCallback, setReorderCallback, setReorderItems } = useModalCallbacks();
@@ -973,54 +972,17 @@ export default function SectionBuilderScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
-            <View style={[styles.fixedHeader, { height: headerHeight }]}>
-                <LinearGradient
-                    colors={
-                        colorScheme === 'dark'
-                            ? ['rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.65)', 'rgba(0, 0, 0, 0.4)', 'rgba(0, 0, 0, 0.15)', 'rgba(0, 0, 0, 0.05)', 'rgba(0, 0, 0, 0)']
-                            : ['rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.65)', 'rgba(255, 255, 255, 0.4)', 'rgba(255, 255, 255, 0.15)', 'rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0)']
-                    }
-                    locations={[0, 0.2, 0.4, 0.65, 0.85, 1]}
-                    style={[styles.headerGradient, { height: gradientHeight }]}
-                    pointerEvents="none"
-                />
-            </View>
-
             <KeyboardAwareScrollView
                 style={styles.scrollView}
                 contentContainerStyle={[
                     styles.scrollContent,
-                    { paddingTop: insets.top }
+                    { paddingTop: insets.top + headerHeight },
                 ]}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 bottomOffset={40}
             >
-                <View style={styles.header}>
-                    <View style={styles.headerLeft}>
-                        <IconButton
-                            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-                            onPress={handleBack}
-                            size="md"
-                            color={themeColors.text}
-                        />
-                        <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>
-                            {state.name || t('library.section.newSection')}
-                        </Text>
-                    </View>
-                    <View style={styles.headerRight}>
-                        <IconButton
-                            icon={{ sf: 'checkmark', IconComponent: Check }}
-                            onPress={handleSave}
-                            size="md"
-                            variant={canSave ? 'primary' : 'default'}
-                            disabled={!canSave}
-                            loading={createSectionMutation.isPending || updateSectionMutation.isPending}
-                        />
-                    </View>
-                </View>
-
-                {/* Section Details */}
+                    {/* Section Details */}
                 <View style={styles.sectionConfig}>
                     <InputBox
                         label={t('library.section.name')}
@@ -1202,6 +1164,32 @@ export default function SectionBuilderScreen() {
                 <View style={{ height: 160 }} />
             </KeyboardAwareScrollView>
 
+            <StatusBarBlur blurHeight={gradientHeight - insets.top} largeHeader />
+
+            <View style={[styles.fixedHeader, { paddingTop: insets.top, height: headerHeight + insets.top }]}>
+                <View style={styles.headerLeft}>
+                    <IconButton
+                        icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+                        onPress={handleBack}
+                        size="md"
+                        color={themeColors.text}
+                    />
+                    <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>
+                        {state.name || t('library.section.newSection')}
+                    </Text>
+                </View>
+                <View style={styles.headerRight}>
+                    <IconButton
+                        icon={{ sf: 'checkmark', IconComponent: Check }}
+                        onPress={handleSave}
+                        size="md"
+                        variant={canSave ? 'primary' : 'default'}
+                        disabled={!canSave}
+                        loading={createSectionMutation.isPending || updateSectionMutation.isPending}
+                    />
+                </View>
+            </View>
+
             <View style={styles.bottomBarWrapper}>
                 <View style={[styles.bottomBarDivider, { backgroundColor: themeColors.border }]} />
                 <View
@@ -1281,25 +1269,25 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+    scrollView: {
+        flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
+        paddingHorizontal: 16,
+        paddingBottom: 32,
+    },
     fixedHeader: {
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        zIndex: 10,
-    },
-    headerGradient: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-    },
-    scrollView: {
-        flex: 1,
-    },
-    scrollContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingBottom: 32,
+        paddingBottom: 12,
+        zIndex: 1001,
     },
     sectionConfig: {
         gap: 16,
@@ -1309,14 +1297,6 @@ const styles = StyleSheet.create({
         height: 1,
         marginHorizontal: -16,
         marginBottom: 24,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingTop: 12,
-        marginBottom: 16,
-        height: 56,
     },
     headerLeft: {
         flexDirection: 'row',

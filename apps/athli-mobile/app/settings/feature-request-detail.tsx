@@ -30,7 +30,6 @@ import {
   useCoachProfileStore,
   useClientProfileStore,
   useAppView,
-  useColorScheme,
 } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
@@ -40,9 +39,6 @@ import { Card } from '@/components/ui/card';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { haptics } from '@/utils/haptics';
-
-const darkBackground = require('@/assets/backgrounds/dark.png');
-const lightBackground = require('@/assets/backgrounds/light.png');
 import {
   getFeatureRequestById,
   getReplies,
@@ -60,8 +56,7 @@ export default function FeatureRequestDetailScreen() {
   const iconColor = themeColors.text;
   const { appView } = useAppView();
   const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme();
-  const backgroundImage = colorScheme === 'dark' ? darkBackground : lightBackground;
+  const HEADER_HEIGHT = 52;
 
   // Get current user info
   const coachProfile = useCoachProfileStore((state) => state.profile);
@@ -354,46 +349,7 @@ export default function FeatureRequestDetailScreen() {
       if (!currentRequest) return null;
 
       return (
-        <>
-          {/* Spacer for status bar */}
-          <View style={{ height: insets.top }} />
-          {/* Header */}
-          <View style={styles.header}>
-            <IconButton
-              icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-              onPress={handleGoBack}
-              size="md"
-              color={iconColor}
-            />
-            <Text
-              style={[
-                styles.headerTitle,
-                { color: themeColors.text },
-                canDeleteRequest && styles.headerTitleLeft,
-              ]}
-              numberOfLines={1}
-            >
-              {currentRequest.title}
-            </Text>
-            <View style={styles.headerRight}>
-              {canDeleteRequest && (
-                <IconButton
-                  icon={{ sf: 'trash', IconComponent: Trash2 }}
-                  onPress={() => setShowDeleteRequestDialog(true)}
-                  size="md"
-                  color={iconColor}
-                />
-              )}
-              <IconButton
-                icon={{ sf: 'bubble.right', IconComponent: MessageCircle }}
-                onPress={handleAddReply}
-                size="md"
-                color={iconColor}
-              />
-            </View>
-          </View>
-
-          <View style={styles.content}>
+        <View style={styles.content}>
             {/* Request Card */}
             <Card style={styles.card}>
               <View style={styles.cardRow}>
@@ -523,26 +479,19 @@ export default function FeatureRequestDetailScreen() {
               )}
             </View>
           </View>
-        </>
       );
     },
     [
-      insets.top,
-      iconColor,
       themeColors,
       currentRequest,
-      canDeleteRequest,
       statusLabel,
       statusColor,
       userTypeLabel,
       replies.length,
       sortAscending,
-      handleGoBack,
-      handleAddReply,
       handleUpvotePress,
       getReplyCountText,
       formatDate,
-      t,
     ]
   );
 
@@ -569,7 +518,7 @@ export default function FeatureRequestDetailScreen() {
   // Loading state
   if (!currentRequest && isLoadingReplies) {
     return (
-      <ScreenWrapper>
+      <ScreenWrapper useImageBackground={false}>
         <View style={styles.header}>
           <IconButton
             icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
@@ -603,7 +552,7 @@ export default function FeatureRequestDetailScreen() {
   // Empty state
   if (!currentRequest) {
     return (
-      <ScreenWrapper>
+      <ScreenWrapper useImageBackground={false}>
         <View style={styles.header}>
           <IconButton
             icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
@@ -627,13 +576,7 @@ export default function FeatureRequestDetailScreen() {
 
   return (
     <>
-      <View style={styles.screen}>
-        <Image
-          source={backgroundImage}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-        />
+      <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
         <FlashList
           data={sortedReplies}
           renderItem={renderReplyItem}
@@ -641,10 +584,45 @@ export default function FeatureRequestDetailScreen() {
           ListHeaderComponent={ListHeader}
           ListEmptyComponent={ListEmpty}
           ListFooterComponent={ListFooter}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingTop: insets.top + HEADER_HEIGHT },
+          ]}
           showsVerticalScrollIndicator={false}
         />
-        <StatusBarBlur />
+
+        <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+        <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
+          <IconButton
+            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+            onPress={handleGoBack}
+            size="md"
+            color={iconColor}
+          />
+          <Text
+            style={[styles.headerTitle, { color: themeColors.text }]}
+            numberOfLines={1}
+          >
+            {currentRequest?.title || t('featureRequests.detailTitle')}
+          </Text>
+          <View style={styles.headerRight}>
+            {canDeleteRequest && (
+              <IconButton
+                icon={{ sf: 'trash', IconComponent: Trash2 }}
+                onPress={() => setShowDeleteRequestDialog(true)}
+                size="md"
+                color={iconColor}
+              />
+            )}
+            <IconButton
+              icon={{ sf: 'bubble.right', IconComponent: MessageCircle }}
+              onPress={handleAddReply}
+              size="md"
+              color={iconColor}
+            />
+          </View>
+        </View>
       </View>
 
       {/* Delete Request Dialog */}
@@ -880,6 +858,19 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 0,
   },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -892,10 +883,6 @@ const styles = StyleSheet.create({
     ...typography.h5,
     flex: 1,
     textAlign: 'center',
-    marginHorizontal: 8,
-  },
-  headerTitleLeft: {
-    textAlign: 'left',
   },
   headerRight: {
     flexDirection: 'row',

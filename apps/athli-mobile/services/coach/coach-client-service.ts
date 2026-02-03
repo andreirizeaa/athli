@@ -197,3 +197,27 @@ export const deleteClient = async (athleteId: string): Promise<void> => {
     body: JSON.stringify({ id: athleteId }) as any,
   });
 };
+
+export interface AtRiskClient {
+  id: string;
+  name: string;
+  avatarUrl: string;
+  lastActivity: string | null;
+}
+
+/**
+ * Service method to get at-risk clients (inactive for more than threshold days)
+ */
+export const getAtRiskClients = async (thresholdDays: number = 5): Promise<AtRiskClient[]> => {
+  const response = await apiFetch<{ data: { clients: any[]; thresholdDays: number } }>('/clients/at-risk', {
+    method: 'POST',
+    body: JSON.stringify({ thresholdDays }) as any,
+  });
+
+  return response.data.clients.map((client) => ({
+    id: client.client_id,
+    name: client.full_name || '',
+    avatarUrl: client.avatar_url || '',
+    lastActivity: client.last_activity || null,
+  }));
+};

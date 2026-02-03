@@ -54,7 +54,7 @@ export default function AddCheckInModal() {
     const isClientPrivate = !isEditing && params.clientId && params.coachId;
     const refreshClientCheckIns = useClientDetailStore((state) => state.refreshSection);
 
-    const [selectedTab, setSelectedTab] = useState<TabKey>(isEditing ? 'new' : 'templates');
+    const [selectedTab, setSelectedTab] = useState<TabKey>('new');
     const underlinePosition = useSharedValue(0);
     const underlineWidth = useSharedValue(0);
     const tabLayoutsRef = useRef<{ [key: string]: { x: number; width: number } }>({});
@@ -532,6 +532,7 @@ export default function AddCheckInModal() {
                                 onChangeText={setName}
                                 placeholder={t('library.addCheckIn.namePlaceholder')}
                                 required
+                                autoFocus
                             />
 
                             {/* Schedule - Optional */}

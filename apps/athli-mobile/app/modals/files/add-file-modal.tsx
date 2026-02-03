@@ -486,7 +486,7 @@ export default function AddFileModal() {
                             onChangeText={setFileName}
                             placeholder={t('files.addFile.fileNamePlaceholder')}
                             required
-                            autoFocus={isEditNameOnly}
+                            autoFocus
                         />
 
                         {/* File Type Selection - Hidden in edit name only mode */}

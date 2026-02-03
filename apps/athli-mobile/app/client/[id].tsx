@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -28,6 +28,7 @@ import {
   Sparkles,
   MessageCircle,
 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PressableScale, PressableOpacity } from 'pressto';
 
@@ -36,9 +37,9 @@ import { haptics } from '@/utils/haptics';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
-import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { createNewChat } from '@/services/chats-service';
 
 type MenuItem = {
@@ -233,11 +234,88 @@ export default function ClientProfileScreen() {
     opacity: skeletonOpacity.value,
   }));
 
+  const insets = useSafeAreaInsets();
+  const HEADER_HEIGHT = 52;
+
   // Loading state - show while client basic info is loading
   if (isLoadingClient && !client) {
     return (
-      <ScreenWrapper useImageBackground={false}>
-        <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Profile Card Skeleton */}
+          <Card variant="profile">
+            <View style={styles.skeletonProfileContent}>
+              <Animated.View
+                style={[
+                  styles.skeletonAvatarLarge,
+                  { backgroundColor: themeColors.border },
+                  skeletonAnimatedStyle,
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.skeletonName,
+                  { backgroundColor: themeColors.border },
+                  skeletonAnimatedStyle,
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.skeletonEditButton,
+                  { backgroundColor: themeColors.border },
+                  skeletonAnimatedStyle,
+                ]}
+              />
+            </View>
+          </Card>
+
+          {/* Menu Items Skeleton */}
+          <View style={styles.menuContainer}>
+            {Array.from({ length: 11 }).map((_, index) => (
+              <View key={index}>
+                <View style={styles.menuItem}>
+                  <View style={styles.menuItemLeft}>
+                    <Animated.View
+                      style={[
+                        styles.skeletonIcon,
+                        { backgroundColor: themeColors.border },
+                        skeletonAnimatedStyle,
+                      ]}
+                    />
+                    <Animated.View
+                      style={[
+                        styles.skeletonMenuTitle,
+                        { backgroundColor: themeColors.border },
+                        skeletonAnimatedStyle,
+                      ]}
+                    />
+                  </View>
+                  <Animated.View
+                    style={[
+                      styles.skeletonChevron,
+                      { backgroundColor: themeColors.border },
+                      skeletonAnimatedStyle,
+                    ]}
+                  />
+                </View>
+                <Separator />
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+
+        {/* Status Bar Blur */}
+        <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+        {/* Fixed Header */}
+        <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
           <IconButton
             icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
             onPress={handleBackPress}
@@ -249,76 +327,25 @@ export default function ClientProfileScreen() {
           </Text>
           <View style={styles.headerPlaceholder} />
         </View>
-
-        {/* Profile Card Skeleton */}
-        <Card variant="profile">
-          <View style={styles.skeletonProfileContent}>
-            <Animated.View
-              style={[
-                styles.skeletonAvatarLarge,
-                { backgroundColor: themeColors.border },
-                skeletonAnimatedStyle,
-              ]}
-            />
-            <Animated.View
-              style={[
-                styles.skeletonName,
-                { backgroundColor: themeColors.border },
-                skeletonAnimatedStyle,
-              ]}
-            />
-            <Animated.View
-              style={[
-                styles.skeletonEditButton,
-                { backgroundColor: themeColors.border },
-                skeletonAnimatedStyle,
-              ]}
-            />
-          </View>
-        </Card>
-
-        {/* Menu Items Skeleton */}
-        <View style={styles.menuContainer}>
-          {Array.from({ length: 11 }).map((_, index) => (
-            <View key={index}>
-              <View style={styles.menuItem}>
-                <View style={styles.menuItemLeft}>
-                  <Animated.View
-                    style={[
-                      styles.skeletonIcon,
-                      { backgroundColor: themeColors.border },
-                      skeletonAnimatedStyle,
-                    ]}
-                  />
-                  <Animated.View
-                    style={[
-                      styles.skeletonMenuTitle,
-                      { backgroundColor: themeColors.border },
-                      skeletonAnimatedStyle,
-                    ]}
-                  />
-                </View>
-                <Animated.View
-                  style={[
-                    styles.skeletonChevron,
-                    { backgroundColor: themeColors.border },
-                    skeletonAnimatedStyle,
-                  ]}
-                />
-              </View>
-              <Separator />
-            </View>
-          ))}
-        </View>
-      </ScreenWrapper>
+      </View>
     );
   }
 
   // Error state
   if (error || !client) {
     return (
-      <ScreenWrapper useImageBackground={false}>
-        <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+        <View style={[styles.errorContainer, { paddingTop: insets.top + HEADER_HEIGHT }]}>
+          <Text style={[styles.errorText, { color: themeColors.mutedText }]}>
+            {error || t('clientDetail.clientNotFound')}
+          </Text>
+        </View>
+
+        {/* Status Bar Blur */}
+        <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+        {/* Fixed Header */}
+        <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
           <IconButton
             icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
             onPress={handleBackPress}
@@ -330,19 +357,116 @@ export default function ClientProfileScreen() {
           </Text>
           <View style={styles.headerPlaceholder} />
         </View>
-        <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: themeColors.mutedText }]}>
-            {error || t('clientDetail.clientNotFound')}
-          </Text>
-        </View>
-      </ScreenWrapper>
+      </View>
     );
   }
 
   return (
-    <ScreenWrapper scrollable={true} useImageBackground={false}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Profile Card */}
+        <Card variant="profile">
+          <View style={styles.avatarLarge}>
+            {client.avatarUrl ? (
+              <Image
+                source={{ uri: client.avatarUrl }}
+                style={styles.avatarLargeImage}
+                contentFit="cover"
+                contentPosition="center"
+                cachePolicy="memory-disk"
+              />
+            ) : (
+              <View style={[styles.avatarLargeImage, styles.avatarPlaceholder, { backgroundColor: themeColors.border }]}>
+                <Text style={[styles.avatarInitial, { color: themeColors.mutedText }]}>
+                  {client.name?.charAt(0)}
+                </Text>
+              </View>
+            )}
+          </View>
+          <Text style={[styles.profileName, { color: themeColors.text }]}>
+            {client.name}
+          </Text>
+          <PressableOpacity
+            style={[
+              styles.editButton,
+              {
+                backgroundColor: themeColors.surfaceSecondary,
+              },
+            ]}
+            onPress={handleEditProfilePress}
+          >
+            <Pencil {...({ size: 16, color: themeColors.primary } as any)} />
+            <Text style={[styles.editButtonText, { color: themeColors.primary }]}>
+              {t('clientDetail.editProfile')}
+            </Text>
+          </PressableOpacity>
+        </Card>
+
+        {/* Training Card */}
+        <View style={styles.trainingCardContainer}>
+          <PressableScale onPress={() => router.push(`/client/${id}/training`)}>
+            <Card style={styles.trainingCard}>
+              <View style={styles.trainingCardRow}>
+                <View style={styles.trainingCardIcon}>
+                  <PlatformIcon
+                    sf="figure.run"
+                    IconComponent={Dumbbell}
+                    size={iconSizes.tabBarIcons}
+                    color={iconColor}
+                  />
+                </View>
+                <Text style={[styles.trainingCardText, { color: themeColors.text }]}>
+                  {t('clientDetail.sections.training')}
+                </Text>
+                <PlatformIcon
+                  sf="chevron.right"
+                  IconComponent={ChevronRight}
+                  size={iconSizes.extraSmallIcons}
+                  color={themeColors.mutedText}
+                />
+              </View>
+            </Card>
+          </PressableScale>
+        </View>
+
+        {/* Menu Items */}
+        <View style={styles.menuContainer}>
+          {menuItems.map((item) => (
+            <View key={item.id}>
+              <PressableScale onPress={() => handleMenuItemPress(item)}>
+                <View style={styles.menuItem}>
+                  <View style={styles.menuItemLeft}>
+                    <PlatformIcon
+                      sf={item.icon.sf}
+                      IconComponent={item.icon.IconComponent}
+                      size={24}
+                      color={iconColor}
+                    />
+                    <Text style={[styles.menuItemTitle, { color: themeColors.text }]}>
+                      {item.title}
+                    </Text>
+                  </View>
+                  <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                </View>
+              </PressableScale>
+              <Separator />
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+
+      {/* Status Bar Blur */}
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+      {/* Fixed Header */}
+      <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
         <IconButton
           icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}
@@ -368,109 +492,32 @@ export default function ClientProfileScreen() {
           />
         </View>
       </View>
-
-      {/* Profile Card */}
-      <Card variant="profile">
-        <View style={styles.avatarLarge}>
-          {client.avatarUrl ? (
-            <Image
-              source={{ uri: client.avatarUrl }}
-              style={styles.avatarLargeImage}
-              contentFit="cover"
-              contentPosition="center"
-              cachePolicy="memory-disk"
-            />
-          ) : (
-            <View style={[styles.avatarLargeImage, styles.avatarPlaceholder, { backgroundColor: themeColors.border }]}>
-              <Text style={[styles.avatarInitial, { color: themeColors.mutedText }]}>
-                {client.name?.charAt(0)}
-              </Text>
-            </View>
-          )}
-        </View>
-        <Text style={[styles.profileName, { color: themeColors.text }]}>
-          {client.name}
-        </Text>
-        <PressableOpacity
-          style={[
-            styles.editButton,
-            {
-              backgroundColor: themeColors.surfaceSecondary,
-            },
-          ]}
-          onPress={handleEditProfilePress}
-        >
-          <Pencil {...({ size: 16, color: themeColors.primary } as any)} />
-          <Text style={[styles.editButtonText, { color: themeColors.primary }]}>
-            {t('clientDetail.editProfile')}
-          </Text>
-        </PressableOpacity>
-      </Card>
-
-      {/* Training Card */}
-      <View style={styles.trainingCardContainer}>
-        <PressableScale onPress={() => router.push(`/client/${id}/training`)}>
-          <Card style={styles.trainingCard}>
-            <View style={styles.trainingCardRow}>
-              <View style={styles.trainingCardIcon}>
-                <PlatformIcon
-                  sf="figure.run"
-                  IconComponent={Dumbbell}
-                  size={iconSizes.tabBarIcons}
-                  color={iconColor}
-                />
-              </View>
-              <Text style={[styles.trainingCardText, { color: themeColors.text }]}>
-                {t('clientDetail.sections.training')}
-              </Text>
-              <PlatformIcon
-                sf="chevron.right"
-                IconComponent={ChevronRight}
-                size={iconSizes.extraSmallIcons}
-                color={themeColors.mutedText}
-              />
-            </View>
-          </Card>
-        </PressableScale>
-      </View>
-
-      {/* Menu Items */}
-      <View style={styles.menuContainer}>
-        {menuItems.map((item) => (
-          <View key={item.id}>
-            <PressableScale onPress={() => handleMenuItemPress(item)}>
-              <View style={styles.menuItem}>
-                <View style={styles.menuItemLeft}>
-                  <PlatformIcon
-                    sf={item.icon.sf}
-                    IconComponent={item.icon.IconComponent}
-                    size={24}
-                    color={iconColor}
-                  />
-                  <Text style={[styles.menuItemTitle, { color: themeColors.text }]}>
-                    {item.title}
-                  </Text>
-                </View>
-                <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
-              </View>
-            </PressableScale>
-            <Separator />
-          </View>
-        ))}
-      </View>
-    </ScreenWrapper>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
+  screen: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 4,
     paddingBottom: 8,
     gap: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h5,
@@ -560,9 +607,7 @@ const styles = StyleSheet.create({
     ...typography.p1,
     flex: 1,
   },
-  menuContainer: {
-    paddingBottom: 40,
-  },
+  menuContainer: {},
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',

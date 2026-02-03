@@ -300,6 +300,7 @@ export default function AddWorkoutModal() {
                             onChangeText={setName}
                             placeholder={t('library.addWorkout.namePlaceholder')}
                             required
+                            autoFocus
                         />
 
                         <TextAreaInput

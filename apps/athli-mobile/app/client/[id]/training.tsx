@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, ScrollView, InteractionManager } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -32,7 +33,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableCalendar } from '@/components/features/calendar/swipeable-calendar';
 import { formatDateDDMMYYYY, formatDateYYYYMMDD } from '@/lib/utils/date-formatters';
-import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { FilledButton } from '@/components/ui/buttons';
 import { Card } from '@/components/ui/card';
 import { ExerciseListPreview, ExercisePreviewItem } from '@/components/features/training/exercise-list-preview';
@@ -561,6 +562,8 @@ const SELECTED_DATE_KEY = '@select_date_modal_selected_date_client';
 
 export default function ClientTrainingScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const HEADER_HEIGHT = 52;
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -892,8 +895,72 @@ export default function ClientTrainingScreen() {
   const pagerKey = `${currentYear}-${currentMonth}`;
 
   return (
-    <ScreenWrapper scrollable={false} useImageBackground={false}>
-      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <View style={[styles.contentWrapper, { paddingTop: insets.top + HEADER_HEIGHT }]}>
+        {/* Content - rendered after navigation completes */}
+        {isReady ? (
+          <>
+            {/* Calendar */}
+            <View style={styles.headerBottomRow}>
+              <SwipeableCalendar
+                selectedDate={selectedDate}
+                onDateSelect={handleDateSelect}
+                onSwipe={handleCalendarSwipe}
+                workoutStatusByDate={workoutStatusByDate}
+              />
+            </View>
+
+            {/* Day Content Pager */}
+            <PagerView
+              key={pagerKey}
+              ref={pagerRef}
+              style={styles.pagerContainer}
+              initialPage={selectedDayIndex}
+              onPageSelected={handlePageSelected}
+              offscreenPageLimit={2}
+            >
+              {daysArray.map((date) => {
+                const dateKey = formatDateDDMMYYYY(date);
+                const workoutsObj = trainingCalendar[dateKey];
+                const dayWorkouts = workoutsObj
+                  ? Object.entries(workoutsObj).map(([key, w]: [string, any]) => ({
+                      ...w,
+                      id: key,
+                      templateId: w.id,
+                    }))
+                  : [];
+                const isFutureOrToday = date.getTime() >= todayTimestamp;
+                const isPast = date.getTime() < todayTimestamp;
+                const isCurrentPageLoading = isLoadingTraining && selectedDate.getTime() === date.getTime();
+
+                return (
+                  <View key={`day-${dateKey}`} style={styles.pageContainer} collapsable={false}>
+                    <WorkoutDayPage
+                      date={date}
+                      workouts={dayWorkouts}
+                      isLoading={isCurrentPageLoading}
+                      isFutureOrToday={isFutureOrToday}
+                      isPast={isPast}
+                      onWorkoutPress={handleWorkoutPress}
+                      onDeleteWorkout={handleDeleteWorkout}
+                      onAddWorkout={handleAddWorkout}
+                      themeColors={themeColors}
+                      t={t}
+                      renderStatusIcon={renderStatusIcon}
+                    />
+                  </View>
+                );
+              })}
+            </PagerView>
+          </>
+        ) : (
+          <TrainingSkeleton themeColors={themeColors} />
+        )}
+      </View>
+
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+      <View style={[styles.fixedHeader, { paddingTop: insets.top, backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton
           icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}
@@ -914,66 +981,6 @@ export default function ClientTrainingScreen() {
           />
         </PressableScale>
       </View>
-
-      {/* Content - rendered after navigation completes */}
-      {isReady ? (
-        <>
-          {/* Calendar */}
-          <View style={styles.headerBottomRow}>
-            <SwipeableCalendar
-              selectedDate={selectedDate}
-              onDateSelect={handleDateSelect}
-              onSwipe={handleCalendarSwipe}
-              workoutStatusByDate={workoutStatusByDate}
-            />
-          </View>
-
-          {/* Day Content Pager */}
-          <PagerView
-            key={pagerKey}
-            ref={pagerRef}
-            style={styles.pagerContainer}
-            initialPage={selectedDayIndex}
-            onPageSelected={handlePageSelected}
-            offscreenPageLimit={2}
-          >
-            {daysArray.map((date) => {
-              const dateKey = formatDateDDMMYYYY(date);
-              const workoutsObj = trainingCalendar[dateKey];
-              const dayWorkouts = workoutsObj
-                ? Object.entries(workoutsObj).map(([key, w]: [string, any]) => ({
-                    ...w,
-                    id: key,
-                    templateId: w.id,
-                  }))
-                : [];
-              const isFutureOrToday = date.getTime() >= todayTimestamp;
-              const isPast = date.getTime() < todayTimestamp;
-              const isCurrentPageLoading = isLoadingTraining && selectedDate.getTime() === date.getTime();
-
-              return (
-                <View key={`day-${dateKey}`} style={styles.pageContainer} collapsable={false}>
-                  <WorkoutDayPage
-                    date={date}
-                    workouts={dayWorkouts}
-                    isLoading={isCurrentPageLoading}
-                    isFutureOrToday={isFutureOrToday}
-                    isPast={isPast}
-                    onWorkoutPress={handleWorkoutPress}
-                    onDeleteWorkout={handleDeleteWorkout}
-                    onAddWorkout={handleAddWorkout}
-                    themeColors={themeColors}
-                    t={t}
-                    renderStatusIcon={renderStatusIcon}
-                  />
-                </View>
-              );
-            })}
-          </PagerView>
-        </>
-      ) : (
-        <TrainingSkeleton themeColors={themeColors} />
-      )}
 
       <Dialog
         visible={showErrorDialog}
@@ -1014,18 +1021,29 @@ export default function ClientTrainingScreen() {
           },
         ]}
       />
-    </ScreenWrapper>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
+  screen: {
+    flex: 1,
+  },
+  contentWrapper: {
+    flex: 1,
+  },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 4,
-    paddingBottom: 8,
     paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   dateButton: {
     flexDirection: 'row',

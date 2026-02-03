@@ -3,14 +3,14 @@ import { StyleSheet, Text, View, Platform, Keyboard, ActivityIndicator } from 'r
 import { Dialog } from '@/components/ui/dialog';
 import { ChevronLeft, Check, Repeat, Plus, Dumbbell, Layers, Link as LinkIcon, Pencil } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference, useColorScheme } from '@/stores';
+import { useThemePreference } from '@/stores';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { PressableScale } from 'pressto';
@@ -87,7 +87,6 @@ export default function WorkoutDetailScreen() {
     // Determine if we're editing a client's workout instance vs a library workout
     const isClientWorkout = !!params.clientId && !!params.clientWorkoutDate;
     const { colors: themeColors } = useThemePreference();
-    const colorScheme = useColorScheme();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
 
@@ -1427,66 +1426,17 @@ export default function WorkoutDetailScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
-            {/* Fixed Header Gradient */}
-            <View style={[styles.fixedHeader, { height: headerHeight }]}>
-                <LinearGradient
-                    colors={
-                        colorScheme === 'dark'
-                            ? ['rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.65)', 'rgba(0, 0, 0, 0.4)', 'rgba(0, 0, 0, 0.15)', 'rgba(0, 0, 0, 0.05)', 'rgba(0, 0, 0, 0)']
-                            : ['rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.65)', 'rgba(255, 255, 255, 0.4)', 'rgba(255, 255, 255, 0.15)', 'rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0)']
-                    }
-                    locations={[0, 0.2, 0.4, 0.65, 0.85, 1]}
-                    style={[styles.headerGradient, { height: gradientHeight }]}
-                    pointerEvents="none"
-                />
-            </View>
-
             <KeyboardAwareScrollView
                 style={styles.scrollView}
                 contentContainerStyle={[
                     styles.scrollContent,
-                    { paddingTop: insets.top }
+                    { paddingTop: insets.top + headerHeight },
                 ]}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 bottomOffset={40}
             >
-                {/* Header - Left-aligned title layout that scrolls with content */}
-                <View style={styles.header}>
-                    <View style={styles.headerLeft}>
-                        <IconButton
-                            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-                            onPress={handleBackPress}
-                            size="md"
-                            color={themeColors.text}
-                        />
-                        <Text
-                            style={[styles.title, { color: themeColors.text }]}
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                        >
-                            {workoutState.meta.name || t('library.workout.newWorkout')}
-                        </Text>
-                    </View>
-                    <View style={styles.headerRight}>
-                        <IconButton
-                            icon={{ sf: 'pencil', IconComponent: Pencil }}
-                            onPress={handleEditMetadata}
-                            size="md"
-                            color={themeColors.text}
-                        />
-                        <IconButton
-                            icon={{ sf: 'checkmark', IconComponent: Check }}
-                            onPress={handleSave}
-                            size="md"
-                            variant={canSave ? 'primary' : 'default'}
-                            disabled={!canSave}
-                            loading={createMutation.isPending || editMutation.isPending || clientWorkoutMutation.isPending}
-                        />
-                    </View>
-                </View>
-
-                {/* Page Content */}
+                    {/* Page Content */}
                 {isLoadingData ? (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color={themeColors.primary} />
@@ -1636,6 +1586,43 @@ export default function WorkoutDetailScreen() {
                     );
                 })}
             </KeyboardAwareScrollView>
+
+            <StatusBarBlur blurHeight={gradientHeight - insets.top} largeHeader />
+
+            <View style={[styles.fixedHeader, { paddingTop: insets.top, height: headerHeight + insets.top }]}>
+                <View style={styles.headerLeft}>
+                    <IconButton
+                        icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+                        onPress={handleBackPress}
+                        size="md"
+                        color={themeColors.text}
+                    />
+                    <Text
+                        style={[styles.title, { color: themeColors.text }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                    >
+                        {workoutState.meta.name || t('library.workout.newWorkout')}
+                    </Text>
+                </View>
+                <View style={styles.headerRight}>
+                    <IconButton
+                        icon={{ sf: 'pencil', IconComponent: Pencil }}
+                        onPress={handleEditMetadata}
+                        size="md"
+                        color={themeColors.text}
+                    />
+                    <IconButton
+                        icon={{ sf: 'checkmark', IconComponent: Check }}
+                        onPress={handleSave}
+                        size="md"
+                        variant={canSave ? 'primary' : 'default'}
+                        disabled={!canSave}
+                        loading={createMutation.isPending || editMutation.isPending || clientWorkoutMutation.isPending}
+                    />
+                </View>
+            </View>
+
             {BottomBar}
 
             <Dialog
@@ -1688,30 +1675,22 @@ const styles = StyleSheet.create({
     scrollView: {
         flex: 1,
     },
+    scrollContent: {
+        flexGrow: 1,
+        paddingHorizontal: 16,
+        paddingBottom: 32,
+    },
     fixedHeader: {
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        zIndex: 10,
-    },
-    headerGradient: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-    },
-    scrollContent: {
-        paddingHorizontal: 16,
-        paddingBottom: 32,
-    },
-    header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingTop: 12,
-        marginBottom: 16,
-        height: 56,
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+        zIndex: 1001,
     },
     headerLeft: {
         flexDirection: 'row',
