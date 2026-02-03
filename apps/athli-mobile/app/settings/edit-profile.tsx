@@ -151,30 +151,28 @@ export default function EditProfileScreen() {
         styles.container,
         {
           backgroundColor: themeColors.backgroundPrimary,
-          paddingTop: insets.top,
           paddingLeft: insets.left,
           paddingRight: insets.right,
         },
       ]}
     >
-      <View style={styles.header}>
-        <IconButton
-          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-          onPress={handleGoBack}
-          size="md"
-          color={themeColors.text}
-        />
-        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-          {t('profile.title')}
-        </Text>
-        <View style={styles.headerPlaceholder} />
-      </View>
-
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.header}>
+          <IconButton
+            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+            onPress={handleGoBack}
+            size="md"
+            color={themeColors.text}
+          />
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+            {t('profile.title')}
+          </Text>
+          <View style={styles.headerPlaceholder} />
+        </View>
         {/* Personal Details */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>
           {t('profile.personalDetails')}
@@ -342,7 +340,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
   },
