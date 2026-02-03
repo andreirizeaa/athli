@@ -13,6 +13,7 @@ import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
 import { useModalCallbacksStore } from '@/stores/useModalCallbacksStore';
 import { IconButton } from '@/components/ui/icon-button';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SegmentedControl, type PhotoView } from '@/components/ui/segmented-control';
 import { haptics } from '@/utils/haptics';
@@ -68,6 +69,7 @@ export default function ComparePhotosScreen() {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
+  const HEADER_HEIGHT = 52;
   const iconColor = themeColors.text;
 
   const [photoView, setPhotoView] = useState<PhotoView>('all');
@@ -513,8 +515,28 @@ export default function ComparePhotosScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top }]}>
-      <View style={styles.header}>
+    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <View style={[styles.container, { paddingTop: insets.top + HEADER_HEIGHT }]}>
+        <View style={styles.filterContainer}>
+          <SegmentedControl
+            segments={photoViewSegments}
+            value={photoView}
+            onChange={(value) => setPhotoView(value as PhotoView)}
+          />
+        </View>
+
+        <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
+
+        <View style={[styles.compareContainer, { paddingBottom: insets.bottom }]}>
+        {renderPhotoPanel(topDate, 'top')}
+        <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
+        {renderPhotoPanel(bottomDate, 'bottom')}
+      </View>
+      </View>
+
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+      <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
         <IconButton
           icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}
@@ -525,22 +547,6 @@ export default function ComparePhotosScreen() {
           {t('clientDetail.photos.compare')}
         </Text>
         <View style={styles.headerSpacer} />
-      </View>
-
-      <View style={styles.filterContainer}>
-        <SegmentedControl
-          segments={photoViewSegments}
-          value={photoView}
-          onChange={(value) => setPhotoView(value as PhotoView)}
-        />
-      </View>
-
-      <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
-
-      <View style={[styles.compareContainer, { paddingBottom: insets.bottom }]}>
-        {renderPhotoPanel(topDate, 'top')}
-        <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
-        {renderPhotoPanel(bottomDate, 'bottom')}
       </View>
 
       <Dialog
@@ -608,16 +614,24 @@ export default function ComparePhotosScreen() {
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
-  header: {
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 4,
-    paddingBottom: 8,
     paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h5,

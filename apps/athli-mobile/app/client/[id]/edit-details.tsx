@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dialog } from '@/components/ui/dialog';
 import { X, Check } from 'lucide-react-native';
@@ -12,7 +13,7 @@ import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import {
   InputBox,
   SelectInput,
@@ -73,6 +74,8 @@ type OriginalValues = {
 
 export default function EditClientDetailsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const HEADER_HEIGHT = 52;
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   // Handle case where id might be an array (Expo Router quirk)
   const clientId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -276,8 +279,12 @@ export default function EditClientDetailsScreen() {
 
   if (isLoading) {
     return (
-      <ScreenWrapper scrollable={false} useImageBackground={false}>
-        <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+        <View style={[styles.loadingContainer, { paddingTop: insets.top + HEADER_HEIGHT }]} />
+
+        <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+        <View style={[styles.fixedHeader, { paddingTop: insets.top, backgroundColor: themeColors.backgroundPrimary }]}>
           <IconButton
             icon={{ sf: 'xmark', IconComponent: X }}
             onPress={handleClose}
@@ -289,14 +296,82 @@ export default function EditClientDetailsScreen() {
           </Text>
           <View style={styles.headerPlaceholder} />
         </View>
-      </ScreenWrapper>
+      </View>
     );
   }
 
   return (
-    <ScreenWrapper scrollable={true} useImageBackground={false}>
+    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Form Content */}
+        <View style={styles.formContainer}>
+          <InputBox
+            label={t('clients.addClientModal.name')}
+            value={name}
+            onChangeText={setName}
+            placeholder={t('clients.addClientModal.namePlaceholder')}
+          />
+
+          <InputBox
+            label={t('clients.addClientModal.email')}
+            value={email}
+            onChangeText={setEmail}
+            placeholder={t('clients.addClientModal.emailPlaceholder')}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+
+          <SelectInput
+            label={t('clients.editClientModal.type')}
+            value={category}
+            onChange={setCategory}
+            options={categoryOptions}
+            placeholder={t('clients.editClientModal.typePlaceholder')}
+          />
+
+          <DateOfBirthInput
+            label={t('clients.editClientModal.dateOfBirth')}
+            value={dateOfBirth}
+            onChange={setDateOfBirth}
+          />
+
+          <HeightInput
+            label={t('clients.editClientModal.height')}
+            value={height}
+            onChangeText={setHeight}
+            placeholder={t('clients.editClientModal.heightPlaceholder')}
+          />
+
+          <CountrySelectorInput
+            label={t('clients.editClientModal.country')}
+            value={country}
+            onChange={setCountry}
+            placeholder={t('clients.editClientModal.countryPlaceholder')}
+            modalTitle={t('clients.editClientModal.countryModalTitle')}
+          />
+
+          <PhoneNumberInput
+            codeLabel={t('clients.editClientModal.code')}
+            numberLabel={t('clients.editClientModal.phoneNumber')}
+            value={phoneNumber}
+            onChange={setPhoneNumber}
+            placeholder={t('clients.editClientModal.phoneNumberPlaceholder')}
+            modalTitle={t('clients.editClientModal.countryModalTitle')}
+          />
+        </View>
+      </ScrollView>
+
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <View style={[styles.fixedHeader, { paddingTop: insets.top, backgroundColor: themeColors.backgroundPrimary }]}>
         <IconButton
           icon={{ sf: 'xmark', IconComponent: X }}
           onPress={handleCloseWithConfirmation}
@@ -318,63 +393,6 @@ export default function EditClientDetailsScreen() {
         ) : (
           <View style={styles.headerPlaceholder} />
         )}
-      </View>
-
-      {/* Form Content */}
-      <View style={styles.formContainer}>
-        <InputBox
-          label={t('clients.addClientModal.name')}
-          value={name}
-          onChangeText={setName}
-          placeholder={t('clients.addClientModal.namePlaceholder')}
-        />
-
-        <InputBox
-          label={t('clients.addClientModal.email')}
-          value={email}
-          onChangeText={setEmail}
-          placeholder={t('clients.addClientModal.emailPlaceholder')}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-
-        <SelectInput
-          label={t('clients.editClientModal.type')}
-          value={category}
-          onChange={setCategory}
-          options={categoryOptions}
-          placeholder={t('clients.editClientModal.typePlaceholder')}
-        />
-
-        <DateOfBirthInput
-          label={t('clients.editClientModal.dateOfBirth')}
-          value={dateOfBirth}
-          onChange={setDateOfBirth}
-        />
-
-        <HeightInput
-          label={t('clients.editClientModal.height')}
-          value={height}
-          onChangeText={setHeight}
-          placeholder={t('clients.editClientModal.heightPlaceholder')}
-        />
-
-        <CountrySelectorInput
-          label={t('clients.editClientModal.country')}
-          value={country}
-          onChange={setCountry}
-          placeholder={t('clients.editClientModal.countryPlaceholder')}
-          modalTitle={t('clients.editClientModal.countryModalTitle')}
-        />
-
-        <PhoneNumberInput
-          codeLabel={t('clients.editClientModal.code')}
-          numberLabel={t('clients.editClientModal.phoneNumber')}
-          value={phoneNumber}
-          onChange={setPhoneNumber}
-          placeholder={t('clients.editClientModal.phoneNumberPlaceholder')}
-          modalTitle={t('clients.editClientModal.countryModalTitle')}
-        />
       </View>
 
       <Dialog
@@ -413,18 +431,35 @@ export default function EditClientDetailsScreen() {
           },
         ]}
       />
-    </ScreenWrapper>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
+  screen: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+  },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 4,
     paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h5,

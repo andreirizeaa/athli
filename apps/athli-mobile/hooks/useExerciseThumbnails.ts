@@ -192,8 +192,9 @@ export const useExerciseThumbnails = <T extends ExerciseWithThumbnail>(
     if (!enabled || filenames.length === 0) return;
 
     // Check if we have new filenames to fetch
+    // Only check global cache and pending fetches - don't use lastFetchedRef to avoid missing retries
     const newFilenames = filenames.filter(
-      (f) => !lastFetchedRef.current.has(f) && !globalThumbnailCache.has(f)
+      (f) => !globalThumbnailCache.has(f) && !pendingFetches.has(f)
     );
 
     if (newFilenames.length === 0) return;
@@ -203,17 +204,21 @@ export const useExerciseThumbnails = <T extends ExerciseWithThumbnail>(
       clearTimeout(debounceTimerRef.current);
     }
 
-    // Debounce to batch rapid changes
+    // Short debounce to batch rapid changes, but not too long to avoid perceived delay
     debounceTimerRef.current = setTimeout(async () => {
       setIsLoading(true);
 
-      // Mark as fetched
-      newFilenames.forEach((f) => lastFetchedRef.current.add(f));
-
       await fetchAndCacheThumbnails(newFilenames);
 
+      // Mark as fetched only AFTER successful fetch
+      newFilenames.forEach((f) => {
+        if (globalThumbnailCache.has(f)) {
+          lastFetchedRef.current.add(f);
+        }
+      });
+
       setIsLoading(false);
-    }, 100);
+    }, 50); // Reduced debounce from 100ms to 50ms for faster response
 
     return () => {
       if (debounceTimerRef.current) {

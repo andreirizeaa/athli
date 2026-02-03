@@ -12,6 +12,19 @@ import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
+
+// Format schedule text for display
+const formatSchedule = (schedule: string | undefined): string => {
+  if (!schedule) return '';
+  const scheduleMap: Record<string, string> = {
+    daily: 'Daily',
+    weekly: 'Weekly',
+    biweekly: 'Bi-weekly',
+    monthly: 'Monthly',
+    manual: 'Manual',
+  };
+  return scheduleMap[schedule.toLowerCase()] || schedule.charAt(0).toUpperCase() + schedule.slice(1);
+};
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
@@ -204,24 +217,23 @@ export const CheckInsTab = () => {
                     {item.name}
                   </Text>
                   <View style={styles.metaRow}>
-                    {item.schedule_config?.frequency && (
-                      <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                        {item.schedule_config.frequency}
-                      </Text>
-                    )}
                     {(() => {
                       const count = item.questionCount ?? item.questions?.length ?? 0;
                       return (
-                        <>
-                          {item.schedule_config?.frequency && (
-                            <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                          )}
-                          <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
-                            {count} {count === 1 ? 'question' : 'questions'}
+                        <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                          <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                            {count} {count === 1 ? t('general.question') : t('general.questions')}
                           </Text>
-                        </>
+                        </View>
                       );
                     })()}
+                    {item.schedule_config?.frequency && (
+                      <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                        <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                          {formatSchedule(item.schedule_config.frequency)}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </View>
                 <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
@@ -308,13 +320,20 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
   metaText: {
     ...typography.p3,
   },
-  metaDot: {
-    marginHorizontal: 6,
-    ...typography.p3,
+  pill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  pillText: {
+    ...typography.p4,
+    fontWeight: '500',
   },
   separatorContainer: {
     paddingLeft: 86,

@@ -59,7 +59,7 @@ export default function AddMetricModal() {
     const isClientAssignment = params.isClientAssignment === 'true';
     const refreshClientMetrics = useClientDetailStore((state) => state.refreshSection);
 
-    const [selectedTab, setSelectedTab] = useState<TabKey>(isEditing ? 'new' : 'templates');
+    const [selectedTab, setSelectedTab] = useState<TabKey>('new');
     const underlinePosition = useSharedValue(0);
     const underlineWidth = useSharedValue(0);
     const tabLayoutsRef = useRef<{ [key: string]: { x: number; width: number } }>({});
@@ -556,6 +556,7 @@ export default function AddMetricModal() {
                                 onChangeText={setName}
                                 placeholder={t('library.addMetric.namePlaceholder')}
                                 required
+                                autoFocus
                             />
 
                             {/* Log Frequency - Optional */}

@@ -125,6 +125,7 @@ export default function ExerciseDetailScreen() {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
+  const HEADER_HEIGHT = 52;
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
 
@@ -447,136 +448,127 @@ export default function ExerciseDetailScreen() {
     <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Content */}
-      {isLoading ? (
-        <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
-          <ActivityIndicator size="large" color={themeColors.primary} />
-        </View>
-      ) : history.length === 0 ? (
-        <View style={[styles.emptyContainer, { paddingTop: insets.top }]}>
-          <View style={styles.header}>
-            <IconButton
-              icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-              onPress={handleBackPress}
-              size="md"
-              color={themeColors.text}
-            />
-            <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
-              {exerciseName}
-            </Text>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 32 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={themeColors.primary} />
           </View>
-          <View style={styles.emptyContent}>
+        ) : history.length === 0 ? (
+          <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
               {t('progress.noExerciseHistory')}
             </Text>
           </View>
-        </View>
-      ) : (
-        <ScrollView
-          style={styles.scrollContent}
-          contentContainerStyle={[styles.scrollContentContainer, { paddingTop: insets.top + 4, paddingBottom: insets.bottom + 32 }]}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <IconButton
-              icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-              onPress={handleBackPress}
-              size="md"
-              color={themeColors.text}
-            />
-            <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
-              {exerciseName}
-            </Text>
-          </View>
+        ) : (
+          <>
+            {/* Variation selector */}
+            {dropdownOptions.length > 1 && (
+              <View style={styles.selectContainer}>
+                <Card style={styles.variationCard}>
+                  <DropdownMenuWrapper options={dropdownOptions}>
+                    <SettingsOption
+                      icon={
+                        Platform.OS === 'ios' ? (
+                          <SymbolView name="square.3.layers.3d" tintColor={iconColor} size={iconSize} type="monochrome" />
+                        ) : (
+                          <Layers size={iconSize} color={iconColor} />
+                        )
+                      }
+                      title={t('progress.variation')}
+                      subtitle={selectedLabel}
+                      subtitleRight
+                      showChevron
+                      chevronSize={14}
+                      chevronIcon={{ sf: 'chevron.down', IconComponent: ChevronDown }}
+                      onPress={() => {}}
+                    />
+                  </DropdownMenuWrapper>
+                </Card>
+              </View>
+            )}
 
-          {/* Variation selector */}
-          {dropdownOptions.length > 1 && (
-            <View style={styles.selectContainer}>
-              <Card style={styles.variationCard}>
-                <DropdownMenuWrapper options={dropdownOptions}>
-                  <SettingsOption
-                    icon={
-                      Platform.OS === 'ios' ? (
-                        <SymbolView name="square.3.layers.3d" tintColor={iconColor} size={iconSize} type="monochrome" />
-                      ) : (
-                        <Layers size={iconSize} color={iconColor} />
-                      )
-                    }
-                    title={t('progress.variation')}
-                    subtitle={selectedLabel}
-                    subtitleRight
-                    showChevron
-                    chevronSize={14}
-                    chevronIcon={{ sf: 'chevron.down', IconComponent: ChevronDown }}
-                    onPress={() => {}}
+            {/* Chart */}
+            <ValueLineChart
+              data={chartData.map((d) => ({ value: d.value, date: d.date }))}
+              name={chartLabel}
+              renderHeaderRight={renderAggregationDropdown}
+              renderFooter={isDualField ? () => (
+                <View style={styles.chartFooter}>
+                  <SegmentedControl
+                    segments={metricSegments}
+                    value={selectedMetric}
+                    onChange={setSelectedMetric}
+                    backgroundColor={isDarkMode ? themeColors.surfaceSecondary : themeColors.surfacePrimary}
+                    noPadding
                   />
-                </DropdownMenuWrapper>
-              </Card>
+                </View>
+              ) : undefined}
+            />
+
+            {/* History section header */}
+            <View style={styles.historyHeader}>
+              <Text style={[styles.historyTitle, { color: themeColors.text }]}>
+                History
+              </Text>
+              <Text style={[styles.historyCount, { color: themeColors.mutedText }]}>
+                {groupedHistory.length} {groupedHistory.length === 1 ? 'session' : 'sessions'}
+              </Text>
             </View>
-          )}
 
-          {/* Chart */}
-          <ValueLineChart
-            data={chartData.map((d) => ({ value: d.value, date: d.date }))}
-            name={chartLabel}
-            renderHeaderRight={renderAggregationDropdown}
-            renderFooter={isDualField ? () => (
-              <View style={styles.chartFooter}>
-                <SegmentedControl
-                  segments={metricSegments}
-                  value={selectedMetric}
-                  onChange={setSelectedMetric}
-                  backgroundColor={isDarkMode ? themeColors.surfaceSecondary : themeColors.surfacePrimary}
-                  noPadding
-                />
-              </View>
-            ) : undefined}
-          />
+            {/* History cards */}
+            {groupedHistory.map((group) => (
+              <Card key={`${group.date}-${group.workoutId}`} style={styles.historyCard}>
+                <View style={styles.historyCardHeader}>
+                  <Text style={[styles.historyDate, { color: themeColors.text }]}>
+                    {formatDate(group.date)}
+                  </Text>
+                  <Text
+                    style={[styles.historyWorkoutName, { color: themeColors.mutedText }]}
+                    numberOfLines={1}
+                  >
+                    {group.workoutName}
+                  </Text>
+                </View>
+                <Separator style={styles.historySeparator} />
+                <View style={styles.setsContainer}>
+                  {group.sets.map((set: any, index: number) => (
+                    <View key={index} style={styles.setRow}>
+                      <Text style={[styles.setNumber, { color: themeColors.mutedText }]}>
+                        {index + 1}.
+                      </Text>
+                      <Text style={[styles.setValue, { color: themeColors.text }]}>
+                        {formatSetValue(set)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </Card>
+            ))}
+          </>
+        )}
+      </ScrollView>
 
-          {/* History section header */}
-          <View style={styles.historyHeader}>
-            <Text style={[styles.historyTitle, { color: themeColors.text }]}>
-              History
-            </Text>
-            <Text style={[styles.historyCount, { color: themeColors.mutedText }]}>
-              {groupedHistory.length} {groupedHistory.length === 1 ? 'session' : 'sessions'}
-            </Text>
-          </View>
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
 
-          {/* History cards */}
-          {groupedHistory.map((group) => (
-            <Card key={`${group.date}-${group.workoutId}`} style={styles.historyCard}>
-              <View style={styles.historyCardHeader}>
-                <Text style={[styles.historyDate, { color: themeColors.text }]}>
-                  {formatDate(group.date)}
-                </Text>
-                <Text
-                  style={[styles.historyWorkoutName, { color: themeColors.mutedText }]}
-                  numberOfLines={1}
-                >
-                  {group.workoutName}
-                </Text>
-              </View>
-              <Separator style={styles.historySeparator} />
-              <View style={styles.setsContainer}>
-                {group.sets.map((set: any, index: number) => (
-                  <View key={index} style={styles.setRow}>
-                    <Text style={[styles.setNumber, { color: themeColors.mutedText }]}>
-                      {index + 1}.
-                    </Text>
-                    <Text style={[styles.setValue, { color: themeColors.text }]}>
-                      {formatSetValue(set)}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </Card>
-          ))}
-        </ScrollView>
-      )}
-
-      <StatusBarBlur />
+      <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
+        <IconButton
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+          onPress={handleBackPress}
+          size="md"
+          color={themeColors.text}
+        />
+        <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
+          {exerciseName}
+        </Text>
+        <View style={styles.headerSpacer} />
+      </View>
     </View>
   );
 }
@@ -585,17 +577,33 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  header: {
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: 8,
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
+    paddingBottom: 8,
     gap: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h5,
     fontWeight: '600',
     flex: 1,
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 44,
   },
   selectContainer: {
     paddingHorizontal: 16,
@@ -627,9 +635,6 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-  },
-  emptyContent: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
@@ -637,12 +642,6 @@ const styles = StyleSheet.create({
   emptyText: {
     ...typography.p1,
     textAlign: 'center',
-  },
-  scrollContent: {
-    flex: 1,
-  },
-  scrollContentContainer: {
-    paddingHorizontal: 0,
   },
   historyHeader: {
     flexDirection: 'row',

@@ -29,6 +29,8 @@ import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
 import { addCheckIn, editCheckInDetails } from '@/services/coach/coach-check-in-service';
+import { addClientCheckIn, convertScheduleToCron } from '@/services/client/client-form-service';
+import { useClientDetailStore } from '@/stores';
 
 type TabKey = 'new' | 'templates';
 
@@ -44,10 +46,15 @@ export default function AddCheckInModal() {
         editingId?: string;
         name?: string;
         description?: string;
+        // Client-specific context (when adding from client detail)
+        clientId?: string;
+        coachId?: string;
     }>();
     const isEditing = !!params.editingId;
+    const isClientPrivate = !isEditing && params.clientId && params.coachId;
+    const refreshClientCheckIns = useClientDetailStore((state) => state.refreshSection);
 
-    const [selectedTab, setSelectedTab] = useState<TabKey>(isEditing ? 'new' : 'templates');
+    const [selectedTab, setSelectedTab] = useState<TabKey>('new');
     const underlinePosition = useSharedValue(0);
     const underlineWidth = useSharedValue(0);
     const tabLayoutsRef = useRef<{ [key: string]: { x: number; width: number } }>({});
@@ -64,14 +71,46 @@ export default function AddCheckInModal() {
     const [errorMessage, setErrorMessage] = useState('');
     const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
+    // Track if user has manually set schedule (vs residual data from store)
+    const userSetScheduleRef = useRef(false);
+
+    // Clear schedule data on mount when not editing
+    useEffect(() => {
+        if (!isEditing) {
+            setScheduleData(null);
+            userSetScheduleRef.current = false;
+        }
+    }, [isEditing, setScheduleData]);
+
     // TanStack Query
     const queryClient = useQueryClient();
 
     const saveMutation = useMutation({
-        mutationFn: isEditing ? editCheckInDetails : addCheckIn,
+        mutationFn: async (data: any) => {
+            if (isEditing) {
+                return editCheckInDetails(data);
+            }
+            // Creating new check-in - check if for client or coach library
+            if (isClientPrivate) {
+                return addClientCheckIn({
+                    name: data.name,
+                    description: data.description,
+                    schedule_config: data.schedule,
+                    cron_expression: data.schedule ? convertScheduleToCron({ type: 'recurring', ...data.schedule }) : undefined,
+                    clientId: params.clientId!,
+                    coachId: params.coachId!,
+                });
+            }
+            // Add to coach library
+            return addCheckIn(data);
+        },
         onSuccess: async () => {
             // Refetch to update the cache and trigger Zustand store update
-            await queryClient.refetchQueries({ queryKey: ['checkIns'] });
+            if (isClientPrivate) {
+                await refreshClientCheckIns('check-ins');
+            } else {
+                await queryClient.refetchQueries({ queryKey: ['checkIns'] });
+            }
             haptics.success();
             handleClose();
         },
@@ -192,9 +231,10 @@ export default function AddCheckInModal() {
             changes = name !== (params.name || '') ||
                 description !== (params.description || '');
         } else {
+            // Only count schedule as a change if user explicitly set it (not residual store data)
             changes = trimmedName.length > 0 ||
                 description.trim().length > 0 ||
-                hasSchedule;
+                (hasSchedule && userSetScheduleRef.current);
         }
 
         return {
@@ -252,6 +292,7 @@ export default function AddCheckInModal() {
                 schedule.specificDay = template.schedule.specificDay;
             }
             setScheduleData(schedule);
+            userSetScheduleRef.current = true;
         } else {
             setScheduleData(null);
         }
@@ -264,6 +305,7 @@ export default function AddCheckInModal() {
         // Set callback to receive schedule data
         setScheduleCallback((data: ScheduleData) => {
             setScheduleData(data);
+            userSetScheduleRef.current = true;
         });
         router.push('/modals/shared/define-schedule-modal');
     }, [router, setScheduleCallback, setScheduleData]);
@@ -490,6 +532,7 @@ export default function AddCheckInModal() {
                                 onChangeText={setName}
                                 placeholder={t('library.addCheckIn.namePlaceholder')}
                                 required
+                                autoFocus
                             />
 
                             {/* Schedule - Optional */}

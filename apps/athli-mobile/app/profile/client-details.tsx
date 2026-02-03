@@ -317,40 +317,38 @@ export default function ClientDetailsScreen() {
         styles.container,
         {
           backgroundColor: themeColors.backgroundPrimary,
-          paddingTop: insets.top,
           paddingLeft: insets.left,
           paddingRight: insets.right,
         },
       ]}
     >
-      <View style={styles.header}>
-        <IconButton
-          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-          onPress={handleBackPress}
-          size="md"
-          color={themeColors.text}
-        />
-        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-          {t('profile.editTitle')}
-        </Text>
-        <IconButton
-          icon={{ sf: 'checkmark', IconComponent: Check }}
-          onPress={handleSave}
-          size="md"
-          variant={canSave ? 'primary' : 'default'}
-          disabled={!canSave}
-          loading={isLoadingProfile}
-        />
-      </View>
-
       <TouchableWithoutFeedback onPress={handleDismissKeyboard} accessible={false}>
         <KeyboardAwareScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           bottomOffset={40}
         >
+          <View style={styles.header}>
+            <IconButton
+              icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+              onPress={handleBackPress}
+              size="md"
+              color={themeColors.text}
+            />
+            <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+              {t('profile.editTitle')}
+            </Text>
+            <IconButton
+              icon={{ sf: 'checkmark', IconComponent: Check }}
+              onPress={handleSave}
+              size="md"
+              variant={canSave ? 'primary' : 'default'}
+              disabled={!canSave}
+              loading={isLoadingProfile}
+            />
+          </View>
 
             <ProfilePictureInput
               label={t('settings.personalDetails.profilePicture')}
@@ -457,7 +455,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
   },

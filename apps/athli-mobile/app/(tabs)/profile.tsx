@@ -140,7 +140,7 @@ export default function ProfileTabScreen() {
 
   return (
     <>
-    <ScreenWrapper contentContainerStyle={{ paddingBottom: 60 }}>
+    <ScreenWrapper tabScreen>
       <View style={styles.content}>
         <View style={styles.titleRow}>
           <Text style={[styles.title, { color: themeColors.text }]}>
@@ -349,7 +349,6 @@ export default function ProfileTabScreen() {
             </View>
           </PressableScale>
         </Card>
-        <View style={{ height: 60 }} />
       </View>
     </ScreenWrapper>
     <Dialog

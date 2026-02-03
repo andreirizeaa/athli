@@ -631,6 +631,42 @@ export const coachClientController = {
      * Filters by date and optionally by status (completed, in_progress, missed)
      * Also fetches workout data from client_training to include in response
      */
+    /**
+     * Get at-risk clients (inactive for more than threshold days)
+     */
+    getAtRiskClients: async (req: Request, res: Response) => {
+        const coachId = getActingCoachId(req);
+        if (!coachId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const { thresholdDays = 5 } = req.body;
+
+        const supabase = getSupabaseClient();
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - thresholdDays);
+
+        const { data: clients, error } = await supabase
+            .from('coach_clients_view')
+            .select('*')
+            .eq('coach_id', coachId)
+            .eq('is_active', true)
+            .eq('is_archived', false)
+            .not('last_activity', 'is', null)
+            .lt('last_activity', cutoffDate.toISOString())
+            .order('last_activity', { ascending: true });
+
+        if (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+
+        success(res, {
+            message: 'At-risk clients retrieved successfully',
+            data: { clients, thresholdDays },
+        });
+    },
+
     getTrainingHistory: async (req: Request, res: Response) => {
         const coachId = getActingCoachId(req);
         const { date, status } = req.body;

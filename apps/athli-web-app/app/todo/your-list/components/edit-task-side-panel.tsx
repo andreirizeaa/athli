@@ -21,7 +21,7 @@ import {
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { ChevronDownIcon, Trash2, Check } from 'lucide-react';
+import { ChevronDownIcon, Trash2, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { YourListTask } from '@/api/coach/coach-todo-service';
 import { Combobox } from '@/components/ui/combobox';
@@ -59,15 +59,6 @@ export const EditTaskSidePanel = ({ open, onOpenChange, task, onSave, onDelete }
           clientId: z.string().optional(),
           completeBy: z.date().optional(),
         })
-        .refine(
-          (data) => {
-            return data.completeBy !== undefined;
-          },
-          {
-            message: t('home.completeByRequiredError'),
-            path: ['completeBy'],
-          }
-        )
         .refine(
           (data) => {
             if (data.taskType === 'client') {
@@ -108,10 +99,9 @@ export const EditTaskSidePanel = ({ open, onOpenChange, task, onSave, onDelete }
   const formValues = form.watch();
   const hasChanges = useMemo(() => {
     if (!task) return false;
-    const dueDateChanged =
-      formValues.completeBy && task.dueDate
-        ? formValues.completeBy.getTime() !== new Date(task.dueDate).getTime()
-        : formValues.completeBy !== undefined;
+    const taskDueTime = task.dueDate ? new Date(task.dueDate).getTime() : null;
+    const formDueTime = formValues.completeBy ? formValues.completeBy.getTime() : null;
+    const dueDateChanged = taskDueTime !== formDueTime;
     return (
       formValues.title !== task.title ||
       formValues.information !== (task.information || '') ||
@@ -128,19 +118,32 @@ export const EditTaskSidePanel = ({ open, onOpenChange, task, onSave, onDelete }
         information: task.information || '',
         taskType: task.type,
         clientId: task.clientId || '',
-        completeBy: new Date(task.dueDate),
+        completeBy: task.dueDate ? new Date(task.dueDate) : undefined,
       });
     }
   }, [task, open, form]);
 
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleSave = async (values: TaskFormValues) => {
-    await onSave(values);
-    handleClose();
+    setIsSaving(true);
+    try {
+      await onSave(values);
+      handleClose();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDelete = async () => {
-    await onDelete();
-    handleClose();
+    setIsDeleting(true);
+    try {
+      await onDelete();
+      handleClose();
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleClose = () => {
@@ -170,20 +173,29 @@ export const EditTaskSidePanel = ({ open, onOpenChange, task, onSave, onDelete }
             type="button"
             variant="outline"
             onClick={handleDelete}
+            disabled={isDeleting || isSaving}
             aria-label={t('general.delete')}
             className="gap-2"
           >
-            <Trash2 className="size-4" />
+            {isDeleting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Trash2 className="size-4" />
+            )}
             {t('general.delete')}
           </Button>
           <Button
             type="button"
             onClick={form.handleSubmit(handleSave)}
-            disabled={!hasChanges || !form.formState.isValid}
+            disabled={!hasChanges || !form.formState.isValid || isSaving || isDeleting}
             aria-label={t('general.save')}
             className="gap-2"
           >
-            <Check className="size-4" />
+            {isSaving ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Check className="size-4" />
+            )}
             {t('general.save')}
           </Button>
         </div>
@@ -326,10 +338,7 @@ export const EditTaskSidePanel = ({ open, onOpenChange, task, onSave, onDelete }
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  <span>
-                    {t('home.completeBy')}
-                    <RequiredAsterisk />
-                  </span>
+                  <span>{t('home.completeBy')}</span>
                 </FormLabel>
                 <FormControl>
                   <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>

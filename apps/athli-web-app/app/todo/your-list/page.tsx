@@ -46,7 +46,7 @@ const YourListPage = () => {
   const [yourListSortOrder, setYourListSortOrder] = useState<'earliest' | 'latest'>('earliest');
 
   const isTaskOverdue = (task: YourListTask): boolean => {
-    if (task.completed) return false;
+    if (task.completed || !task.dueDate) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dueDate = new Date(task.dueDate);
@@ -67,8 +67,11 @@ const YourListPage = () => {
       filtered = filtered.filter((task) => task.type === yourListTaskTypeFilter);
     }
 
-    // Sort by due date
+    // Sort by due date (tasks without due date go last)
     filtered.sort((a, b) => {
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
       const dateA = new Date(a.dueDate).getTime();
       const dateB = new Date(b.dueDate).getTime();
       return yourListSortOrder === 'earliest' ? dateA - dateB : dateB - dateA;
@@ -119,8 +122,8 @@ const YourListPage = () => {
       label: t('home.due'),
       sortable: true,
       width: { class: 'w-[150px]', pixel: '150px' },
-      getSortValue: (row) => new Date(row.dueDate).getTime(),
-      getSearchValue: (row) => formatDueDate(new Date(row.dueDate)),
+      getSortValue: (row) => row.dueDate ? new Date(row.dueDate).getTime() : Infinity,
+      getSearchValue: (row) => row.dueDate ? formatDueDate(new Date(row.dueDate)) : '',
       renderHeader: () => (
         <div className="flex items-center gap-2 justify-end">
           <Calendar className="size-3 text-muted-foreground" />
@@ -128,6 +131,9 @@ const YourListPage = () => {
         </div>
       ),
       renderCell: (row) => {
+        if (!row.dueDate) {
+          return <div className="text-sm whitespace-nowrap text-right text-muted-foreground">—</div>;
+        }
         const isOverdue = isTaskOverdue(row);
         return (
           <div className="text-sm whitespace-nowrap text-right">
@@ -194,7 +200,7 @@ const YourListPage = () => {
       information: values.information,
       type: values.taskType,
       client_id: values.taskType === 'client' ? values.clientId : undefined,
-      due_date: values.completeBy!.toISOString(),
+      due_date: values.completeBy?.toISOString(),
     });
   };
 
@@ -216,7 +222,7 @@ const YourListPage = () => {
         information: values.information,
         type: values.taskType,
         client_id: values.taskType === 'client' ? values.clientId : undefined,
-        due_date: values.completeBy!.toISOString(),
+        due_date: values.completeBy?.toISOString(),
       },
     });
   };

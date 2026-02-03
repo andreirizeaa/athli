@@ -5,11 +5,14 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Check } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Storage } from '@/lib/storage';
 import { IconButton } from '@/components/ui/icon-button';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
+import { hexToRgba } from '@/utils/colorUtils';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useModalCallbacks } from '@/stores';
@@ -116,6 +119,7 @@ type DayCellProps = {
   isSelected: boolean;
   isTodayDate: boolean;
   isFuture: boolean;
+  isPast: boolean;
   isHighlighted: boolean;
   isLastInRow: boolean;
   cellWidth: number;
@@ -135,6 +139,7 @@ const DayCell = ({
   isSelected,
   isTodayDate,
   isFuture,
+  isPast,
   isHighlighted,
   isLastInRow,
   cellWidth,
@@ -145,6 +150,7 @@ const DayCell = ({
   textColor,
   onDayPress,
 }: DayCellProps) => {
+  const isDisabled = isFuture || isPast;
   const isActive = isSelected || isTodayDate;
   const currentCircleSize = isActive ? activeCircleSize : circleSize;
   const highlightRingSize = circleSize + 6;
@@ -167,7 +173,7 @@ const DayCell = ({
     isSelectedWithPhoto && { backgroundColor: greenColor },
     isSelectedWithoutPhoto && { backgroundColor: primaryColor },
     showTodayBorder && { borderWidth: 2, borderColor: primaryColor },
-    isFuture && { opacity: 0.25 },
+    isDisabled && { opacity: 0.25 },
   ];
 
   const textStyle = [
@@ -177,7 +183,7 @@ const DayCell = ({
 
   const cellContent = (
     <View style={styles.dayCellContent}>
-      {isHighlighted && !isFuture && !isSelected && (
+      {isHighlighted && !isDisabled && !isSelected && (
         <View
           style={[
             styles.highlightRing,
@@ -191,7 +197,7 @@ const DayCell = ({
     </View>
   );
 
-  if (isFuture) {
+  if (isDisabled) {
     return <View style={cellStyle}>{cellContent}</View>;
   }
 
@@ -209,6 +215,7 @@ const MemoizedDayCell = React.memo(DayCell, (prevProps, nextProps) => {
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.isTodayDate === nextProps.isTodayDate &&
     prevProps.isFuture === nextProps.isFuture &&
+    prevProps.isPast === nextProps.isPast &&
     prevProps.isHighlighted === nextProps.isHighlighted &&
     prevProps.day === nextProps.day &&
     prevProps.cellWidth === nextProps.cellWidth
@@ -227,6 +234,7 @@ type CalendarMonthPageProps = {
   cellWidth: number;
   gridWidth: number;
   allowFuture: boolean;
+  allowPast: boolean;
   highlightedDates?: Set<string>;
 };
 
@@ -242,6 +250,7 @@ const CalendarMonthPage = React.memo(({
   cellWidth,
   gridWidth,
   allowFuture,
+  allowPast,
   highlightedDates,
 }: CalendarMonthPageProps) => {
   const firstDay = useMemo(() => getFirstDayOfWeek(monthData.year, monthData.month), [monthData.year, monthData.month]);
@@ -257,25 +266,33 @@ const CalendarMonthPage = React.memo(({
       dateKey: string;
       highlightKey: string;
       isFuture: boolean;
+      isPast: boolean;
     }> = [];
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dateKey = makeDateKey(monthData.year, monthData.month, day);
       // Format for highlighted dates: YYYY-MM-DD with zero-padded month and day
       const highlightKey = `${monthData.year}-${String(monthData.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      
+
+      const dayTimestamp = new Date(monthData.year, monthData.month, day).setHours(0, 0, 0, 0);
+
       // Calculate if future using timestamp comparison (only once per day)
       let isFuture = false;
       if (!allowFuture) {
-        const dayTimestamp = new Date(monthData.year, monthData.month, day).setHours(0, 0, 0, 0);
         isFuture = dayTimestamp > todayTimestamp;
       }
 
-      data.push({ day, dateKey, highlightKey, isFuture });
+      // Calculate if past
+      let isPast = false;
+      if (!allowPast) {
+        isPast = dayTimestamp < todayTimestamp;
+      }
+
+      data.push({ day, dateKey, highlightKey, isFuture, isPast });
     }
 
     return data;
-  }, [monthData.year, monthData.month, daysInMonth, allowFuture, todayTimestamp]);
+  }, [monthData.year, monthData.month, daysInMonth, allowFuture, allowPast, todayTimestamp]);
 
   const totalDays = firstDay + daysInMonth;
   const numRows = Math.ceil(totalDays / 7);
@@ -302,7 +319,7 @@ const CalendarMonthPage = React.memo(({
           />
         );
       } else {
-        const { day, dateKey, highlightKey, isFuture } = dayData[dayIndex];
+        const { day, dateKey, highlightKey, isFuture, isPast } = dayData[dayIndex];
         const isSelected = dateKey === selectedDateKey;
         const isTodayDate = dateKey === todayKey;
         const isHighlighted = highlightedDates?.has(highlightKey) ?? false;
@@ -316,6 +333,7 @@ const CalendarMonthPage = React.memo(({
             isSelected={isSelected}
             isTodayDate={isTodayDate}
             isFuture={isFuture}
+            isPast={isPast}
             isHighlighted={isHighlighted}
             isLastInRow={isLastInRow}
             cellWidth={cellWidth}
@@ -354,6 +372,7 @@ const CalendarMonthPage = React.memo(({
     prevProps.cellWidth === nextProps.cellWidth &&
     prevProps.gridWidth === nextProps.gridWidth &&
     prevProps.allowFuture === nextProps.allowFuture &&
+    prevProps.allowPast === nextProps.allowPast &&
     prevProps.highlightedDates === nextProps.highlightedDates &&
     prevProps.onDayPress === nextProps.onDayPress
   );
@@ -392,18 +411,20 @@ WeekdayHeader.displayName = 'WeekdayHeader';
 
 export default function SelectDateModal() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ selectedDate?: string; storageKey?: string; allowFuture?: string; highlightedDates?: string; mode?: string }>();
+  const params = useLocalSearchParams<{ selectedDate?: string; storageKey?: string; allowFuture?: string; allowPast?: string; highlightedDates?: string; mode?: string }>();
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
   const { t } = useTranslations();
   const { triggerDateSelect } = useModalCallbacks();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const pagerRef = useRef<PagerView>(null);
   const isClosingRef = useRef(false);
 
   // Get storage key from params or use default
   const storageKey = params.storageKey || DEFAULT_STORAGE_KEY;
   const allowFuture = params.allowFuture !== 'false';
+  const allowPast = params.allowPast !== 'false';
   const mode = params.mode || 'default'; // 'default' | 'birthdate'
   const showTodayButton = mode !== 'birthdate';
 
@@ -703,15 +724,33 @@ export default function SelectDateModal() {
   }
 
   // Default calendar mode
+  const isAndroid = Platform.OS === 'android';
+  const headerHeight = isAndroid ? 56 + insets.top : 56;
+  const gradientHeight = headerHeight + 12;
+
   const containerStyle: ViewStyle[] = [
     styles.container,
     { paddingBottom: 200 },
-    Platform.OS === 'android' && { backgroundColor: themeColors.backgroundSecondary },
+    isAndroid && { backgroundColor: themeColors.backgroundSecondary },
   ].filter(Boolean) as ViewStyle[];
 
   return (
     <View style={containerStyle}>
-      <View style={styles.header}>
+      {/* Header with gradient for Android */}
+      {isAndroid && (
+        <LinearGradient
+          colors={[
+            hexToRgba(themeColors.backgroundSecondary, 1),
+            hexToRgba(themeColors.backgroundSecondary, 0.85),
+            hexToRgba(themeColors.backgroundSecondary, 0.5),
+            hexToRgba(themeColors.backgroundSecondary, 0),
+          ]}
+          locations={[0, 0.5, 0.8, 1]}
+          style={[styles.headerGradient, { height: gradientHeight }]}
+          pointerEvents="none"
+        />
+      )}
+      <View style={[styles.header, isAndroid && { paddingTop: 12 + insets.top }]}>
         <View style={styles.headerSideLeft}>
           {showTodayButton && (
             <PressableOpacity
@@ -780,6 +819,7 @@ export default function SelectDateModal() {
                   cellWidth={cellWidth}
                   gridWidth={gridWidth}
                   allowFuture={allowFuture}
+                  allowPast={allowPast}
                   highlightedDates={highlightedDates}
                 />
               </View>
@@ -799,6 +839,7 @@ export default function SelectDateModal() {
               cellWidth={cellWidth}
               gridWidth={gridWidth}
               allowFuture={allowFuture}
+              allowPast={allowPast}
               highlightedDates={highlightedDates}
             />
           </View>
@@ -812,6 +853,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  headerGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -819,6 +867,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 8,
+    zIndex: 2,
   },
   headerSideLeft: {
     flex: 1,

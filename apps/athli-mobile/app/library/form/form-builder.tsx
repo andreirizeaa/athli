@@ -1,8 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { StyleSheet, Text, View, Platform, ActivityIndicator, ScrollView } from 'react-native';
 import { Dialog } from '@/components/ui/dialog';
 import { ChevronLeft, Check, Plus, Repeat, Pencil } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PressableScale } from 'pressto';
@@ -13,9 +12,9 @@ import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
-import { useModalCallbacks } from '@/stores';
+import { useModalCallbacks, useClientDetailStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { hexToRgba } from '@/utils/colorUtils';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { QuestionCard } from '@/components/features/form-builder/question-card';
 import {
   getQuestionnaires,
@@ -33,6 +32,7 @@ type FormBuilderParams = {
   formType: 'questionnaire' | 'checkIn';
   formId: string;
   formName: string;
+  clientId?: string;
 };
 
 export default function FormBuilderScreen() {
@@ -45,6 +45,24 @@ export default function FormBuilderScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { setQuestionSelectCallback, setReorderQuestions, setQuestionsReorderCallback } = useModalCallbacks();
+  const refreshSection = useClientDetailStore((state) => state.refreshSection);
+  const clientMetrics = useClientDetailStore((state) => state.metrics);
+
+  // Determine if metrics question type should be hidden
+  // - In library context (no clientId): always hide metrics
+  // - In client context with check-in: only show if client has metrics assigned
+  const hideMetrics = useMemo(() => {
+    // If not in client context (library page), hide metrics
+    if (!params.clientId) {
+      return true;
+    }
+    // If in client context with check-in, only show metrics if client has metrics
+    if (params.formType === 'checkIn') {
+      return clientMetrics.length === 0;
+    }
+    // For questionnaires in client context, show metrics
+    return false;
+  }, [params.clientId, params.formType, clientMetrics.length]);
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isDirty, setIsDirty] = useState(false);
@@ -106,6 +124,10 @@ export default function FormBuilderScreen() {
     },
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: [isQuestionnaire ? 'questionnaires' : 'checkIns'] });
+      // If coming from client context, also refresh client's forms data
+      if (params.clientId) {
+        refreshSection(isQuestionnaire ? 'questionnaires' : 'check-ins');
+      }
       haptics.success();
       setIsDirty(false);
       router.back();
@@ -173,9 +195,10 @@ export default function FormBuilderScreen() {
         formId: params.formId,
         hasProgressPhoto: hasProgressPhoto ? 'true' : 'false',
         usedMetricIds: JSON.stringify(usedMetricIds),
+        hideMetrics: hideMetrics ? 'true' : 'false',
       },
     });
-  }, [params.formType, params.formId, questions, router, setQuestionSelectCallback]);
+  }, [params.formType, params.formId, questions, router, setQuestionSelectCallback, hideMetrics]);
 
   const handleEditQuestion = useCallback((question: Question, index: number) => {
     // Set callback to receive edited question from modal
@@ -212,6 +235,7 @@ export default function FormBuilderScreen() {
         questionRequired: question.required ? 'true' : 'false',
         hasProgressPhoto: hasProgressPhoto ? 'true' : 'false',
         usedMetricIds: JSON.stringify(usedMetricIds),
+        hideMetrics: hideMetrics ? 'true' : 'false',
         ...(question.options && { questionOptions: JSON.stringify(question.options) }),
         ...(question.scaleFrom && { questionScaleFrom: question.scaleFrom }),
         ...(question.scaleTo && { questionScaleTo: question.scaleTo }),
@@ -220,7 +244,7 @@ export default function FormBuilderScreen() {
         ...(question.metricName && { questionMetricName: question.metricName }),
       },
     });
-  }, [params.formType, params.formId, questions, router, setQuestionSelectCallback]);
+  }, [params.formType, params.formId, questions, router, setQuestionSelectCallback, hideMetrics]);
 
   const handleDeleteQuestion = useCallback((index: number) => {
     setQuestions(prev => prev.filter((_, i) => i !== index));
@@ -290,61 +314,49 @@ export default function FormBuilderScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
-      <View style={[styles.fixedHeader, { height: headerHeight }]}>
-        <LinearGradient
-          colors={[
-            hexToRgba(themeColors.backgroundPrimary, 1),
-            hexToRgba(themeColors.backgroundPrimary, 0.85),
-            hexToRgba(themeColors.backgroundPrimary, 0.5),
-            hexToRgba(themeColors.backgroundPrimary, 0),
-          ]}
-          locations={[0, 0.5, 0.8, 1]}
-          style={[styles.headerGradient, { height: gradientHeight }]}
-          pointerEvents="none"
-        />
-      </View>
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: insets.top }
+          { paddingTop: insets.top + headerHeight },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.header}>
-          <IconButton
-            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-            onPress={handleBack}
-            size="md"
-            color={themeColors.text}
-          />
-          <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>
-            {formName || t('library.formBuilder.title')}
-          </Text>
-          <View style={styles.headerActions}>
-            <IconButton
-              icon={{ sf: 'pencil', IconComponent: Pencil }}
-              onPress={handleEditMetadata}
-              size="md"
-              color={themeColors.text}
-            />
-            <IconButton
-              icon={{ sf: 'checkmark', IconComponent: Check }}
-              onPress={handleSave}
-              size="md"
-              variant={isDirty ? 'primary' : 'default'}
-              disabled={!isDirty}
-              loading={saveQuestionsMutation.isPending}
-            />
-          </View>
-        </View>
-
         {renderQuestionsList()}
 
         <View style={{ height: 160 }} />
       </ScrollView>
+
+      <StatusBarBlur blurHeight={gradientHeight - insets.top} largeHeader />
+
+      <View style={[styles.fixedHeader, { paddingTop: insets.top, height: headerHeight + insets.top }]}>
+        <IconButton
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+          onPress={handleBack}
+          size="md"
+          color={themeColors.text}
+        />
+        <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>
+          {formName || t('library.formBuilder.title')}
+        </Text>
+        <View style={styles.headerActions}>
+          <IconButton
+            icon={{ sf: 'pencil', IconComponent: Pencil }}
+            onPress={handleEditMetadata}
+            size="md"
+            color={themeColors.text}
+          />
+          <IconButton
+            icon={{ sf: 'checkmark', IconComponent: Check }}
+            onPress={handleSave}
+            size="md"
+            variant={isDirty ? 'primary' : 'default'}
+            disabled={!isDirty}
+            loading={saveQuestionsMutation.isPending}
+          />
+        </View>
+      </View>
 
       <View style={styles.bottomBarWrapper}>
         <View style={[styles.bottomBarDivider, { backgroundColor: themeColors.border }]} />
@@ -420,33 +432,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 32,
+  },
   fixedHeader: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 10,
-  },
-  headerGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
-  },
-  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 12,
-    marginBottom: 16,
-    height: 56,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
     gap: 12,
+    zIndex: 1001,
   },
   title: {
     ...typography.h6,

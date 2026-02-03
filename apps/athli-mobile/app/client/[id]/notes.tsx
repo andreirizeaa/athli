@@ -1,17 +1,18 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { StyleSheet, Text, View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SquircleView from 'react-native-fast-squircle';
 
 import { Dialog } from '@/components/ui/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, Notebook, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, Plus, Notebook } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useThemePreference, useTranslations, useClientDetailStore, useCoachProfileStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SearchBar } from '@/components/ui/search-bar';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
@@ -34,6 +35,8 @@ const fuzzyMatch = (text: string, query: string): boolean => {
 
 export default function ClientNotesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const HEADER_HEIGHT = 52;
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -132,13 +135,11 @@ export default function ClientNotesScreen() {
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
-    return date.toLocaleDateString(undefined, {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
   };
 
   const renderNote = useCallback(({ item, index, isLastItem }: { item: typeof notes[0]; index: number; isLastItem: boolean }) => (
@@ -159,19 +160,22 @@ export default function ClientNotesScreen() {
               />
             </SquircleView>
             <View style={styles.noteContent}>
-              <Text style={[styles.noteTitle, { color: themeColors.text }]} numberOfLines={1}>
-                {item.title}
-              </Text>
+              <View style={styles.noteHeader}>
+                <Text style={[styles.noteTitle, { color: themeColors.text }]} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <View style={[styles.datePill, { borderColor: themeColors.mutedText }]}>
+                  <Text style={[styles.dateText, { color: themeColors.mutedText }]}>
+                    {formatDate(item.createdAt)}
+                  </Text>
+                </View>
+              </View>
               {item.body ? (
                 <Text style={[styles.noteText, { color: themeColors.mutedText }]} numberOfLines={2}>
                   {item.body}
                 </Text>
               ) : null}
-              <Text style={[styles.noteDate, { color: themeColors.mutedText }]}>
-                {formatDate(item.createdAt)}
-              </Text>
             </View>
-            <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
           </View>
         </PressableScale>
       </SwipeableRow>
@@ -190,27 +194,16 @@ export default function ClientNotesScreen() {
   ), [themeColors, handleNotePress, handleDeleteNote, registerOpenRow, formatDate, t]);
 
   return (
-    <ScreenWrapper scrollable={false} useImageBackground={false}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
-          <IconButton
-            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-            onPress={handleBackPress}
-            size="md"
-            color={iconColor}
-          />
-          <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-            {t('clientDetail.sections.notes')}
-          </Text>
-          <IconButton
-            icon={{ sf: 'plus', IconComponent: Plus }}
-            onPress={handleAddNote}
-            size="md"
-            color={iconColor}
-          />
-        </View>
-
+    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+      >
         {/* Search bar */}
         <View style={styles.searchContainer}>
           <SearchBar
@@ -258,52 +251,77 @@ export default function ClientNotesScreen() {
             </View>
           ) : (
             /* Notes list */
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-              keyboardDismissMode="on-drag"
-              bounces={false}
-            >
+            <View>
               {filteredNotes.map((note, index) => (
                 <View key={note.id}>
                   {renderNote({ item: note, index, isLastItem: index === filteredNotes.length - 1 })}
                 </View>
               ))}
-            </ScrollView>
+            </View>
           )}
         </Pressable>
+      </ScrollView>
 
-        <Dialog
-          visible={showErrorDialog}
-          onClose={() => setShowErrorDialog(false)}
-          title={t('general.error')}
-          message={t('general.errorDeleting')}
-          showCloseIcon={false}
-          buttons={[
-            {
-              label: t('general.ok'),
-              onPress: () => setShowErrorDialog(false),
-              variant: 'primary',
-            },
-          ]}
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+      <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
+        <IconButton
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+          onPress={handleBackPress}
+          size="md"
+          color={iconColor}
+        />
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+          {t('clientDetail.sections.notes')}
+        </Text>
+        <IconButton
+          icon={{ sf: 'plus', IconComponent: Plus }}
+          onPress={handleAddNote}
+          size="md"
+          color={iconColor}
         />
       </View>
-    </ScreenWrapper>
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={t('general.errorDeleting')}
+        showCloseIcon={false}
+        buttons={[
+          {
+            label: t('general.ok'),
+            onPress: () => setShowErrorDialog(false),
+            variant: 'primary',
+          },
+        ]}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
   },
-  header: {
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 4,
     paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h5,
@@ -340,23 +358,15 @@ const styles = StyleSheet.create({
     ...typography.p2,
     textAlign: 'center',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
   noteItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingVertical: 8,
     paddingHorizontal: 16,
-    gap: 12,
   },
   noteIconContainer: {
-    width: 58,
-    height: 58,
+    width: 54,
+    height: 54,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -364,22 +374,38 @@ const styles = StyleSheet.create({
   },
   noteContent: {
     flex: 1,
-    marginRight: 12,
-    gap: 4,
+    justifyContent: 'flex-start',
+  },
+  noteHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 4,
   },
   noteTitle: {
-    ...typography.p2,
-    fontWeight: '500',
+    ...typography.h7,
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 8,
   },
   noteText: {
     ...typography.p3,
-    fontWeight: '400',
   },
-  noteDate: {
+  datePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexShrink: 0,
+  },
+  dateText: {
     ...typography.p4,
+    fontWeight: '500',
   },
   separatorContainer: {
-    paddingLeft: 86,
+    paddingLeft: 82, // 16 (paddingHorizontal) + 54 (icon) + 12 (marginRight)
     paddingRight: 16,
   },
   separator: {
