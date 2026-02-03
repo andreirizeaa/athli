@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dialog } from '@/components/ui/dialog';
 import { ChevronLeft, MoreHorizontal, TrendingUp, TrendingDown, Calculator, Activity, Target, Flame, Pencil, Plus, Trash2 } from 'lucide-react-native';
@@ -10,7 +11,7 @@ import { typography } from '@/constants/typography';
 import { useTranslations, useClientDetailStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { PlatformIcon } from '@/components/ui/platform-icon';
-import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import {
     SegmentedControl,
     filterLogsByTimeRange,
@@ -28,6 +29,8 @@ import { haptics } from '@/utils/haptics';
 
 export default function HabitDetailScreen() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
+    const HEADER_HEIGHT = 52;
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const { appView } = useAppView();
@@ -224,9 +227,26 @@ export default function HabitDetailScreen() {
 
     if (!habit) {
         return (
-            <ScreenWrapper useImageBackground={false}>
+            <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
                 <Stack.Screen options={{ headerShown: false }} />
-                <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={[
+                        styles.scrollContent,
+                        { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
+                    ]}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.emptyContainer}>
+                        <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
+                            {t('clientDetail.habitDetail.notFound')}
+                        </Text>
+                    </View>
+                </ScrollView>
+
+                <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+                <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
                     <IconButton
                         icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                         onPress={handleBackPress}
@@ -238,20 +258,195 @@ export default function HabitDetailScreen() {
                     </Text>
                     <View style={{ width: 44 }} />
                 </View>
-                <View style={styles.emptyContainer}>
-                    <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
-                        {t('clientDetail.habitDetail.notFound')}
-                    </Text>
-                </View>
-            </ScreenWrapper>
+            </View>
         );
     }
 
     return (
-        <ScreenWrapper useImageBackground={false}>
+        <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
             <Stack.Screen options={{ headerShown: false }} />
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={[
+                    styles.scrollContent,
+                    { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
+                ]}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Time Range Filter */}
+                <SegmentedControl
+                    segments={timeRangeSegments}
+                    value={timeRange}
+                    onChange={(value) => setTimeRange(value as TimeRange)}
+                />
+
+                {/* Stats Row 1: Average & Delta */}
+                <View style={styles.statsRow}>
+                    {/* Average Card */}
+                    <FlipCard
+                        frontContent={
+                            <Card variant="stat" style={styles.statCardFront}>
+                                <View style={[
+                                    styles.statIconContainer,
+                                    { backgroundColor: hexToRgba(themeColors.primary, 0.15) }
+                                ]}>
+                                    <Calculator {...({ size: 18, color: themeColors.primary } as any)} />
+                                </View>
+                                <View style={styles.statValueRow}>
+                                    <Text style={[styles.statValue, { color: themeColors.text }]}>
+                                        {displayAverage}
+                                    </Text>
+                                    {habit.unit && (
+                                        <Text style={[styles.statUnit, { color: themeColors.mutedText }]}>
+                                            {habit.unit}
+                                        </Text>
+                                    )}
+                                </View>
+                                <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
+                                    {t('clientDetail.habitDetail.average')}
+                                </Text>
+                            </Card>
+                        }
+                        backContent={
+                            <Card variant="stat" style={styles.statCardBack}>
+                                <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
+                                    {t('clientDetail.habitDetail.descriptions.average')}
+                                </Text>
+                            </Card>
+                        }
+                    />
+
+                    {/* Delta Card */}
+                    <FlipCard
+                        frontContent={
+                            <Card variant="stat" style={styles.statCardFront}>
+                                <View style={[
+                                    styles.statIconContainer,
+                                    { backgroundColor: delta === null || delta.value === 0
+                                        ? hexToRgba(themeColors.primary, 0.15)
+                                        : delta.isUp
+                                            ? 'rgba(34, 197, 94, 0.15)'
+                                            : 'rgba(239, 68, 68, 0.15)'
+                                    }
+                                ]}>
+                                    {delta !== null && delta.value !== 0 ? (
+                                        delta.isUp ? (
+                                            <TrendingUp {...({ size: 18, color: '#22c55e' } as any)} />
+                                        ) : (
+                                            <TrendingDown {...({ size: 18, color: '#ef4444' } as any)} />
+                                        )
+                                    ) : (
+                                        <Activity {...({ size: 18, color: themeColors.primary } as any)} />
+                                    )}
+                                </View>
+                                <Text style={[
+                                    styles.statValue,
+                                    { color: delta === null || delta.value === 0
+                                        ? themeColors.text
+                                        : delta.isUp
+                                            ? '#22c55e'
+                                            : '#ef4444'
+                                    }
+                                ]}>
+                                    {displayDelta}%
+                                </Text>
+                                <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
+                                    {t('clientDetail.habitDetail.delta')}
+                                </Text>
+                            </Card>
+                        }
+                        backContent={
+                            <Card variant="stat" style={styles.statCardBack}>
+                                <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
+                                    {t('clientDetail.habitDetail.descriptions.delta')}
+                                </Text>
+                            </Card>
+                        }
+                    />
+                </View>
+
+                {/* Stats Row 2: Completion Rate & Current Streak */}
+                <View style={styles.statsRow}>
+                    {/* Completion Rate Card */}
+                    <FlipCard
+                        frontContent={
+                            <Card variant="stat" style={styles.statCardFront}>
+                                <View style={[styles.statIconContainer, { backgroundColor: completionRateColors.bg }]}>
+                                    <Target {...({ size: 18, color: completionRateColors.text } as any)} />
+                                </View>
+                                <Text style={[styles.statValue, { color: completionRateColors.text }]}>
+                                    {displayCompletionRate}%
+                                </Text>
+                                <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
+                                    {t('clientDetail.habitDetail.completionRate')}
+                                </Text>
+                            </Card>
+                        }
+                        backContent={
+                            <Card variant="stat" style={styles.statCardBack}>
+                                <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
+                                    {t('clientDetail.habitDetail.descriptions.completionRate')}
+                                </Text>
+                            </Card>
+                        }
+                    />
+
+                    {/* Current Streak Card */}
+                    <FlipCard
+                        frontContent={
+                            <Card variant="stat" style={styles.statCardFront}>
+                                <View style={[styles.statIconContainer, { backgroundColor: 'rgba(249, 115, 22, 0.15)' }]}>
+                                    <PlatformIcon
+                                        sf="flame.fill"
+                                        IconComponent={Flame}
+                                        size={18}
+                                        color="#f97316"
+                                    />
+                                </View>
+                                <Text style={[styles.statValue, { color: themeColors.text }]}>
+                                    {displayStreak}
+                                </Text>
+                                <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
+                                    {t('clientDetail.habitDetail.currentStreak')}
+                                </Text>
+                            </Card>
+                        }
+                        backContent={
+                            <Card variant="stat" style={styles.statCardBack}>
+                                <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
+                                    {t('clientDetail.habitDetail.descriptions.currentStreak')}
+                                </Text>
+                            </Card>
+                        }
+                    />
+                </View>
+
+                {/* Value Chart - use TargetLineChart if habit has a target amount and values */}
+                {habit.amount && averageValue !== null ? (
+                    <TargetLineChart
+                        data={chartData}
+                        targetValue={habit.amount}
+                        unit={habit.unit}
+                    />
+                ) : (
+                    <ValueLineChart data={chartData} />
+                )}
+
+                {/* Logs List */}
+                <LogsList
+                    data={sortedLogs}
+                    unit={habit.unit}
+                    isHabit
+                    targetAmount={habit.amount}
+                    clientId={clientId}
+                    assignmentId={habit.assignment_id}
+                />
+            </ScrollView>
+
+            <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
             {/* Header */}
-            <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+            <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
                 <IconButton
                     icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                     onPress={handleBackPress}
@@ -280,175 +475,6 @@ export default function HabitDetailScreen() {
                 )}
             </View>
 
-            {/* Time Range Filter */}
-            <SegmentedControl
-                segments={timeRangeSegments}
-                value={timeRange}
-                onChange={(value) => setTimeRange(value as TimeRange)}
-            />
-
-            {/* Stats Row 1: Average & Delta */}
-            <View style={styles.statsRow}>
-                {/* Average Card */}
-                <FlipCard
-                    frontContent={
-                        <Card variant="stat" style={styles.statCardFront}>
-                            <View style={[
-                                styles.statIconContainer,
-                                { backgroundColor: hexToRgba(themeColors.primary, 0.15) }
-                            ]}>
-                                <Calculator {...({ size: 18, color: themeColors.primary } as any)} />
-                            </View>
-                            <View style={styles.statValueRow}>
-                                <Text style={[styles.statValue, { color: themeColors.text }]}>
-                                    {displayAverage}
-                                </Text>
-                                {habit.unit && (
-                                    <Text style={[styles.statUnit, { color: themeColors.mutedText }]}>
-                                        {habit.unit}
-                                    </Text>
-                                )}
-                            </View>
-                            <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
-                                {t('clientDetail.habitDetail.average')}
-                            </Text>
-                        </Card>
-                    }
-                    backContent={
-                        <Card variant="stat" style={styles.statCardBack}>
-                            <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
-                                {t('clientDetail.habitDetail.descriptions.average')}
-                            </Text>
-                        </Card>
-                    }
-                />
-
-                {/* Delta Card */}
-                <FlipCard
-                    frontContent={
-                        <Card variant="stat" style={styles.statCardFront}>
-                            <View style={[
-                                styles.statIconContainer,
-                                { backgroundColor: delta === null || delta.value === 0
-                                    ? hexToRgba(themeColors.primary, 0.15)
-                                    : delta.isUp
-                                        ? 'rgba(34, 197, 94, 0.15)'
-                                        : 'rgba(239, 68, 68, 0.15)'
-                                }
-                            ]}>
-                                {delta !== null && delta.value !== 0 ? (
-                                    delta.isUp ? (
-                                        <TrendingUp {...({ size: 18, color: '#22c55e' } as any)} />
-                                    ) : (
-                                        <TrendingDown {...({ size: 18, color: '#ef4444' } as any)} />
-                                    )
-                                ) : (
-                                    <Activity {...({ size: 18, color: themeColors.primary } as any)} />
-                                )}
-                            </View>
-                            <Text style={[
-                                styles.statValue,
-                                { color: delta === null || delta.value === 0
-                                    ? themeColors.text
-                                    : delta.isUp
-                                        ? '#22c55e'
-                                        : '#ef4444'
-                                }
-                            ]}>
-                                {displayDelta}%
-                            </Text>
-                            <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
-                                {t('clientDetail.habitDetail.delta')}
-                            </Text>
-                        </Card>
-                    }
-                    backContent={
-                        <Card variant="stat" style={styles.statCardBack}>
-                            <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
-                                {t('clientDetail.habitDetail.descriptions.delta')}
-                            </Text>
-                        </Card>
-                    }
-                />
-            </View>
-
-            {/* Stats Row 2: Completion Rate & Current Streak */}
-            <View style={styles.statsRow}>
-                {/* Completion Rate Card */}
-                <FlipCard
-                    frontContent={
-                        <Card variant="stat" style={styles.statCardFront}>
-                            <View style={[styles.statIconContainer, { backgroundColor: completionRateColors.bg }]}>
-                                <Target {...({ size: 18, color: completionRateColors.text } as any)} />
-                            </View>
-                            <Text style={[styles.statValue, { color: completionRateColors.text }]}>
-                                {displayCompletionRate}%
-                            </Text>
-                            <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
-                                {t('clientDetail.habitDetail.completionRate')}
-                            </Text>
-                        </Card>
-                    }
-                    backContent={
-                        <Card variant="stat" style={styles.statCardBack}>
-                            <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
-                                {t('clientDetail.habitDetail.descriptions.completionRate')}
-                            </Text>
-                        </Card>
-                    }
-                />
-
-                {/* Current Streak Card */}
-                <FlipCard
-                    frontContent={
-                        <Card variant="stat" style={styles.statCardFront}>
-                            <View style={[styles.statIconContainer, { backgroundColor: 'rgba(249, 115, 22, 0.15)' }]}>
-                                <PlatformIcon
-                                    sf="flame.fill"
-                                    IconComponent={Flame}
-                                    size={18}
-                                    color="#f97316"
-                                />
-                            </View>
-                            <Text style={[styles.statValue, { color: themeColors.text }]}>
-                                {displayStreak}
-                            </Text>
-                            <Text style={[styles.statLabel, { color: themeColors.mutedText }]}>
-                                {t('clientDetail.habitDetail.currentStreak')}
-                            </Text>
-                        </Card>
-                    }
-                    backContent={
-                        <Card variant="stat" style={styles.statCardBack}>
-                            <Text style={[styles.descriptionText, { color: themeColors.mutedText }]}>
-                                {t('clientDetail.habitDetail.descriptions.currentStreak')}
-                            </Text>
-                        </Card>
-                    }
-                />
-            </View>
-
-            {/* Value Chart - use TargetLineChart if habit has a target amount and values */}
-            {habit.amount && averageValue !== null ? (
-                <TargetLineChart
-                    data={chartData}
-                    targetValue={habit.amount}
-                    unit={habit.unit}
-                />
-            ) : (
-                <ValueLineChart data={chartData} />
-            )}
-
-            {/* Logs List */}
-            <LogsList
-                data={sortedLogs}
-                unit={habit.unit}
-                isHabit
-                targetAmount={habit.amount}
-                clientId={clientId}
-                assignmentId={habit.assignment_id}
-            />
-
             <Dialog
                 visible={showDeleteDialog}
                 onClose={() => setShowDeleteDialog(false)}
@@ -467,18 +493,32 @@ export default function HabitDetailScreen() {
                     },
                 ]}
             />
-        </ScreenWrapper>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    header: {
+    screen: {
+        flex: 1,
+    },
+    scrollView: {
+        flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
+    },
+    fixedHeader: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingTop: 4,
-        paddingBottom: 8,
         paddingHorizontal: 16,
+        paddingBottom: 8,
+        gap: 8,
+        zIndex: 1001,
     },
     headerTitle: {
         ...typography.h5,

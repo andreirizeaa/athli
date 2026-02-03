@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from 'pressto';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Plus, MessageCircle, ChevronUp, User } from 'lucide-react-native';
-import { Image } from 'expo-image';
+import { Image } from 'expo-image';  // Still needed for avatar images
 
 import { typography } from '@/constants/typography';
 import {
@@ -15,7 +15,6 @@ import {
   useCoachProfileStore,
   useClientProfileStore,
   useAppView,
-  useColorScheme,
 } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
@@ -24,9 +23,6 @@ import { Card } from '@/components/ui/card';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { haptics } from '@/utils/haptics';
 import { PlatformIcon } from '@/components/ui/platform-icon';
-
-const darkBackground = require('@/assets/backgrounds/dark.png');
-const lightBackground = require('@/assets/backgrounds/light.png');
 import {
   getFeatureRequests,
   toggleUpvote,
@@ -40,8 +36,7 @@ export default function FeatureRequestsScreen() {
   const iconColor = themeColors.text;
   const { appView } = useAppView();
   const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme();
-  const backgroundImage = colorScheme === 'dark' ? darkBackground : lightBackground;
+  const HEADER_HEIGHT = 52;
 
   // Get current user info
   const coachProfile = useCoachProfileStore((state) => state.profile);
@@ -224,48 +219,24 @@ export default function FeatureRequestsScreen() {
 
   const ListHeader = useMemo(
     () => (
-      <>
-        {/* Spacer for status bar */}
-        <View style={{ height: insets.top }} />
-        {/* Header */}
-        <View style={styles.header}>
-          <IconButton
-            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-            onPress={handleGoBack}
-            size="md"
-            color={iconColor}
-          />
-          <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-            {t('featureRequests.title')}
-          </Text>
-          <IconButton
-            icon={{ sf: 'plus', IconComponent: Plus }}
-            onPress={handleRequestFeature}
-            size="md"
-            color={iconColor}
+      <View style={styles.searchContainer}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={handleSearchChange}
+          placeholder={t('general.searchPlaceholder')}
+        />
+
+        <View style={styles.filterContainer}>
+          <SegmentedControl
+            segments={filterSegments}
+            value={sortBy}
+            onChange={(value) => setSortBy(value as SortOption)}
+            noPadding
           />
         </View>
-
-        {/* Search and filters */}
-        <View style={styles.searchContainer}>
-          <SearchBar
-            value={searchQuery}
-            onChangeText={handleSearchChange}
-            placeholder={t('general.searchPlaceholder')}
-          />
-
-          <View style={styles.filterContainer}>
-            <SegmentedControl
-              segments={filterSegments}
-              value={sortBy}
-              onChange={(value) => setSortBy(value as SortOption)}
-              noPadding
-            />
-          </View>
-        </View>
-      </>
+      </View>
     ),
-    [insets.top, iconColor, themeColors.text, t, searchQuery, handleSearchChange, filterSegments, sortBy, setSortBy]
+    [t, searchQuery, handleSearchChange, filterSegments, sortBy, setSortBy]
   );
 
   const ListEmpty = useMemo(
@@ -293,13 +264,7 @@ export default function FeatureRequestsScreen() {
   );
 
   return (
-    <View style={styles.screen}>
-      <Image
-        source={backgroundImage}
-        style={StyleSheet.absoluteFill}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-      />
+    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
       <FlashList
         ref={listRef}
         data={sortedRequests}
@@ -308,10 +273,32 @@ export default function FeatureRequestsScreen() {
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={ListEmpty}
         ListFooterComponent={ListFooter}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingTop: insets.top + HEADER_HEIGHT },
+        ]}
         showsVerticalScrollIndicator={false}
       />
-      <StatusBarBlur />
+
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+      <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
+        <IconButton
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+          onPress={handleGoBack}
+          size="md"
+          color={iconColor}
+        />
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+          {t('featureRequests.title')}
+        </Text>
+        <IconButton
+          icon={{ sf: 'plus', IconComponent: Plus }}
+          onPress={handleRequestFeature}
+          size="md"
+          color={iconColor}
+        />
+      </View>
     </View>
   );
 }
@@ -483,16 +470,23 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 0,
   },
-  header: {
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 4,
     paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h5,
+    flex: 1,
+    textAlign: 'center',
   },
   searchContainer: {
     paddingHorizontal: 16,

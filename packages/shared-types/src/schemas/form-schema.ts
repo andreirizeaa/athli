@@ -277,6 +277,7 @@ export interface AssignClientCheckInData {
   coachId: string;
   schedule_config?: AssignFormScheduleData | Record<string, unknown>;
   cron_expression?: string;
+  status?: 'draft' | 'live';
 }
 
 export interface AssignClientQuestionnaireData {
@@ -285,6 +286,7 @@ export interface AssignClientQuestionnaireData {
   coachId: string;
   schedule_config?: AssignFormScheduleData | Record<string, unknown>;
   cron_expression?: string;
+  status?: 'draft' | 'pending';
 }
 
 export interface DeleteClientCheckInsData {
@@ -306,6 +308,7 @@ export interface AssignFormData {
   formType: 'check-in' | 'questionnaire';
   cronExpression: string;
   scheduleData: AssignFormScheduleData;
+  status?: 'draft' | 'live' | 'pending';
 }
 
 export interface AssignFormsToClientsData {

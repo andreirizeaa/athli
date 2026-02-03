@@ -1,14 +1,15 @@
 import React, { useMemo, useEffect, useState } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, MessageCircle, Activity } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
 import { createNewChat } from '@/services/chats-service';
 import { IconButton } from '@/components/ui/icon-button';
-import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { PlatformIcon } from '@/components/ui/platform-icon';
@@ -18,6 +19,8 @@ export default function ClientActivityScreen() {
   const { id, fromChat } = useLocalSearchParams<{ id: string; fromChat?: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const insets = useSafeAreaInsets();
+  const HEADER_HEIGHT = 52;
 
   const iconColor = themeColors.text;
   const isFromChat = fromChat === 'true';
@@ -152,9 +155,81 @@ export default function ClientActivityScreen() {
   };
 
   return (
-    <ScreenWrapper scrollable={true} useImageBackground={false}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Activity Stats Card */}
+        {isLoadingTraining ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={themeColors.primary} />
+          </View>
+        ) : (
+          <View style={styles.content}>
+            <Card style={styles.activityCard}>
+              <View style={styles.cardContentNoPadding}>
+                <View style={styles.rowItemStatic}>
+                  <Text style={[styles.rowLabel, { color: themeColors.mutedText }]}>
+                    {t('clientDetail.overview.lastActivity')}
+                  </Text>
+                  <Text style={[styles.rowValue, { color: themeColors.text }]}>
+                    {activityStats.lastActivity}
+                  </Text>
+                </View>
+                <Separator style={styles.rowSeparator} />
+                <View style={styles.rowItemStatic}>
+                  <Text style={[styles.rowLabel, { color: themeColors.mutedText }]}>
+                    {t('clientDetail.overview.pastWeek')}
+                  </Text>
+                  <Text style={[styles.rowValue, { color: themeColors.text }]}>
+                    {activityStats.pastWeek} {t('clientDetail.overview.completed')}
+                  </Text>
+                </View>
+                <Separator style={styles.rowSeparator} />
+                <View style={styles.rowItemStatic}>
+                  <Text style={[styles.rowLabel, { color: themeColors.mutedText }]}>
+                    {t('clientDetail.overview.pastMonth')}
+                  </Text>
+                  <Text style={[styles.rowValue, { color: themeColors.text }]}>
+                    {activityStats.pastMonth} {t('clientDetail.overview.completed')}
+                  </Text>
+                </View>
+                <Separator style={styles.rowSeparator} />
+                <View style={styles.rowItemStatic}>
+                  <Text style={[styles.rowLabel, { color: themeColors.mutedText }]}>
+                    {t('clientDetail.overview.nextWeek')}
+                  </Text>
+                  <Text style={[styles.rowValue, { color: themeColors.text }]}>
+                    {activityStats.nextWeek} {t('clientDetail.overview.planned')}
+                  </Text>
+                </View>
+                {client && (
+                  <>
+                    <Separator style={styles.rowSeparator} />
+                    <View style={styles.rowItemStatic}>
+                      <Text style={[styles.rowLabel, { color: themeColors.mutedText }]}>
+                        {t('clientDetail.overview.clientFor')}
+                      </Text>
+                      <Text style={[styles.rowValue, { color: themeColors.text }]}>
+                        {client.clientFor + 1} {t('clientDetail.overview.days')}
+                      </Text>
+                    </View>
+                  </>
+                )}
+              </View>
+            </Card>
+          </View>
+        )}
+      </ScrollView>
+
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+      <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
         <IconButton
           icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}
@@ -176,80 +251,32 @@ export default function ClientActivityScreen() {
           />
         )}
       </View>
-
-      {/* Activity Stats Card */}
-      {isLoadingTraining ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={themeColors.primary} />
-        </View>
-      ) : (
-        <View style={styles.content}>
-          <Card style={styles.activityCard}>
-            <View style={styles.cardContentNoPadding}>
-              <View style={styles.rowItemStatic}>
-                <Text style={[styles.rowLabel, { color: themeColors.mutedText }]}>
-                  {t('clientDetail.overview.lastActivity')}
-                </Text>
-                <Text style={[styles.rowValue, { color: themeColors.text }]}>
-                  {activityStats.lastActivity}
-                </Text>
-              </View>
-              <Separator style={styles.rowSeparator} />
-              <View style={styles.rowItemStatic}>
-                <Text style={[styles.rowLabel, { color: themeColors.mutedText }]}>
-                  {t('clientDetail.overview.pastWeek')}
-                </Text>
-                <Text style={[styles.rowValue, { color: themeColors.text }]}>
-                  {activityStats.pastWeek} {t('clientDetail.overview.completed')}
-                </Text>
-              </View>
-              <Separator style={styles.rowSeparator} />
-              <View style={styles.rowItemStatic}>
-                <Text style={[styles.rowLabel, { color: themeColors.mutedText }]}>
-                  {t('clientDetail.overview.pastMonth')}
-                </Text>
-                <Text style={[styles.rowValue, { color: themeColors.text }]}>
-                  {activityStats.pastMonth} {t('clientDetail.overview.completed')}
-                </Text>
-              </View>
-              <Separator style={styles.rowSeparator} />
-              <View style={styles.rowItemStatic}>
-                <Text style={[styles.rowLabel, { color: themeColors.mutedText }]}>
-                  {t('clientDetail.overview.nextWeek')}
-                </Text>
-                <Text style={[styles.rowValue, { color: themeColors.text }]}>
-                  {activityStats.nextWeek} {t('clientDetail.overview.planned')}
-                </Text>
-              </View>
-              {client && (
-                <>
-                  <Separator style={styles.rowSeparator} />
-                  <View style={styles.rowItemStatic}>
-                    <Text style={[styles.rowLabel, { color: themeColors.mutedText }]}>
-                      {t('clientDetail.overview.clientFor')}
-                    </Text>
-                    <Text style={[styles.rowValue, { color: themeColors.text }]}>
-                      {client.clientFor + 1} {t('clientDetail.overview.days')}
-                    </Text>
-                  </View>
-                </>
-              )}
-            </View>
-          </Card>
-        </View>
-      )}
-    </ScreenWrapper>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
+  screen: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 4,
     paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h5,

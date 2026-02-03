@@ -206,9 +206,11 @@ export const QuestionnairesTab = () => {
                     {(() => {
                       const count = item.questionCount ?? item.questions?.length ?? 0;
                       return (
-                        <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
-                          {count} {count === 1 ? 'question' : 'questions'}
-                        </Text>
+                        <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                          <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                            {count} {count === 1 ? t('general.question') : t('general.questions')}
+                          </Text>
+                        </View>
                       );
                     })()}
                   </View>
@@ -297,13 +299,17 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
-  metaText: {
-    ...typography.p3,
+  pill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
   },
-  metaDot: {
-    marginHorizontal: 6,
-    ...typography.p3,
+  pillText: {
+    ...typography.p4,
+    fontWeight: '500',
   },
   separatorContainer: {
     paddingLeft: 86,

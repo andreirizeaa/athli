@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { StyleSheet, View, Text, ScrollView, Keyboard, useWindowDimensions } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Keyboard, useWindowDimensions, Platform, KeyboardAvoidingView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, SlidersHorizontal, SquarePen, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { typography } from '@/constants/typography';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { AnimatedSearchBar } from '@/components/ui/animated-search-bar';
 import { SlidingPanel, SlidingPanelRef } from '@/components/ui/sliding-panel';
 import { haptics } from '@/utils/haptics';
@@ -438,13 +439,145 @@ export default function ClientAssistantScreen() {
             }}
         >
             <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
-                {/* Header */}
-                <View
-                    style={[
-                        styles.header,
-                        { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top + 4 },
-                    ]}
-                >
+                {Platform.OS === 'ios' ? (
+                    <KeyboardAwareWrapper style={{ flex: 1 }} extraBottomInset={composerHeight}>
+                        <View style={{ height: insets.top + 52 }} />
+                        <ScrollView
+                            style={[styles.scrollView, { backgroundColor: themeColors.backgroundPrimary }]}
+                            contentContainerStyle={styles.scrollContent}
+                            keyboardDismissMode="on-drag"
+                        >
+                            {messages.length === 0 ? (
+                                <View style={styles.emptyState}>
+                                    <Text style={[styles.emptyStateText, { color: themeColors.mutedText }]}>
+                                        {t('clientDetail.assistant.emptyState')}
+                                    </Text>
+                                </View>
+                            ) : (
+                                messages.map((message) => (
+                                    <View
+                                        key={message.id}
+                                        style={[
+                                            styles.messageBubble,
+                                            message.role === 'user' ? styles.userMessage : styles.assistantMessage,
+                                            {
+                                                backgroundColor:
+                                                    message.role === 'user'
+                                                        ? themeColors.primary
+                                                        : themeColors.translucentBackground,
+                                            },
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.messageText,
+                                                {
+                                                    color: message.role === 'user' ? '#FFFFFF' : themeColors.text,
+                                                },
+                                            ]}
+                                        >
+                                            {message.text}
+                                        </Text>
+                                    </View>
+                                ))
+                            )}
+                        </ScrollView>
+
+                        {/* Composer */}
+                        <View style={styles.composerContainer}>
+                            <View
+                                style={[
+                                    styles.composerWrapper,
+                                    {
+                                        height: composerHeight,
+                                        backgroundColor: themeColors.translucentBackground,
+                                    },
+                                ]}
+                            >
+                                <KeyboardComposer
+                                    placeholder={t('clientDetail.assistant.placeholder')}
+                                    onSend={handleSend}
+                                    onStop={handleStop}
+                                    onHeightChange={setComposerHeight}
+                                    isStreaming={isStreaming}
+                                    minHeight={48}
+                                    maxHeight={120}
+                                />
+                            </View>
+                        </View>
+                    </KeyboardAwareWrapper>
+                ) : (
+                    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+                        <View style={{ height: insets.top + 52 }} />
+                        <ScrollView
+                            style={[styles.scrollView, { backgroundColor: themeColors.backgroundPrimary }]}
+                            contentContainerStyle={styles.scrollContent}
+                            keyboardDismissMode="on-drag"
+                        >
+                            {messages.length === 0 ? (
+                                <View style={styles.emptyState}>
+                                    <Text style={[styles.emptyStateText, { color: themeColors.mutedText }]}>
+                                        {t('clientDetail.assistant.emptyState')}
+                                    </Text>
+                                </View>
+                            ) : (
+                                messages.map((message) => (
+                                    <View
+                                        key={message.id}
+                                        style={[
+                                            styles.messageBubble,
+                                            message.role === 'user' ? styles.userMessage : styles.assistantMessage,
+                                            {
+                                                backgroundColor:
+                                                    message.role === 'user'
+                                                        ? themeColors.primary
+                                                        : themeColors.translucentBackground,
+                                            },
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.messageText,
+                                                {
+                                                    color: message.role === 'user' ? '#FFFFFF' : themeColors.text,
+                                                },
+                                            ]}
+                                        >
+                                            {message.text}
+                                        </Text>
+                                    </View>
+                                ))
+                            )}
+                        </ScrollView>
+
+                        {/* Composer */}
+                        <View style={[styles.composerContainer, { paddingBottom: insets.bottom + 8 }]}>
+                            <View
+                                style={[
+                                    styles.composerWrapper,
+                                    {
+                                        height: composerHeight,
+                                        backgroundColor: themeColors.translucentBackground,
+                                    },
+                                ]}
+                            >
+                                <KeyboardComposer
+                                    placeholder={t('clientDetail.assistant.placeholder')}
+                                    onSend={handleSend}
+                                    onStop={handleStop}
+                                    onHeightChange={setComposerHeight}
+                                    isStreaming={isStreaming}
+                                    minHeight={48}
+                                    maxHeight={120}
+                                />
+                            </View>
+                        </View>
+                    </KeyboardAvoidingView>
+                )}
+
+                <StatusBarBlur blurHeight={52} largeHeader />
+
+                <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
                     <IconButton
                         icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
                         onPress={handleBackPress}
@@ -461,72 +594,6 @@ export default function ClientAssistantScreen() {
                         color={iconColor}
                     />
                 </View>
-
-                <KeyboardAwareWrapper style={{ flex: 1 }} extraBottomInset={composerHeight}>
-                    <ScrollView
-                        style={[styles.scrollView, { backgroundColor: themeColors.backgroundPrimary }]}
-                        contentContainerStyle={styles.scrollContent}
-                        keyboardDismissMode="on-drag"
-                    >
-                        {messages.length === 0 ? (
-                            <View style={styles.emptyState}>
-                                <Text style={[styles.emptyStateText, { color: themeColors.mutedText }]}>
-                                    {t('clientDetail.assistant.emptyState')}
-                                </Text>
-                            </View>
-                        ) : (
-                            messages.map((message) => (
-                                <View
-                                    key={message.id}
-                                    style={[
-                                        styles.messageBubble,
-                                        message.role === 'user' ? styles.userMessage : styles.assistantMessage,
-                                        {
-                                            backgroundColor:
-                                                message.role === 'user'
-                                                    ? themeColors.primary
-                                                    : themeColors.translucentBackground,
-                                        },
-                                    ]}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.messageText,
-                                            {
-                                                color: message.role === 'user' ? '#FFFFFF' : themeColors.text,
-                                            },
-                                        ]}
-                                    >
-                                        {message.text}
-                                    </Text>
-                                </View>
-                            ))
-                        )}
-                    </ScrollView>
-
-                    {/* Composer */}
-                    <View style={styles.composerContainer}>
-                        <View
-                            style={[
-                                styles.composerWrapper,
-                                {
-                                    height: composerHeight,
-                                    backgroundColor: themeColors.translucentBackground,
-                                },
-                            ]}
-                        >
-                            <KeyboardComposer
-                                placeholder={t('clientDetail.assistant.placeholder')}
-                                onSend={handleSend}
-                                onStop={handleStop}
-                                onHeightChange={setComposerHeight}
-                                isStreaming={isStreaming}
-                                minHeight={48}
-                                maxHeight={120}
-                            />
-                        </View>
-                    </View>
-                </KeyboardAwareWrapper>
             </View>
         </SlidingPanel>
     );
@@ -536,11 +603,18 @@ const styles = StyleSheet.create({
     screen: {
         flex: 1,
     },
-    header: {
+    fixedHeader: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingBottom: 8,
+        gap: 8,
+        zIndex: 1001,
     },
     headerTitle: {
         ...typography.h5,

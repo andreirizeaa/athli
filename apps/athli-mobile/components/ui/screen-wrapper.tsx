@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { View, ScrollView, StyleSheet, ViewStyle } from 'react-native';
+import { View, ScrollView, StyleSheet, ViewStyle, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemePreference, useColorScheme } from '@/stores';
@@ -7,6 +7,9 @@ import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 
 const darkBackground = require('@/assets/backgrounds/dark.png');
 const lightBackground = require('@/assets/backgrounds/light.png');
+
+// Extra bottom padding for tab screens to account for tab bar height
+const TAB_BAR_HEIGHT = Platform.OS === 'android' ? 80 : 70;
 
 type ScreenWrapperProps = {
   children: ReactNode;
@@ -19,6 +22,8 @@ type ScreenWrapperProps = {
   hideStatusBarBlur?: boolean;
   scrollEnabled?: boolean;
   useImageBackground?: boolean; // Set to false to use solid backgroundPrimary instead
+  largeHeader?: boolean; // Use stronger blur gradient for pages with fixed headers
+  tabScreen?: boolean; // Add extra bottom padding for tab screens
 };
 
 export const ScreenWrapper = ({
@@ -32,11 +37,16 @@ export const ScreenWrapper = ({
   hideStatusBarBlur = false,
   scrollEnabled = true,
   useImageBackground = true,
+  largeHeader = false,
+  tabScreen = false,
 }: ScreenWrapperProps) => {
   const insets = useSafeAreaInsets();
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
   const backgroundImage = colorScheme === 'dark' ? darkBackground : lightBackground;
+
+  // Calculate bottom padding: safe area + tab bar height if on a tab screen
+  const bottomPadding = tabScreen ? insets.bottom + TAB_BAR_HEIGHT : insets.bottom;
 
   const scrollableContent = (
     <View
@@ -52,7 +62,7 @@ export const ScreenWrapper = ({
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
-          { paddingBottom: insets.bottom },
+          { paddingBottom: bottomPadding },
           contentContainerStyle,
         ]}
         showsVerticalScrollIndicator={showsVerticalScrollIndicator}
@@ -63,7 +73,7 @@ export const ScreenWrapper = ({
         {children}
       </ScrollView>
       {overlay}
-      {!hideStatusBarBlur && <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} />}
+      {!hideStatusBarBlur && <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} largeHeader={largeHeader} />}
     </View>
   );
 
@@ -82,7 +92,7 @@ export const ScreenWrapper = ({
         {children}
       </View>
       {overlay}
-      {!hideStatusBarBlur && <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} />}
+      {!hideStatusBarBlur && <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} largeHeader={largeHeader} />}
     </>
   );
 

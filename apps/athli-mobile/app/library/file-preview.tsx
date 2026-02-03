@@ -6,14 +6,13 @@ import { X, FileText, Send } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
 import { Image } from 'expo-image';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useEvent } from 'expo';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { PlatformIcon } from '@/components/ui/platform-icon';
-import { hexToRgba } from '@/utils/colorUtils';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -240,18 +239,8 @@ export default function FilePreviewScreen() {
     return (
         <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
             {/* Header */}
+            <StatusBarBlur blurHeight={gradientHeight - insets.top} largeHeader />
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
-                <LinearGradient
-                    colors={[
-                        hexToRgba(themeColors.backgroundSecondary, 1),
-                        hexToRgba(themeColors.backgroundSecondary, 0.85),
-                        hexToRgba(themeColors.backgroundSecondary, 0.5),
-                        hexToRgba(themeColors.backgroundSecondary, 0),
-                    ]}
-                    locations={[0, 0.5, 0.8, 1]}
-                    style={[styles.headerGradient, { height: gradientHeight }]}
-                    pointerEvents="none"
-                />
                 <View
                     style={[
                         styles.header,

@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator, ScrollView, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dialog } from '@/components/ui/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, ChevronRight, Target } from 'lucide-react-native';
+import { ChevronLeft, Plus, Target } from 'lucide-react-native';
 
 import { PressableScale } from 'pressto';
 
@@ -11,7 +12,7 @@ import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useThemePreference, useTranslations, useClientDetailStore, useCoachProfileStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SearchBar } from '@/components/ui/search-bar';
@@ -39,6 +40,8 @@ export default function ClientGoalsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const insets = useSafeAreaInsets();
+  const HEADER_HEIGHT = 52;
 
   // Get goals from store (already loaded by parent screen)
   const goals = useClientDetailStore((state) => state.goals);
@@ -129,11 +132,11 @@ export default function ClientGoalsScreen() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
   };
 
   const renderGoal = useCallback(({ item, index, isLastItem }: { item: AthleteGoal; index: number; isLastItem: boolean }) => (
@@ -154,23 +157,32 @@ export default function ClientGoalsScreen() {
               />
             </View>
             <View style={styles.goalContent}>
-              <Text
-                style={[
-                  styles.goalTitle,
-                  { color: themeColors.text },
-                  item.achieved && styles.goalTitleAchieved,
-                ]}
-                numberOfLines={2}
-              >
-                {item.goal}
-              </Text>
-              {item.target_date && (
-                <Text style={[styles.goalDate, { color: themeColors.mutedText }]}>
-                  {formatDate(item.target_date)}
+              <View style={styles.goalHeader}>
+                <Text
+                  style={[
+                    styles.goalTitle,
+                    { color: themeColors.text },
+                    item.achieved && styles.goalTitleAchieved,
+                  ]}
+                  numberOfLines={2}
+                >
+                  {item.goal}
                 </Text>
-              )}
+                {item.target_date && (
+                  <View style={[styles.datePill, { borderColor: themeColors.mutedText }]}>
+                    <PlatformIcon
+                      sf="scope"
+                      IconComponent={Target}
+                      size={12}
+                      color={themeColors.mutedText}
+                    />
+                    <Text style={[styles.dateText, { color: themeColors.mutedText }]}>
+                      {formatDate(item.target_date)}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
-            <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
           </View>
         </PressableScale>
       </SwipeableRow>
@@ -191,8 +203,23 @@ export default function ClientGoalsScreen() {
   // Loading state
   if (isLoading && goals.length === 0) {
     return (
-      <ScreenWrapper useImageBackground={false}>
-        <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={themeColors.primary} />
+          </View>
+        </ScrollView>
+
+        <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+        <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
           <IconButton
             icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
             onPress={handleBackPress}
@@ -204,35 +231,21 @@ export default function ClientGoalsScreen() {
           </Text>
           <View style={styles.headerPlaceholder} />
         </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={themeColors.primary} />
-        </View>
-      </ScreenWrapper>
+      </View>
     );
   }
 
   return (
-    <ScreenWrapper scrollable={false} useImageBackground={false}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
-          <IconButton
-            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-            onPress={handleBackPress}
-            size="md"
-            color={iconColor}
-          />
-          <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-            {t('clientDetail.overview.goals')}
-          </Text>
-          <IconButton
-            icon={{ sf: 'plus', IconComponent: Plus }}
-            onPress={handleAddGoal}
-            size="md"
-            color={iconColor}
-          />
-        </View>
-
+    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+      >
         {/* Search bar */}
         <View style={styles.searchContainer}>
           <SearchBar
@@ -265,52 +278,77 @@ export default function ClientGoalsScreen() {
               <EmptyState message={t('clientDetail.overview.noGoals')} />
             </View>
           ) : (
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-              keyboardDismissMode="on-drag"
-              bounces={false}
-            >
+            <View>
               {filteredGoals.map((item, index) => (
                 <View key={item.id}>
                   {renderGoal({ item, index, isLastItem: index === filteredGoals.length - 1 })}
                 </View>
               ))}
-            </ScrollView>
+            </View>
           )}
         </Pressable>
+      </ScrollView>
 
-        <Dialog
-          visible={showErrorDialog}
-          onClose={() => setShowErrorDialog(false)}
-          title={t('general.error')}
-          message={t('general.errorDeleting')}
-          showCloseIcon={false}
-          buttons={[
-            {
-              label: t('general.ok'),
-              onPress: () => setShowErrorDialog(false),
-              variant: 'primary',
-            },
-          ]}
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+      <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
+        <IconButton
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+          onPress={handleBackPress}
+          size="md"
+          color={iconColor}
+        />
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+          {t('clientDetail.overview.goals')}
+        </Text>
+        <IconButton
+          icon={{ sf: 'plus', IconComponent: Plus }}
+          onPress={handleAddGoal}
+          size="md"
+          color={iconColor}
         />
       </View>
-    </ScreenWrapper>
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={t('general.errorDeleting')}
+        showCloseIcon={false}
+        buttons={[
+          {
+            label: t('general.ok'),
+            onPress: () => setShowErrorDialog(false),
+            variant: 'primary',
+          },
+        ]}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
   },
-  header: {
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 4,
     paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h5,
@@ -351,14 +389,12 @@ const styles = StyleSheet.create({
   goalItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingVertical: 8,
     paddingHorizontal: 16,
-    gap: 12,
   },
   goalIconContainer: {
-    width: 58,
-    height: 58,
+    width: 54,
+    height: 54,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -366,22 +402,39 @@ const styles = StyleSheet.create({
   },
   goalContent: {
     flex: 1,
-    marginRight: 12,
-    gap: 4,
+    justifyContent: 'flex-start',
+  },
+  goalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   goalTitle: {
-    ...typography.p2,
-    fontWeight: '500',
+    ...typography.h7,
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 8,
   },
   goalTitleAchieved: {
     textDecorationLine: 'line-through',
     opacity: 0.7,
   },
-  goalDate: {
+  datePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 4,
+    flexShrink: 0,
+  },
+  dateText: {
     ...typography.p4,
+    fontWeight: '500',
   },
   separatorContainer: {
-    paddingLeft: 86,
+    paddingLeft: 82,
     paddingRight: 16,
   },
   separator: {

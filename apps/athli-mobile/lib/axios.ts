@@ -107,9 +107,10 @@ axiosInstance.interceptors.response.use(
 
         if (refreshError || !data.session) {
           console.error('[API] Token refresh failed:', refreshError);
-          // Session is invalid - user needs to re-authenticate
-          // The onAuthStateChange listener will handle the logout
+          // Session is invalid - sign out to trigger SIGNED_OUT event
+          // The onAuthStateChange listener in _layout.tsx will handle cleanup and navigation
           cachedSession = null;
+          await supabase.auth.signOut();
           return Promise.reject(error);
         }
 
@@ -125,6 +126,9 @@ axiosInstance.interceptors.response.use(
         return axiosInstance.request(error.config);
       } catch (refreshError) {
         console.error('[API] Error during token refresh:', refreshError);
+        // Sign out to trigger SIGNED_OUT event and redirect to welcome
+        cachedSession = null;
+        await supabase.auth.signOut().catch(() => {});
         return Promise.reject(error);
       }
     }

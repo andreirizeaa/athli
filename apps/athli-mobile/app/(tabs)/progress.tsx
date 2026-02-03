@@ -208,7 +208,7 @@ export default function ProgressScreen() {
   const hasNoData = metricsWithChartData.length === 0 && habitsWithChartData.length === 0;
 
   return (
-    <ScreenWrapper scrollable={true}>
+    <ScreenWrapper scrollable={true} tabScreen>
       <View style={styles.container}>
         <Text style={[styles.title, { color: themeColors.text }]}>{t('progress.title')}</Text>
 
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   lastSection: {
-    paddingBottom: 100,
+    marginTop: 8,
   },
   photosCardRow: {
     flexDirection: 'row',

@@ -1,10 +1,9 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Platform, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { Dialog } from '@/components/ui/dialog';
 import { ChevronLeft, GripVertical, Check } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -23,8 +22,9 @@ import { haptics } from '@/utils/haptics';
 import { useThemePreference } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { useTranslations } from '@/stores';
-import { hexToRgba } from '@/utils/colorUtils';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { useModalCallbacks } from '@/stores';
+import { Card } from '@/components/ui/card';
 import type { Question } from '@/services/coach/coach-questionnaire-service';
 
 // Row height constants
@@ -168,23 +168,11 @@ const DraggableRow: React.FC<DraggableRowProps> = ({
     };
   });
 
-  const draggingCardStyle = useAnimatedStyle(() => {
-    return {
-      shadowOpacity: isDragging.value ? 0.25 : 0,
-      backgroundColor: themeColors.surfacePrimary,
-    };
-  });
-
   return (
     <Animated.View style={[styles.itemWrapper, shiftStyle]}>
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[styles.rowWrapper, animatedDragStyle]}>
-          <Animated.View
-            style={[
-              styles.rowContent,
-              draggingCardStyle,
-            ]}
-          >
+          <Card style={styles.rowContent}>
             <View style={[styles.numberCircle, { backgroundColor: themeColors.primary }]}>
               <Text style={[styles.numberText, { color: themeColors.primaryForeground }]}>
                 {index + 1}
@@ -205,7 +193,7 @@ const DraggableRow: React.FC<DraggableRowProps> = ({
             <View style={styles.dragHandle}>
               <GripVertical {...({ size: 20, color: themeColors.mutedText } as any)} />
             </View>
-          </Animated.View>
+          </Card>
         </Animated.View>
       </GestureDetector>
     </Animated.View>
@@ -282,55 +270,21 @@ export default function ReorderQuestionsScreen() {
     }
   }, [hasUnsavedChanges, router]);
 
-  const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
-  const gradientHeight = headerHeight + 12;
+  const HEADER_HEIGHT = 52;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
-        <View style={[styles.fixedHeader, { height: headerHeight }]}>
-          <LinearGradient
-            colors={[
-              hexToRgba(themeColors.backgroundSecondary, 1),
-              hexToRgba(themeColors.backgroundSecondary, 0.85),
-              hexToRgba(themeColors.backgroundSecondary, 0.5),
-              hexToRgba(themeColors.backgroundSecondary, 0),
-            ]}
-            locations={[0, 0.5, 0.8, 1]}
-            style={[styles.headerGradient, { height: gradientHeight }]}
-            pointerEvents="none"
-          />
-        </View>
-
+      <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingTop: insets.top, paddingBottom: insets.bottom + 40 }
+            { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 }
           ]}
           showsVerticalScrollIndicator={false}
           scrollEnabled={isScrollEnabled}
           keyboardDismissMode="on-drag"
         >
-          <View style={styles.header}>
-            <IconButton
-              icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-              onPress={handleBack}
-              size="md"
-              color={themeColors.text}
-            />
-            <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>
-              {t('library.formBuilder.reorder')}
-            </Text>
-            <IconButton
-              icon={{ sf: 'checkmark', IconComponent: Check }}
-              onPress={handleSave}
-              size="md"
-              variant={hasUnsavedChanges ? 'primary' : 'default'}
-              disabled={!hasUnsavedChanges}
-            />
-          </View>
-
           <View style={styles.listContainer}>
             {questions.map((question, index) => (
               <DraggableRow
@@ -348,6 +302,27 @@ export default function ReorderQuestionsScreen() {
             ))}
           </View>
         </ScrollView>
+
+        <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+        <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
+          <IconButton
+            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+            onPress={handleBack}
+            size="md"
+            color={themeColors.text}
+          />
+          <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>
+            {t('formBuilder.reorderQuestions')}
+          </Text>
+          <IconButton
+            icon={{ sf: 'checkmark', IconComponent: Check }}
+            onPress={handleSave}
+            size="md"
+            color={hasUnsavedChanges ? themeColors.primary : themeColors.mutedText}
+            disabled={!hasUnsavedChanges}
+          />
+        </View>
 
         <Dialog
           visible={showDiscardDialog}
@@ -373,27 +348,19 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 10,
-  },
-  headerGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 12,
-    marginBottom: 16,
-    height: 56,
   },
   title: {
     ...typography.h6,
@@ -412,11 +379,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     height: ROW_HEIGHT,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 12,
+    paddingVertical: 0,
+    marginBottom: 0,
   },
   numberCircle: {
     width: 32,
