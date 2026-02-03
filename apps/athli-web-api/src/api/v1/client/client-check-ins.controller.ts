@@ -48,6 +48,20 @@ export const clientCheckInsController = {
         const { data: assignments, error } = await query;
         if (error) return res.status(500).json({ success: false, message: error.message });
 
+        // Get submission counts for all check-ins
+        const checkInIds = assignments.map((a: any) => a.id);
+        const { data: submissionCounts } = await supabase
+            .from('client_checkin_logs')
+            .select('assignment_id')
+            .eq('client_id', targetClientId)
+            .in('assignment_id', checkInIds);
+
+        // Create a map of assignment_id -> count
+        const countMap: Record<string, number> = {};
+        (submissionCounts || []).forEach((s: any) => {
+            countMap[s.assignment_id] = (countMap[s.assignment_id] || 0) + 1;
+        });
+
         const checkins = assignments.map((a: any) => ({
             id: a.id,
             assignment_id: a.id,
@@ -56,12 +70,11 @@ export const clientCheckInsController = {
             description: a.description,
             schedule_config: a.schedule_config,
             questions: a.questions,
-            status: a.status,
+            status: a.status || 'draft',
             completed_at: a.completed_at,
             assigned_at: a.created_at,
             created_at: a.created_at,
-            // Responses might be in log table or here?
-            // Assuming transient nature, responses are logs.
+            submission_count: countMap[a.id] || 0,
         }));
 
         success(res, {
@@ -140,6 +153,7 @@ export const clientCheckInsController = {
         const assignments: any[] = [];
         for (const cid of targetClientIds) {
             for (const h of libraryItems) {
+                const hasQuestions = h.questions && Array.isArray(h.questions) && h.questions.length > 0;
                 assignments.push({
                     client_id: cid,
                     coach_id: targetCoachId,
@@ -147,7 +161,8 @@ export const clientCheckInsController = {
                     description: h.description,
                     questions: h.questions,
                     schedule_config: schedule_config || h.schedule_config,
-                    cron_expression: cron_expression || h.cron_expression
+                    cron_expression: cron_expression || h.cron_expression,
+                    status: hasQuestions ? 'live' : 'draft',
                 });
             }
         }
@@ -273,5 +288,206 @@ export const clientCheckInsController = {
 
         if (error) return res.status(500).json({ success: false, message: error.message });
         noContent(res);
+    },
+
+    /**
+     * Get a single check-in by ID
+     */
+    getCheckInById: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id } = req.params;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+
+        if (!coachIdHeader || coachIdHeader !== userId) return unauthorized(res, { message: 'Unauthorized' });
+        if (!clientIdHeader) return forbidden(res, { message: 'x-client-id required' });
+
+        const targetCoachId = coachIdHeader as string;
+        const targetClientId = clientIdHeader as string;
+
+        const supabase = getSupabaseClient();
+
+        const { data: checkIn, error } = await supabase
+            .from('client_checkins')
+            .select('*')
+            .eq('id', id)
+            .eq('client_id', targetClientId)
+            .eq('coach_id', targetCoachId)
+            .single();
+
+        if (error || !checkIn) return notFound(res, { message: 'Check-in not found' });
+
+        success(res, {
+            message: 'Check-in retrieved successfully',
+            data: {
+                id: checkIn.id,
+                name: checkIn.name,
+                description: checkIn.description,
+                questions: checkIn.questions || [],
+                scheduleConfig: checkIn.schedule_config,
+                cronExpression: checkIn.cron_expression,
+            },
+        });
+    },
+
+    /**
+     * Update a check-in (questions, etc.)
+     */
+    updateCheckIn: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id } = req.params;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+        const { questions, name, description, schedule_config, cron_expression } = req.body;
+
+        if (!coachIdHeader || coachIdHeader !== userId) return unauthorized(res, { message: 'Unauthorized' });
+        if (!clientIdHeader) return forbidden(res, { message: 'x-client-id required' });
+
+        const targetCoachId = coachIdHeader as string;
+        const targetClientId = clientIdHeader as string;
+
+        const supabase = getSupabaseClient();
+
+        // Build update object with only provided fields
+        const updateData: any = {};
+        if (questions !== undefined) updateData.questions = questions;
+        if (name !== undefined) updateData.name = name;
+        if (description !== undefined) updateData.description = description;
+        if (schedule_config !== undefined) updateData.schedule_config = schedule_config;
+        if (cron_expression !== undefined) updateData.cron_expression = cron_expression;
+
+        const { data, error } = await supabase
+            .from('client_checkins')
+            .update(updateData)
+            .eq('id', id)
+            .eq('client_id', targetClientId)
+            .eq('coach_id', targetCoachId)
+            .select()
+            .single();
+
+        if (error) return res.status(500).json({ success: false, message: error.message });
+        if (!data) return notFound(res, { message: 'Check-in not found' });
+
+        success(res, {
+            message: 'Check-in updated successfully',
+            data: {
+                id: data.id,
+                name: data.name,
+                description: data.description,
+                questions: data.questions || [],
+            },
+        });
+    },
+
+    /**
+     * Create a client-specific check-in (not from library)
+     */
+    createCheckIn: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+        const { name, description, questions, schedule_config, cron_expression } = req.body;
+
+        if (!coachIdHeader || coachIdHeader !== userId) return unauthorized(res, { message: 'Unauthorized' });
+        if (!clientIdHeader) return forbidden(res, { message: 'x-client-id required' });
+        if (!name) return res.status(400).json({ success: false, message: 'name is required' });
+
+        const targetCoachId = coachIdHeader as string;
+        const targetClientId = clientIdHeader as string;
+
+        const supabase = getSupabaseClient();
+
+        // Verify relationship
+        const { data: relation } = await supabase
+            .from('coach_client_assignments')
+            .select('client_id')
+            .eq('coach_id', targetCoachId)
+            .eq('client_id', targetClientId)
+            .single();
+
+        if (!relation) return forbidden(res, { message: 'Client not assigned to this coach' });
+
+        // Check for duplicate names and rename if needed
+        const { data: existingCheckIns } = await supabase
+            .from('client_checkins')
+            .select('name')
+            .eq('client_id', targetClientId)
+            .eq('coach_id', targetCoachId);
+
+        const existingNames = new Set((existingCheckIns || []).map((c: any) => c.name));
+        let finalName = name;
+        let counter = 1;
+        while (existingNames.has(finalName)) {
+            finalName = `${name} ${counter}`;
+            counter++;
+        }
+
+        const { data: checkIn, error } = await supabase
+            .from('client_checkins')
+            .insert({
+                client_id: targetClientId,
+                coach_id: targetCoachId,
+                name: finalName,
+                description: description || '',
+                questions: questions || [],
+                schedule_config: schedule_config || null,
+                cron_expression: cron_expression || null,
+            })
+            .select()
+            .single();
+
+        if (error) return res.status(500).json({ success: false, message: error.message });
+
+        created(res, {
+            message: 'Check-in created successfully',
+            data: {
+                id: checkIn.id,
+                name: checkIn.name,
+                description: checkIn.description,
+                questions: checkIn.questions || [],
+            },
+        });
+    },
+
+    /**
+     * Update check-in status (publish/pause)
+     */
+    updateCheckInStatus: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id } = req.params;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+        const { status } = req.body;
+
+        if (!coachIdHeader || coachIdHeader !== userId) return unauthorized(res, { message: 'Unauthorized' });
+        if (!clientIdHeader) return forbidden(res, { message: 'x-client-id required' });
+        if (!status || !['live', 'paused'].includes(status)) {
+            return res.status(400).json({ success: false, message: 'Valid status (live/paused) required' });
+        }
+
+        const targetCoachId = coachIdHeader as string;
+        const targetClientId = clientIdHeader as string;
+
+        const supabase = getSupabaseClient();
+
+        const { data, error } = await supabase
+            .from('client_checkins')
+            .update({ status })
+            .eq('id', id)
+            .eq('client_id', targetClientId)
+            .eq('coach_id', targetCoachId)
+            .select()
+            .single();
+
+        if (error) return res.status(500).json({ success: false, message: error.message });
+        if (!data) return notFound(res, { message: 'Check-in not found' });
+
+        success(res, {
+            message: `Check-in ${status === 'live' ? 'published' : 'paused'} successfully`,
+            data: {
+                id: data.id,
+                status: data.status,
+            },
+        });
     },
 };

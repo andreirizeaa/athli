@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useQueryClient } from '@tanstack/react-query';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -15,23 +16,24 @@ import {
   BreadcrumbSeparator,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
-import { ChevronRight, Plus, GripVertical, Edit } from 'lucide-react';
+import { ChevronRight, Plus, GripVertical, Edit, Loader2 } from 'lucide-react';
 import { type CheckIn as Form, addQuestion, reorderQuestions, getCheckIns } from '@/api/coach/coach-check-in-service';
 import { formTemplates } from '@/constants/forms';
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EditCheckInFormSidePanel } from '@/components/forms/edit-check-in-form-side-panel';
 import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel';
-import { FormDetailContent } from '@/components/forms/form-detail-content';
+import { FormBuilder } from '@/components/forms/form-builder';
 
 // Removed mock check-ins data as we now fetch from the API
 
-import type { Question } from '@/components/forms/form-detail-content';
+import type { Question } from '@/components/forms/form-builder';
 
 const CheckInFormDetailPage = () => {
   const t = useTranslations();
   const params = useParams<{ formId: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const formId = Array.isArray(params.formId) ? params.formId[0] : params.formId;
   const [isEditFormOpen, setIsEditFormOpen] = useState<boolean>(false);
   const [isAddQuestionOpen, setIsAddQuestionOpen] = useState<boolean>(false);
@@ -66,7 +68,7 @@ const CheckInFormDetailPage = () => {
   if (isLoading) {
     return (
       <div className="h-full w-full flex items-center justify-center">
-        <p className="text-muted-foreground">{t('general.loading')}</p>
+        <Loader2 className="h-10 w-10 animate-spin text-foreground" />
       </div>
     );
   }
@@ -225,7 +227,7 @@ const CheckInFormDetailPage = () => {
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
 
-      <FormDetailContent
+      <FormBuilder
         formId={formId}
         formType="check-in"
         form={currentForm}
@@ -240,6 +242,9 @@ const CheckInFormDetailPage = () => {
         onReorder={handleReorder}
         isAddQuestionOpen={isAddQuestionOpen}
         onAddQuestionOpenChange={setIsAddQuestionOpen}
+        onQuestionsChanged={() => {
+          queryClient.invalidateQueries({ queryKey: ['coach-check-ins'] });
+        }}
       />
 
 

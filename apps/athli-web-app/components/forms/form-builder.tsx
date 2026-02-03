@@ -28,7 +28,7 @@ export type Question = {
   metricId?: string;
 };
 
-type FormDetailContentProps = {
+type FormBuilderProps = {
   formId: string;
   formType: 'check-in' | 'questionnaire';
   form: Form;
@@ -43,9 +43,18 @@ type FormDetailContentProps = {
   onReorder?: (newData: any[]) => void;
   isAddQuestionOpen?: boolean;
   onAddQuestionOpenChange?: (open: boolean) => void;
+  clientId?: string;
+  // Optional callbacks for client-specific forms (bypass coach API)
+  onAddQuestion?: (questionData: any) => Promise<Question>;
+  onDeleteQuestion?: (questionId: string) => Promise<void>;
+  onEditQuestion?: (questionData: Question) => Promise<void>;
+  // Read-only mode (hides add row and action column)
+  readOnly?: boolean;
+  // Callback when questions are modified (add, edit, delete)
+  onQuestionsChanged?: () => void;
 };
 
-export const FormDetailContent = ({
+export const FormBuilder = ({
   formId,
   formType,
   form,
@@ -60,7 +69,13 @@ export const FormDetailContent = ({
   onReorder,
   isAddQuestionOpen: isAddQuestionOpenProp,
   onAddQuestionOpenChange,
-}: FormDetailContentProps) => {
+  clientId,
+  onAddQuestion: onAddQuestionProp,
+  onDeleteQuestion: onDeleteQuestionProp,
+  onEditQuestion: onEditQuestionProp,
+  readOnly = false,
+  onQuestionsChanged,
+}: FormBuilderProps) => {
   const t = useTranslations();
   const [isAddQuestionOpenLocal, setIsAddQuestionOpenLocal] = useState<boolean>(false);
 
@@ -157,6 +172,16 @@ export const FormDetailContent = ({
 
   const handleAddQuestion = async (questionData: any) => {
     try {
+      // Use custom callback if provided (for client-specific forms)
+      if (onAddQuestionProp) {
+        const newQuestion = await onAddQuestionProp(questionData);
+        setQuestions([...questions, newQuestion]);
+        setPreviewQuestionIndex(questions.length);
+        onQuestionsChanged?.();
+        return;
+      }
+
+      // Default behavior: use coach API
       const isCheckIn = formType === 'check-in';
       const addQuestionFn = isCheckIn ? addCheckInQuestion : addQuestionnaireQuestion;
 
@@ -181,32 +206,50 @@ export const FormDetailContent = ({
       setQuestions([...questions, questionWithMetric]);
       // Navigate to the newly added question in preview
       setPreviewQuestionIndex(questions.length);
+      onQuestionsChanged?.();
     } catch (error) {
       console.error('Failed to add question:', error);
     }
   };
 
 
-  const handleEditQuestion = (questionData: Question) => {
-    setQuestions(questions.map((q) => (q.id === questionData.id ? questionData : q)));
+  const handleEditQuestion = async (questionData: Question) => {
+    try {
+      // Use custom callback if provided (for client-specific forms)
+      if (onEditQuestionProp) {
+        await onEditQuestionProp(questionData);
+      }
+      // Always update local state
+      setQuestions(questions.map((q) => (q.id === questionData.id ? questionData : q)));
+      onQuestionsChanged?.();
+    } catch (error) {
+      console.error('Failed to edit question:', error);
+    }
   };
 
   const handleDeleteQuestion = async (questionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const isCheckIn = formType === 'check-in';
-      const deleteQuestionFn = isCheckIn ? deleteCheckInQuestion : deleteQuestionnaireQuestion;
+      // Use custom callback if provided (for client-specific forms)
+      if (onDeleteQuestionProp) {
+        await onDeleteQuestionProp(questionId);
+      } else {
+        // Default behavior: use coach API
+        const isCheckIn = formType === 'check-in';
+        const deleteQuestionFn = isCheckIn ? deleteCheckInQuestion : deleteQuestionnaireQuestion;
 
-      await deleteQuestionFn({
-        formId: formId,
-        questionId: questionId,
-      });
+        await deleteQuestionFn({
+          formId: formId,
+          questionId: questionId,
+        });
+      }
 
       setQuestions(questions.filter((q) => q.id !== questionId));
       // Adjust preview index if needed
       if (previewQuestionIndex >= questions.length - 1 && previewQuestionIndex > 0) {
         setPreviewQuestionIndex(previewQuestionIndex - 1);
       }
+      onQuestionsChanged?.();
     } catch (error) {
       console.error('Failed to delete question:', error);
     }
@@ -227,6 +270,8 @@ export const FormDetailContent = ({
       text: t('forms.detail.addQuestion.formats.text'),
       number: t('forms.detail.addQuestion.formats.number'),
       multipleChoice: t('forms.detail.addQuestion.formats.multipleChoice'),
+      select: t('forms.detail.addQuestion.formats.multipleChoice'),
+      multiselect: t('forms.detail.addQuestion.formats.multipleChoice'),
       scale: t('forms.detail.addQuestion.formats.scale'),
       yesNo: t('forms.detail.addQuestion.formats.yesNo'),
       images: t('forms.detail.addQuestion.formats.images'),
@@ -240,136 +285,145 @@ export const FormDetailContent = ({
     return (format: string) => formatMap[format] || format;
   }, [t]);
 
-  const columns: ColumnDefinition<any>[] = useMemo(() => [
-    {
-      id: 'question',
-      label: t('forms.detail.columns.question'),
-      sortable: false,
-      width: { class: 'w-full', pixel: '100%' },
-      renderHeader: () => (
-        <div className="flex items-center gap-2">
-          <span className="text-xs uppercase text-muted-foreground">
-            {t('forms.detail.columns.question')}
-          </span>
-        </div>
-      ),
-      renderCell: (row) => {
-        if (row._isAddRow) {
-          if (isReorderMode) {
-            return null;
-          }
-          return (
-            <Button
-              variant="default"
-              onClick={handleOpenAddQuestionInternal}
-              className="gap-2"
-            >
-              <Plus className="size-4" />
-              <span>{t('forms.detail.actions.addQuestion')}</span>
-            </Button>
-          );
-        }
-        // Check if this is a metric question
-        if (row.format === 'metrics' && row.metricId) {
-          const metric = metricsMap.get(row.metricId);
-          return (
-            <div className="flex flex-col gap-0.5 py-1">
-              <span className="text-sm font-medium">{row.question || ''}</span>
-              {metric && (
-                <span className="text-xs text-muted-foreground font-normal">{metric.name}</span>
-              )}
-            </div>
-          );
-        }
-
-        // For non-metric questions, just show the question
-        return (
-          <span className="text-sm font-medium py-1">{row.question || ''}</span>
-        );
-      },
-    },
-    {
-      id: 'required',
-      label: t('forms.detail.columns.required'),
-      sortable: false,
-      width: { class: 'w-[120px]', pixel: '120px' },
-      renderHeader: () => (
-        <div className="flex items-center gap-2">
-          <span className="text-xs uppercase text-muted-foreground">
-            {t('forms.detail.columns.required')}
-          </span>
-        </div>
-      ),
-      renderCell: (row) => {
-        if (row._isAddRow) return null;
-        return <span className="text-sm">{row.required ? t('general.yes') : t('general.no')}</span>;
-      },
-    },
-    {
-      id: 'type',
-      label: t('forms.detail.columns.type'),
-      sortable: false,
-      width: { class: 'w-[150px]', pixel: '150px' },
-      renderHeader: () => (
-        <div className="flex items-center gap-2">
-          <span className="text-xs uppercase text-muted-foreground">
-            {t('forms.detail.columns.type')}
-          </span>
-        </div>
-      ),
-      renderCell: (row) => {
-        if (row._isAddRow) return null;
-        return <span className="text-sm">{getFormatLabel(row.format)}</span>;
-      },
-    },
-    {
-      id: 'action',
-      label: t('forms.detail.columns.action'),
-      sortable: false,
-      width: { class: 'w-[100px]', pixel: '100px' },
-      renderHeader: () => (
-        <div className="flex items-center gap-2">
-          <span className="text-xs uppercase text-muted-foreground">
-            {t('forms.detail.columns.action')}
-          </span>
-        </div>
-      ),
-      renderCell: (row) => {
-        if (row._isAddRow) {
-          if (isReorderMode) {
+  const columns: ColumnDefinition<any>[] = useMemo(() => {
+    const baseColumns: ColumnDefinition<any>[] = [
+      {
+        id: 'question',
+        label: t('forms.detail.columns.question'),
+        sortable: false,
+        width: { class: 'w-full', pixel: '100%' },
+        renderHeader: () => (
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase text-muted-foreground">
+              {t('forms.detail.columns.question')}
+            </span>
+          </div>
+        ),
+        renderCell: (row) => {
+          if (row._isAddRow) {
+            if (isReorderMode || readOnly) {
+              return null;
+            }
             return (
               <Button
                 variant="default"
-                onClick={onToggleReorder}
+                onClick={handleOpenAddQuestionInternal}
                 className="gap-2"
               >
-                <span>{t('forms.detail.actions.done')}</span>
+                <Plus className="size-4" />
+                <span>{t('forms.detail.actions.addQuestion')}</span>
               </Button>
             );
           }
-          return null;
-        }
-        if (isReorderMode) {
+          // Check if this is a metric question
+          const questionFormat = row.format || row.type;
+          if (questionFormat === 'metrics' && row.metricId) {
+            const metric = metricsMap.get(row.metricId);
+            return (
+              <div className="flex flex-col gap-0.5 py-1">
+                <span className="text-sm font-medium">{row.question || ''}</span>
+                {metric && (
+                  <span className="text-xs text-muted-foreground font-normal">{metric.name}</span>
+                )}
+              </div>
+            );
+          }
+
+          // For non-metric questions, just show the question
           return (
-            <div className="flex items-center justify-center h-8 w-8 cursor-grab active:cursor-grabbing">
-              <GripVertical className="h-4 w-4 text-muted-foreground" />
-            </div>
+            <span className="text-sm font-medium py-1">{row.question || ''}</span>
           );
-        }
-        return (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => handleDeleteQuestion(row.id, e)}
-            className="h-8 w-8"
-            aria-label={t('general.delete')}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        );
+        },
       },
-    },
-  ], [t, isReorderMode, handleOpenAddQuestionInternal, handleDeleteQuestion, onToggleReorder, metricsMap, getFormatLabel]);
+      {
+        id: 'required',
+        label: t('forms.detail.columns.required'),
+        sortable: false,
+        width: { class: 'w-[120px]', pixel: '120px' },
+        renderHeader: () => (
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase text-muted-foreground">
+              {t('forms.detail.columns.required')}
+            </span>
+          </div>
+        ),
+        renderCell: (row) => {
+          if (row._isAddRow) return null;
+          return <span className="text-sm">{row.required ? t('general.yes') : t('general.no')}</span>;
+        },
+      },
+      {
+        id: 'type',
+        label: t('forms.detail.columns.type'),
+        sortable: false,
+        width: { class: 'w-[150px]', pixel: '150px' },
+        renderHeader: () => (
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase text-muted-foreground">
+              {t('forms.detail.columns.type')}
+            </span>
+          </div>
+        ),
+        renderCell: (row) => {
+          if (row._isAddRow) return null;
+          return <span className="text-sm">{getFormatLabel(row.format || row.type)}</span>;
+        },
+      },
+    ];
+
+    // Only add action column if not in readOnly mode
+    if (!readOnly) {
+      baseColumns.push({
+        id: 'action',
+        label: t('forms.detail.columns.action'),
+        sortable: false,
+        width: { class: 'w-[100px]', pixel: '100px' },
+        renderHeader: () => (
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase text-muted-foreground">
+              {t('forms.detail.columns.action')}
+            </span>
+          </div>
+        ),
+        renderCell: (row) => {
+          if (row._isAddRow) {
+            if (isReorderMode) {
+              return (
+                <Button
+                  variant="default"
+                  onClick={onToggleReorder}
+                  className="gap-2"
+                >
+                  <span>{t('forms.detail.actions.done')}</span>
+                </Button>
+              );
+            }
+            return null;
+          }
+          if (isReorderMode) {
+            return (
+              <div className="flex items-center justify-center h-8 w-8 cursor-grab active:cursor-grabbing">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              </div>
+            );
+          }
+          return (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => handleDeleteQuestion(row.id, e)}
+              className="h-8 w-8"
+              aria-label={t('general.delete')}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          );
+        },
+      });
+    }
+
+    return baseColumns;
+  }, [t, isReorderMode, readOnly, handleOpenAddQuestionInternal, handleDeleteQuestion, onToggleReorder, metricsMap, getFormatLabel]);
 
   return (
     <>
@@ -380,7 +434,7 @@ export const FormDetailContent = ({
             style={{ width: 'calc(70% - 0.5rem)', flexShrink: 0 }}
           >
             <DataGrid
-              data={[
+              data={readOnly ? questions : [
                 ...questions,
                 {
                   id: 'add-question-row',
@@ -407,11 +461,11 @@ export const FormDetailContent = ({
               gridPadding={false}
               emptyMessage={t('forms.detail.emptyQuestions')}
               emptyState={null}
-              onRowClick={isReorderMode ? undefined : handleRowClick}
-              enableRowReordering={true}
+              onRowClick={isReorderMode || readOnly ? undefined : handleRowClick}
+              enableRowReordering={!readOnly}
               isReorderMode={isReorderMode}
               onReorder={handleReorder}
-              fixedBottomRowFilter={(row: any) => row._isAddRow === true}
+              fixedBottomRowFilter={readOnly ? undefined : (row: any) => row._isAddRow === true}
             />
           </div>
           <Card
@@ -439,6 +493,7 @@ export const FormDetailContent = ({
         onOpenChange={setIsAddQuestionOpen}
         onSave={handleAddQuestion}
         questions={questions}
+        clientId={clientId}
       />
 
       <EditQuestionSidePanel

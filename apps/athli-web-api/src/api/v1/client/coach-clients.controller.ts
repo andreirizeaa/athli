@@ -417,7 +417,6 @@ export const coachClientController = {
             'client_metric_entries',
             'client_habit_logs',
             'client_checkin_logs',
-            'client_questionnaire_logs',
             'client_photo_logs'
         ];
 

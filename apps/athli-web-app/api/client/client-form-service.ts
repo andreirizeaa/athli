@@ -26,7 +26,7 @@ import type {
   QuestionAnswer,
   ClientCheckIn,
   ClientQuestionnaire,
-  ClientQuestionnaireDetail,
+  ClientQuestionnaireDetail as SharedClientQuestionnaireDetail,
   CheckInInstance,
   AssignFormScheduleData,
   AssignClientCheckInData,
@@ -99,14 +99,22 @@ export const getClientCheckIns = async (clientId: string, coachId: string): Prom
     headers: { 'x-client-id': clientId, 'x-coach-id': coachId }
   });
 
-  return response.data.checkins.map((c: any) => ({
-    id: c.id || c.assignment_id,
-    name: c.name || 'Unknown Check-in',
-    questionCount: c.questions?.length || 0,
-    schedule: c.schedule_config?.frequency || 'Manual',
-    nextScheduledAt: new Date(c.assigned_at || c.created_at),
-    description: c.description,
-  }));
+  return response.data.checkins.map((c: any) => {
+    const questionCount = c.questions?.length || 0;
+    // Status logic: draft if 0 questions, otherwise use backend status or default to 'live'
+    const status = questionCount === 0 ? 'draft' : (c.status || 'live');
+    return {
+      id: c.id || c.assignment_id,
+      name: c.name || 'Unknown Check-in',
+      questionCount,
+      schedule: c.schedule_config?.frequency || 'Manual',
+      nextScheduledAt: new Date(c.assigned_at || c.created_at),
+      createdAt: new Date(c.created_at),
+      description: c.description,
+      status: status as 'draft' | 'live' | 'paused',
+      submissionCount: c.submission_count || 0,
+    };
+  });
 };
 
 /**
@@ -121,24 +129,24 @@ export const getClientQuestionnaires = async (clientId: string, coachId: string)
     id: q.id || q.assignment_id,
     name: q.name || 'Unknown Questionnaire',
     questionCount: q.questions?.length || 0,
-    status: q.status || 'pending',
-    sentAt: new Date(q.assigned_at || q.created_at || Date.now()),
+    status: q.status || 'draft',
+    sentAt: q.sent_at ? new Date(q.sent_at) : undefined,
     completedAt: q.completed_at ? new Date(q.completed_at) : undefined,
     description: q.description,
   }));
 };
 
 /**
- * Service method to get a single questionnaire for a client
+ * Service method to get a single questionnaire for a client (with response data)
  */
-export const getClientQuestionnaire = async (clientId: string, questionnaireId: string): Promise<ClientQuestionnaireDetail> => {
-  const response = await apiFetch<{ data: ClientQuestionnaireDetail }>(`/client/forms/questionnaires/${questionnaireId}`, {
-    headers: { 'x-client-id': clientId }
+export const getClientQuestionnaire = async (clientId: string, coachId: string, questionnaireId: string): Promise<SharedClientQuestionnaireDetail> => {
+  const response = await apiFetch<{ data: SharedClientQuestionnaireDetail }>(`/client/forms/questionnaires/${questionnaireId}`, {
+    headers: { 'x-client-id': clientId, 'x-coach-id': coachId }
   });
 
   return {
     ...response.data,
-    sentAt: new Date(response.data.sentAt),
+    sentAt: response.data.sentAt ? new Date(response.data.sentAt) : undefined,
     completedAt: response.data.completedAt ? new Date(response.data.completedAt) : undefined,
   };
 };
@@ -688,5 +696,193 @@ export const updateCoachReview = async (data: UpdateCoachReviewData): Promise<vo
   //   body: JSON.stringify({ review: data.review }),
   // })
   // if (!response.ok) throw new Error('Failed to update coach review')
+};
+
+// Types for client-specific form creation
+export type CreateClientCheckInData = {
+  clientId: string;
+  coachId: string;
+  name: string;
+  description?: string;
+  questions: any[];
+  scheduleConfig: Record<string, any>;
+  cronExpression: string;
+};
+
+export type CreateClientQuestionnaireData = {
+  clientId: string;
+  coachId: string;
+  name: string;
+  description?: string;
+  questions: any[];
+};
+
+export type UpdateClientCheckInData = {
+  clientId: string;
+  coachId: string;
+  checkInId: string;
+  questions: any[];
+};
+
+export type UpdateClientQuestionnaireData = {
+  clientId: string;
+  coachId: string;
+  questionnaireId: string;
+  questions: any[];
+};
+
+export type ClientCheckInDetail = {
+  id: string;
+  name: string;
+  description?: string;
+  questions: any[];
+  scheduleConfig?: Record<string, any>;
+  cronExpression?: string;
+};
+
+export type LocalClientQuestionnaireDetail = {
+  id: string;
+  name: string;
+  description?: string;
+  questions: any[];
+  status?: 'draft' | 'pending' | 'completed';
+  sent_at?: string;
+  completed_at?: string;
+};
+
+/**
+ * Create a check-in directly for a client (not in coach library)
+ */
+export const createClientCheckIn = async (data: CreateClientCheckInData): Promise<ClientCheckInDetail> => {
+  const response = await apiFetch<{ data: ClientCheckInDetail }>(`/client/forms/check-ins/create`, {
+    method: 'POST',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      name: data.name,
+      description: data.description,
+      questions: data.questions,
+      schedule_config: data.scheduleConfig,
+      cron_expression: data.cronExpression,
+    }),
+  });
+
+  return response.data;
+};
+
+/**
+ * Create a questionnaire directly for a client (not in coach library)
+ */
+export const createClientQuestionnaire = async (data: CreateClientQuestionnaireData): Promise<LocalClientQuestionnaireDetail> => {
+  const response = await apiFetch<{ data: LocalClientQuestionnaireDetail }>(`/client/forms/questionnaires/create`, {
+    method: 'POST',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      name: data.name,
+      description: data.description,
+      questions: data.questions,
+    }),
+  });
+
+  return response.data;
+};
+
+/**
+ * Get a single client check-in with questions (for editing)
+ */
+export const getClientCheckInById = async (clientId: string, coachId: string, checkInId: string): Promise<ClientCheckInDetail> => {
+  const response = await apiFetch<{ data: ClientCheckInDetail }>(`/client/forms/check-ins/${checkInId}`, {
+    headers: { 'x-client-id': clientId, 'x-coach-id': coachId }
+  });
+
+  return response.data;
+};
+
+/**
+ * Get a single client questionnaire with questions (for editing)
+ */
+export const getClientQuestionnaireById = async (clientId: string, coachId: string, questionnaireId: string): Promise<LocalClientQuestionnaireDetail> => {
+  const response = await apiFetch<{ data: LocalClientQuestionnaireDetail }>(`/client/forms/questionnaires/${questionnaireId}`, {
+    headers: { 'x-client-id': clientId, 'x-coach-id': coachId }
+  });
+
+  return response.data;
+};
+
+/**
+ * Update client check-in questions
+ */
+export const updateClientCheckIn = async (data: UpdateClientCheckInData): Promise<void> => {
+  await apiFetch(`/client/forms/check-ins/${data.checkInId}`, {
+    method: 'PATCH',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      questions: data.questions,
+    }),
+  });
+};
+
+/**
+ * Update client questionnaire questions
+ */
+export const updateClientQuestionnaire = async (data: UpdateClientQuestionnaireData): Promise<void> => {
+  await apiFetch(`/client/forms/questionnaires/${data.questionnaireId}`, {
+    method: 'PATCH',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      questions: data.questions,
+    }),
+  });
+};
+
+/**
+ * Send a questionnaire to a client (update status from draft to pending)
+ */
+export type SendClientQuestionnaireData = {
+  questionnaireId: string;
+  clientId: string;
+  coachId: string;
+};
+
+export const sendClientQuestionnaire = async (data: SendClientQuestionnaireData): Promise<void> => {
+  await apiFetch(`/client/forms/questionnaires/${data.questionnaireId}/send`, {
+    method: 'POST',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+  });
+};
+
+/**
+ * Resend a questionnaire to a client (duplicate and send again)
+ */
+export type ResendClientQuestionnaireData = {
+  questionnaireId: string;
+  clientId: string;
+  coachId: string;
+};
+
+export const resendClientQuestionnaire = async (data: ResendClientQuestionnaireData): Promise<void> => {
+  await apiFetch(`/client/forms/questionnaires/${data.questionnaireId}/resend`, {
+    method: 'POST',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+  });
+};
+
+/**
+ * Update client check-in status (publish, pause)
+ */
+export type UpdateClientCheckInStatusData = {
+  checkInId: string;
+  clientId: string;
+  coachId: string;
+  status: 'live' | 'paused';
+};
+
+export const updateClientCheckInStatus = async (data: UpdateClientCheckInStatusData): Promise<void> => {
+  await apiFetch(`/client/forms/check-ins/${data.checkInId}/status`, {
+    method: 'PATCH',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      status: data.status,
+    }),
+  });
 };
 

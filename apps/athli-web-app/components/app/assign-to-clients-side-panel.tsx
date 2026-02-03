@@ -7,10 +7,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { SidePanel } from '@/components/app/side-panel';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { Athlete } from '@/api/coach/coach-client-service';
 import { Spinner } from '@/components/ui/spinner';
-import { UserPlus, Check, Loader2 } from 'lucide-react';
+import { UserPlus, Check, Loader2, Info } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 
 interface AssignToClientsSidePanelProps {
@@ -29,6 +30,10 @@ interface AssignToClientsSidePanelProps {
     onAssign: (clientIds: string[]) => Promise<void>;
     isAssigning?: boolean;
     assignButtonLabel?: string | ((count: number) => string);
+    /**
+     * Alert message to show below the client grid
+     */
+    alertMessage?: string;
 }
 
 export const AssignToClientsSidePanel = ({
@@ -39,7 +44,8 @@ export const AssignToClientsSidePanel = ({
     previewComponent,
     onAssign,
     isAssigning = false,
-    assignButtonLabel
+    assignButtonLabel,
+    alertMessage
 }: AssignToClientsSidePanelProps) => {
     const t = useTranslations();
     const { clients, isLoading } = useCoachClients();
@@ -221,6 +227,14 @@ export const AssignToClientsSidePanel = ({
                             />
                         )}
                     </div>
+
+                    {/* Alert Message */}
+                    {alertMessage && (
+                        <Alert className="flex-shrink-0">
+                            <Info className="h-4 w-4" />
+                            <AlertDescription>{alertMessage}</AlertDescription>
+                        </Alert>
+                    )}
                 </div>
             </div>
         </SidePanel>

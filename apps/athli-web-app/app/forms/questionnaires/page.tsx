@@ -277,19 +277,27 @@ const QuestionnairesPage = () => {
           </DropdownMenu>
         </div>
       ),
-      renderCell: (row, isSelected) => (
-        <div className="flex items-center gap-3 h-full w-full">
-          <div className="flex items-center justify-center h-full flex-shrink-0" data-no-row-link="true">
-            <Checkbox checked={isSelected} onCheckedChange={() => {
-              const newSet = new Set(selectedQuestionnaires);
-              if (newSet.has(row.id)) newSet.delete(row.id);
-              else newSet.add(row.id);
-              setSelectedQuestionnaires(newSet);
-            }} />
+      renderCell: (row, isSelected) => {
+        const hasNoQuestions = !row.questions || row.questions.length === 0;
+        return (
+          <div className="flex items-center gap-3 h-full w-full">
+            <div className="flex items-center justify-center h-full flex-shrink-0" data-no-row-link="true">
+              <Checkbox
+                checked={isSelected}
+                disabled={hasNoQuestions}
+                onCheckedChange={() => {
+                  if (hasNoQuestions) return;
+                  const newSet = new Set(selectedQuestionnaires);
+                  if (newSet.has(row.id)) newSet.delete(row.id);
+                  else newSet.add(row.id);
+                  setSelectedQuestionnaires(newSet);
+                }}
+              />
+            </div>
+            <span className="text-sm font-medium truncate">{row.name}</span>
           </div>
-          <span className="text-sm font-medium truncate">{row.name}</span>
-        </div>
-      ),
+        );
+      },
     },
     {
       id: 'description',
@@ -361,6 +369,7 @@ const QuestionnairesPage = () => {
         enableRowSelection={true}
         selectedRowIds={selectedQuestionnaires}
         onSelectionChange={setSelectedQuestionnaires}
+        isRowSelectable={(row) => row.questions && row.questions.length > 0}
 
         showPagination={true}
         gridPadding={true}
@@ -564,6 +573,7 @@ const QuestionnairesPage = () => {
           </div>
         }
         assignButtonLabel={(count) => count <= 1 ? t('forms.assignToOneClient') : t('forms.assignToClientsCount', { count })}
+        alertMessage={t('forms.questionnaires.assignAlert')}
       />
     </div>
   );

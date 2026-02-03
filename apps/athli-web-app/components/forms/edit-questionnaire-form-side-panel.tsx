@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -19,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info, Trash2, Check, Loader2 } from 'lucide-react';
+import { Info, Check, Loader2, Trash2 } from 'lucide-react';
 import { editQuestionnaireDetails, deleteQuestionnaire, type Questionnaire as FormType } from '@/api/coach/coach-questionnaire-service';
 import { toast } from 'sonner';
 
@@ -38,6 +39,7 @@ type FormFormValues = {
 
 export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSave, onDelete }: EditQuestionnaireFormSidePanelProps) => {
   const t = useTranslations();
+  const queryClient = useQueryClient();
 
   const formSchema = z.object({
     name: z
@@ -86,6 +88,9 @@ export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSav
 
       toast.success(t('forms.toast.updateSuccess'));
 
+      // Invalidate cache to refresh grid data
+      queryClient.invalidateQueries({ queryKey: ['coach-questionnaires'] });
+
       if (onSave) {
         onSave(updatedForm);
       }
@@ -105,6 +110,10 @@ export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSav
     try {
       await deleteQuestionnaire(form.id);
       toast.success(t('forms.toast.deleteSuccess'));
+
+      // Invalidate cache to refresh grid data
+      queryClient.invalidateQueries({ queryKey: ['coach-questionnaires'] });
+
       if (onDelete) {
         onDelete(form.id);
       }
@@ -131,38 +140,35 @@ export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSav
       title={t('forms.editFormTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
-        <div className="flex w-full justify-between gap-2">
+        <div className="flex w-full justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isDeleting || isSaving}>
+            {t('general.cancel')}
+          </Button>
           <Button
             type="button"
             variant="outline"
             onClick={handleDelete}
-            className="gap-2 text-destructive hover:bg-destructive/10"
             disabled={isDeleting || isSaving}
           >
             {isDeleting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Trash2 className="size-4" />
+              <Trash2 className="h-4 w-4" />
             )}
-            <span>{t('general.delete')}</span>
+            {t('general.delete')}
           </Button>
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isDeleting || isSaving}>
-              {t('general.cancel')}
-            </Button>
-            <Button
-              type="button"
-              onClick={reactForm.handleSubmit(handleSave)}
-              disabled={!reactForm.formState.isValid || !hasChanges || isDeleting || isSaving}
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="h-4 w-4" />
-              )}
-              {t('general.save')}
-            </Button>
-          </div>
+          <Button
+            type="button"
+            onClick={reactForm.handleSubmit(handleSave)}
+            disabled={!reactForm.formState.isValid || !hasChanges || isDeleting || isSaving}
+          >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
+            {t('general.save')}
+          </Button>
         </div>
       }
     >

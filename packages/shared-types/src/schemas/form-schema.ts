@@ -66,7 +66,10 @@ export interface ClientCheckIn {
   questionCount: number;
   schedule: string;
   nextScheduledAt: Date;
+  createdAt: Date;
   description?: string;
+  status: 'draft' | 'live' | 'paused';
+  submissionCount: number;
 }
 
 export interface CheckInInstance {
@@ -113,8 +116,8 @@ export interface ClientQuestionnaire {
   id: string;
   name: string;
   questionCount: number;
-  status: 'pending' | 'completed';
-  sentAt: Date;
+  status: 'draft' | 'pending' | 'completed';
+  sentAt?: Date;
   completedAt?: Date;
   description?: string;
 }
@@ -123,8 +126,8 @@ export interface ClientQuestionnaireDetail {
   id: string;
   name: string;
   description?: string;
-  status: 'pending' | 'completed';
-  sentAt: Date;
+  status: 'draft' | 'pending' | 'completed';
+  sentAt?: Date;
   completedAt?: Date;
   questions: Question[];
   answers: QuestionAnswer[];
