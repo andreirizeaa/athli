@@ -388,6 +388,7 @@ export default function AddSectionModal() {
                             onChangeText={setName}
                             placeholder={t('library.addSection.namePlaceholder')}
                             required
+                            autoFocus
                         />
 
                         <SectionTypeSelect

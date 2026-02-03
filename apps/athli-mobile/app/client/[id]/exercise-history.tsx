@@ -23,6 +23,7 @@ export default function ClientProgressScreen() {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
+  const HEADER_HEIGHT = 52;
   const iconColor = themeColors.text;
 
   const coachId = useClientDetailStore((state) => state.coachId);
@@ -146,34 +147,17 @@ export default function ClientProgressScreen() {
   }, [getThumbnailUrl, handleExercisePress, handleThumbnailPress, themeColors]);
 
   const ListHeader = useMemo(() => (
-    <>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
-        <IconButton
-          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-          onPress={handleBackPress}
-          size="md"
-          color={iconColor}
-        />
-        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-          {t('progress.exerciseHistory')}
-        </Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      {/* Search */}
-      <View style={styles.searchContainer}>
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder={t('general.searchPlaceholder')}
-        />
-        <Text style={[styles.countText, { color: themeColors.mutedText }]}>
-          {filteredExercises.length} {filteredExercises.length === 1 ? t('library.exercise') : t('library.exercises')}
-        </Text>
-      </View>
-    </>
-  ), [insets.top, themeColors, iconColor, searchQuery, filteredExercises.length, t, handleBackPress]);
+    <View style={styles.searchContainer}>
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder={t('general.searchPlaceholder')}
+      />
+      <Text style={[styles.countText, { color: themeColors.mutedText }]}>
+        {filteredExercises.length} {filteredExercises.length === 1 ? t('library.exercise') : t('library.exercises')}
+      </Text>
+    </View>
+  ), [themeColors, searchQuery, filteredExercises.length, t]);
 
   const ListEmpty = useMemo(() => (
     isLoading || isLoadingFromStore ? (
@@ -211,10 +195,24 @@ export default function ClientProgressScreen() {
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={ListEmpty}
         ListFooterComponent={ListFooter}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingTop: insets.top + HEADER_HEIGHT }]}
         showsVerticalScrollIndicator={false}
       />
-      <StatusBarBlur />
+
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+      <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
+        <IconButton
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+          onPress={handleBackPress}
+          size="md"
+          color={iconColor}
+        />
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+          {t('progress.exerciseHistory')}
+        </Text>
+        <View style={styles.headerSpacer} />
+      </View>
     </View>
   );
 }
@@ -223,12 +221,18 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  header: {
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 8,
     paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h5,

@@ -53,7 +53,7 @@ export default function AddQuestionnaireModal() {
     const isClientPrivate = !isEditing && params.clientId && params.coachId;
     const refreshClientQuestionnaires = useClientDetailStore((state) => state.refreshSection);
 
-    const [selectedTab, setSelectedTab] = useState<TabKey>(isEditing ? 'new' : 'templates');
+    const [selectedTab, setSelectedTab] = useState<TabKey>('new');
     const underlinePosition = useSharedValue(0);
     const underlineWidth = useSharedValue(0);
     const tabLayoutsRef = useRef<{ [key: string]: { x: number; width: number } }>({});
@@ -420,6 +420,7 @@ export default function AddQuestionnaireModal() {
                                 onChangeText={setName}
                                 placeholder={t('library.addQuestionnaire.namePlaceholder')}
                                 required
+                                autoFocus
                             />
 
                             <TextAreaInput

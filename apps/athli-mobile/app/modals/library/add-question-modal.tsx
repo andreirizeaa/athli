@@ -424,6 +424,17 @@ export default function AddQuestionModal() {
         alwaysBounceVertical={false}
         overScrollMode="never"
       >
+        <TextAreaInput
+          label={t('library.addQuestion.question')}
+          value={questionText}
+          onChangeText={setQuestionText}
+          placeholder={t('library.addQuestion.questionPlaceholder')}
+          required
+          numberOfLines={3}
+          minHeight={60}
+          autoFocus
+        />
+
         {/* Format type selector */}
         <PressableOpacity onPress={() => setFormatModalVisible(true)}>
           <Card variant="form">
@@ -453,16 +464,6 @@ export default function AddQuestionModal() {
             required
           />
         )}
-
-        <TextAreaInput
-          label={t('library.addQuestion.question')}
-          value={questionText}
-          onChangeText={setQuestionText}
-          placeholder={t('library.addQuestion.questionPlaceholder')}
-          required
-          numberOfLines={3}
-          minHeight={60}
-        />
 
         <View style={styles.switchRow}>
           <Text style={[styles.switchLabel, { color: themeColors.text }]}>

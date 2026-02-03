@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SegmentedControl, type PhotoView } from '@/components/ui/segmented-control';
 import { haptics } from '@/utils/haptics';
@@ -41,6 +42,7 @@ export default function ClientPhotosScreen() {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
+  const HEADER_HEIGHT = 52;
   const iconColor = themeColors.text;
 
   // Photo view filter state
@@ -360,33 +362,12 @@ export default function ClientPhotosScreen() {
   const bottomBarHeight = 48 + 24 + insets.bottom;
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
+    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: insets.top, paddingBottom: bottomBarHeight }
-        ]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: bottomBarHeight }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
-          <IconButton
-            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-            onPress={handleBackPress}
-            size="md"
-            color={iconColor}
-          />
-          <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-            {t('clientDetail.sections.photos')}
-          </Text>
-          <IconButton
-            icon={{ sf: 'plus', IconComponent: Plus }}
-            onPress={handleAddPhoto}
-            size="md"
-            color={iconColor}
-          />
-        </View>
-
         {/* Photo view filter */}
         <View style={styles.filterContainer}>
           <SegmentedControl
@@ -441,6 +422,26 @@ export default function ClientPhotosScreen() {
           </View>
         )}
       </ScrollView>
+
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+      <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
+        <IconButton
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+          onPress={handleBackPress}
+          size="md"
+          color={iconColor}
+        />
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+          {t('clientDetail.sections.photos')}
+        </Text>
+        <IconButton
+          icon={{ sf: 'plus', IconComponent: Plus }}
+          onPress={handleAddPhoto}
+          size="md"
+          color={iconColor}
+        />
+      </View>
 
       {/* Bottom bar with Sort and Compare buttons */}
       <View style={styles.bottomBarWrapper}>
@@ -530,21 +531,29 @@ export default function ClientPhotosScreen() {
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
   container: {
     flex: 1,
+  },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 4,
-    paddingBottom: 8,
-    paddingHorizontal: 16,
   },
   filterContainer: {
     marginBottom: 12,

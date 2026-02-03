@@ -98,6 +98,24 @@ coachClientRouter.patch('/injuries', supabaseAuthenticate, clientDetailsControll
 
 /**
  * @swagger
+ * /api/v1/clients/at-risk:
+ *   post:
+ *     summary: Get at-risk clients (inactive for more than threshold days)
+ *     tags: [Coach Clients]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               thresholdDays:
+ *                 type: number
+ *                 default: 5
+ */
+coachClientRouter.post('/at-risk', supabaseAuthenticate, coachClientController.getAtRiskClients);
+
+/**
+ * @swagger
  * /api/v1/clients/training-history:
  *   post:
  *     summary: Get training history for all coach's clients

@@ -105,6 +105,7 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
           onChangeText={setName}
           placeholder={t('clients.addClientModal.namePlaceholder')}
           required
+          autoFocus
         />
 
         <InputBox

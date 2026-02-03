@@ -1,5 +1,6 @@
 import React, { useRef, useCallback, useState, useMemo, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus, HelpCircle, ChevronRight, ClipboardList, Link2, FilePlus } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
@@ -9,7 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { SearchBar } from '@/components/ui/search-bar';
@@ -58,6 +59,8 @@ const getStatusLabel = (status: string, t: any) => {
 
 export default function ClientQuestionairesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const HEADER_HEIGHT = 52;
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -184,28 +187,16 @@ export default function ClientQuestionairesScreen() {
   };
 
   return (
-    <ScreenWrapper scrollable={false} useImageBackground={false}>
-      <View style={styles.container}>
-        <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
-          <IconButton
-            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-            onPress={handleBackPress}
-            size="md"
-            color={iconColor}
-          />
-          <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-            {t('clientDetail.sections.questionnaires')}
-          </Text>
-          <DropdownMenuWrapper options={addMenuOptions}>
-            <IconButton
-              icon={{ sf: 'plus', IconComponent: Plus }}
-              onPress={() => {}}
-              size="md"
-              color={iconColor}
-            />
-          </DropdownMenuWrapper>
-        </View>
-
+    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+      >
         {/* Search bar */}
         <View style={styles.searchContainer}>
           <SearchBar
@@ -249,17 +240,11 @@ export default function ClientQuestionairesScreen() {
                 <Text style={[styles.emptyDescription, { color: themeColors.mutedText }]}>
                   {t('clientDetail.questionnaires.emptyDescription')}
                 </Text>
-            )}
+              )}
             </View>
           ) : (
             /* Questionnaires list */
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-              keyboardDismissMode="on-drag"
-              bounces={false}
-            >
+            <View>
               {filteredQuestionnaires.map((questionnaire, index) => {
                 const isLastItem = index === filteredQuestionnaires.length - 1;
                 const statusStyle = getStatusStyle(questionnaire.status || 'draft', themeColors);
@@ -319,25 +304,58 @@ export default function ClientQuestionairesScreen() {
                   </View>
                 );
               })}
-            </ScrollView>
+            </View>
           )}
         </Pressable>
+      </ScrollView>
+
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+      <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
+        <IconButton
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+          onPress={handleBackPress}
+          size="md"
+          color={iconColor}
+        />
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+          {t('clientDetail.sections.questionnaires')}
+        </Text>
+        <DropdownMenuWrapper options={addMenuOptions}>
+          <IconButton
+            icon={{ sf: 'plus', IconComponent: Plus }}
+            onPress={() => {}}
+            size="md"
+            color={iconColor}
+          />
+        </DropdownMenuWrapper>
       </View>
-    </ScreenWrapper>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
   },
-  header: {
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 4,
-    paddingBottom: 8,
     paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h5,
@@ -375,13 +393,6 @@ const styles = StyleSheet.create({
   emptyDescription: {
     ...typography.p2,
     textAlign: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 40,
   },
   rowContent: {
     flexDirection: 'row',

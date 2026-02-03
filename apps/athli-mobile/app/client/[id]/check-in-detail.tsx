@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Pencil, Inbox, Pause, Play, Trash2, Send } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { Card } from '@/components/ui/card';
 import { SettingsOption } from '@/components/ui/settings-option';
 import { Separator } from '@/components/ui/separator';
@@ -26,6 +27,8 @@ export default function CheckInDetailScreen() {
   const params = useLocalSearchParams<CheckInDetailParams>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const insets = useSafeAreaInsets();
+  const HEADER_HEIGHT = 52;
 
   const coachId = useClientDetailStore((state) => state.coachId);
   const checkIns = useClientDetailStore((state) => state.checkIns);
@@ -123,8 +126,66 @@ export default function CheckInDetailScreen() {
 
   return (
     <>
-      <ScreenWrapper useImageBackground={false}>
-        <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.contentContainer}>
+            <Card>
+              <SettingsOption
+                icon={<PlatformIcon sf="pencil" IconComponent={Pencil} size={iconSize} color={iconColor} />}
+                title={t('clientDetail.checkIns.viewEditForm')}
+                onPress={handleViewEditForm}
+                showChevron
+              />
+              <Separator />
+              <SettingsOption
+                icon={<PlatformIcon sf="tray.full" IconComponent={Inbox} size={iconSize} color={iconColor} />}
+                title={t('clientDetail.checkIns.submissions')}
+                onPress={handleViewSubmissions}
+                showChevron
+              />
+            </Card>
+
+            <Card style={styles.actionsCard}>
+              <SettingsOption
+                icon={
+                  <PlatformIcon
+                    sf={isDraft ? 'paperplane' : isLive ? 'pause' : 'play'}
+                    IconComponent={isDraft ? Send : isLive ? Pause : Play}
+                    size={iconSize}
+                    color={iconColor}
+                  />
+                }
+                title={
+                  isDraft
+                    ? t('clientDetail.checkIns.publish')
+                    : isLive
+                      ? t('clientDetail.checkIns.pause')
+                      : t('clientDetail.checkIns.resume')
+                }
+                onPress={handlePauseResume}
+                showChevron
+              />
+              <Separator />
+              <SettingsOption
+                icon={<PlatformIcon sf="trash" IconComponent={Trash2} size={iconSize} color={iconColor} />}
+                title={t('clientDetail.checkIns.delete')}
+                onPress={handleDelete}
+                showChevron
+              />
+            </Card>
+          </View>
+        </ScrollView>
+
+        <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+        <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
           <IconButton
             icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
             onPress={handleBackPress}
@@ -136,54 +197,7 @@ export default function CheckInDetailScreen() {
           </Text>
           <View style={{ width: 40 }} />
         </View>
-
-        <View style={styles.contentContainer}>
-          <Card>
-            <SettingsOption
-              icon={<PlatformIcon sf="pencil" IconComponent={Pencil} size={iconSize} color={iconColor} />}
-              title={t('clientDetail.checkIns.viewEditForm')}
-              onPress={handleViewEditForm}
-              showChevron
-            />
-            <Separator />
-            <SettingsOption
-              icon={<PlatformIcon sf="tray.full" IconComponent={Inbox} size={iconSize} color={iconColor} />}
-              title={t('clientDetail.checkIns.submissions')}
-              onPress={handleViewSubmissions}
-              showChevron
-            />
-          </Card>
-
-          <Card style={styles.actionsCard}>
-            <SettingsOption
-              icon={
-                <PlatformIcon
-                  sf={isDraft ? 'paperplane' : isLive ? 'pause' : 'play'}
-                  IconComponent={isDraft ? Send : isLive ? Pause : Play}
-                  size={iconSize}
-                  color={iconColor}
-                />
-              }
-              title={
-                isDraft
-                  ? t('clientDetail.checkIns.publish')
-                  : isLive
-                    ? t('clientDetail.checkIns.pause')
-                    : t('clientDetail.checkIns.resume')
-              }
-              onPress={handlePauseResume}
-              showChevron
-            />
-            <Separator />
-            <SettingsOption
-              icon={<PlatformIcon sf="trash" IconComponent={Trash2} size={iconSize} color={iconColor} />}
-              title={t('clientDetail.checkIns.delete')}
-              onPress={handleDelete}
-              showChevron
-            />
-          </Card>
-        </View>
-      </ScreenWrapper>
+      </View>
 
       <Dialog
         visible={showPauseDialog}
@@ -245,13 +259,27 @@ export default function CheckInDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
+  screen: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 4,
-    paddingBottom: 8,
     paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h5,

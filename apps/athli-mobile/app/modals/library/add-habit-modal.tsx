@@ -94,7 +94,7 @@ export default function AddHabitModal() {
     const isClientAssignment = params.isClientAssignment === 'true';
     const refreshClientHabits = useClientDetailStore((state) => state.refreshSection);
 
-    const [selectedTab, setSelectedTab] = useState<TabKey>(isEditing ? 'new' : 'templates');
+    const [selectedTab, setSelectedTab] = useState<TabKey>('new');
     const underlinePosition = useSharedValue(0);
     const underlineWidth = useSharedValue(0);
     const tabLayoutsRef = useRef<{ [key: string]: { x: number; width: number } }>({});
@@ -580,6 +580,7 @@ export default function AddHabitModal() {
                                 onChangeText={setName}
                                 placeholder={t('library.addHabit.namePlaceholder')}
                                 required
+                                autoFocus
                             />
 
                             <TextAreaInput

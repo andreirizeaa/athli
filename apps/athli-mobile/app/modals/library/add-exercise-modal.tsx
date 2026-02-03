@@ -561,6 +561,7 @@ export default function AddExerciseModal() {
                             onChangeText={setExerciseName}
                             placeholder={t('library.addExercise.namePlaceholder')}
                             required
+                            autoFocus
                         />
 
                         {/* 2. Instructions */}

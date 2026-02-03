@@ -18,7 +18,7 @@ export interface YourListTask {
   clientId?: string;
   clientName?: string;
   clientAvatar?: string;
-  dueDate: string;
+  dueDate?: string;
   completed: boolean;
 }
 
@@ -40,7 +40,7 @@ export interface CreateTaskData {
   information?: string;
   type: TaskType;
   client_id?: string;
-  due_date: string;
+  due_date?: string;
 }
 
 export interface UpdateTaskData extends Partial<CreateTaskData> {

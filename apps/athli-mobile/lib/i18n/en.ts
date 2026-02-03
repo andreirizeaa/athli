@@ -130,6 +130,32 @@ export const en = {
   },
   home: {
     title: 'Home',
+    dailyWorkouts: {
+      title: 'Workouts',
+      today: 'Today',
+      filters: {
+        completed: 'Completed',
+        inProgress: 'In Progress',
+        missed: 'Missed',
+      },
+      empty: {
+        completed: 'No clients have completed a workout yet',
+        inProgress: 'No clients are currently working out',
+        missed: 'All clients are on track',
+      },
+    },
+    atRiskClients: {
+      title: 'At Risk',
+      noActivity: 'No activity',
+      lastActivity: {
+        one: 'Last activity 1 day ago',
+        other: 'Last activity {count} days ago',
+      },
+      infoDialog: {
+        title: 'At Risk Clients',
+        message: 'Clients shown here have not logged any training activity in the last 5 days. Regular check-ins can help keep them engaged and on track with their fitness goals.',
+      },
+    },
   },
   athlete: {
     loading: {
@@ -1657,6 +1683,42 @@ export const en = {
     },
     profile: 'Profile',
     editProfile: 'Edit Profile',
+  },
+  todos: {
+    title: 'To Dos',
+    tabs: {
+      yourList: 'Your list',
+      aiAssistant: 'AI Assistant',
+    },
+    addTask: {
+      title: 'Add Task',
+      type: 'Type',
+      typeGeneral: 'General',
+      typeClient: 'Client',
+      taskTitle: 'Title',
+      titlePlaceholder: 'Enter task title',
+      description: 'Description',
+      descriptionPlaceholder: 'Add details (optional)',
+      dueDate: 'Complete by',
+      selectDate: 'Select date',
+      selectClient: 'Select client',
+    },
+    editTask: {
+      title: 'Edit Task',
+    },
+    emptyOwnTitle: 'No tasks yet',
+    emptyOwnSubtitle: 'Add tasks to keep track of your coaching work',
+    emptyAiTitle: 'Athli Assistant is resting',
+    emptyAiSubtitle: 'Automated tasks and reminders will appear here when there\'s something that needs your attention',
+    outstanding: 'outstanding',
+    allCaughtUp: 'All caught up',
+  },
+  checkIns: {
+    title: 'Check Ins',
+    awaitingReview: 'awaiting review',
+    noReviewsNeeded: 'No reviews needed',
+    emptyTitle: 'All caught up!',
+    emptySubtitle: 'No check-ins are currently awaiting your review. Great work!',
   },
   shared: {
     defineSchedule: {

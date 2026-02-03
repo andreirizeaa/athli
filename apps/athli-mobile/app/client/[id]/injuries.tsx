@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator, ScrollView, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dialog } from '@/components/ui/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -11,7 +12,7 @@ import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useThemePreference, useTranslations, useClientDetailStore, useCoachProfileStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
-import { ScreenWrapper } from '@/components/ui/screen-wrapper';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SearchBar } from '@/components/ui/search-bar';
@@ -36,6 +37,8 @@ const fuzzyMatch = (text: string, query: string): boolean => {
 
 export default function ClientInjuriesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const HEADER_HEIGHT = 52;
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -193,8 +196,23 @@ export default function ClientInjuriesScreen() {
   // Loading state
   if (isLoading && injuries.length === 0) {
     return (
-      <ScreenWrapper useImageBackground={false}>
-        <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={themeColors.primary} />
+          </View>
+        </ScrollView>
+
+        <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+        <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
           <IconButton
             icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
             onPress={handleBackPress}
@@ -206,35 +224,21 @@ export default function ClientInjuriesScreen() {
           </Text>
           <View style={styles.headerPlaceholder} />
         </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={themeColors.primary} />
-        </View>
-      </ScreenWrapper>
+      </View>
     );
   }
 
   return (
-    <ScreenWrapper scrollable={false} useImageBackground={false}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: themeColors.backgroundPrimary }]}>
-          <IconButton
-            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-            onPress={handleBackPress}
-            size="md"
-            color={iconColor}
-          />
-          <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-            {t('clientDetail.overview.injuries')}
-          </Text>
-          <IconButton
-            icon={{ sf: 'plus', IconComponent: Plus }}
-            onPress={handleAddInjury}
-            size="md"
-            color={iconColor}
-          />
-        </View>
-
+    <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+      >
         {/* Search bar */}
         <View style={styles.searchContainer}>
           <SearchBar
@@ -267,52 +271,77 @@ export default function ClientInjuriesScreen() {
               <EmptyState message={t('clientDetail.overview.noInjuries')} />
             </View>
           ) : (
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-              keyboardDismissMode="on-drag"
-              bounces={false}
-            >
+            <View>
               {filteredInjuries.map((item, index) => (
                 <View key={item.id}>
                   {renderInjury({ item, index, isLastItem: index === filteredInjuries.length - 1 })}
                 </View>
               ))}
-            </ScrollView>
+            </View>
           )}
         </Pressable>
+      </ScrollView>
 
-        <Dialog
-          visible={showErrorDialog}
-          onClose={() => setShowErrorDialog(false)}
-          title={t('general.error')}
-          message={t('general.errorDeleting')}
-          showCloseIcon={false}
-          buttons={[
-            {
-              label: t('general.ok'),
-              onPress: () => setShowErrorDialog(false),
-              variant: 'primary',
-            },
-          ]}
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+      <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
+        <IconButton
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+          onPress={handleBackPress}
+          size="md"
+          color={iconColor}
+        />
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+          {t('clientDetail.overview.injuries')}
+        </Text>
+        <IconButton
+          icon={{ sf: 'plus', IconComponent: Plus }}
+          onPress={handleAddInjury}
+          size="md"
+          color={iconColor}
         />
       </View>
-    </ScreenWrapper>
+
+      <Dialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title={t('general.error')}
+        message={t('general.errorDeleting')}
+        showCloseIcon={false}
+        buttons={[
+          {
+            label: t('general.ok'),
+            onPress: () => setShowErrorDialog(false),
+            variant: 'primary',
+          },
+        ]}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
   },
-  header: {
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 4,
     paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h5,
@@ -344,15 +373,9 @@ const styles = StyleSheet.create({
     ...typography.p2,
     textAlign: 'center',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
   injuryItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 16,
   },

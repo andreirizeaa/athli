@@ -1,10 +1,9 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Platform, Pressable, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, Pressable, ScrollView } from 'react-native';
 import { Dialog } from '@/components/ui/dialog';
 import { ChevronLeft, ChevronDown, ChevronUp, GripVertical, Check } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -24,8 +23,9 @@ import { haptics } from '@/utils/haptics';
 import { useThemePreference } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { useTranslations } from '@/stores';
-import { hexToRgba } from '@/utils/colorUtils';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { useModalCallbacks } from '@/stores';
+import { Card } from '@/components/ui/card';
 import {
     type BuilderItem,
     type BuilderSection,
@@ -279,14 +279,6 @@ const DraggableRow: React.FC<DraggableRowProps> = ({
         };
     });
 
-    // Dragging card visual style
-    const draggingCardStyle = useAnimatedStyle(() => {
-        return {
-            shadowOpacity: isDragging.value ? 0.25 : 0,
-            backgroundColor: themeColors.backgroundTertiary,
-        };
-    });
-
     const renderLeftIcon = () => {
         if (isSection) {
             const ChevronIcon = item.isCollapsed ? ChevronUp : ChevronDown;
@@ -317,13 +309,7 @@ const DraggableRow: React.FC<DraggableRowProps> = ({
                         animatedDragStyle,
                     ]}
                 >
-                    <Animated.View
-                        style={[
-                            styles.rowContent,
-                            { borderColor: themeColors.border },
-                            draggingCardStyle,
-                        ]}
-                    >
+                    <Card style={styles.rowContent}>
                         {renderLeftIcon()}
                         <Text
                             style={[
@@ -338,7 +324,7 @@ const DraggableRow: React.FC<DraggableRowProps> = ({
                         <View style={styles.dragHandle}>
                             <GripVertical {...({ size: 20, color: themeColors.primary, strokeWidth: 1.5 } as any)} />
                         </View>
-                    </Animated.View>
+                    </Card>
                 </Animated.View>
             </GestureDetector>
         </Animated.View>
@@ -508,56 +494,21 @@ export default function ReorderScreen() {
         }
     }, [hasUnsavedChanges, router]);
 
-    const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
-    const gradientHeight = headerHeight + 12;
+    const HEADER_HEIGHT = 52;
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-            <View style={[styles.container, { backgroundColor: themeColors.backgroundSecondary }]}>
-                {/* Fixed Header Gradient */}
-                <View style={[styles.fixedHeader, { height: headerHeight }]}>
-                    <LinearGradient
-                        colors={[
-                            hexToRgba(themeColors.backgroundSecondary, 1),
-                            hexToRgba(themeColors.backgroundSecondary, 0.85),
-                            hexToRgba(themeColors.backgroundSecondary, 0.5),
-                            hexToRgba(themeColors.backgroundSecondary, 0),
-                        ]}
-                        locations={[0, 0.5, 0.8, 1]}
-                        style={[styles.headerGradient, { height: gradientHeight }]}
-                        pointerEvents="none"
-                    />
-                </View>
-
+            <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
                 <ScrollView
                     style={styles.scrollView}
                     contentContainerStyle={[
                         styles.scrollContent,
-                        { paddingTop: insets.top, paddingBottom: insets.bottom + 40 }
+                        { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 }
                     ]}
                     showsVerticalScrollIndicator={false}
                     scrollEnabled={isScrollEnabled}
                     keyboardDismissMode="on-drag"
                 >
-                    {/* Header */}
-                    <View style={styles.header}>
-                        <IconButton
-                            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-                            onPress={handleBack}
-                            size="md"
-                            color={themeColors.text}
-                        />
-                        <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>
-                            {t('library.reorder.title')}
-                        </Text>
-                        <IconButton
-                            icon={{ sf: 'checkmark', IconComponent: Check }}
-                            onPress={handleSave}
-                            size="md"
-                            variant="primary"
-                        />
-                    </View>
-
                     {/* Reorderable List */}
                     <View style={styles.listContainer}>
                         {flatItems
@@ -588,6 +539,27 @@ export default function ReorderScreen() {
                     </View>
                 </ScrollView>
 
+                <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+                <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
+                    <IconButton
+                        icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+                        onPress={handleBack}
+                        size="md"
+                        color={themeColors.text}
+                    />
+                    <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>
+                        {t('library.reorder.title')}
+                    </Text>
+                    <IconButton
+                        icon={{ sf: 'checkmark', IconComponent: Check }}
+                        onPress={handleSave}
+                        size="md"
+                        color={hasUnsavedChanges ? themeColors.primary : themeColors.mutedText}
+                        disabled={!hasUnsavedChanges}
+                    />
+                </View>
+
                 <Dialog
                     visible={showDiscardDialog}
                     onClose={() => setShowDiscardDialog(false)}
@@ -612,27 +584,19 @@ const styles = StyleSheet.create({
         top: 0,
         left: 0,
         right: 0,
-        zIndex: 10,
-    },
-    headerGradient: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingBottom: 8,
+        gap: 8,
+        zIndex: 1001,
     },
     scrollView: {
         flex: 1,
     },
     scrollContent: {
         paddingHorizontal: 16,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingTop: 12,
-        marginBottom: 16,
-        height: 56,
     },
     title: {
         ...typography.h6,
@@ -653,12 +617,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         height: ROW_HEIGHT,
-        borderRadius: 12,
+        paddingVertical: 0,
         paddingHorizontal: 12,
-        borderWidth: StyleSheet.hairlineWidth,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowRadius: 12,
+        marginBottom: 0,
     },
     chevronButton: {
         width: 32,
