@@ -55,7 +55,8 @@ export const clientQuestionnairesController = {
             name: a.name,
             description: a.description,
             questions: a.questions,
-            status: a.status,
+            status: a.status || 'draft',
+            sent_at: a.sent_at,
             completed_at: a.completed_at,
             assigned_at: a.created_at,
             created_at: a.created_at
@@ -198,8 +199,8 @@ export const clientQuestionnairesController = {
                     name: finalName,
                     description: item.description,
                     questions: item.questions,
-                    // Store reference to library item if desired, but schema might not have it. 
-                    // Based on other controllers, we often just copy values.
+                    status: 'pending',
+                    sent_at: new Date().toISOString(),
                 });
             }
         }
@@ -215,7 +216,7 @@ export const clientQuestionnairesController = {
     },
 
     /**
-     * Submit a questionnaire
+     * Submit a questionnaire (client submits their answers)
      */
     submitQuestionnaire: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
@@ -231,7 +232,7 @@ export const clientQuestionnairesController = {
 
         const supabase = getSupabaseClient();
 
-        // 1. Fetch assignment details
+        // Fetch assignment details
         const { data: assignmentDetails, error: detailsError } = await supabase
             .from('client_questionnaires')
             .select('client_id, coach_id')
@@ -246,21 +247,13 @@ export const clientQuestionnairesController = {
             return forbidden(res, { message: 'Coach ID mismatch' });
         }
 
-        // 2. Insert into logs
-        await supabase.from('client_questionnaire_logs').insert({
-            client_id: targetClientId,
-            coach_id: assignmentDetails.coach_id,
-            assignment_id: id,
-            answers: responses,
-            submission_date: new Date().toISOString(),
-            status: 'completed'
-        });
-
+        // Update the questionnaire with answers directly (no logs table)
         const { data, error } = await supabase
             .from('client_questionnaires')
             .update({
                 status: 'completed',
                 completed_at: new Date().toISOString(),
+                answers: responses,
             })
             .eq('id', id)
             .eq('client_id', targetClientId)
@@ -303,5 +296,289 @@ export const clientQuestionnairesController = {
 
         if (error) return res.status(500).json({ success: false, message: error.message });
         noContent(res);
+    },
+
+    /**
+     * Get a single questionnaire by ID
+     * Supports both coach access (x-coach-id + x-client-id) and client access (x-client-id only)
+     */
+    getQuestionnaireById: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id } = req.params;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+
+        let targetClientId: string;
+        let targetCoachId: string | undefined;
+
+        if (coachIdHeader) {
+            // Coach access: x-coach-id + x-client-id
+            if (coachIdHeader !== userId) return unauthorized(res, { message: 'Coach ID mismatch' });
+            if (!clientIdHeader) return forbidden(res, { message: 'x-client-id header required' });
+            targetClientId = clientIdHeader as string;
+            targetCoachId = coachIdHeader as string;
+
+            // Verify coach-client relationship
+            const supabase = getSupabaseClient();
+            const { data: relation } = await supabase
+                .from('coach_client_assignments')
+                .select('client_id')
+                .eq('coach_id', targetCoachId)
+                .eq('client_id', targetClientId)
+                .single();
+
+            if (!relation) return forbidden(res, { message: 'Forbidden' });
+        } else {
+            // Client access: x-client-id only (client viewing their own questionnaire)
+            if (clientIdHeader && clientIdHeader !== userId) return forbidden(res, { message: 'Client ID mismatch' });
+            targetClientId = clientIdHeader || userId;
+        }
+
+        const supabase = getSupabaseClient();
+
+        let query = supabase
+            .from('client_questionnaires')
+            .select('*')
+            .eq('id', id)
+            .eq('client_id', targetClientId);
+
+        if (targetCoachId) {
+            query = query.eq('coach_id', targetCoachId);
+        }
+
+        const { data: questionnaire, error } = await query.single();
+
+        if (error || !questionnaire) return notFound(res, { message: 'Questionnaire not found' });
+
+        success(res, {
+            message: 'Questionnaire retrieved successfully',
+            data: {
+                id: questionnaire.id,
+                name: questionnaire.name,
+                description: questionnaire.description,
+                questions: questionnaire.questions || [],
+                answers: questionnaire.answers || [],
+                status: questionnaire.status || 'draft',
+                sentAt: questionnaire.sent_at,
+                completedAt: questionnaire.completed_at,
+            },
+        });
+    },
+
+    /**
+     * Update a questionnaire (questions, etc.)
+     */
+    updateQuestionnaire: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id } = req.params;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+        const { questions, name, description } = req.body;
+
+        if (!coachIdHeader || coachIdHeader !== userId) return unauthorized(res, { message: 'Unauthorized' });
+        if (!clientIdHeader) return forbidden(res, { message: 'x-client-id required' });
+
+        const targetCoachId = coachIdHeader as string;
+        const targetClientId = clientIdHeader as string;
+
+        const supabase = getSupabaseClient();
+
+        // Build update object with only provided fields
+        const updateData: any = {};
+        if (questions !== undefined) updateData.questions = questions;
+        if (name !== undefined) updateData.name = name;
+        if (description !== undefined) updateData.description = description;
+
+        const { data, error } = await supabase
+            .from('client_questionnaires')
+            .update(updateData)
+            .eq('id', id)
+            .eq('client_id', targetClientId)
+            .eq('coach_id', targetCoachId)
+            .select()
+            .single();
+
+        if (error) return res.status(500).json({ success: false, message: error.message });
+        if (!data) return notFound(res, { message: 'Questionnaire not found' });
+
+        success(res, {
+            message: 'Questionnaire updated successfully',
+            data: {
+                id: data.id,
+                name: data.name,
+                description: data.description,
+                questions: data.questions || [],
+            },
+        });
+    },
+
+    /**
+     * Create a client-specific questionnaire (not from library)
+     */
+    createQuestionnaire: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+        const { name, description, questions } = req.body;
+
+        if (!coachIdHeader || coachIdHeader !== userId) return unauthorized(res, { message: 'Unauthorized' });
+        if (!clientIdHeader) return forbidden(res, { message: 'x-client-id required' });
+        if (!name) return res.status(400).json({ success: false, message: 'name is required' });
+
+        const targetCoachId = coachIdHeader as string;
+        const targetClientId = clientIdHeader as string;
+
+        const supabase = getSupabaseClient();
+
+        // Verify relationship
+        const { data: relation } = await supabase
+            .from('coach_client_assignments')
+            .select('client_id')
+            .eq('coach_id', targetCoachId)
+            .eq('client_id', targetClientId)
+            .single();
+
+        if (!relation) return forbidden(res, { message: 'Client not assigned to this coach' });
+
+        // Check for duplicate names and rename if needed
+        const { data: existingQuestionnaires } = await supabase
+            .from('client_questionnaires')
+            .select('name')
+            .eq('client_id', targetClientId)
+            .eq('coach_id', targetCoachId);
+
+        const existingNames = new Set((existingQuestionnaires || []).map((q: any) => q.name));
+        let finalName = name;
+        let counter = 1;
+        while (existingNames.has(finalName)) {
+            finalName = `${name} ${counter}`;
+            counter++;
+        }
+
+        const { data: questionnaire, error } = await supabase
+            .from('client_questionnaires')
+            .insert({
+                client_id: targetClientId,
+                coach_id: targetCoachId,
+                name: finalName,
+                description: description || '',
+                questions: questions || [],
+            })
+            .select()
+            .single();
+
+        if (error) return res.status(500).json({ success: false, message: error.message });
+
+        created(res, {
+            message: 'Questionnaire created successfully',
+            data: {
+                id: questionnaire.id,
+                name: questionnaire.name,
+                description: questionnaire.description,
+                questions: questionnaire.questions || [],
+            },
+        });
+    },
+
+    /**
+     * Send a questionnaire to a client (update status from draft to pending)
+     */
+    sendQuestionnaire: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id } = req.params;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+
+        if (!coachIdHeader || coachIdHeader !== userId) return unauthorized(res, { message: 'Unauthorized' });
+        if (!clientIdHeader) return forbidden(res, { message: 'x-client-id required' });
+
+        const targetCoachId = coachIdHeader as string;
+        const targetClientId = clientIdHeader as string;
+
+        const supabase = getSupabaseClient();
+
+        // Update status to pending and set sent_at
+        const { data, error } = await supabase
+            .from('client_questionnaires')
+            .update({
+                status: 'pending',
+                sent_at: new Date().toISOString(),
+            })
+            .eq('id', id)
+            .eq('client_id', targetClientId)
+            .eq('coach_id', targetCoachId)
+            .select()
+            .single();
+
+        if (error) return res.status(500).json({ success: false, message: error.message });
+        if (!data) return notFound(res, { message: 'Questionnaire not found' });
+
+        success(res, {
+            message: 'Questionnaire sent successfully',
+            data: {
+                id: data.id,
+                name: data.name,
+                status: data.status,
+                sent_at: data.sent_at,
+            },
+        });
+    },
+
+    /**
+     * Resend a questionnaire (duplicate and send again)
+     * Creates a new questionnaire with same questions but reset status
+     */
+    resendQuestionnaire: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id } = req.params;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+
+        if (!coachIdHeader || coachIdHeader !== userId) return unauthorized(res, { message: 'Unauthorized' });
+        if (!clientIdHeader) return forbidden(res, { message: 'x-client-id required' });
+
+        const targetCoachId = coachIdHeader as string;
+        const targetClientId = clientIdHeader as string;
+
+        const supabase = getSupabaseClient();
+
+        // Fetch the original questionnaire
+        const { data: original, error: fetchError } = await supabase
+            .from('client_questionnaires')
+            .select('*')
+            .eq('id', id)
+            .eq('client_id', targetClientId)
+            .eq('coach_id', targetCoachId)
+            .single();
+
+        if (fetchError || !original) return notFound(res, { message: 'Questionnaire not found' });
+
+        // Create a new questionnaire with same questions but reset fields
+        const { data: newQuestionnaire, error: insertError } = await supabase
+            .from('client_questionnaires')
+            .insert({
+                client_id: targetClientId,
+                coach_id: targetCoachId,
+                name: original.name,
+                description: original.description,
+                questions: original.questions,
+                status: 'pending',
+                sent_at: new Date().toISOString(),
+                answers: [],
+            })
+            .select()
+            .single();
+
+        if (insertError) return res.status(500).json({ success: false, message: insertError.message });
+
+        created(res, {
+            message: 'Questionnaire resent successfully',
+            data: {
+                id: newQuestionnaire.id,
+                name: newQuestionnaire.name,
+                status: newQuestionnaire.status,
+                sent_at: newQuestionnaire.sent_at,
+            },
+        });
     },
 };

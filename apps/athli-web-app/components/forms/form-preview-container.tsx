@@ -35,11 +35,15 @@ export const FormPreviewContainer = ({
   const [metrics, setMetrics] = React.useState<Metric[]>([]);
   const [isLoadingMetrics, setIsLoadingMetrics] = React.useState<boolean>(false);
 
+  // Support both 'format' and 'type' field names
+  const getQuestionFormat = (q: Question | undefined) => (q as any)?.format || (q as any)?.type;
+
   React.useEffect(() => {
-    if (currentQuestion?.format === 'metrics' && currentQuestion?.metricId) {
+    const format = getQuestionFormat(currentQuestion);
+    if (format === 'metrics' && currentQuestion?.metricId) {
       fetchMetrics();
     }
-  }, [currentQuestion?.format, currentQuestion?.metricId]);
+  }, [currentQuestion]);
 
   const fetchMetrics = async () => {
     setIsLoadingMetrics(true);
@@ -122,7 +126,7 @@ export const FormPreviewContainer = ({
         <div className="w-full">
           <PreviewQuestion
             question={currentQuestion.question}
-            format={currentQuestion.format as any}
+            format={getQuestionFormat(currentQuestion) as any}
             required={currentQuestion.required}
             options={currentQuestion.options}
             scaleFrom={currentQuestion.scaleFrom}
