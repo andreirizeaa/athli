@@ -183,13 +183,6 @@ export const FilesTab = () => {
     });
   }, [queryClient]);
 
-  const formatSize = (bytes: number | null) => {
-    if (!bytes) return '';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString(undefined, {
@@ -384,18 +377,11 @@ export const FilesTab = () => {
                   <Text style={[styles.fileName, { color: themeColors.text }]} numberOfLines={1}>
                     {item.filename}
                   </Text>
-                  <View style={styles.fileMeta}>
-                    {item.size && (
-                      <Text style={[styles.fileSize, { color: themeColors.mutedText }]}>
-                        {formatSize(item.size)}
-                      </Text>
-                    )}
-                    {item.created_at && (
-                      <Text style={[styles.fileDate, { color: themeColors.mutedText }]}>
-                        {formatDate(item.created_at)}
-                      </Text>
-                    )}
-                  </View>
+                  {item.created_at && (
+                    <Text style={[styles.fileDate, { color: themeColors.mutedText }]}>
+                      {formatDate(item.created_at)}
+                    </Text>
+                  )}
                 </View>
               </View>
             </PressableScale>
@@ -414,7 +400,7 @@ export const FilesTab = () => {
         {isLastItem && <View style={{ height: 24 }} />}
       </View>
     );
-  }, [filteredFiles.length, themeColors, t, registerOpenRow, handleFilePress, handleAssign, handleEditFilename, handleDeleteWithConfirmation, handleLongPress, deleteMutation, renderThumbnail, formatSize, formatDate]);
+  }, [filteredFiles.length, themeColors, t, registerOpenRow, handleFilePress, handleAssign, handleEditFilename, handleDeleteWithConfirmation, handleLongPress, deleteMutation, renderThumbnail, formatDate]);
 
   return (
     <>
@@ -502,14 +488,6 @@ const styles = StyleSheet.create({
   fileName: {
     ...typography.p1,
     fontWeight: '500',
-  },
-  fileMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  fileSize: {
-    ...typography.p3,
   },
   fileDate: {
     ...typography.p3,

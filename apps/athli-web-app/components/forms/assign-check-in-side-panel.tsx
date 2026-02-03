@@ -162,6 +162,10 @@ export const AssignCheckInSidePanel = ({
         };
         const cronExpression = convertScheduleToCron(scheduleData);
 
+        // If 0 questions, set as draft
+        const questionCount = checkIn.questionCount ?? checkIn.questions?.length ?? 0;
+        const status = questionCount === 0 ? 'draft' : undefined;
+
         await assignForm({
           formId: checkIn.id,
           clientId: clientId,
@@ -169,6 +173,7 @@ export const AssignCheckInSidePanel = ({
           formType: 'check-in',
           cronExpression: cronExpression,
           scheduleData: scheduleData,
+          status,
         });
       }
 

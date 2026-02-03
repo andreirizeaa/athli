@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, ActivityIndicator, ScrollView, Pressable } from
 
 import { Dialog } from '@/components/ui/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, ChevronRight, Heart } from 'lucide-react-native';
+import { ChevronLeft, Plus, Heart, Calendar } from 'lucide-react-native';
 
 import { PressableScale } from 'pressto';
 
@@ -129,11 +129,11 @@ export default function ClientInjuriesScreen() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
   };
 
   const renderInjury = useCallback(({ item, index, isLastItem }: { item: AthleteInjury; index: number; isLastItem: boolean }) => (
@@ -154,18 +154,25 @@ export default function ClientInjuriesScreen() {
               />
             </View>
             <View style={styles.injuryContent}>
-              <Text style={[styles.injuryTitle, { color: themeColors.text }]} numberOfLines={2}>
-                {item.injury}
-              </Text>
-              <View style={styles.injuryMeta}>
+              <View style={styles.injuryHeader}>
+                <Text style={[styles.injuryTitle, { color: themeColors.text }]} numberOfLines={2}>
+                  {item.injury}
+                </Text>
                 {item.date && (
-                  <Text style={[styles.injuryDate, { color: themeColors.mutedText }]}>
-                    {formatDate(item.date)}
-                  </Text>
+                  <View style={[styles.datePill, { borderColor: themeColors.mutedText }]}>
+                    <PlatformIcon
+                      sf="calendar"
+                      IconComponent={Calendar}
+                      size={12}
+                      color={themeColors.mutedText}
+                    />
+                    <Text style={[styles.dateText, { color: themeColors.mutedText }]}>
+                      {formatDate(item.date)}
+                    </Text>
+                  </View>
                 )}
               </View>
             </View>
-            <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
           </View>
         </PressableScale>
       </SwipeableRow>
@@ -345,15 +352,13 @@ const styles = StyleSheet.create({
   },
   injuryItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     paddingVertical: 8,
     paddingHorizontal: 16,
-    gap: 12,
   },
   injuryIconContainer: {
-    width: 58,
-    height: 58,
+    width: 54,
+    height: 54,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -361,28 +366,35 @@ const styles = StyleSheet.create({
   },
   injuryContent: {
     flex: 1,
-    marginRight: 12,
-    gap: 4,
+    justifyContent: 'flex-start',
+  },
+  injuryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   injuryTitle: {
-    ...typography.p2,
-    fontWeight: '500',
+    ...typography.h7,
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 8,
   },
-  injuryMeta: {
+  datePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 4,
+    flexShrink: 0,
   },
-  injurySeverity: {
+  dateText: {
     ...typography.p4,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  injuryDate: {
-    ...typography.p4,
+    fontWeight: '500',
   },
   separatorContainer: {
-    paddingLeft: 86,
+    paddingLeft: 82,
     paddingRight: 16,
   },
   separator: {

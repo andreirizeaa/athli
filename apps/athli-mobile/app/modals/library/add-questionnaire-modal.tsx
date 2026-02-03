@@ -29,6 +29,8 @@ import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
 import { addQuestionnaire, editQuestionnaireDetails } from '@/services/coach/coach-questionnaire-service';
+import { addClientQuestionnaire } from '@/services/client/client-form-service';
+import { useClientDetailStore } from '@/stores';
 
 type TabKey = 'new' | 'templates';
 
@@ -43,8 +45,13 @@ export default function AddQuestionnaireModal() {
         editingId?: string;
         name?: string;
         description?: string;
+        // Client-specific context (when adding from client detail)
+        clientId?: string;
+        coachId?: string;
     }>();
     const isEditing = !!params.editingId;
+    const isClientPrivate = !isEditing && params.clientId && params.coachId;
+    const refreshClientQuestionnaires = useClientDetailStore((state) => state.refreshSection);
 
     const [selectedTab, setSelectedTab] = useState<TabKey>(isEditing ? 'new' : 'templates');
     const underlinePosition = useSharedValue(0);
@@ -67,10 +74,29 @@ export default function AddQuestionnaireModal() {
     const queryClient = useQueryClient();
 
     const saveMutation = useMutation({
-        mutationFn: isEditing ? editQuestionnaireDetails : addQuestionnaire,
+        mutationFn: async (data: any) => {
+            if (isEditing) {
+                return editQuestionnaireDetails(data);
+            }
+            // Creating new questionnaire - check if for client or coach library
+            if (isClientPrivate) {
+                return addClientQuestionnaire({
+                    name: data.name,
+                    description: data.description,
+                    clientId: params.clientId!,
+                    coachId: params.coachId!,
+                });
+            }
+            // Add to coach library
+            return addQuestionnaire(data);
+        },
         onSuccess: async () => {
             // Refetch to update the cache and trigger Zustand store update
-            await queryClient.refetchQueries({ queryKey: ['questionnaires'] });
+            if (isClientPrivate) {
+                await refreshClientQuestionnaires('questionnaires');
+            } else {
+                await queryClient.refetchQueries({ queryKey: ['questionnaires'] });
+            }
             haptics.success();
             handleClose();
         },

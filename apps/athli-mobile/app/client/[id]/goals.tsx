@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, ActivityIndicator, ScrollView, Pressable } from
 
 import { Dialog } from '@/components/ui/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, ChevronRight, Target } from 'lucide-react-native';
+import { ChevronLeft, Plus, Target } from 'lucide-react-native';
 
 import { PressableScale } from 'pressto';
 
@@ -129,11 +129,11 @@ export default function ClientGoalsScreen() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
   };
 
   const renderGoal = useCallback(({ item, index, isLastItem }: { item: AthleteGoal; index: number; isLastItem: boolean }) => (
@@ -154,23 +154,32 @@ export default function ClientGoalsScreen() {
               />
             </View>
             <View style={styles.goalContent}>
-              <Text
-                style={[
-                  styles.goalTitle,
-                  { color: themeColors.text },
-                  item.achieved && styles.goalTitleAchieved,
-                ]}
-                numberOfLines={2}
-              >
-                {item.goal}
-              </Text>
-              {item.target_date && (
-                <Text style={[styles.goalDate, { color: themeColors.mutedText }]}>
-                  {formatDate(item.target_date)}
+              <View style={styles.goalHeader}>
+                <Text
+                  style={[
+                    styles.goalTitle,
+                    { color: themeColors.text },
+                    item.achieved && styles.goalTitleAchieved,
+                  ]}
+                  numberOfLines={2}
+                >
+                  {item.goal}
                 </Text>
-              )}
+                {item.target_date && (
+                  <View style={[styles.datePill, { borderColor: themeColors.mutedText }]}>
+                    <PlatformIcon
+                      sf="scope"
+                      IconComponent={Target}
+                      size={12}
+                      color={themeColors.mutedText}
+                    />
+                    <Text style={[styles.dateText, { color: themeColors.mutedText }]}>
+                      {formatDate(item.target_date)}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
-            <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
           </View>
         </PressableScale>
       </SwipeableRow>
@@ -350,15 +359,13 @@ const styles = StyleSheet.create({
   },
   goalItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     paddingVertical: 8,
     paddingHorizontal: 16,
-    gap: 12,
   },
   goalIconContainer: {
-    width: 58,
-    height: 58,
+    width: 54,
+    height: 54,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -366,22 +373,39 @@ const styles = StyleSheet.create({
   },
   goalContent: {
     flex: 1,
-    marginRight: 12,
-    gap: 4,
+    justifyContent: 'flex-start',
+  },
+  goalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   goalTitle: {
-    ...typography.p2,
-    fontWeight: '500',
+    ...typography.h7,
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 8,
   },
   goalTitleAchieved: {
     textDecorationLine: 'line-through',
     opacity: 0.7,
   },
-  goalDate: {
+  datePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 4,
+    flexShrink: 0,
+  },
+  dateText: {
     ...typography.p4,
+    fontWeight: '500',
   },
   separatorContainer: {
-    paddingLeft: 86,
+    paddingLeft: 82,
     paddingRight: 16,
   },
   separator: {

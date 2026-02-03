@@ -44,15 +44,24 @@ export default function ClientHabitsScreen() {
   // Track currently open swipeable row
   const openRowCloseRef = useRef<(() => void) | null>(null);
   const hadOpenRowRef = useRef(false);
+  const isClosingRef = useRef(false);
 
   const closeOpenRow = useCallback(() => {
     if (openRowCloseRef.current) {
+      isClosingRef.current = true;
       openRowCloseRef.current();
       openRowCloseRef.current = null;
+      // Reset after animation completes
+      setTimeout(() => {
+        isClosingRef.current = false;
+      }, 300);
     }
   }, []);
 
   const handleRowOpen = useCallback((close: () => void) => {
+    // Ignore onOpen calls that happen during close animation
+    if (isClosingRef.current) return;
+
     // Close any previously open row
     if (openRowCloseRef.current && openRowCloseRef.current !== close) {
       openRowCloseRef.current();
@@ -215,13 +224,16 @@ export default function ClientHabitsScreen() {
                             {habit.name}
                           </Text>
                           <View style={styles.metaRow}>
-                            <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                              {habit.amount} {habit.unit}
-                            </Text>
-                            <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                            <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
-                              {habit.period === 'daily' ? t('general.daily') : t('general.weekly')}
-                            </Text>
+                            <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                              <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                                {habit.amount} {habit.unit}
+                              </Text>
+                            </View>
+                            <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                              <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                                {habit.period === 'daily' ? t('general.daily') : t('general.weekly')}
+                              </Text>
+                            </View>
                           </View>
                         </View>
                         <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
@@ -332,13 +344,17 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
-  metaText: {
-    ...typography.p3,
+  pill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
   },
-  metaDot: {
-    marginHorizontal: 6,
-    ...typography.p3,
+  pillText: {
+    ...typography.p4,
+    fontWeight: '500',
   },
   separatorContainer: {
     paddingLeft: 86,

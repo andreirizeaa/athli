@@ -131,6 +131,10 @@ export const AssignQuestionnaireSidePanel = ({
         const scheduleData = getDefaultScheduleData();
         const cronExpression = convertScheduleToCron(scheduleData);
 
+        // If 0 questions, set as draft
+        const questionCount = questionnaire.questionCount ?? questionnaire.questions?.length ?? 0;
+        const status = questionCount === 0 ? 'draft' : undefined;
+
         await assignForm({
           formId: questionnaire.id,
           clientId: clientId,
@@ -138,6 +142,7 @@ export const AssignQuestionnaireSidePanel = ({
           formType: 'questionnaire',
           cronExpression: cronExpression,
           scheduleData: scheduleData,
+          status,
         });
       }
 

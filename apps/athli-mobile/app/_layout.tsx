@@ -460,8 +460,10 @@ function RootLayoutNav() {
           <Stack.Screen name="client/[id]/files" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/check-ins" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/check-in-detail" options={{ headerShown: false }} />
+          <Stack.Screen name="client/[id]/check-in-submissions" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/questionaires" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/questionnaire-detail" options={{ headerShown: false }} />
+          <Stack.Screen name="client/[id]/questionnaire-response" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/settings" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/assistant" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/goals" options={{ headerShown: false }} />
@@ -958,6 +960,30 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="modals/client/assign-file-to-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/assign-check-in-to-client-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/client/assign-questionnaire-to-client-modal"
             options={{
               presentation: 'modal',
               gestureEnabled: false,

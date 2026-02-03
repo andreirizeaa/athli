@@ -53,9 +53,12 @@ export const getClientCheckIns = async (
     id: c.id || c.assignment_id,
     name: c.name || 'Unknown Check-in',
     questionCount: c.questions?.length || 0,
-    schedule: c.schedule_config?.frequency || 'Manual',
-    nextScheduledAt: new Date(c.assigned_at || c.created_at),
+    schedule: c.schedule_config?.frequency || 'manual',
+    nextScheduledAt: new Date(c.next_scheduled_at || c.assigned_at || c.created_at),
+    createdAt: new Date(c.created_at || Date.now()),
     description: c.description,
+    status: c.status || 'draft',
+    submissionCount: c.submission_count || 0,
   }));
 };
 
@@ -148,6 +151,26 @@ export const deleteClientCheckIns = async (data: DeleteClientCheckInsData & { co
 };
 
 /**
+ * Update client check-in status (pause/resume)
+ */
+export type UpdateClientCheckInStatusData = {
+  checkInId: string;
+  clientId: string;
+  coachId: string;
+  status: 'live' | 'paused';
+};
+
+export const updateClientCheckInStatus = async (data: UpdateClientCheckInStatusData): Promise<void> => {
+  await apiFetch(`/client/forms/check-ins/${data.checkInId}/status`, {
+    method: 'PATCH',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      status: data.status,
+    }),
+  });
+};
+
+/**
  * Delete questionnaires from a client
  */
 export const deleteClientQuestionnaires = async (
@@ -157,6 +180,86 @@ export const deleteClientQuestionnaires = async (
     method: 'DELETE',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify({ questionnaireIds: data.questionnaireIds }),
+  });
+};
+
+/**
+ * Send a questionnaire to a client (changes status from draft to pending)
+ */
+export type SendClientQuestionnaireData = {
+  questionnaireId: string;
+  clientId: string;
+  coachId: string;
+};
+
+export const sendClientQuestionnaire = async (data: SendClientQuestionnaireData): Promise<void> => {
+  await apiFetch(`/client/forms/questionnaires/${data.questionnaireId}/send`, {
+    method: 'POST',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+  });
+};
+
+/**
+ * Resend a questionnaire to a client (duplicate and send again)
+ */
+export type ResendClientQuestionnaireData = {
+  questionnaireId: string;
+  clientId: string;
+  coachId: string;
+};
+
+export const resendClientQuestionnaire = async (data: ResendClientQuestionnaireData): Promise<void> => {
+  await apiFetch(`/client/forms/questionnaires/${data.questionnaireId}/resend`, {
+    method: 'POST',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+  });
+};
+
+/**
+ * Create a private check-in directly for a client (not from coach library)
+ */
+export type AddClientCheckInData = {
+  name: string;
+  description?: string;
+  schedule_config?: any;
+  cron_expression?: string;
+  clientId: string;
+  coachId: string;
+};
+
+export const addClientCheckIn = async (data: AddClientCheckInData): Promise<void> => {
+  await apiFetch('/client/forms/check-ins', {
+    method: 'POST',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      name: data.name,
+      description: data.description,
+      schedule_config: data.schedule_config,
+      cron_expression: data.cron_expression,
+      // No checkInIds means create new private check-in
+    }),
+  });
+};
+
+/**
+ * Create a private questionnaire directly for a client (not from coach library)
+ */
+export type AddClientQuestionnaireData = {
+  name: string;
+  description?: string;
+  clientId: string;
+  coachId: string;
+};
+
+export const addClientQuestionnaire = async (data: AddClientQuestionnaireData): Promise<void> => {
+  await apiFetch('/client/forms/questionnaires', {
+    method: 'POST',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      name: data.name,
+      description: data.description,
+      // No questionnaireIds means create new private questionnaire
+    }),
   });
 };
 
