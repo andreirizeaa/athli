@@ -261,9 +261,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   thumbnail: {
-    width: 64,
-    height: 64,
-    borderRadius: 10,
+    width: 58,
+    height: 58,
+    borderRadius: 8,
   },
   placeholderThumbnail: {
     alignItems: 'center',
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   separator: {
-    marginLeft: 92,
+    marginLeft: 86,
     marginRight: 16,
   },
   loadingContainer: {

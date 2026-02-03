@@ -188,13 +188,6 @@ export default function ClientFilesScreen() {
     });
   };
 
-  const formatFileSize = (bytes: number | undefined) => {
-    if (!bytes) return '';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
   const renderThumbnail = (file: ClientFile) => {
     const isMedia = isMediaFile(file.mime_type);
     const isVideo = file.mime_type?.startsWith('video/');
@@ -361,18 +354,11 @@ export default function ClientFilesScreen() {
                             <Text style={[styles.fileName, { color: themeColors.text }]} numberOfLines={1}>
                               {fileName}
                             </Text>
-                            <View style={styles.fileMeta}>
-                              {file.size && (
-                                <Text style={[styles.fileSize, { color: themeColors.mutedText }]}>
-                                  {formatFileSize(file.size)}
-                                </Text>
-                              )}
-                              {file.created_at && (
-                                <Text style={[styles.fileDate, { color: themeColors.mutedText }]}>
-                                  {formatDate(file.created_at)}
-                                </Text>
-                              )}
-                            </View>
+                            {file.created_at && (
+                              <Text style={[styles.fileDate, { color: themeColors.mutedText }]}>
+                                {formatDate(file.created_at)}
+                              </Text>
+                            )}
                           </View>
                         </View>
                       </PressableScale>
@@ -536,14 +522,6 @@ const styles = StyleSheet.create({
   fileName: {
     ...typography.p1,
     fontWeight: '500',
-  },
-  fileMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  fileSize: {
-    ...typography.p3,
   },
   fileDate: {
     ...typography.p3,

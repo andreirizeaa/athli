@@ -4,7 +4,7 @@ import SquircleView from 'react-native-fast-squircle';
 
 import { Dialog } from '@/components/ui/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, Notebook, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, Plus, Notebook } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 
 import { typography } from '@/constants/typography';
@@ -132,13 +132,32 @@ export default function ClientNotesScreen() {
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
-    return date.toLocaleDateString(undefined, {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+    // If less than 24 hours, show exact time in 24-hour format
+    if (diffInHours < 24) {
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+
+    // If more than 24 hours but less than a week, show "Yesterday" or day name
+    if (diffInDays < 7) {
+      if (diffInDays === 1) {
+        return 'Yesterday';
+      }
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      return dayNames[date.getDay()];
+    }
+
+    // If more than a week, show date in dd/mm/yyyy format
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
   const renderNote = useCallback(({ item, index, isLastItem }: { item: typeof notes[0]; index: number; isLastItem: boolean }) => (
@@ -159,19 +178,20 @@ export default function ClientNotesScreen() {
               />
             </SquircleView>
             <View style={styles.noteContent}>
-              <Text style={[styles.noteTitle, { color: themeColors.text }]} numberOfLines={1}>
-                {item.title}
-              </Text>
+              <View style={styles.noteHeader}>
+                <Text style={[styles.noteTitle, { color: themeColors.text }]} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={[styles.noteDate, { color: themeColors.mutedText }]}>
+                  {formatDate(item.createdAt)}
+                </Text>
+              </View>
               {item.body ? (
                 <Text style={[styles.noteText, { color: themeColors.mutedText }]} numberOfLines={2}>
                   {item.body}
                 </Text>
               ) : null}
-              <Text style={[styles.noteDate, { color: themeColors.mutedText }]}>
-                {formatDate(item.createdAt)}
-              </Text>
             </View>
-            <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
           </View>
         </PressableScale>
       </SwipeableRow>
@@ -348,15 +368,13 @@ const styles = StyleSheet.create({
   },
   noteItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     paddingVertical: 8,
     paddingHorizontal: 16,
-    gap: 12,
   },
   noteIconContainer: {
-    width: 58,
-    height: 58,
+    width: 54,
+    height: 54,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -364,22 +382,29 @@ const styles = StyleSheet.create({
   },
   noteContent: {
     flex: 1,
-    marginRight: 12,
-    gap: 4,
+    justifyContent: 'flex-start',
+  },
+  noteHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 4,
   },
   noteTitle: {
-    ...typography.p2,
-    fontWeight: '500',
+    ...typography.h7,
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 8,
   },
   noteText: {
     ...typography.p3,
-    fontWeight: '400',
   },
   noteDate: {
-    ...typography.p4,
+    ...typography.p3,
+    flexShrink: 0,
   },
   separatorContainer: {
-    paddingLeft: 86,
+    paddingLeft: 82, // 16 (paddingHorizontal) + 54 (icon) + 12 (marginRight)
     paddingRight: 16,
   },
   separator: {

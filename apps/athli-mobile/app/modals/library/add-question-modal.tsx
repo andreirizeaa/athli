@@ -17,7 +17,7 @@ import { useTranslations } from '@/stores';
 import { useModalCallbacks } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { Switch } from 'react-native';
-import { InputBox, DropdownInput } from '@/components/ui/form-inputs';
+import { InputBox, DropdownInput, TextAreaInput } from '@/components/ui/form-inputs';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
@@ -73,10 +73,12 @@ export default function AddQuestionModal() {
     // Existing questions info
     hasProgressPhoto?: string;
     usedMetricIds?: string;
+    hideMetrics?: string;
   }>();
 
   const isEditMode = params.editMode === 'true';
   const hasExistingProgressPhoto = params.hasProgressPhoto === 'true';
+  const shouldHideMetrics = params.hideMetrics === 'true';
   const usedMetricIds: string[] = params.usedMetricIds ? JSON.parse(params.usedMetricIds) : [];
 
   const { colors: themeColors } = useThemePreference();
@@ -156,7 +158,7 @@ export default function AddQuestionModal() {
     );
   }, [availableMetrics, metricSearchQuery]);
 
-  // Filter format options based on existing questions
+  // Filter format options based on existing questions and context
   const filteredSyncsWithFormats = useMemo(() => {
     return SYNCS_WITH_FORMATS.filter(format => {
       // If editing a progressPhoto question, don't hide it
@@ -167,9 +169,17 @@ export default function AddQuestionModal() {
       if (format.id === 'progressPhoto' && hasExistingProgressPhoto) {
         return false;
       }
+      // If editing a metrics question, don't hide it even if shouldHideMetrics is true
+      if (format.id === 'metrics' && isEditMode && params.questionFormat === 'metrics') {
+        return true;
+      }
+      // Hide metrics based on context (library page or no client metrics)
+      if (format.id === 'metrics' && shouldHideMetrics) {
+        return false;
+      }
       return true;
     });
-  }, [hasExistingProgressPhoto, isEditMode, params.questionFormat]);
+  }, [hasExistingProgressPhoto, isEditMode, params.questionFormat, shouldHideMetrics]);
 
   const handleClose = useCallback(() => {
     if (isDirty) {
@@ -444,12 +454,14 @@ export default function AddQuestionModal() {
           />
         )}
 
-        <InputBox
+        <TextAreaInput
           label={t('library.addQuestion.question')}
           value={questionText}
           onChangeText={setQuestionText}
           placeholder={t('library.addQuestion.questionPlaceholder')}
           required
+          numberOfLines={3}
+          minHeight={60}
         />
 
         <View style={styles.switchRow}>

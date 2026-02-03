@@ -1202,14 +1202,14 @@ export default function SectionBuilderScreen() {
                 <View style={{ height: 160 }} />
             </KeyboardAwareScrollView>
 
-            <View style={[
-                styles.bottomBarContainer,
-                {
-                    backgroundColor: themeColors.surfacePrimary,
-                    paddingBottom: insets.bottom + 12,
-                }
-            ]}>
-                <View style={styles.bottomBarContent}>
+            <View style={styles.bottomBarWrapper}>
+                <View style={[styles.bottomBarDivider, { backgroundColor: themeColors.border }]} />
+                <View
+                    style={[
+                        styles.bottomBarContainer,
+                        { backgroundColor: themeColors.cardPrimary },
+                    ]}
+                >
                     <View style={[styles.countCircle, { backgroundColor: themeColors.primary }]}>
                         <Text style={[styles.countText, { color: themeColors.primaryForeground }]}>{totalExercises}</Text>
                     </View>
@@ -1234,6 +1234,15 @@ export default function SectionBuilderScreen() {
                         </PressableScale>
                     </View>
                 </View>
+                <View
+                    style={[
+                        styles.bottomBarSafeAreaFill,
+                        {
+                            height: insets.bottom,
+                            backgroundColor: themeColors.cardPrimary,
+                        },
+                    ]}
+                />
             </View>
 
             <Dialog
@@ -1339,23 +1348,27 @@ const styles = StyleSheet.create({
     loadingText: {
         ...typography.p2,
     },
+    bottomBarWrapper: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+    },
+    bottomBarDivider: {
+        height: 1,
+    },
     bottomBarContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         marginTop: -24,
-        // Top edge shadow
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.06,
-        shadowRadius: 10,
-        elevation: 10,
-    },
-    bottomBarContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingTop: 12,
-        paddingHorizontal: 16,
         gap: 12,
+    },
+    bottomBarSafeAreaFill: {
+        width: '100%',
     },
     countCircle: {
         width: 48,
@@ -1363,11 +1376,6 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         alignItems: 'center',
         justifyContent: 'center',
-        // Match action button feel
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
     },
     countText: {
         ...typography.h6,

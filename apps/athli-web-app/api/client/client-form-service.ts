@@ -125,15 +125,20 @@ export const getClientQuestionnaires = async (clientId: string, coachId: string)
     headers: { 'x-client-id': clientId, 'x-coach-id': coachId }
   });
 
-  return response.data.questionnaires.map((q: any) => ({
-    id: q.id || q.assignment_id,
-    name: q.name || 'Unknown Questionnaire',
-    questionCount: q.questions?.length || 0,
-    status: q.status || 'draft',
-    sentAt: q.sent_at ? new Date(q.sent_at) : undefined,
-    completedAt: q.completed_at ? new Date(q.completed_at) : undefined,
-    description: q.description,
-  }));
+  return response.data.questionnaires.map((q: any) => {
+    const questionCount = q.questions?.length || 0;
+    // Status logic: draft if 0 questions, otherwise use backend status or default to 'draft'
+    const status = questionCount === 0 ? 'draft' : (q.status || 'draft');
+    return {
+      id: q.id || q.assignment_id,
+      name: q.name || 'Unknown Questionnaire',
+      questionCount,
+      status: status as 'draft' | 'pending' | 'completed',
+      sentAt: q.sent_at ? new Date(q.sent_at) : undefined,
+      completedAt: q.completed_at ? new Date(q.completed_at) : undefined,
+      description: q.description,
+    };
+  });
 };
 
 /**
@@ -162,7 +167,8 @@ export const assignClientCheckIn = async (data: AssignClientCheckInData): Promis
     body: JSON.stringify({
       checkInIds: data.checkInIds,
       schedule_config: data.schedule_config,
-      cron_expression: data.cron_expression
+      cron_expression: data.cron_expression,
+      status: data.status,
     }),
   });
 };
@@ -173,6 +179,7 @@ export const assignClientQuestionnaire = async (data: AssignClientQuestionnaireD
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify({
       questionnaireIds: data.questionnaireIds,
+      status: data.status,
     }),
   });
 };
@@ -308,7 +315,8 @@ export const assignForm = async (data: AssignFormData): Promise<void> => {
       clientId: data.clientId,
       coachId: data.coachId,
       schedule_config: data.scheduleData,
-      cron_expression: data.cronExpression
+      cron_expression: data.cronExpression,
+      status: data.status as 'draft' | 'live' | undefined,
     });
   } else {
     await assignClientQuestionnaire({
@@ -316,7 +324,8 @@ export const assignForm = async (data: AssignFormData): Promise<void> => {
       clientId: data.clientId,
       coachId: data.coachId,
       schedule_config: data.scheduleData,
-      cron_expression: data.cronExpression
+      cron_expression: data.cronExpression,
+      status: data.status as 'draft' | 'pending' | undefined,
     });
   }
 };
@@ -707,6 +716,7 @@ export type CreateClientCheckInData = {
   questions: any[];
   scheduleConfig: Record<string, any>;
   cronExpression: string;
+  status?: 'draft' | 'live';
 };
 
 export type CreateClientQuestionnaireData = {
@@ -715,6 +725,7 @@ export type CreateClientQuestionnaireData = {
   name: string;
   description?: string;
   questions: any[];
+  status?: 'draft' | 'pending';
 };
 
 export type UpdateClientCheckInData = {
@@ -754,6 +765,9 @@ export type LocalClientQuestionnaireDetail = {
  * Create a check-in directly for a client (not in coach library)
  */
 export const createClientCheckIn = async (data: CreateClientCheckInData): Promise<ClientCheckInDetail> => {
+  // If no questions, set status to draft
+  const status = data.questions.length === 0 ? 'draft' : (data.status || 'live');
+
   const response = await apiFetch<{ data: ClientCheckInDetail }>(`/client/forms/check-ins/create`, {
     method: 'POST',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
@@ -763,6 +777,7 @@ export const createClientCheckIn = async (data: CreateClientCheckInData): Promis
       questions: data.questions,
       schedule_config: data.scheduleConfig,
       cron_expression: data.cronExpression,
+      status,
     }),
   });
 
@@ -773,6 +788,9 @@ export const createClientCheckIn = async (data: CreateClientCheckInData): Promis
  * Create a questionnaire directly for a client (not in coach library)
  */
 export const createClientQuestionnaire = async (data: CreateClientQuestionnaireData): Promise<LocalClientQuestionnaireDetail> => {
+  // If no questions, set status to draft
+  const status = data.questions.length === 0 ? 'draft' : (data.status || 'draft');
+
   const response = await apiFetch<{ data: LocalClientQuestionnaireDetail }>(`/client/forms/questionnaires/create`, {
     method: 'POST',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
@@ -780,6 +798,7 @@ export const createClientQuestionnaire = async (data: CreateClientQuestionnaireD
       name: data.name,
       description: data.description,
       questions: data.questions,
+      status,
     }),
   });
 

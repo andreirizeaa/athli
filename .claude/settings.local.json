@@ -100,7 +100,8 @@
       "Bash(adb shell:*)",
       "Bash(keytool:*)",
       "Bash(xargs cat:*)",
-      "Bash(expo run:android)"
+      "Bash(expo run:android)",
+      "Bash(tree:*)"
     ]
   }
 }

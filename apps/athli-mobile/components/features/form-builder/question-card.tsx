@@ -59,7 +59,7 @@ export const QuestionCard = ({ question, index, isReorderMode, onDelete, onPress
       </View>
 
       <View style={styles.content}>
-        <Text style={[styles.questionText, { color: themeColors.text }]} numberOfLines={2}>
+        <Text style={[styles.questionText, { color: themeColors.text }]}>
           {question.question}
           {question.required && <Text style={styles.requiredAsterisk}>*</Text>}
         </Text>
@@ -119,6 +119,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     marginBottom: 12,
+    minHeight: 72,
   },
   numberCircle: {
     width: 32,
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   questionText: {
-    ...typography.p1,
+    ...typography.p2,
     fontWeight: '500',
     marginBottom: 4,
   },
