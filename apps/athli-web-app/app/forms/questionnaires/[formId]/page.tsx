@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useQueryClient } from '@tanstack/react-query';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -15,22 +16,23 @@ import {
   BreadcrumbSeparator,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
-import { ChevronRight, Plus, GripVertical, Edit } from 'lucide-react';
+import { ChevronRight, Plus, GripVertical, Edit, Loader2 } from 'lucide-react';
 import { type Questionnaire as Form, addQuestion, reorderQuestions, getQuestionnaires } from '@/api/coach/coach-questionnaire-service';
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EditQuestionnaireFormSidePanel } from '@/components/forms/edit-questionnaire-form-side-panel';
 import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel';
-import { FormDetailContent } from '@/components/forms/form-detail-content';
+import { FormBuilder } from '@/components/forms/form-builder';
 
 // Removed mock forms data as we now fetch from the API
 
-import type { Question } from '@/components/forms/form-detail-content';
+import type { Question } from '@/components/forms/form-builder';
 
 const QuestionnaireFormDetailPage = () => {
   const t = useTranslations();
   const params = useParams<{ formId: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const formId = Array.isArray(params.formId) ? params.formId[0] : params.formId;
   const [isEditFormOpen, setIsEditFormOpen] = useState<boolean>(false);
   const [isAddQuestionOpen, setIsAddQuestionOpen] = useState<boolean>(false);
@@ -80,7 +82,7 @@ const QuestionnaireFormDetailPage = () => {
   if (isLoading) {
     return (
       <div className="h-full w-full flex items-center justify-center">
-        <p className="text-muted-foreground">{t('general.loading')}</p>
+        <Loader2 className="h-10 w-10 animate-spin text-foreground" />
       </div>
     );
   }
@@ -239,7 +241,7 @@ const QuestionnaireFormDetailPage = () => {
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
 
-      <FormDetailContent
+      <FormBuilder
         formId={formId}
         formType="questionnaire"
         form={currentForm as Form}
@@ -254,6 +256,9 @@ const QuestionnaireFormDetailPage = () => {
         onReorder={handleReorder}
         isAddQuestionOpen={isAddQuestionOpen}
         onAddQuestionOpenChange={setIsAddQuestionOpen}
+        onQuestionsChanged={() => {
+          queryClient.invalidateQueries({ queryKey: ['coach-questionnaires'] });
+        }}
       />
 
 

@@ -144,6 +144,8 @@ export type DataGridProps<T = any> = {
   onRowKeyDown?: (row: T, event: React.KeyboardEvent<HTMLTableRowElement>) => void;
   selectedRowIds?: Set<string>;
   onSelectionChange?: (selectedIds: Set<string>) => void;
+  /** Optional function to determine if a row can be selected. If not provided, all rows are selectable. */
+  isRowSelectable?: (row: T) => boolean;
   pinnedColumns?: string[];
 
   /** Configuration for the pinned column (sticky left) */
@@ -360,6 +362,7 @@ export function DataGrid<T extends Record<string, any>>({
   onRowKeyDown,
   selectedRowIds: controlledSelectedRowIds,
   onSelectionChange,
+  isRowSelectable,
   pinnedColumns = [],
   pinnedColumn,
   defaultColumnOrder,
@@ -853,21 +856,36 @@ export function DataGrid<T extends Record<string, any>>({
     if (!enableRowSelection || paginatedData.length === 0) {
       return false;
     }
+    // If isRowSelectable is provided, check if all selectable rows are selected
+    if (isRowSelectable) {
+      const selectableRows = paginatedData.filter((row) => isRowSelectable(row));
+      if (selectableRows.length === 0) return false;
+      return selectableRows.every((row) => selectedRowIds.has(getRowId(row)));
+    }
     return pagesFullySelected.has(currentPage);
-  }, [enableRowSelection, paginatedData.length, pagesFullySelected, currentPage]);
+  }, [enableRowSelection, paginatedData, pagesFullySelected, currentPage, isRowSelectable, selectedRowIds, getRowId]);
 
   const isIndeterminate = useMemo(() => {
     if (!enableRowSelection || paginatedData.length === 0) {
       return false;
     }
-    const hasSomeSelected = paginatedData.some((row) => selectedRowIds.has(getRowId(row)));
+    // If isRowSelectable is provided, only consider selectable rows
+    const rowsToCheck = isRowSelectable
+      ? paginatedData.filter((row) => isRowSelectable(row))
+      : paginatedData;
+    if (rowsToCheck.length === 0) return false;
+    const hasSomeSelected = rowsToCheck.some((row) => selectedRowIds.has(getRowId(row)));
     return hasSomeSelected && !isAllSelected;
-  }, [enableRowSelection, paginatedData, selectedRowIds, isAllSelected, getRowId]);
+  }, [enableRowSelection, paginatedData, selectedRowIds, isAllSelected, getRowId, isRowSelectable]);
 
   const handleToggleAll = () => {
     if (!enableRowSelection) return;
 
-    const pageIds = paginatedData.map((row) => getRowId(row));
+    // Filter to only selectable rows
+    const selectableRows = isRowSelectable
+      ? paginatedData.filter((row) => isRowSelectable(row))
+      : paginatedData;
+    const pageIds = selectableRows.map((row) => getRowId(row));
 
     if (isAllSelected) {
       // Deselect current page items
@@ -883,7 +901,7 @@ export function DataGrid<T extends Record<string, any>>({
         return next;
       });
     } else {
-      // Select all items on current page
+      // Select all selectable items on current page
       setSelectedRowIds((prev) => {
         const next = new Set(prev);
         pageIds.forEach((id) => next.add(id));

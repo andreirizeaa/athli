@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -18,9 +18,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/components/ui/tooltip';
 import { Edit, Plus, X, Check } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
-import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
+import { getClientMetrics } from '@/api/client/client-metric-service';
+import { useUserProfile } from '@/hooks/use-user-profile';
+
+type MetricOption = {
+  id: string;
+  name: string;
+  unit?: string;
+};
 
 type QuestionFormat = {
   id: string;
@@ -42,11 +54,13 @@ type AddQuestionSidePanelProps = {
     metricId?: string;
   }) => void;
   questions: any[];
+  clientId?: string;
 };
 
-export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions }: AddQuestionSidePanelProps) => {
+export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, clientId }: AddQuestionSidePanelProps) => {
   const t = useTranslations();
   const router = useRouter();
+  const { user } = useUserProfile();
   const [questionText, setQuestionText] = useState<string>('');
   const [isRequired, setIsRequired] = useState<boolean>(true);
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
@@ -55,7 +69,7 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions }: 
   const [scaleTo, setScaleTo] = useState<string>('10');
   const [mediaCount, setMediaCount] = useState<number>(1);
   const [selectedMetricId, setSelectedMetricId] = useState<string>('');
-  const [metrics, setMetrics] = useState<Metric[]>([]);
+  const [metrics, setMetrics] = useState<MetricOption[]>([]);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(false);
 
   const syncsWithFormats: QuestionFormat[] = [
@@ -115,16 +129,33 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions }: 
   }, [open, selectedFormat]);
 
   const fetchMetrics = async () => {
+    if (!clientId) {
+      setMetrics([]); // No fetching on coach side
+      return;
+    }
     setIsLoadingMetrics(true);
     try {
-      const fetchedMetrics = await getAllMetrics();
-      setMetrics(fetchedMetrics);
+      const clientMetrics = await getClientMetrics(clientId, user?.id || '');
+      setMetrics(clientMetrics.map(m => ({ id: m.id, name: m.name, unit: m.unit })));
     } catch (error) {
-      console.error('Failed to fetch metrics:', error);
+      console.error('Failed to fetch client metrics:', error);
     } finally {
       setIsLoadingMetrics(false);
     }
   };
+
+  const metricsCardState = useMemo(() => {
+    // Coach side - no client context
+    if (!clientId) {
+      return { enabled: false, reason: 'no-client-context' as const };
+    }
+    // Client profile - no metrics assigned
+    if (filteredMetrics.length === 0 && !isLoadingMetrics) {
+      return { enabled: false, reason: 'no-metrics-assigned' as const };
+    }
+    // Enabled
+    return { enabled: true };
+  }, [clientId, filteredMetrics, isLoadingMetrics]);
 
   const handleClose = () => {
     resetForm();
@@ -312,27 +343,54 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions }: 
                   "grid gap-3",
                   filteredSyncsWithFormats.length === 1 ? "grid-cols-1" : "grid-cols-2"
                 )}>
-                  {filteredSyncsWithFormats.map((format) => (
-                    <Card
-                      key={format.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleFormatSelect(format.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleFormatSelect(format.id);
-                        }
-                      }}
-                      className="p-4 cursor-pointer hover:bg-accent transition-colors"
-                      aria-label={`Select ${format.label} format`}
-                    >
-                      <div className="flex flex-col gap-1">
-                        <span className="text-sm font-medium text-foreground">{format.label}</span>
-                        <span className="text-xs text-muted-foreground">{format.subtitle}</span>
-                      </div>
-                    </Card>
-                  ))}
+                  {filteredSyncsWithFormats.map((format) => {
+                    const isMetrics = format.id === 'metrics';
+                    const isDisabled = isMetrics && !metricsCardState.enabled;
+
+                    const card = (
+                      <Card
+                        key={format.id}
+                        role="button"
+                        tabIndex={isDisabled ? -1 : 0}
+                        onClick={() => !isDisabled && handleFormatSelect(format.id)}
+                        onKeyDown={(e) => {
+                          if (!isDisabled && (e.key === 'Enter' || e.key === ' ')) {
+                            e.preventDefault();
+                            handleFormatSelect(format.id);
+                          }
+                        }}
+                        className={cn(
+                          "p-4 transition-colors",
+                          isDisabled
+                            ? "cursor-not-allowed opacity-50"
+                            : "cursor-pointer hover:bg-accent"
+                        )}
+                        aria-label={`Select ${format.label} format`}
+                      >
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-medium text-foreground">{format.label}</span>
+                          <span className="text-xs text-muted-foreground">{format.subtitle}</span>
+                        </div>
+                      </Card>
+                    );
+
+                    if (isDisabled) {
+                      return (
+                        <Tooltip key={format.id}>
+                          <TooltipTrigger asChild>
+                            <div>{card}</div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            {metricsCardState.reason === 'no-client-context'
+                              ? t('forms.detail.addQuestion.metricsDisabledNoClient')
+                              : t('forms.detail.addQuestion.metricsDisabledNoMetrics')}
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    }
+
+                    return card;
+                  })}
                 </div>
               </div>
 

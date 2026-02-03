@@ -49,6 +49,89 @@ clientCheckInRouter.delete('/', supabaseAuthenticate, clientCheckInsController.d
 
 /**
  * @swagger
+ * /api/v1/client/forms/check-ins/create:
+ *   post:
+ *     summary: Create a client-specific check-in (not from library)
+ *     tags: [Client Forms]
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name: { type: string }
+ *               description: { type: string }
+ *               questions: { type: array }
+ *               schedule_config: { type: object }
+ *               cron_expression: { type: string }
+ *     responses: { 201: { description: 'Created' } }
+ */
+clientCheckInRouter.post('/create', supabaseAuthenticate, clientCheckInsController.createCheckIn);
+
+/**
+ * @swagger
+ * /api/v1/client/forms/check-ins/{id}:
+ *   get:
+ *     summary: Get a single check-in by ID
+ *     tags: [Client Forms]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
+ *     responses: { 200: { description: 'Success' } }
+ *   patch:
+ *     summary: Update a check-in (questions, etc.)
+ *     tags: [Client Forms]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               questions: { type: array }
+ *               name: { type: string }
+ *               description: { type: string }
+ *     responses: { 200: { description: 'Success' } }
+ */
+clientCheckInRouter.get('/:id', supabaseAuthenticate, clientCheckInsController.getCheckInById);
+clientCheckInRouter.patch('/:id', supabaseAuthenticate, clientCheckInsController.updateCheckIn);
+
+/**
+ * @swagger
  * /api/v1/client/forms/check-ins/{id}/submit:
  *   post:
  *     summary: Submit a check-in
@@ -73,3 +156,35 @@ clientCheckInRouter.delete('/', supabaseAuthenticate, clientCheckInsController.d
  *     responses: { 200: { description: 'Success' } }
  */
 clientCheckInRouter.post('/:id/submit', supabaseAuthenticate, clientCheckInsController.submitCheckIn);
+
+/**
+ * @swagger
+ * /api/v1/client/forms/check-ins/{id}/status:
+ *   patch:
+ *     summary: Update check-in status (publish/pause)
+ *     tags: [Client Forms]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [status]
+ *             properties:
+ *               status: { type: string, enum: [live, paused] }
+ *     responses: { 200: { description: 'Success' } }
+ */
+clientCheckInRouter.patch('/:id/status', supabaseAuthenticate, clientCheckInsController.updateCheckInStatus);
