@@ -1532,9 +1532,18 @@ export const esMessages = {
         addCheckInAria: 'Agregar check-in al atleta',
         emptyMessage: 'No se encontraron check-ins.',
         clearSelected: 'Limpiar',
+        publish: 'Publicar',
+        pause: 'Pausar',
+        resume: 'Reanudar',
+        publishSuccess: 'Check-in publicado exitosamente',
+        pauseSuccess: 'Check-in pausado exitosamente',
+        resumeSuccess: 'Check-in reanudado exitosamente',
         columns: {
           name: 'Nombre',
+          status: 'Estado',
           schedule: 'Programación',
+          submissions: 'Envíos',
+          createdAt: 'Creado el',
           nextScheduledAt: 'Próximo programado',
           description: 'Descripción',
         },
@@ -1544,6 +1553,9 @@ export const esMessages = {
         noFormsMessage: 'Aún no has creado un formulario. Por favor, navega a',
         formsLink: 'Formularios',
         status: {
+          draft: 'Borrador',
+          live: 'Activo',
+          paused: 'Pausado',
           assigned: 'Asignado',
           completed: 'Completado',
           review: 'Revisar',
@@ -1575,6 +1587,8 @@ export const esMessages = {
             monthlySpecific: 'Este check-in se enviará mensualmente el día {day} de cada mes.',
           },
         },
+        noSubmissions: 'Aún no hay envíos',
+        selectSubmission: 'Selecciona un envío para ver',
       },
       questionnaires: {
         title: 'Cuestionarios',
@@ -1591,11 +1605,18 @@ export const esMessages = {
           description: 'Descripción',
         },
         status: {
+          draft: 'Borrador',
           pending: 'Pendiente',
           completed: 'Completado',
         },
         questions: '{count} pregunta',
         questionsPlural: '{count} preguntas',
+        sendForm: 'Enviar formulario',
+        sendAgain: 'Enviar de nuevo',
+        sendConfirmTitle: '¿Enviar cuestionario?',
+        sendConfirmDescription: '¿Estás seguro? Esto enviará este formulario inmediatamente al cliente y no se puede deshacer.',
+        sendSuccess: 'Cuestionario enviado exitosamente',
+        resendSuccess: 'Cuestionario reenviado exitosamente',
         goToForms: 'Ir a Formularios',
         emptyState: {
           title: 'No se encontraron cuestionarios',
@@ -1605,6 +1626,8 @@ export const esMessages = {
         notFoundDescription: 'El cuestionario que buscas no existe.',
         noFormsMessage: 'Aún no has creado un formulario. Por favor, navega a',
         formsLink: 'Formularios',
+        noSubmission: 'Aún no hay envío',
+        notYetCompleted: 'Este cuestionario aún no ha sido completado',
         schedule: {
           label: 'Cuándo enviar',
           sendNow: 'Enviar ahora',
@@ -1885,12 +1908,17 @@ export const esMessages = {
         mile: 'milla',
         sec: 'seg',
         hour: 'hora',
+        hours: 'horas',
+        minutes: 'minutos',
         ml: 'ml',
         l: 'l',
         oz: 'oz',
         cal: 'cal',
         g: 'g',
         mg: 'mg',
+        session: 'sesión',
+        sessions: 'sesiones',
+        glasses: 'vasos',
       },
     },
   },
@@ -1973,12 +2001,31 @@ export const esMessages = {
   },
   forms: {
     title: 'Formularios',
+    create: {
+      success: 'Se ha creado {name} exitosamente',
+    },
+    update: {
+      success: 'Formulario actualizado exitosamente',
+    },
+    assign: {
+      success: 'Formulario(s) asignado(s) exitosamente',
+    },
+    reorder: {
+      success: 'Preguntas reordenadas exitosamente',
+    },
+    newCheckIn: 'Nuevo Check-in',
+    newQuestionnaire: 'Nuevo Cuestionario',
+    checkInDetail: 'Detalles del check-in',
+    questionnaireDetail: 'Detalles del cuestionario',
+    notFound: 'Formulario no encontrado',
     addForm: 'Agregar formulario',
     addCheckIn: 'Agregar Check-in',
     addQuestionnaire: 'Agregar Cuestionario',
     tabs: {
       checkIns: 'Check-ins',
       questionnaires: 'Cuestionarios',
+      submissions: 'Envíos',
+      response: 'Respuesta',
     },
     questionnaires: {
       title: 'Cuestionarios',
@@ -1986,6 +2033,7 @@ export const esMessages = {
         title: 'No se encontraron cuestionarios',
         subtitle: 'Comienza creando tu primera plantilla de cuestionario.',
       },
+      assignAlert: 'Este cuestionario se enviará inmediatamente a los clientes seleccionados.',
     },
     checkIns: {
       title: 'Check-ins',
@@ -2006,6 +2054,10 @@ export const esMessages = {
       breadcrumb: {
         forms: 'Formularios',
       },
+      tabs: {
+        submissions: 'Envíos',
+        response: 'Respuesta',
+      },
       columns: {
         question: 'Pregunta',
         required: 'Requerido',
@@ -2022,6 +2074,7 @@ export const esMessages = {
       },
       addQuestion: {
         title: 'Agregar pregunta',
+        success: 'Pregunta agregada exitosamente',
         question: 'Pregunta',
         questionPlaceholder: 'Ingresa la pregunta...',
         required: 'Requerido',
@@ -2066,9 +2119,14 @@ export const esMessages = {
         numberOfImages: 'Número de imágenes',
         numberOfVideos: 'Número de videos',
         pleaseAddMetric: 'Por favor, agrega una métrica',
+        metricsDisabledNoClient: 'Asigna este formulario a un cliente primero, luego edita desde su perfil',
+        metricsDisabledNoMetrics: 'Agrega métricas a este cliente primero',
       },
       editQuestion: {
         title: 'Editar pregunta',
+      },
+      deleteQuestion: {
+        success: 'Pregunta eliminada exitosamente',
       },
     },
   },
