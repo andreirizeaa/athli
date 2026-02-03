@@ -1207,7 +1207,7 @@ export default function SectionBuilderScreen() {
                 <View
                     style={[
                         styles.bottomBarContainer,
-                        { backgroundColor: themeColors.cardPrimary },
+                        { backgroundColor: themeColors.surfacePrimary },
                     ]}
                 >
                     <View style={[styles.countCircle, { backgroundColor: themeColors.primary }]}>
@@ -1239,7 +1239,7 @@ export default function SectionBuilderScreen() {
                         styles.bottomBarSafeAreaFill,
                         {
                             height: insets.bottom,
-                            backgroundColor: themeColors.cardPrimary,
+                            backgroundColor: themeColors.surfacePrimary,
                         },
                     ]}
                 />

@@ -1383,7 +1383,7 @@ export default function WorkoutDetailScreen() {
             <View
                 style={[
                     styles.bottomBarContainer,
-                    { backgroundColor: themeColors.cardPrimary },
+                    { backgroundColor: themeColors.surfacePrimary },
                 ]}
             >
                 <View style={[styles.countCircle, { backgroundColor: themeColors.primary }]}>
