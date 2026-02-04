@@ -55,6 +55,7 @@ export const clientQuestionnairesController = {
             name: a.name,
             description: a.description,
             questions: a.questions,
+            answers: a.answers || [],
             status: a.status || 'draft',
             sent_at: a.sent_at,
             completed_at: a.completed_at,
@@ -217,11 +218,11 @@ export const clientQuestionnairesController = {
 
     /**
      * Submit a questionnaire (client submits their answers)
+     * Supports both JSON-only and multipart/form-data (for file uploads)
      */
     submitQuestionnaire: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const { id } = req.params;
-        const { responses } = req.body;
 
         const clientIdHeader = req.header('x-client-id');
         const coachIdHeader = req.header('x-coach-id');
@@ -247,26 +248,315 @@ export const clientQuestionnairesController = {
             return forbidden(res, { message: 'Coach ID mismatch' });
         }
 
-        // Update the questionnaire with answers directly (no logs table)
-        const { data, error } = await supabase
-            .from('client_questionnaires')
-            .update({
-                status: 'completed',
-                completed_at: new Date().toISOString(),
-                answers: responses,
-            })
-            .eq('id', id)
-            .eq('client_id', targetClientId)
-            .eq('coach_id', assignmentDetails.coach_id)
-            .select()
-            .single();
+        const targetCoachId = assignmentDetails.coach_id;
 
-        if (error) return res.status(500).json({ success: false, message: error.message });
+        // Parse answers from body (either direct JSON or from form-data)
+        let responses: any[] = [];
+        try {
+            if (req.body.answers) {
+                responses = typeof req.body.answers === 'string'
+                    ? JSON.parse(req.body.answers)
+                    : req.body.answers;
+            } else if (req.body.responses) {
+                responses = typeof req.body.responses === 'string'
+                    ? JSON.parse(req.body.responses)
+                    : req.body.responses;
+            }
+        } catch (parseError) {
+            return res.status(400).json({ success: false, message: 'Invalid answers format' });
+        }
 
-        success(res, {
-            message: 'Questionnaire submitted successfully',
-            data: { assignment: data },
-        });
+        // Get uploaded files if any (from multer.any() - returns array, not object)
+        const files = (req as any).files as Express.Multer.File[] | undefined;
+
+        // Helper to upload a single file to the specified bucket
+        const uploadFileToBucket = async (
+            file: Express.Multer.File,
+            bucket: string,
+            pathPrefix: string
+        ): Promise<string> => {
+            const fileExtension = file.originalname?.split('.').pop() || 'jpg';
+            const dateStr = new Date().toISOString().split('T')[0];
+            const uniqueFileName = `${pathPrefix}/${dateStr}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExtension}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from(bucket)
+                .upload(uniqueFileName, file.buffer, {
+                    contentType: file.mimetype,
+                    upsert: false,
+                });
+
+            if (uploadError) {
+                throw new Error(`Upload failed: ${uploadError.message}`);
+            }
+
+            return uniqueFileName;
+        };
+
+        try {
+            console.log('[submitQuestionnaire] Processing submission for questionnaire:', id);
+            console.log('[submitQuestionnaire] Number of responses:', responses.length);
+            console.log('[submitQuestionnaire] Response formats:', responses.map((r: any) => r.format));
+
+            // Process files and update answers with file paths
+            // multer.any() returns files as a flat array with fieldname property
+            if (files && files.length > 0) {
+                for (const file of files) {
+                    const fieldName = file.fieldname;
+
+                    // Parse field name to extract question ID and file type
+                    // Format: questionId_type_index (e.g., "abc123_images_0" or "abc123_signature")
+                    // For progressPhoto: "abc123_progressPhoto_front"
+                    const parts = fieldName.split('_');
+                    const questionId = parts[0];
+                    const fileType = parts[1];
+                    const subType = parts[2]; // index for images/videos, angle for progressPhoto
+
+                    // Find the answer for this question
+                    const answerIndex = responses.findIndex((a: any) => a.questionId === questionId);
+                    if (answerIndex === -1) continue;
+
+                    if (fileType === 'progressPhoto') {
+                        // Upload progress photo to client_photos bucket
+                        const angle = subType as 'front' | 'back' | 'side';
+                        const filePath = await uploadFileToBucket(
+                            file,
+                            'client_photos',
+                            `${targetClientId}/${new Date().toISOString().split('T')[0]}/${angle}`
+                        );
+
+                        // Initialize answer object if needed
+                        if (typeof responses[answerIndex].answer !== 'object' || !responses[answerIndex].answer) {
+                            responses[answerIndex].answer = {};
+                        }
+                        responses[answerIndex].answer[angle] = filePath;
+                    } else if (fileType === 'signature') {
+                        // Upload signature to form_files bucket
+                        const filePath = await uploadFileToBucket(
+                            file,
+                            'form_files',
+                            `${targetClientId}/signatures/${id}`
+                        );
+                        responses[answerIndex].answer = filePath;
+                    } else if (fileType === 'images' || fileType === 'videos') {
+                        // Upload media to form_files bucket
+                        const filePath = await uploadFileToBucket(
+                            file,
+                            'form_files',
+                            `${targetClientId}/${fileType}/${id}`
+                        );
+
+                        // Initialize array if needed
+                        if (!Array.isArray(responses[answerIndex].answer)) {
+                            responses[answerIndex].answer = [];
+                        }
+
+                        // Add to array at the correct index
+                        const mediaIndex = parseInt(subType, 10);
+                        if (!isNaN(mediaIndex)) {
+                            // Ensure array is large enough
+                            while (responses[answerIndex].answer.length <= mediaIndex) {
+                                responses[answerIndex].answer.push(null);
+                            }
+                            responses[answerIndex].answer[mediaIndex] = filePath;
+                        } else {
+                            responses[answerIndex].answer.push(filePath);
+                        }
+                    }
+                }
+
+                // Clean up any null values from media arrays
+                for (const response of responses) {
+                    if (Array.isArray(response.answer)) {
+                        response.answer = response.answer.filter((item: any) => item !== null);
+                    }
+                }
+            }
+
+            // Handle base64 signatures that were sent directly in answers (not as file uploads)
+            for (let i = 0; i < responses.length; i++) {
+                const response = responses[i];
+                if (
+                    response.format === 'signature' &&
+                    typeof response.answer === 'string' &&
+                    response.answer.startsWith('data:')
+                ) {
+                    try {
+                        // Parse the base64 data URI
+                        const matches = response.answer.match(/^data:([^;]+);base64,(.+)$/);
+                        if (matches) {
+                            const mimeType = matches[1];
+                            const base64Data = matches[2];
+                            const buffer = Buffer.from(base64Data, 'base64');
+
+                            // Determine file extension
+                            const extensionMap: Record<string, string> = {
+                                'image/png': 'png',
+                                'image/jpeg': 'jpg',
+                                'image/jpg': 'jpg',
+                            };
+                            const extension = extensionMap[mimeType] || 'png';
+
+                            // Upload to form_files bucket
+                            const dateStr = new Date().toISOString().split('T')[0];
+                            const uniqueFileName = `${targetClientId}/signatures/${id}/${dateStr}/${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
+
+                            const { error: uploadError } = await supabase.storage
+                                .from('form_files')
+                                .upload(uniqueFileName, buffer, {
+                                    contentType: mimeType,
+                                    upsert: false,
+                                });
+
+                            if (!uploadError) {
+                                responses[i].answer = uniqueFileName;
+                            }
+                        }
+                    } catch (sigError) {
+                        console.error('Failed to process signature:', sigError);
+                        // Keep the base64 data as-is if upload fails
+                    }
+                }
+            }
+
+            // Handle base64 images
+            for (let i = 0; i < responses.length; i++) {
+                const response = responses[i];
+                if (response.format === 'images' && Array.isArray(response.answer)) {
+                    const uploadedPaths: string[] = [];
+                    for (const item of response.answer) {
+                        if (typeof item === 'string' && item.startsWith('data:')) {
+                            try {
+                                // Parse and upload base64
+                                const matches = item.match(/^data:([^;]+);base64,(.+)$/);
+                                if (matches) {
+                                    const mimeType = matches[1];
+                                    const base64Data = matches[2];
+                                    const buffer = Buffer.from(base64Data, 'base64');
+                                    const extension = mimeType.split('/')[1] || 'jpg';
+                                    const filePath = `${targetClientId}/images/${id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
+
+                                    const { error: uploadError } = await supabase.storage
+                                        .from('form_files')
+                                        .upload(filePath, buffer, { contentType: mimeType });
+
+                                    if (!uploadError) {
+                                        uploadedPaths.push(filePath);
+                                    }
+                                }
+                            } catch (imgError) {
+                                console.error('Failed to process image:', imgError);
+                            }
+                        } else if (typeof item === 'string' && item !== '__FILE_UPLOAD__') {
+                            uploadedPaths.push(item); // Already a URL/path
+                        }
+                    }
+                    responses[i].answer = uploadedPaths;
+                }
+            }
+
+            // Handle base64 progress photos
+            for (let i = 0; i < responses.length; i++) {
+                const response = responses[i];
+                if (response.format === 'progressPhoto' && typeof response.answer === 'object' && response.answer) {
+                    const progressAnswer = response.answer as { front?: string; back?: string; side?: string };
+
+                    for (const angle of ['front', 'back', 'side'] as const) {
+                        const value = progressAnswer[angle];
+                        if (typeof value === 'string' && value.startsWith('data:')) {
+                            try {
+                                const matches = value.match(/^data:([^;]+);base64,(.+)$/);
+                                if (matches) {
+                                    const mimeType = matches[1];
+                                    const base64Data = matches[2];
+                                    const buffer = Buffer.from(base64Data, 'base64');
+                                    const extension = mimeType.split('/')[1] || 'jpg';
+                                    const dateStr = new Date().toISOString().split('T')[0];
+                                    const filePath = `${targetClientId}/${dateStr}/${angle}/${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
+
+                                    const { error: uploadError } = await supabase.storage
+                                        .from('client_photos')
+                                        .upload(filePath, buffer, { contentType: mimeType });
+
+                                    if (!uploadError) {
+                                        progressAnswer[angle] = filePath;
+                                    }
+                                }
+                            } catch (photoError) {
+                                console.error(`Failed to process ${angle} photo:`, photoError);
+                            }
+                        }
+                    }
+                    responses[i].answer = progressAnswer;
+                }
+            }
+
+            // Handle progress photo log entry if any progressPhoto answers exist
+            // Helper to check if a path is a valid upload (not a placeholder or base64)
+            const isValidPath = (path: any): path is string =>
+                typeof path === 'string' && path !== '__FILE_UPLOAD__' && !path.startsWith('data:') && path.length > 0;
+
+            const progressPhotoAnswer = responses.find((a: any) =>
+                a.format === 'progressPhoto' &&
+                typeof a.answer === 'object' &&
+                a.answer !== null &&
+                (isValidPath(a.answer.front) || isValidPath(a.answer.back) || isValidPath(a.answer.side))
+            );
+
+            if (progressPhotoAnswer) {
+                const dateStr = new Date().toISOString().split('T')[0];
+                const photoPaths: any = {};
+
+                if (isValidPath(progressPhotoAnswer.answer.front)) {
+                    photoPaths.front_photo_path = progressPhotoAnswer.answer.front;
+                }
+                if (isValidPath(progressPhotoAnswer.answer.side)) {
+                    photoPaths.side_photo_path = progressPhotoAnswer.answer.side;
+                }
+                if (isValidPath(progressPhotoAnswer.answer.back)) {
+                    photoPaths.back_photo_path = progressPhotoAnswer.answer.back;
+                }
+
+                // Only insert if we have at least one valid path
+                if (Object.keys(photoPaths).length > 0) {
+                    await supabase
+                        .from('client_photo_logs')
+                        .upsert({
+                            client_id: targetClientId,
+                            coach_id: targetCoachId,
+                            date: dateStr,
+                            ...photoPaths,
+                        }, {
+                            onConflict: 'client_id,date'
+                        });
+                }
+            }
+
+            // Update the questionnaire with answers
+            const { data, error } = await supabase
+                .from('client_questionnaires')
+                .update({
+                    status: 'completed',
+                    completed_at: new Date().toISOString(),
+                    answers: responses,
+                })
+                .eq('id', id)
+                .eq('client_id', targetClientId)
+                .eq('coach_id', targetCoachId)
+                .select()
+                .single();
+
+            if (error) return res.status(500).json({ success: false, message: error.message });
+
+            success(res, {
+                message: 'Questionnaire submitted successfully',
+                data: { assignment: data },
+            });
+        } catch (uploadError: any) {
+            console.error('[submitQuestionnaire] Error:', uploadError);
+            console.error('[submitQuestionnaire] Stack:', uploadError.stack);
+            return res.status(500).json({ success: false, message: `Processing failed: ${uploadError.message}` });
+        }
     },
 
     /**
@@ -579,6 +869,44 @@ export const clientQuestionnairesController = {
                 status: newQuestionnaire.status,
                 sent_at: newQuestionnaire.sent_at,
             },
+        });
+    },
+
+    /**
+     * Get a signed URL for questionnaire media (images, videos, signatures, progress photos)
+     * Supports both form_files and client_photos buckets
+     */
+    getMediaUrl: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { bucket, path } = req.query;
+
+        if (!bucket || !path) {
+            return res.status(400).json({ success: false, message: 'bucket and path query params required' });
+        }
+
+        const bucketName = String(bucket);
+        const filePath = String(path);
+
+        // Only allow specific buckets for security
+        if (bucketName !== 'form_files' && bucketName !== 'client_photos') {
+            return res.status(400).json({ success: false, message: 'Invalid bucket' });
+        }
+
+        const supabase = getSupabaseClient();
+
+        // Generate signed URL (24 hours validity)
+        const { data, error } = await supabase.storage
+            .from(bucketName)
+            .createSignedUrl(filePath, 60 * 60 * 24);
+
+        if (error) {
+            console.error('[getMediaUrl] Error creating signed URL:', error);
+            return res.status(500).json({ success: false, message: error.message });
+        }
+
+        success(res, {
+            message: 'Signed URL generated successfully',
+            data: { url: data.signedUrl },
         });
     },
 };

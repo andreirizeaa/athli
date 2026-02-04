@@ -575,6 +575,7 @@ const FormDetailPage = () => {
         onOpenChange={setIsAddQuestionOpen}
         onSave={handleAddQuestion}
         questions={questions}
+        formType={formType}
       />
 
       <EditQuestionSidePanel

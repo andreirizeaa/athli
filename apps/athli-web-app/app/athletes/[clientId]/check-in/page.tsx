@@ -378,6 +378,7 @@ const ClientCheckInPage = () => {
               <Button
                 variant="default"
                 size="sm"
+                disabled={row.questionCount === 0}
                 onClick={(e) => {
                   e.stopPropagation();
                   handlePublish(row);

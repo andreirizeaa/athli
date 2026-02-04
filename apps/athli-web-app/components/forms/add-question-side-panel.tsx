@@ -55,9 +55,10 @@ type AddQuestionSidePanelProps = {
   }) => void;
   questions: any[];
   clientId?: string;
+  formType?: 'check-in' | 'questionnaire';
 };
 
-export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, clientId }: AddQuestionSidePanelProps) => {
+export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, clientId, formType }: AddQuestionSidePanelProps) => {
   const t = useTranslations();
   const router = useRouter();
   const { user } = useUserProfile();
@@ -65,8 +66,6 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
   const [isRequired, setIsRequired] = useState<boolean>(true);
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [options, setOptions] = useState<string[]>(['']);
-  const [scaleFrom, setScaleFrom] = useState<string>('1');
-  const [scaleTo, setScaleTo] = useState<string>('10');
   const [mediaCount, setMediaCount] = useState<number>(1);
   const [selectedMetricId, setSelectedMetricId] = useState<string>('');
   const [metrics, setMetrics] = useState<MetricOption[]>([]);
@@ -97,7 +96,13 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
   const allFormats = [...syncsWithFormats, ...generalFormats];
 
   const filteredSyncsWithFormats = syncsWithFormats.filter(
-    (format) => !(format.id === 'progressPhoto' && isProgressPhotoAlreadyUsed)
+    (format) => {
+      // Hide progress photo if already used
+      if (format.id === 'progressPhoto' && isProgressPhotoAlreadyUsed) return false;
+      // Hide metrics for questionnaires (metrics only apply to check-ins)
+      if (format.id === 'metrics' && formType === 'questionnaire') return false;
+      return true;
+    }
   );
 
   const filteredMetrics = metrics.filter((metric) => !usedMetricIds.has(metric.id));
@@ -107,8 +112,6 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
     setIsRequired(true);
     setSelectedFormat(null);
     setOptions(['']);
-    setScaleFrom('1');
-    setScaleTo('10');
     setMediaCount(1);
     setSelectedMetricId('');
     setMetrics([]);
@@ -169,12 +172,6 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
         return;
       }
     }
-    if (selectedFormat === 'scale') {
-      if (!scaleFrom.trim() || !scaleTo.trim()) {
-        return;
-      }
-    }
-
     const questionData: any = {
       question: questionText,
       required: isRequired,
@@ -185,8 +182,8 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
       questionData.options = options.filter((opt) => opt.trim() !== '');
     }
     if (selectedFormat === 'scale') {
-      questionData.scaleFrom = scaleFrom;
-      questionData.scaleTo = scaleTo;
+      questionData.scaleFrom = '1';
+      questionData.scaleTo = '10';
     }
     if (selectedFormat === 'images' || selectedFormat === 'videos') {
       questionData.mediaCount = mediaCount;
@@ -210,13 +207,6 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
       }
     } else {
       setOptions(['']);
-    }
-    if (format === 'scale') {
-      setScaleFrom('1');
-      setScaleTo('10');
-    } else {
-      setScaleFrom('1');
-      setScaleTo('10');
     }
     if (format === 'images' || format === 'videos') {
       setMediaCount(1);
@@ -254,7 +244,6 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
   const isValid = questionText.trim() &&
     selectedFormat &&
     !(selectedFormat === 'multipleChoice' && !options.some((opt) => opt.trim() !== '')) &&
-    !(selectedFormat === 'scale' && (!scaleFrom.trim() || !scaleTo.trim())) &&
     !(selectedFormat === 'metrics' && !selectedMetricId);
 
   return (
@@ -468,39 +457,6 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
                 <Plus className="h-4 w-4" />
                 {t('forms.detail.addQuestion.addOption')}
               </Button>
-            </div>
-          </div>
-        )}
-
-        {selectedFormat === 'scale' && (
-          <div className="flex flex-col gap-3">
-            <div className="flex gap-3">
-              <div className="flex flex-col gap-2 flex-1">
-                <label className="text-sm font-medium text-foreground" htmlFor="scale-from">
-                  {t('forms.detail.addQuestion.from')}
-                  <RequiredAsterisk />
-                </label>
-                <Input
-                  id="scale-from"
-                  type="text"
-                  value={scaleFrom}
-                  onChange={(e) => setScaleFrom(e.target.value)}
-                  placeholder="1 / Easy / Low"
-                />
-              </div>
-              <div className="flex flex-col gap-2 flex-1">
-                <label className="text-sm font-medium text-foreground" htmlFor="scale-to">
-                  {t('forms.detail.addQuestion.to')}
-                  <RequiredAsterisk />
-                </label>
-                <Input
-                  id="scale-to"
-                  type="text"
-                  value={scaleTo}
-                  onChange={(e) => setScaleTo(e.target.value)}
-                  placeholder="10 / Hard / High"
-                />
-              </div>
             </div>
           </div>
         )}

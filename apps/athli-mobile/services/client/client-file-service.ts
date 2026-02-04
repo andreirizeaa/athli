@@ -206,6 +206,22 @@ export const shareClientFile = async (
 };
 
 /**
+ * Get files for the authenticated athlete (self-access)
+ */
+export const getMyFiles = async (): Promise<ClientFile[]> => {
+  const response = await apiFetch<{ success: boolean; data: { assignments: any[]; files?: any[] } }>(
+    '/client/files'
+  );
+  const assignments = response.data.assignments || response.data.files || [];
+  return assignments.map((f: any) => ({
+    ...f,
+    name: f.display_name || f.fileName || f.filename || f.name,
+    filename: f.fileName || f.filename,
+    display_name: f.display_name || f.fileName || f.filename,
+  }));
+};
+
+/**
  * Get all files assigned to a client
  */
 export const getClientFiles = async (clientId: string, coachId: string): Promise<ClientFile[]> => {
