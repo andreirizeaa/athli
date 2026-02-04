@@ -172,6 +172,7 @@ export default function CheckInDetailScreen() {
                 }
                 onPress={handlePauseResume}
                 showChevron
+                disabled={isDraft && (currentCheckIn?.questionCount ?? 0) === 0}
               />
               <Separator />
               <SettingsOption

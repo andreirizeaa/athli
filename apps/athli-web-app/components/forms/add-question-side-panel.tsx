@@ -55,9 +55,10 @@ type AddQuestionSidePanelProps = {
   }) => void;
   questions: any[];
   clientId?: string;
+  formType?: 'check-in' | 'questionnaire';
 };
 
-export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, clientId }: AddQuestionSidePanelProps) => {
+export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, clientId, formType }: AddQuestionSidePanelProps) => {
   const t = useTranslations();
   const router = useRouter();
   const { user } = useUserProfile();
@@ -95,7 +96,13 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
   const allFormats = [...syncsWithFormats, ...generalFormats];
 
   const filteredSyncsWithFormats = syncsWithFormats.filter(
-    (format) => !(format.id === 'progressPhoto' && isProgressPhotoAlreadyUsed)
+    (format) => {
+      // Hide progress photo if already used
+      if (format.id === 'progressPhoto' && isProgressPhotoAlreadyUsed) return false;
+      // Hide metrics for questionnaires (metrics only apply to check-ins)
+      if (format.id === 'metrics' && formType === 'questionnaire') return false;
+      return true;
+    }
   );
 
   const filteredMetrics = metrics.filter((metric) => !usedMetricIds.has(metric.id));

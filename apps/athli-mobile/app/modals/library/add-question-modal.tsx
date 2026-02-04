@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check, Plus, Trash2, ChevronDown, Activity } from 'lucide-react-native';
 import { PressableScale, PressableOpacity } from 'pressto';
+import SquircleView from 'react-native-fast-squircle';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 
@@ -167,13 +168,17 @@ export default function AddQuestionModal() {
       if (format.id === 'metrics' && isEditMode && params.questionFormat === 'metrics') {
         return true;
       }
+      // Hide metrics for questionnaires (only available for check-ins)
+      if (format.id === 'metrics' && params.formType === 'questionnaire') {
+        return false;
+      }
       // Hide metrics based on context (library page or no client metrics)
       if (format.id === 'metrics' && shouldHideMetrics) {
         return false;
       }
       return true;
     });
-  }, [hasExistingProgressPhoto, isEditMode, params.questionFormat, shouldHideMetrics]);
+  }, [hasExistingProgressPhoto, isEditMode, params.questionFormat, params.formType, shouldHideMetrics]);
 
   const handleClose = useCallback(() => {
     if (isDirty) {
@@ -476,13 +481,21 @@ export default function AddQuestionModal() {
                     required={index === 0}
                   />
                 </View>
-                {options.length > 1 && (
-                  <PressableScale
-                    style={[styles.removeOptionButton, { backgroundColor: themeColors.surfacePrimary }]}
-                    onPress={() => handleRemoveOption(index)}
-                  >
-                    <Trash2 {...({ size: 18, color: themeColors.mutedText } as any)} />
-                  </PressableScale>
+                {index !== 0 && options.length > 1 && (
+                  <PressableOpacity onPress={() => handleRemoveOption(index)}>
+                    <SquircleView
+                      cornerSmoothing={1}
+                      style={[
+                        styles.removeOptionButton,
+                        {
+                          backgroundColor: 'transparent',
+                          borderColor: themeColors.border,
+                        },
+                      ]}
+                    >
+                      <Trash2 size={20} color={themeColors.text} />
+                    </SquircleView>
+                  </PressableOpacity>
                 )}
               </View>
             ))}
@@ -840,19 +853,19 @@ const styles = StyleSheet.create({
   },
   optionRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
+    alignItems: 'flex-start',
+    gap: 12,
   },
   optionInputWrapper: {
     flex: 1,
   },
   removeOptionButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
+    width: 52,
+    height: 70,
+    borderRadius: 16,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
   },
   addOptionButton: {
     flexDirection: 'row',
