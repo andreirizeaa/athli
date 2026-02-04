@@ -1,15 +1,15 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Pressable, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dialog } from '@/components/ui/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, Share, File, FileText, Play, Pencil, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Plus, Share, File, FileText, Play, Pencil, Trash2 } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 import { useQueries } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 
-import { typography } from '@/constants/typography';
+import { typography, iconSizes } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useThemePreference, useTranslations, useClientDetailStore, useCoachProfileStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
@@ -19,6 +19,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SearchBar } from '@/components/ui/search-bar';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { deleteClientFiles, getClientFileUrl, getClientFileName, isMediaFile, type ClientFile } from '@/services/client/client-file-service';
+import { isExternalLink } from '@athli/shared-types';
 
 // Simple fuzzy search - checks if all characters appear in order
 const fuzzyMatch = (text: string, query: string): boolean => {
@@ -37,7 +38,8 @@ const fuzzyMatch = (text: string, query: string): boolean => {
 
 export default function ClientFilesScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, hideAddButton } = useLocalSearchParams<{ id: string; hideAddButton?: string }>();
+  const shouldHideAddButton = hideAddButton === 'true';
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
@@ -48,7 +50,11 @@ export default function ClientFilesScreen() {
   const files = useClientDetailStore((state) => state.files);
   const isLoadingFiles = useClientDetailStore((state) => state.isLoadingFiles);
   const refreshSection = useClientDetailStore((state) => state.refreshSection);
+  const storeCoachId = useClientDetailStore((state) => state.coachId);
   const coachProfile = useCoachProfileStore((state) => state.profile);
+
+  // Use coachProfile.id for coaches, or storeCoachId for athletes
+  const coachId = coachProfile?.id || storeCoachId || '';
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -90,12 +96,12 @@ export default function ClientFilesScreen() {
   // Fetch thumbnail URLs using React Query with caching
   const thumbnailQueries = useQueries({
     queries: filesNeedingThumbnails.map(file => ({
-      queryKey: ['clientFileUrl', file.id, id, coachProfile?.id],
-      queryFn: () => getClientFileUrl(file.id, id, coachProfile?.id || ''),
+      queryKey: ['clientFileUrl', file.id, id, coachId],
+      queryFn: () => getClientFileUrl(file.id, id, coachId),
       staleTime: 10 * 60 * 1000, // 10 minutes - signed URLs typically valid for 15-60 min
       refetchOnMount: false,
       refetchOnWindowFocus: false,
-      enabled: !!coachProfile?.id && !!id,
+      enabled: !!coachId && !!id,
     })),
   });
 
@@ -112,13 +118,13 @@ export default function ClientFilesScreen() {
   }, [filesNeedingThumbnails, thumbnailQueries]);
 
   const handleDeleteFile = async (fileId: string) => {
-    if (!coachProfile?.id || !id) return;
+    if (!coachId || !id) return;
 
     try {
       await deleteClientFiles({
         fileIds: [fileId],
         clientId: id,
-        coachId: coachProfile.id,
+        coachId,
       });
       haptics.success();
       refreshSection('files');
@@ -140,7 +146,7 @@ export default function ClientFilesScreen() {
     router.push(`/modals/files/add-file-modal?clientId=${id}` as any);
   };
 
-  const handleFilePress = useCallback((fileId: string) => {
+  const handleFilePress = useCallback((file: ClientFile) => {
     // If a row was just closed, prevent navigation
     if (hadOpenRowRef.current) {
       hadOpenRowRef.current = false;
@@ -151,7 +157,16 @@ export default function ClientFilesScreen() {
       closeOpenRow();
       return;
     }
-    router.push(`/modals/client/file-viewer-modal?clientId=${id}&fileId=${fileId}` as any);
+
+    // If external link, open directly in browser
+    if (isExternalLink(file.file_path)) {
+      Linking.openURL(file.file_path!).catch((err) => {
+        console.error('[ClientFilesScreen] Failed to open URL:', err);
+      });
+      return;
+    }
+
+    router.push(`/modals/client/file-viewer-modal?clientId=${id}&fileId=${file.id}` as any);
   }, [closeOpenRow, router, id]);
 
   const handleEditFilename = useCallback((file: ClientFile) => {
@@ -320,7 +335,7 @@ export default function ClientFilesScreen() {
                         onOpen={registerOpenRow}
                         deleteConfirmTitle={`${t('general.delete')} ${fileName}?`}
                       >
-                        <PressableScale onPress={() => handleFilePress(file.id)}>
+                        <PressableScale onPress={() => handleFilePress(file)}>
                           <View style={[styles.fileItem, { backgroundColor: themeColors.backgroundPrimary }]}>
                             {renderThumbnail(file)}
                             <View style={styles.fileInfo}>
@@ -333,6 +348,14 @@ export default function ClientFilesScreen() {
                                 </Text>
                               )}
                             </View>
+                            {isExternalLink(file.file_path) && (
+                              <PlatformIcon
+                                sf="chevron.right"
+                                IconComponent={ChevronRight}
+                                size={iconSizes.extraSmallIcons}
+                                color={themeColors.mutedText}
+                              />
+                            )}
                           </View>
                         </PressableScale>
                       </SwipeableRow>
@@ -368,27 +391,31 @@ export default function ClientFilesScreen() {
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>
           {t('clientDetail.sections.files')}
         </Text>
-        <DropdownMenuWrapper
-          options={[
-            {
-              label: t('clientDetail.actions.assignFile'),
-              icon: { sf: 'square.and.arrow.up', IconComponent: Share },
-              onPress: handleAssignFile,
-            },
-            {
-              label: t('clientDetail.actions.addFile'),
-              icon: { sf: 'plus', IconComponent: Plus },
-              onPress: handleAddFile,
-            },
-          ]}
-        >
-          <IconButton
-            icon={{ sf: 'plus', IconComponent: Plus }}
-            onPress={() => {}}
-            size="md"
-            color={iconColor}
-          />
-        </DropdownMenuWrapper>
+        {shouldHideAddButton ? (
+          <View style={{ width: 40 }} />
+        ) : (
+          <DropdownMenuWrapper
+            options={[
+              {
+                label: t('clientDetail.actions.assignFile'),
+                icon: { sf: 'square.and.arrow.up', IconComponent: Share },
+                onPress: handleAssignFile,
+              },
+              {
+                label: t('clientDetail.actions.addFile'),
+                icon: { sf: 'plus', IconComponent: Plus },
+                onPress: handleAddFile,
+              },
+            ]}
+          >
+            <IconButton
+              icon={{ sf: 'plus', IconComponent: Plus }}
+              onPress={() => {}}
+              size="md"
+              color={iconColor}
+            />
+          </DropdownMenuWrapper>
+        )}
       </View>
 
       <Dialog

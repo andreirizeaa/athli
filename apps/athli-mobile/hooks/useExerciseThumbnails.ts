@@ -155,7 +155,7 @@ export const useExerciseThumbnails = <T extends ExerciseWithThumbnail>(
   const { enabled = true, maxVisible } = options || {};
 
   // State to trigger re-renders when cache updates
-  const [, setCacheVersion] = useState(0);
+  const [cacheVersion, setCacheVersion] = useState(0);
 
   // Track if we're currently loading
   const [isLoading, setIsLoading] = useState(false);
@@ -230,7 +230,8 @@ export const useExerciseThumbnails = <T extends ExerciseWithThumbnail>(
   // Function to get thumbnail URL for a given raw URL
   const getThumbnailUrl = useCallback((rawThumbnailUrl?: string): string => {
     return getCachedThumbnailUrl(rawThumbnailUrl);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cacheVersion]);
 
   // Function to check if a specific thumbnail is still loading (not yet cached)
   const isThumbnailLoading = useCallback((rawThumbnailUrl?: string): boolean => {

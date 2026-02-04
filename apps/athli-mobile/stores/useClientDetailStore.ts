@@ -116,6 +116,7 @@ interface ClientDetailStore {
   // Direct setters for athlete self-access
   setMetrics: (metrics: ClientMetric[]) => void;
   setHabits: (habits: ClientHabit[]) => void;
+  setFiles: (files: ClientFile[]) => void;
   setClientId: (clientId: string) => void;
   setCoachId: (coachId: string) => void;
   setUniqueExercises: (exercises: UniqueExercise[]) => void;
@@ -749,5 +750,9 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
 
   setUniqueExercises: (exercises: UniqueExercise[]) => {
     set({ uniqueExercises: exercises, isLoadingUniqueExercises: false });
+  },
+
+  setFiles: (files: ClientFile[]) => {
+    set({ files, isLoadingFiles: false });
   },
 }));

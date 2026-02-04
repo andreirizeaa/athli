@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Pencil, MessageSquare, Send, RefreshCw, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, Pencil, MessageSquare, Send, RefreshCw, Trash2, Eye } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
@@ -62,6 +62,7 @@ export default function QuestionnaireDetailScreen() {
         formId: params.questionnaireId,
         formName: params.questionnaireName,
         clientId: params.id,
+        viewOnly: isDraft ? 'false' : 'true',
       },
     } as any);
   };
@@ -161,8 +162,8 @@ export default function QuestionnaireDetailScreen() {
           <View style={styles.contentContainer}>
             <Card>
               <SettingsOption
-                icon={<PlatformIcon sf="pencil" IconComponent={Pencil} size={iconSize} color={iconColor} />}
-                title={t('clientDetail.questionnaires.viewEditForm')}
+                icon={<PlatformIcon sf={isDraft ? 'pencil' : 'eye'} IconComponent={isDraft ? Pencil : Eye} size={iconSize} color={iconColor} />}
+                title={isDraft ? t('clientDetail.questionnaires.viewEditForm') : t('clientDetail.questionnaires.viewForm')}
                 onPress={handleViewEditForm}
                 showChevron
               />
@@ -219,7 +220,7 @@ export default function QuestionnaireDetailScreen() {
             color={themeColors.text}
           />
           <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
-            {params.questionnaireName}
+            {currentQuestionnaire?.name || params.questionnaireName}
           </Text>
           <View style={{ width: 40 }} />
         </View>

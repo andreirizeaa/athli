@@ -110,6 +110,72 @@ export const getClientQuestionnaire = async (
 };
 
 /**
+ * Get a single check-in for a client with full details including questions
+ */
+export type ClientCheckInDetail = {
+  id: string;
+  name: string;
+  description?: string;
+  questions: Question[];
+  schedule?: string;
+  status?: string;
+};
+
+export const getClientCheckInDetail = async (
+  clientId: string,
+  checkInId: string,
+  coachId: string
+): Promise<ClientCheckInDetail> => {
+  const response = await apiFetch<{ success: boolean; data: any }>(
+    `/client/forms/check-ins/${checkInId}`,
+    {
+      headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+    }
+  );
+
+  return {
+    id: response.data.id,
+    name: response.data.name,
+    description: response.data.description,
+    questions: response.data.questions || [],
+    schedule: response.data.schedule_config?.frequency || response.data.schedule,
+    status: response.data.status,
+  };
+};
+
+/**
+ * Get a single questionnaire for a client with full details including questions
+ */
+export type ClientQuestionnaireFullDetail = {
+  id: string;
+  name: string;
+  description?: string;
+  questions: Question[];
+  status?: string;
+};
+
+export const getClientQuestionnaireDetail = async (
+  clientId: string,
+  questionnaireId: string,
+  coachId: string
+): Promise<ClientQuestionnaireFullDetail> => {
+  const response = await apiFetch<{ success: boolean; data: any }>(
+    `/client/forms/questionnaires/${questionnaireId}`,
+    {
+      headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+    }
+  );
+
+  return {
+    id: response.data.id,
+    name: response.data.name,
+    description: response.data.description,
+    questions: response.data.questions || [],
+    status: response.data.status,
+  };
+};
+
+/**
  * Assign check-ins to a client
  */
 export const assignClientCheckIn = async (data: AssignClientCheckInData): Promise<void> => {
@@ -354,4 +420,88 @@ export const convertScheduleToCron = (scheduleData: AssignFormScheduleData): str
   }
 
   return `${defaultMinute} ${defaultHour} * * *`;
+};
+
+/**
+ * Edit a client's check-in details
+ */
+export type EditClientCheckInData = {
+  checkInId: string;
+  clientId: string;
+  coachId: string;
+  name: string;
+  description?: string;
+};
+
+export const editClientCheckIn = async (data: EditClientCheckInData): Promise<void> => {
+  await apiFetch(`/client/forms/check-ins/${data.checkInId}`, {
+    method: 'PATCH',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      name: data.name,
+      description: data.description,
+    }),
+  });
+};
+
+/**
+ * Edit a client's questionnaire details
+ */
+export type EditClientQuestionnaireData = {
+  questionnaireId: string;
+  clientId: string;
+  coachId: string;
+  name: string;
+  description?: string;
+};
+
+export const editClientQuestionnaire = async (data: EditClientQuestionnaireData): Promise<void> => {
+  await apiFetch(`/client/forms/questionnaires/${data.questionnaireId}`, {
+    method: 'PATCH',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      name: data.name,
+      description: data.description,
+    }),
+  });
+};
+
+/**
+ * Save questions for a client's check-in
+ */
+export type SaveClientCheckInQuestionsData = {
+  checkInId: string;
+  clientId: string;
+  coachId: string;
+  questions: Question[];
+};
+
+export const saveClientCheckInQuestions = async (data: SaveClientCheckInQuestionsData): Promise<void> => {
+  await apiFetch(`/client/forms/check-ins/${data.checkInId}`, {
+    method: 'PATCH',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      questions: data.questions,
+    }),
+  });
+};
+
+/**
+ * Save questions for a client's questionnaire
+ */
+export type SaveClientQuestionnaireQuestionsData = {
+  questionnaireId: string;
+  clientId: string;
+  coachId: string;
+  questions: Question[];
+};
+
+export const saveClientQuestionnaireQuestions = async (data: SaveClientQuestionnaireQuestionsData): Promise<void> => {
+  await apiFetch(`/client/forms/questionnaires/${data.questionnaireId}`, {
+    method: 'PATCH',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      questions: data.questions,
+    }),
+  });
 };

@@ -31,8 +31,11 @@ export default function FileViewerModal() {
     const { clientId, fileId } = params;
 
     const coachProfile = useCoachProfileStore((state) => state.profile);
-    const coachId = coachProfile?.id;
+    const storeCoachId = useClientDetailStore((state) => state.coachId);
     const files = useClientDetailStore((state) => state.files);
+
+    // Use coachProfile.id for coaches, or storeCoachId for athletes
+    const coachId = coachProfile?.id || storeCoachId || '';
 
     const [isSharing, setIsSharing] = useState(false);
 

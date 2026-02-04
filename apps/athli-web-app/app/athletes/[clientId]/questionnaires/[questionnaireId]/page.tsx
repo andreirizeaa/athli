@@ -24,7 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ChevronRight, ChevronLeft, Plus, GripVertical, Download, Loader2 } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Plus, GripVertical, Download, Loader2, Edit } from 'lucide-react';
 import Image from 'next/image';
 import { PageTabs } from '@/components/page-tabs';
 import {
@@ -34,6 +34,7 @@ import {
   type ClientQuestionnaireDetail as SharedClientQuestionnaireDetail,
 } from '@/api/client/client-form-service';
 import { FormBuilder, type Question } from '@/components/forms/form-builder';
+import { EditClientQuestionnaireFormSidePanel } from '@/components/forms/edit-client-questionnaire-form-side-panel';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 interface LocalClientQuestionnaireDetail {
@@ -73,6 +74,7 @@ const ClientQuestionnaireDetailPage = () => {
 
   // Builder tab state
   const [isAddQuestionOpen, setIsAddQuestionOpen] = useState<boolean>(false);
+  const [isEditFormOpen, setIsEditFormOpen] = useState<boolean>(false);
   const [currentForm, setCurrentForm] = useState<LocalClientQuestionnaireDetail | null>(null);
   const [previewQuestionIndex, setPreviewQuestionIndex] = useState<number>(0);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -304,6 +306,18 @@ const ClientQuestionnaireDetailPage = () => {
     }
   };
 
+  const handleEditForm = async (updatedForm: LocalClientQuestionnaireDetail) => {
+    // Update local state immediately for responsive UI
+    setCurrentForm(updatedForm);
+    // Invalidate queries to ensure data consistency
+    queryClient.invalidateQueries({ queryKey: ['client-questionnaires', clientId] });
+  };
+
+  const handleDeleteForm = () => {
+    // Navigate back to questionnaires list after deletion
+    router.push(`/athletes/${clientId}/questionnaires`);
+  };
+
   // Render answer helper
   const getAnswerForQuestion = (questionId: string): QuestionAnswer | undefined => {
     return submissionData?.answers?.find((a: QuestionAnswer) => a.questionId === questionId);
@@ -440,8 +454,16 @@ const ClientQuestionnaireDetailPage = () => {
         </div>
         {/* Action buttons - positioned at top right */}
         <div className="absolute top-2 right-4 flex items-center gap-2">
-          {activeTab === 'builder' && currentForm?.status === 'draft' && (
+          {activeTab === 'builder' && currentForm?.status !== 'pending' && currentForm?.status !== 'completed' && (
             <ButtonGroup className="flex-shrink-0">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditFormOpen(true)}
+                className="gap-2"
+              >
+                <Edit className="size-4" />
+                <span>{t('general.edit')}</span>
+              </Button>
               <Button
                 variant={isReorderMode ? 'default' : 'outline'}
                 onClick={handleToggleReorder}
@@ -474,7 +496,7 @@ const ClientQuestionnaireDetailPage = () => {
           <PageTabs
             tabs={[
               { value: 'builder', label: currentForm?.name || '' },
-              ...(currentForm?.status !== 'draft' ? [{ value: 'response', label: t('forms.detail.tabs.response') }] : []),
+              ...(currentForm?.status === 'pending' || currentForm?.status === 'completed' ? [{ value: 'response', label: t('forms.detail.tabs.response') }] : []),
             ]}
             value={activeTab}
             onValueChange={(value) => setActiveTab(value as TabType)}
@@ -503,7 +525,7 @@ const ClientQuestionnaireDetailPage = () => {
           onAddQuestion={handleAddQuestion}
           onDeleteQuestion={handleDeleteQuestion}
           onEditQuestion={handleEditQuestion}
-          readOnly={currentForm?.status !== 'draft'}
+          readOnly={currentForm?.status === 'pending' || currentForm?.status === 'completed'}
           onQuestionsChanged={() => {
             queryClient.invalidateQueries({ queryKey: ['client-questionnaires', clientId] });
           }}
@@ -634,6 +656,19 @@ const ClientQuestionnaireDetailPage = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit form side panel */}
+      {user?.id && (
+        <EditClientQuestionnaireFormSidePanel
+          open={isEditFormOpen}
+          onOpenChange={setIsEditFormOpen}
+          form={currentForm}
+          clientId={clientId}
+          coachId={user.id}
+          onSave={handleEditForm}
+          onDelete={handleDeleteForm}
+        />
+      )}
     </div>
   );
 };

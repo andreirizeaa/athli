@@ -20,6 +20,7 @@ import { Separator } from '@/components/ui/separator';
 import { IconButton } from '@/components/ui/icon-button';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { DetailRow } from '@/components/ui/detail-row';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { findCountry } from '@/services/coach/coach-company-service';
 
 export default function EditProfileScreen() {
@@ -144,6 +145,7 @@ export default function EditProfileScreen() {
 
   // Get the appropriate profile based on view
   const currentProfile = isAthleteView ? clientProfile : coachProfile;
+  const HEADER_HEIGHT = 52;
 
   return (
     <View
@@ -158,21 +160,9 @@ export default function EditProfileScreen() {
     >
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + HEADER_HEIGHT }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <IconButton
-            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-            onPress={handleGoBack}
-            size="md"
-            color={themeColors.text}
-          />
-          <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-            {t('profile.title')}
-          </Text>
-          <View style={styles.headerPlaceholder} />
-        </View>
         {/* Personal Details */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>
           {t('profile.personalDetails')}
@@ -328,6 +318,21 @@ export default function EditProfileScreen() {
         )}
 
       </ScrollView>
+
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+      <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
+        <IconButton
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+          onPress={handleGoBack}
+          size="md"
+          color={themeColors.text}
+        />
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+          {t('profile.title')}
+        </Text>
+        <View style={styles.headerPlaceholder} />
+      </View>
     </View>
   );
 }
@@ -336,15 +341,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 4,
+    paddingHorizontal: 16,
     paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h5,
+    flex: 1,
+    textAlign: 'center',
   },
   headerPlaceholder: {
     width: 44,

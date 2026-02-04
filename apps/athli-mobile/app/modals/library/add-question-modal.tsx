@@ -109,12 +109,6 @@ export default function AddQuestionModal() {
   const [options, setOptions] = useState<string[]>(
     isEditMode && params.questionOptions ? JSON.parse(params.questionOptions) : ['']
   );
-  const [scaleFrom, setScaleFrom] = useState(
-    isEditMode && params.questionScaleFrom ? params.questionScaleFrom : '1'
-  );
-  const [scaleTo, setScaleTo] = useState(
-    isEditMode && params.questionScaleTo ? params.questionScaleTo : '10'
-  );
   const [mediaCount, setMediaCount] = useState(
     isEditMode && params.questionMediaCount ? parseInt(params.questionMediaCount, 10) : 1
   );
@@ -206,10 +200,6 @@ export default function AddQuestionModal() {
     if (format === 'multipleChoice') {
       setOptions(['']);
     }
-    if (format === 'scale') {
-      setScaleFrom('1');
-      setScaleTo('10');
-    }
     if (format === 'images' || format === 'videos') {
       setMediaCount(1);
     }
@@ -255,14 +245,11 @@ export default function AddQuestionModal() {
     if (selectedFormat === 'multipleChoice') {
       return options.some(opt => opt.trim() !== '');
     }
-    if (selectedFormat === 'scale') {
-      return scaleFrom.trim() !== '' && scaleTo.trim() !== '';
-    }
     if (selectedFormat === 'metrics') {
       return !!selectedMetricId;
     }
     return true;
-  }, [questionText, selectedFormat, options, scaleFrom, scaleTo, selectedMetricId]);
+  }, [questionText, selectedFormat, options, selectedMetricId]);
 
   // Check if form has changed from original values (only relevant in edit mode)
   const hasChanged = useMemo(() => {
@@ -278,10 +265,6 @@ export default function AddQuestionModal() {
       const originalOptions: string[] = params.questionOptions ? JSON.parse(params.questionOptions) : [''];
       if (JSON.stringify(options) !== JSON.stringify(originalOptions)) return true;
     }
-    if (selectedFormat === 'scale') {
-      if (scaleFrom !== (params.questionScaleFrom || '1')) return true;
-      if (scaleTo !== (params.questionScaleTo || '10')) return true;
-    }
     if (selectedFormat === 'images' || selectedFormat === 'videos') {
       const originalMediaCount = params.questionMediaCount ? parseInt(params.questionMediaCount, 10) : 1;
       if (mediaCount !== originalMediaCount) return true;
@@ -291,7 +274,7 @@ export default function AddQuestionModal() {
     }
 
     return false;
-  }, [isEditMode, questionText, selectedFormat, isRequired, options, scaleFrom, scaleTo, mediaCount, selectedMetricId, params]);
+  }, [isEditMode, questionText, selectedFormat, isRequired, options, mediaCount, selectedMetricId, params]);
 
   // Combine validation and change detection for save button
   const canSave = isValid && hasChanged;
@@ -327,8 +310,8 @@ export default function AddQuestionModal() {
       newQuestion.options = options.filter(opt => opt.trim() !== '');
     }
     if (selectedFormat === 'scale') {
-      newQuestion.scaleFrom = scaleFrom;
-      newQuestion.scaleTo = scaleTo;
+      newQuestion.scaleFrom = '1';
+      newQuestion.scaleTo = '10';
     }
     if (selectedFormat === 'images' || selectedFormat === 'videos') {
       newQuestion.mediaCount = mediaCount;
@@ -344,7 +327,7 @@ export default function AddQuestionModal() {
     haptics.success();
     triggerQuestionSelect(newQuestion);
     handleClose();
-  }, [canSave, questionText, isRequired, selectedFormat, options, scaleFrom, scaleTo, mediaCount, selectedMetricId, selectedMetricName, triggerQuestionSelect, handleClose, isEditMode, params.questionId]);
+  }, [canSave, questionText, isRequired, selectedFormat, options, mediaCount, selectedMetricId, selectedMetricName, triggerQuestionSelect, handleClose, isEditMode, params.questionId]);
 
   const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
   const gradientHeight = headerHeight + 12;
@@ -512,31 +495,6 @@ export default function AddQuestionModal() {
                 {t('library.addQuestion.addOption')}
               </Text>
             </PressableScale>
-          </View>
-        )}
-
-        {selectedFormat === 'scale' && (
-          <View style={styles.scaleSection}>
-            <View style={styles.scaleRow}>
-              <View style={styles.scaleInput}>
-                <InputBox
-                  label={t('library.addQuestion.from')}
-                  value={scaleFrom}
-                  onChangeText={setScaleFrom}
-                  placeholder="1 / Easy"
-                  required
-                />
-              </View>
-              <View style={styles.scaleInput}>
-                <InputBox
-                  label={t('library.addQuestion.to')}
-                  value={scaleTo}
-                  onChangeText={setScaleTo}
-                  placeholder="10 / Hard"
-                  required
-                />
-              </View>
-            </View>
           </View>
         )}
 

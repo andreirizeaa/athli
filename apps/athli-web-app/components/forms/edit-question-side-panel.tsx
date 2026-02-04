@@ -55,8 +55,6 @@ export const EditQuestionSidePanel = ({ open, onOpenChange, question, onSave, qu
   const [isRequired, setIsRequired] = useState<boolean>(true);
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [options, setOptions] = useState<string[]>(['']);
-  const [scaleFrom, setScaleFrom] = useState<string>('1');
-  const [scaleTo, setScaleTo] = useState<string>('10');
   const [mediaCount, setMediaCount] = useState<number>(1);
   const [selectedMetricId, setSelectedMetricId] = useState<string>('');
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -107,13 +105,6 @@ export const EditQuestionSidePanel = ({ open, onOpenChange, question, onSave, qu
       } else {
         setOptions(['']);
       }
-      if (question.format === 'scale') {
-        setScaleFrom(question.scaleFrom || '1');
-        setScaleTo(question.scaleTo || '10');
-      } else {
-        setScaleFrom('1');
-        setScaleTo('10');
-      }
       if (question.format === 'images' || question.format === 'videos') {
         setMediaCount(question.mediaCount || 1);
       } else {
@@ -157,8 +148,6 @@ export const EditQuestionSidePanel = ({ open, onOpenChange, question, onSave, qu
     setIsRequired(true);
     setSelectedFormat(null);
     setOptions(['']);
-    setScaleFrom('1');
-    setScaleTo('10');
     setMediaCount(1);
     setSelectedMetricId('');
     setMetrics([]);
@@ -174,12 +163,6 @@ export const EditQuestionSidePanel = ({ open, onOpenChange, question, onSave, qu
         return;
       }
     }
-    if (selectedFormat === 'scale') {
-      if (!scaleFrom.trim() || !scaleTo.trim()) {
-        return;
-      }
-    }
-
     const questionData: QuestionData = {
       ...question,
       question: questionText,
@@ -191,8 +174,8 @@ export const EditQuestionSidePanel = ({ open, onOpenChange, question, onSave, qu
       questionData.options = options.filter((opt) => opt.trim() !== '');
     }
     if (selectedFormat === 'scale') {
-      questionData.scaleFrom = scaleFrom;
-      questionData.scaleTo = scaleTo;
+      questionData.scaleFrom = '1';
+      questionData.scaleTo = '10';
     }
     if (selectedFormat === 'images' || selectedFormat === 'videos') {
       questionData.mediaCount = mediaCount;
@@ -216,13 +199,6 @@ export const EditQuestionSidePanel = ({ open, onOpenChange, question, onSave, qu
       }
     } else {
       setOptions(['']);
-    }
-    if (format === 'scale') {
-      setScaleFrom('1');
-      setScaleTo('10');
-    } else {
-      setScaleFrom('1');
-      setScaleTo('10');
     }
     if (format === 'images' || format === 'videos') {
       setMediaCount(1);
@@ -260,7 +236,6 @@ export const EditQuestionSidePanel = ({ open, onOpenChange, question, onSave, qu
   const isValid = questionText.trim() &&
     selectedFormat &&
     !(selectedFormat === 'multipleChoice' && !options.some((opt) => opt.trim() !== '')) &&
-    !(selectedFormat === 'scale' && (!scaleFrom.trim() || !scaleTo.trim())) &&
     !(selectedFormat === 'metrics' && !selectedMetricId);
 
   if (!question) return null;
@@ -449,39 +424,6 @@ export const EditQuestionSidePanel = ({ open, onOpenChange, question, onSave, qu
                 <Plus className="h-4 w-4" />
                 {t('forms.detail.addQuestion.addOption')}
               </Button>
-            </div>
-          </div>
-        )}
-
-        {selectedFormat === 'scale' && (
-          <div className="flex flex-col gap-3">
-            <div className="flex gap-3">
-              <div className="flex flex-col gap-2 flex-1">
-                <label className="text-sm font-medium text-foreground" htmlFor="scale-from">
-                  {t('forms.detail.addQuestion.from')}
-                  <RequiredAsterisk />
-                </label>
-                <Input
-                  id="scale-from"
-                  type="text"
-                  value={scaleFrom}
-                  onChange={(e) => setScaleFrom(e.target.value)}
-                  placeholder="1 / Easy / Low"
-                />
-              </div>
-              <div className="flex flex-col gap-2 flex-1">
-                <label className="text-sm font-medium text-foreground" htmlFor="scale-to">
-                  {t('forms.detail.addQuestion.to')}
-                  <RequiredAsterisk />
-                </label>
-                <Input
-                  id="scale-to"
-                  type="text"
-                  value={scaleTo}
-                  onChange={(e) => setScaleTo(e.target.value)}
-                  placeholder="10 / Hard / High"
-                />
-              </div>
             </div>
           </div>
         )}
