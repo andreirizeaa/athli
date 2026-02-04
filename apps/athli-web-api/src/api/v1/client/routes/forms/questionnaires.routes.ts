@@ -1,6 +1,17 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { clientQuestionnairesController } from '../../client-questionnaires.controller';
 import { supabaseAuthenticate } from '../../../../../middlewares/supabase-auth';
+
+// Configure multer for memory storage with higher limits for videos and base64 fields
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB limit for videos
+        files: 20, // Max 20 files per submission
+        fieldSize: 50 * 1024 * 1024, // 50MB limit for field values (base64 images in answers JSON)
+    },
+});
 
 export const clientQuestionnaireRouter = Router();
 
@@ -46,6 +57,25 @@ export const clientQuestionnaireRouter = Router();
 clientQuestionnaireRouter.get('/', supabaseAuthenticate, clientQuestionnairesController.getQuestionnaires);
 clientQuestionnaireRouter.post('/', supabaseAuthenticate, clientQuestionnairesController.assignQuestionnaire);
 clientQuestionnaireRouter.delete('/', supabaseAuthenticate, clientQuestionnairesController.deleteAssignment);
+
+/**
+ * @swagger
+ * /api/v1/client/forms/questionnaires/media-url:
+ *   get:
+ *     summary: Get a signed URL for questionnaire media
+ *     tags: [Client Forms]
+ *     parameters:
+ *       - in: query
+ *         name: bucket
+ *         required: true
+ *         schema: { type: string, enum: [form_files, client_photos] }
+ *       - in: query
+ *         name: path
+ *         required: true
+ *         schema: { type: string }
+ *     responses: { 200: { description: 'Success' } }
+ */
+clientQuestionnaireRouter.get('/media-url', supabaseAuthenticate, clientQuestionnairesController.getMediaUrl);
 
 /**
  * @swagger
@@ -132,7 +162,7 @@ clientQuestionnaireRouter.patch('/:id', supabaseAuthenticate, clientQuestionnair
  * @swagger
  * /api/v1/client/forms/questionnaires/{id}/submit:
  *   post:
- *     summary: Submit a questionnaire
+ *     summary: Submit a questionnaire with optional file uploads
  *     tags: [Client Forms]
  *     parameters:
  *       - in: path
@@ -148,12 +178,17 @@ clientQuestionnaireRouter.patch('/:id', supabaseAuthenticate, clientQuestionnair
  *     requestBody:
  *       required: true
  *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               answers: { type: string, description: 'JSON stringified answers array' }
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/SubmitFormInput'
  *     responses: { 200: { description: 'Success' } }
  */
-clientQuestionnaireRouter.post('/:id/submit', supabaseAuthenticate, clientQuestionnairesController.submitQuestionnaire);
+clientQuestionnaireRouter.post('/:id/submit', supabaseAuthenticate, upload.any(), clientQuestionnairesController.submitQuestionnaire);
 
 /**
  * @swagger
