@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ViewStyle, TextStyle } from 'react-native';
+import { StyleSheet, Text, View, ViewStyle, TextStyle, ActivityIndicator } from 'react-native';
 import { PressableScale } from 'pressto';
 import SquircleView from 'react-native-fast-squircle';
 
@@ -10,6 +10,7 @@ type FilledButtonProps = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  loading?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
   icon?: React.ReactNode;
@@ -22,6 +23,7 @@ export const FilledButton = ({
   label,
   onPress,
   disabled = false,
+  loading = false,
   style,
   textStyle,
   icon,
@@ -31,11 +33,12 @@ export const FilledButton = ({
 }: FilledButtonProps) => {
   const { colors: themeColors } = useThemePreference();
 
-  const bgColor = backgroundColor ?? (disabled ? themeColors.backgroundTertiary : themeColors.primary);
-  const txtColor = textColor ?? (disabled ? themeColors.mutedText : themeColors.primaryForeground);
+  const isDisabled = disabled || loading;
+  const bgColor = backgroundColor ?? (isDisabled ? themeColors.backgroundTertiary : themeColors.primary);
+  const txtColor = textColor ?? (isDisabled ? themeColors.mutedText : themeColors.primaryForeground);
 
   return (
-    <PressableScale onPress={onPress} enabled={!disabled}>
+    <PressableScale onPress={onPress} enabled={!isDisabled}>
       <SquircleView
         cornerSmoothing={1}
         style={[
@@ -43,21 +46,25 @@ export const FilledButton = ({
           size === 'lg' && styles.buttonLg,
           {
             backgroundColor: bgColor,
-            opacity: disabled ? 0.5 : 1,
+            opacity: isDisabled ? 0.5 : 1,
           },
           style,
         ]}
       >
-        {icon && <View style={styles.iconContainer}>{icon}</View>}
-        <Text
-          style={[
-            styles.buttonText,
-            { color: txtColor },
-            textStyle,
-          ]}
-        >
-          {label}
-        </Text>
+        {icon && !loading && <View style={styles.iconContainer}>{icon}</View>}
+        {loading ? (
+          <ActivityIndicator size="small" color={txtColor} />
+        ) : (
+          <Text
+            style={[
+              styles.buttonText,
+              { color: txtColor },
+              textStyle,
+            ]}
+          >
+            {label}
+          </Text>
+        )}
       </SquircleView>
     </PressableScale>
   );

@@ -1,8 +1,9 @@
 import React, { useMemo, useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ChevronRight, FileText } from 'lucide-react-native';
+import { ChevronRight, FileText, ClipboardCheck, HelpCircle } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
+import { SymbolView } from 'expo-symbols';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference, useAuth, useClientDetailStore } from '@/stores';
@@ -11,6 +12,7 @@ import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { Card } from '@/components/ui/card';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { getMyFiles } from '@/services/client/client-file-service';
+import { useAthleteQuestionnaires } from '@/hooks/useAthleteQuestionnaires';
 
 // Helper to get ordinal suffix
 const getOrdinalSuffix = (day: number): string => {
@@ -25,11 +27,18 @@ const getOrdinalSuffix = (day: number): string => {
 
 export const AthleteHomeContent = () => {
   const router = useRouter();
-  const { colors: themeColors } = useThemePreference();
+  const { colors: themeColors, primaryColor } = useThemePreference();
   const { t } = useTranslations();
   const { clientProfile } = useAuth();
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
+
+  // Fetch questionnaires to show outstanding count
+  const { outstandingQuestionnaires } = useAthleteQuestionnaires();
+  const outstandingQuestionnairesCount = outstandingQuestionnaires.length;
+
+  // TODO: Replace with actual data from athlete check-ins hook
+  const outstandingCheckIns = 0;
 
   // Store setters for athlete self-access
   const setStoreFiles = useClientDetailStore((state) => state.setFiles);
@@ -64,6 +73,14 @@ export const AthleteHomeContent = () => {
     });
   };
 
+  const handleOpenCheckIns = () => {
+    router.push('/athlete-check-ins');
+  };
+
+  const handleOpenQuestionnaires = () => {
+    router.push('/athlete-questionnaires');
+  };
+
   const greeting = useMemo(() => {
     if (clientProfile?.name) {
       const firstName = clientProfile.name.split(' ')[0];
@@ -84,13 +101,85 @@ export const AthleteHomeContent = () => {
   }, [t]);
 
   return (
-    <ScreenWrapper scrollable={false}>
+    <ScreenWrapper scrollable tabScreen>
       <View style={styles.header}>
         <Text style={[styles.title, { color: themeColors.text }]}>{greeting}</Text>
         <Text style={[styles.subtitle, { color: themeColors.mutedText }]}>{dateSubtitle}</Text>
       </View>
 
       <View style={styles.content}>
+        {/* Two column row for Check-ins and Questionnaires */}
+        <View style={styles.twoColumnRow}>
+          <View style={styles.column}>
+            <Text style={[styles.columnLabel, { color: themeColors.mutedText }]}>
+              {t('athlete.checkIns.title')}
+            </Text>
+            <PressableScale onPress={handleOpenCheckIns}>
+              <Card style={styles.squareCard}>
+                <View style={styles.squareCardContent}>
+                  {outstandingCheckIns > 0 ? (
+                    <>
+                      <Text style={[styles.squareCardNumber, { color: themeColors.text }]}>
+                        {outstandingCheckIns}
+                      </Text>
+                      <Text style={[styles.squareCardSubtitle, { color: themeColors.mutedText }]}>
+                        {t('athlete.checkIns.outstanding')}
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <View style={styles.squareCardIcon}>
+                        {Platform.OS === 'ios' ? (
+                          <SymbolView name="checkmark.circle" tintColor={primaryColor} size={28} type="monochrome" />
+                        ) : (
+                          <ClipboardCheck {...({ size: 28, color: primaryColor } as any)} />
+                        )}
+                      </View>
+                      <Text style={[styles.squareCardEmpty, { color: themeColors.text }]}>
+                        {t('athlete.checkIns.allCaughtUp')}
+                      </Text>
+                    </>
+                  )}
+                </View>
+              </Card>
+            </PressableScale>
+          </View>
+          <View style={styles.column}>
+            <Text style={[styles.columnLabel, { color: themeColors.mutedText }]}>
+              {t('athlete.questionnaires.title')}
+            </Text>
+            <PressableScale onPress={handleOpenQuestionnaires}>
+              <Card style={styles.squareCard}>
+                <View style={styles.squareCardContent}>
+                  {outstandingQuestionnairesCount > 0 ? (
+                    <>
+                      <Text style={[styles.squareCardNumber, { color: themeColors.text }]}>
+                        {outstandingQuestionnairesCount}
+                      </Text>
+                      <Text style={[styles.squareCardSubtitle, { color: themeColors.mutedText }]}>
+                        {t('athlete.questionnaires.outstanding')}
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <View style={styles.squareCardIcon}>
+                        {Platform.OS === 'ios' ? (
+                          <SymbolView name="questionmark.circle" tintColor={primaryColor} size={28} type="monochrome" />
+                        ) : (
+                          <HelpCircle {...({ size: 28, color: primaryColor } as any)} />
+                        )}
+                      </View>
+                      <Text style={[styles.squareCardEmpty, { color: themeColors.text }]}>
+                        {t('athlete.questionnaires.allCaughtUp')}
+                      </Text>
+                    </>
+                  )}
+                </View>
+              </Card>
+            </PressableScale>
+          </View>
+        </View>
+
         <PressableScale onPress={handleOpenFiles}>
           <Card>
             <View style={styles.optionRow}>
@@ -133,6 +222,43 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 16,
+  },
+  twoColumnRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  column: {
+    flex: 1,
+  },
+  columnLabel: {
+    ...typography.p1,
+    marginBottom: 8,
+  },
+  squareCard: {
+    aspectRatio: 1.25,
+    marginBottom: 0,
+  },
+  squareCardContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  squareCardIcon: {
+    marginBottom: 8,
+  },
+  squareCardNumber: {
+    ...typography.h1,
+    fontSize: 48,
+    lineHeight: 56,
+  },
+  squareCardSubtitle: {
+    ...typography.p3,
+    marginTop: 4,
+  },
+  squareCardEmpty: {
+    ...typography.h5,
+    textAlign: 'center',
   },
   optionRow: {
     flexDirection: 'row',

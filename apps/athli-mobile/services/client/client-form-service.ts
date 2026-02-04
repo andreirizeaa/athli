@@ -505,3 +505,206 @@ export const saveClientQuestionnaireQuestions = async (data: SaveClientQuestionn
     }),
   });
 };
+
+/**
+ * Get a signed URL for questionnaire media (images, videos, signatures, progress photos)
+ */
+export const getQuestionnaireMediaUrl = async (
+  bucket: 'form_files' | 'client_photos',
+  path: string
+): Promise<string> => {
+  const response = await apiFetch<{ success: boolean; data: { url: string } }>(
+    `/client/forms/questionnaires/media-url?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`
+  );
+  return response.data.url;
+};
+
+// ============================================
+// Athlete Self-Access Endpoints
+// ============================================
+
+/**
+ * Athlete questionnaire type for self-access
+ */
+export type AthleteQuestionnaire = {
+  id: string;
+  name: string;
+  description?: string;
+  questions: Question[];
+  status: 'pending' | 'completed' | 'draft';
+  sent_at: string;
+  completed_at: string | null;
+  answers?: QuestionAnswer[];
+};
+
+/**
+ * Get questionnaires for the authenticated athlete (self-access)
+ */
+export const getMyQuestionnaires = async (): Promise<AthleteQuestionnaire[]> => {
+  const response = await apiFetch<{ success: boolean; data: { questionnaires: any[] } }>(
+    '/client/forms/questionnaires'
+  );
+
+  return (response.data.questionnaires || []).map((q: any) => ({
+    id: q.id,
+    name: q.name || 'Untitled Questionnaire',
+    description: q.description,
+    questions: q.questions || [],
+    status: q.status || 'pending',
+    sent_at: q.sent_at || q.created_at,
+    completed_at: q.completed_at,
+    answers: q.answers || [],
+  }));
+};
+
+/**
+ * Submit questionnaire answers (athlete self-access)
+ * Handles file uploads for images, videos, signatures, and progress photos
+ */
+export type SubmitQuestionnaireData = {
+  questionnaireId: string;
+  answers: QuestionAnswer[];
+};
+
+/**
+ * Helper to check if a string is a local file URI
+ */
+const isLocalFileUri = (value: unknown): value is string => {
+  if (typeof value !== 'string') return false;
+  return value.startsWith('file://') || value.startsWith('ph://') || value.startsWith('/');
+};
+
+/**
+ * Helper to check if a string is a base64 data URI
+ */
+const isBase64DataUri = (value: unknown): value is string => {
+  if (typeof value !== 'string') return false;
+  return value.startsWith('data:');
+};
+
+/**
+ * Helper to convert a local file URI to base64 data URI
+ */
+const convertToBase64 = async (uri: string, mimeType: string): Promise<string> => {
+  const response = await fetch(uri);
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
+export const submitMyQuestionnaire = async (data: SubmitQuestionnaireData): Promise<void> => {
+  // Check if we have any video files that need FormData (too large for base64)
+  // Must check ALL answers, not use some() which stops early
+  const hasVideoFiles = data.answers.some((answer) => {
+    if (!answer.answer) return false;
+    if (answer.format === 'videos' && Array.isArray(answer.answer)) {
+      return answer.answer.some(isLocalFileUri);
+    }
+    return false;
+  });
+
+  // Process answers - convert images and progress photos to base64
+  const processedAnswers = [...data.answers];
+
+  for (let i = 0; i < processedAnswers.length; i++) {
+    const answer = processedAnswers[i];
+    if (!answer.answer) continue;
+
+    // Handle images - convert to base64
+    if (answer.format === 'images' && Array.isArray(answer.answer)) {
+      const base64Array: string[] = [];
+      for (const uri of answer.answer) {
+        if (isLocalFileUri(uri)) {
+          try {
+            const base64 = await convertToBase64(uri, 'image/jpeg');
+            base64Array.push(base64);
+          } catch (error) {
+            console.error('Failed to convert image to base64:', error);
+            // Skip failed conversions
+          }
+        } else {
+          base64Array.push(uri); // Keep existing URLs
+        }
+      }
+      processedAnswers[i] = { ...answer, answer: base64Array };
+    }
+
+    // Handle progress photos - convert to base64
+    if (answer.format === 'progressPhoto' && typeof answer.answer === 'object' && answer.answer) {
+      const progressAnswer = answer.answer as { front?: string; back?: string; side?: string };
+      const newProgressAnswer: { front?: string; back?: string; side?: string } = {};
+
+      for (const angle of ['front', 'back', 'side'] as const) {
+        const uri = progressAnswer[angle];
+        if (uri && isLocalFileUri(uri)) {
+          try {
+            const base64 = await convertToBase64(uri, 'image/jpeg');
+            newProgressAnswer[angle] = base64;
+          } catch (error) {
+            console.error(`Failed to convert ${angle} photo to base64:`, error);
+            // Skip failed conversions
+          }
+        } else if (uri) {
+          newProgressAnswer[angle] = uri; // Keep existing URLs
+        }
+      }
+      processedAnswers[i] = { ...answer, answer: newProgressAnswer };
+    }
+  }
+
+  // If no video files, use simple JSON submission (images/progressPhotos are now base64)
+  if (!hasVideoFiles) {
+    await apiFetch(`/client/forms/questionnaires/${data.questionnaireId}/submit`, {
+      method: 'POST',
+      body: JSON.stringify({
+        answers: processedAnswers,
+      }),
+    });
+    return;
+  }
+
+  // Has video files, use FormData for videos only
+  const formData = new FormData();
+
+  for (let i = 0; i < processedAnswers.length; i++) {
+    const answer = processedAnswers[i];
+    if (!answer.answer) continue;
+
+    const questionId = answer.questionId;
+
+    // Handle videos - keep as FormData files (too large for base64)
+    if (answer.format === 'videos' && Array.isArray(answer.answer)) {
+      const newAnswerArray: string[] = [];
+      for (let j = 0; j < answer.answer.length; j++) {
+        const uri = answer.answer[j];
+        if (isLocalFileUri(uri)) {
+          const fieldName = `${questionId}_videos_${j}`;
+          const filename = uri.split('/').pop() || `video_${j}.mp4`;
+          formData.append(fieldName, {
+            uri,
+            type: 'video/mp4',
+            name: filename,
+          } as any);
+          newAnswerArray.push('__FILE_UPLOAD__');
+        } else {
+          newAnswerArray.push(uri);
+        }
+      }
+      processedAnswers[i] = { ...answer, answer: newAnswerArray };
+    }
+  }
+
+  // Add answers JSON to FormData
+  formData.append('answers', JSON.stringify(processedAnswers));
+
+  // Submit with FormData
+  await apiFetch(`/client/forms/questionnaires/${data.questionnaireId}/submit`, {
+    method: 'POST',
+    body: formData,
+    // Don't set Content-Type header - let fetch set it with boundary for multipart
+  });
+};
