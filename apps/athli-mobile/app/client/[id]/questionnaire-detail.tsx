@@ -190,6 +190,7 @@ export default function QuestionnaireDetailScreen() {
                   title={t('clientDetail.questionnaires.sendForm')}
                   onPress={handleSend}
                   showChevron
+                  disabled={(currentQuestionnaire?.questionCount ?? 0) === 0}
                 />
               ) : (
                 <SettingsOption

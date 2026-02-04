@@ -38,13 +38,14 @@ export interface SettingsOptionProps {
     IconComponent: LucideIcon;
   };
   rightElement?: JSX.Element;
+  disabled?: boolean;
 }
 
-export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, showChevron, style, chevronSize, chevronIcon, rightElement }: SettingsOptionProps) {
+export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, showChevron, style, chevronSize, chevronIcon, rightElement, disabled }: SettingsOptionProps) {
   const { colors: themeColors } = useThemePreference();
 
   const handleOptionPress = () => {
-    if (!onPress) {
+    if (!onPress || disabled) {
       return;
     }
 
@@ -64,8 +65,9 @@ export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, 
       style={[
         styles.optionRow,
         style,
+        disabled && { opacity: 0.4 },
       ]}
-      onPress={onPress ? handleOptionPress : undefined}
+      onPress={onPress && !disabled ? handleOptionPress : undefined}
     >
       <View style={styles.iconContainer}>{icon}</View>
       <View style={styles.textContainer}>

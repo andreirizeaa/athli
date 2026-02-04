@@ -316,6 +316,7 @@ const ClientQuestionnairesPage = () => {
             <Button
               size="sm"
               className="gap-2"
+              disabled={row.questionCount === 0}
               onClick={(e) => {
                 e.stopPropagation();
                 handleSendQuestionnaire(row);
