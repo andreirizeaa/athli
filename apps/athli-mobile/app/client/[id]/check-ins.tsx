@@ -282,6 +282,11 @@ export default function ClientCheckInsScreen() {
                               {checkIn.name}
                             </Text>
                             <View style={styles.metaRow}>
+                              <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                                <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                                  {checkIn.questionCount || 0} {(checkIn.questionCount || 0) === 1 ? t('general.question') : t('general.questions')}
+                                </Text>
+                              </View>
                               {checkIn.schedule && (
                                 <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
                                   <Text style={[styles.pillText, { color: themeColors.mutedText }]}>

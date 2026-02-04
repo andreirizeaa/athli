@@ -494,6 +494,7 @@ export const FormBuilder = ({
         onSave={handleAddQuestion}
         questions={questions}
         clientId={clientId}
+        formType={formType}
       />
 
       <EditQuestionSidePanel

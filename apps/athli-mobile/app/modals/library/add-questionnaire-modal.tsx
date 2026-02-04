@@ -29,7 +29,7 @@ import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
 import { addQuestionnaire, editQuestionnaireDetails } from '@/services/coach/coach-questionnaire-service';
-import { addClientQuestionnaire } from '@/services/client/client-form-service';
+import { addClientQuestionnaire, editClientQuestionnaire } from '@/services/client/client-form-service';
 import { useClientDetailStore } from '@/stores';
 
 type TabKey = 'new' | 'templates';
@@ -50,7 +50,7 @@ export default function AddQuestionnaireModal() {
         coachId?: string;
     }>();
     const isEditing = !!params.editingId;
-    const isClientPrivate = !isEditing && params.clientId && params.coachId;
+    const isClientContext = !!params.clientId && !!params.coachId;
     const refreshClientQuestionnaires = useClientDetailStore((state) => state.refreshSection);
 
     const [selectedTab, setSelectedTab] = useState<TabKey>('new');
@@ -76,10 +76,20 @@ export default function AddQuestionnaireModal() {
     const saveMutation = useMutation({
         mutationFn: async (data: any) => {
             if (isEditing) {
+                // Editing - check if in client context or coach library
+                if (isClientContext) {
+                    return editClientQuestionnaire({
+                        questionnaireId: params.editingId!,
+                        clientId: params.clientId!,
+                        coachId: params.coachId!,
+                        name: data.name,
+                        description: data.description,
+                    });
+                }
                 return editQuestionnaireDetails(data);
             }
             // Creating new questionnaire - check if for client or coach library
-            if (isClientPrivate) {
+            if (isClientContext) {
                 return addClientQuestionnaire({
                     name: data.name,
                     description: data.description,
@@ -91,11 +101,18 @@ export default function AddQuestionnaireModal() {
             return addQuestionnaire(data);
         },
         onSuccess: async () => {
-            // Refetch to update the cache and trigger Zustand store update
-            if (isClientPrivate) {
+            // Invalidate relevant queries
+            await queryClient.invalidateQueries({ queryKey: ['questionnaires'] });
+
+            if (isClientContext) {
+                // Invalidate specific client form query if editing
+                if (isEditing && params.editingId) {
+                    await queryClient.invalidateQueries({
+                        queryKey: ['clientForm', 'questionnaire', params.editingId, params.clientId]
+                    });
+                }
+                // Refresh the client detail store section
                 await refreshClientQuestionnaires('questionnaires');
-            } else {
-                await queryClient.refetchQueries({ queryKey: ['questionnaires'] });
             }
             haptics.success();
             handleClose();

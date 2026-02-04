@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, Share, ActivityIndicator } from 'react-native';
 import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { ChevronRight, Send } from 'lucide-react-native';
+import { ChevronRight, Forward } from 'lucide-react-native';
 import SquircleView from 'react-native-fast-squircle';
 
 import { useQuery } from '@tanstack/react-query';
@@ -184,7 +184,7 @@ export default function ClientsScreen() {
           <Text style={[styles.title, { color: themeColors.text }]}>{t('clients.title')}</Text>
           <View style={styles.headerButtonContainer}>
             <IconButton
-              icon={{ sf: 'square.and.arrow.up', IconComponent: Send }}
+              icon={{ sf: 'arrowshape.turn.up.forward', IconComponent: Forward }}
               onPress={handleShare}
               size="md"
               color={themeColors.text}

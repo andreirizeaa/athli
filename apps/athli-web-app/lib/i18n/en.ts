@@ -2504,6 +2504,7 @@ export const enMessages = {
       label: 'Type',
       checkIn: 'Check in',
       questionnaire: 'Questionnaire',
+      checkInInfo: 'Check-ins are recurring forms that can be scheduled to be sent to athletes on a regular basis',
       questionnaireInfo: 'Questionnaires are one-time forms that can be assigned and sent immediately to athletes at any time',
     },
     toast: {
@@ -2551,7 +2552,7 @@ export const enMessages = {
           multipleChoice: 'Multiple Choice',
           multipleChoiceSubtitle: 'Select one or more options',
           scale: 'Scale',
-          scaleSubtitle: 'Rate on a scale',
+          scaleSubtitle: '1-10',
           yesNo: 'Yes/No',
           yesNoSubtitle: 'Binary choice',
           images: 'Images',

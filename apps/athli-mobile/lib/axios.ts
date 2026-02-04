@@ -32,7 +32,7 @@ supabase.auth.onAuthStateChange((event, session) => {
 const axiosInstance = axios.create({
   baseURL: API_URL,
   headers: {},
-  timeout: 30000, // 30 seconds timeout for mobile
+  timeout: 120000, // 2 minutes timeout for mobile (to handle video uploads up to 50MB)
 });
 
 // Request interceptor to add Auth token

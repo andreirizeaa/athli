@@ -18,6 +18,7 @@ import { typography } from '@/constants/typography';
 import { useAuthSessionStore, useClientProfileStore, useThemePreference, useTranslations } from '@/stores';
 import { haptics } from '@/utils/haptics';
 import { IconButton } from '@/components/ui/icon-button';
+import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { supabase } from '@/lib/supabase';
 import {
   CountrySelectorInput,
@@ -310,6 +311,7 @@ export default function ClientDetailsScreen() {
 
   // Current image to display (selected or original)
   const currentImage = selectedImage || profile?.profile_picture_url || null;
+  const HEADER_HEIGHT = 52;
 
   return (
     <View
@@ -325,31 +327,11 @@ export default function ClientDetailsScreen() {
       <TouchableWithoutFeedback onPress={handleDismissKeyboard} accessible={false}>
         <KeyboardAwareScrollView
           style={styles.scrollView}
-          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + HEADER_HEIGHT }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           bottomOffset={40}
         >
-          <View style={styles.header}>
-            <IconButton
-              icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-              onPress={handleBackPress}
-              size="md"
-              color={themeColors.text}
-            />
-            <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-              {t('profile.editTitle')}
-            </Text>
-            <IconButton
-              icon={{ sf: 'checkmark', IconComponent: Check }}
-              onPress={handleSave}
-              size="md"
-              variant={canSave ? 'primary' : 'default'}
-              disabled={!canSave}
-              loading={isLoadingProfile}
-            />
-          </View>
-
             <ProfilePictureInput
               label={t('settings.personalDetails.profilePicture')}
               imageUrl={currentImage}
@@ -422,6 +404,28 @@ export default function ClientDetailsScreen() {
         </KeyboardAwareScrollView>
       </TouchableWithoutFeedback>
 
+      <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+
+      <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
+        <IconButton
+          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+          onPress={handleBackPress}
+          size="md"
+          color={themeColors.text}
+        />
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+          {t('profile.editTitle')}
+        </Text>
+        <IconButton
+          icon={{ sf: 'checkmark', IconComponent: Check }}
+          onPress={handleSave}
+          size="md"
+          variant={canSave ? 'primary' : 'default'}
+          disabled={!canSave}
+          loading={isLoadingProfile}
+        />
+      </View>
+
       <Dialog
         visible={showErrorDialog}
         onClose={() => setShowErrorDialog(false)}
@@ -451,15 +455,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 4,
+    paddingHorizontal: 16,
     paddingBottom: 8,
+    gap: 8,
+    zIndex: 1001,
   },
   headerTitle: {
     ...typography.h5,
+    flex: 1,
+    textAlign: 'center',
   },
   scrollView: {
     flex: 1,

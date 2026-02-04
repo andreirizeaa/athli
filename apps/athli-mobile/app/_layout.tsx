@@ -457,6 +457,20 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="athlete-check-ins"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="athlete-questionnaires"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
             name="client/[id]"
             options={{
               headerShown: false,
@@ -1360,6 +1374,26 @@ function RootLayoutNav() {
               presentation: 'modal',
               headerShown: false,
               animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="modals/athlete/form-response-session-modal"
+            options={{
+              presentation: 'card',
+              headerShown: false,
+              animation: 'slide_from_bottom',
+              animationDuration: 200,
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="modals/athlete/form-review-modal"
+            options={{
+              presentation: 'card',
+              headerShown: false,
+              animation: 'slide_from_bottom',
+              animationDuration: 200,
+              gestureEnabled: false,
             }}
           />
           {/* Profile is now a tab, so profile/profile route is no longer needed */}

@@ -735,11 +735,27 @@ export type UpdateClientCheckInData = {
   questions: any[];
 };
 
+export type EditClientCheckInDetailsData = {
+  clientId: string;
+  coachId: string;
+  checkInId: string;
+  name: string;
+  description?: string;
+};
+
 export type UpdateClientQuestionnaireData = {
   clientId: string;
   coachId: string;
   questionnaireId: string;
   questions: any[];
+};
+
+export type EditClientQuestionnaireDetailsData = {
+  clientId: string;
+  coachId: string;
+  questionnaireId: string;
+  name: string;
+  description?: string;
 };
 
 export type ClientCheckInDetail = {
@@ -841,6 +857,22 @@ export const updateClientCheckIn = async (data: UpdateClientCheckInData): Promis
 };
 
 /**
+ * Edit client check-in details (name, description)
+ */
+export const editClientCheckInDetails = async (data: EditClientCheckInDetailsData): Promise<ClientCheckInDetail> => {
+  const response = await apiFetch<{ data: ClientCheckInDetail }>(`/client/forms/check-ins/${data.checkInId}`, {
+    method: 'PATCH',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      name: data.name,
+      description: data.description,
+    }),
+  });
+
+  return response.data;
+};
+
+/**
  * Update client questionnaire questions
  */
 export const updateClientQuestionnaire = async (data: UpdateClientQuestionnaireData): Promise<void> => {
@@ -851,6 +883,22 @@ export const updateClientQuestionnaire = async (data: UpdateClientQuestionnaireD
       questions: data.questions,
     }),
   });
+};
+
+/**
+ * Edit client questionnaire details (name, description)
+ */
+export const editClientQuestionnaireDetails = async (data: EditClientQuestionnaireDetailsData): Promise<LocalClientQuestionnaireDetail> => {
+  const response = await apiFetch<{ data: LocalClientQuestionnaireDetail }>(`/client/forms/questionnaires/${data.questionnaireId}`, {
+    method: 'PATCH',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      name: data.name,
+      description: data.description,
+    }),
+  });
+
+  return response.data;
 };
 
 /**

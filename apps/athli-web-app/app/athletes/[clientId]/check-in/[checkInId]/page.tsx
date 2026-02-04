@@ -25,7 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronRight, Plus, GripVertical, Download, Loader2, GitCompare, ChevronDown } from 'lucide-react';
+import { ChevronRight, Plus, GripVertical, Download, Loader2, GitCompare, ChevronDown, Edit } from 'lucide-react';
 import { PageTabs } from '@/components/page-tabs';
 import {
   getClientCheckInById,
@@ -37,6 +37,7 @@ import {
 } from '@/api/client/client-form-service';
 import { FormBuilder, type Question } from '@/components/forms/form-builder';
 import { CheckInReviewContent } from '@/components/forms/check-in-review-content';
+import { EditClientCheckInFormSidePanel } from '@/components/forms/edit-client-check-in-form-side-panel';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 type TabType = 'builder' | 'submissions';
@@ -56,6 +57,7 @@ const ClientCheckInDetailPage = () => {
 
   // Builder tab state
   const [isAddQuestionOpen, setIsAddQuestionOpen] = useState<boolean>(false);
+  const [isEditFormOpen, setIsEditFormOpen] = useState<boolean>(false);
   const [currentForm, setCurrentForm] = useState<ClientCheckInDetail | null>(null);
   const [previewQuestionIndex, setPreviewQuestionIndex] = useState<number>(0);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -326,6 +328,18 @@ const ClientCheckInDetailPage = () => {
     }
   };
 
+  const handleEditForm = async (updatedForm: ClientCheckInDetail) => {
+    // Update local state immediately for responsive UI
+    setCurrentForm(updatedForm);
+    // Invalidate queries to ensure data consistency
+    queryClient.invalidateQueries({ queryKey: ['client-check-ins', clientId] });
+  };
+
+  const handleDeleteForm = () => {
+    // Navigate back to check-ins list after deletion
+    router.push(`/athletes/${clientId}/check-in`);
+  };
+
   if (isLoading) {
     return (
       <div className="h-full w-full flex items-center justify-center">
@@ -382,6 +396,14 @@ const ClientCheckInDetailPage = () => {
         <div className="absolute top-2 right-4 flex items-center gap-2">
           {activeTab === 'builder' && (
             <ButtonGroup className="flex-shrink-0">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditFormOpen(true)}
+                className="gap-2"
+              >
+                <Edit className="size-4" />
+                <span>{t('general.edit')}</span>
+              </Button>
               <Button
                 variant={isReorderMode ? 'default' : 'outline'}
                 onClick={handleToggleReorder}
@@ -555,6 +577,19 @@ const ClientCheckInDetailPage = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* Edit form side panel */}
+      {user?.id && (
+        <EditClientCheckInFormSidePanel
+          open={isEditFormOpen}
+          onOpenChange={setIsEditFormOpen}
+          form={currentForm}
+          clientId={clientId}
+          coachId={user.id}
+          onSave={handleEditForm}
+          onDelete={handleDeleteForm}
+        />
       )}
     </div>
   );

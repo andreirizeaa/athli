@@ -29,7 +29,7 @@ import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
 import { addCheckIn, editCheckInDetails } from '@/services/coach/coach-check-in-service';
-import { addClientCheckIn, convertScheduleToCron } from '@/services/client/client-form-service';
+import { addClientCheckIn, editClientCheckIn, convertScheduleToCron } from '@/services/client/client-form-service';
 import { useClientDetailStore } from '@/stores';
 
 type TabKey = 'new' | 'templates';
@@ -51,7 +51,7 @@ export default function AddCheckInModal() {
         coachId?: string;
     }>();
     const isEditing = !!params.editingId;
-    const isClientPrivate = !isEditing && params.clientId && params.coachId;
+    const isClientContext = !!params.clientId && !!params.coachId;
     const refreshClientCheckIns = useClientDetailStore((state) => state.refreshSection);
 
     const [selectedTab, setSelectedTab] = useState<TabKey>('new');
@@ -88,10 +88,20 @@ export default function AddCheckInModal() {
     const saveMutation = useMutation({
         mutationFn: async (data: any) => {
             if (isEditing) {
+                // Editing - check if in client context or coach library
+                if (isClientContext) {
+                    return editClientCheckIn({
+                        checkInId: params.editingId!,
+                        clientId: params.clientId!,
+                        coachId: params.coachId!,
+                        name: data.name,
+                        description: data.description,
+                    });
+                }
                 return editCheckInDetails(data);
             }
             // Creating new check-in - check if for client or coach library
-            if (isClientPrivate) {
+            if (isClientContext) {
                 return addClientCheckIn({
                     name: data.name,
                     description: data.description,
@@ -105,11 +115,18 @@ export default function AddCheckInModal() {
             return addCheckIn(data);
         },
         onSuccess: async () => {
-            // Refetch to update the cache and trigger Zustand store update
-            if (isClientPrivate) {
+            // Invalidate relevant queries
+            await queryClient.invalidateQueries({ queryKey: ['checkIns'] });
+
+            if (isClientContext) {
+                // Invalidate specific client form query if editing
+                if (isEditing && params.editingId) {
+                    await queryClient.invalidateQueries({
+                        queryKey: ['clientForm', 'checkIn', params.editingId, params.clientId]
+                    });
+                }
+                // Refresh the client detail store section
                 await refreshClientCheckIns('check-ins');
-            } else {
-                await queryClient.refetchQueries({ queryKey: ['checkIns'] });
             }
             haptics.success();
             handleClose();

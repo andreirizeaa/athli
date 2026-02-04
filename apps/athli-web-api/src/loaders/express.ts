@@ -107,13 +107,19 @@ export function createExpressApp() {
   });
 
   // Body parsing with size limits to prevent memory exhaustion
-  // Default limit for general API endpoints
-  app.use(express.json({ limit: '1mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+  // Route-specific limits must come BEFORE the general limit
 
   // Stricter limits for auth routes (they don't need large payloads)
   app.use('/api/v1/auth', express.json({ limit: '16kb' }));
   app.use('/api/v1/auth', express.urlencoded({ extended: true, limit: '16kb' }));
+
+  // Higher limits for client forms routes (base64 encoded images can be large)
+  app.use('/api/v1/client/forms', express.json({ limit: '50mb' }));
+  app.use('/api/v1/client/forms', express.urlencoded({ extended: true, limit: '50mb' }));
+
+  // Default limit for general API endpoints
+  app.use(express.json({ limit: '1mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
   // Logging
   app.use(

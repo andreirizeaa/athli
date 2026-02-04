@@ -16,6 +16,7 @@ type QuestionCardProps = {
   isReorderMode: boolean;
   onDelete: () => void;
   onPress?: () => void;
+  hideDelete?: boolean;
 };
 
 const FORMAT_LABELS: Record<string, string> = {
@@ -33,7 +34,7 @@ const FORMAT_LABELS: Record<string, string> = {
   metrics: 'Metrics',
 };
 
-export const QuestionCard = ({ question, index, isReorderMode, onDelete, onPress }: QuestionCardProps) => {
+export const QuestionCard = ({ question, index, isReorderMode, onDelete, onPress, hideDelete }: QuestionCardProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
 
@@ -59,7 +60,7 @@ export const QuestionCard = ({ question, index, isReorderMode, onDelete, onPress
       </View>
 
       <View style={styles.content}>
-        <Text style={[styles.questionText, { color: themeColors.text }]}>
+        <Text style={[styles.questionText, { color: themeColors.text }]} numberOfLines={2}>
           {question.question}
           {question.required && <Text style={styles.requiredAsterisk}>*</Text>}
         </Text>
@@ -72,11 +73,11 @@ export const QuestionCard = ({ question, index, isReorderMode, onDelete, onPress
         <View style={styles.dragHandle}>
           <GripVertical {...({ size: 20, color: themeColors.mutedText } as any)} />
         </View>
-      ) : (
+      ) : !hideDelete ? (
         <PressableOpacity onPress={handleDelete} style={styles.deleteButton} hitSlop={8}>
           <Trash2 {...({ size: 20, color: themeColors.text } as any)} />
         </PressableOpacity>
-      )}
+      ) : null}
     </Card>
   );
 
@@ -140,13 +141,13 @@ const styles = StyleSheet.create({
   questionText: {
     ...typography.p2,
     fontWeight: '500',
-    marginBottom: 4,
   },
   requiredAsterisk: {
     color: '#EF4444',
   },
   formatText: {
     ...typography.p3,
+    marginTop: 4,
   },
   dragHandle: {
     padding: 4,
