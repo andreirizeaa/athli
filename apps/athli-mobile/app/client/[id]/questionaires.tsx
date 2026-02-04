@@ -270,6 +270,11 @@ export default function ClientQuestionairesScreen() {
                               {questionnaire.name}
                             </Text>
                             <View style={styles.metaRow}>
+                              <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                                <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                                  {questionnaire.questionCount || 0} {(questionnaire.questionCount || 0) === 1 ? t('general.question') : t('general.questions')}
+                                </Text>
+                              </View>
                               <View
                                 style={[
                                   styles.pill,

@@ -89,6 +89,11 @@ export default function EmailSignInScreen() {
                 title: t('auth.noAccountFound'),
                 message: t('auth.noAccountFoundMessage'),
             });
+        } else if (error.message === 'Invalid login credentials') {
+            setErrorDialog({
+                title: t('auth.signInError'),
+                message: t('auth.invalidCredentials'),
+            });
         } else {
             setErrorDialog({
                 title: t('auth.signInError'),

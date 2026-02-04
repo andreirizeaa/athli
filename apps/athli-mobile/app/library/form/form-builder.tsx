@@ -27,12 +27,19 @@ import {
   reorderQuestions as reorderCheckInQuestions,
   type CheckIn,
 } from '@/services/coach/coach-check-in-service';
+import {
+  getClientCheckInDetail,
+  getClientQuestionnaireDetail,
+  saveClientCheckInQuestions,
+  saveClientQuestionnaireQuestions,
+} from '@/services/client/client-form-service';
 
 type FormBuilderParams = {
   formType: 'questionnaire' | 'checkIn';
   formId: string;
   formName: string;
   clientId?: string;
+  viewOnly?: string;
 };
 
 export default function FormBuilderScreen() {
@@ -47,6 +54,10 @@ export default function FormBuilderScreen() {
   const { setQuestionSelectCallback, setReorderQuestions, setQuestionsReorderCallback } = useModalCallbacks();
   const refreshSection = useClientDetailStore((state) => state.refreshSection);
   const clientMetrics = useClientDetailStore((state) => state.metrics);
+  const coachId = useClientDetailStore((state) => state.coachId);
+
+  // View-only mode (for non-draft forms in client context)
+  const isViewOnly = params.viewOnly === 'true';
 
   // Determine if metrics question type should be hidden
   // - In library context (no clientId): always hide metrics
@@ -75,11 +86,22 @@ export default function FormBuilderScreen() {
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   const isQuestionnaire = params.formType === 'questionnaire';
+  const isClientContext = !!params.clientId && !!coachId;
 
-  // Fetch form data
+  // Fetch form data - use client endpoints when in client context
   const { data: formData, isLoading } = useQuery({
-    queryKey: [isQuestionnaire ? 'questionnaires' : 'checkIns'],
+    queryKey: isClientContext
+      ? ['clientForm', params.formType, params.formId, params.clientId]
+      : [isQuestionnaire ? 'questionnaires' : 'checkIns'],
     queryFn: async () => {
+      // When in client context, fetch the specific client form directly
+      if (isClientContext) {
+        if (isQuestionnaire) {
+          return getClientQuestionnaireDetail(params.clientId!, params.formId, coachId);
+        }
+        return getClientCheckInDetail(params.clientId!, params.formId, coachId);
+      }
+      // Otherwise fetch from coach library
       if (isQuestionnaire) {
         return getQuestionnaires();
       }
@@ -87,17 +109,27 @@ export default function FormBuilderScreen() {
     },
   });
 
-  // Extract the specific form from the list
+  // Extract the specific form from the list (or use directly if client context)
   useEffect(() => {
     if (formData && params.formId) {
-      const form = formData.find((f: Questionnaire | CheckIn) => f.id === params.formId);
-      if (form) {
+      // In client context, formData is already the specific form
+      if (isClientContext) {
+        const form = formData as { questions?: Question[]; name?: string; description?: string };
         setQuestions(form.questions || []);
         setFormName(form.name || '');
         setFormDescription(form.description || '');
+      } else {
+        // In library context, find form from the list
+        const formList = formData as (Questionnaire | CheckIn)[];
+        const form = formList.find((f) => f.id === params.formId);
+        if (form) {
+          setQuestions(form.questions || []);
+          setFormName(form.name || '');
+          setFormDescription(form.description || '');
+        }
       }
     }
-  }, [formData, params.formId]);
+  }, [formData, params.formId, isClientContext]);
 
   // Disable swipe-to-go-back gesture when there are unsaved changes
   useEffect(() => {
@@ -117,15 +149,41 @@ export default function FormBuilderScreen() {
         return q;
       });
 
+      // Use client-specific endpoints when in client context
+      if (isClientContext) {
+        if (isQuestionnaire) {
+          return saveClientQuestionnaireQuestions({
+            questionnaireId: params.formId,
+            clientId: params.clientId!,
+            coachId: coachId!,
+            questions: questionsWithRealIds,
+          });
+        }
+        return saveClientCheckInQuestions({
+          checkInId: params.formId,
+          clientId: params.clientId!,
+          coachId: coachId!,
+          questions: questionsWithRealIds,
+        });
+      }
+
+      // Use coach library endpoints otherwise
       if (isQuestionnaire) {
         return reorderQuestionnaireQuestions({ formId: params.formId, questions: questionsWithRealIds });
       }
       return reorderCheckInQuestions({ formId: params.formId, questions: questionsWithRealIds });
     },
     onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: [isQuestionnaire ? 'questionnaires' : 'checkIns'] });
+      // Invalidate coach library queries
+      await queryClient.invalidateQueries({ queryKey: [isQuestionnaire ? 'questionnaires' : 'checkIns'] });
+
       // If coming from client context, also refresh client's forms data
       if (params.clientId) {
+        // Invalidate the specific client form query
+        await queryClient.invalidateQueries({
+          queryKey: ['clientForm', params.formType, params.formId, params.clientId]
+        });
+        // Refresh the client detail store section
         refreshSection(isQuestionnaire ? 'questionnaires' : 'check-ins');
       }
       haptics.success();
@@ -263,9 +321,11 @@ export default function FormBuilderScreen() {
         editingId: params.formId,
         name: formName,
         description: formDescription,
+        ...(params.clientId && { clientId: params.clientId }),
+        ...(coachId && { coachId }),
       },
     });
-  }, [isQuestionnaire, params.formId, formName, formDescription, router]);
+  }, [isQuestionnaire, params.formId, params.clientId, formName, formDescription, router, coachId]);
 
   const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
   const gradientHeight = headerHeight + 12;
@@ -300,12 +360,13 @@ export default function FormBuilderScreen() {
       <View style={styles.questionsContainer}>
         {questions.map((question, index) => (
           <QuestionCard
-            key={question.id}
+            key={question.id || `question-${index}`}
             question={question}
             index={index}
             isReorderMode={false}
             onDelete={() => handleDeleteQuestion(index)}
-            onPress={() => handleEditQuestion(question, index)}
+            onPress={isViewOnly ? undefined : () => handleEditQuestion(question, index)}
+            hideDelete={isViewOnly}
           />
         ))}
       </View>
@@ -325,7 +386,7 @@ export default function FormBuilderScreen() {
       >
         {renderQuestionsList()}
 
-        <View style={{ height: 160 }} />
+        <View style={{ height: isViewOnly ? 40 : 160 }} />
       </ScrollView>
 
       <StatusBarBlur blurHeight={gradientHeight - insets.top} largeHeader />
@@ -340,70 +401,75 @@ export default function FormBuilderScreen() {
         <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>
           {formName || t('library.formBuilder.title')}
         </Text>
-        <View style={styles.headerActions}>
-          <IconButton
-            icon={{ sf: 'pencil', IconComponent: Pencil }}
-            onPress={handleEditMetadata}
-            size="md"
-            color={themeColors.text}
-          />
-          <IconButton
-            icon={{ sf: 'checkmark', IconComponent: Check }}
-            onPress={handleSave}
-            size="md"
-            variant={isDirty ? 'primary' : 'default'}
-            disabled={!isDirty}
-            loading={saveQuestionsMutation.isPending}
-          />
-        </View>
+        {!isViewOnly && (
+          <View style={styles.headerActions}>
+            <IconButton
+              icon={{ sf: 'pencil', IconComponent: Pencil }}
+              onPress={handleEditMetadata}
+              size="md"
+              color={themeColors.text}
+            />
+            <IconButton
+              icon={{ sf: 'checkmark', IconComponent: Check }}
+              onPress={handleSave}
+              size="md"
+              variant={isDirty ? 'primary' : 'default'}
+              disabled={!isDirty}
+              loading={saveQuestionsMutation.isPending}
+            />
+          </View>
+        )}
+        {isViewOnly && <View style={{ width: 40 }} />}
       </View>
 
-      <View style={styles.bottomBarWrapper}>
-        <View style={[styles.bottomBarDivider, { backgroundColor: themeColors.border }]} />
-        <View
-          style={[
-            styles.bottomBarContainer,
-            { backgroundColor: themeColors.surfacePrimary },
-          ]}
-        >
-          <View style={styles.buttonWrapper}>
-            <PressableScale
-              style={[styles.actionButton, { backgroundColor: themeColors.primary, opacity: questions.length < 2 ? 0.5 : 1 }]}
-              onPress={handleReorder}
-              enabled={questions.length >= 2}
-            >
-              <Repeat {...({ size: 18, color: themeColors.primaryForeground, style: styles.buttonIcon } as any)} />
-              <Text style={[styles.actionButtonText, { color: themeColors.primaryForeground }]}>
-                {t('library.formBuilder.reorder')}
-              </Text>
-            </PressableScale>
-          </View>
+      {!isViewOnly && (
+        <View style={styles.bottomBarWrapper}>
+          <View style={[styles.bottomBarDivider, { backgroundColor: themeColors.border }]} />
+          <View
+            style={[
+              styles.bottomBarContainer,
+              { backgroundColor: themeColors.surfacePrimary },
+            ]}
+          >
+            <View style={styles.buttonWrapper}>
+              <PressableScale
+                style={[styles.actionButton, { backgroundColor: themeColors.primary, opacity: questions.length < 2 ? 0.5 : 1 }]}
+                onPress={handleReorder}
+                enabled={questions.length >= 2}
+              >
+                <Repeat {...({ size: 18, color: themeColors.primaryForeground, style: styles.buttonIcon } as any)} />
+                <Text style={[styles.actionButtonText, { color: themeColors.primaryForeground }]}>
+                  {t('library.formBuilder.reorder')}
+                </Text>
+              </PressableScale>
+            </View>
 
-          <View style={styles.buttonWrapper}>
-            <PressableScale
-              style={[
-                styles.actionButton,
-                { backgroundColor: themeColors.primary }
-              ]}
-              onPress={handleAddQuestion}
-            >
-              <Plus {...({ size: 18, color: themeColors.primaryForeground, style: styles.buttonIcon } as any)} />
-              <Text style={[styles.actionButtonText, { color: themeColors.primaryForeground }]}>
-                {t('library.formBuilder.addQuestion')}
-              </Text>
-            </PressableScale>
+            <View style={styles.buttonWrapper}>
+              <PressableScale
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: themeColors.primary }
+                ]}
+                onPress={handleAddQuestion}
+              >
+                <Plus {...({ size: 18, color: themeColors.primaryForeground, style: styles.buttonIcon } as any)} />
+                <Text style={[styles.actionButtonText, { color: themeColors.primaryForeground }]}>
+                  {t('library.formBuilder.addQuestion')}
+                </Text>
+              </PressableScale>
+            </View>
           </View>
+          <View
+            style={[
+              styles.bottomBarSafeAreaFill,
+              {
+                height: insets.bottom,
+                backgroundColor: themeColors.surfacePrimary,
+              },
+            ]}
+          />
         </View>
-        <View
-          style={[
-            styles.bottomBarSafeAreaFill,
-            {
-              height: insets.bottom,
-              backgroundColor: themeColors.surfacePrimary,
-            },
-          ]}
-        />
-      </View>
+      )}
 
       <Dialog
         visible={showErrorDialog}

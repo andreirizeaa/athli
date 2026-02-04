@@ -2042,6 +2042,13 @@ export const esMessages = {
         subtitle: 'Comienza creando tu primera plantilla de check-in.',
       },
     },
+    type: {
+      label: 'Tipo',
+      checkIn: 'Check-in',
+      questionnaire: 'Cuestionario',
+      checkInInfo: 'Los check-ins son formularios recurrentes que se pueden programar para enviar a los atletas de forma regular',
+      questionnaireInfo: 'Los cuestionarios son formularios únicos que se pueden asignar y enviar inmediatamente a los atletas en cualquier momento',
+    },
     toast: {
       updateSuccess: 'Formulario actualizado exitosamente',
       updateError: 'Error al actualizar el formulario',
@@ -2087,7 +2094,7 @@ export const esMessages = {
           multipleChoice: 'Opción múltiple',
           multipleChoiceSubtitle: 'Selecciona una o más opciones',
           scale: 'Escala',
-          scaleSubtitle: 'Calificar en una escala',
+          scaleSubtitle: '1-10',
           yesNo: 'Sí/No',
           yesNoSubtitle: 'Elección binaria',
           images: 'Imágenes',

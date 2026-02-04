@@ -153,6 +153,7 @@ export default function ChangeEmailModal() {
             autoCorrect={false}
             returnKeyType="go"
             onSubmitEditing={handleUpdateEmail}
+            required
           />
         </View>
 
