@@ -55,7 +55,7 @@ export const AthleteHomeContent = () => {
       setStoreCoachId(clientProfile.coach_id);
 
       try {
-        const filesData = await getMyFiles();
+        const filesData = await getMyFiles(clientProfile.client_id, clientProfile.coach_id);
         setStoreFiles(filesData);
       } catch (error) {
         console.error('[AthleteHomeContent] Error fetching files:', error);

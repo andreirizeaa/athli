@@ -14,7 +14,7 @@ import SignatureScreen, { SignatureViewRef } from 'react-native-signature-canvas
 import LottieView from 'lottie-react-native';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 
-import { useThemePreference, useTranslations, useModalCallbacks } from '@/stores';
+import { useThemePreference, useTranslations, useModalCallbacks, useAuth } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { FilledButton } from '@/components/ui/buttons/filled-button';
@@ -133,6 +133,7 @@ export default function FormResponseSessionModal() {
   const { colors: themeColors, primaryColor } = useThemePreference();
   const { t } = useTranslations();
   const { setDateSelectCallback } = useModalCallbacks();
+  const { clientProfile } = useAuth();
 
   const keyboardHeight = useSharedValue(0);
 
@@ -252,7 +253,7 @@ export default function FormResponseSessionModal() {
 
   // Submit the questionnaire (called automatically when entering completion page)
   const submitQuestionnaire = useCallback(async () => {
-    if (!questionnaireId || isSubmitting) return;
+    if (!questionnaireId || isSubmitting || !clientProfile) return;
 
     setIsSubmitting(true);
     try {
@@ -264,10 +265,11 @@ export default function FormResponseSessionModal() {
         answer: answers[q.id] ?? null,
       }));
 
-      await submitMyQuestionnaire({
-        questionnaireId,
-        answers: formattedAnswers,
-      });
+      await submitMyQuestionnaire(
+        { questionnaireId, answers: formattedAnswers },
+        clientProfile.client_id,
+        clientProfile.coach_id,
+      );
 
       haptics.success();
       // Invalidate questionnaires cache to refetch
@@ -281,7 +283,7 @@ export default function FormResponseSessionModal() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [questionnaireId, questions, answers, queryClient, isSubmitting]);
+  }, [questionnaireId, questions, answers, queryClient, isSubmitting, clientProfile]);
 
   // Navigate to completion page and start submission
   const handleComplete = useCallback(() => {

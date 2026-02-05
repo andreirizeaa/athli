@@ -102,11 +102,13 @@ export const getClientHabits = async (clientId: string, coachId: string): Promis
 
 /**
  * Get habits for the authenticated athlete (self-access)
- * No coach ID required - the API will use the authenticated user's ID
  */
-export const getMyHabits = async (): Promise<ClientHabit[]> => {
+export const getMyHabits = async (clientId: string, coachId: string): Promise<ClientHabit[]> => {
   const response = await apiFetch<{ success: boolean; data: { habits: ClientHabit[] } }>(
-    '/client/habits'
+    '/client/habits',
+    {
+      headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+    }
   );
   return response.data.habits;
 };
@@ -180,15 +182,17 @@ export const getHabitStreaks = async (
 
 /**
  * Get habit streaks for the authenticated athlete (self-access)
- * No coach ID required - the API will use the authenticated user's ID
  */
 export const getMyHabitStreaks = async (
-  assignmentId: string
+  assignmentId: string,
+  clientId: string,
+  coachId: string
 ): Promise<HabitStreaks> => {
   const response = await apiFetch<{ success: boolean; data: HabitStreaks }>(
     '/client/habits/streaks',
     {
       method: 'POST',
+      headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
       body: JSON.stringify({ assignmentId }),
     }
   );

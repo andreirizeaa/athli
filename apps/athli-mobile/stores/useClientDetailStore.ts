@@ -301,7 +301,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       // 1. First fetch client info (required)
       // Also fetch from clients list to get the avatar URL (which is more reliable)
       const [clientData, clientsList] = await Promise.all([
-        getClientDetails(clientId),
+        getClientDetails(clientId, coachId),
         getClients().catch(() => []),
       ]);
 
@@ -419,7 +419,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       switch (section) {
         case 'client':
           set({ isLoadingClient: true });
-          const clientData = await getClientDetails(clientId);
+          const clientData = await getClientDetails(clientId, coachId);
           set({ client: clientData, isLoadingClient: false });
           break;
 

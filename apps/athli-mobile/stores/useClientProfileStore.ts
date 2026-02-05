@@ -85,6 +85,7 @@ export const useClientProfileStore = create<ClientProfileStore>((set, get) => ({
     try {
       const updatedProfile = await updateClientProfile(
         profile.client_id,
+        profile.coach_id,
         updates
       );
       set({ profile: updatedProfile, isLoading: false });
