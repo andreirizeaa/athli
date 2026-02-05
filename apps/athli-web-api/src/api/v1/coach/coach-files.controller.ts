@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { success, unauthorized, created } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
 import { randomUUID } from 'crypto';
-import { isExternalLink } from '@athli/shared-types';
+import { isExternalLink } from '../../../utils/file-utils';
 
 export const coachFilesController = {
     /**

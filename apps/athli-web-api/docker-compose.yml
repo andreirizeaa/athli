@@ -9,9 +9,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: athli-api
+    container_name: athli-service
     ports:
-      - "3000:3000"
+      - "3003:3000"
     env_file:
       - .env
     environment:
