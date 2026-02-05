@@ -14,12 +14,19 @@ export const clientCheckInsController = {
         let targetClientId: string;
         let targetCoachId: string | undefined;
 
-        if (coachIdHeader) {
-            if (coachIdHeader !== userId) return unauthorized(res, { message: 'Coach ID mismatch' });
-            if (!clientIdHeader) return forbidden(res, { message: 'x-client-id header required' });
-            targetClientId = clientIdHeader as string;
-            targetCoachId = coachIdHeader as string;
+        // Determine request context by matching userId to headers
+        const isCoachRequest = coachIdHeader && coachIdHeader === userId;
 
+        if (isCoachRequest) {
+            // COACH SCENARIO: Coach accessing client's data
+            if (!clientIdHeader) {
+                return forbidden(res, { message: 'x-client-id header required for coach requests' });
+            }
+
+            targetClientId = clientIdHeader;
+            targetCoachId = coachIdHeader;
+
+            // Verify coach-client relationship
             const supabase = getSupabaseClient();
             const { data: relation } = await supabase
                 .from('coach_client_assignments')
@@ -28,11 +35,35 @@ export const clientCheckInsController = {
                 .eq('client_id', targetClientId)
                 .single();
 
-            if (!relation) return forbidden(res, { message: 'Forbidden' });
+            if (!relation) {
+                return forbidden(res, { message: 'Client not assigned to this coach' });
+            }
         } else {
-            if (clientIdHeader && clientIdHeader !== userId) return forbidden(res, { message: 'Client ID mismatch' });
-            targetClientId = userId;
-            targetCoachId = coachIdHeader as string;
+            // CLIENT SCENARIO: Client accessing their own data
+            // If x-client-id provided, it must match authenticated user
+            if (clientIdHeader && clientIdHeader !== userId) {
+                return forbidden(res, { message: 'Cannot access another client\'s data' });
+            }
+
+            targetClientId = clientIdHeader || userId;
+
+            // x-coach-id scopes to a specific coach relationship (optional)
+            if (coachIdHeader) {
+                // Verify client is assigned to this coach
+                const supabase = getSupabaseClient();
+                const { data: assignment } = await supabase
+                    .from('coach_client_assignments')
+                    .select('coach_id')
+                    .eq('client_id', targetClientId)
+                    .eq('coach_id', coachIdHeader)
+                    .single();
+
+                if (!assignment) {
+                    return forbidden(res, { message: 'Not assigned to this coach' });
+                }
+
+                targetCoachId = coachIdHeader;
+            }
         }
 
         const supabase = getSupabaseClient();
@@ -299,21 +330,74 @@ export const clientCheckInsController = {
         const clientIdHeader = req.header('x-client-id');
         const coachIdHeader = req.header('x-coach-id');
 
-        if (!coachIdHeader || coachIdHeader !== userId) return unauthorized(res, { message: 'Unauthorized' });
-        if (!clientIdHeader) return forbidden(res, { message: 'x-client-id required' });
+        let targetClientId: string;
+        let targetCoachId: string | undefined;
 
-        const targetCoachId = coachIdHeader as string;
-        const targetClientId = clientIdHeader as string;
+        // Determine request context by matching userId to headers
+        const isCoachRequest = coachIdHeader && coachIdHeader === userId;
+
+        if (isCoachRequest) {
+            // COACH SCENARIO: Coach accessing client's data
+            if (!clientIdHeader) {
+                return forbidden(res, { message: 'x-client-id header required for coach requests' });
+            }
+
+            targetClientId = clientIdHeader;
+            targetCoachId = coachIdHeader;
+
+            // Verify coach-client relationship
+            const supabase = getSupabaseClient();
+            const { data: relation } = await supabase
+                .from('coach_client_assignments')
+                .select('client_id')
+                .eq('coach_id', targetCoachId)
+                .eq('client_id', targetClientId)
+                .single();
+
+            if (!relation) {
+                return forbidden(res, { message: 'Client not assigned to this coach' });
+            }
+        } else {
+            // CLIENT SCENARIO: Client accessing their own data
+            // If x-client-id provided, it must match authenticated user
+            if (clientIdHeader && clientIdHeader !== userId) {
+                return forbidden(res, { message: 'Cannot access another client\'s data' });
+            }
+
+            targetClientId = clientIdHeader || userId;
+
+            // x-coach-id scopes to a specific coach relationship (optional)
+            if (coachIdHeader) {
+                // Verify client is assigned to this coach
+                const supabase = getSupabaseClient();
+                const { data: assignment } = await supabase
+                    .from('coach_client_assignments')
+                    .select('coach_id')
+                    .eq('client_id', targetClientId)
+                    .eq('coach_id', coachIdHeader)
+                    .single();
+
+                if (!assignment) {
+                    return forbidden(res, { message: 'Not assigned to this coach' });
+                }
+
+                targetCoachId = coachIdHeader;
+            }
+        }
 
         const supabase = getSupabaseClient();
 
-        const { data: checkIn, error } = await supabase
+        let query = supabase
             .from('client_checkins')
             .select('*')
             .eq('id', id)
-            .eq('client_id', targetClientId)
-            .eq('coach_id', targetCoachId)
-            .single();
+            .eq('client_id', targetClientId);
+
+        if (targetCoachId) {
+            query = query.eq('coach_id', targetCoachId);
+        }
+
+        const { data: checkIn, error } = await query.single();
 
         if (error || !checkIn) return notFound(res, { message: 'Check-in not found' });
 
