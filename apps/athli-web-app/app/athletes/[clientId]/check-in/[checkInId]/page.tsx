@@ -474,6 +474,7 @@ const ClientCheckInDetailPage = () => {
             className="mt-1"
           />
         </div>
+        <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
 
       {/* Tab content */}
@@ -503,7 +504,7 @@ const ClientCheckInDetailPage = () => {
       )}
 
       {activeTab === 'submissions' && (
-        <div className="flex h-full w-full flex-1 min-h-0 relative">
+        <div className="flex h-full w-full flex-1 min-h-0 relative border-t">
           {/* Loading overlay */}
           {instancesLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-10">
@@ -530,7 +531,7 @@ const ClientCheckInDetailPage = () => {
                           className={cn(
                             'w-full flex items-start gap-3 px-4 py-3 text-sm transition-colors text-left',
                             isActive
-                              ? 'bg-accent text-accent-foreground'
+                              ? 'bg-accent/50 border-l-2 border-l-primary'
                               : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
                           )}
                         >
