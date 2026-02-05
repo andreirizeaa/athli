@@ -38,3 +38,21 @@ export const passwordResetRateLimiter = rateLimit({
   keyGenerator: (req) => req.body?.email || req.ip,
 });
 
+// Registration rate limiter (prevents mass account creation)
+export const registrationRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // 5 registration attempts per hour per IP
+  message: { error: { message: 'Too many registration attempts. Please try again later.' } },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Auth provider check rate limiter (prevents email enumeration)
+export const authCheckRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 checks per window per IP
+  message: { error: { message: 'Too many requests. Please try again later.' } },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+

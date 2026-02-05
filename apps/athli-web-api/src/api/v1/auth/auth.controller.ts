@@ -133,8 +133,12 @@ export class AuthController {
         return unauthorized(res, { message: 'Invalid Google token' });
       }
 
+      if (!payload.email) {
+        return unauthorized(res, { message: 'Google account has no verified email' });
+      }
+
       const googleUser = {
-        email: payload.email!,
+        email: payload.email,
         name: payload.name || '',
         picture: payload.picture,
         sub: payload.sub,

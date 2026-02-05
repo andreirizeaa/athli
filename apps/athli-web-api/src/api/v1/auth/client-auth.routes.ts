@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { clientAuthController } from './client-auth.controller';
 import { validate } from '../../../middlewares/validate';
+import { registrationRateLimiter, authCheckRateLimiter } from '../../../middlewares/rate-limit';
 import { z } from 'zod';
 
 // Client-specific schemas
@@ -69,7 +70,7 @@ clientAuthRouter.get('/invite/:code', clientAuthController.getCoachByInviteCode)
  *       201:
  *         description: Client account created
  */
-clientAuthRouter.post('/accept-invite', validate(acceptInviteSchema), clientAuthController.acceptInvite);
+clientAuthRouter.post('/accept-invite', registrationRateLimiter, validate(acceptInviteSchema), clientAuthController.acceptInvite);
 
 /**
  * @swagger
@@ -92,4 +93,4 @@ clientAuthRouter.post('/accept-invite', validate(acceptInviteSchema), clientAuth
  *       200:
  *         description: Client verified
  */
-clientAuthRouter.post('/verify', validate(verifyClientLoginSchema), clientAuthController.verifyClientLogin);
+clientAuthRouter.post('/verify', authCheckRateLimiter, validate(verifyClientLoginSchema), clientAuthController.verifyClientLogin);
