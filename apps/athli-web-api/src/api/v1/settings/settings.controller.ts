@@ -29,11 +29,11 @@ export const settingsController = {
         ]);
 
         if (eventsRes.error) {
-            return res.status(500).json({ success: false, message: eventsRes.error.message });
+            return res.status(500).json({ success: false, message: 'Failed to fetch notification settings' });
         }
 
         if (prefsRes.error) {
-            return res.status(500).json({ success: false, message: prefsRes.error.message });
+            return res.status(500).json({ success: false, message: 'Failed to fetch notification settings' });
         }
 
         // Merge preferences with available events, fallback to default_enabled if no preference row exists
@@ -84,7 +84,7 @@ export const settingsController = {
             });
 
         if (error) {
-            return res.status(500).json({ success: false, message: error.message });
+            return res.status(500).json({ success: false, message: 'An unexpected error occurred. Please try again later.' });
         }
 
         success(res, {
@@ -110,7 +110,7 @@ export const settingsController = {
             .single();
 
         if (error && error.code !== 'PGRST116') { // PGRST116 is no rows
-            return res.status(500).json({ success: false, message: error.message });
+            return res.status(500).json({ success: false, message: 'An unexpected error occurred. Please try again later.' });
         }
 
         success(res, {
@@ -153,7 +153,7 @@ export const settingsController = {
             .single();
 
         if (error) {
-            return res.status(500).json({ success: false, message: error.message });
+            return res.status(500).json({ success: false, message: 'An unexpected error occurred. Please try again later.' });
         }
 
         success(res, {
@@ -182,7 +182,7 @@ export const settingsController = {
             .single();
 
         if (error && error.code !== 'PGRST116') {
-            return res.status(500).json({ success: false, message: error.message });
+            return res.status(500).json({ success: false, message: 'An unexpected error occurred. Please try again later.' });
         }
 
         success(res, {
@@ -225,7 +225,7 @@ export const settingsController = {
             .single();
 
         if (error) {
-            return res.status(500).json({ success: false, message: error.message });
+            return res.status(500).json({ success: false, message: 'An unexpected error occurred. Please try again later.' });
         }
 
         success(res, {
@@ -253,7 +253,7 @@ export const settingsController = {
             .single();
 
         if (error && error.code !== 'PGRST116') {
-            return res.status(500).json({ success: false, message: error.message });
+            return res.status(500).json({ success: false, message: 'An unexpected error occurred. Please try again later.' });
         }
 
         success(res, {
