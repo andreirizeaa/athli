@@ -102,7 +102,7 @@ export const createSection = async (sectionData: WorkoutProgramPayload & { secti
       } else if (section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom' || section.type === 'circuits') {
         const exercises = section.exercises || [];
         return total + exercises.reduce((sum: number, group: any) => sum + (group.exercises?.length || 0), 0);
-      } else if (section.type === 'amrap' || section.type === 'timed') {
+      } else if (section.type === 'amrap') {
         return total + (section.exercises?.length || 0);
       }
     }
@@ -163,7 +163,7 @@ export const updateSection = async (
         } else if (section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom') {
           const exercises = section.exercises || [];
           return total + exercises.reduce((sum: number, group: any) => sum + (group.exercises?.length || 0), 0);
-        } else if (section.type === 'amrap' || section.type === 'timed') {
+        } else if (section.type === 'amrap') {
           return total + (section.exercises?.length || 0);
         }
       }

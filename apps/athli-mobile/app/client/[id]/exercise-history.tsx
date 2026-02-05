@@ -191,7 +191,6 @@ export default function ClientProgressScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderExerciseItem}
         ItemSeparatorComponent={() => <Separator style={styles.separator} />}
-        estimatedItemSize={64}
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={ListEmpty}
         ListFooterComponent={ListFooter}

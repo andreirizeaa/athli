@@ -79,7 +79,7 @@ export const TabataRoundPage = ({
   const { t } = useTranslations();
 
   // Refs for timer management - using refs to avoid stale closures
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasCompletedRef = useRef(false);
   const phaseStartTimeRef = useRef<number>(Date.now());
   const currentPhaseRef = useRef<TimerPhase>('work');
@@ -97,7 +97,7 @@ export const TabataRoundPage = ({
   const [completionMessage, setCompletionMessage] = useState('');
   const completionOverlayOpacity = useSharedValue(0);
   const completionTextScale = useSharedValue(0.5);
-  const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const completionTimeoutRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastCompletionMessageRef = useRef(-1);
   const hasShownCompletionRef = useRef(false);
 

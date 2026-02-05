@@ -99,7 +99,7 @@ export default function AddSectionModal() {
             formValid = formValid && duration.trim().length > 0 && !isNaN(durationNum) && durationNum > 0;
         }
 
-        if (sectionType === 'timed' || sectionType === 'circuits') {
+        if (sectionType === 'circuits') {
             const roundsNum = parseInt(rounds);
             formValid = formValid && rounds.trim().length > 0 && !isNaN(roundsNum) && roundsNum > 0;
         }
@@ -194,7 +194,7 @@ export default function AddSectionModal() {
             }
         }
 
-        if (sectionType === 'timed' || sectionType === 'circuits') {
+        if (sectionType === 'circuits') {
             const roundsNum = parseInt(rounds);
             if (!rounds.trim() || isNaN(roundsNum) || roundsNum <= 0) {
                 sectionMetadataError.roundsError = true;
@@ -286,10 +286,6 @@ export default function AddSectionModal() {
             emptySectionData.durationSec = duration ? parseInt(duration) * 60 : null; // Convert minutes to seconds
             emptySectionData.actualDurationSec = null;
             emptySectionData.roundsCompleted = null;
-        } else if (sectionType === 'timed') {
-            emptySectionData.targetRounds = rounds ? parseInt(rounds) : null;
-            emptySectionData.actualRounds = null;
-            emptySectionData.totalDurationSec = null;
         } else if (sectionType === 'tabata' || sectionType === 'hiit') {
             // Tabata/HIIT sections have work/rest/rounds
             emptySectionData.workSec = workSec ? parseInt(workSec) : (sectionType === 'tabata' ? 20 : 40);

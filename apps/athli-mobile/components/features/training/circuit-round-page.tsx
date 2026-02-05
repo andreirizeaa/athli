@@ -75,7 +75,7 @@ export const CircuitRoundPage = ({
   const [completionMessage, setCompletionMessage] = useState('');
   const completionOverlayOpacity = useSharedValue(0);
   const completionTextScale = useSharedValue(0.5);
-  const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const completionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastCompletionMessageRef = useRef(-1);
   const hasShownCompletionRef = useRef(false);
 

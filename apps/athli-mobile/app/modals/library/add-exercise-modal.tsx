@@ -612,7 +612,7 @@ export default function AddExerciseModal() {
                                                 />
                                                 {/* Play button overlay */}
                                                 <View style={styles.playOverlay}>
-                                                    <Play size={12} color="#fff" fill="#fff" />
+                                                    <Play size={12} />
                                                 </View>
                                             </>
                                         ) : isYouTubeUrl(videoLink) ? (
@@ -655,7 +655,7 @@ export default function AddExerciseModal() {
                                                 ]}
                                             >
                                                 <View style={[styles.videoPlayIndicator, { backgroundColor: themeColors.primary }]}>
-                                                    <Play size={14} color="#fff" fill="#fff" />
+                                                    <Play size={14} />
                                                 </View>
                                             </SquircleView>
                                         )}
@@ -676,9 +676,9 @@ export default function AddExerciseModal() {
                                     ]}
                                 >
                                     {(videoFile || isExistingCustomUpload || (videoLink.trim() && isValidVideoUrl(videoLink))) ? (
-                                        <Trash2 size={20} color={themeColors.text} />
+                                        <Trash2 size={20} />
                                     ) : (
-                                        <Video size={20} color={themeColors.text} />
+                                        <Video size={20} />
                                     )}
                                 </SquircleView>
                             </PressableOpacity>

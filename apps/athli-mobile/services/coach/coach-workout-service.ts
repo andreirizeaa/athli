@@ -94,14 +94,13 @@ export const createWorkout = async (workoutData: WorkoutProgramPayload): Promise
       } else if (section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom' || section.type === 'circuits') {
         const exercises = section.exercises || [];
         return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
-      } else if (section.type === 'amrap' || section.type === 'timed') {
+      } else if (section.type === 'amrap') {
         return total + (section.exercises?.length || 0);
       }
     }
     return total;
   }, 0);
 
-  // Separate metadata from workout data
   // Separate metadata from workout data
   const cleanWorkoutData = {
     items: workoutData.items,
@@ -147,14 +146,13 @@ export const editWorkout = async (
       } else if (section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom' || section.type === 'circuits') {
         const exercises = section.exercises || [];
         return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
-      } else if (section.type === 'amrap' || section.type === 'timed') {
+      } else if (section.type === 'amrap') {
         return total + (section.exercises?.length || 0);
       }
     }
     return total;
   }, 0);
 
-  // Separate metadata from workout data
   // Separate metadata from workout data
   const cleanWorkoutData = {
     items: workoutData.items,

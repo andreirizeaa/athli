@@ -517,8 +517,8 @@ export default function WorkoutDetailScreen() {
                                         const isSupersetNext = nextEx && ex.supersetGroupId && ex.supersetGroupId === nextEx.supersetGroupId;
                                         return { ...ex, isSupersetNext: isSupersetNext || false };
                                     });
-                                } else if (data.type === 'amrap' || data.type === 'timed') {
-                                    // AMRAP/Timed sections have a flat array of exercises
+                                } else if (data.type === 'amrap') {
+                                    // AMRAP sections have a flat array of exercises
                                     const allExercises = (data.exercises || []).map((ex: any) => {
                                         const exerciseDetails = getExerciseDetails(ex.prescribedExerciseId);
 

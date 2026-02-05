@@ -105,15 +105,16 @@ const generateMonthDays = (year: number, month: number): Date[] => {
   return days;
 };
 
-// Helper to get button label based on workout status
-const getWorkoutButtonLabel = (status: string | undefined, t: (key: string) => string): string => {
+// Helper to get button label based on workout status and date
+const getWorkoutButtonLabel = (status: string | undefined, isPast: boolean, t: (key: string) => string): string => {
   switch (status) {
     case 'completed':
       return t('training.athlete.reviewWorkout');
     case 'in_progress':
       return t('training.athlete.resumeWorkout');
     default:
-      return t('training.athlete.startWorkout');
+      // For past missed workouts, show "View Workout" instead of "Start Workout"
+      return isPast ? t('training.athlete.viewWorkout') : t('training.athlete.startWorkout');
   }
 };
 
@@ -232,10 +233,10 @@ const WorkoutDayPage = React.memo(
                   />
                 )}
               </View>
-              {isToday && (
+              {(isToday || isPast) && (
                 <View style={pageStyles.buttonContainer}>
                   <FilledButton
-                    label={getWorkoutButtonLabel(workout.completedSummary?.status, t)}
+                    label={getWorkoutButtonLabel(workout.completedSummary?.status, isPast, t)}
                     onPress={() => onWorkoutButtonPress(workout)}
                     style={pageStyles.workoutButton}
                     textStyle={pageStyles.workoutButtonText}
@@ -602,28 +603,48 @@ export default function TrainingScreen() {
     return statusMap;
   }, [trainingCalendar]);
 
-  // Handler for workout button press (Start/Resume/Review)
-  const handleWorkoutButtonPress = useCallback((workout: any, dateStr: string) => {
+  // Handler for workout button press (Start/Resume/Review/View)
+  const handleWorkoutButtonPress = useCallback((workout: any, dateStr: string, isPast: boolean) => {
     if (!clientId || !coachId) return;
 
     const status = workout.completedSummary?.status;
-    const params = {
-      workoutId: workout.instanceKey,
-      date: dateStr,
-      clientId,
-      coachId,
-      workoutPayload: JSON.stringify(workout),
-    };
+    const workoutPayload = JSON.stringify(workout.workout_data || workout);
 
     if (status === 'completed') {
       router.push({
         pathname: '/modals/training/workout-review-modal',
-        params,
+        params: {
+          workoutId: workout.instanceKey,
+          date: dateStr,
+          clientId,
+          coachId,
+          workoutPayload,
+        },
+      });
+    } else if (isPast) {
+      // Past missed workouts go to preview modal (same as coach view)
+      router.push({
+        pathname: '/modals/training/workout-preview-modal',
+        params: {
+          workoutId: workout.instanceKey,
+          date: dateStr,
+          clientId,
+          coachId,
+          workoutName: workout.workout,
+          workoutPayload,
+        },
       });
     } else {
+      // Today's workouts go to session modal
       router.push({
         pathname: '/modals/training/workout-session-modal',
-        params,
+        params: {
+          workoutId: workout.instanceKey,
+          date: dateStr,
+          clientId,
+          coachId,
+          workoutPayload,
+        },
       });
     }
   }, [clientId, coachId, router]);
@@ -712,7 +733,7 @@ export default function TrainingScreen() {
                 <WorkoutDayPage
                   workouts={dayWorkouts}
                   isLoading={isCurrentPageLoading}
-                  onWorkoutButtonPress={(workout) => handleWorkoutButtonPress(workout, formatDateYYYYMMDD(date))}
+                  onWorkoutButtonPress={(workout) => handleWorkoutButtonPress(workout, formatDateYYYYMMDD(date), isPast)}
                   themeColors={themeColors}
                   t={t}
                   renderStatusIcon={renderStatusIcon}

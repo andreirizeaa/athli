@@ -108,7 +108,7 @@ export default function AddSectionToBuilderModal() {
             formValid = formValid && duration.trim().length > 0 && !isNaN(durationNum) && durationNum > 0;
         }
 
-        if (sectionType === 'timed' || sectionType === 'circuits') {
+        if (sectionType === 'circuits') {
             const roundsNum = parseInt(rounds);
             formValid = formValid && rounds.trim().length > 0 && !isNaN(roundsNum) && roundsNum > 0;
         }
@@ -287,8 +287,8 @@ export default function AddSectionToBuilderModal() {
             // Transform exercises based on section type
             let exercises: any[] = [];
 
-            if (sectionType === 'amrap' || sectionType === 'timed') {
-                // AMRAP/Timed: flat array of exercises
+            if (sectionType === 'amrap') {
+                // AMRAP: flat array of exercises
                 exercises = (data.exercises || []).map((ex: any, idx: number) => {
                     const exerciseDetails = getExerciseDetails(ex.prescribedExerciseId);
                     const transformedAlternatives = (ex.alternatives || []).map((altId: string) => {
@@ -446,9 +446,7 @@ export default function AddSectionToBuilderModal() {
                 name: data.name,
                 sectionType: sectionType,
                 duration: sectionType === 'amrap' && data.durationSec ? String(Math.round(data.durationSec / 60)) : undefined,
-                rounds: sectionType === 'timed' && data.targetRounds ? String(data.targetRounds) : (
-                    (sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'circuits') && data.rounds ? String(data.rounds) : undefined
-                ),
+                rounds: (sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'circuits') && data.rounds ? String(data.rounds) : undefined,
                 notes: data.notes || undefined,
                 exercises: fixedExercises,
                 // Tabata/HIIT fields
@@ -503,14 +501,11 @@ export default function AddSectionToBuilderModal() {
         if (section.sectionType === 'amrap' && section.duration) {
             return `${Math.round(section.duration / 60)}m`;
         }
-        if (section.sectionType === 'timed' && section.rounds) {
-            return `${section.rounds} ${section.rounds === 1 ? 'round' : 'rounds'}`;
-        }
         if ((section.sectionType === 'tabata' || section.sectionType === 'hiit') && section.rounds) {
             return `${section.rounds} ${section.rounds === 1 ? 'round' : 'rounds'}`;
         }
-        if (section.sectionType === 'emom' && section.durationMin) {
-            return `${section.durationMin}m`;
+        if (section.sectionType === 'emom' && section.duration) {
+            return `${section.duration}m`;
         }
         return null;
     };

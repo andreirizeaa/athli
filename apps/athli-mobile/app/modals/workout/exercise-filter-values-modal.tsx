@@ -25,9 +25,9 @@ import {
 type FilterType = 'muscles' | 'categories' | 'difficulties';
 
 const FILTER_OPTIONS: Record<FilterType, { value: string; label: string }[]> = {
-    muscles: MUSCLEWIKI_MUSCLE_OPTIONS,
-    categories: MUSCLEWIKI_CATEGORY_OPTIONS,
-    difficulties: MUSCLEWIKI_DIFFICULTY_OPTIONS,
+    muscles: [...MUSCLEWIKI_MUSCLE_OPTIONS],
+    categories: [...MUSCLEWIKI_CATEGORY_OPTIONS],
+    difficulties: [...MUSCLEWIKI_DIFFICULTY_OPTIONS],
 };
 
 const FILTER_TITLES: Record<FilterType, string> = {
@@ -154,7 +154,6 @@ export default function ExerciseFilterValuesModal() {
                     data={filteredOptions}
                     renderItem={renderItem}
                     ItemSeparatorComponent={renderSeparator}
-                    estimatedItemSize={50}
                     ListHeaderComponent={
                         <View style={[styles.listHeader, { paddingTop: headerHeight + 16 }]}>
                             <SearchBar

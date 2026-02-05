@@ -32,7 +32,7 @@ export const useClientsStore = create<ClientsStore>((set, get) => ({
     // Apply category filter
     if (categoryFilter && categoryFilter !== 'all') {
       filtered = filtered.filter(
-        (client) => client.category.toLowerCase() === categoryFilter.toLowerCase()
+        (client) => client.category?.toLowerCase() === categoryFilter.toLowerCase()
       );
     }
 

@@ -284,7 +284,7 @@ export default function WorkoutReviewModal() {
             .map((i) => i.data as RegularExercisePayload);
 
           const allCompleted = supersetExercises.every(
-            (ex) => ex.completed === 'completed' || ex.completed === true
+            (ex) => ex.completed === 'completed' || (ex.completed as any) === true
           );
 
           items.push({
@@ -299,14 +299,14 @@ export default function WorkoutReviewModal() {
           items.push({
             type: 'exercise',
             exercise,
-            completed: exercise.completed === 'completed' || exercise.completed === true,
+            completed: exercise.completed === 'completed' || (exercise.completed as any) === true,
             startLetterIndex: currentLetterIndex,
           });
           currentLetterIndex++;
         }
       } else if (item.itemType === 'section') {
         const section = item.data as WorkoutSectionPayload;
-        const isCompleted = section.completed === 'completed' || section.completed === true;
+        const isCompleted = section.completed === 'completed' || (section.completed as any) === true;
         const exerciseItems = extractSectionExercises(section);
 
         let details: string | undefined;

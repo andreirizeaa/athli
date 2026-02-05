@@ -429,7 +429,7 @@ export default function ExerciseDetailScreen() {
         {Platform.OS === 'ios' ? (
           <SymbolView name="chevron.down" tintColor={themeColors.mutedText} size={12} type="monochrome" />
         ) : (
-          <ChevronDown size={12} color={themeColors.mutedText} />
+          <ChevronDown size={12} />
         )}
       </PressableOpacity>
     </DropdownMenuWrapper>
@@ -478,7 +478,7 @@ export default function ExerciseDetailScreen() {
                         Platform.OS === 'ios' ? (
                           <SymbolView name="square.3.layers.3d" tintColor={iconColor} size={iconSize} type="monochrome" />
                         ) : (
-                          <Layers size={iconSize} color={iconColor} />
+                          <Layers size={iconSize} />
                         )
                       }
                       title={t('progress.variation')}
@@ -504,7 +504,7 @@ export default function ExerciseDetailScreen() {
                   <SegmentedControl
                     segments={metricSegments}
                     value={selectedMetric}
-                    onChange={setSelectedMetric}
+                    onChange={(value) => setSelectedMetric(value as MetricField)}
                     backgroundColor={isDarkMode ? themeColors.surfaceSecondary : themeColors.surfacePrimary}
                     noPadding
                   />

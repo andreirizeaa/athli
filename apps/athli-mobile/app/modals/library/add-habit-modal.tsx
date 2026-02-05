@@ -620,7 +620,7 @@ export default function AddHabitModal() {
                                 label={t('library.addHabit.period')}
                                 options={periodOptions}
                                 value={period}
-                                onChange={setPeriod}
+                                onChange={(value) => value && setPeriod(value)}
                                 required
                                 clearable={false}
                             />

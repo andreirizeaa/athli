@@ -72,7 +72,7 @@ export const AmrapRoundPage = ({
   const lottieRef = useRef<LottieView>(null);
 
   // Refs for timer management
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasCompletedRef = useRef(false);
   const startTimeRef = useRef<number>(Date.now());
   const durationSecRef = useRef(durationSec);

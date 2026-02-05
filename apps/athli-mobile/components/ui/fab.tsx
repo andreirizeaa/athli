@@ -36,7 +36,7 @@ export const FAB = ({ onPress, variant = 'plus', bottom = 90 }: FABProps) => {
           />
         );
       }
-      return <Megaphone size={iconSize} color={iconColor} />;
+      return <Megaphone size={iconSize} />;
     }
 
     if (Platform.OS === 'ios') {
@@ -49,7 +49,7 @@ export const FAB = ({ onPress, variant = 'plus', bottom = 90 }: FABProps) => {
         />
       );
     }
-    return <Plus size={iconSize} color={iconColor} />;
+    return <Plus size={iconSize} />;
   };
 
   return (
