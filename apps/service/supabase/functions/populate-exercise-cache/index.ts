@@ -2,10 +2,10 @@
  * Supabase Edge Function: populate-exercise-cache
  * 
  * This function is triggered by pg_cron to populate the MuscleWiki exercise cache.
- * It calls the athli-web-api endpoint to do the actual work.
- * 
+ * It calls the service endpoint to do the actual work.
+ *
  * Environment Variables Required:
- * - ATHLI_API_URL: The URL of the athli-web-api (e.g., https://api.athli.app)
+ * - ATHLI_API_URL: The URL of the service (e.g., https://api.athli.app)
  * - CACHE_POPULATE_SERVICE_TOKEN: Service token for authentication
  */
 

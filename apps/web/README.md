@@ -82,7 +82,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ## Project Structure
 
 ```
-athli-web-app/
+web/
 ├── app/              # Next.js App Router pages
 ├── components/       # React components
 │   └── ui/          # shadcn/ui components

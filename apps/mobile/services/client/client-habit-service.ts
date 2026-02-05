@@ -13,7 +13,7 @@ import type {
 
 /**
  * Client habit service for habit tracking
- * Mirrors apps/athli-web-app/api/client/client-habit-service.ts
+ * Mirrors apps/web/api/client/client-habit-service.ts
  */
 
 // Re-export types from shared-types for backwards compatibility

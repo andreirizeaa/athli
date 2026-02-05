@@ -2,7 +2,7 @@ import { apiFetch } from '@/lib/api-client';
 
 /**
  * Client updates service for coach notes
- * Mirrors apps/athli-web-app/api/client/client-updates-service.ts
+ * Mirrors apps/web/api/client/client-updates-service.ts
  */
 
 export interface ClientUpdate {

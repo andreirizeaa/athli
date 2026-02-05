@@ -11,7 +11,7 @@ import type {
 
 /**
  * Client service for coach to view/manage client data
- * Mirrors apps/athli-web-app/api/client/client-service.ts
+ * Mirrors apps/web/api/client/client-service.ts
  */
 
 // Re-export types from shared-types for backwards compatibility

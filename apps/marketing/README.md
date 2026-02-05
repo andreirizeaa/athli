@@ -75,7 +75,7 @@ NEXT_PUBLIC_WWW_URL=http://localhost:3000
 ## Project Structure
 
 ```
-athli-landing-page/
+marketing/
 ├── app/              # Next.js App Router pages
 ├── components/       # React components
 │   └── ui/          # shadcn/ui components

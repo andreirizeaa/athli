@@ -2,7 +2,7 @@ import { apiFetch } from '@/lib/api-client';
 
 /**
  * Client photo service for progress photos
- * Mirrors apps/athli-web-app/api/client/client-photo-service.ts
+ * Mirrors apps/web/api/client/client-photo-service.ts
  */
 
 export interface ClientPhoto {

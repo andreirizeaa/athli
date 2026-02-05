@@ -13,7 +13,7 @@ import type {
 
 /**
  * Client file service for file management
- * Mirrors apps/athli-web-app/api/client/client-file-service.ts
+ * Mirrors apps/web/api/client/client-file-service.ts
  */
 
 // Re-export types from shared-types for backwards compatibility
