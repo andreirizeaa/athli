@@ -71,9 +71,9 @@ const calculateAge = (dateOfBirth: string | null): number | null => {
  * Get client details by ID (for coach viewing client)
  * Uses /clients/detail endpoint which returns data from coach_clients_view with correct avatar_url
  */
-export const getClientDetails = async (clientId: string): Promise<AthleteDetails> => {
+export const getClientDetails = async (clientId: string, coachId: string): Promise<AthleteDetails> => {
   const response = await apiFetch<{ success: boolean; data: { client: any } }>('/clients/detail', {
-    headers: { 'x-client-id': clientId },
+    headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
   });
 
   const client = response.data.client;
@@ -199,6 +199,7 @@ export const saveAthleteInjuries = async (
  */
 export const saveAthleteDetails = async (
   clientId: string,
+  coachId: string,
   details: Partial<AthleteDetails>
 ): Promise<void> => {
   const updatePayload: any = {
@@ -217,7 +218,7 @@ export const saveAthleteDetails = async (
 
   await apiFetch('/client', {
     method: 'PATCH',
-    headers: { 'x-client-id': clientId },
+    headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
     body: JSON.stringify(updatePayload),
   });
 };
