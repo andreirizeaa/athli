@@ -111,7 +111,7 @@ export class CoachAuthController {
                 const { data: coachProfile } = await supabase
                     .from('coach_profiles')
                     .select('id')
-                    .eq('id', existingUser.id)
+                    .eq('id', existingProfile.id)
                     .single();
 
                 if (!coachProfile) {
@@ -142,14 +142,14 @@ export class CoachAuthController {
             }
 
             // Get coach profile using the full view (merges user_profiles)
-            const { data: profile, error: profileError } = await supabase
+            const { data: profile, error: profileFetchError } = await supabase
                 .from('coach_profiles_full')
                 .select('*')
                 .eq('id', userId)
                 .single();
 
-            if (profileError) {
-                console.error('Profile fetch error:', profileError);
+            if (profileFetchError) {
+                console.error('Profile fetch error:', profileFetchError);
             }
 
             // Generate magic link for session
