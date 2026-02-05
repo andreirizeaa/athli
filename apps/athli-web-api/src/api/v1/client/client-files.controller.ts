@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { success, unauthorized, notFound, created, noContent, forbidden } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
-import { isExternalLink } from '@athli/shared-types';
+import { isExternalLink } from '../../../utils/file-utils';
 
 export const clientFilesController = {
     /**

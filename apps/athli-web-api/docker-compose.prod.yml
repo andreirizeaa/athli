@@ -26,11 +26,11 @@ services:
         max-file: "3"
 
   api:
-    image: ${ECR_REGISTRY:-athli-api}:${IMAGE_TAG:-latest}
+    image: ${ECR_REGISTRY:-athli-service}:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: athli-api
+    container_name: athli-service
     expose:
       - "3000"
     env_file:

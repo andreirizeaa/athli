@@ -20,7 +20,7 @@ on:
 
 env:
   AWS_REGION: eu-west-1
-  ECR_REPOSITORY: athli-api
+  ECR_REPOSITORY: athli-service
 
 # Only one deploy at a time — cancel in-progress runs
 concurrency:
@@ -57,7 +57,7 @@ jobs:
         run: |
           cd apps/athli-web-api
 
-          docker build \
+          docker build --platform linux/amd64 \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
             .
@@ -92,7 +92,7 @@ jobs:
 
             echo "==> Pulling latest image..."
             cd /opt/athli
-            export ECR_REGISTRY=${{ secrets.ECR_REGISTRY }}/athli-api
+            export ECR_REGISTRY=${{ secrets.ECR_REGISTRY }}/athli-service
             export IMAGE_TAG=latest
             docker compose -f docker-compose.prod.yml pull
 
@@ -101,7 +101,7 @@ jobs:
 
             echo "==> Waiting for health check..."
             sleep 5
-            curl -sf http://localhost:3000/health || { echo "HEALTH CHECK FAILED"; exit 1; }
+            curl -sfk https://localhost/health || { echo "HEALTH CHECK FAILED"; exit 1; }
 
             echo "==> Cleaning up old images..."
             docker image prune -f
@@ -133,7 +133,7 @@ jobs:
   #
   #           echo "==> Pulling latest image..."
   #           cd /opt/athli
-  #           export ECR_REGISTRY=${{ secrets.ECR_REGISTRY_US }}/athli-api
+  #           export ECR_REGISTRY=${{ secrets.ECR_REGISTRY_US }}/athli-service
   #           export IMAGE_TAG=latest
   #           docker compose -f docker-compose.prod.yml pull
   #

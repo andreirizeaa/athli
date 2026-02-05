@@ -544,7 +544,10 @@ const options: swaggerJsdoc.Options = {
       },
     },
   },
-  apis: ['./src/api/**/*.ts', './src/loaders/**/*.ts'], // Paths to files containing OpenAPI definitions
+  // In production (Docker), use compiled JS files; in dev, use TS source files
+  apis: env.NODE_ENV === 'production'
+    ? ['./dist/api/**/*.js', './dist/loaders/**/*.js']
+    : ['./src/api/**/*.ts', './src/loaders/**/*.ts'],
 };
 
 export const swaggerSpec = swaggerJsdoc(options);
