@@ -49,8 +49,8 @@ export default function ProgressScreen() {
 
         // Fetch athlete's own metrics, habits, and unique exercises
         const [metricsData, habitsData, uniqueExercisesData] = await Promise.all([
-          getMyMetrics(),
-          getMyHabits(),
+          getMyMetrics(clientProfile.client_id, clientProfile.coach_id),
+          getMyHabits(clientProfile.client_id, clientProfile.coach_id),
           getClientUniqueExercises({
             clientId: clientProfile.client_id,
             coachId: clientProfile.coach_id,
@@ -71,7 +71,7 @@ export default function ProgressScreen() {
         await Promise.all(
           habitsData.map(async (habit) => {
             try {
-              const streaks = await getMyHabitStreaks(habit.assignment_id);
+              const streaks = await getMyHabitStreaks(habit.assignment_id, clientProfile.client_id, clientProfile.coach_id);
               streaksMap[habit.assignment_id] = streaks.current_streak;
             } catch {
               streaksMap[habit.assignment_id] = 0;

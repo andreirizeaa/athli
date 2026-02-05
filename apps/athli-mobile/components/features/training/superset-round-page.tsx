@@ -64,7 +64,7 @@ export const SupersetRoundPage = ({
   const { t } = useTranslations();
 
   // Refs for timer management
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasCompletedRef = useRef(false);
   const restStartTimeRef = useRef<number>(Date.now());
   const currentPhaseRef = useRef<TimerPhase | null>(null);

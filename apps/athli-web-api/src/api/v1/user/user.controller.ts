@@ -35,7 +35,7 @@ export class UserController {
       });
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      return internalError(res, { message: error.message || 'Failed to update profile' });
+      return internalError(res, { message: 'Failed to update profile' });
     }
   });
 
@@ -69,15 +69,24 @@ export class UserController {
   });
 
   /**
-   * Get user by ID (public endpoint, no authentication required)
+   * Get user by ID (public endpoint for invite pages)
+   * Only returns minimal, non-sensitive fields
    */
   fetchUser = asyncHandler(async (req: Request, res: Response) => {
     const id = String(req.params.id);
 
     const user = await userService.getUserById(id);
 
+    // Only expose non-sensitive fields needed for invite/public pages
     success(res, {
-      data: { user },
+      data: {
+        user: {
+          id: user.id,
+          name: user.name,
+          profilePictureUrl: user.profilePictureUrl,
+          userType: user.userType,
+        },
+      },
     });
   });
 
@@ -171,7 +180,7 @@ export class UserController {
       });
     } catch (error: any) {
       console.error('Failed to generate avatar:', error);
-      return internalError(res, { message: error.message || 'Failed to generate avatar' });
+      return internalError(res, { message: 'Failed to generate avatar' });
     }
   });
 }

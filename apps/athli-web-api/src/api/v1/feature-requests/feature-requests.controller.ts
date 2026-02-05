@@ -86,7 +86,7 @@ export const featureRequestsController = {
       const { data: requests, error: requestsError } = await query;
 
       if (requestsError) {
-        return internalError(res, { message: requestsError.message });
+        return internalError(res, { message: 'Failed to fetch feature requests' });
       }
 
       // Get upvotes for current user
@@ -134,7 +134,7 @@ export const featureRequestsController = {
         },
       });
     } catch (error: any) {
-      return internalError(res, { message: error.message });
+      return internalError(res, { message: 'An unexpected error occurred. Please try again later.' });
     }
   },
 
@@ -163,7 +163,7 @@ export const featureRequestsController = {
         if (error.code === 'PGRST116') {
           return notFound(res, { message: 'Feature request not found' });
         }
-        return internalError(res, { message: error.message });
+        return internalError(res, { message: 'An unexpected error occurred. Please try again later.' });
       }
 
       // Check if user has upvoted
@@ -200,7 +200,7 @@ export const featureRequestsController = {
         data: { featureRequest },
       });
     } catch (error: any) {
-      return internalError(res, { message: error.message });
+      return internalError(res, { message: 'An unexpected error occurred. Please try again later.' });
     }
   },
 
@@ -209,7 +209,7 @@ export const featureRequestsController = {
    */
   createFeatureRequest: async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const { title, description, userName, userType, profilePictureUrl } = req.body;
+    const { title, description } = req.body;
 
     if (!userId) {
       unauthorized(res, { message: 'User not authenticated' });
@@ -220,13 +220,21 @@ export const featureRequestsController = {
       return badRequest(res, { message: 'Title is required' });
     }
 
-    if (!userName || !userType) {
-      return badRequest(res, { message: 'User info is required' });
-    }
-
     const supabase = getSupabaseClient();
 
     try {
+      // Look up user info server-side instead of trusting client-supplied values
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('name, user_type, profile_picture_url')
+        .eq('id', userId)
+        .limit(1)
+        .single();
+
+      const userName = userProfile?.name || 'Unknown User';
+      const userType = userProfile?.user_type || 'coach';
+      const profilePictureUrl = userProfile?.profile_picture_url || null;
+
       // Insert feature request
       const { data, error } = await supabase
         .from('feature_requests')
@@ -236,14 +244,14 @@ export const featureRequestsController = {
           user_id: userId,
           user_name: userName,
           user_type: userType,
-          profile_picture_url: profilePictureUrl || null,
+          profile_picture_url: profilePictureUrl,
           upvote_count: 0,
         })
         .select()
         .single();
 
       if (error) {
-        return internalError(res, { message: error.message });
+        return internalError(res, { message: 'An unexpected error occurred. Please try again later.' });
       }
 
       // Auto-upvote by the creator
@@ -272,7 +280,7 @@ export const featureRequestsController = {
         data: { featureRequest },
       });
     } catch (error: any) {
-      return internalError(res, { message: error.message });
+      return internalError(res, { message: 'An unexpected error occurred. Please try again later.' });
     }
   },
 
@@ -316,12 +324,12 @@ export const featureRequestsController = {
         .eq('id', id);
 
       if (error) {
-        return internalError(res, { message: error.message });
+        return internalError(res, { message: 'An unexpected error occurred. Please try again later.' });
       }
 
       success(res, { message: 'Feature request deleted successfully' });
     } catch (error: any) {
-      return internalError(res, { message: error.message });
+      return internalError(res, { message: 'An unexpected error occurred. Please try again later.' });
     }
   },
 
@@ -387,7 +395,7 @@ export const featureRequestsController = {
         });
       }
     } catch (error: any) {
-      return internalError(res, { message: error.message });
+      return internalError(res, { message: 'An unexpected error occurred. Please try again later.' });
     }
   },
 
@@ -413,7 +421,7 @@ export const featureRequestsController = {
         .order('created_at', { ascending: true });
 
       if (error) {
-        return internalError(res, { message: error.message });
+        return internalError(res, { message: 'An unexpected error occurred. Please try again later.' });
       }
 
       const replies: FeatureRequestReply[] = (data || []).map((r) => ({
@@ -432,7 +440,7 @@ export const featureRequestsController = {
         data: { replies },
       });
     } catch (error: any) {
-      return internalError(res, { message: error.message });
+      return internalError(res, { message: 'An unexpected error occurred. Please try again later.' });
     }
   },
 
@@ -442,7 +450,7 @@ export const featureRequestsController = {
   createReply: async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     const { id } = req.params;
-    const { message, userName, userType, profilePictureUrl } = req.body;
+    const { message } = req.body;
 
     if (!userId) {
       unauthorized(res, { message: 'User not authenticated' });
@@ -453,13 +461,21 @@ export const featureRequestsController = {
       return badRequest(res, { message: 'Message is required' });
     }
 
-    if (!userName || !userType) {
-      return badRequest(res, { message: 'User info is required' });
-    }
-
     const supabase = getSupabaseClient();
 
     try {
+      // Look up user info server-side instead of trusting client-supplied values
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('name, user_type, profile_picture_url')
+        .eq('id', userId)
+        .limit(1)
+        .single();
+
+      const userName = userProfile?.name || 'Unknown User';
+      const userType = userProfile?.user_type || 'coach';
+      const profilePictureUrl = userProfile?.profile_picture_url || null;
+
       const { data, error } = await supabase
         .from('feature_request_replies')
         .insert({
@@ -467,14 +483,14 @@ export const featureRequestsController = {
           user_id: userId,
           user_name: userName,
           user_type: userType,
-          profile_picture_url: profilePictureUrl || null,
+          profile_picture_url: profilePictureUrl,
           message,
         })
         .select()
         .single();
 
       if (error) {
-        return internalError(res, { message: error.message });
+        return internalError(res, { message: 'An unexpected error occurred. Please try again later.' });
       }
 
       const reply: FeatureRequestReply = {
@@ -493,7 +509,7 @@ export const featureRequestsController = {
         data: { reply },
       });
     } catch (error: any) {
-      return internalError(res, { message: error.message });
+      return internalError(res, { message: 'An unexpected error occurred. Please try again later.' });
     }
   },
 
@@ -533,12 +549,12 @@ export const featureRequestsController = {
         .eq('id', replyId);
 
       if (error) {
-        return internalError(res, { message: error.message });
+        return internalError(res, { message: 'An unexpected error occurred. Please try again later.' });
       }
 
       success(res, { message: 'Reply deleted successfully' });
     } catch (error: any) {
-      return internalError(res, { message: error.message });
+      return internalError(res, { message: 'An unexpected error occurred. Please try again later.' });
     }
   },
 };

@@ -112,19 +112,15 @@ export interface CoachClientHistoryItem {
  * Assign a workout to a client's training calendar
  */
 export const assignWorkout = async (data: AssignWorkoutData): Promise<void> => {
-  const headers: Record<string, string> = {
-    'x-client-id': data.clientId,
-  };
-  if (data.coachId) {
-    headers['x-coach-id'] = data.coachId;
-  }
-
-  const { clientId, ...payload } = data;  // Keep coachId in payload
+  const { clientId, coachId, ...payload } = data;
 
   await apiFetch('/client/trainings/assign-workout', {
     method: 'POST',
-    headers,
-    body: JSON.stringify(payload),
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId || '',
+    },
+    body: JSON.stringify({ ...payload, coachId }),
   });
 };
 
@@ -132,14 +128,12 @@ export const assignWorkout = async (data: AssignWorkoutData): Promise<void> => {
  * Assign a program to a client's training calendar
  */
 export const assignProgram = async (data: AssignProgramData): Promise<void> => {
-  const headers: Record<string, string> = {};
-  if (data.coachId) {
-    headers['x-coach-id'] = data.coachId;
-  }
-
   await apiFetch('/client/trainings/assign-program', {
     method: 'POST',
-    headers,
+    headers: {
+      'x-client-id': data.clientId,
+      'x-coach-id': data.coachId || '',
+    },
     body: JSON.stringify(data),
   });
 };

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { coachAuthController } from './coach-auth.controller';
 import { validate } from '../../../middlewares/validate';
+import { registrationRateLimiter, loginRateLimiter } from '../../../middlewares/rate-limit';
 import { registerSchema, googleAuthSchema } from './auth.schemas';
 
 export const coachAuthRouter = Router();
@@ -32,7 +33,7 @@ export const coachAuthRouter = Router();
  *       201:
  *         description: Coach registered successfully
  */
-coachAuthRouter.post('/register', validate(registerSchema), coachAuthController.register);
+coachAuthRouter.post('/register', registrationRateLimiter, validate(registerSchema), coachAuthController.register);
 
 /**
  * @swagger
@@ -55,4 +56,4 @@ coachAuthRouter.post('/register', validate(registerSchema), coachAuthController.
  *       200:
  *         description: Login successful
  */
-coachAuthRouter.post('/google', validate(googleAuthSchema), coachAuthController.googleAuth);
+coachAuthRouter.post('/google', loginRateLimiter, validate(googleAuthSchema), coachAuthController.googleAuth);

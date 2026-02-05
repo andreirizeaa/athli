@@ -241,7 +241,7 @@ const WorkoutDayPage = React.memo(
                   <View style={[pageStyles.divider, { backgroundColor: themeColors.border }]} />
                   <View style={pageStyles.exerciseListContainer}>
                     <ExerciseListPreview
-                      exercises={extractExercisePreviewItems(workout.workout_data?.items ? workout.workout_data : workout)}
+                      exercises={extractExercisePreviewItems((workout.workout_data as any)?.items ? workout.workout_data as any : workout)}
                       themeColors={themeColors}
                     />
                   </View>
@@ -439,7 +439,7 @@ const TrainingSkeleton = React.memo(({ themeColors }: TrainingSkeletonProps) => 
     <View style={skeletonStyles.container}>
       {/* Calendar skeleton - single card bar */}
       <View style={skeletonStyles.calendarRow}>
-        <Card style={skeletonStyles.calendarCard} />
+        <Card style={skeletonStyles.calendarCard}><View /></Card>
       </View>
 
       {/* Workout card skeleton */}

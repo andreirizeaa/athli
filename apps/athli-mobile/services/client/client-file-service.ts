@@ -208,9 +208,12 @@ export const shareClientFile = async (
 /**
  * Get files for the authenticated athlete (self-access)
  */
-export const getMyFiles = async (): Promise<ClientFile[]> => {
+export const getMyFiles = async (clientId: string, coachId: string): Promise<ClientFile[]> => {
   const response = await apiFetch<{ success: boolean; data: { assignments: any[]; files?: any[] } }>(
-    '/client/files'
+    '/client/files',
+    {
+      headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+    }
   );
   const assignments = response.data.assignments || response.data.files || [];
   return assignments.map((f: any) => ({

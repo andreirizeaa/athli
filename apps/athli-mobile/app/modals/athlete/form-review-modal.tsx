@@ -20,6 +20,9 @@ import { getQuestionnaireMediaUrl, type Question, type QuestionAnswer } from '@/
 
 type QuestionWithId = Question & { id: string };
 
+// Extended answer type with format field from API response
+type QuestionAnswerWithFormat = QuestionAnswer & { format?: string };
+
 const HEADER_HEIGHT = 52;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -54,7 +57,7 @@ export default function FormReviewModal() {
     }
   }, [questionsJson]);
 
-  const answers: QuestionAnswer[] = useMemo(() => {
+  const answers: QuestionAnswerWithFormat[] = useMemo(() => {
     try {
       return JSON.parse(answersJson || '[]');
     } catch {
@@ -82,7 +85,7 @@ export default function FormReviewModal() {
 
   // Helper to check if path is valid (not a placeholder)
   const isValidPath = (path: string): boolean => {
-    return path && !path.startsWith('__') && path !== '__FILE_UPLOAD__';
+    return !!(path && !path.startsWith('__') && path !== '__FILE_UPLOAD__');
   };
 
   // Generate video thumbnail from URL
@@ -208,7 +211,7 @@ export default function FormReviewModal() {
           <Image source={{ uri: thumbnailUrl }} style={styles.thumbnailImage} contentFit="cover" />
           {isVideo && (
             <View style={styles.playOverlay}>
-              <Play size={20} color="#FFFFFF" fill="#FFFFFF" />
+              <Play size={20} />
             </View>
           )}
         </View>
@@ -223,8 +226,6 @@ export default function FormReviewModal() {
           <Star
             key={value}
             size={24}
-            color={primaryColor}
-            fill={value <= rating ? primaryColor : 'transparent'}
           />
         ))}
       </View>

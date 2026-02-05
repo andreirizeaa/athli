@@ -34,7 +34,7 @@ export const authenticate: RequestHandler = async (
     }
 
     const token = authHeader.substring(7);
-    const decoded = authService.verifyToken(token);
+    const decoded = await authService.verifyToken(token);
 
     if (!decoded) {
       return next(new AppError(401, 'Unauthorized - Invalid token'));

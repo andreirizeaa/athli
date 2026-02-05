@@ -14,7 +14,7 @@ import SignatureScreen, { SignatureViewRef } from 'react-native-signature-canvas
 import LottieView from 'lottie-react-native';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 
-import { useThemePreference, useTranslations, useModalCallbacks } from '@/stores';
+import { useThemePreference, useTranslations, useModalCallbacks, useAuth } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { FilledButton } from '@/components/ui/buttons/filled-button';
@@ -76,16 +76,16 @@ const VideoThumbnailItem = memo(({ uri, onPress, themeColors }: {
         <View style={videoThumbnailStyles.container}>
           <Image source={{ uri: thumbnailUri }} style={videoThumbnailStyles.image} contentFit="cover" />
           <View style={videoThumbnailStyles.playOverlay}>
-            <Play size={20} color="#FFFFFF" fill="#FFFFFF" />
+            <Play size={20} />
           </View>
         </View>
       ) : (
         <View style={[videoThumbnailStyles.container, { backgroundColor: themeColors.surfacePrimary }]}>
-          <Video size={24} color={themeColors.text} />
+          <Video size={24} />
         </View>
       )}
       <View style={[videoThumbnailStyles.removeBadge, { backgroundColor: themeColors.text }]}>
-        <X size={12} color={themeColors.backgroundPrimary} />
+        <X size={12} />
       </View>
     </PressableScale>
   );
@@ -133,6 +133,7 @@ export default function FormResponseSessionModal() {
   const { colors: themeColors, primaryColor } = useThemePreference();
   const { t } = useTranslations();
   const { setDateSelectCallback } = useModalCallbacks();
+  const { clientProfile } = useAuth();
 
   const keyboardHeight = useSharedValue(0);
 
@@ -252,7 +253,7 @@ export default function FormResponseSessionModal() {
 
   // Submit the questionnaire (called automatically when entering completion page)
   const submitQuestionnaire = useCallback(async () => {
-    if (!questionnaireId || isSubmitting) return;
+    if (!questionnaireId || isSubmitting || !clientProfile) return;
 
     setIsSubmitting(true);
     try {
@@ -264,10 +265,11 @@ export default function FormResponseSessionModal() {
         answer: answers[q.id] ?? null,
       }));
 
-      await submitMyQuestionnaire({
-        questionnaireId,
-        answers: formattedAnswers,
-      });
+      await submitMyQuestionnaire(
+        { questionnaireId, answers: formattedAnswers },
+        clientProfile.client_id,
+        clientProfile.coach_id,
+      );
 
       haptics.success();
       // Invalidate questionnaires cache to refetch
@@ -281,7 +283,7 @@ export default function FormResponseSessionModal() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [questionnaireId, questions, answers, queryClient, isSubmitting]);
+  }, [questionnaireId, questions, answers, queryClient, isSubmitting, clientProfile]);
 
   // Navigate to completion page and start submission
   const handleComplete = useCallback(() => {
@@ -407,7 +409,7 @@ export default function FormResponseSessionModal() {
       try {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         // Accept both 'granted' and 'limited' (iOS 14+ limited access)
-        if (status !== 'granted' && status !== 'limited') {
+        if (status !== 'granted' && (status as string) !== 'limited') {
           setPermissionDialogMessage(t('general.libraryPermissionMessage'));
           setShowPermissionDialog(true);
           return;
@@ -512,7 +514,7 @@ export default function FormResponseSessionModal() {
     setTimeout(async () => {
       try {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted' && status !== 'limited') {
+        if (status !== 'granted' && (status as string) !== 'limited') {
           setPermissionDialogMessage(t('general.libraryPermissionMessage'));
           setShowPermissionDialog(true);
           return;
@@ -587,10 +589,9 @@ export default function FormResponseSessionModal() {
                   >
                     <SquircleView
                       cornerSmoothing={1}
-                      borderRadius={16}
                       style={[
                         styles.optionButton,
-                        { backgroundColor: isSelected ? primaryColor : themeColors.surfacePrimary },
+                        { backgroundColor: isSelected ? primaryColor : themeColors.surfacePrimary, borderRadius: 16 },
                       ]}
                     >
                       <Text
@@ -631,10 +632,9 @@ export default function FormResponseSessionModal() {
                   >
                     <SquircleView
                       cornerSmoothing={1}
-                      borderRadius={16}
                       style={[
                         styles.scaleOptionButton,
-                        { backgroundColor: isSelected ? primaryColor : themeColors.surfacePrimary },
+                        { backgroundColor: isSelected ? primaryColor : themeColors.surfacePrimary, borderRadius: 16 },
                       ]}
                     >
                       <Text
@@ -673,10 +673,9 @@ export default function FormResponseSessionModal() {
                   >
                     <SquircleView
                       cornerSmoothing={1}
-                      borderRadius={16}
                       style={[
                         styles.optionButton,
-                        { backgroundColor: isSelected ? primaryColor : themeColors.surfacePrimary },
+                        { backgroundColor: isSelected ? primaryColor : themeColors.surfacePrimary, borderRadius: 16 },
                       ]}
                     >
                       <View style={styles.yesNoContent}>
@@ -688,7 +687,6 @@ export default function FormResponseSessionModal() {
                         >
                           <IconComponent
                             size={20}
-                            color={isSelected ? primaryColor : themeColors.text}
                           />
                         </View>
                         <Text
@@ -725,8 +723,6 @@ export default function FormResponseSessionModal() {
                 >
                   <Star
                     size={44}
-                    color={primaryColor}
-                    fill={isFilled ? primaryColor : 'transparent'}
                   />
                 </PressableOpacity>
               );
@@ -791,7 +787,7 @@ export default function FormResponseSessionModal() {
                   <PressableScale key={index} onPress={() => handleRemoveMedia(currentQuestion.id, index)}>
                     <Image source={{ uri }} style={styles.mediaThumbnail} contentFit="cover" />
                     <View style={[styles.removeBadge, { backgroundColor: themeColors.text }]}>
-                      <X size={12} color={themeColors.backgroundPrimary} />
+                      <X size={12} />
                     </View>
                   </PressableScale>
                 ))}
@@ -821,7 +817,7 @@ export default function FormResponseSessionModal() {
                   <Image source={{ uri }} style={styles.progressThumbnailImage} contentFit="cover" />
                 ) : (
                   <View style={styles.progressThumbnailPlaceholder}>
-                    <Camera size={28} color={themeColors.mutedText} />
+                    <Camera size={28} />
                     <Text style={[styles.progressAddLabel, { color: themeColors.mutedText }]}>
                       {t('general.add')}
                     </Text>

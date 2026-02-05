@@ -208,7 +208,6 @@ export default function AthleteCheckInsScreen() {
           ListHeaderComponent={ListHeader}
           ListEmptyComponent={() => renderEmptyState(selectedTab === 'historic')}
           showsVerticalScrollIndicator={false}
-          estimatedItemSize={64}
         />
       )}
 

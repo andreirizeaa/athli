@@ -228,6 +228,7 @@ export const en = {
       startWorkout: 'Start workout',
       resumeWorkout: 'Resume workout',
       reviewWorkout: 'Review workout',
+      viewWorkout: 'View workout',
     },
     readiness: {
       title: 'Readiness',

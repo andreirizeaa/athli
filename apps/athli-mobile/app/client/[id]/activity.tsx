@@ -216,7 +216,7 @@ export default function ClientActivityScreen() {
                         {t('clientDetail.overview.clientFor')}
                       </Text>
                       <Text style={[styles.rowValue, { color: themeColors.text }]}>
-                        {client.clientFor + 1} {t('clientDetail.overview.days')}
+                        {(Number(client.clientFor) || 0) + 1} {t('clientDetail.overview.days')}
                       </Text>
                     </View>
                   </>

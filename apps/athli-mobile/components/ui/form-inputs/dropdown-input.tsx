@@ -92,7 +92,7 @@ export const DropdownInput = ({
                             },
                         ]}
                     >
-                        <Trash2 size={20} color={themeColors.text} />
+                        <Trash2 size={20} />
                     </SquircleView>
                 </PressableOpacity>
             </View>

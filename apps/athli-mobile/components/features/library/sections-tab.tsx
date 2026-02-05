@@ -201,20 +201,17 @@ export const SectionsTab = () => {
   };
 
   const getSectionTypeInfo = (section: typeof filteredSections[0]) => {
-    // Return duration for AMRAP or rounds for timed
+    // Return duration for AMRAP
     if (section.sectionType === 'amrap' && section.duration) {
       return `${section.duration}m`;
     }
-    if (section.sectionType === 'timed' && section.rounds) {
-      return `${section.rounds} ${section.rounds === 1 ? 'round' : 'rounds'}`;
-    }
-    // Tabata/HIIT: show work/rest/rounds
+    // Tabata/HIIT: show rounds
     if ((section.sectionType === 'tabata' || section.sectionType === 'hiit') && section.rounds) {
       return `${section.rounds} ${section.rounds === 1 ? 'round' : 'rounds'}`;
     }
     // EMOM: show duration
-    if (section.sectionType === 'emom' && section.durationMin) {
-      return `${section.durationMin}m`;
+    if (section.sectionType === 'emom' && section.duration) {
+      return `${section.duration}m`;
     }
     return null;
   };

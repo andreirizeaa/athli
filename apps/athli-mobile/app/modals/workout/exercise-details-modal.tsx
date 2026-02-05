@@ -97,27 +97,26 @@ export default function ExerciseDetailsModal() {
         }
 
         if (musclewikiExercise) {
+            // musclewikiExercise is already transformed by getExerciseById
+            // Map to our local Exercise type, using imageUrl as rawThumbnailUrl
             return {
-                exerciseId: musclewikiExercise.musclewikiId || musclewikiExercise.id,
+                exerciseId: musclewikiExercise.exerciseId,
                 musclewikiId: musclewikiExercise.musclewikiId,
                 name: musclewikiExercise.name,
                 imageUrl: '',
-                rawThumbnailUrl: musclewikiExercise.thumbnailUrl,
-                equipments: musclewikiExercise.category ? [musclewikiExercise.category] : [],
-                bodyParts: musclewikiExercise.targetMuscles?.slice(0, 1) || [],
-                exerciseType: 'weight_reps',
+                rawThumbnailUrl: musclewikiExercise.imageUrl, // imageUrl contains the thumbnail from transform
+                equipments: musclewikiExercise.equipments || [],
+                bodyParts: musclewikiExercise.bodyParts || [],
+                exerciseType: musclewikiExercise.exerciseType || 'weight_reps',
                 targetMuscles: musclewikiExercise.targetMuscles || [],
-                secondaryMuscles: [
-                    ...(musclewikiExercise.synergistMuscles || []),
-                    ...(musclewikiExercise.stabilizerMuscles || []),
-                ],
-                videoUrl: '',
-                keywords: [],
-                overview: '',
+                secondaryMuscles: musclewikiExercise.secondaryMuscles || [],
+                videoUrl: musclewikiExercise.videoUrl || '',
+                keywords: musclewikiExercise.keywords || [],
+                overview: musclewikiExercise.overview || '',
                 instructions: musclewikiExercise.instructions || [],
-                exerciseTips: musclewikiExercise.tips || [],
-                variations: [],
-                relatedExerciseIds: [],
+                exerciseTips: musclewikiExercise.exerciseTips || [],
+                variations: musclewikiExercise.variations || [],
+                relatedExerciseIds: musclewikiExercise.relatedExerciseIds || [],
                 difficulty: musclewikiExercise.difficulty,
                 force: musclewikiExercise.force,
                 mechanic: musclewikiExercise.mechanic,
@@ -155,7 +154,7 @@ export default function ExerciseDetailsModal() {
     const isLoading = isLoadingMusclewiki || isLoadingCoach;
 
     // Get thumbnail URL for the exercise
-    const rawThumbnailUrl = exercise?.rawThumbnailUrl || cachedExercise?.rawThumbnailUrl || musclewikiExercise?.thumbnailUrl;
+    const rawThumbnailUrl = exercise?.rawThumbnailUrl || cachedExercise?.rawThumbnailUrl || musclewikiExercise?.imageUrl;
     const { thumbnailUrl, isLoading: isThumbnailLoading } = useSingleThumbnail(rawThumbnailUrl);
 
     // Get musclewiki ID for video modal - prioritize the param passed from caller
@@ -265,14 +264,14 @@ export default function ExerciseDetailsModal() {
                                         {/* Play button overlay */}
                                         <View style={styles.playButtonOverlay}>
                                             <View style={styles.playButton}>
-                                                <Play size={20} color="#000" fill="#000" />
+                                                <Play size={20} />
                                             </View>
                                         </View>
                                     </>
                                 ) : (
                                     <View style={styles.videoPlaceholder}>
                                         <View style={[styles.playButton, { backgroundColor: themeColors.primary }]}>
-                                            <Play size={24} color="#FFF" fill="#FFF" />
+                                            <Play size={24} />
                                         </View>
                                         <Text style={[styles.tapToPlayText, { color: themeColors.mutedText }]}>
                                             {t('library.tapToPlayVideo')}

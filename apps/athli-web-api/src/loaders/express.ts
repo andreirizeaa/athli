@@ -223,7 +223,17 @@ export function createExpressApp() {
     res.status(200).json({ status: 'ok' });
   });
 
-  app.use('/metrics', metricsRouter);
+  // Protect metrics endpoint in production
+  if (env.NODE_ENV === 'production' && env.SWAGGER_PASSWORD) {
+    const metricsAuth = basicAuth({
+      users: { 'admin': env.SWAGGER_PASSWORD },
+      challenge: true,
+      realm: 'Metrics',
+    });
+    app.use('/metrics', metricsAuth, metricsRouter);
+  } else {
+    app.use('/metrics', metricsRouter);
+  }
 
   // Swagger documentation (protected in production)
   if (env.NODE_ENV === 'production' && env.SWAGGER_PASSWORD) {

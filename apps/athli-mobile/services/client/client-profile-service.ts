@@ -29,14 +29,20 @@ interface ClientApiProfile {
  * This ensures we get the merged profile with correct avatar URL
  */
 export async function fetchClientProfile(
-  clientId: string
+  clientId: string,
+  coachId?: string
 ): Promise<ClientProfile> {
   try {
+    const headers: Record<string, string> = { 'x-client-id': clientId };
+    if (coachId) {
+      headers['x-coach-id'] = coachId;
+    }
+
     const response = await apiFetch<{
       success: boolean;
       data: { profile: ClientApiProfile };
     }>('/client', {
-      headers: { 'x-client-id': clientId },
+      headers,
     });
 
     const apiProfile = response.data.profile;
@@ -86,6 +92,7 @@ export async function fetchClientProfile(
  */
 export async function updateClientProfile(
   clientId: string,
+  coachId: string,
   updates: Partial<
     Omit<ClientProfile, 'client_id' | 'coach_id' | 'created_at' | 'updated_at'>
   >
@@ -108,7 +115,7 @@ export async function updateClientProfile(
       data: { profile: ClientApiProfile };
     }>('/client', {
       method: 'PATCH',
-      headers: { 'x-client-id': clientId },
+      headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
       body: JSON.stringify(apiUpdates),
     });
 
