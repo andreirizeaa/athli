@@ -1,0 +1,150 @@
+# ──────────────────────────────────────────────────────────
+# Athli API — Build, push to ECR, deploy to EC2
+#
+# Triggers on pushes to main that touch the API code.
+# Phase 1: deploys to EU (eu-west-1) only.
+# Phase 2: uncomment the deploy-us job to add US region.
+# ──────────────────────────────────────────────────────────
+
+name: Deploy API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/athli-web-api/**"
+      - ".github/workflows/deploy-api.yml"
+
+  # Manual trigger from GitHub Actions tab
+  workflow_dispatch:
+
+env:
+  AWS_REGION: eu-west-1
+  ECR_REPOSITORY: athli-api
+
+# Only one deploy at a time — cancel in-progress runs
+concurrency:
+  group: deploy-api
+  cancel-in-progress: true
+
+jobs:
+  # ────────────────────────────────────────────
+  # 1. Build Docker image and push to ECR
+  # ────────────────────────────────────────────
+  build:
+    name: Build & Push
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd apps/athli-web-api
+
+          docker build \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            .
+
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          echo "Pushed $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+  # ────────────────────────────────────────────
+  # 2. Deploy to EU EC2 (Phase 1)
+  # ────────────────────────────────────────────
+  deploy-eu:
+    name: Deploy EU
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production-eu
+    steps:
+      - name: Deploy to EU EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_EU_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+
+            echo "==> Logging into ECR (eu-west-1)..."
+            aws ecr get-login-password --region eu-west-1 | \
+              docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+
+            echo "==> Pulling latest image..."
+            cd /opt/athli
+            export ECR_REGISTRY=${{ secrets.ECR_REGISTRY }}/athli-api
+            export IMAGE_TAG=latest
+            docker compose -f docker-compose.prod.yml pull
+
+            echo "==> Starting containers..."
+            docker compose -f docker-compose.prod.yml up -d
+
+            echo "==> Waiting for health check..."
+            sleep 5
+            curl -sf http://localhost:3000/health || { echo "HEALTH CHECK FAILED"; exit 1; }
+
+            echo "==> Cleaning up old images..."
+            docker image prune -f
+
+            echo "==> Deploy complete!"
+
+  # ────────────────────────────────────────────
+  # 3. Deploy to US EC2 (Phase 2 — uncomment when ready)
+  # ────────────────────────────────────────────
+  # deploy-us:
+  #   name: Deploy US
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   environment: production-us
+  #   steps:
+  #     - name: Deploy to US EC2
+  #       uses: appleboy/ssh-action@v1
+  #       with:
+  #         host: ${{ secrets.EC2_US_HOST }}
+  #         username: ec2-user
+  #         key: ${{ secrets.EC2_SSH_KEY }}
+  #         script_stop: true
+  #         script: |
+  #           set -e
+  #
+  #           echo "==> Logging into ECR (us-east-1)..."
+  #           aws ecr get-login-password --region us-east-1 | \
+  #             docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY_US }}
+  #
+  #           echo "==> Pulling latest image..."
+  #           cd /opt/athli
+  #           export ECR_REGISTRY=${{ secrets.ECR_REGISTRY_US }}/athli-api
+  #           export IMAGE_TAG=latest
+  #           docker compose -f docker-compose.prod.yml pull
+  #
+  #           echo "==> Starting containers..."
+  #           docker compose -f docker-compose.prod.yml up -d
+  #
+  #           echo "==> Waiting for health check..."
+  #           sleep 5
+  #           curl -sf http://localhost:3000/health || { echo "HEALTH CHECK FAILED"; exit 1; }
+  #
+  #           echo "==> Cleaning up old images..."
+  #           docker image prune -f
+  #
+  #           echo "==> Deploy complete!"
