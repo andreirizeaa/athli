@@ -2,7 +2,7 @@ import { apiFetch } from '@/lib/api-client';
 
 /**
  * Client notes service
- * Mirrors apps/athli-web-app/api/coach/coach-client-service.ts notes functionality
+ * Mirrors apps/web/api/coach/coach-client-service.ts notes functionality
  */
 
 export interface ClientNote {

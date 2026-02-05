@@ -13,7 +13,7 @@ import type {
 
 /**
  * Client metric service for metric tracking
- * Mirrors apps/athli-web-app/api/client/client-metric-service.ts
+ * Mirrors apps/web/api/client/client-metric-service.ts
  */
 
 // Re-export types from shared-types for backwards compatibility

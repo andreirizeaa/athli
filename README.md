@@ -8,10 +8,10 @@ This is a monorepo managed with [Turborepo](https://turbo.build/) and npm worksp
 
 ### Applications
 
-- **`apps/athli-landing-page`** - Marketing landing page (Next.js)
-- **`apps/athli-web-app`** - Main web application (Next.js)
-- **`apps/athli-mobile`** - Mobile application (React Native/Expo)
-- **`apps/athli-web-api`** - Web API backend (Express.js/TypeScript)
+- **`apps/marketing`** - Marketing landing page (Next.js)
+- **`apps/web`** - Main web application (Next.js)
+- **`apps/mobile`** - Mobile application (React Native/Expo)
+- **`apps/service`** - Web API backend (Express.js/TypeScript)
 
 
 ## Tech Stack
@@ -74,10 +74,10 @@ npm run dev
 
 This will start all apps in parallel using Turborepo. For specific application setup and ports, see the individual README files in each app directory:
 
-- [`apps/athli-landing-page/README.md`](./apps/athli-landing-page/README.md)
-- [`apps/athli-web-app/README.md`](./apps/athli-web-app/README.md)
-- [`apps/athli-mobile/README.md`](./apps/athli-mobile/README.md)
-- [`apps/athli-web-api/README.md`](./apps/athli-web-api/README.md)
+- [`apps/marketing/README.md`](./apps/marketing/README.md)
+- [`apps/web/README.md`](./apps/web/README.md)
+- [`apps/mobile/README.md`](./apps/mobile/README.md)
+- [`apps/service/README.md`](./apps/service/README.md)
 
 ## Available Scripts
 

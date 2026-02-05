@@ -16,7 +16,7 @@ import type {
 
 /**
  * Client form service for check-ins and questionnaires
- * Mirrors apps/athli-web-app/api/client/client-form-service.ts
+ * Mirrors apps/web/api/client/client-form-service.ts
  */
 
 // Extended QuestionAnswer with format field from API response

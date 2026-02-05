@@ -2,7 +2,7 @@ import { apiFetch } from '@/lib/api-client';
 
 /**
  * Client training service for workout and program management
- * Mirrors apps/athli-web-app/api/client/client-training-service.ts
+ * Mirrors apps/web/api/client/client-training-service.ts
  */
 
 export interface AssignWorkoutData {

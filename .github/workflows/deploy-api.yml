@@ -12,7 +12,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "apps/athli-web-api/**"
+      - "apps/service/**"
       - ".github/workflows/deploy-api.yml"
 
   # Manual trigger from GitHub Actions tab
@@ -55,7 +55,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          cd apps/athli-web-api
+          cd apps/service
 
           docker build --platform linux/amd64 \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \

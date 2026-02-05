@@ -1,7 +1,7 @@
 /**
  * MuscleWiki Service for Mobile App
  *
- * This service calls the athli-web-api backend for all exercise data.
+ * This service calls the service backend for all exercise data.
  * All MuscleWiki API interactions are handled by the backend with caching.
  */
 

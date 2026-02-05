@@ -46,13 +46,13 @@ next-env.d.ts
 
 .expo/
 
-# expo / react-native (athli-mobile)
-apps/athli-mobile/.expo/
-apps/athli-mobile/.expo-shared/
-apps/athli-mobile/ios/
-apps/athli-mobile/android/
-apps/athli-mobile/web-build/
-apps/athli-mobile/expo-env.d.ts
+# expo / react-native (mobile)
+apps/mobile/.expo/
+apps/mobile/.expo-shared/
+apps/mobile/ios/
+apps/mobile/android/
+apps/mobile/web-build/
+apps/mobile/expo-env.d.ts
 
 # native build artifacts
 *.jks
