@@ -607,7 +607,7 @@ const ClientHabitsPage = () => {
                         className={cn(
                           'w-full flex items-start gap-3 px-4 py-3 text-sm transition-colors text-left',
                           isSelected
-                            ? 'bg-accent text-accent-foreground'
+                            ? 'bg-accent/50 border-l-2 border-l-primary'
                             : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
                         )}
                       >

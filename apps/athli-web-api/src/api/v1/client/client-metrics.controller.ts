@@ -8,32 +8,26 @@ export const clientMetricsController = {
      * Context: Client (x-client-id) or Coach (x-coach-id + x-client-id)
      */
     getMetrics: async (req: Request, res: Response) => {
-        const userId = (req as any).userId; // Authenticated User ID
+        const userId = (req as any).userId;
         const clientIdHeader = req.header('x-client-id');
         const coachIdHeader = req.header('x-coach-id');
 
-        // IF acting as Coach: clientIdHeader is mandatory, coachIdHeader is mandatory (and must match auth user)
-        // IF acting as Client: clientIdHeader is optional (defaults to userId), coachIdHeader is optional (defaults to assigned coach?)
-        // WAIT: The user wants "x-client-id and x-coach-id sent in the request headers"
-
-        // 1. Determine Context
         let targetClientId: string;
         let targetCoachId: string | undefined;
 
-        if (coachIdHeader) {
-            // Coach View
-            if (coachIdHeader !== userId) {
-                // Ensure the authenticated user is actually the coach they claim to be?
-                // Or maybe the user IS the coach. 
-                // Let's assume userId is the coach_id if x-coach-id is present.
-                if (coachIdHeader !== userId) return unauthorized(res, { message: 'Coach ID mismatch' });
+        // Determine request context by matching userId to headers
+        const isCoachRequest = coachIdHeader && coachIdHeader === userId;
+
+        if (isCoachRequest) {
+            // COACH SCENARIO: Coach accessing client's data
+            if (!clientIdHeader) {
+                return forbidden(res, { message: 'x-client-id header required for coach requests' });
             }
-            if (!clientIdHeader) return forbidden(res, { message: 'x-client-id header required for coach view' });
 
-            targetClientId = clientIdHeader as string;
-            targetCoachId = coachIdHeader as string;
+            targetClientId = clientIdHeader;
+            targetCoachId = coachIdHeader;
 
-            // Verify Relationship
+            // Verify coach-client relationship
             const supabase = getSupabaseClient();
             const { data: relation } = await supabase
                 .from('coach_client_assignments')
@@ -42,21 +36,35 @@ export const clientMetricsController = {
                 .eq('client_id', targetClientId)
                 .single();
 
-            if (!relation) return forbidden(res, { message: 'Client not assigned to this coach' });
-
+            if (!relation) {
+                return forbidden(res, { message: 'Client not assigned to this coach' });
+            }
         } else {
-            // Client View
-            // If checking own metrics
-            if (clientIdHeader && clientIdHeader !== userId) return forbidden(res, { message: 'Client ID mismatch' });
-            targetClientId = userId;
+            // CLIENT SCENARIO: Client accessing their own data
+            // If x-client-id provided, it must match authenticated user
+            if (clientIdHeader && clientIdHeader !== userId) {
+                return forbidden(res, { message: 'Cannot access another client\'s data' });
+            }
 
-            // Client might have multiple coaches?
-            // "client routes also need to pass in the x-coach-id into the req headers too"
-            // So client must specify WHICH coach's metrics they want to see?
-            // "so this makes sure they get their relevant data only"
-            targetCoachId = coachIdHeader as string;
-            // If client doesn't send coach-id, do we show all? User says "composite pk... query with coach_id in key"
-            // So arguably, x-coach-id is REQUIRED if we want to hit the PK index efficiently or satisfy the logic.
+            targetClientId = clientIdHeader || userId;
+
+            // x-coach-id scopes to a specific coach relationship (optional)
+            if (coachIdHeader) {
+                // Verify client is assigned to this coach
+                const supabase = getSupabaseClient();
+                const { data: assignment } = await supabase
+                    .from('coach_client_assignments')
+                    .select('coach_id')
+                    .eq('client_id', targetClientId)
+                    .eq('coach_id', coachIdHeader)
+                    .single();
+
+                if (!assignment) {
+                    return forbidden(res, { message: 'Not assigned to this coach' });
+                }
+
+                targetCoachId = coachIdHeader;
+            }
         }
 
         const supabase = getSupabaseClient();

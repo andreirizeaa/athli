@@ -68,11 +68,11 @@ export const useAthleteDataStore = create<AthleteDataStore>((set, get) => ({
 
       // Fetch all data in parallel
       const [metricsData, habitsData, trainingData] = await Promise.all([
-        getMyMetrics().catch((err) => {
+        getMyMetrics(clientId, coachId).catch((err) => {
           console.warn('[AthleteDataStore] Failed to load metrics:', err);
           return [];
         }),
-        getMyHabits().catch((err) => {
+        getMyHabits(clientId, coachId).catch((err) => {
           console.warn('[AthleteDataStore] Failed to load habits:', err);
           return [];
         }),

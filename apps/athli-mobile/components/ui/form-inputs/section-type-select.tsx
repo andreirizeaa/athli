@@ -126,7 +126,7 @@ export const SectionTypeSelect = ({
       )}
 
       {/* Rounds field for Timed and Circuits */}
-      {(sectionType === 'timed' || sectionType === 'circuits') && onRoundsChange && (
+      {(sectionType === 'circuits') && onRoundsChange && (
         <>
           <View style={[styles.configDivider, { backgroundColor: themeColors.border }]} />
           <View

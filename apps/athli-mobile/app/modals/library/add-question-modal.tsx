@@ -180,6 +180,43 @@ export default function AddQuestionModal() {
     });
   }, [hasExistingProgressPhoto, isEditMode, params.questionFormat, params.formType, shouldHideMetrics]);
 
+  // Check if form has changed from original values (only relevant in edit mode)
+  // Moved up because handleClose depends on isDirty which depends on hasChanged
+  const hasChanged = useMemo(() => {
+    if (!isEditMode) return true; // In add mode, always allow save if valid
+
+    // Compare current values with original params
+    if (questionText !== (params.questionText || '')) return true;
+    if (selectedFormat !== (params.questionFormat || null)) return true;
+    if (isRequired !== (params.questionRequired !== 'false')) return true;
+
+    // Compare format-specific fields
+    if (selectedFormat === 'multipleChoice') {
+      const originalOptions: string[] = params.questionOptions ? JSON.parse(params.questionOptions) : [''];
+      if (JSON.stringify(options) !== JSON.stringify(originalOptions)) return true;
+    }
+    if (selectedFormat === 'images' || selectedFormat === 'videos') {
+      const originalMediaCount = params.questionMediaCount ? parseInt(params.questionMediaCount, 10) : 1;
+      if (mediaCount !== originalMediaCount) return true;
+    }
+    if (selectedFormat === 'metrics') {
+      if (selectedMetricId !== (params.questionMetricId || null)) return true;
+    }
+
+    return false;
+  }, [isEditMode, questionText, selectedFormat, isRequired, options, mediaCount, selectedMetricId, params]);
+
+  // Check if the form is dirty (has any unsaved changes)
+  // Moved up because handleClose depends on isDirty
+  const isDirty = useMemo(() => {
+    if (isEditMode) {
+      // In edit mode, dirty if something has changed from original
+      return hasChanged;
+    }
+    // In add mode, dirty if user has started filling the form
+    return selectedFormat !== null || questionText.trim() !== '';
+  }, [isEditMode, hasChanged, selectedFormat, questionText]);
+
   const handleClose = useCallback(() => {
     if (isDirty) {
       setShowDiscardDialog(true);
@@ -256,43 +293,8 @@ export default function AddQuestionModal() {
     return true;
   }, [questionText, selectedFormat, options, selectedMetricId]);
 
-  // Check if form has changed from original values (only relevant in edit mode)
-  const hasChanged = useMemo(() => {
-    if (!isEditMode) return true; // In add mode, always allow save if valid
-
-    // Compare current values with original params
-    if (questionText !== (params.questionText || '')) return true;
-    if (selectedFormat !== (params.questionFormat || null)) return true;
-    if (isRequired !== (params.questionRequired !== 'false')) return true;
-
-    // Compare format-specific fields
-    if (selectedFormat === 'multipleChoice') {
-      const originalOptions: string[] = params.questionOptions ? JSON.parse(params.questionOptions) : [''];
-      if (JSON.stringify(options) !== JSON.stringify(originalOptions)) return true;
-    }
-    if (selectedFormat === 'images' || selectedFormat === 'videos') {
-      const originalMediaCount = params.questionMediaCount ? parseInt(params.questionMediaCount, 10) : 1;
-      if (mediaCount !== originalMediaCount) return true;
-    }
-    if (selectedFormat === 'metrics') {
-      if (selectedMetricId !== (params.questionMetricId || null)) return true;
-    }
-
-    return false;
-  }, [isEditMode, questionText, selectedFormat, isRequired, options, mediaCount, selectedMetricId, params]);
-
   // Combine validation and change detection for save button
   const canSave = isValid && hasChanged;
-
-  // Check if the form is dirty (has any unsaved changes)
-  const isDirty = useMemo(() => {
-    if (isEditMode) {
-      // In edit mode, dirty if something has changed from original
-      return hasChanged;
-    }
-    // In add mode, dirty if user has started filling the form
-    return selectedFormat !== null || questionText.trim() !== '';
-  }, [isEditMode, hasChanged, selectedFormat, questionText]);
 
   const selectedFormatInfo = useMemo(() => {
     if (!selectedFormat) return null;
@@ -493,7 +495,7 @@ export default function AddQuestionModal() {
                         },
                       ]}
                     >
-                      <Trash2 size={20} color={themeColors.text} />
+                      <Trash2 size={20} />
                     </SquircleView>
                   </PressableOpacity>
                 )}

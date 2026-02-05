@@ -365,7 +365,7 @@ export default function WorkoutSessionModal() {
   const [showSupersetOverlay, setShowSupersetOverlay] = useState(false);
   const [supersetMessage, setSupersetMessage] = useState('');
   const supersetOverlayOpacity = useSharedValue(0);
-  const supersetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const supersetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousStepRef = useRef(currentStep);
 
   // Completion celebration overlay state
@@ -373,7 +373,7 @@ export default function WorkoutSessionModal() {
   const [completionMessage, setCompletionMessage] = useState('');
   const completionOverlayOpacity = useSharedValue(0);
   const completionTextScale = useSharedValue(0.5);
-  const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const completionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastCompletionMessageRef = useRef(-1);
 
   // Phase overlay state (for WORK/REST transitions, next round, etc.)

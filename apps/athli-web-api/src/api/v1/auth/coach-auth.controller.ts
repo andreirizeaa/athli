@@ -27,7 +27,8 @@ export class CoachAuthController {
         });
 
         if (authError) {
-            throw new Error(`Registration failed: ${authError.message}`);
+            console.error('Coach registration failed:', authError.message);
+            throw new Error('Registration failed. Please try again.');
         }
 
         if (!authData.user) {
@@ -77,33 +78,40 @@ export class CoachAuthController {
                 return unauthorized(res, { message: 'Invalid Google token' });
             }
 
+            if (!payload.email) {
+                return unauthorized(res, { message: 'Google account has no verified email' });
+            }
+
             const googleUser = {
-                email: payload.email!,
+                email: payload.email,
                 name: payload.name || '',
                 picture: payload.picture,
                 sub: payload.sub,
             };
 
-            // Check if user exists
-            const { data: existingUsers, error: listError } = await supabase.auth.admin.listUsers();
+            // Check if user exists by querying user_profiles (avoids loading all users)
+            const { data: existingProfile, error: profileError } = await supabase
+                .from('user_profiles')
+                .select('id')
+                .eq('email', googleUser.email)
+                .limit(1)
+                .maybeSingle();
 
-            if (listError) {
-                throw new Error(`Failed to check existing users: ${listError.message}`);
+            if (profileError && profileError.code !== 'PGRST116') {
+                throw new Error('Failed to check existing users');
             }
-
-            const existingUser = existingUsers.users.find((u) => u.email === googleUser.email);
 
             let userId: string;
             let isNew = false;
 
-            if (existingUser) {
-                userId = existingUser.id;
+            if (existingProfile) {
+                userId = existingProfile.id;
 
                 // Verify user is a coach
                 const { data: coachProfile } = await supabase
                     .from('coach_profiles')
                     .select('id')
-                    .eq('id', existingUser.id)
+                    .eq('id', existingProfile.id)
                     .single();
 
                 if (!coachProfile) {
@@ -125,7 +133,8 @@ export class CoachAuthController {
                 });
 
                 if (createError || !newUser.user) {
-                    throw new Error(`Failed to create user: ${createError?.message || 'Unknown error'}`);
+                    console.error('Failed to create coach user:', createError?.message);
+                    throw new Error('Failed to create user account');
                 }
 
                 userId = newUser.user.id;
@@ -133,14 +142,14 @@ export class CoachAuthController {
             }
 
             // Get coach profile using the full view (merges user_profiles)
-            const { data: profile, error: profileError } = await supabase
+            const { data: profile, error: profileFetchError } = await supabase
                 .from('coach_profiles_full')
                 .select('*')
                 .eq('id', userId)
                 .single();
 
-            if (profileError) {
-                console.error('Profile fetch error:', profileError);
+            if (profileFetchError) {
+                console.error('Profile fetch error:', profileFetchError);
             }
 
             // Generate magic link for session

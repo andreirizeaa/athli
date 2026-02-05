@@ -5,7 +5,8 @@ import { avatarService } from '../../../services/avatar.service';
 import * as crypto from 'crypto';
 
 const getActingCoachId = (req: Request): string | null => {
-    return (req.header('x-coach-id') as string) || (req as any).userId || null;
+    // Always use the authenticated userId - never trust client-supplied headers
+    return (req as any).userId || null;
 };
 
 export const coachClientController = {
@@ -29,7 +30,7 @@ export const coachClientController = {
             .eq('is_archived', false);
 
         if (error) {
-            return res.status(500).json({ success: false, message: error.message });
+            return res.status(500).json({ success: false, message: 'An unexpected error occurred. Please try again later.' });
         }
 
         success(res, {
@@ -72,7 +73,7 @@ export const coachClientController = {
         if (error || !client) {
             if (error?.code !== 'PGRST116') { // PGRST116 is "The result contains 0 rows"
                 console.error('Error fetching client:', error);
-                return res.status(500).json({ success: false, message: error?.message || 'Error fetching client' });
+                return res.status(500).json({ success: false, message: 'Error fetching client' });
             }
             return notFound(res, { message: 'Client not found' });
         }
@@ -220,7 +221,7 @@ export const coachClientController = {
                 results.push(clientId);
             } catch (err: any) {
                 console.error(`Failed to handle client ${email}:`, err);
-                lastError = err.message || JSON.stringify(err);
+                lastError = 'Failed to create client';
                 // Continue with next client
             }
         }
@@ -240,7 +241,7 @@ export const coachClientController = {
             .eq('coach_id', coachId);
 
         if (fetchError) {
-            return res.status(500).json({ success: false, message: fetchError.message });
+            return res.status(500).json({ success: false, message: 'Failed to fetch clients' });
         }
 
         created(res, {
@@ -379,7 +380,7 @@ export const coachClientController = {
             });
         } catch (error: any) {
             console.error('Error updating client:', error);
-            return res.status(500).json({ success: false, message: error.message || 'Failed to update client' });
+            return res.status(500).json({ success: false, message: 'Failed to update client' });
         }
     },
 
@@ -476,7 +477,7 @@ export const coachClientController = {
             noContent(res);
         } catch (error: any) {
             console.error('Error deleting client data:', error);
-            return res.status(500).json({ success: false, message: error.message || 'Failed to delete client data' });
+            return res.status(500).json({ success: false, message: 'Failed to delete client data' });
         }
     },
 
@@ -498,7 +499,7 @@ export const coachClientController = {
             .eq('is_archived', true);
 
         if (error) {
-            return res.status(500).json({ success: false, message: error.message });
+            return res.status(500).json({ success: false, message: 'An unexpected error occurred. Please try again later.' });
         }
 
         success(res, {
@@ -533,7 +534,7 @@ export const coachClientController = {
             .in('client_id', clientIds);
 
         if (assignmentError) {
-            return res.status(500).json({ success: false, message: assignmentError.message });
+            return res.status(500).json({ success: false, message: 'Failed to verify client assignments' });
         }
 
         if (!assignments || assignments.length !== clientIds.length) {
@@ -554,7 +555,7 @@ export const coachClientController = {
             .in('client_id', clientIds);
 
         if (updateError) {
-            return res.status(500).json({ success: false, message: updateError.message });
+            return res.status(500).json({ success: false, message: 'Failed to restore clients' });
         }
 
         // Unarchive conversation_participants for each restored client
@@ -618,7 +619,7 @@ export const coachClientController = {
         // - Client name (client.full_name)
         // - Invitation link with token
         // - Coach information
-        console.log(`TODO: Send invitation email to ${client.email} with token ${client.invitation_token}`);
+        // TODO: Integrate email invitation service here
 
         success(res, {
             message: 'Invitation resent successfully',
@@ -658,7 +659,7 @@ export const coachClientController = {
             .order('last_activity', { ascending: true });
 
         if (error) {
-            return res.status(500).json({ success: false, message: error.message });
+            return res.status(500).json({ success: false, message: 'An unexpected error occurred. Please try again later.' });
         }
 
         success(res, {
@@ -699,7 +700,7 @@ export const coachClientController = {
 
         if (historyError) {
             console.error('Error fetching training history:', historyError);
-            return res.status(500).json({ success: false, message: historyError.message });
+            return res.status(500).json({ success: false, message: 'Failed to fetch training history' });
         }
 
         if (!historyItems || historyItems.length === 0) {

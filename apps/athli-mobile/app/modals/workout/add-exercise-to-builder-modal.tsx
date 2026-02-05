@@ -297,7 +297,7 @@ export default function AddExerciseToBuilderModal() {
                         )}
                         {/* Play button overlay */}
                         <View style={styles.playOverlay}>
-                            <Play size={10} color="#000" fill="#000" />
+                            <Play size={10} />
                         </View>
                     </View>
                 </PressableScale>

@@ -7,6 +7,8 @@ import {
   loginRateLimiter,
   otpRateLimiter,
   passwordResetRateLimiter,
+  registrationRateLimiter,
+  authCheckRateLimiter,
 } from '../../../middlewares/rate-limit';
 import {
   registerSchema,
@@ -54,7 +56,7 @@ export const authRouter = Router();
  *       201:
  *         description: User registered successfully
  */
-authRouter.post('/register', validate(registerSchema), authController.register);
+authRouter.post('/register', registrationRateLimiter, validate(registerSchema), authController.register);
 
 /**
  * @swagger
@@ -152,7 +154,7 @@ authRouter.post('/login', loginRateLimiter, validate(loginSchema), authControlle
  *       200:
  *         description: Auth provider info returned
  */
-authRouter.post('/check-auth-provider', validate(checkAuthProviderSchema), authController.checkAuthProvider);
+authRouter.post('/check-auth-provider', authCheckRateLimiter, validate(checkAuthProviderSchema), authController.checkAuthProvider);
 
 /**
  * @swagger
@@ -227,7 +229,7 @@ authRouter.post('/reset-password', otpRateLimiter, validate(resetPasswordSchema)
  *       200:
  *         description: Login successful
  */
-authRouter.post('/google', validate(googleAuthSchema), authController.googleAuth);
+authRouter.post('/google', loginRateLimiter, validate(googleAuthSchema), authController.googleAuth);
 
 
 /**

@@ -11,7 +11,7 @@ export type TypographyStyle = Pick<TextStyle, 'fontSize' | 'fontWeight' | 'fontF
 export const headingFontFamily = Platform.OS === 'ios' ? 'SF Pro Display' : 'Roboto';
 export const bodyFontFamily = Platform.OS === 'ios' ? 'SF Pro Text' : 'Roboto';
 
-export const typography: Record<TextVariant, TypographyStyle> = {
+export const typography: Record<TextVariant, TypographyStyle> & { caption: TypographyStyle } = {
   // Headings: descending sizes and weights (all with heading font)
   h1: { fontSize: 34, fontWeight: '700', fontFamily: headingFontFamily },
   h2: { fontSize: 30, fontWeight: '600', fontFamily: headingFontFamily },
@@ -31,6 +31,9 @@ export const typography: Record<TextVariant, TypographyStyle> = {
   p6: { fontSize: 11, fontWeight: '400', fontFamily: bodyFontFamily },
   p7: { fontSize: 10, fontWeight: '400', fontFamily: bodyFontFamily },
   p8: { fontSize: 9, fontWeight: '400', fontFamily: bodyFontFamily },
+
+  // Special variants
+  caption: { fontSize: 11, fontWeight: '400', fontFamily: bodyFontFamily },
 };
 
 export const getTypographyStyle = (variant: TextVariant): TypographyStyle => {

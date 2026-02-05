@@ -122,15 +122,20 @@ class AuthService {
   async sendSecurityOTP(email: string) {
     const supabase = getSupabaseClient();
 
-    // Check if user exists first
-    const { data: users, error: listError } = await supabase.auth.admin.listUsers();
+    // Check if user exists by querying user_profiles (avoids loading all users)
+    const { data: existingProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('email', email)
+      .limit(1)
+      .maybeSingle();
 
-    if (listError) {
-      console.error('Security OTP user check error:', listError.message);
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error('Security OTP user check error:', profileError.message);
       throw new Error('Failed to send security verification code. Please try again.');
     }
 
-    const userExists = users.users.some((u) => u.email === email);
+    const userExists = !!existingProfile;
 
     if (userExists) {
       // For existing users, use signInWithOtp with anon key
@@ -246,22 +251,38 @@ class AuthService {
   async checkAuthProvider(email: string): Promise<{ provider: 'email' | 'google' | 'apple' | null; exists: boolean }> {
     const supabase = getSupabaseClient();
 
-    // Check if user exists using admin API
-    const { data: users, error: listError } = await supabase.auth.admin.listUsers();
+    // First check user_profiles (indexed by email, avoids loading all users)
+    const { data: userProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id, signin_method')
+      .eq('email', email)
+      .limit(1)
+      .maybeSingle();
 
-    if (listError) {
-      console.error('Auth provider check error:', listError.message);
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error('Auth provider check error:', profileError.message);
       throw new Error('Unable to check authentication provider. Please try again.');
     }
 
-    const user = users.users.find((u) => u.email === email);
-
-    if (!user) {
+    if (!userProfile) {
       return { provider: null, exists: false };
     }
 
-    // Check app_metadata for provider (most reliable)
-    const appProvider = user.app_metadata?.provider as string;
+    // If user_profiles has a signin_method, use it as the source of truth
+    if (userProfile.signin_method) {
+      const method = userProfile.signin_method as 'email' | 'google' | 'apple';
+      return { provider: method, exists: true };
+    }
+
+    // Fallback: check auth metadata for a single user by ID
+    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userProfile.id);
+
+    if (authError || !authUser.user) {
+      // User exists in profiles but not in auth — still report as existing
+      return { provider: 'email', exists: true };
+    }
+
+    const appProvider = authUser.user.app_metadata?.provider as string;
 
     if (appProvider === 'google') {
       return { provider: 'google', exists: true };
@@ -272,9 +293,8 @@ class AuthService {
     }
 
     // Check user_metadata for additional indicators
-    const userMetadata = user.user_metadata || {};
+    const userMetadata = authUser.user.user_metadata || {};
 
-    // Check issuer (iss) field
     if (userMetadata.iss) {
       if (userMetadata.iss.includes('appleid.apple.com')) {
         return { provider: 'apple', exists: true };
@@ -292,17 +312,6 @@ class AuthService {
     // Check for Google-specific indicators
     if (userMetadata.picture && userMetadata.picture.includes('googleusercontent.com')) {
       return { provider: 'google', exists: true };
-    }
-
-    // Check user_profiles for signin_method (single source of truth)
-    const { data: userProfile } = await supabase
-      .from('user_profiles')
-      .select('signin_method')
-      .eq('id', user.id)
-      .single();
-
-    if (userProfile?.signin_method && userProfile.signin_method !== 'email') {
-      return { provider: userProfile.signin_method as 'google' | 'apple', exists: true };
     }
 
     // Default to email
@@ -362,21 +371,24 @@ class AuthService {
   async handleGoogleAuth(googleUser: GoogleUser) {
     const supabase = getSupabaseClient();
 
-    // Check if user exists using admin API
-    const { data: existingUsers, error: listError } = await supabase.auth.admin.listUsers();
+    // Check if user exists by querying user_profiles (avoids loading all users)
+    const { data: existingProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('email', googleUser.email)
+      .limit(1)
+      .maybeSingle();
 
-    if (listError) {
-      console.error('Google auth user check error:', listError.message);
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error('Google auth user check error:', profileError.message);
       throw new Error('Authentication failed. Please try again.');
     }
-
-    const existingUser = existingUsers.users.find((u) => u.email === googleUser.email);
 
     let userId: string;
     let isNew = false;
 
-    if (existingUser) {
-      userId = existingUser.id;
+    if (existingProfile) {
+      userId = existingProfile.id;
     } else {
       // Create new user
       const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
@@ -430,28 +442,19 @@ class AuthService {
 
 
   /**
-   * Verify JWT token
+   * Verify JWT token using Supabase's server-side verification
    */
-  verifyToken(token: string): { userId: string } | null {
+  async verifyToken(token: string): Promise<{ userId: string } | null> {
     const supabase = getSupabaseClient();
 
     try {
-      // Use Supabase to verify the JWT token
-      // Note: This is a synchronous check of the JWT signature
-      // For production, you may want to use supabase.auth.getUser(token) which is async
-      const decoded = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+      const { data: { user }, error } = await supabase.auth.getUser(token);
 
-      // Basic validation - check if token has required fields and isn't expired
-      if (!decoded.sub || !decoded.exp) {
+      if (error || !user) {
         return null;
       }
 
-      // Check if token is expired
-      if (decoded.exp * 1000 < Date.now()) {
-        return null;
-      }
-
-      return { userId: decoded.sub };
+      return { userId: user.id };
     } catch (error) {
       return null;
     }

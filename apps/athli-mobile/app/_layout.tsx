@@ -1371,9 +1371,11 @@ function RootLayoutNav() {
           <Stack.Screen
             name="modals/training/workout-preview-modal"
             options={{
-              presentation: 'modal',
+              presentation: 'card',
               headerShown: false,
               animation: 'slide_from_bottom',
+              animationDuration: 200,
+              gestureEnabled: false,
             }}
           />
           <Stack.Screen

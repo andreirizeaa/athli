@@ -19,6 +19,9 @@ import type {
  * Mirrors apps/athli-web-app/api/client/client-form-service.ts
  */
 
+// Extended QuestionAnswer with format field from API response
+export type QuestionAnswerWithFormat = QuestionAnswer & { format?: string };
+
 // Re-export types from shared-types for backwards compatibility
 export type {
   Question,
@@ -104,7 +107,7 @@ export const getClientQuestionnaire = async (
 
   return {
     ...response.data,
-    sentAt: new Date(response.data.sentAt),
+    sentAt: response.data.sentAt ? new Date(response.data.sentAt) : undefined,
     completedAt: response.data.completedAt ? new Date(response.data.completedAt) : undefined,
   };
 };
@@ -540,9 +543,12 @@ export type AthleteQuestionnaire = {
 /**
  * Get questionnaires for the authenticated athlete (self-access)
  */
-export const getMyQuestionnaires = async (): Promise<AthleteQuestionnaire[]> => {
+export const getMyQuestionnaires = async (clientId: string, coachId: string): Promise<AthleteQuestionnaire[]> => {
   const response = await apiFetch<{ success: boolean; data: { questionnaires: any[] } }>(
-    '/client/forms/questionnaires'
+    '/client/forms/questionnaires',
+    {
+      headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+    }
   );
 
   return (response.data.questionnaires || []).map((q: any) => ({
@@ -563,7 +569,7 @@ export const getMyQuestionnaires = async (): Promise<AthleteQuestionnaire[]> => 
  */
 export type SubmitQuestionnaireData = {
   questionnaireId: string;
-  answers: QuestionAnswer[];
+  answers: QuestionAnswerWithFormat[];
 };
 
 /**
@@ -596,7 +602,7 @@ const convertToBase64 = async (uri: string, mimeType: string): Promise<string> =
   });
 };
 
-export const submitMyQuestionnaire = async (data: SubmitQuestionnaireData): Promise<void> => {
+export const submitMyQuestionnaire = async (data: SubmitQuestionnaireData, clientId: string, coachId: string): Promise<void> => {
   // Check if we have any video files that need FormData (too large for base64)
   // Must check ALL answers, not use some() which stops early
   const hasVideoFiles = data.answers.some((answer) => {
@@ -608,7 +614,8 @@ export const submitMyQuestionnaire = async (data: SubmitQuestionnaireData): Prom
   });
 
   // Process answers - convert images and progress photos to base64
-  const processedAnswers = [...data.answers];
+  // Use any[] since we modify answer shapes during processing
+  const processedAnswers: any[] = [...data.answers];
 
   for (let i = 0; i < processedAnswers.length; i++) {
     const answer = processedAnswers[i];
@@ -660,6 +667,7 @@ export const submitMyQuestionnaire = async (data: SubmitQuestionnaireData): Prom
   if (!hasVideoFiles) {
     await apiFetch(`/client/forms/questionnaires/${data.questionnaireId}/submit`, {
       method: 'POST',
+      headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
       body: JSON.stringify({
         answers: processedAnswers,
       }),
@@ -704,6 +712,7 @@ export const submitMyQuestionnaire = async (data: SubmitQuestionnaireData): Prom
   // Submit with FormData
   await apiFetch(`/client/forms/questionnaires/${data.questionnaireId}/submit`, {
     method: 'POST',
+    headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
     body: formData,
     // Don't set Content-Type header - let fetch set it with boundary for multipart
   });

@@ -72,7 +72,7 @@ exercisesRouter.get('/filters', exercisesController.getFilterOptions);
  *       200:
  *         description: Cache status retrieved successfully
  */
-exercisesRouter.get('/cache/status', exercisesController.getCacheStatus);
+exercisesRouter.get('/cache/status', supabaseAuthenticate, exercisesController.getCacheStatus);
 
 /**
  * @swagger
@@ -91,7 +91,7 @@ exercisesRouter.get('/cache/status', exercisesController.getCacheStatus);
  *       200:
  *         description: Compliance report retrieved successfully
  */
-exercisesRouter.get('/compliance', exercisesController.getComplianceReport);
+exercisesRouter.get('/compliance', supabaseAuthenticate, exercisesController.getComplianceReport);
 
 /**
  * @swagger

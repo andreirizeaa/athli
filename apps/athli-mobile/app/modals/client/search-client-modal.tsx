@@ -181,7 +181,6 @@ export default function SearchClientModal() {
             )
           }
           showsVerticalScrollIndicator={false}
-          estimatedItemSize={72}
         />
       </View>
     </View>
