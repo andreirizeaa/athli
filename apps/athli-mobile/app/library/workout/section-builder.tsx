@@ -164,8 +164,8 @@ export default function SectionBuilderScreen() {
                     const apiExercises: any[] = [];
                     const exerciseGroups: any[] = [];
 
-                    if (sectionType === 'amrap' || sectionType === 'timed') {
-                        // AMRAP/Timed: exercises is a flat array of RoundExercisePayload
+                    if (sectionType === 'amrap') {
+                        // AMRAP: exercises is a flat array of RoundExercisePayload
                         // Each exercise has trackableField1/trackableField2, not sets array
                         exerciseData.forEach((ex: any) => {
                             apiExercises.push({
@@ -499,7 +499,7 @@ export default function SectionBuilderScreen() {
             }
         }
 
-        if (state.sectionType === 'timed' || state.sectionType === 'circuits') {
+        if (state.sectionType === 'circuits') {
             const rounds = parseInt(state.rounds);
             if (!state.rounds.trim() || isNaN(rounds) || rounds <= 0) {
                 sectionMetadataError.roundsError = true;
@@ -1003,7 +1003,7 @@ export default function SectionBuilderScreen() {
 
                                 // If changing to amrap, timed, or circuits, trim all exercises to one set each
                                 // These section types only support one set per exercise (values per round)
-                                if (newType === 'amrap' || newType === 'timed' || newType === 'circuits') {
+                                if (newType === 'amrap' || newType === 'circuits') {
                                     updatedExercises = updatedExercises.map(ex => ({
                                         ...ex,
                                         sets: ex.sets.length > 0 ? [ex.sets[0]] : ex.sets,

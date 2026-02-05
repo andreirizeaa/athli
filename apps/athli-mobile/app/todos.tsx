@@ -269,7 +269,7 @@ export default function TodosScreen() {
         <PressableOpacity
           style={styles.taskPressable}
           onPress={() => handleEditTodo(item)}
-          disabled={isCompleting}
+          enabled={!isCompleting}
         >
           {hasAvatar && (
             <Image
@@ -452,7 +452,6 @@ export default function TodosScreen() {
           ListHeaderComponent={ListHeader}
           ListEmptyComponent={() => renderEmptyState(false)}
           showsVerticalScrollIndicator={false}
-          estimatedItemSize={64}
           extraData={completingIds}
         />
       ) : (
@@ -465,7 +464,6 @@ export default function TodosScreen() {
           ListHeaderComponent={ListHeader}
           ListEmptyComponent={() => renderEmptyState(true)}
           showsVerticalScrollIndicator={false}
-          estimatedItemSize={64}
           extraData={completingIds}
         />
       )}

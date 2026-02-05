@@ -19,6 +19,9 @@ import type {
  * Mirrors apps/athli-web-app/api/client/client-form-service.ts
  */
 
+// Extended QuestionAnswer with format field from API response
+export type QuestionAnswerWithFormat = QuestionAnswer & { format?: string };
+
 // Re-export types from shared-types for backwards compatibility
 export type {
   Question,
@@ -104,7 +107,7 @@ export const getClientQuestionnaire = async (
 
   return {
     ...response.data,
-    sentAt: new Date(response.data.sentAt),
+    sentAt: response.data.sentAt ? new Date(response.data.sentAt) : undefined,
     completedAt: response.data.completedAt ? new Date(response.data.completedAt) : undefined,
   };
 };
@@ -566,7 +569,7 @@ export const getMyQuestionnaires = async (clientId: string, coachId: string): Pr
  */
 export type SubmitQuestionnaireData = {
   questionnaireId: string;
-  answers: QuestionAnswer[];
+  answers: QuestionAnswerWithFormat[];
 };
 
 /**
@@ -611,7 +614,8 @@ export const submitMyQuestionnaire = async (data: SubmitQuestionnaireData, clien
   });
 
   // Process answers - convert images and progress photos to base64
-  const processedAnswers = [...data.answers];
+  // Use any[] since we modify answer shapes during processing
+  const processedAnswers: any[] = [...data.answers];
 
   for (let i = 0; i < processedAnswers.length; i++) {
     const answer = processedAnswers[i];

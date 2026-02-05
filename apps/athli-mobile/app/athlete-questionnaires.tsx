@@ -260,7 +260,6 @@ export default function AthleteQuestionnairesScreen() {
           ListHeaderComponent={ListHeader}
           ListEmptyComponent={() => renderEmptyState(selectedTab === 'historic')}
           showsVerticalScrollIndicator={false}
-          estimatedItemSize={80}
         />
       )}
 

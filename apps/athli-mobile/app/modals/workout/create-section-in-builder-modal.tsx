@@ -169,27 +169,6 @@ export default function CreateSectionInBuilderModal() {
                             </>
                         )}
 
-                        {sectionType === 'timed' && (
-                            <>
-                                <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
-                                <View style={styles.fieldRow}>
-                                    <View style={styles.labelContainer}>
-                                        <Text style={[styles.fieldLabel, { color: themeColors.mutedText }]}>Rounds</Text>
-                                        <Text style={styles.requiredAsterisk}>*</Text>
-                                    </View>
-                                    <View style={[styles.dropdownValueRow, { flex: 1, justifyContent: 'flex-end' }]}>
-                                        <TextInput
-                                            value={rounds}
-                                            onChangeText={setRounds}
-                                            placeholder="0"
-                                            placeholderTextColor={themeColors.mutedText}
-                                            keyboardType="number-pad"
-                                            style={[styles.dropdownValue, { color: themeColors.text, textAlign: 'right', minWidth: 120, height: '100%' }]}
-                                        />
-                                    </View>
-                                </View>
-                            </>
-                        )}
                     </View>
 
                     <TextAreaInput

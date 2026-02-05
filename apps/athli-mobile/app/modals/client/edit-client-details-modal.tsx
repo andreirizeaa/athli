@@ -423,7 +423,7 @@ export default function EditClientDetailsModal() {
             <SelectInput
               label={t('clients.editClientModal.type')}
               value={category}
-              onChange={setCategory}
+              onChange={(value) => value && setCategory(value)}
               options={categoryOptions}
               placeholder={t('clients.editClientModal.typePlaceholder')}
               clearable={false}

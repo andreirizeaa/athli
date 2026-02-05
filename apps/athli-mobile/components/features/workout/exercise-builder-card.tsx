@@ -356,7 +356,7 @@ export const ExerciseBuilderCard = ({
                                     { backgroundColor: themeColors.surfacePrimary }
                                 ]}
                             >
-                                <Dumbbell size={24} color={themeColors.mutedText} />
+                                <Dumbbell size={24} />
                             </SquircleView>
                         )}
                     </View>
@@ -636,10 +636,10 @@ export const ExerciseBuilderCard = ({
                             </Text>
                             {validAlternatives.map((alt, index) => {
                                 // Determine if this alternative is a custom exercise
-                                const isAltCustom = alt.imageUrl && (
+                                const isAltCustom = !!(alt.imageUrl && (
                                     alt.imageUrl.includes('supabase.co') ||
                                     (alt.imageUrl.startsWith('http') && !alt.imageUrl.includes('musclewiki'))
-                                );
+                                ));
                                 // Get the appropriate thumbnail URL
                                 const rawAltThumbnailUrl = alt.imageUrl?.includes('og_images') ? alt.imageUrl : undefined;
                                 const cachedAltThumbnail = rawAltThumbnailUrl ? getAlternativeThumbnailUrl(rawAltThumbnailUrl) : '';
@@ -674,7 +674,7 @@ export const ExerciseBuilderCard = ({
                                                             styles.smallThumbnail,
                                                             { backgroundColor: themeColors.surfacePrimary, alignItems: 'center', justifyContent: 'center' }
                                                         ]}>
-                                                            <Dumbbell size={12} color={themeColors.mutedText} />
+                                                            <Dumbbell size={12} />
                                                         </View>
                                                     )}
                                                 </View>

@@ -63,7 +63,7 @@ export default function FeatureRequestsScreen() {
   const updateRequestUpvote = useFeatureRequestsStore((state) => state.updateRequestUpvote);
 
   // List ref for scrolling
-  const listRef = useRef<FlashList<FeatureRequest>>(null);
+  const listRef = useRef<React.ElementRef<typeof FlashList<FeatureRequest>>>(null);
 
   // Scroll to top when sort changes
   useEffect(() => {

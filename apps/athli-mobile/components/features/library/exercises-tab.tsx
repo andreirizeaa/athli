@@ -77,7 +77,7 @@ const ExerciseThumbnail = ({ videoLink, themeColors, onPress }: ExerciseThumbnai
           {/* Play icon overlay */}
           <View style={styles.playIconOverlay}>
             <View style={styles.playIconCircle}>
-              <Play size={10} color="#fff" fill="#fff" />
+              <Play size={10} />
             </View>
           </View>
         </View>
@@ -112,7 +112,7 @@ const ExerciseThumbnail = ({ videoLink, themeColors, onPress }: ExerciseThumbnai
           style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}
         >
           <View style={[styles.videoIndicator, { backgroundColor: themeColors.primary }]}>
-            <Play size={16} color="#fff" fill="#fff" />
+            <Play size={16} />
           </View>
         </SquircleView>
       ) : (

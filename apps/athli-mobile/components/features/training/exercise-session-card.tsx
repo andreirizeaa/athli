@@ -68,7 +68,7 @@ export const ExerciseSessionCard = ({
   
   // Rest timer state
   const [activeRestTimer, setActiveRestTimer] = useState<{ setIndex: number; restSec: number; timeRemaining: number } | null>(null);
-  const restTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const restTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const hasAlternatives = alternatives.length > 0;
 
@@ -183,8 +183,8 @@ export const ExerciseSessionCard = ({
   const displayThumbnailUrl = isCustomExercise ? exerciseImageUrl : (cachedThumbnailUrl || exerciseImageUrl);
 
   // Determine which columns to show (hide if None or Optional)
-  const showColumn1 = exercise.column1Label && exercise.column1Label !== 'None' && exercise.column1Label !== 'Optional';
-  const showColumn2 = exercise.column2Label && exercise.column2Label !== 'None' && exercise.column2Label !== 'Optional';
+  const showColumn1 = !!(exercise.column1Label && exercise.column1Label !== 'None' && exercise.column1Label !== 'Optional');
+  const showColumn2 = !!(exercise.column2Label && exercise.column2Label !== 'None' && exercise.column2Label !== 'Optional');
   const showBothColumns = showColumn1 && showColumn2;
   const showNoColumns = !showColumn1 && !showColumn2;
 
@@ -255,7 +255,7 @@ export const ExerciseSessionCard = ({
               />
             ) : (
               <View style={[styles.thumbnail, { backgroundColor: themeColors.surfacePrimary, alignItems: 'center', justifyContent: 'center' }]}>
-                <Dumbbell size={24} color={themeColors.mutedText} />
+                <Dumbbell size={24} />
               </View>
             )}
           </View>
@@ -338,7 +338,7 @@ export const ExerciseSessionCard = ({
         )}
         {showNoColumns && <View style={styles.spacer} />}
         <View style={styles.completeHeaderSpacer}>
-          <Check size={16} color={themeColors.mutedText} strokeWidth={2.5} />
+          <Check size={16} />
         </View>
       </View>
 
@@ -359,7 +359,7 @@ export const ExerciseSessionCard = ({
             isCheckboxEnabled={nextSetToComplete === -1 || set.completed === 'completed' || index === nextSetToComplete}
           />
           {/* Rest Timer - always visible for non-superset exercises, show rest duration by default */}
-          {!isSuperset && index < exercise.sets.length - 1 && set.restSec > 0 && (
+          {!isSuperset && index < exercise.sets.length - 1 && (set.restSec ?? 0) > 0 && (
             <View style={styles.restTimerCardContainer}>
               {activeRestTimer?.setIndex === index ? (
                 <Card
@@ -383,7 +383,7 @@ export const ExerciseSessionCard = ({
               ) : (
                 <Card variant="form" style={styles.restTimerCard}>
                   <Text style={[styles.restTimerTime, { color: themeColors.text }]}>
-                    {formatRestTime(set.restSec)}{' '}
+                    {formatRestTime(set.restSec ?? 0)}{' '}
                     <Text style={[styles.restTimerSuffix, { color: themeColors.text }]}>
                       Rest
                     </Text>
@@ -606,7 +606,7 @@ const SetRow = ({
           }
         ]}>
           {isCompleted && (
-            <Check size={16} color="#FFFFFF" strokeWidth={3} />
+            <Check size={16} />
           )}
         </View>
       </PressableScale>
@@ -640,7 +640,7 @@ const AlternativeCard = ({ alternative, themeColors, onSelect }: AlternativeCard
             />
           ) : (
             <View style={[styles.alternativeThumbnail, { backgroundColor: themeColors.surfacePrimary, alignItems: 'center', justifyContent: 'center' }]}>
-              <Dumbbell size={20} color={themeColors.mutedText} />
+              <Dumbbell size={20} />
             </View>
           )}
           <Text style={[styles.alternativeName, { color: themeColors.text }]} numberOfLines={2}>

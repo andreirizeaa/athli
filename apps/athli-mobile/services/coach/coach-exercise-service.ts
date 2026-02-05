@@ -12,6 +12,8 @@ export type Exercise = {
   muscle_group?: string[];
   difficulty?: string;
   video_link?: string;
+  equipment?: string;
+  modality?: string;
   starred: boolean;
   isFavourite: boolean;
   archived: boolean;
