@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -21,13 +21,14 @@ import {
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { ChevronDownIcon, Check, Loader2 } from 'lucide-react';
+import { ChevronDownIcon, Trash2, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
+import { YourListTask } from '@/api/coach/coach-todo-service';
 import { Combobox } from '@/components/ui/combobox';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-type TaskFormValues = {
+export type TaskFormValues = {
   title: string;
   information?: string;
   taskType: 'client' | 'general';
@@ -39,12 +40,16 @@ interface AddTaskSidePanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (values: TaskFormValues) => Promise<void>;
+  task?: YourListTask | null;
+  onDelete?: () => Promise<void>;
 }
 
-export const AddTaskSidePanel = ({ open, onOpenChange, onSave }: AddTaskSidePanelProps) => {
+export const AddTaskSidePanel = ({ open, onOpenChange, onSave, task, onDelete }: AddTaskSidePanelProps) => {
   const t = useTranslations();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const { clients, isLoading: isLoadingClients } = useCoachClients();
+
+  const isEditing = !!task;
 
   const taskSchema = useMemo(
     () =>
@@ -93,7 +98,35 @@ export const AddTaskSidePanel = ({ open, onOpenChange, onSave }: AddTaskSidePane
 
   const taskType = form.watch('taskType');
 
+  const formValues = form.watch();
+  const hasChanges = useMemo(() => {
+    if (!task) return false;
+    const taskDueTime = task.dueDate ? new Date(task.dueDate).getTime() : null;
+    const formDueTime = formValues.completeBy ? formValues.completeBy.getTime() : null;
+    const dueDateChanged = taskDueTime !== formDueTime;
+    return (
+      formValues.title !== task.title ||
+      formValues.information !== (task.information || '') ||
+      formValues.taskType !== task.type ||
+      formValues.clientId !== (task.clientId || '') ||
+      dueDateChanged
+    );
+  }, [formValues, task]);
+
+  useEffect(() => {
+    if (task && open) {
+      form.reset({
+        title: task.title,
+        information: task.information || '',
+        taskType: task.type,
+        clientId: task.clientId || '',
+        completeBy: task.dueDate ? new Date(task.dueDate) : undefined,
+      });
+    }
+  }, [task, open, form]);
+
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleSave = async (values: TaskFormValues) => {
     setIsSaving(true);
@@ -102,6 +135,17 @@ export const AddTaskSidePanel = ({ open, onOpenChange, onSave }: AddTaskSidePane
       handleClose();
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    setIsDeleting(true);
+    try {
+      await onDelete();
+      handleClose();
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -121,17 +165,34 @@ export const AddTaskSidePanel = ({ open, onOpenChange, onSave }: AddTaskSidePane
     <SidePanel
       open={open}
       onOpenChange={handleOpenChange}
-      title={t('home.addTask')}
+      title={isEditing ? t('home.editTask') : t('home.addTask')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
         <div className="flex w-full justify-end gap-2">
           <Button type="button" variant="outline" onClick={handleClose}>
             {t('general.cancel')}
           </Button>
+          {isEditing && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDelete}
+              disabled={isDeleting || isSaving}
+              aria-label={t('general.delete')}
+              className="gap-2"
+            >
+              {isDeleting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
+              {t('general.delete')}
+            </Button>
+          )}
           <Button
             type="button"
             onClick={form.handleSubmit(handleSave)}
-            disabled={!form.formState.isValid || isSaving}
+            disabled={(isEditing ? !hasChanges || isDeleting : false) || !form.formState.isValid || isSaving}
             aria-label={t('general.save')}
             className="gap-2"
           >
@@ -238,6 +299,7 @@ export const AddTaskSidePanel = ({ open, onOpenChange, onSave }: AddTaskSidePane
                   </FormLabel>
                   <FormControl>
                     <Combobox
+                      key={task?.id || 'new'}
                       options={clientOptions}
                       value={field.value}
                       onValueChange={field.onChange}
