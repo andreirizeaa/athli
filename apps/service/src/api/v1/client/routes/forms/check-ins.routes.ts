@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { clientCheckInsController } from '../../client-check-ins.controller';
+import { clientPdfController } from '../../client-pdf.controller';
 import { supabaseAuthenticate } from '../../../../../middlewares/supabase-auth';
 
 export const clientCheckInRouter = Router();
@@ -155,6 +156,7 @@ clientCheckInRouter.patch('/:id', supabaseAuthenticate, clientCheckInsController
  *             $ref: '#/components/schemas/SubmitFormInput'
  *     responses: { 200: { description: 'Success' } }
  */
+clientCheckInRouter.get('/:id/pdf', supabaseAuthenticate, clientPdfController.getCheckInPdf);
 clientCheckInRouter.post('/:id/submit', supabaseAuthenticate, clientCheckInsController.submitCheckIn);
 
 /**

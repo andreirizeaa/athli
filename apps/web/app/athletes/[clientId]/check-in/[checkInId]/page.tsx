@@ -197,6 +197,8 @@ const ClientCheckInDetailPage = () => {
           answers: instanceDetail.answers || [],
         },
         clientName: 'Client',
+        clientId,
+        coachId: user!.id,
       });
     } catch (error) {
       console.error('Failed to download check-in:', error);

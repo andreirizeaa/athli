@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Platform, StyleSheet, Text, View, Linking, ActivityIndicator, InteractionManager } from 'react-native';
+import { Platform, StyleSheet, Text, View, Linking, ActivityIndicator, InteractionManager, Alert } from 'react-native';
 import { PressableScale } from 'pressto';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -172,12 +172,10 @@ export default function SettingsScreen() {
   };
 
   const handleDeleteAccount = () => {
-    const webAppUrl = process.env.EXPO_PUBLIC_WEB_APP_URL;
-    if (webAppUrl) {
-      Linking.openURL(`${webAppUrl}/delete-account`).catch((err) =>
-        console.error('Failed to open delete account URL:', err)
-      );
-    }
+    Alert.alert(
+      t('profile.deleteAccount'),
+      t('profile.deleteAccountMessage'),
+    );
   };
 
   return (

@@ -1275,7 +1275,7 @@ const styles = StyleSheet.create({
     scrollContent: {
         flexGrow: 1,
         paddingHorizontal: 16,
-        paddingBottom: 32,
+        paddingBottom: 160,
     },
     fixedHeader: {
         position: 'absolute',

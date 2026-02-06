@@ -953,3 +953,16 @@ export const updateClientCheckInStatus = async (data: UpdateClientCheckInStatusD
   });
 };
 
+/**
+ * Get a signed URL for questionnaire media (images, videos, signatures, progress photos)
+ */
+export const getQuestionnaireMediaUrl = async (
+  bucket: 'form_files' | 'client_photos',
+  path: string
+): Promise<string> => {
+  const response = await apiFetch<{ data: { url: string } }>(
+    `/client/forms/questionnaires/media-url?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`
+  );
+  return response.data.url;
+};
+
