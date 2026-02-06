@@ -124,8 +124,8 @@ export const SidePanel = ({
         )}
         onOpenAutoFocus={onOpenAutoFocus}
         style={{
-          borderTopLeftRadius: '22px',
-          borderBottomLeftRadius: '22px',
+          borderTopLeftRadius: '0px',
+          borderBottomLeftRadius: '0px',
         }}
       >
         <div className="px-4 pt-3 flex items-center justify-between">
@@ -149,7 +149,7 @@ export const SidePanel = ({
         {hasFooter && (
           <>
             <Separator />
-            <div className="px-4 pb-4 mt-auto [&_button]:text-[14px]">{footerContent}</div>
+            <div className="px-4 pb-4 -mt-1 [&_button]:text-[14px]">{footerContent}</div>
           </>
         )}
       </SheetContent>

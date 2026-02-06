@@ -220,7 +220,7 @@ export const GoalsCard = ({ clientId }: GoalsCardProps) => {
       >
         <div className="flex-1 flex flex-col min-h-0 gap-4 overflow-y-auto px-1">
           <div className="space-y-2">
-            <Label htmlFor="goal-title">{t('athletes.profile.goalTitle')}</Label>
+            <Label htmlFor="goal-title">{t('athletes.profile.goalTitle')} <span className="text-destructive">*</span></Label>
             <Input
               id="goal-title"
               ref={titleInputRef}
