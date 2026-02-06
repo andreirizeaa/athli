@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Edit, Info, Check, Loader2 } from 'lucide-react';
+import { Edit, Info } from 'lucide-react';
 import { addCheckIn, editCheckInDetails, type AddCheckInData, type CheckIn } from '@/api/coach/coach-check-in-service';
 import { addQuestionnaire, editQuestionnaireDetails, type AddQuestionnaireData, type Questionnaire } from '@/api/coach/coach-questionnaire-service';
 
@@ -250,25 +250,10 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave, editingForm }: Ad
       onOpenChange={onOpenChange}
       title={isEditing ? t('forms.editFormTitle') : t('forms.addFormTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
-      footer={
-        <div className="flex w-full justify-end gap-2">
-          <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
-            {t('general.cancel')}
-          </Button>
-          <Button
-            type="button"
-            onClick={isEditing ? form.handleSubmit(handleSave) : (activeTab === 'new' ? form.handleSubmit(handleSave) : handleSaveFromTemplate)}
-            disabled={!isValid || isSaving}
-          >
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="h-4 w-4" />
-            )}
-            {t('general.save')}
-          </Button>
-        </div>
-      }
+      onSave={isEditing ? form.handleSubmit(handleSave) : (activeTab === 'new' ? form.handleSubmit(handleSave) : handleSaveFromTemplate)}
+      isSaving={isSaving}
+      isSaveDisabled={!isValid}
+      onCancel={handleClose}
     >
       {isEditing ? (
         <Form {...form}>
