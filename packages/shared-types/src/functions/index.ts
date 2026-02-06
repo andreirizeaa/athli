@@ -7,3 +7,4 @@
 export * from './payload-builder';
 export * from './payload-converter';
 export * from './messaging-utils';
+export * from './pdf-template';

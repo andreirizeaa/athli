@@ -491,7 +491,6 @@ function RootLayoutNav() {
           <Stack.Screen name="client/[id]/check-in-submissions" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/questionaires" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/questionnaire-detail" options={{ headerShown: false }} />
-          <Stack.Screen name="client/[id]/questionnaire-response" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/settings" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/assistant" options={{ headerShown: false }} />
           <Stack.Screen name="client/[id]/goals" options={{ headerShown: false }} />
