@@ -220,7 +220,7 @@ export const InjuryCard = ({ clientId }: InjuryCardProps) => {
       >
         <div className="flex-1 flex flex-col min-h-0 gap-4 overflow-y-auto px-1">
           <div className="space-y-2">
-            <Label htmlFor="injury-title">{t('athletes.profile.injuryTitle')}</Label>
+            <Label htmlFor="injury-title">{t('athletes.profile.injuryTitle')} <span className="text-destructive">*</span></Label>
             <Input
               id="injury-title"
               ref={titleInputRef}
