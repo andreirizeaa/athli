@@ -221,7 +221,7 @@ const WorkoutDayPage = React.memo(
                 <View style={pageStyles.workoutHeaderLeft}>
                   {renderStatusIcon(workout.completedSummary?.status, isPast)}
                   <View style={pageStyles.workoutInfo}>
-                    <Text style={[pageStyles.workoutName, { color: themeColors.text }]} numberOfLines={1}>
+                    <Text style={[pageStyles.workoutName, { color: themeColors.text }]}>
                       {workout.workout}
                     </Text>
                   </View>

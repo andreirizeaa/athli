@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
@@ -24,18 +24,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ChevronRight, ChevronLeft, Plus, GripVertical, Download, Loader2, Edit } from 'lucide-react';
-import Image from 'next/image';
+import { ChevronRight, ChevronLeft, Plus, GripVertical, Download, Loader2, Edit, Play } from 'lucide-react';
 import { PageTabs } from '@/components/page-tabs';
 import {
   getClientQuestionnaireById,
   getClientQuestionnaire,
   updateClientQuestionnaire,
+  getQuestionnaireMediaUrl,
   type ClientQuestionnaireDetail as SharedClientQuestionnaireDetail,
 } from '@/api/client/client-form-service';
 import { FormBuilder, type Question } from '@/components/forms/form-builder';
 import { EditClientQuestionnaireFormSidePanel } from '@/components/forms/edit-client-questionnaire-form-side-panel';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { useClientProfileContext } from '../../client-profile-context';
 
 interface LocalClientQuestionnaireDetail {
   id: string;
@@ -55,6 +56,7 @@ interface MediaPreview {
   currentIndex: number;
   questionNumber: number;
   questionText: string;
+  type?: 'image' | 'video';
 }
 
 type TabType = 'builder' | 'response';
@@ -65,6 +67,7 @@ const ClientQuestionnaireDetailPage = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useUserProfile();
+  const { athlete } = useClientProfileContext();
 
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
   const questionnaireId = Array.isArray(params.questionnaireId) ? params.questionnaireId[0] : params.questionnaireId;
@@ -87,6 +90,54 @@ const ClientQuestionnaireDetailPage = () => {
   const [submissionLoading, setSubmissionLoading] = useState<boolean>(false);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [mediaPreview, setMediaPreview] = useState<MediaPreview | null>(null);
+  const [resolvedMediaUrls, setResolvedMediaUrls] = useState<Record<string, string>>({});
+  const fetchedMediaPathsRef = useRef<Set<string>>(new Set());
+
+  const isValidMediaPath = (path: string): boolean => {
+    return !!(path && !path.startsWith('__') && path !== '__FILE_UPLOAD__' && !path.startsWith('http'));
+  };
+
+  const fetchMediaUrl = useCallback(async (path: string, bucket: 'form_files' | 'client_photos' = 'form_files') => {
+    if (fetchedMediaPathsRef.current.has(path) || !isValidMediaPath(path)) return;
+    fetchedMediaPathsRef.current.add(path);
+    try {
+      const url = await getQuestionnaireMediaUrl(bucket, path);
+      setResolvedMediaUrls(prev => ({ ...prev, [path]: url }));
+    } catch (error) {
+      console.error('Failed to fetch media URL:', error);
+      fetchedMediaPathsRef.current.delete(path);
+    }
+  }, []);
+
+  // Fetch signed URLs for all media answers when submission data loads
+  useEffect(() => {
+    if (!submissionData?.answers) return;
+    const questions = submissionData.questions || [];
+    submissionData.answers.forEach((answer: QuestionAnswer) => {
+      if (!answer.answer) return;
+      const question = questions.find((q: Question) => q.id === answer.questionId);
+      const format = (question as any)?.format || (question as any)?.type;
+      if ((format === 'images' || format === 'videos') && Array.isArray(answer.answer)) {
+        answer.answer.forEach((path: string) => {
+          if (isValidMediaPath(path)) fetchMediaUrl(path);
+        });
+      }
+      if (format === 'signature' && typeof answer.answer === 'string') {
+        if (isValidMediaPath(answer.answer) && !answer.answer.startsWith('data:')) {
+          fetchMediaUrl(answer.answer);
+        }
+      }
+      if (format === 'progressPhoto' && typeof answer.answer === 'object' && answer.answer) {
+        const progressAnswer = answer.answer as { front?: string; back?: string; side?: string };
+        ['front', 'back', 'side'].forEach((angle) => {
+          const path = progressAnswer[angle as keyof typeof progressAnswer];
+          if (path && isValidMediaPath(path)) {
+            fetchMediaUrl(path, 'client_photos');
+          }
+        });
+      }
+    });
+  }, [submissionData, fetchMediaUrl]);
 
   const fetchForm = async () => {
     if (!user?.id) return;
@@ -186,7 +237,11 @@ const ClientQuestionnaireDetailPage = () => {
       const { downloadQuestionnaire } = await import('@/lib/general/pdf-service');
       await downloadQuestionnaire({
         questionnaire: submissionData,
-        clientName: 'Client',
+        clientName: athlete?.name || 'Client',
+        clientEmail: athlete?.email,
+        clientId,
+        coachId: user!.id,
+        resolvedMediaUrls,
       });
     } catch (error) {
       console.error('Failed to download questionnaire:', error);
@@ -374,27 +429,176 @@ const ClientQuestionnaireDetailPage = () => {
             <span className="text-sm text-muted-foreground ml-2">{answer.answer as number}/5</span>
           </div>
         );
-      case 'images':
-      case 'videos':
-        const mediaUrls = answer.answer as string[];
+      case 'images': {
+        const imagePaths = answer.answer as string[];
+        const imageResolvedUrls = imagePaths.map(path =>
+          path.startsWith('http') ? path : resolvedMediaUrls[path]
+        );
         return (
           <div className="flex flex-wrap gap-2">
-            {mediaUrls.map((url, index) => (
-              <div
-                key={index}
-                className="relative w-24 h-24 rounded-md overflow-hidden border border-border cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => setMediaPreview({
-                  urls: mediaUrls,
-                  currentIndex: index,
-                  questionNumber: questionIndex + 1,
-                  questionText: question.question
-                })}
-              >
-                <Image src={url} alt={`Media ${index + 1}`} fill className="object-cover" />
-              </div>
-            ))}
+            {imagePaths.map((path, index) => {
+              const resolvedUrl = imageResolvedUrls[index];
+              return (
+                <div
+                  key={index}
+                  className="relative w-24 h-24 rounded-md overflow-hidden border border-border cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => {
+                    const validUrls = imageResolvedUrls.filter((u): u is string => !!u);
+                    if (validUrls.length > 0) {
+                      setMediaPreview({
+                        urls: validUrls,
+                        currentIndex: Math.min(index, validUrls.length - 1),
+                        questionNumber: questionIndex + 1,
+                        questionText: question.question,
+                      });
+                    }
+                  }}
+                >
+                  {resolvedUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={resolvedUrl} alt={`Media ${index + 1}`} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-muted">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         );
+      }
+      case 'videos': {
+        const videoPaths = answer.answer as string[];
+        const videoResolvedUrls = videoPaths.map(path =>
+          path.startsWith('http') ? path : resolvedMediaUrls[path]
+        );
+        return (
+          <div className="flex flex-wrap gap-2">
+            {videoPaths.map((path, index) => {
+              const resolvedUrl = videoResolvedUrls[index];
+              return (
+                <div
+                  key={index}
+                  className="relative w-24 h-24 rounded-md overflow-hidden border border-border cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => {
+                    const validUrls = videoResolvedUrls.filter((u): u is string => !!u);
+                    if (validUrls.length > 0) {
+                      setMediaPreview({
+                        urls: validUrls,
+                        currentIndex: Math.min(index, validUrls.length - 1),
+                        questionNumber: questionIndex + 1,
+                        questionText: question.question,
+                        type: 'video',
+                      });
+                    }
+                  }}
+                >
+                  {resolvedUrl ? (
+                    <>
+                      <video src={resolvedUrl} className="w-full h-full object-cover" muted preload="metadata" />
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                        <Play className="size-6 text-white" />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-muted">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      }
+      case 'signature': {
+        if (typeof answer.answer === 'string' && answer.answer.length > 0) {
+          const sigPath = answer.answer as string;
+          const sigUrl = sigPath.startsWith('http') || sigPath.startsWith('data:')
+            ? sigPath
+            : resolvedMediaUrls[sigPath];
+
+          if (!sigUrl && isValidMediaPath(sigPath)) {
+            return (
+              <div className="w-full h-[120px] rounded-md border border-border bg-muted flex items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            );
+          }
+
+          return (
+            <div className="w-full h-[120px] rounded-md border border-border bg-white overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={sigUrl} alt="Signature" className="w-full h-full object-contain" />
+            </div>
+          );
+        }
+        return <span className="text-sm text-muted-foreground italic">No answer provided</span>;
+      }
+      case 'progressPhoto': {
+        if (typeof answer.answer === 'object' && answer.answer) {
+          const progressAnswer = answer.answer as { front?: string; back?: string; side?: string };
+          const hasAnyPhoto = progressAnswer.front || progressAnswer.back || progressAnswer.side;
+
+          if (!hasAnyPhoto) {
+            return <span className="text-sm text-muted-foreground italic">No answer provided</span>;
+          }
+
+          const renderProgressCard = (path: string | undefined, label: string) => {
+            const url = path
+              ? (path.startsWith('http') ? path : resolvedMediaUrls[path])
+              : undefined;
+            const isLoading = path ? !url && isValidMediaPath(path) : false;
+
+            return (
+              <div className="flex flex-col gap-2 flex-1">
+                <span className="text-xs text-muted-foreground uppercase font-semibold text-center">{label}</span>
+                <div
+                  className={cn(
+                    "relative aspect-square border-2 border-dashed rounded-xl overflow-hidden",
+                    path ? "border-primary bg-primary/5" : "border-muted-foreground/30"
+                  )}
+                >
+                  {isLoading ? (
+                    <div className="w-full h-full flex items-center justify-center bg-muted">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : url ? (
+                    <div
+                      className="w-full h-full cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => {
+                        setMediaPreview({
+                          urls: [url],
+                          currentIndex: 0,
+                          questionNumber: questionIndex + 1,
+                          questionText: question.question,
+                        });
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt={label} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="text-muted-foreground text-lg">-</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          };
+
+          return (
+            <div className="grid grid-cols-3 gap-4">
+              {renderProgressCard(progressAnswer.front, t('photos.form.front'))}
+              {renderProgressCard(progressAnswer.side, t('photos.form.side'))}
+              {renderProgressCard(progressAnswer.back, t('photos.form.back'))}
+            </div>
+          );
+        }
+        return <span className="text-sm text-muted-foreground italic">No answer provided</span>;
+      }
       default:
         return <p className="text-sm text-foreground">{String(answer.answer)}</p>;
     }
@@ -429,7 +633,7 @@ const ClientQuestionnaireDetailPage = () => {
   return (
     <div className="h-full w-full flex flex-col bg-background overflow-hidden">
       {/* Header with breadcrumb and tabs */}
-      <div className="w-full relative flex-shrink-0">
+      <div className="w-full relative flex-shrink-0 border-b">
         <div className="px-4 flex flex-col gap-1 mb-2 mt-2">
           <Breadcrumb>
             <BreadcrumbList className="text-xs gap-1">
@@ -533,7 +737,7 @@ const ClientQuestionnaireDetailPage = () => {
       )}
 
       {activeTab === 'response' && (
-        <div className="w-full h-full flex-1 min-h-0 py-4 flex flex-col items-center justify-center overflow-auto gap-4 relative">
+        <div className="w-full h-full flex-1 min-h-0 py-4 px-4 flex flex-col items-center overflow-auto gap-4 relative">
           {/* Loading overlay */}
           {submissionLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-10">
@@ -547,41 +751,37 @@ const ClientQuestionnaireDetailPage = () => {
               <p className="text-muted-foreground">{t('athletes.profile.questionnaires.notYetCompleted')}</p>
             </div>
           ) : !submissionLoading && submissionData && submissionData.status === 'completed' ? (
-            <Card className="w-full max-w-2xl">
+            <Card className="w-full max-w-2xl pt-0 gap-0">
               <div className="w-full">
                 {submissionData.completedAt && (
                   <>
-                    <CardHeader className="px-4 pb-3">
+                    <CardHeader className="px-4 pt-3 pb-1">
                       <CardTitle>{formatCompletionDate(submissionData.completedAt)}</CardTitle>
                     </CardHeader>
-                    <Separator className="w-full mt-[-8px] mb-[-4px]" />
+                    <Separator className="w-full" />
                   </>
                 )}
                 {submissionData.questions.map((question: Question, index: number) => (
                   <div
                     key={question.id}
-                    className={cn(
-                      'py-4 px-4',
-                      index < submissionData.questions.length - 1 && 'border-b'
-                    )}
+                    className={cn(index > 0 && 'border-t border-border')}
                   >
-                    <div className="flex items-start gap-2">
+                    <div className="flex items-start gap-2 px-4 pt-2 pb-2 bg-muted/50">
                       <span className="text-sm font-medium text-muted-foreground flex-shrink-0">
                         {index + 1}.
                       </span>
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-start gap-2">
-                          <p className="text-sm font-medium text-foreground">
-                            {question.question}
-                          </p>
-                          {question.required && (
-                            <span className="text-red-500 text-sm">*</span>
-                          )}
-                        </div>
-                        <div className="pl-0">
-                          {renderAnswer(question, index)}
-                        </div>
+                      <div className="flex items-start gap-2">
+                        <p className="text-sm font-medium text-foreground">
+                          {question.question}
+                        </p>
+                        {question.required && (
+                          <span className="text-red-500 text-sm">*</span>
+                        )}
                       </div>
+                    </div>
+                    <div className="border-t border-border" />
+                    <div className="px-4 pt-2 pb-2">
+                      {renderAnswer(question, index)}
                     </div>
                   </div>
                 ))}
@@ -609,12 +809,22 @@ const ClientQuestionnaireDetailPage = () => {
                 </DialogTitle>
               </DialogHeader>
               <div className="relative w-full aspect-video rounded-md overflow-hidden bg-muted/10">
-                <Image
-                  src={mediaPreview.urls[mediaPreview.currentIndex]}
-                  alt="Preview"
-                  fill
-                  className="object-contain"
-                />
+                {mediaPreview.type === 'video' ? (
+                  <video
+                    key={mediaPreview.urls[mediaPreview.currentIndex]}
+                    src={mediaPreview.urls[mediaPreview.currentIndex]}
+                    className="w-full h-full object-contain"
+                    controls
+                    autoPlay
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={mediaPreview.urls[mediaPreview.currentIndex]}
+                    alt="Preview"
+                    className="w-full h-full object-contain"
+                  />
+                )}
                 {mediaPreview.urls.length > 1 && (
                   <>
                     <button
@@ -646,7 +856,8 @@ const ClientQuestionnaireDetailPage = () => {
                             : "opacity-60 hover:opacity-100"
                         )}
                       >
-                        <Image src={url} alt={`Thumbnail ${index + 1}`} fill className="object-cover" />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`Thumbnail ${index + 1}`} className="w-full h-full object-cover" />
                       </div>
                     ))}
                   </div>

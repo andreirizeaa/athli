@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { clientQuestionnairesController } from '../../client-questionnaires.controller';
+import { clientPdfController } from '../../client-pdf.controller';
 import { supabaseAuthenticate } from '../../../../../middlewares/supabase-auth';
 
 // Configure multer for memory storage with higher limits for videos and base64 fields
@@ -188,6 +189,7 @@ clientQuestionnaireRouter.patch('/:id', supabaseAuthenticate, clientQuestionnair
  *             $ref: '#/components/schemas/SubmitFormInput'
  *     responses: { 200: { description: 'Success' } }
  */
+clientQuestionnaireRouter.get('/:id/pdf', supabaseAuthenticate, clientPdfController.getQuestionnairePdf);
 clientQuestionnaireRouter.post('/:id/submit', supabaseAuthenticate, upload.any(), clientQuestionnairesController.submitQuestionnaire);
 
 /**

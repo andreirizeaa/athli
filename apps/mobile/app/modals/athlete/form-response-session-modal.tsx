@@ -723,6 +723,8 @@ export default function FormResponseSessionModal() {
                 >
                   <Star
                     size={44}
+                    color={isFilled ? primaryColor : themeColors.border}
+                    fill={isFilled ? primaryColor : 'transparent'}
                   />
                 </PressableOpacity>
               );

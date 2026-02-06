@@ -122,6 +122,7 @@ export default function AthleteQuestionnairesScreen() {
           questionnaireName: item.name,
           questionsJson: JSON.stringify(item.questions),
           answersJson: JSON.stringify(item.answers || []),
+          completedAt: item.completed_at || undefined,
         },
       });
     }

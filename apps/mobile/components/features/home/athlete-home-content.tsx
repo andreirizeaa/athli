@@ -1,7 +1,8 @@
-import React, { useMemo, useEffect } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
+import { Platform, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ChevronRight, FileText, ClipboardCheck, HelpCircle } from 'lucide-react-native';
+import { useFocusEffect } from 'expo-router';
+import { ChevronRight, FileText, ClipboardCheck, HelpCircle, Dumbbell, Moon } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 import { SymbolView } from 'expo-symbols';
 
@@ -13,6 +14,8 @@ import { Card } from '@/components/ui/card';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { getMyFiles } from '@/services/client/client-file-service';
 import { useAthleteQuestionnaires } from '@/hooks/useAthleteQuestionnaires';
+import { getTrainingCalendarRange, type TrainingCalendarItem } from '@/services/client/client-service';
+import { formatDateDDMMYYYY, formatDateYYYYMMDD } from '@/lib/utils/date-formatters';
 
 // Helper to get ordinal suffix
 const getOrdinalSuffix = (day: number): string => {
@@ -23,6 +26,15 @@ const getOrdinalSuffix = (day: number): string => {
     case 3: return 'rd';
     default: return 'th';
   }
+};
+
+// Pick a stable random rest day message based on today's date
+const getRestDayIndex = (): number => {
+  const today = new Date();
+  const dayOfYear = Math.floor(
+    (today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000
+  );
+  return dayOfYear % 8;
 };
 
 export const AthleteHomeContent = () => {
@@ -40,10 +52,57 @@ export const AthleteHomeContent = () => {
   // TODO: Replace with actual data from athlete check-ins hook
   const outstandingCheckIns = 0;
 
+  // Today's workout state
+  const [todayWorkouts, setTodayWorkouts] = useState<{ name: string; key: string }[]>([]);
+  const [isLoadingWorkouts, setIsLoadingWorkouts] = useState(true);
+
   // Store setters for athlete self-access
   const setStoreFiles = useClientDetailStore((state) => state.setFiles);
   const setStoreClientId = useClientDetailStore((state) => state.setClientId);
   const setStoreCoachId = useClientDetailStore((state) => state.setCoachId);
+
+  // Fetch today's workouts
+  useFocusEffect(
+    useCallback(() => {
+      const fetchTodayWorkouts = async () => {
+        if (!clientProfile?.client_id || !clientProfile?.coach_id) {
+          setIsLoadingWorkouts(false);
+          return;
+        }
+
+        try {
+          const today = new Date();
+          const dateStr = formatDateYYYYMMDD(today);
+          const calendar = await getTrainingCalendarRange(
+            clientProfile.client_id,
+            clientProfile.coach_id,
+            dateStr,
+            dateStr
+          );
+
+          const dayKey = formatDateDDMMYYYY(today);
+          const workoutsObj = calendar[dayKey];
+
+          if (workoutsObj && !Array.isArray(workoutsObj)) {
+            const workouts = Object.entries(workoutsObj).map(([key, w]) => ({
+              name: w.workout,
+              key,
+            }));
+            setTodayWorkouts(workouts);
+          } else {
+            setTodayWorkouts([]);
+          }
+        } catch (error) {
+          console.error('[AthleteHomeContent] Error fetching today workouts:', error);
+          setTodayWorkouts([]);
+        } finally {
+          setIsLoadingWorkouts(false);
+        }
+      };
+
+      fetchTodayWorkouts();
+    }, [clientProfile?.client_id, clientProfile?.coach_id])
+  );
 
   // Fetch files on mount
   useEffect(() => {
@@ -81,6 +140,10 @@ export const AthleteHomeContent = () => {
     router.push('/athlete-questionnaires');
   };
 
+  const handleOpenTraining = useCallback(() => {
+    router.push('/(tabs)/training');
+  }, [router]);
+
   const greeting = useMemo(() => {
     if (clientProfile?.name) {
       const firstName = clientProfile.name.split(' ')[0];
@@ -100,6 +163,90 @@ export const AthleteHomeContent = () => {
     return `Today is the ${day}${getOrdinalSuffix(day)} of ${monthName}`;
   }, [t]);
 
+  const restDayMessage = useMemo(() => {
+    return t(`home.todayWorkoutCard.restDay${getRestDayIndex()}`);
+  }, [t]);
+
+  const workoutCardMessage = useMemo(() => {
+    if (todayWorkouts.length === 0) return '';
+    if (todayWorkouts.length === 1) return t('home.todayWorkoutCard.hasWorkouts');
+    return t('home.todayWorkoutCard.hasWorkoutsPlural', { count: todayWorkouts.length });
+  }, [todayWorkouts.length, t]);
+
+  const isRestDay = !isLoadingWorkouts && todayWorkouts.length === 0;
+
+  // Today's workout card content
+  const todayWorkoutCard = useMemo(() => {
+    if (isLoadingWorkouts) {
+      return (
+        <Card style={styles.workoutCard}>
+          <View style={styles.workoutCardLoading}>
+            <ActivityIndicator size="small" color={themeColors.mutedText} />
+          </View>
+        </Card>
+      );
+    }
+
+    if (isRestDay) {
+      return (
+        <Card style={styles.restDayCard}>
+          <View style={styles.restDayContent}>
+            <PlatformIcon sf="moon.zzz" IconComponent={Moon} size={28} color={themeColors.mutedText} />
+            <Text style={[styles.restDayTitle, { color: themeColors.text }]}>
+              {t('training.athlete.noWorkouts')}
+            </Text>
+            <Text style={[styles.workoutCardMessage, { color: themeColors.mutedText }]}>
+              {restDayMessage}
+            </Text>
+          </View>
+        </Card>
+      );
+    }
+
+    return (
+      <PressableScale onPress={handleOpenTraining}>
+        <Card style={styles.activeWorkoutCard}>
+          {/* Header section */}
+          <View style={styles.activeCardHeader}>
+            <View style={[styles.activeCardIconCircle, { backgroundColor: primaryColor }]}>
+              <PlatformIcon sf="dumbbell" IconComponent={Dumbbell} size={18} color={themeColors.primaryForeground} />
+            </View>
+            <View style={styles.activeCardHeaderText}>
+              <Text style={[styles.activeCardTitle, { color: themeColors.text }]}>
+                {workoutCardMessage} {'💪'}
+              </Text>
+            </View>
+            <PlatformIcon
+              sf="chevron.right"
+              IconComponent={ChevronRight}
+              size={iconSizes.extraSmallIcons}
+              color={themeColors.mutedText}
+            />
+          </View>
+
+          {/* Divider */}
+          <View style={[styles.activeCardDivider, { backgroundColor: themeColors.border }]} />
+
+          {/* Workout list */}
+          <View style={styles.activeCardList}>
+            {todayWorkouts.map((workout, index) => (
+              <View key={workout.key} style={styles.workoutRow}>
+                <View style={[styles.workoutNumberCircle, { backgroundColor: primaryColor }]}>
+                  <Text style={[styles.workoutNumberText, { color: themeColors.primaryForeground }]}>
+                    {index + 1}
+                  </Text>
+                </View>
+                <Text style={[styles.workoutName, { color: themeColors.text }]}>
+                  {workout.name}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </Card>
+      </PressableScale>
+    );
+  }, [isLoadingWorkouts, isRestDay, todayWorkouts, themeColors, primaryColor, restDayMessage, workoutCardMessage, handleOpenTraining]);
+
   return (
     <ScreenWrapper scrollable tabScreen>
       <View style={styles.header}>
@@ -108,6 +255,9 @@ export const AthleteHomeContent = () => {
       </View>
 
       <View style={styles.content}>
+        {/* Today's workout card */}
+        {todayWorkoutCard}
+
         {/* Two column row for Check-ins and Questionnaires */}
         <View style={styles.twoColumnRow}>
           <View style={styles.column}>
@@ -222,6 +372,95 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 16,
+  },
+  // Rest day card
+  restDayCard: {
+    marginBottom: 24,
+    minHeight: 120,
+  },
+  restDayContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 16,
+  },
+  restDayTitle: {
+    ...typography.h3,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  workoutCardMessage: {
+    ...typography.p2,
+    textAlign: 'center',
+    paddingVertical: 4,
+  },
+  // Loading card
+  workoutCard: {
+    marginBottom: 24,
+  },
+  workoutCardLoading: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Active workout card
+  activeWorkoutCard: {
+    marginBottom: 24,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  activeCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  activeCardIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeCardHeaderText: {
+    flex: 1,
+  },
+  activeCardTitle: {
+    ...typography.h5,
+    fontWeight: '600',
+  },
+  activeCardDivider: {
+    height: 1,
+  },
+  activeCardList: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 6,
+  },
+  workoutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 5,
+  },
+  workoutNumberCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  workoutNumberText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  workoutName: {
+    ...typography.p2,
+    fontWeight: '500',
+    flex: 1,
   },
   twoColumnRow: {
     flexDirection: 'row',

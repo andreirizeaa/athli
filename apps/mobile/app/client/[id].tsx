@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
+import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -216,105 +209,43 @@ export default function ClientProfileScreen() {
     },
   ];
 
-  // Skeleton animation
-  const skeletonOpacity = useSharedValue(0.3);
-
-  useEffect(() => {
-    skeletonOpacity.value = withRepeat(
-      withTiming(1, {
-        duration: 1000,
-        easing: Easing.inOut(Easing.ease),
-      }),
-      -1,
-      true
-    );
-  }, []);
-
-  const skeletonAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: skeletonOpacity.value,
-  }));
-
   const insets = useSafeAreaInsets();
   const HEADER_HEIGHT = 52;
 
-  // Loading state - show while client basic info is loading
-  if (isLoadingClient && !client) {
+  // Loading state - show spinner until client data is available
+  if (!client || isLoadingClient) {
+    // Only show error if we're not loading and there's an actual error
+    if (!isLoadingClient && error) {
+      return (
+        <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
+          <View style={[styles.errorContainer, { paddingTop: insets.top + HEADER_HEIGHT }]}>
+            <Text style={[styles.errorText, { color: themeColors.mutedText }]}>
+              {error || t('clientDetail.clientNotFound')}
+            </Text>
+          </View>
+          <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
+          <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
+            <IconButton
+              icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+              onPress={handleBackPress}
+              size="md"
+              color={iconColor}
+            />
+            <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+              {t('clientDetail.profile')}
+            </Text>
+            <View style={styles.headerPlaceholder} />
+          </View>
+        </View>
+      );
+    }
+
     return (
       <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 40 },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Profile Card Skeleton */}
-          <Card variant="profile">
-            <View style={styles.skeletonProfileContent}>
-              <Animated.View
-                style={[
-                  styles.skeletonAvatarLarge,
-                  { backgroundColor: themeColors.border },
-                  skeletonAnimatedStyle,
-                ]}
-              />
-              <Animated.View
-                style={[
-                  styles.skeletonName,
-                  { backgroundColor: themeColors.border },
-                  skeletonAnimatedStyle,
-                ]}
-              />
-              <Animated.View
-                style={[
-                  styles.skeletonEditButton,
-                  { backgroundColor: themeColors.border },
-                  skeletonAnimatedStyle,
-                ]}
-              />
-            </View>
-          </Card>
-
-          {/* Menu Items Skeleton */}
-          <View style={styles.menuContainer}>
-            {Array.from({ length: 11 }).map((_, index) => (
-              <View key={index}>
-                <View style={styles.menuItem}>
-                  <View style={styles.menuItemLeft}>
-                    <Animated.View
-                      style={[
-                        styles.skeletonIcon,
-                        { backgroundColor: themeColors.border },
-                        skeletonAnimatedStyle,
-                      ]}
-                    />
-                    <Animated.View
-                      style={[
-                        styles.skeletonMenuTitle,
-                        { backgroundColor: themeColors.border },
-                        skeletonAnimatedStyle,
-                      ]}
-                    />
-                  </View>
-                  <Animated.View
-                    style={[
-                      styles.skeletonChevron,
-                      { backgroundColor: themeColors.border },
-                      skeletonAnimatedStyle,
-                    ]}
-                  />
-                </View>
-                <Separator />
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-
-        {/* Status Bar Blur */}
+        <View style={[styles.loadingContainer, { paddingTop: insets.top + HEADER_HEIGHT }]}>
+          <ActivityIndicator size="large" color={themeColors.mutedText} />
+        </View>
         <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
-
-        {/* Fixed Header */}
         <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
           <IconButton
             icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
@@ -331,8 +262,8 @@ export default function ClientProfileScreen() {
     );
   }
 
-  // Error state
-  if (error || !client) {
+  // Error state - only reachable if client loaded but then errored
+  if (error) {
     return (
       <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
         <View style={[styles.errorContainer, { paddingTop: insets.top + HEADER_HEIGHT }]}>
@@ -625,41 +556,9 @@ const styles = StyleSheet.create({
     ...typography.p1,
     fontWeight: '500',
   },
-  // Skeleton styles
-  skeletonProfileContent: {
+  loadingContainer: {
+    flex: 1,
     alignItems: 'center',
-    width: '100%',
-  },
-  skeletonAvatarLarge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 16,
-  },
-  skeletonName: {
-    width: 120,
-    height: 20,
-    borderRadius: 4,
-    marginBottom: 16,
-  },
-  skeletonEditButton: {
-    width: 100,
-    height: 44,
-    borderRadius: 24,
-  },
-  skeletonIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-  },
-  skeletonMenuTitle: {
-    width: '50%',
-    height: 16,
-    borderRadius: 4,
-  },
-  skeletonChevron: {
-    width: 16,
-    height: 16,
-    borderRadius: 4,
+    justifyContent: 'center',
   },
 });

@@ -5,7 +5,7 @@ import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Play } from 'lucide-react-native';
 import { Image } from 'expo-image';
-import { PressableOpacity, PressableScale } from 'pressto';
+import { PressableScale } from 'pressto';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
@@ -117,7 +117,7 @@ export default function ClientProgressScreen() {
     const thumbnailUrl = getThumbnailUrl(item.rawThumbnailUrl);
 
     return (
-      <PressableOpacity
+      <PressableScale
         onPress={() => handleExercisePress(item)}
         style={styles.exerciseItem}
       >
@@ -142,7 +142,7 @@ export default function ClientProgressScreen() {
             {item.name}
           </Text>
         </View>
-      </PressableOpacity>
+      </PressableScale>
     );
   }, [getThumbnailUrl, handleExercisePress, handleThumbnailPress, themeColors]);
 

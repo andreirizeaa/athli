@@ -40,8 +40,9 @@ export default function ClientCheckInsScreen() {
   const HEADER_HEIGHT = 52;
   const iconColor = themeColors.text;
 
-  // Search state
+  // Search & filter state
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
 
   // Get check-ins from store (already loaded by parent screen)
   const checkIns = useClientDetailStore((state) => state.checkIns);
@@ -58,15 +59,36 @@ export default function ClientCheckInsScreen() {
     });
   }, [queryClient]);
 
-  // Filter check-ins based on search query
+  const statusFilters = useMemo(() => [
+    { key: 'draft', label: t('clientDetail.checkIns.statusDraft') },
+    { key: 'live', label: t('clientDetail.checkIns.statusLive') },
+    { key: 'paused', label: t('clientDetail.checkIns.statusPaused') },
+  ], [t]);
+
+  const toggleFilter = useCallback((key: string) => {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  // Filter check-ins based on search query and status filters
   const filteredCheckIns = useMemo(() => {
-    if (!searchQuery.trim()) return checkIns;
-    const query = searchQuery.toLowerCase();
-    return checkIns.filter((checkIn) =>
-      checkIn.name.toLowerCase().includes(query) ||
-      checkIn.schedule?.toLowerCase().includes(query)
-    );
-  }, [checkIns, searchQuery]);
+    let result = checkIns;
+    if (activeFilters.size > 0) {
+      result = result.filter((c) => activeFilters.has(c.status || 'draft'));
+    }
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((c) =>
+        c.name.toLowerCase().includes(query) ||
+        c.schedule?.toLowerCase().includes(query)
+      );
+    }
+    return result;
+  }, [checkIns, searchQuery, activeFilters]);
 
   // Track currently open swipeable row
   const openRowCloseRef = useRef<(() => void) | null>(null);
@@ -216,6 +238,36 @@ export default function ClientCheckInsScreen() {
             onChangeText={setSearchQuery}
             placeholder={t('general.searchPlaceholder')}
           />
+        </View>
+
+        {/* Status filter pills */}
+        <View style={styles.filterRow}>
+          {statusFilters.map((filter) => {
+            const isActive = activeFilters.has(filter.key);
+            return (
+              <PressableScale key={filter.key} onPress={() => toggleFilter(filter.key)}>
+                <SquircleView
+                  cornerSmoothing={1}
+                  style={[
+                    styles.filterPill,
+                    {
+                      borderColor: isActive ? themeColors.primary : themeColors.border,
+                      backgroundColor: isActive ? themeColors.primary + '15' : 'transparent',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.filterPillText,
+                      { color: isActive ? themeColors.primary : themeColors.mutedText },
+                    ]}
+                  >
+                    {filter.label}
+                  </Text>
+                </SquircleView>
+              </PressableScale>
+            );
+          })}
         </View>
 
         <Pressable
@@ -385,6 +437,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 12,
   },
+  filterRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  filterPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  filterPillText: {
+    ...typography.p3,
+    fontWeight: '500',
+  },
   contentContainer: {
     flex: 1,
   },
@@ -392,13 +460,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
   },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
     paddingHorizontal: 32,
     gap: 12,
   },
