@@ -24,8 +24,7 @@ import { formTemplates } from '@/constants/forms';
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel';
-import { EditQuestionSidePanel } from '@/components/forms/edit-question-side-panel';
-import { EditFormSidePanel } from '@/components/forms/edit-form-side-panel';
+import { AddFormSidePanel } from '@/components/forms/add-form-side-panel';
 import { FormPreviewContainer } from '@/components/forms/form-preview-container';
 import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
 
@@ -578,7 +577,7 @@ const FormDetailPage = () => {
         formType={formType}
       />
 
-      <EditQuestionSidePanel
+      <AddQuestionSidePanel
         open={isEditQuestionOpen}
         onOpenChange={setIsEditQuestionOpen}
         question={editingQuestion}
@@ -586,10 +585,10 @@ const FormDetailPage = () => {
         questions={questions}
       />
 
-      <EditFormSidePanel
+      <AddFormSidePanel
         open={isEditFormOpen}
         onOpenChange={setIsEditFormOpen}
-        form={currentForm}
+        editingForm={currentForm}
         onSave={handleEditForm}
       />
     </div>

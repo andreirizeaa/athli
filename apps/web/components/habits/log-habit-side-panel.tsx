@@ -33,7 +33,7 @@ import { Label } from '@/components/ui/label';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { type Habit } from '@/api/coach/coach-habit-service';
 import { checkExistingHabitLog } from '@/api/client/client-habit-log-service';
-import { Info, ChevronDownIcon, Check, Loader2 } from 'lucide-react';
+import { Info, ChevronDownIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 type LogHabitFormValues = {
@@ -159,21 +159,10 @@ export const LogHabitSidePanel = ({
       onOpenChange={onOpenChange}
       title={t('habits.logHabitTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
-      footer={
-        <div className="flex w-full justify-end gap-2">
-          <Button variant="outline" onClick={handleClose} disabled={isSaving}>
-            {t('general.cancel')}
-          </Button>
-          <Button onClick={form.handleSubmit(handleSave)} disabled={isSaveDisabled || isSaving}>
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="h-4 w-4" />
-            )}
-            {t('general.save')}
-          </Button>
-        </div>
-      }
+      onSave={form.handleSubmit(handleSave)}
+      isSaving={isSaving}
+      isSaveDisabled={isSaveDisabled}
+      onCancel={handleClose}
     >
       <Form {...form}>
         <form className="flex flex-col gap-4">

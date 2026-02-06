@@ -19,7 +19,6 @@ import { uploadFile, updateFile, deleteFile, getFileTypeFromMime, isExternalLink
 import { deleteClientFiles, addFilesToClient, uploadClientFile, getClientFileUrl, downloadClientFile, isPreviewable } from '@/api/client/client-file-service';
 import { getClientFiles } from '@/api/coach/coach-client-service';
 import { AddFileSidePanel } from '@/components/files/add-file-side-panel';
-import { EditFileSidePanel } from '@/components/files/edit-file-side-panel';
 import { FilePreviewDialog } from '@/components/files/file-preview-dialog';
 import { ClientFileThumbnail } from '@/components/files/client-file-thumbnail';
 import { useClientFiles } from '@/hooks/use-client-files';
@@ -542,18 +541,19 @@ const ClientFilesPage = () => {
       />
 
       {editingFile && (
-        <EditFileSidePanel
+        <AddFileSidePanel
           open={editingFileId !== null}
           onOpenChange={(open) => {
             if (!open) {
               setEditingFileId(null);
             }
           }}
-          fileId={editingFileId}
-          fileName={editingFile.fileName}
-          tags={editingFile.tags}
-          onSave={handleSaveEdit}
-          onDelete={handleDeleteEdit}
+          onUpload={async () => {}}
+          editingFileId={editingFileId}
+          editingFileName={editingFile.fileName}
+          editingTags={editingFile.tags}
+          onEditSave={handleSaveEdit}
+          onEditDelete={handleDeleteEdit}
         />
       )}
 

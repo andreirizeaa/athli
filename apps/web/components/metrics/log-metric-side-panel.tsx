@@ -32,7 +32,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { checkExistingMetricLog } from '@/api/client/client-metric-log-service';
-import { Info, ChevronDownIcon, Check, Loader2 } from 'lucide-react';
+import { Info, ChevronDownIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 type Metric = {
@@ -165,21 +165,10 @@ export const LogMetricSidePanel = ({
       onOpenChange={onOpenChange}
       title={t('metrics.logMetricTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
-      footer={
-        <div className="flex w-full justify-end gap-2">
-          <Button variant="outline" onClick={handleClose} disabled={isSaving}>
-            {t('general.cancel')}
-          </Button>
-          <Button onClick={form.handleSubmit(handleSave)} disabled={isSaveDisabled || isSaving} className="gap-2">
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="h-4 w-4" />
-            )}
-            {t('general.save')}
-          </Button>
-        </div>
-      }
+      onSave={form.handleSubmit(handleSave)}
+      isSaving={isSaving}
+      isSaveDisabled={isSaveDisabled}
+      onCancel={handleClose}
     >
       <Form {...form}>
         <form className="flex flex-col gap-4">

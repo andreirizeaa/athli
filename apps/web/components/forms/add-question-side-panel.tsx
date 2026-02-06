@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -23,9 +23,10 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from '@/components/ui/tooltip';
-import { Edit, Plus, X, Check } from 'lucide-react';
+import { Edit, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { getClientMetrics } from '@/api/client/client-metric-service';
+import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 type MetricOption = {
@@ -40,25 +41,29 @@ type QuestionFormat = {
   subtitle: string;
 };
 
+export type QuestionData = {
+  id: string;
+  question: string;
+  required: boolean;
+  format: string;
+  options?: string[];
+  scaleFrom?: string;
+  scaleTo?: string;
+  mediaCount?: number;
+  metricId?: string;
+};
+
 type AddQuestionSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (question: {
-    question: string;
-    required: boolean;
-    format: string;
-    options?: string[];
-    scaleFrom?: string;
-    scaleTo?: string;
-    mediaCount?: number;
-    metricId?: string;
-  }) => void;
+  onSave: (question: any) => void;
   questions: any[];
   clientId?: string;
   formType?: 'check-in' | 'questionnaire';
+  question?: QuestionData | null;
 };
 
-export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, clientId, formType }: AddQuestionSidePanelProps) => {
+export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, clientId, formType, question }: AddQuestionSidePanelProps) => {
   const t = useTranslations();
   const router = useRouter();
   const { user } = useUserProfile();
@@ -70,6 +75,9 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
   const [selectedMetricId, setSelectedMetricId] = useState<string>('');
   const [metrics, setMetrics] = useState<MetricOption[]>([]);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(false);
+  const questionMetricIdRef = useRef<string>('');
+
+  const isEditing = !!question;
 
   const syncsWithFormats: QuestionFormat[] = [
     { id: 'progressPhoto', label: t('forms.detail.addQuestion.formats.progressPhoto'), subtitle: t('forms.detail.addQuestion.formats.progressPhotoSubtitle') },
@@ -77,8 +85,14 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
   ];
 
   const safeQuestions = questions || [];
-  const isProgressPhotoAlreadyUsed = safeQuestions.some(q => q.format === 'progressPhoto');
-  const usedMetricIds = new Set(safeQuestions.filter(q => q.format === 'metrics').map(q => q.metricId));
+  const isProgressPhotoAlreadyUsed = safeQuestions.some(q =>
+    q.format === 'progressPhoto' && (isEditing ? q.id !== question?.id : true)
+  );
+  const usedMetricIds = new Set(
+    safeQuestions
+      .filter(q => q.format === 'metrics' && (isEditing ? q.id !== question?.id : true))
+      .map(q => q.metricId)
+  );
 
   const generalFormats: QuestionFormat[] = [
     { id: 'text', label: t('forms.detail.addQuestion.formats.text'), subtitle: t('forms.detail.addQuestion.formats.textSubtitle') },
@@ -99,8 +113,8 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
     (format) => {
       // Hide progress photo if already used
       if (format.id === 'progressPhoto' && isProgressPhotoAlreadyUsed) return false;
-      // Hide metrics for questionnaires (metrics only apply to check-ins)
-      if (format.id === 'metrics' && formType === 'questionnaire') return false;
+      // Hide metrics for questionnaires (metrics only apply to check-ins) - only in add mode
+      if (!isEditing && format.id === 'metrics' && formType === 'questionnaire') return false;
       return true;
     }
   );
@@ -115,6 +129,7 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
     setMediaCount(1);
     setSelectedMetricId('');
     setMetrics([]);
+    questionMetricIdRef.current = '';
   };
 
   // Reset form when panel closes
@@ -124,6 +139,33 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
     }
   }, [open]);
 
+  // Populate form state from question data when editing
+  useEffect(() => {
+    if (question && open) {
+      setQuestionText(question.question);
+      setIsRequired(question.required);
+      setSelectedFormat(question.format);
+      if (question.format === 'multipleChoice') {
+        setOptions(question.options && question.options.length > 0 ? question.options : ['']);
+      } else {
+        setOptions(['']);
+      }
+      if (question.format === 'images' || question.format === 'videos') {
+        setMediaCount(question.mediaCount || 1);
+      } else {
+        setMediaCount(1);
+      }
+      if (question.format === 'metrics') {
+        const metricId = question.metricId || '';
+        questionMetricIdRef.current = metricId;
+        setSelectedMetricId(metricId);
+      } else {
+        questionMetricIdRef.current = '';
+        setSelectedMetricId('');
+      }
+    }
+  }, [question, open]);
+
   // Fetch metrics when metrics format is selected
   useEffect(() => {
     if (open && selectedFormat === 'metrics') {
@@ -132,22 +174,44 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
   }, [open, selectedFormat]);
 
   const fetchMetrics = async () => {
-    if (!clientId) {
-      setMetrics([]); // No fetching on coach side
-      return;
-    }
-    setIsLoadingMetrics(true);
-    try {
-      const clientMetrics = await getClientMetrics(clientId, user?.id || '');
-      setMetrics(clientMetrics.map(m => ({ id: m.id, name: m.name, unit: m.unit })));
-    } catch (error) {
-      console.error('Failed to fetch client metrics:', error);
-    } finally {
-      setIsLoadingMetrics(false);
+    if (isEditing) {
+      // Edit mode: fetch all metrics from coach-metric-service
+      setIsLoadingMetrics(true);
+      try {
+        const fetchedMetrics = await getAllMetrics();
+        setMetrics(fetchedMetrics.map(m => ({ id: m.id, name: m.name, unit: m.unit })));
+        // After metrics are loaded, set the selectedMetricId from the ref
+        if (questionMetricIdRef.current) {
+          setSelectedMetricId(questionMetricIdRef.current);
+        }
+      } catch (error) {
+        console.error('Failed to fetch metrics:', error);
+      } finally {
+        setIsLoadingMetrics(false);
+      }
+    } else {
+      // Add mode: fetch client metrics
+      if (!clientId) {
+        setMetrics([]); // No fetching on coach side
+        return;
+      }
+      setIsLoadingMetrics(true);
+      try {
+        const clientMetrics = await getClientMetrics(clientId, user?.id || '');
+        setMetrics(clientMetrics.map(m => ({ id: m.id, name: m.name, unit: m.unit })));
+      } catch (error) {
+        console.error('Failed to fetch client metrics:', error);
+      } finally {
+        setIsLoadingMetrics(false);
+      }
     }
   };
 
   const metricsCardState = useMemo(() => {
+    // In edit mode, metrics card is always enabled
+    if (isEditing) {
+      return { enabled: true };
+    }
     // Coach side - no client context
     if (!clientId) {
       return { enabled: false, reason: 'no-client-context' as const };
@@ -158,7 +222,7 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
     }
     // Enabled
     return { enabled: true };
-  }, [clientId, filteredMetrics, isLoadingMetrics]);
+  }, [isEditing, clientId, filteredMetrics, isLoadingMetrics]);
 
   const handleClose = () => {
     resetForm();
@@ -166,17 +230,27 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
   };
 
   const handleSave = () => {
+    if (isEditing && !question) return;
+
     if (selectedFormat === 'multipleChoice') {
       const hasValidOptions = options.some((opt) => opt.trim() !== '');
       if (!hasValidOptions) {
         return;
       }
     }
-    const questionData: any = {
-      question: questionText,
-      required: isRequired,
-      format: selectedFormat,
-    };
+
+    const questionData: any = isEditing
+      ? {
+          ...question,
+          question: questionText,
+          required: isRequired,
+          format: selectedFormat || '',
+        }
+      : {
+          question: questionText,
+          required: isRequired,
+          format: selectedFormat,
+        };
 
     if (selectedFormat === 'multipleChoice') {
       questionData.options = options.filter((opt) => opt.trim() !== '');
@@ -250,23 +324,12 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
     <SidePanel
       open={open}
       onOpenChange={onOpenChange}
-      title={t('forms.detail.addQuestion.title')}
+      title={isEditing ? t('forms.detail.editQuestion.title') : t('forms.detail.addQuestion.title')}
       onOpenAutoFocus={(e) => e.preventDefault()}
-      footer={
-        <div className="flex w-full justify-end gap-2">
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {t('general.cancel')}
-          </Button>
-          <Button
-            type="button"
-            onClick={handleSave}
-            disabled={!isValid}
-          >
-            <Check className="h-4 w-4" />
-            {t('general.add')}
-          </Button>
-        </div>
-      }
+      onSave={handleSave}
+      saveText={isEditing ? t('general.save') : t('general.add')}
+      isSaveDisabled={!isValid}
+      onCancel={handleClose}
     >
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
@@ -334,7 +397,7 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
                 )}>
                   {filteredSyncsWithFormats.map((format) => {
                     const isMetrics = format.id === 'metrics';
-                    const isDisabled = isMetrics && !metricsCardState.enabled;
+                    const isDisabled = !isEditing && isMetrics && !metricsCardState.enabled;
 
                     const card = (
                       <Card
@@ -542,10 +605,3 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
     </SidePanel>
   );
 };
-
-
-
-
-
-
-

@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/general/utils';
 import { AddHabitSidePanel, type HabitFormValues } from '@/components/habits/add-habit-side-panel';
-import { EditHabitSidePanel } from '@/components/habits/edit-habit-side-panel';
 import { LogHabitSidePanel } from '@/components/habits/log-habit-side-panel';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
@@ -933,7 +932,7 @@ const ClientHabitsPage = () => {
       />
 
       {selectedHabit && (
-        <EditHabitSidePanel
+        <AddHabitSidePanel
           open={isEditHabitOpen}
           onOpenChange={setIsEditHabitOpen}
           habit={selectedHabit}

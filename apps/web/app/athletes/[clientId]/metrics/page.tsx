@@ -20,7 +20,6 @@ import {
 import { cn } from '@/lib/general/utils';
 import { AddMetricSidePanel } from '@/components/metrics/add-metric-side-panel';
 import { LogMetricSidePanel } from '@/components/metrics/log-metric-side-panel';
-import { EditMetricSidePanel } from '@/components/metrics/edit-metric-side-panel';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
@@ -838,7 +837,7 @@ const ClientMetricsPage = () => {
       />
 
       {selectedMetric && (
-        <EditMetricSidePanel
+        <AddMetricSidePanel
           open={isEditMetricOpen}
           onOpenChange={setIsEditMetricOpen}
           metric={selectedMetric}

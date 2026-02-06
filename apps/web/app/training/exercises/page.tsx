@@ -43,7 +43,6 @@ import { starPrograms, deletePrograms } from '@/api/coach/coach-program-service'
 import { getExercises, starExercises, deleteExercises as deleteExercisesService, createExercise, editExercise, duplicateExercises, type Exercise } from '@/api/coach/coach-exercise-service';
 import { toast } from 'sonner';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
-import { EditExerciseSidePanel } from './edit-exercise-side-panel';
 import { useTrainingData } from '../training-data-context';
 import { useVideoThumbnails } from '@/hooks/use-video-thumbnail';
 import {
@@ -1025,7 +1024,7 @@ const ExercisesPage = () => {
         }}
         onSave={handleSaveExercise}
       />
-      <EditExerciseSidePanel
+      <AddExerciseSidePanel
         open={isEditExerciseOpen}
         onOpenChange={(open) => {
           setIsEditExerciseOpen(open);
