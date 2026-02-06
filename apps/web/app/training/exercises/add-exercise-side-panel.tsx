@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -16,9 +17,9 @@ import {
 import { MultiAsyncSelect } from '@/components/ui/multi-async-select';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Spinner } from '@/components/ui/spinner';
-import { X, Upload, Check, Loader2 } from 'lucide-react';
+import { X, Upload, Check, Loader2, Trash2, Video } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
-import { createExercise } from '@/api/coach/coach-exercise-service';
+import { createExercise, editExercise, getExerciseVideoUrl, type Exercise } from '@/api/coach/coach-exercise-service';
 import { toast } from 'sonner';
 import {
   MUSCLEWIKI_CATEGORY_OPTIONS,
@@ -63,10 +64,14 @@ type AddExerciseSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: () => void;
+  exercise?: Exercise | null;
+  onDelete?: () => void;
 };
 
-export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExerciseSidePanelProps) => {
+export const AddExerciseSidePanel = ({ open, onOpenChange, onSave, exercise, onDelete }: AddExerciseSidePanelProps) => {
   const t = useTranslations();
+  const isEditing = !!exercise;
+
   const [exerciseName, setExerciseName] = useState<string>('');
   const [exerciseInstructions, setExerciseInstructions] = useState<string>('');
   const [videoLink, setVideoLink] = useState<string>('');
@@ -88,6 +93,20 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
 
+  // Edit-specific state
+  const [signedVideoUrl, setSignedVideoUrl] = useState<string | null>(null);
+  const [isLoadingSignedUrl, setIsLoadingSignedUrl] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+  const [originalExerciseData, setOriginalExerciseData] = useState<{
+    name: string;
+    instructions: string;
+    videoLink: string;
+    category: string;
+    muscleGroups: string[];
+    difficulty: string;
+  } | null>(null);
+
   const resetForm = () => {
     setExerciseName('');
     setExerciseInstructions('');
@@ -107,6 +126,9 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
     setMuscleGroupsError(null);
     setDifficultyError(null);
     setIsSaving(false);
+    setSignedVideoUrl(null);
+    setIsLoadingSignedUrl(false);
+    setOriginalExerciseData(null);
     dragCounterRef.current = 0;
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -122,6 +144,48 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
       resetForm();
     }
   }, [open]);
+
+  // Populate form when exercise changes (edit mode)
+  useEffect(() => {
+    if (exercise && open) {
+      setExerciseName(exercise.name || '');
+      setExerciseInstructions(exercise.description || '');
+      setVideoLink(exercise.video_link || '');
+      setVideoFile(null);
+      setVideoPreview(null);
+      setSignedVideoUrl(null);
+      setCategory(exercise.category || '');
+      setMuscleGroups(exercise.muscle_group || []);
+      setDifficulty(exercise.difficulty || '');
+
+      // Store original data for change detection
+      setOriginalExerciseData({
+        name: exercise.name || '',
+        instructions: exercise.description || '',
+        videoLink: exercise.video_link || '',
+        category: exercise.category || '',
+        muscleGroups: exercise.muscle_group || [],
+        difficulty: exercise.difficulty || '',
+      });
+
+      // Fetch fresh signed URL for Supabase videos
+      if (exercise.video_link && isSupabaseUrl(exercise.video_link)) {
+        setIsLoadingSignedUrl(true);
+        getExerciseVideoUrl(exercise.id)
+          .then((url) => {
+            if (url) {
+              setSignedVideoUrl(url);
+            }
+          })
+          .catch((err) => {
+            console.error('Failed to get signed video URL:', err);
+          })
+          .finally(() => {
+            setIsLoadingSignedUrl(false);
+          });
+      }
+    }
+  }, [exercise, open]);
 
   // Fetch Vimeo thumbnail when video link changes
   useEffect(() => {
@@ -235,6 +299,22 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
     }
   };
 
+  const hasFormChanged = (): boolean => {
+    if (!originalExerciseData || !exercise) {
+      return false;
+    }
+
+    return (
+      exerciseName.trim() !== originalExerciseData.name.trim() ||
+      exerciseInstructions.trim() !== originalExerciseData.instructions.trim() ||
+      videoLink.trim() !== originalExerciseData.videoLink.trim() ||
+      !!videoFile || // File upload counts as change
+      category !== originalExerciseData.category ||
+      JSON.stringify([...muscleGroups].sort()) !== JSON.stringify([...originalExerciseData.muscleGroups].sort()) ||
+      difficulty !== originalExerciseData.difficulty
+    );
+  };
+
   const handleClose = () => {
     resetForm();
     onOpenChange(false);
@@ -243,6 +323,8 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
   const isFormValid = exerciseName.trim() !== '';
 
   const handleSave = async () => {
+    if (isEditing && !exercise) return;
+
     let hasError = false;
 
     if (!exerciseName.trim()) {
@@ -333,8 +415,13 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
         difficulty,
       };
 
-      await createExercise(exerciseData);
-      toast.success(t('exercises.actions.createSuccess') || 'Exercise created successfully');
+      if (isEditing) {
+        await editExercise(exercise.id, exerciseData);
+        toast.success(t('exercises.actions.updateSuccess') || 'Exercise updated successfully');
+      } else {
+        await createExercise(exerciseData);
+        toast.success(t('exercises.actions.createSuccess') || 'Exercise created successfully');
+      }
       onSave();
       handleClose();
     } catch (error) {
@@ -344,30 +431,46 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
     }
   };
 
-  return (
+  const panel = (
     <SidePanel
       open={open}
       onOpenChange={onOpenChange}
       onOpenAutoFocus={(e) => {
         e.preventDefault();
       }}
-      title={t('exercises.addExercise.title')}
+      title={isEditing ? t('exercises.addExercise.editTitle') : t('exercises.addExercise.title')}
       footer={
         <div className="flex w-full justify-end gap-2">
           <Button
             type="button"
             variant="outline"
             onClick={handleClose}
-            disabled={isSaving}
+            disabled={isSaving || isDeleting}
             aria-label={t('exercises.addExercise.cancelAria')}
             className="gap-2"
           >
             {t('general.cancel')}
           </Button>
+          {isEditing && onDelete && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              disabled={isSaving || isDeleting}
+              className="gap-2"
+            >
+              {isDeleting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
+              {t('general.delete') || 'Delete'}
+            </Button>
+          )}
           <Button
             type="button"
             onClick={handleSave}
-            disabled={isSaving || !isFormValid}
+            disabled={isSaving || isDeleting || (isEditing ? !hasFormChanged() : !isFormValid)}
             aria-label={t('exercises.addExercise.saveAria')}
             className="gap-2"
           >
@@ -439,8 +542,42 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
               {t('exercises.addExercise.video')}
             </label>
 
-            {/* Video Link Input - shown when no file is selected */}
-            {!videoFile && (
+            {/* Existing Custom Upload (Supabase URL) - shown when editing and video link is a Supabase URL */}
+            {isEditing && !videoFile && isSupabaseUrl(videoLink) && (
+              <div className="flex flex-col gap-3">
+                {/* Input bar showing "Custom upload" with trash icon */}
+                <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30">
+                  <Video className="size-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-sm font-medium flex-1">{t('exercises.addExercise.customUpload')}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVideoLink('');
+                      setSignedVideoUrl(null);
+                    }}
+                    className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    aria-label={t('exercises.addExercise.clearVideoLink')}
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+                {/* Video preview below */}
+                {isLoadingSignedUrl ? (
+                  <div className="w-full aspect-video rounded-md border border-border bg-muted flex items-center justify-center">
+                    <Spinner className="h-6 w-6" />
+                  </div>
+                ) : (
+                  <video
+                    src={signedVideoUrl || videoLink}
+                    className="w-full rounded-md border border-border"
+                    controls
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Video Link Input - shown when no file is selected and not a Supabase URL (in edit mode) */}
+            {!videoFile && !(isEditing && isSupabaseUrl(videoLink)) && (
               <div className="relative">
                 <Input
                   id="video-link"
@@ -474,7 +611,7 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
             )}
 
             {/* Video Link Preview */}
-            {!videoFile && (() => {
+            {!videoFile && !(isEditing && isSupabaseUrl(videoLink)) && (() => {
               const { id, type } = extractVideoId(videoLink);
               if (id && type === 'youtube') {
                 return (
@@ -703,5 +840,29 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
       </div>
     </SidePanel>
   );
-};
 
+  if (isEditing) {
+    return (
+      <>
+        {panel}
+        <ConfirmDeleteDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          onConfirm={async () => {
+            setIsDeleteDialogOpen(false);
+            setIsDeleting(true);
+            try {
+              await onDelete?.();
+            } finally {
+              setIsDeleting(false);
+            }
+          }}
+          itemName={exerciseName}
+          itemType="exercise"
+        />
+      </>
+    );
+  }
+
+  return panel;
+};

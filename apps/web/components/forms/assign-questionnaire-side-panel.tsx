@@ -23,7 +23,7 @@ import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { FileText, Info, Check, Loader2, Edit } from 'lucide-react';
+import { FileText, Info, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { getQuestionnaires, type Questionnaire as CoachQuestionnaire } from '@/api/coach/coach-questionnaire-service';
 import { assignForm, convertScheduleToCron, type AssignFormScheduleData, createClientQuestionnaire } from '@/api/client/client-form-service';
@@ -312,69 +312,20 @@ export const AssignQuestionnaireSidePanel = ({
     },
   ], [t]);
 
-  const renderFooter = () => {
-    if (activeTab === 'yourLibrary') {
-      return (
-        <div className="flex w-full justify-end gap-2">
-          <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
-            {t('general.cancel')}
-          </Button>
-          <Button
-            type="button"
-            onClick={handleSaveFromYourLibrary}
-            disabled={selectedQuestionnaires.size === 0 || isSaving}
-          >
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="h-4 w-4" />
-            )}
-            {getButtonText()}
-          </Button>
-        </div>
-      );
-    } else if (activeTab === 'athliLibrary') {
-      return (
-        <div className="flex w-full justify-end gap-2">
-          <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
-            {t('general.cancel')}
-          </Button>
-          <Button
-            type="button"
-            onClick={handleSaveFromAthliLibrary}
-            disabled={!selectedTemplate || isSaving}
-          >
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="h-4 w-4" />
-            )}
-            {t('general.assign')}
-          </Button>
-        </div>
-      );
-    } else {
-      return (
-        <div className="flex w-full justify-end gap-2">
-          <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
-            {t('general.cancel')}
-          </Button>
-          <Button
-            type="button"
-            onClick={form.handleSubmit(handleSaveNewQuestionnaire)}
-            disabled={!isValid || isSaving}
-          >
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="h-4 w-4" />
-            )}
-            {t('general.assign')}
-          </Button>
-        </div>
-      );
-    }
-  };
+  // Compute footer props based on active tab
+  const footerSaveHandler = activeTab === 'yourLibrary'
+    ? handleSaveFromYourLibrary
+    : activeTab === 'athliLibrary'
+      ? handleSaveFromAthliLibrary
+      : form.handleSubmit(handleSaveNewQuestionnaire);
+
+  const footerSaveText = activeTab === 'yourLibrary' ? getButtonText() : t('general.assign');
+
+  const footerIsSaveDisabled = activeTab === 'yourLibrary'
+    ? selectedQuestionnaires.size === 0
+    : activeTab === 'athliLibrary'
+      ? !selectedTemplate
+      : !isValid;
 
   const showAlert = !!clientName && activeTab !== 'yourLibrary';
 
@@ -391,7 +342,11 @@ export const AssignQuestionnaireSidePanel = ({
       title={t('general.assign') + ' Questionnaire'}
       onOpenAutoFocus={(e) => e.preventDefault()}
       contentClassName="w-full sm:w-[600px] sm:max-w-[600px]"
-      footer={renderFooter()}
+      onSave={footerSaveHandler}
+      saveText={footerSaveText}
+      isSaving={isSaving}
+      isSaveDisabled={footerIsSaveDisabled}
+      onCancel={handleClose}
     >
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'yourLibrary' | 'athliLibrary' | 'newQuestionnaire')} className="w-full flex-1 flex flex-col min-h-0">
         <TabsList className="w-full mb-6">

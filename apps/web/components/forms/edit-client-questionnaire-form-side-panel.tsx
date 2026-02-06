@@ -6,7 +6,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import {
   Form,
@@ -20,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info, Check, Loader2, Trash2 } from 'lucide-react';
+import { Info } from 'lucide-react';
 import {
   editClientQuestionnaireDetails,
   deleteClientQuestionnaires,
@@ -159,38 +158,12 @@ export const EditClientQuestionnaireFormSidePanel = ({
       onOpenChange={onOpenChange}
       title={t('forms.editFormTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
-      footer={
-        <div className="flex w-full justify-end gap-2">
-          <Button type="button" variant="outline" onClick={handleClose} disabled={isDeleting || isSaving}>
-            {t('general.cancel')}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleDelete}
-            disabled={isDeleting || isSaving}
-          >
-            {isDeleting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="h-4 w-4" />
-            )}
-            {t('general.delete')}
-          </Button>
-          <Button
-            type="button"
-            onClick={reactForm.handleSubmit(handleSave)}
-            disabled={!reactForm.formState.isValid || !hasChanges || isDeleting || isSaving}
-          >
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="h-4 w-4" />
-            )}
-            {t('general.save')}
-          </Button>
-        </div>
-      }
+      onSave={reactForm.handleSubmit(handleSave)}
+      isSaving={isSaving}
+      isSaveDisabled={!reactForm.formState.isValid || !hasChanges}
+      onDelete={handleDelete}
+      isDeleting={isDeleting}
+      onCancel={handleClose}
     >
       <Form {...reactForm}>
         <form

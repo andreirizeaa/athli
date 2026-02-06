@@ -12,7 +12,6 @@ type Form = CheckIn | Questionnaire;
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel';
-import { EditQuestionSidePanel } from '@/components/forms/edit-question-side-panel';
 import { FormPreviewContainer } from '@/components/forms/form-preview-container';
 import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
 
@@ -497,7 +496,7 @@ export const FormBuilder = ({
         formType={formType}
       />
 
-      <EditQuestionSidePanel
+      <AddQuestionSidePanel
         open={isEditQuestionOpen}
         onOpenChange={setIsEditQuestionOpen}
         question={editingQuestion}

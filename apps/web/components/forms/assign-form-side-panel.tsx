@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
-import { Search, Edit, FileText, ChevronDownIcon, Info, Check, Loader2 } from 'lucide-react';
+import { Search, Edit, FileText, ChevronDownIcon, Info } from 'lucide-react';
 import { getCheckIns, type CheckIn } from '@/api/coach/coach-check-in-service';
 import { getQuestionnaires, type Questionnaire } from '@/api/coach/coach-questionnaire-service';
 
@@ -250,42 +250,11 @@ export const AssignFormSidePanel = ({
       title={t('athletes.profile.checkIns.assignForm')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       contentClassName="w-full sm:w-[600px] sm:max-w-[600px]"
-      footer={
-        step === 1 ? (
-          forms.length > 0 ? (
-            <div className="flex w-full justify-end gap-2">
-              <Button type="button" variant="outline" onClick={handleClose}>
-                {t('general.cancel')}
-              </Button>
-              <Button
-                type="button"
-                onClick={handleContinue}
-                disabled={!selectedForm}
-              >
-                {t('general.continue')}
-              </Button>
-            </div>
-          ) : null
-        ) : (
-          <div className="flex w-full justify-end gap-2">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
-              {t('general.cancel')}
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSave}
-              disabled={!isValidStep2() || isSaving}
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="h-4 w-4" />
-              )}
-              {t('general.save')}
-            </Button>
-          </div>
-        )
-      }
+      onSave={step === 1 ? (forms.length > 0 ? handleContinue : undefined) : handleSave}
+      saveText={step === 1 ? t('general.continue') : undefined}
+      isSaving={step === 2 ? isSaving : false}
+      isSaveDisabled={step === 1 ? !selectedForm : !isValidStep2()}
+      onCancel={handleClose}
     >
       {step === 1 ? (
         <div className="flex flex-col gap-6 max-h-[calc(100vh-200px)] overflow-y-auto px-1 pt-1">

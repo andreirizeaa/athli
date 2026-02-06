@@ -6,12 +6,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { SidePanel } from '@/components/app/side-panel';
-import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { Athlete } from '@/api/coach/coach-client-service';
 import { Spinner } from '@/components/ui/spinner';
-import { UserPlus, Check, Loader2, Info } from 'lucide-react';
+import { UserPlus, Info } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 
 interface AssignToClientsSidePanelProps {
@@ -147,29 +146,10 @@ export const AssignToClientsSidePanel = ({
             open={open}
             onOpenChange={onOpenChange}
             title={title}
-            footer={
-                <div className="flex w-full justify-end gap-2">
-                    <Button
-                        variant="outline"
-                        onClick={() => onOpenChange(false)}
-                        disabled={loadingState}
-                    >
-                        {t('general.cancel')}
-                    </Button>
-                    <Button
-                        onClick={handleAssign}
-                        disabled={selectedClientIds.size === 0 || loadingState}
-                        className="gap-2"
-                    >
-                        {loadingState ? (
-                            <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                            <Check className="size-4" />
-                        )}
-                        {label}
-                    </Button>
-                </div>
-            }
+            onSave={handleAssign}
+            saveText={label}
+            isSaving={loadingState}
+            isSaveDisabled={selectedClientIds.size === 0}
         >
             <div className="flex flex-col gap-6 h-full">
                 {description && (

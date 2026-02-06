@@ -13,7 +13,6 @@ import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { PageHeader } from '@/components/app/page-header';
 import { AddMetricSidePanel } from '@/components/metrics/add-metric-side-panel';
-import { EditMetricSidePanel } from '@/components/metrics/edit-metric-side-panel';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { useCoachMetrics } from '@/hooks/use-coach-metrics';
 import { useCoachClients } from '@/hooks/use-coach-clients';
@@ -505,10 +504,10 @@ const MetricsPage = () => {
       />
 
       {editingMetric && (
-        <EditMetricSidePanel
+        <AddMetricSidePanel
           open={isEditMetricOpen}
           onOpenChange={setIsEditMetricOpen}
-          metric={editingMetric as any /* temporary cast if there are slight mismatches in expected props */}
+          metric={editingMetric as any}
           onSave={async (name, unit, description, scheduleConfig, cronExpression) => {
             await handleSaveMetric(name, unit, description, undefined, scheduleConfig, cronExpression);
           }}
