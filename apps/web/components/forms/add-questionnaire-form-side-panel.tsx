@@ -22,7 +22,7 @@ import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Edit, Info, FileText, Check, Loader2, Trash2 } from 'lucide-react';
+import { Edit, Info, FileText } from 'lucide-react';
 import { addQuestionnaire, editQuestionnaireDetails, deleteQuestionnaire, type AddQuestionnaireData as AddFormData, type Questionnaire } from '@/api/coach/coach-questionnaire-service';
 import { formTemplates, type FormTemplate } from '@/constants/forms';
 import { cn } from '@/lib/general/utils';
@@ -235,59 +235,6 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave, edit
     },
   ], [t]);
 
-  const editFooter = (
-    <div className="flex w-full justify-end gap-2">
-      <Button type="button" variant="outline" onClick={handleClose} disabled={isDeleting || isSaving}>
-        {t('general.cancel')}
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={handleDelete}
-        disabled={isDeleting || isSaving}
-      >
-        {isDeleting ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Trash2 className="h-4 w-4" />
-        )}
-        {t('general.delete')}
-      </Button>
-      <Button
-        type="button"
-        onClick={form.handleSubmit(handleSave)}
-        disabled={!form.formState.isValid || !hasChanges || isDeleting || isSaving}
-      >
-        {isSaving ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Check className="h-4 w-4" />
-        )}
-        {t('general.save')}
-      </Button>
-    </div>
-  );
-
-  const addFooter = (
-    <div className="flex w-full justify-end gap-2">
-      <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
-        {t('general.cancel')}
-      </Button>
-      <Button
-        type="button"
-        onClick={activeTab === 'new' ? form.handleSubmit(handleSave) : handleSaveFromTemplate}
-        disabled={!isValid || isSaving}
-      >
-        {isSaving ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Check className="h-4 w-4" />
-        )}
-        {t('general.save')}
-      </Button>
-    </div>
-  );
-
   const nameDescriptionForm = (
     <Form {...form}>
       <form
@@ -393,7 +340,12 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave, edit
       onOpenChange={onOpenChange}
       title={isEditing ? t('forms.editFormTitle') : t('forms.addQuestionnaireTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
-      footer={isEditing ? editFooter : addFooter}
+      onSave={isEditing ? form.handleSubmit(handleSave) : (activeTab === 'new' ? form.handleSubmit(handleSave) : handleSaveFromTemplate)}
+      isSaving={isSaving}
+      isSaveDisabled={!isValid}
+      onDelete={isEditing ? handleDelete : undefined}
+      isDeleting={isDeleting}
+      onCancel={handleClose}
     >
       {isEditing ? (
         nameDescriptionForm

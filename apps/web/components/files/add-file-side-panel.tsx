@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Upload, Check, FileText, X, Loader2, Trash2 } from 'lucide-react';
+import { Upload, Check, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
@@ -481,70 +481,13 @@ export const AddFileSidePanel = ({
         }
       }}
       title={isEditing ? t('files.editFile.title') : t('files.addFile')}
-      footer={
-        isEditing ? (
-          <div className="flex w-full justify-end gap-2">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving || isDeleting}>
-              {t('general.cancel')}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleEditDelete}
-              disabled={isSaving || isDeleting}
-              className="gap-2"
-            >
-              {isDeleting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-              {t('general.delete')}
-            </Button>
-            <Button
-              type="button"
-              onClick={handleEditSave}
-              disabled={!hasEditChanges || isSaving || isDeleting}
-              className="gap-2"
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="h-4 w-4" />
-              )}
-              {t('general.save')}
-            </Button>
-          </div>
-        ) : clientId && activeTab === 'yourLibrary' ? (
-          <div className="flex w-full justify-end gap-2">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
-              {t('general.cancel')}
-            </Button>
-            <Button type="button" onClick={handleSaveFromYourLibrary} disabled={selectedLibraryFiles.size === 0 || isSaving} className="gap-2">
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="h-4 w-4" />
-              )}
-              {getButtonText()}
-            </Button>
-          </div>
-        ) : (
-          <div className="flex w-full justify-end gap-2">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isUploading || isSaving}>
-              {t('general.cancel')}
-            </Button>
-            <Button type="button" onClick={handleSave} disabled={!isValid || isUploading || isSaving} className="gap-2">
-              {isUploading || isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="h-4 w-4" />
-              )}
-              Add
-            </Button>
-          </div>
-        )
-      }
+      onSave={isEditing ? handleEditSave : (clientId && activeTab === 'yourLibrary') ? handleSaveFromYourLibrary : handleSave}
+      saveText={isEditing ? undefined : (clientId && activeTab === 'yourLibrary') ? getButtonText() : 'Add'}
+      isSaving={isUploading || isSaving}
+      isSaveDisabled={isEditing ? !hasEditChanges : (clientId && activeTab === 'yourLibrary') ? selectedLibraryFiles.size === 0 : !isValid}
+      onDelete={isEditing ? handleEditDelete : undefined}
+      isDeleting={isDeleting}
+      onCancel={handleClose}
     >
       {isEditing ? (
         <div className="flex flex-col gap-6">

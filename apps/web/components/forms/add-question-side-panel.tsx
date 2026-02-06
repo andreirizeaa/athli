@@ -23,7 +23,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from '@/components/ui/tooltip';
-import { Edit, Plus, X, Check } from 'lucide-react';
+import { Edit, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { getClientMetrics } from '@/api/client/client-metric-service';
 import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
@@ -326,21 +326,10 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
       onOpenChange={onOpenChange}
       title={isEditing ? t('forms.detail.editQuestion.title') : t('forms.detail.addQuestion.title')}
       onOpenAutoFocus={(e) => e.preventDefault()}
-      footer={
-        <div className="flex w-full justify-end gap-2">
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {t('general.cancel')}
-          </Button>
-          <Button
-            type="button"
-            onClick={handleSave}
-            disabled={!isValid}
-          >
-            <Check className="h-4 w-4" />
-            {isEditing ? t('general.save') : t('general.add')}
-          </Button>
-        </div>
-      }
+      onSave={handleSave}
+      saveText={isEditing ? t('general.save') : t('general.add')}
+      isSaveDisabled={!isValid}
+      onCancel={handleClose}
     >
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">

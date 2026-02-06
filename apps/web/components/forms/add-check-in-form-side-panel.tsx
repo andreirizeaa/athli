@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Edit, Info, Check, Loader2, Trash2 } from 'lucide-react';
+import { Edit, Info } from 'lucide-react';
 import { addCheckIn, editCheckInDetails, deleteCheckIn, type AddCheckInData as AddFormData, type CheckIn } from '@/api/coach/coach-check-in-service';
 import { formTemplates, type FormTemplate } from '@/constants/forms';
 import { convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
@@ -635,68 +635,18 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave, editingFor
     </>
   );
 
-  // Footer for edit mode
-  const editFooter = (
-    <div className="flex w-full justify-end gap-2">
-      <Button type="button" variant="outline" onClick={handleClose} disabled={isDeleting || isSaving}>
-        {t('general.cancel')}
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={handleDelete}
-        disabled={isDeleting || isSaving}
-      >
-        {isDeleting ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Trash2 className="h-4 w-4" />
-        )}
-        {t('general.delete')}
-      </Button>
-      <Button
-        type="button"
-        onClick={form.handleSubmit(handleSave)}
-        disabled={!form.formState.isValid || !hasChanges || isDeleting || isSaving}
-      >
-        {isSaving ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Check className="h-4 w-4" />
-        )}
-        {t('general.save')}
-      </Button>
-    </div>
-  );
-
-  // Footer for add mode
-  const addFooter = (
-    <div className="flex w-full justify-end gap-2">
-      <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
-        {t('general.cancel')}
-      </Button>
-      <Button
-        type="button"
-        onClick={activeTab === 'new' ? form.handleSubmit(handleSave) : handleSaveFromTemplate}
-        disabled={!isValid || isSaving}
-      >
-        {isSaving ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Check className="h-4 w-4" />
-        )}
-        {t('general.save')}
-      </Button>
-    </div>
-  );
-
   return (
     <SidePanel
       open={open}
       onOpenChange={onOpenChange}
       title={isEditing ? t('forms.editDetailsAndSchedule') : t('forms.addCheckInTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
-      footer={isEditing ? editFooter : addFooter}
+      onSave={isEditing ? form.handleSubmit(handleSave) : (activeTab === 'new' ? form.handleSubmit(handleSave) : handleSaveFromTemplate)}
+      isSaving={isSaving}
+      isSaveDisabled={isEditing ? (!form.formState.isValid || !hasChanges) : !isValid}
+      onDelete={isEditing ? handleDelete : undefined}
+      isDeleting={isDeleting}
+      onCancel={handleClose}
     >
       {isEditing ? (
         // Edit mode: show form directly without tabs

@@ -5,9 +5,8 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Search, Target, Check, Loader2, Trash2 } from 'lucide-react';
+import { Search, Target } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
-import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -341,78 +340,20 @@ export const AddHabitSidePanel = ({
     return clientId ? t('general.assign') : t('general.add');
   };
 
-  const editFooter = (
-    <div className="flex w-full justify-end gap-2">
-      <Button type="button" variant="outline" onClick={handleClose} disabled={isDeleting || isSaving}>
-        {t('general.cancel')}
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={handleDelete}
-        disabled={isDeleting || isSaving}
-        className="gap-2"
-      >
-        {isDeleting ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Trash2 className="h-4 w-4" />
-        )}
-        {t('general.delete')}
-      </Button>
-      <Button
-        type="button"
-        onClick={form.handleSubmit(handleSave)}
-        disabled={!form.formState.isValid || isDeleting || isSaving}
-        className="gap-2"
-      >
-        {isSaving ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Check className="h-4 w-4" />
-        )}
-        {t('general.save')}
-      </Button>
-    </div>
-  );
+  // Compute footer props based on mode/tab
+  const footerSaveHandler = isEditing
+    ? form.handleSubmit(handleSave)
+    : activeTab === 'yourLibrary'
+      ? handleSaveFromYourLibrary
+      : activeTab === 'newHabit'
+        ? form.handleSubmit(handleSave)
+        : undefined;
 
-  const addFooter = activeTab === 'yourLibrary' ? (
-    <div className="flex w-full justify-end gap-2">
-      <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
-        {t('general.cancel')}
-      </Button>
-      <Button
-        type="button"
-        onClick={handleSaveFromYourLibrary}
-        disabled={selectedLibraryHabits.size === 0 || isSaving}
-      >
-        {isSaving ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Check className="h-4 w-4" />
-        )}
-        {getButtonText()}
-      </Button>
-    </div>
-  ) : activeTab === 'newHabit' ? (
-    <div className="flex w-full justify-end gap-2">
-      <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
-        {t('general.cancel')}
-      </Button>
-      <Button
-        type="button"
-        onClick={form.handleSubmit(handleSave)}
-        disabled={!form.formState.isValid || isSaving}
-      >
-        {isSaving ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Check className="h-4 w-4" />
-        )}
-        {clientId ? t('general.assign') : t('general.add')}
-      </Button>
-    </div>
-  ) : null;
+  const footerIsSaveDisabled = isEditing
+    ? !form.formState.isValid
+    : activeTab === 'yourLibrary'
+      ? selectedLibraryHabits.size === 0
+      : !form.formState.isValid;
 
   return (
     <SidePanel
@@ -427,7 +368,13 @@ export const AddHabitSidePanel = ({
       title={isEditing ? t('habits.editHabitTitle') : clientId ? "Assign Habit" : t('habits.addHabitTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       contentClassName="w-full sm:w-[600px] sm:max-w-[600px]"
-      footer={isEditing ? editFooter : addFooter}
+      onSave={footerSaveHandler}
+      saveText={isEditing ? undefined : getButtonText()}
+      isSaving={isSaving}
+      isSaveDisabled={footerIsSaveDisabled}
+      onDelete={isEditing ? handleDelete : undefined}
+      isDeleting={isDeleting}
+      onCancel={handleClose}
     >
       {isEditing ? (
         <HabitFormManual

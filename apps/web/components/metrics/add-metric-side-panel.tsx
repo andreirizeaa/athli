@@ -5,8 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Search, Info, Target, Check, Loader2, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Search, Info, Target } from 'lucide-react';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -425,77 +424,20 @@ export const AddMetricSidePanel = ({
     ? (allowSchedule ? "w-full sm:w-[600px] sm:max-w-[600px]" : "w-full sm:w-[400px] sm:max-w-[400px]")
     : "w-full sm:w-[600px] sm:max-w-[600px]";
 
-  // --- Footer ---
-  const footer = isEditing ? (
-    <div className="flex w-full justify-end gap-2">
-      <Button type="button" variant="outline" onClick={handleClose} disabled={isDeleting || isSaving}>
-        {t('general.cancel')}
-      </Button>
-      {onDelete && (
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleDelete}
-          disabled={isDeleting || isSaving}
-          className="gap-2"
-          aria-label={metric ? t('metrics.actions.deleteAria', { name: metric.name }) : undefined}
-        >
-          {isDeleting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Trash2 className="h-4 w-4" />
-          )}
-          {t('general.delete')}
-        </Button>
-      )}
-      <Button
-        type="button"
-        onClick={form.handleSubmit(handleSave)}
-        disabled={!form.formState.isValid || !hasChanges || isDeleting || isSaving}
-        className="gap-2"
-      >
-        {isSaving ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Check className="h-4 w-4" />
-        )}
-        {t('general.save')}
-      </Button>
-    </div>
-  ) : activeTab === 'yourLibrary' ? (
-    <div className="flex w-full justify-end gap-2">
-      <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
-        {t('general.cancel')}
-      </Button>
-      <Button type="button" onClick={handleSaveFromYourLibrary} disabled={selectedCoachMetrics.size === 0 || isSaving} className="gap-2">
-        {isSaving ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Check className="h-4 w-4" />
-        )}
-        {getButtonText()}
-      </Button>
-    </div>
-  ) : activeTab === 'newMetric' ? (
-    <div className="flex w-full justify-end gap-2">
-      <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
-        {t('general.cancel')}
-      </Button>
-      <Button
-        type="button"
-        onClick={form.handleSubmit(handleSave)}
-        disabled={!form.watch('name') || isSaving}
-        className="gap-2"
-      >
-        {isSaving ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Check className="h-4 w-4" />
-        )}
-        {clientId ? t('general.assign') : t('general.add')}
-      </Button>
-    </div>
-  ) : null;
+  // --- Footer props ---
+  const footerSaveHandler = isEditing
+    ? form.handleSubmit(handleSave)
+    : activeTab === 'yourLibrary'
+      ? handleSaveFromYourLibrary
+      : activeTab === 'newMetric'
+        ? form.handleSubmit(handleSave)
+        : undefined;
+
+  const footerIsSaveDisabled = isEditing
+    ? !form.formState.isValid || !hasChanges
+    : activeTab === 'yourLibrary'
+      ? selectedCoachMetrics.size === 0
+      : !form.watch('name');
 
   // --- Shared form content (used in both add newMetric tab and edit mode) ---
   const metricFormContent = (
@@ -629,7 +571,13 @@ export const AddMetricSidePanel = ({
       title={title}
       onOpenAutoFocus={(e) => e.preventDefault()}
       contentClassName={contentClassName}
-      footer={footer}
+      onSave={footerSaveHandler}
+      saveText={isEditing ? undefined : getButtonText()}
+      isSaving={isSaving}
+      isSaveDisabled={footerIsSaveDisabled}
+      onDelete={isEditing && onDelete ? handleDelete : undefined}
+      isDeleting={isDeleting}
+      onCancel={handleClose}
     >
       {isEditing ? (
         metricFormContent

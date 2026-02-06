@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Search, FileText, Info, Edit, Check, Loader2 } from 'lucide-react';
+import { FileText, Info } from 'lucide-react';
 import { getQuestionnaires, type Questionnaire as Form } from '@/api/coach/coach-questionnaire-service';
 import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -212,27 +211,11 @@ export const AddQuestionnaireSidePanel = ({
       title={clientId ? t('general.assign') + ' Questionnaire' : t('athletes.profile.questionnaires.addQuestionnaire')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       contentClassName="w-full sm:w-[600px] sm:max-w-[600px] h-full flex flex-col"
-      footer={
-        forms.length > 0 ? (
-          <div className="flex w-full justify-end gap-2">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
-              {t('general.cancel')}
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSave}
-              disabled={selectedForms.size === 0 || isSaving}
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="h-4 w-4" />
-              )}
-              {selectedForms.size > 0 ? `${t('general.assign')} ${selectedForms.size} ${selectedForms.size === 1 ? 'Questionnaire' : 'Questionnaires'}` : t('general.assign')}
-            </Button>
-          </div>
-        ) : null
-      }
+      onSave={forms.length > 0 ? handleSave : undefined}
+      saveText={selectedForms.size > 0 ? `${t('general.assign')} ${selectedForms.size} ${selectedForms.size === 1 ? 'Questionnaire' : 'Questionnaires'}` : t('general.assign')}
+      isSaving={isSaving}
+      isSaveDisabled={selectedForms.size === 0}
+      onCancel={handleClose}
     >
       <div className="flex flex-col gap-6 flex-1 min-h-0 px-1 pt-1">
         {!isLoading && forms.length === 0 && (

@@ -6,8 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Search, Check, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Search } from 'lucide-react';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -194,27 +193,10 @@ export const AddFlowSidePanel = ({
       title={isEditing ? t('flows.editFlow') : t('flows.addFlow')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       contentClassName="w-full sm:w-[600px] sm:max-w-[600px]"
-      footer={
-        isEditing || activeTab === 'manual' ? (
-          <div className="flex w-full justify-end gap-2">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
-              {t('general.cancel')}
-            </Button>
-            <Button
-              type="button"
-              onClick={reactForm.handleSubmit(handleSave)}
-              disabled={!reactForm.formState.isValid || isSaving}
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="h-4 w-4" />
-              )}
-              {t('general.save')}
-            </Button>
-          </div>
-        ) : null
-      }
+      onSave={(isEditing || activeTab === 'manual') ? reactForm.handleSubmit(handleSave) : undefined}
+      isSaving={isSaving}
+      isSaveDisabled={!reactForm.formState.isValid}
+      onCancel={handleClose}
     >
       {isEditing ? (
         <Form {...reactForm}>
