@@ -20,7 +20,7 @@ import { ChevronRight, Plus, GripVertical, Edit, Loader2 } from 'lucide-react';
 import { type Questionnaire as Form, addQuestion, reorderQuestions, getQuestionnaires } from '@/api/coach/coach-questionnaire-service';
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
-import { EditQuestionnaireFormSidePanel } from '@/components/forms/edit-questionnaire-form-side-panel';
+import { AddQuestionnaireFormSidePanel } from '@/components/forms/add-questionnaire-form-side-panel';
 import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel';
 import { FormBuilder } from '@/components/forms/form-builder';
 
@@ -262,10 +262,10 @@ const QuestionnaireFormDetailPage = () => {
       />
 
 
-      <EditQuestionnaireFormSidePanel
+      <AddQuestionnaireFormSidePanel
         open={isEditFormOpen}
         onOpenChange={setIsEditFormOpen}
-        form={currentForm}
+        editingForm={currentForm}
         onSave={handleEditForm}
         onDelete={() => router.push('/forms/questionnaires')}
       />

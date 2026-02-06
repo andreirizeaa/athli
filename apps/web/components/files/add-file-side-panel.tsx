@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Upload, Check, FileText, X, Loader2 } from 'lucide-react';
+import { Upload, Check, FileText, X, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,11 @@ type AddFileSidePanelProps = {
   isUploading?: boolean;
   clientName?: string;
   clientId?: string;
+  editingFileId?: string | null;
+  editingFileName?: string;
+  editingTags?: string[];
+  onEditSave?: (fileName: string, tags: string[]) => Promise<void>;
+  onEditDelete?: () => Promise<void>;
 };
 
 export const AddFileSidePanel = ({
@@ -39,6 +44,11 @@ export const AddFileSidePanel = ({
   isUploading = false,
   clientName,
   clientId,
+  editingFileId,
+  editingFileName,
+  editingTags,
+  onEditSave,
+  onEditDelete,
 }: AddFileSidePanelProps) => {
   const t = useTranslations();
   const { user } = useUserProfile();
@@ -54,14 +64,34 @@ export const AddFileSidePanel = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
 
+  // Edit mode
+  const isEditing = !!editingFileId;
+  const [editFileName, setEditFileName] = useState<string>('');
+  const [hasEditChanges, setHasEditChanges] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Link state
   const [linkUrl, setLinkUrl] = useState<string>('');
 
   useEffect(() => {
-    if (open && activeTab === 'yourLibrary') {
+    if (open && isEditing && editingFileName !== undefined) {
+      setEditFileName(editingFileName);
+      setHasEditChanges(false);
+    }
+  }, [open, isEditing, editingFileId, editingFileName]);
+
+  useEffect(() => {
+    if (isEditing && open && editingFileName !== undefined) {
+      const hasChanges = editFileName.trim() !== editingFileName;
+      setHasEditChanges(hasChanges);
+    }
+  }, [isEditing, editFileName, editingFileName, open]);
+
+  useEffect(() => {
+    if (open && !isEditing && activeTab === 'yourLibrary') {
       fetchCoachFiles();
     }
-  }, [open, activeTab]);
+  }, [open, isEditing, activeTab]);
 
   const fetchCoachFiles = async () => {
     setIsLoadingFiles(true);
@@ -84,9 +114,38 @@ export const AddFileSidePanel = ({
     setActiveTab('yourLibrary');
     setSelectedLibraryFiles(new Set());
     setLinkUrl('');
+    setEditFileName('');
+    setHasEditChanges(false);
+    setIsDeleting(false);
     dragCounterRef.current = 0;
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const handleEditSave = async () => {
+    if (!hasEditChanges || isSaving || isDeleting || !onEditSave) return;
+    setIsSaving(true);
+    try {
+      await onEditSave(editFileName.trim(), editingTags || []);
+      handleClose();
+    } catch (error) {
+      console.error('Failed to save file:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEditDelete = async () => {
+    if (isSaving || isDeleting || !onEditDelete) return;
+    setIsDeleting(true);
+    try {
+      await onEditDelete();
+      handleClose();
+    } catch (error) {
+      console.error('Failed to delete file:', error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -421,9 +480,42 @@ export const AddFileSidePanel = ({
           handleClose();
         }
       }}
-      title={t('files.addFile')}
+      title={isEditing ? t('files.editFile.title') : t('files.addFile')}
       footer={
-        clientId && activeTab === 'yourLibrary' ? (
+        isEditing ? (
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving || isDeleting}>
+              {t('general.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleEditDelete}
+              disabled={isSaving || isDeleting}
+              className="gap-2"
+            >
+              {isDeleting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              {t('general.delete')}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleEditSave}
+              disabled={!hasEditChanges || isSaving || isDeleting}
+              className="gap-2"
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              {t('general.save')}
+            </Button>
+          </div>
+        ) : clientId && activeTab === 'yourLibrary' ? (
           <div className="flex w-full justify-end gap-2">
             <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
               {t('general.cancel')}
@@ -454,7 +546,22 @@ export const AddFileSidePanel = ({
         )
       }
     >
-      {clientId ? (
+      {isEditing ? (
+        <div className="flex flex-col gap-6">
+          {/* File Name Input */}
+          <div className="flex flex-col gap-2">
+            <label htmlFor="edit-file-name" className="text-sm font-medium">
+              {t('files.form.fileName')}
+            </label>
+            <Input
+              id="edit-file-name"
+              value={editFileName}
+              onChange={(e) => setEditFileName(e.target.value)}
+              placeholder={t('files.form.fileNamePlaceholder')}
+            />
+          </div>
+        </div>
+      ) : clientId ? (
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'new' | 'yourLibrary')} className="w-full flex-1 flex flex-col min-h-0">
           <TabsList className="w-full mb-6">
             <TabsTrigger

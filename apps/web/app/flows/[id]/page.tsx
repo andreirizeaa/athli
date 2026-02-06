@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { ChevronRight } from 'lucide-react';
 import { FlowEditor } from '@/components/flows/flow-editor';
-import { EditFlowSidePanel } from '@/components/flows/edit-flow-side-panel';
+import { AddFlowSidePanel } from '@/components/flows/add-flow-side-panel';
 import { getFlowById, updateFlowDetails, updateFlowStatus, type Flow } from '@/api/coach/coach-flow-service';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -143,7 +143,7 @@ const FlowDetailPage = () => {
       />
 
       {/* Edit Flow Side Panel */}
-      <EditFlowSidePanel
+      <AddFlowSidePanel
         open={isEditFlowOpen}
         onOpenChange={setIsEditFlowOpen}
         flowId={flowId}

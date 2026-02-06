@@ -21,7 +21,7 @@ import { type CheckIn as Form, addQuestion, reorderQuestions, getCheckIns } from
 import { formTemplates } from '@/constants/forms';
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
-import { EditCheckInFormSidePanel } from '@/components/forms/edit-check-in-form-side-panel';
+import { AddCheckInFormSidePanel } from '@/components/forms/add-check-in-form-side-panel';
 import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel';
 import { FormBuilder } from '@/components/forms/form-builder';
 
@@ -248,10 +248,10 @@ const CheckInFormDetailPage = () => {
       />
 
 
-      <EditCheckInFormSidePanel
+      <AddCheckInFormSidePanel
         open={isEditFormOpen}
         onOpenChange={setIsEditFormOpen}
-        form={currentForm}
+        editingForm={currentForm}
         onSave={handleEditForm}
         onDelete={() => router.push('/forms/check-ins')}
       />

@@ -21,7 +21,6 @@ import { format } from 'date-fns';
 import { useCoachTodo } from '@/hooks/use-coach-todo';
 import { YourListTask } from '@/api/coach/coach-todo-service';
 import { AddTaskSidePanel } from './components/add-task-side-panel';
-import { EditTaskSidePanel } from './components/edit-task-side-panel';
 
 type YourListTaskFormValues = {
   title: string;
@@ -294,7 +293,7 @@ const YourListPage = () => {
 
       <AddTaskSidePanel open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen} onSave={handleSaveTask} />
 
-      <EditTaskSidePanel
+      <AddTaskSidePanel
         open={isEditTaskOpen}
         onOpenChange={setIsEditTaskOpen}
         task={selectedTask}

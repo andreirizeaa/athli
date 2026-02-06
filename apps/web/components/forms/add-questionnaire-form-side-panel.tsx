@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -21,8 +22,8 @@ import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Edit, Info, FileText, Check, Loader2 } from 'lucide-react';
-import { addQuestionnaire, type AddQuestionnaireData as AddFormData } from '@/api/coach/coach-questionnaire-service';
+import { Edit, Info, FileText, Check, Loader2, Trash2 } from 'lucide-react';
+import { addQuestionnaire, editQuestionnaireDetails, deleteQuestionnaire, type AddQuestionnaireData as AddFormData, type Questionnaire } from '@/api/coach/coach-questionnaire-service';
 import { formTemplates, type FormTemplate } from '@/constants/forms';
 import { cn } from '@/lib/general/utils';
 import { toast } from 'sonner';
@@ -32,6 +33,8 @@ type AddQuestionnaireFormSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave?: (form: any, questions?: FormTemplate['questions']) => void;
+  editingForm?: Questionnaire | null;
+  onDelete?: (formId: string) => void;
 };
 
 type FormFormValues = {
@@ -39,11 +42,15 @@ type FormFormValues = {
   description?: string;
 };
 
-export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: AddQuestionnaireFormSidePanelProps) => {
+export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave, editingForm, onDelete }: AddQuestionnaireFormSidePanelProps) => {
   const t = useTranslations();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'new' | 'templates'>('new');
   const [selectedTemplate, setSelectedTemplate] = useState<FormTemplate | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const isEditing = !!editingForm;
 
   // Filter templates to only show questionnaire templates
   const questionnaireTemplates = useMemo(() => {
@@ -69,6 +76,15 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
     },
   });
 
+  useEffect(() => {
+    if (editingForm && open) {
+      form.reset({
+        name: editingForm.name,
+        description: editingForm.description || '',
+      });
+    }
+  }, [editingForm, open, form]);
+
   const handleClose = () => {
     form.reset();
     setActiveTab('new');
@@ -77,6 +93,33 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
   };
 
   const handleSave = async (values: FormFormValues) => {
+    if (isEditing) {
+      setIsSaving(true);
+      try {
+        const updatedForm = await editQuestionnaireDetails({
+          id: editingForm.id,
+          name: values.name,
+          description: values.description,
+        });
+
+        toast.success(t('forms.toast.updateSuccess'));
+
+        // Invalidate cache to refresh grid data
+        queryClient.invalidateQueries({ queryKey: ['coach-questionnaires'] });
+
+        if (onSave) {
+          onSave(updatedForm);
+        }
+        handleClose();
+      } catch (error) {
+        console.error('Failed to save form:', error);
+        toast.error(t('forms.toast.updateError'));
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
     setIsSaving(true);
     try {
       const questions = selectedTemplate?.questions || [];
@@ -96,6 +139,29 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
       toast.error(t('general.error'));
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!editingForm) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteQuestionnaire(editingForm.id);
+      toast.success(t('forms.toast.deleteSuccess'));
+
+      // Invalidate cache to refresh grid data
+      queryClient.invalidateQueries({ queryKey: ['coach-questionnaires'] });
+
+      if (onDelete) {
+        onDelete(editingForm.id);
+      }
+      handleClose();
+    } catch (error) {
+      console.error('Failed to delete form:', error);
+      toast.error(t('forms.toast.deleteError'));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -134,9 +200,16 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
     }
   };
 
-  const isValid = activeTab === 'new'
-    ? form.formState.isValid && form.watch('name').trim() !== ''
-    : selectedTemplate !== null;
+  const hasChanges = editingForm && (
+    form.watch('name') !== editingForm.name ||
+    form.watch('description') !== (editingForm.description || '')
+  );
+
+  const isValid = isEditing
+    ? form.formState.isValid && !!hasChanges
+    : activeTab === 'new'
+      ? form.formState.isValid && form.watch('name').trim() !== ''
+      : selectedTemplate !== null;
 
   const columns: ColumnDefinition<FormTemplate>[] = useMemo(() => [
     {
@@ -162,185 +235,227 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
     },
   ], [t]);
 
+  const editFooter = (
+    <div className="flex w-full justify-end gap-2">
+      <Button type="button" variant="outline" onClick={handleClose} disabled={isDeleting || isSaving}>
+        {t('general.cancel')}
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleDelete}
+        disabled={isDeleting || isSaving}
+      >
+        {isDeleting ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Trash2 className="h-4 w-4" />
+        )}
+        {t('general.delete')}
+      </Button>
+      <Button
+        type="button"
+        onClick={form.handleSubmit(handleSave)}
+        disabled={!form.formState.isValid || !hasChanges || isDeleting || isSaving}
+      >
+        {isSaving ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Check className="h-4 w-4" />
+        )}
+        {t('general.save')}
+      </Button>
+    </div>
+  );
+
+  const addFooter = (
+    <div className="flex w-full justify-end gap-2">
+      <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
+        {t('general.cancel')}
+      </Button>
+      <Button
+        type="button"
+        onClick={activeTab === 'new' ? form.handleSubmit(handleSave) : handleSaveFromTemplate}
+        disabled={!isValid || isSaving}
+      >
+        {isSaving ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Check className="h-4 w-4" />
+        )}
+        {t('general.save')}
+      </Button>
+    </div>
+  );
+
+  const nameDescriptionForm = (
+    <Form {...form}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          form.handleSubmit(handleSave)(e);
+        }}
+        className="flex flex-col gap-6"
+      >
+        <div className="flex flex-col gap-2">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  <span>
+                    {t('forms.form.name')}
+                    <RequiredAsterisk />
+                  </span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder={t('forms.form.namePlaceholder')}
+                    aria-label={t('forms.form.name')}
+                    maxLength={100}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t('forms.form.description')}</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder={t('forms.form.descriptionPlaceholder')}
+                  aria-label={t('forms.form.description')}
+                  rows={3}
+                  className="resize-none"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {!isEditing && selectedTemplate && (
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium leading-none">
+              {t('forms.template')}
+            </label>
+            <Card className="p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col gap-1 flex-1 min-w-0">
+                  <span className="text-sm font-medium text-foreground">
+                    {selectedTemplate.name}
+                  </span>
+                  {selectedTemplate.description && (
+                    <span className="text-xs text-muted-foreground">
+                      {selectedTemplate.description}
+                    </span>
+                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {selectedTemplate.questions.length} {selectedTemplate.questions.length === 1 ? 'question' : 'questions'}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleEditTemplate}
+                  className="h-8 w-8 flex-shrink-0"
+                  aria-label={t('general.change')}
+                >
+                  <Edit className="size-4" />
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        <Alert className="bg-primary/5 border-primary/20 text-primary">
+          <Info className="size-4" />
+          <AlertDescription className="min-w-0 line-clamp-4">
+            {t('forms.type.questionnaireInfo')}
+          </AlertDescription>
+        </Alert>
+      </form>
+    </Form>
+  );
+
   return (
     <SidePanel
       open={open}
       onOpenChange={onOpenChange}
-      title={t('forms.addQuestionnaireTitle')}
+      title={isEditing ? t('forms.editFormTitle') : t('forms.addQuestionnaireTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
-      footer={
-        <div className="flex w-full justify-end gap-2">
-          <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
-            {t('general.cancel')}
-          </Button>
-          <Button
-            type="button"
-            onClick={activeTab === 'new' ? form.handleSubmit(handleSave) : handleSaveFromTemplate}
-            disabled={!isValid || isSaving}
-          >
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="h-4 w-4" />
-            )}
-            {t('general.save')}
-          </Button>
-        </div>
-      }
+      footer={isEditing ? editFooter : addFooter}
     >
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'new' | 'templates')} className="w-full flex-1 flex flex-col min-h-0">
-        <TabsList className="w-full mb-6">
-          <TabsTrigger
-            value="new"
-            className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-          >
-            {t('forms.newForm')}
-          </TabsTrigger>
-          <TabsTrigger
-            value="templates"
-            className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-          >
-            {t('forms.athliTemplates')}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="new" className="mt-0">
-          <Form {...form}>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                form.handleSubmit(handleSave)(e);
-              }}
-              className="flex flex-col gap-6"
+      {isEditing ? (
+        nameDescriptionForm
+      ) : (
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'new' | 'templates')} className="w-full flex-1 flex flex-col min-h-0">
+          <TabsList className="w-full mb-6">
+            <TabsTrigger
+              value="new"
+              className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
             >
-              <div className="flex flex-col gap-2">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        <span>
-                          {t('forms.form.name')}
-                          <RequiredAsterisk />
-                        </span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={t('forms.form.namePlaceholder')}
-                          aria-label={t('forms.form.name')}
-                          maxLength={100}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              {t('forms.newForm')}
+            </TabsTrigger>
+            <TabsTrigger
+              value="templates"
+              className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+            >
+              {t('forms.athliTemplates')}
+            </TabsTrigger>
+          </TabsList>
 
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('forms.form.description')}</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder={t('forms.form.descriptionPlaceholder')}
-                        aria-label={t('forms.form.description')}
-                        rows={3}
-                        className="resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <TabsContent value="new" className="mt-0">
+            {nameDescriptionForm}
+          </TabsContent>
 
-              {selectedTemplate && (
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium leading-none">
+          <TabsContent value="templates" className="mt-0 h-full flex-1 flex flex-col min-h-0">
+            <div className="flex flex-col gap-6 flex-1 min-h-0">
+              <div className="flex flex-col gap-2 flex-1 min-h-0">
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  <span>
                     {t('forms.template')}
-                  </label>
-                  <Card className="p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex flex-col gap-1 flex-1 min-w-0">
-                        <span className="text-sm font-medium text-foreground">
-                          {selectedTemplate.name}
-                        </span>
-                        {selectedTemplate.description && (
-                          <span className="text-xs text-muted-foreground">
-                            {selectedTemplate.description}
-                          </span>
-                        )}
-                        <span className="text-xs text-muted-foreground">
-                          {selectedTemplate.questions.length} {selectedTemplate.questions.length === 1 ? 'question' : 'questions'}
-                        </span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleEditTemplate}
-                        className="h-8 w-8 flex-shrink-0"
-                        aria-label={t('general.change')}
-                      >
-                        <Edit className="size-4" />
-                      </Button>
-                    </div>
-                  </Card>
+                    <RequiredAsterisk />
+                  </span>
+                </label>
+                <div className="flex-1 min-h-0 [&_.border-t]:border-t-0">
+                  <DataGrid
+                    data={questionnaireTemplates}
+                    columns={columns}
+                    getRowId={(row) => row.name}
+                    gridKey="questionnaire-templates"
+                    searchPlaceholder={t('forms.searchPlaceholder')}
+                    searchFields={[(row) => `${row.name} ${row.description || ''}`]}
+                    enableSearch={true}
+                    enableEditColumns={false}
+                    enableExport={false}
+                    enableRowSelection={false}
+                    selectOnRowClick={true}
+                    onRowClick={(row) => {
+                      handleSelectTemplate(row);
+                      setActiveTab('new');
+                    }}
+                    emptyMessage={t('forms.emptyMessage')}
+                    rowHeight="54px"
+                    compactMode={true}
+                    showPagination={false}
+                    gridPadding={false}
+                  />
                 </div>
-              )}
-
-              <Alert className="bg-primary/5 border-primary/20 text-primary">
-                <Info className="size-4" />
-                <AlertDescription className="min-w-0 line-clamp-4">
-                  {t('forms.type.questionnaireInfo')}
-                </AlertDescription>
-              </Alert>
-            </form>
-          </Form>
-        </TabsContent>
-
-        <TabsContent value="templates" className="mt-0 h-full flex-1 flex flex-col min-h-0">
-          <div className="flex flex-col gap-6 flex-1 min-h-0">
-            <div className="flex flex-col gap-2 flex-1 min-h-0">
-              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                <span>
-                  {t('forms.template')}
-                  <RequiredAsterisk />
-                </span>
-              </label>
-              <div className="flex-1 min-h-0 [&_.border-t]:border-t-0">
-                <DataGrid
-                  data={questionnaireTemplates}
-                  columns={columns}
-                  getRowId={(row) => row.name}
-                  gridKey="questionnaire-templates"
-                  searchPlaceholder={t('forms.searchPlaceholder')}
-                  searchFields={[(row) => `${row.name} ${row.description || ''}`]}
-                  enableSearch={true}
-                  enableEditColumns={false}
-                  enableExport={false}
-                  enableRowSelection={false}
-                  selectOnRowClick={true}
-                  onRowClick={(row) => {
-                    handleSelectTemplate(row);
-                    setActiveTab('new');
-                  }}
-                  emptyMessage={t('forms.emptyMessage')}
-                  rowHeight="54px"
-                  compactMode={true}
-                  showPagination={false}
-                  gridPadding={false}
-                />
               </div>
             </div>
-          </div>
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+        </Tabs>
+      )}
     </SidePanel>
   );
 };
-
