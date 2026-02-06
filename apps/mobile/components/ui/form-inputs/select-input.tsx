@@ -115,7 +115,7 @@ export const SelectInput = <T extends string>({
               },
             ]}
           >
-            <Trash2 size={20} />
+            <Trash2 size={20} color={themeColors.text} />
           </SquircleView>
         </PressableOpacity>
       </View>

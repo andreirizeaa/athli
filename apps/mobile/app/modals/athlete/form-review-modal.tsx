@@ -1,22 +1,26 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { View, StyleSheet, Text, ScrollView, ActivityIndicator, Platform, StatusBar, Dimensions } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { View, StyleSheet, Text, ScrollView, ActivityIndicator, Platform, StatusBar, Dimensions, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X, Image as ImageIcon, Video, Play, Star } from 'lucide-react-native';
+import { X, Image as ImageIcon, Video, Play, Star, Download } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { PressableScale } from 'pressto';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import * as VideoThumbnails from 'expo-video-thumbnails';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import axiosInstance from '@/lib/axios';
 
-import { useThemePreference, useTranslations } from '@/stores';
+import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { Card } from '@/components/ui/card';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { typography } from '@/constants/typography';
-import { getQuestionnaireMediaUrl, type Question, type QuestionAnswer } from '@/services/client/client-form-service';
+import { getQuestionnaireMediaUrl, getClientQuestionnaire, getClientCheckInSubmission, type Question, type QuestionAnswer } from '@/services/client/client-form-service';
 
 type QuestionWithId = Question & { id: string };
 
@@ -42,28 +46,46 @@ export default function FormReviewModal() {
   const { colors: themeColors, primaryColor } = useThemePreference();
   const { t } = useTranslations();
 
-  const { questionnaireId, questionnaireName, questionsJson, answersJson } = useLocalSearchParams<{
+  const { questionnaireId, questionnaireName, questionsJson, answersJson, clientId, formType, completedAt: completedAtParam } = useLocalSearchParams<{
     questionnaireId: string;
     questionnaireName: string;
-    questionsJson: string;
-    answersJson: string;
+    questionsJson?: string;
+    answersJson?: string;
+    clientId?: string;
+    formType?: 'questionnaire' | 'checkIn';
+    completedAt?: string;
   }>();
 
+  const coachId = useClientDetailStore((state) => state.coachId);
+
+  // Fetch data via react-query when opened from coach side (no questionsJson provided)
+  const needsFetch = !questionsJson && !!clientId && !!coachId;
+  const fetchFn = formType === 'checkIn' ? getClientCheckInSubmission : getClientQuestionnaire;
+  const { data: fetchedDetail, isLoading: isLoadingData } = useQuery({
+    queryKey: ['client-form-detail', formType || 'questionnaire', clientId, questionnaireId, coachId],
+    queryFn: () => fetchFn(clientId!, questionnaireId, coachId!),
+    enabled: needsFetch,
+  });
+
   const questions: QuestionWithId[] = useMemo(() => {
-    try {
-      return JSON.parse(questionsJson || '[]');
-    } catch {
-      return [];
+    if (questionsJson) {
+      try { return JSON.parse(questionsJson); } catch { return []; }
     }
-  }, [questionsJson]);
+    return (fetchedDetail?.questions || []) as QuestionWithId[];
+  }, [questionsJson, fetchedDetail]);
 
   const answers: QuestionAnswerWithFormat[] = useMemo(() => {
-    try {
-      return JSON.parse(answersJson || '[]');
-    } catch {
-      return [];
+    if (answersJson) {
+      try { return JSON.parse(answersJson); } catch { return []; }
     }
-  }, [answersJson]);
+    return (fetchedDetail?.answers || []) as QuestionAnswerWithFormat[];
+  }, [answersJson, fetchedDetail]);
+
+  const completedAt = useMemo(() => {
+    if (fetchedDetail?.completedAt) return new Date(fetchedDetail.completedAt);
+    if (completedAtParam) return new Date(completedAtParam);
+    return undefined;
+  }, [fetchedDetail, completedAtParam]);
 
   // Create a map of answers by questionId for easy lookup
   const answersMap = useMemo(() => {
@@ -82,6 +104,10 @@ export default function FormReviewModal() {
 
   // Media viewer state
   const [mediaViewer, setMediaViewer] = useState<MediaViewerState>({ visible: false, url: null, type: null });
+
+  // PDF download state
+  const isCoachSide = !!clientId && !!coachId;
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Helper to check if path is valid (not a placeholder)
   const isValidPath = (path: string): boolean => {
@@ -175,6 +201,34 @@ export default function FormReviewModal() {
     }
   };
 
+  const handleDownloadPdf = async () => {
+    if (isDownloading || !clientId || !coachId) return;
+    setIsDownloading(true);
+    try {
+      const endpoint = formType === 'checkIn'
+        ? `/client/forms/check-ins/${questionnaireId}/pdf`
+        : `/client/forms/questionnaires/${questionnaireId}/pdf`;
+
+      const response = await axiosInstance.get(endpoint, {
+        headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+        responseType: 'arraybuffer',
+      });
+
+      // Write to temp file
+      const { encode } = await import('base64-arraybuffer');
+      const base64 = encode(response.data);
+      const fileName = `${(questionnaireName || 'form').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
+      const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+      await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+
+      await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf' });
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const openMediaViewer = (url: string, type: 'image' | 'video') => {
     setMediaViewer({ visible: true, url, type });
   };
@@ -222,12 +276,17 @@ export default function FormReviewModal() {
   const renderRatingStars = (rating: number) => {
     return (
       <View style={styles.starsContainer}>
-        {[1, 2, 3, 4, 5].map((value) => (
-          <Star
-            key={value}
-            size={24}
-          />
-        ))}
+        {[1, 2, 3, 4, 5].map((value) => {
+          const isFilled = value <= rating;
+          return (
+            <Star
+              key={value}
+              size={24}
+              color={isFilled ? primaryColor : themeColors.border}
+              fill={isFilled ? primaryColor : 'transparent'}
+            />
+          );
+        })}
       </View>
     );
   };
@@ -345,11 +404,9 @@ export default function FormReviewModal() {
           }
 
           return (
-            <PressableScale onPress={() => openMediaViewer(signatureUrl || answer, 'image')}>
-              <View style={[styles.signatureContainer, { borderColor: themeColors.border }]}>
-                <Image source={{ uri: signatureUrl || answer }} style={styles.signatureImage} contentFit="contain" />
-              </View>
-            </PressableScale>
+            <View style={[styles.signatureContainer, { borderColor: themeColors.border }]}>
+              <Image source={{ uri: signatureUrl || answer }} style={styles.signatureImage} contentFit="contain" />
+            </View>
           );
         }
         return (
@@ -495,7 +552,7 @@ export default function FormReviewModal() {
       <GestureHandlerRootView style={StyleSheet.absoluteFill}>
         <StatusBar barStyle="light-content" />
         <View style={styles.mediaViewerContainer}>
-          <View style={[styles.mediaViewerHeader, { paddingTop: insets.top + 12 }]}>
+          <View style={[styles.mediaViewerHeader, { paddingTop: insets.top }]}>
             <IconButton
               icon={{ sf: 'xmark', IconComponent: X }}
               onPress={closeMediaViewer}
@@ -537,32 +594,48 @@ export default function FormReviewModal() {
   return (
     <View style={[styles.container, { backgroundColor: themeColors.backgroundPrimary }]}>
       {/* Content */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 32 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {questions.map((question, index) => (
-          <Card key={question.id} style={styles.questionCard}>
-            <View style={[styles.questionNumber, { backgroundColor: primaryColor }]}>
-              <Text style={[styles.questionNumberText, { color: themeColors.primaryForeground }]}>
-                {index + 1}
+      {isLoadingData ? (
+        <View style={[styles.loadingContainer, { paddingTop: insets.top + HEADER_HEIGHT }]}>
+          <ActivityIndicator size="large" color={themeColors.mutedText} />
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 32 },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {completedAt && (
+            <Card style={styles.completedCard}>
+              <Text style={[styles.completedDateText, { color: themeColors.text }]}>
+                {completedAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
               </Text>
-            </View>
-            <View style={styles.questionContent}>
-              <Text style={[styles.questionText, { color: themeColors.text }]}>
-                {question.question}
+              <Text style={[styles.completedTimeText, { color: themeColors.mutedText }]}>
+                {completedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
               </Text>
-              <View style={styles.answerContainer}>
-                {renderAnswerDisplay(question)}
+            </Card>
+          )}
+          {questions.map((question, index) => (
+            <Card key={question.id} style={styles.questionCard}>
+              <View style={[styles.questionNumber, { backgroundColor: primaryColor }]}>
+                <Text style={[styles.questionNumberText, { color: themeColors.primaryForeground }]}>
+                  {index + 1}
+                </Text>
               </View>
-            </View>
-          </Card>
-        ))}
-      </ScrollView>
+              <View style={styles.questionContent}>
+                <Text style={[styles.questionText, { color: themeColors.text }]}>
+                  {question.question}
+                </Text>
+                <View style={styles.answerContainer}>
+                  {renderAnswerDisplay(question)}
+                </View>
+              </View>
+            </Card>
+          ))}
+        </ScrollView>
+      )}
 
       <StatusBarBlur blurHeight={HEADER_HEIGHT} largeHeader />
 
@@ -577,7 +650,17 @@ export default function FormReviewModal() {
         <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
           {questionnaireName}
         </Text>
-        <View style={styles.headerSpacer} />
+        {isCoachSide ? (
+          <IconButton
+            icon={{ sf: 'square.and.arrow.down', IconComponent: Download }}
+            onPress={handleDownloadPdf}
+            size="md"
+            color={themeColors.text}
+            loading={isDownloading}
+          />
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
       </View>
 
       {/* Media Viewer Overlay */}
@@ -589,6 +672,11 @@ export default function FormReviewModal() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   fixedHeader: {
     position: 'absolute',
@@ -609,6 +697,8 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,
@@ -616,6 +706,18 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     gap: 12,
+  },
+  completedCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    gap: 4,
+  },
+  completedDateText: {
+    ...typography.h4,
+  },
+  completedTimeText: {
+    ...typography.p3,
   },
   questionCard: {
     flexDirection: 'row',
@@ -755,8 +857,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingBottom: 8,
     zIndex: 10,
   },
   mediaViewerContent: {

@@ -14,6 +14,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   ChevronLeft,
   MessageCircle,
+  MessageCirclePlus,
   ChevronUp,
   User,
   Trash2,
@@ -616,7 +617,7 @@ export default function FeatureRequestDetailScreen() {
               />
             )}
             <IconButton
-              icon={{ sf: 'bubble.right', IconComponent: MessageCircle }}
+              icon={{ sf: 'plus.bubble', IconComponent: MessageCirclePlus }}
               onPress={handleAddReply}
               size="md"
               color={iconColor}
@@ -906,7 +907,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: 32,
+    paddingBottom: 0,
   },
   // Card styles
   card: {

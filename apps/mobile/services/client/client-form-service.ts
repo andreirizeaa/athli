@@ -113,6 +113,27 @@ export const getClientQuestionnaire = async (
 };
 
 /**
+ * Get a check-in submission for a client (questions + answers)
+ */
+export const getClientCheckInSubmission = async (
+  clientId: string,
+  checkInId: string,
+  coachId: string
+): Promise<ClientQuestionnaireDetail> => {
+  const response = await apiFetch<{ success: boolean; data: ClientQuestionnaireDetail }>(
+    `/client/forms/check-ins/${checkInId}`,
+    {
+      headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+    }
+  );
+
+  return {
+    ...response.data,
+    completedAt: response.data.completedAt ? new Date(response.data.completedAt) : undefined,
+  };
+};
+
+/**
  * Get a single check-in for a client with full details including questions
  */
 export type ClientCheckInDetail = {

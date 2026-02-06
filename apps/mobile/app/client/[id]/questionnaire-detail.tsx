@@ -69,11 +69,11 @@ export default function QuestionnaireDetailScreen() {
 
   const handleViewResponse = () => {
     router.push({
-      pathname: '/client/[id]/questionnaire-response',
+      pathname: '/modals/athlete/form-review-modal',
       params: {
-        id: params.id,
         questionnaireId: params.questionnaireId,
         questionnaireName: params.questionnaireName,
+        clientId: params.id,
       },
     } as any);
   };
