@@ -12,9 +12,10 @@ import { OutlinedButton } from '@/components/ui/buttons/outlined-button';
 import { typography } from '@/constants/typography';
 import { useTranslations, useCoachProfileStore, useClientProfileStore, useAppView, useThemePreference, useColorScheme } from '@/stores';
 import { AuthLoadingOverlay } from '@/components/auth/auth-loading-overlay';
+import { CoachSelectionDialog } from '@/components/auth/coach-selection-dialog';
 import { authenticateUser } from '@/services/auth/supabase-auth';
 import { haptics } from '@/utils/haptics';
-import type { CoachProfile, ClientProfile } from '@/types/profile';
+import type { CoachProfile, ClientProfile, AuthResult } from '@/types/profile';
 
 export default function WelcomeScreen() {
   const { t } = useTranslations();
@@ -26,6 +27,8 @@ export default function WelcomeScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorDialog, setErrorDialog] = useState({ title: '', message: '' });
+  const [showCoachSelectionDialog, setShowCoachSelectionDialog] = useState(false);
+  const [pendingAuthResult, setPendingAuthResult] = useState<AuthResult | null>(null);
   const setCoachProfile = useCoachProfileStore((state) => state.setProfile);
   const setClientProfile = useClientProfileStore((state) => state.setProfile);
 
@@ -33,14 +36,51 @@ export default function WelcomeScreen() {
     ? require('@/assets/backgrounds/dark.png')
     : require('@/assets/backgrounds/light.png');
 
-  const handleAuthSuccess = (profileType: 'coach' | 'client', profile: CoachProfile | ClientProfile) => {
+  const handleAuthSuccess = (result: AuthResult) => {
+    const { profileType, profile, coachAssignments } = result;
+
     if (profileType === 'coach') {
       setCoachProfile(profile as CoachProfile);
       setAppView('coach');
-    } else {
-      setClientProfile(profile as ClientProfile);
-      setAppView('athlete');
+      router.replace('/(tabs)');
+      return;
     }
+
+    // Client flow - check coach assignments
+    if (!coachAssignments || coachAssignments.length === 0) {
+      // No coach assigned - show error
+      setErrorDialog({
+        title: t('auth.noCoachAssignment'),
+        message: t('auth.noCoachAssignmentMessage'),
+      });
+      setShowErrorDialog(true);
+      return;
+    }
+
+    if (coachAssignments.length === 1) {
+      // Single coach - auto-select and navigate
+      const clientProfile = profile as ClientProfile;
+      clientProfile.coach_id = coachAssignments[0].coach_id;
+      setClientProfile(clientProfile);
+      setAppView('athlete');
+      router.replace('/(tabs)');
+      return;
+    }
+
+    // Multiple coaches - show selection dialog
+    setPendingAuthResult(result);
+    setShowCoachSelectionDialog(true);
+  };
+
+  const handleCoachSelected = (coachId: string) => {
+    if (!pendingAuthResult) return;
+
+    const clientProfile = pendingAuthResult.profile as ClientProfile;
+    clientProfile.coach_id = coachId;
+    setClientProfile(clientProfile);
+    setAppView('athlete');
+    setShowCoachSelectionDialog(false);
+    setPendingAuthResult(null);
     router.replace('/(tabs)');
   };
 
@@ -72,7 +112,7 @@ export default function WelcomeScreen() {
     setIsLoading(true);
     try {
       const result = await authenticateUser('google');
-      handleAuthSuccess(result.profileType!, result.profile as any);
+      handleAuthSuccess(result);
     } catch (error) {
       handleAuthError(error);
     } finally {
@@ -85,7 +125,7 @@ export default function WelcomeScreen() {
     setIsLoading(true);
     try {
       const result = await authenticateUser('apple');
-      handleAuthSuccess(result.profileType!, result.profile as any);
+      handleAuthSuccess(result);
     } catch (error) {
       handleAuthError(error);
     } finally {
@@ -211,6 +251,12 @@ export default function WelcomeScreen() {
             variant: 'primary',
           },
         ]}
+      />
+
+      <CoachSelectionDialog
+        visible={showCoachSelectionDialog}
+        coaches={pendingAuthResult?.coachAssignments || []}
+        onSelect={handleCoachSelected}
       />
     </View>
   );

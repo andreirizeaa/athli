@@ -63,7 +63,7 @@ export function SearchComponent() {
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const { results, hasResults, isLoading } = useGlobalSearch(debouncedSearchQuery);
   const isSearching = isLoading || (searchQuery.trim().length > 0 && searchQuery !== debouncedSearchQuery);
-  const showResults = hasResults && !isSearching;
+  const showResults = hasResults && !isSearching && searchQuery.trim().length > 0;
 
   const sectionRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -201,7 +201,7 @@ export function SearchComponent() {
           <CommandList className="max-h-[80vh] min-h-[50vh] overflow-hidden">
             {/* Empty state */}
             {!searchQuery.trim() && (
-              <div className="flex flex-col items-center justify-center py-16 px-4 min-h-[400px]">
+              <div className="flex flex-col items-center justify-center px-4 min-h-[50vh]">
                 <Search className="h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-sm text-muted-foreground">
                   {t('sidebar.search.emptyMessage')}

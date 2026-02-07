@@ -93,6 +93,8 @@ export const clientPhotosController = {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
         const { date } = req.body;
+        // coachId is the authenticated user uploading for the client
+        const coachId = userId;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -103,10 +105,12 @@ export const clientPhotosController = {
         const supabase = getSupabaseClient();
 
         // Helper to upload a single file
+        // Path structure: {client_id}/{coach_id}/{date}/{category}/{timestamp}_{random}.ext
+        // This allows each coach's data for a client to be isolated and deleted independently
         const uploadFile = async (file: Express.Multer.File, category: string) => {
             const fileExtension = file.originalname.split('.').pop() || 'jpg';
             const dateStr = date || new Date().toISOString().split('T')[0];
-            const uniqueFileName = `${targetClientId}/${dateStr}/${category}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExtension}`;
+            const uniqueFileName = `${targetClientId}/${coachId}/${dateStr}/${category}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExtension}`;
 
             const { error: uploadError } = await supabase.storage
                 .from('client_photos')

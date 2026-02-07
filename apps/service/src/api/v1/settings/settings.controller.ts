@@ -250,6 +250,7 @@ export const settingsController = {
             .from('coach_unique_codes')
             .select('code')
             .eq('coach_id', userId)
+            .is('onboarding_id', null)
             .single();
 
         if (error && error.code !== 'PGRST116') {

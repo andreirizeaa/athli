@@ -69,7 +69,6 @@ export const getClients = async (): Promise<Athlete[]> => {
       age: calculateAge(client.date_of_birth),
       height: client.height_cm || null,
       clientFor: clientForDays.toString(),
-      connected: (client.status === 'accepted' || client.status === 'connected') ? true : client.status === 'invited' ? 'invitation-sent' : false,
     };
   });
 };
@@ -109,7 +108,6 @@ export const getClient = async (id: string): Promise<Athlete> => {
     age: calculateAge(client.date_of_birth),
     height: client.height_cm || null,
     clientFor: clientForDays.toString(),
-    connected: (client.status === 'accepted' || client.status === 'connected') ? true : client.status === 'invited' ? 'invitation-sent' : false,
   };
 };
 
@@ -203,13 +201,14 @@ export const getClientFiles = async (clientId: string, coachId: string): Promise
 /**
  * Service method to add a single client
  */
-export const addClient = async (data: AddClientData & { fullName: string }): Promise<Athlete> => {
+export const addClient = async (data: AddClientData & { fullName: string; onboardingId?: string }): Promise<Athlete> => {
   const response = await apiFetch<{ data: { clients: any[] } }>('/clients/new', {
     method: 'POST',
     body: JSON.stringify({
       email: data.email.toLowerCase().trim(),
       fullName: data.fullName.trim(),
       category: data.coachingType.toLowerCase().trim(),
+      onboardingId: data.onboardingId || undefined,
     }) as any,
   });
 
@@ -238,7 +237,6 @@ export const addClient = async (data: AddClientData & { fullName: string }): Pro
     age: calculateAge(client.date_of_birth),
     height: client.height_cm || null,
     clientFor: clientForDays.toString(),
-    connected: (client.status === 'accepted' || client.status === 'connected') ? true : client.status === 'invited' ? 'invitation-sent' : false,
     invitationToken: client.invitation_token,
   };
 };
@@ -284,7 +282,6 @@ export const addClients = async (data: AddClientsData): Promise<Athlete[]> => {
       age: calculateAge(client.date_of_birth),
       height: client.height_cm || null,
       clientFor: clientForDays.toString(),
-      connected: (client.status === 'accepted' || client.status === 'connected') ? true : client.status === 'invited' ? 'invitation-sent' : false,
     };
   });
 };
@@ -333,7 +330,6 @@ export const getArchivedClients = async (): Promise<Athlete[]> => {
       age: calculateAge(client.date_of_birth),
       height: client.height_cm || null,
       clientFor: clientForDays.toString(),
-      connected: false,
     };
   });
 };

@@ -20,14 +20,17 @@ export const coachPublicController = {
         let coachId: string | null = null;
 
         // Try unique code first
+        let onboardingId: string | null = null;
+
         const { data: codeData } = await supabase
             .from('coach_unique_codes')
-            .select('coach_id')
+            .select('coach_id, onboarding_id')
             .eq('code', code)
             .maybeSingle();
 
         if (codeData) {
             coachId = codeData.coach_id;
+            onboardingId = codeData.onboarding_id;
         } else {
             // Try invitation token
             const { data: assignmentData } = await supabase
@@ -72,7 +75,8 @@ export const coachPublicController = {
                     profilePictureUrl: profileData.profile_picture_url,
                     companyName: companyData?.company_name || null,
                     companyLogoUrl: companyData?.logo_url || null,
-                }
+                },
+                onboardingId,
             },
         });
     },
@@ -94,6 +98,7 @@ export const coachPublicController = {
             .from('coach_unique_codes')
             .select('code')
             .eq('coach_id', coachId)
+            .is('onboarding_id', null)
             .single();
 
         if (error || !data) {

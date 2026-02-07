@@ -34,7 +34,7 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
   const router = useRouter();
   const { hasUnsavedChanges, setHasUnsavedChanges } = useUnsavedChanges();
   const { triggerLogout } = useLogout();
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['account', 'company']));
   const [searchQuery, setSearchQuery] = useState('');
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);

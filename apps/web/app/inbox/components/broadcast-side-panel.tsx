@@ -58,7 +58,7 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
 
   // Filter clients to only show connected ones (status 'accepted' or 'connected')
   const connectedClients = useMemo(() =>
-    (clients || []).filter(c => c.connected === true),
+    (clients || []).filter(c => c.status === 'accepted' || c.status === 'connected'),
     [clients]
   );
 

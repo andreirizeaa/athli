@@ -114,3 +114,14 @@ export async function fetchUserById(userId: string): Promise<UserProfile> {
     }
     return data.data.user;
 }
+
+/**
+ * Seed demo client data for a new coach
+ * Idempotent - only seeds if demo client doesn't exist
+ */
+export async function seedDemoData(): Promise<{ seeded: boolean }> {
+    const data = await apiFetch('/user/seed-demo-data', {
+        method: 'POST',
+    });
+    return data.data;
+}

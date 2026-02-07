@@ -494,6 +494,7 @@ export const esMessages = {
     profile: {
       openAccountMenuAria: 'Abrir menú de cuenta',
       account: 'Cuenta',
+      helpArticles: 'Artículos de Ayuda',
       billing: 'Facturación',
       logOut: 'Cerrar sesión',
     },

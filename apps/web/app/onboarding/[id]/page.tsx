@@ -19,13 +19,12 @@ import {
   BreadcrumbSeparator,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
-import { ChevronRight, Pencil, Power } from 'lucide-react';
+import { ChevronRight, Pencil } from 'lucide-react';
 import { FlowEditor } from '@/components/flows/flow-editor';
 import {
   getOnboardingById,
   updateOnboarding,
   updateOnboardingDetails,
-  updateOnboardingStatus,
   deleteOnboarding,
   type Onboarding,
 } from '@/api/coach/coach-onboarding-service';
@@ -33,8 +32,6 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { SidePanel } from '@/components/app/side-panel';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
-import { ConfirmPublishDialog } from '@/components/app/confirm-publish-dialog';
-import { ButtonGroup } from '@/components/ui/button-group';
 import {
   Form,
   FormControl,
@@ -63,8 +60,6 @@ const OnboardingDetailPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
-
   const formSchema = z.object({
     name: z
       .string()
@@ -150,18 +145,6 @@ const OnboardingDetailPage = () => {
     }
   };
 
-  const handleTogglePublish = async () => {
-    const isActive = !onboarding?.is_active;
-    try {
-      await updateOnboardingStatus(onboardingId, isActive);
-      setOnboarding(prev => prev ? { ...prev, is_active: isActive } : prev);
-      toast.success(isActive ? 'Onboarding published' : 'Onboarding unpublished');
-    } catch (error) {
-      console.error('Failed to update onboarding status:', error);
-      toast.error('Failed to update onboarding status');
-    }
-  };
-
   const handleSaveFlow = async (data: { nodes: any[]; edges: any[] }) => {
     await updateOnboarding({
       id: onboardingId,
@@ -219,23 +202,14 @@ const OnboardingDetailPage = () => {
               <h1 className="text-[22px] font-semibold">{onboarding.name}</h1>
             </div>
           </div>
-          <ButtonGroup>
-            <Button
-              variant="ghost"
-              onClick={handleEditOpen}
-              className="gap-2 border border-primary"
-            >
-              <Pencil className="size-4" />
-              <span>{t('general.edit')}</span>
-            </Button>
-            <Button
-              onClick={() => setIsPublishDialogOpen(true)}
-              className="gap-2"
-            >
-              <Power className="size-4" />
-              <span>{onboarding.is_active ? t('onboarding.unpublish') : t('onboarding.publish')}</span>
-            </Button>
-          </ButtonGroup>
+          <Button
+            variant="ghost"
+            onClick={handleEditOpen}
+            className="gap-2 border border-primary"
+          >
+            <Pencil className="size-4" />
+            <span>{t('general.edit')}</span>
+          </Button>
         </div>
         <Separator />
       </div>
@@ -327,13 +301,6 @@ const OnboardingDetailPage = () => {
         itemName={onboarding.name}
       />
 
-      <ConfirmPublishDialog
-        open={isPublishDialogOpen}
-        onOpenChange={setIsPublishDialogOpen}
-        onConfirm={handleTogglePublish}
-        isPublishing={!onboarding.is_active}
-        itemName={onboarding.name}
-      />
     </div>
   );
 };

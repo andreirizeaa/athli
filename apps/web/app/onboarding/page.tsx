@@ -11,15 +11,13 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Power, Plus, Hash } from 'lucide-react';
+import { FileText, Plus, Hash } from 'lucide-react';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
-import { type Onboarding, createOnboarding, updateOnboardingStatus } from '@/api/coach/coach-onboarding-service';
+import { type Onboarding, createOnboarding } from '@/api/coach/coach-onboarding-service';
 import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
 import { Loader2 } from 'lucide-react';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { ConfirmPublishDialog } from '@/components/app/confirm-publish-dialog';
 import { SidePanel } from '@/components/app/side-panel';
 import {
   Form,
@@ -30,12 +28,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 
 const countActionNodes = (flowData?: { nodes?: any[]; edges?: any[] }) =>
   flowData?.nodes?.filter((n: any) => n.type === 'action').length || 0;
@@ -54,7 +46,6 @@ const OnboardingPage = () => {
   const [optimisticOnboardings, setOptimisticOnboardings] = useState<Onboarding[]>([]);
   const [isAddPanelOpen, setIsAddPanelOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [publishDialogOnboarding, setPublishDialogOnboarding] = useState<{ onboarding: Onboarding; checked: boolean } | null>(null);
 
   const formSchema = z.object({
     name: z
@@ -84,30 +75,12 @@ const OnboardingPage = () => {
 
       const hasChanged = onboardings.some((onb, index) =>
         onb.id !== prev[index]?.id ||
-        onb.is_active !== prev[index]?.is_active ||
         onb.name !== prev[index]?.name
       );
 
       return hasChanged ? onboardings : prev;
     });
   }, [onboardings]);
-
-  const handleToggleActive = async (onboarding: Onboarding, checked: boolean) => {
-    const previousState = optimisticOnboardings;
-
-    setOptimisticOnboardings(prev =>
-      prev.map(o => o.id === onboarding.id ? { ...o, is_active: checked } : o)
-    );
-
-    try {
-      await updateOnboardingStatus(onboarding.id, checked);
-      toast.success(checked ? `${onboarding.name} published` : `${onboarding.name} unpublished`);
-    } catch (error) {
-      console.error('Failed to update onboarding status:', error);
-      toast.error(`Failed to update ${onboarding.name} status`);
-      setOptimisticOnboardings(previousState);
-    }
-  };
 
   const handleAddPanelClose = () => {
     reactForm.reset();
@@ -167,49 +140,6 @@ const OnboardingPage = () => {
       getSortValue: (row) => countActionNodes(row.flow_data),
       renderCell: (row) => (
         <span className="text-sm text-muted-foreground">{countActionNodes(row.flow_data)}</span>
-      ),
-    },
-    {
-      id: 'is_active',
-      label: 'Published',
-      icon: <Power className="size-3" />,
-      sortable: true,
-      width: { class: 'w-[120px]', pixel: '120px' },
-      getSortValue: (row) => (row.is_active ? 1 : 0),
-      renderHeader: ({ isSorted, isAscending }) => (
-        <div className="flex items-center justify-end w-full pr-4 gap-2">
-          <Power className="size-3" />
-          <span className="text-xs font-medium">Published</span>
-          {isSorted && (
-            <span className="ml-1">
-              {isAscending ? (
-                <ArrowUpNarrowWide className="size-3" />
-              ) : (
-                <ArrowDownWideNarrow className="size-3" />
-              )}
-            </span>
-          )}
-        </div>
-      ),
-      renderCell: (row) => (
-        <div className="flex items-center justify-end w-full pr-4" data-no-row-link="true">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Switch
-                    checked={!!row.is_active}
-                    onCheckedChange={(checked) => setPublishDialogOnboarding({ onboarding: row, checked })}
-                    className="data-[state=checked]:bg-primary"
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{row.is_active ? 'Unpublish onboarding' : 'Publish onboarding'}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
       ),
     },
   ];
@@ -352,18 +282,6 @@ const OnboardingPage = () => {
         </Form>
       </SidePanel>
 
-      <ConfirmPublishDialog
-        open={!!publishDialogOnboarding}
-        onOpenChange={(open) => { if (!open) setPublishDialogOnboarding(null); }}
-        onConfirm={async () => {
-          if (publishDialogOnboarding) {
-            await handleToggleActive(publishDialogOnboarding.onboarding, publishDialogOnboarding.checked);
-            setPublishDialogOnboarding(null);
-          }
-        }}
-        isPublishing={!!publishDialogOnboarding?.checked}
-        itemName={publishDialogOnboarding?.onboarding.name}
-      />
     </div>
   );
 };

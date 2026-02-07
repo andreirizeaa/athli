@@ -9,8 +9,10 @@ import { SymbolView } from 'expo-symbols';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { LucideIcon } from 'lucide-react-native';
 import {
+  BookOpen,
   ChevronRight,
   Cog,
+  ArrowLeftRight,
   FileText,
   LogOut,
   MailPlus,
@@ -32,6 +34,9 @@ import { SettingsOption } from '@/components/ui/settings-option';
 import { Separator } from '@/components/ui/separator';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { signOut } from '@/services/auth/supabase-auth';
+import { apiFetch } from '@/lib/api-client';
+import { getClients } from '@/services/coach/coach-client-service';
+import { fetchClientProfile } from '@/services/client/client-profile-service';
 
 type PlatformIconProps = {
   sf: string;
@@ -62,6 +67,7 @@ export default function SettingsScreen() {
   const { t } = useTranslations();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const clientProfile = useClientProfileStore((state) => state.profile);
+  const setClientProfile = useClientProfileStore((state) => state.setProfile);
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
 
@@ -171,11 +177,75 @@ export default function SettingsScreen() {
     setShowLogoutDialog(false);
   };
 
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
   const handleDeleteAccount = () => {
     Alert.alert(
       t('profile.deleteAccount'),
       t('profile.deleteAccountMessage'),
+      [
+        {
+          text: t('general.cancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('profile.deleteAccount'),
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeletingAccount(true);
+            try {
+              await apiFetch('/user/delete-account', {
+                method: 'DELETE',
+              });
+              await signOut();
+              router.replace('/welcome');
+            } catch (error) {
+              console.error('Failed to delete account:', error);
+              Alert.alert(
+                t('general.error'),
+                t('profile.deleteAccountError'),
+              );
+            } finally {
+              setIsDeletingAccount(false);
+            }
+          },
+        },
+      ],
     );
+  };
+
+  const [isSwitchingToClient, setIsSwitchingToClient] = useState(false);
+
+  const handleViewClientArea = async () => {
+    if (!coachProfile || isSwitchingToClient) return;
+    setIsSwitchingToClient(true);
+    try {
+      // Mark checklist item as completed
+      apiFetch('/coach/new/checklist', {
+        method: 'PATCH',
+        body: JSON.stringify({ field: 'client_app_demo' }),
+      }).catch(() => {});
+
+      // Ensure demo client is seeded (idempotent)
+      await apiFetch('/user/seed-demo-data', { method: 'POST' });
+
+      // Find the demo client's ID from coach_client_assignments via the clients list
+      const clients = await getClients();
+      const demoClient = clients.find(c => c.name.includes('- Demo'));
+      if (!demoClient) {
+        console.error('No demo client found for coach');
+        return;
+      }
+
+      const demoClientProfile = await fetchClientProfile(demoClient.id, coachProfile.id);
+      demoClientProfile.coach_id = coachProfile.id;
+      setClientProfile(demoClientProfile);
+      setAppView('athlete');
+    } catch (error) {
+      console.error('Failed to switch to client area:', error);
+    } finally {
+      setIsSwitchingToClient(false);
+    }
   };
 
   return (
@@ -237,6 +307,32 @@ export default function SettingsScreen() {
           </Card>
         </PressableScale>
 
+        {/* Explore - only for coaches */}
+        {isCoach && !isAthleteView && (
+          <>
+            <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.explore')}</Text>
+            <PressableScale onPress={handleViewClientArea} disabled={isSwitchingToClient}>
+              <Card>
+                <View style={styles.profileRow}>
+                  <View style={styles.optionIconContainer}>
+                    <PlatformIcon sf="arrow.left.arrow.right" mdi="swap-horiz" IconComponent={ArrowLeftRight} size={iconSize} color={iconColor} />
+                  </View>
+                  <View style={styles.profileTextContainer}>
+                    <Text style={[styles.optionTitle, { color: themeColors.text }]}>
+                      {t('profile.viewClientArea')}
+                    </Text>
+                  </View>
+                  {isSwitchingToClient ? (
+                    <ActivityIndicator size="small" color={themeColors.mutedText} />
+                  ) : (
+                    <PlatformIcon sf="chevron.right" mdi="chevron-right" IconComponent={ChevronRight} size={iconSizes.extraSmallIcons} color={themeColors.mutedText} />
+                  )}
+                </View>
+              </Card>
+            </PressableScale>
+          </>
+        )}
+
         {/* Support */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.support')}</Text>
         <Card>
@@ -244,6 +340,12 @@ export default function SettingsScreen() {
             icon={<PlatformIcon sf="megaphone" mdi="campaign" IconComponent={Megaphone} size={iconSize} color={iconColor} />}
             title={t('profile.featureRequests')}
             onPress={() => router.push('/settings/feature-requests')}
+            showChevron
+          />
+          <Separator />
+          <SettingsOption
+            icon={<PlatformIcon sf="book" mdi="menu-book" IconComponent={BookOpen} size={iconSize} color={iconColor} />}
+            title={t('profile.helpArticles')}
           />
           <Separator />
           <SettingsOption

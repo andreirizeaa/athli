@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Linking, InteractionManager } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
+  ArrowLeftRight,
+  BookOpen,
+  Briefcase,
   ChevronRight,
   Cog,
   FileText,
@@ -31,7 +34,7 @@ import { signOut } from '@/services/auth/supabase-auth';
 export default function ProfileTabScreen() {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
-  const { appView } = useAppView();
+  const { appView, setAppView } = useAppView();
   const { t } = useTranslations();
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
@@ -46,13 +49,6 @@ export default function ProfileTabScreen() {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showDeletionDialog, setShowDeletionDialog] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  // Log client data when on profile screen
-  useEffect(() => {
-    if (isAthleteView) {
-      console.log('[ProfileTabScreen] Client profile data:', clientProfile);
-    }
-  }, [isAthleteView, clientProfile]);
 
   const handleOpenPreferences = () => {
     router.push({ pathname: '/settings/preferences' });
@@ -138,6 +134,10 @@ export default function ProfileTabScreen() {
     router.push('/modals/settings/change-password-modal');
   }, [router]);
 
+  const handleSwitchToCoach = useCallback(() => {
+    setAppView('coach');
+  }, [setAppView]);
+
   return (
     <>
     <ScreenWrapper tabScreen>
@@ -212,74 +212,104 @@ export default function ProfileTabScreen() {
           </Card>
         </PressableScale>
 
-        {/* Security */}
-        <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>
-          {t('profile.security')}
-        </Text>
-        <Card>
-          {currentProfile?.signin_method === 'google' && (
-            <PressableScale style={styles.providerRow} onPress={handleManageGoogle}>
-              <Image
-                source={require('@/assets/icons/google.png')}
-                style={styles.providerLogo}
-                contentFit="contain"
-              />
-              <Text style={[styles.providerText, { color: themeColors.text }]}>
-                {t('profile.manageWithGoogle')}
-              </Text>
-              <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
-            </PressableScale>
-          )}
-          {currentProfile?.signin_method === 'apple' && (
-            <PressableScale style={styles.providerRow} onPress={handleManageApple}>
-              <Image
-                source={require('@/assets/icons/apple.png')}
-                style={[styles.providerLogo, { tintColor: themeColors.text }]}
-                contentFit="contain"
-              />
-              <Text style={[styles.providerText, { color: themeColors.text }]}>
-                {t('profile.manageWithApple')}
-              </Text>
-              <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
-            </PressableScale>
-          )}
-          {currentProfile?.signin_method === 'email' && (
-            <>
-              <PressableScale style={styles.providerRow} onPress={handleChangePassword}>
-                <PlatformIcon
-                  sf="lock"
-                  IconComponent={Lock}
-                  size={iconSizes.tabBarIcons}
-                  color={themeColors.text}
-                />
-                <Text style={[styles.providerText, { color: themeColors.text }]}>
-                  {t('profile.changePassword')}
-                </Text>
-                <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
-              </PressableScale>
-              <Separator />
-              <PressableScale style={styles.providerRow} onPress={handleChangeEmail}>
-                <PlatformIcon
-                  sf="envelope"
-                  IconComponent={Mail}
-                  size={iconSizes.tabBarIcons}
-                  color={themeColors.text}
-                />
-                <View style={styles.providerTextContainer}>
-                  <Text style={[styles.providerTextInContainer, { color: themeColors.text }]}>
-                    {t('profile.changeEmail')}
+        {/* Security - hidden for coach's demo client view */}
+        {clientProfile?.coach_id !== clientProfile?.client_id && (
+          <>
+            <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>
+              {t('profile.security')}
+            </Text>
+            <Card>
+              {currentProfile?.signin_method === 'google' && (
+                <PressableScale style={styles.providerRow} onPress={handleManageGoogle}>
+                  <Image
+                    source={require('@/assets/icons/google.png')}
+                    style={styles.providerLogo}
+                    contentFit="contain"
+                  />
+                  <Text style={[styles.providerText, { color: themeColors.text }]}>
+                    {t('profile.manageWithGoogle')}
                   </Text>
-                  {currentProfile?.email && (
-                    <Text style={[styles.providerSubtitle, { color: themeColors.mutedText }]}>
-                      {currentProfile.email}
+                  <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
+                </PressableScale>
+              )}
+              {currentProfile?.signin_method === 'apple' && (
+                <PressableScale style={styles.providerRow} onPress={handleManageApple}>
+                  <Image
+                    source={require('@/assets/icons/apple.png')}
+                    style={[styles.providerLogo, { tintColor: themeColors.text }]}
+                    contentFit="contain"
+                  />
+                  <Text style={[styles.providerText, { color: themeColors.text }]}>
+                    {t('profile.manageWithApple')}
+                  </Text>
+                  <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
+                </PressableScale>
+              )}
+              {currentProfile?.signin_method === 'email' && (
+                <>
+                  <PressableScale style={styles.providerRow} onPress={handleChangePassword}>
+                    <PlatformIcon
+                      sf="lock"
+                      IconComponent={Lock}
+                      size={iconSizes.tabBarIcons}
+                      color={themeColors.text}
+                    />
+                    <Text style={[styles.providerText, { color: themeColors.text }]}>
+                      {t('profile.changePassword')}
                     </Text>
-                  )}
-                </View>
-                <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
-              </PressableScale>
-            </>
-          )}
-        </Card>
+                    <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
+                  </PressableScale>
+                  <Separator />
+                  <PressableScale style={styles.providerRow} onPress={handleChangeEmail}>
+                    <PlatformIcon
+                      sf="envelope"
+                      IconComponent={Mail}
+                      size={iconSizes.tabBarIcons}
+                      color={themeColors.text}
+                    />
+                    <View style={styles.providerTextContainer}>
+                      <Text style={[styles.providerTextInContainer, { color: themeColors.text }]}>
+                        {t('profile.changeEmail')}
+                      </Text>
+                      {currentProfile?.email && (
+                        <Text style={[styles.providerSubtitle, { color: themeColors.mutedText }]}>
+                          {currentProfile.email}
+                        </Text>
+                      )}
+                    </View>
+                    <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
+                  </PressableScale>
+                </>
+              )}
+            </Card>
+          </>
+        )}
+
+        {/* Coach (athlete view only) */}
+        {isAthleteView && (
+          <>
+            <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.coach')}</Text>
+            <Card>
+              {clientProfile?.coach_id === clientProfile?.client_id && (
+                <>
+                  <SettingsOption
+                    icon={<PlatformIcon sf="arrow.left.arrow.right" IconComponent={ArrowLeftRight} size={iconSize} color={iconColor} />}
+                    title={t('profile.switchToCoachApp')}
+                    onPress={handleSwitchToCoach}
+                    showChevron
+                  />
+                  <Separator />
+                </>
+              )}
+              <SettingsOption
+                icon={<PlatformIcon sf="briefcase" IconComponent={Briefcase} size={iconSize} color={iconColor} />}
+                title={t('profile.viewCoachProfile')}
+                onPress={() => router.push('/profile/coach-profile')}
+                showChevron
+              />
+            </Card>
+          </>
+        )}
 
         {/* Support */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.support')}</Text>
@@ -288,6 +318,12 @@ export default function ProfileTabScreen() {
             icon={<PlatformIcon sf="megaphone" IconComponent={Megaphone} size={iconSize} color={iconColor} />}
             title={t('profile.featureRequests')}
             onPress={() => router.push('/settings/feature-requests')}
+            showChevron
+          />
+          <Separator />
+          <SettingsOption
+            icon={<PlatformIcon sf="book" IconComponent={BookOpen} size={iconSize} color={iconColor} />}
+            title={t('profile.helpArticles')}
           />
           <Separator />
           <SettingsOption

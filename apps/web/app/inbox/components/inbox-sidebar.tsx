@@ -120,8 +120,8 @@ export const InboxSidebar = React.memo(function InboxSidebar({
                             )}
                         >
                             <Button
-                                variant="outline"
-                                className="w-full justify-start gap-2 pl-[7px] text-muted-foreground hover:text-foreground"
+                                variant="default"
+                                className="w-full justify-start gap-2 pl-[7px]"
                                 onClick={onOpenBroadcast}
                             >
                                 <Megaphone className="size-4 -ml-[5px]" />

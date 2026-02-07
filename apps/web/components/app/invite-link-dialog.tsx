@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
+import { getOrCreateInviteCode } from '@/api/coach/coach-invite-code-service';
 
 interface InviteLinkDialogProps {
   open: boolean;
@@ -51,19 +52,27 @@ export const InviteLinkDialog = ({ open, onOpenChange, uniqueCode }: InviteLinkD
   const { onboardings } = useCoachOnboardings();
   const [step, setStep] = useState<'ask' | 'select'>('ask');
   const [selectedOnboardingId, setSelectedOnboardingId] = useState('');
+  const [isCopying, setIsCopying] = useState(false);
 
-  const getInviteLink = (onboardingId?: string) => {
-    const base = `${window.location.origin}/client/invite/${uniqueCode}`;
-    if (onboardingId) {
-      return `${base}?onboarding=${onboardingId}`;
-    }
-    return base;
+  const getInviteLink = (code: string) => {
+    return `${window.location.origin}/client/invite/${code}`;
   };
 
-  const handleCopyLink = (onboardingId?: string) => {
-    copyToClipboard(getInviteLink(onboardingId));
-    toast.success(t('athletes.inviteDialog.linkCopied'));
-    onOpenChange(false);
+  const handleCopyLink = async (onboardingId?: string) => {
+    try {
+      setIsCopying(true);
+      let code = uniqueCode;
+      if (onboardingId) {
+        code = await getOrCreateInviteCode(onboardingId);
+      }
+      copyToClipboard(getInviteLink(code));
+      toast.success(t('athletes.inviteDialog.linkCopied'));
+      onOpenChange(false);
+    } catch {
+      toast.error('Failed to generate invite link');
+    } finally {
+      setIsCopying(false);
+    }
   };
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -115,7 +124,7 @@ export const InviteLinkDialog = ({ open, onOpenChange, uniqueCode }: InviteLinkD
               </SelectContent>
             </Select>
 
-            <Button onClick={() => handleCopyLink(selectedOnboardingId)} disabled={!selectedOnboardingId} className="w-full gap-2">
+            <Button onClick={() => handleCopyLink(selectedOnboardingId)} disabled={!selectedOnboardingId || isCopying} className="w-full gap-2">
               <Copy className="size-4" />
               {t('athletes.inviteDialog.copyLink')}
             </Button>

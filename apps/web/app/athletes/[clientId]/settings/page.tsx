@@ -38,22 +38,10 @@ const AthleteSettingsPage = () => {
     try {
       await archiveClient(clientId);
       setIsArchiveModalOpen(false);
-      toast.success(t('athletes.profile.archivedSuccessfully'), {
-        style: {
-          background: 'rgb(220 252 231)',
-          color: 'rgb(20 83 45)',
-          border: '1px solid rgb(187 247 208)',
-        },
-      });
+      toast.success(t('athletes.profile.archivedSuccessfully'));
       handleNavigateToAthletes();
     } catch (error) {
-      toast.error(t('athletes.profile.failedToArchive'), {
-        style: {
-          background: 'rgb(254 242 242)',
-          color: 'rgb(153 27 27)',
-          border: '1px solid rgb(254 202 202)',
-        },
-      });
+      toast.error(t('athletes.profile.failedToArchive'));
     }
   };
 
@@ -63,22 +51,10 @@ const AthleteSettingsPage = () => {
     try {
       await deleteClient(clientId);
       setIsDeleteModalOpen(false);
-      toast.success(t('athletes.profile.settings.danger.deleteSuccess'), {
-        style: {
-          background: 'rgb(220 252 231)',
-          color: 'rgb(20 83 45)',
-          border: '1px solid rgb(187 247 208)',
-        },
-      });
+      toast.success(t('athletes.profile.settings.danger.deleteSuccess'));
       handleNavigateToAthletes();
     } catch (error) {
-      toast.error(t('athletes.profile.settings.danger.deleteFailed'), {
-        style: {
-          background: 'rgb(254 242 242)',
-          color: 'rgb(153 27 27)',
-          border: '1px solid rgb(254 202 202)',
-        },
-      });
+      toast.error(t('athletes.profile.settings.danger.deleteFailed'));
     }
   };
 

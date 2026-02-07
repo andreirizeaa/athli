@@ -141,12 +141,13 @@ export async function GET(request: NextRequest) {
               if (!hasPicture) {
                 console.log('=== No OAuth profile picture, generating default avatar ===');
                 // Call backend to generate avatar
-                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+                const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+                const apiVersion = process.env.NEXT_PUBLIC_API_VERSION || 'api/v1';
                 const userName = currentSession?.user.user_metadata?.name ||
                                 currentSession?.user.user_metadata?.full_name ||
                                 currentSession?.user.email?.split('@')[0] || 'User';
 
-                const response = await fetch(`${apiUrl}/user/generate-avatar`, {
+                const response = await fetch(`${apiBaseUrl}/${apiVersion}/user/generate-avatar`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -198,6 +199,27 @@ export async function GET(request: NextRequest) {
           console.log('=== User is client-only, redirecting to /download/client ===');
           redirectPath = '/download/client';
         } else {
+          console.log('=== User is coach, seeding demo data ===');
+          // Seed demo data for coaches (idempotent - only creates if doesn't exist)
+          try {
+            const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+            const apiVersion = process.env.NEXT_PUBLIC_API_VERSION || 'api/v1';
+            const seedResponse = await fetch(`${apiBaseUrl}/${apiVersion}/user/seed-demo-data`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+              },
+            });
+            if (seedResponse.ok) {
+              console.log('=== Demo data seeded successfully ===');
+            } else {
+              console.error('Failed to seed demo data:', await seedResponse.text());
+            }
+          } catch (seedError) {
+            console.error('Error seeding demo data:', seedError);
+            // Don't block auth flow if seeding fails
+          }
           console.log('=== User is coach, using redirectPath:', redirectPath, '===');
         }
 
