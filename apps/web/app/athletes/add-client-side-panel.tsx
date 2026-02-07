@@ -19,12 +19,20 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { SidePanel } from '@/components/app/side-panel';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/general/utils';
 
 type AddAthleteFormValues = {
   fullName: string;
   email: string;
   coachingType: 'online' | 'in-person' | 'hybrid';
+  onboardingId: string;
 };
 
 interface AddClientSidePanelProps {
@@ -35,6 +43,7 @@ interface AddClientSidePanelProps {
 import { addClient } from '@/api/coach/coach-client-service';
 import { Spinner } from '@/components/ui/spinner';
 import { useState } from 'react';
+import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
 
 export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelProps) => {
   const t = useTranslations();
@@ -43,6 +52,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
     fullName: z.string().min(1, t('athletes.addClient.fullNameRequiredError')),
     email: z.string().email(t('athletes.addClient.emailInvalidError')),
     coachingType: z.union([z.literal('online'), z.literal('in-person'), z.literal('hybrid')]),
+    onboardingId: z.string().optional(),
   });
   const form = useForm<AddAthleteFormValues>({
     resolver: zodResolver(addAthleteSchema),
@@ -51,8 +61,10 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
       fullName: '',
       email: '',
       coachingType: 'online',
+      onboardingId: '',
     },
   });
+  const { onboardings } = useCoachOnboardings();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -206,6 +218,37 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
               </FormItem>
             )}
           />
+          {onboardings.length > 0 && (
+            <FormField
+              control={form.control}
+              name="onboardingId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    <span>{t('athletes.addClient.onboardingFlow')}</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger clearable className="w-full">
+                        <SelectValue placeholder={t('general.none')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {onboardings.map((onboarding) => (
+                          <SelectItem key={onboarding.id} value={onboarding.id} description={onboarding.description}>
+                            {onboarding.name || 'Untitled'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
         </form>
       </Form>
     </SidePanel>

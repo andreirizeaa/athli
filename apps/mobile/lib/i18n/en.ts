@@ -1050,6 +1050,16 @@ export const en = {
       reset: 'Reset',
       invite: 'Invite',
       inviting: 'Inviting...',
+      onboardingFlow: 'Onboarding flow',
+      onboardingPlaceholder: 'None',
+    },
+    inviteDialog: {
+      title: 'Your Invite Link',
+      message: 'Would you like to add a specific onboarding flow to this invite link?',
+      noJustShare: 'No, just share link',
+      yesSelect: 'Yes, select onboarding',
+      selectOnboarding: 'Select an onboarding flow',
+      shareLink: 'Share link',
     },
     filterModal: {
       title: 'Filters',

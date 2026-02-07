@@ -20,6 +20,7 @@ import { getFlowById, updateFlowDetails, updateFlowStatus, type Flow } from '@/a
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmPublishDialog } from '@/components/app/confirm-publish-dialog';
 
 const FlowDetailPage = () => {
   const t = useTranslations();
@@ -30,6 +31,7 @@ const FlowDetailPage = () => {
   const [flow, setFlow] = useState<Flow | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isEditFlowOpen, setIsEditFlowOpen] = useState(false);
+  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchFlow = async () => {
@@ -62,7 +64,8 @@ const FlowDetailPage = () => {
     setFlow(prev => prev ? { ...prev, name: data.name, description: data.description || '' } : prev);
   };
 
-  const handleTogglePublish = async (isActive: boolean) => {
+  const handleTogglePublish = async () => {
+    const isActive = !flow?.is_active;
     try {
       await updateFlowStatus(flowId, isActive);
       setFlow(prev => prev ? { ...prev, is_active: isActive } : prev);
@@ -125,7 +128,7 @@ const FlowDetailPage = () => {
           <div className="flex gap-2">
             <Button
               variant={flow.is_active ? "outline" : "default"}
-              onClick={() => handleTogglePublish(!flow.is_active)}
+              onClick={() => setIsPublishDialogOpen(true)}
             >
               {flow.is_active ? 'Unpublish' : 'Publish'}
             </Button>
@@ -150,6 +153,14 @@ const FlowDetailPage = () => {
         initialName={flow.name || ''}
         initialDescription={flow.description || ''}
         onSave={handleEditFlow}
+      />
+
+      <ConfirmPublishDialog
+        open={isPublishDialogOpen}
+        onOpenChange={setIsPublishDialogOpen}
+        onConfirm={handleTogglePublish}
+        isPublishing={!flow.is_active}
+        itemName={flow.name}
       />
     </div>
   );

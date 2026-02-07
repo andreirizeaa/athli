@@ -43,8 +43,8 @@ export function ContactListItem({
   return (
     <div
       className={cn(
-        'group/item relative flex h-[64px] w-full cursor-pointer items-center px-4 transition-all duration-300 ease-in-out hover:bg-primary/10',
-        active && 'bg-primary/10'
+        'group/item relative flex h-[64px] w-full cursor-pointer items-center px-4 transition-all duration-300 ease-in-out hover:bg-accent/50',
+        active ? 'bg-accent/50 border-l-2 border-l-primary' : 'border-l-2 border-l-transparent'
       )}
       onClick={onClick}
     >

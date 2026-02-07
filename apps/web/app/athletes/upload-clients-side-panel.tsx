@@ -17,6 +17,13 @@ import { SidePanel } from '@/components/app/side-panel';
 import { parseCSV, type ClientData } from '@/lib/general/csv-parser';
 import { cn } from '@/lib/general/utils';
 import { Trash2, Check, Upload } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -28,10 +35,13 @@ interface UploadClientsSidePanelProps {
 
 import { addClients } from '@/api/coach/coach-client-service';
 import { toast } from 'sonner';
+import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
 
 export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: UploadClientsSidePanelProps) => {
   const t = useTranslations();
   const queryClient = useQueryClient();
+  const { onboardings } = useCoachOnboardings();
+  const hasOnboardings = onboardings.length > 0;
   const [uploadStep, setUploadStep] = useState<number>(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -40,6 +50,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: U
   const [parsedClients, setParsedClients] = useState<ClientData[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [selectedOnboardingId, setSelectedOnboardingId] = useState<string>('');
   const dragCounterRef = useRef(0);
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -52,6 +63,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: U
       setParsedClients([]);
       setIsDragging(false);
       dragCounterRef.current = 0;
+      setSelectedOnboardingId('');
     }
   };
 
@@ -151,7 +163,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: U
                 }
               }}
               aria-label={t('athletes.uploadClients.continueToReview')}
-              className="gap-2 min-w-[120px]"
+              className="gap-2"
             >
               {isValidatingCSV ? (
                 <Spinner className="size-4" />
@@ -160,7 +172,17 @@ export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: U
               )}
             </Button>
           )}
-          {uploadStep === 2 && (
+          {uploadStep === 2 && hasOnboardings && (
+            <Button
+              type="button"
+              onClick={() => setUploadStep(3)}
+              aria-label={t('athletes.uploadClients.continueToFinal')}
+              className="gap-2"
+            >
+              {t('athletes.uploadClients.continue')}
+            </Button>
+          )}
+          {uploadStep === 2 && !hasOnboardings && (
             <Button
               type="button"
               disabled={isSubmitting}
@@ -168,9 +190,8 @@ export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: U
                 setIsSubmitting(true);
                 try {
                   await addClients({ clients: parsedClients });
-                  // Invalidate the coach-clients query to refresh the list
                   await queryClient.invalidateQueries({ queryKey: ['coach-clients'] });
-                  toast.success(t('athletes.addClient.invitationSent')); // Using existing success toast
+                  toast.success(t('athletes.addClient.invitationSent'));
                   if (onClientsAdded) onClientsAdded();
                   handleOpenChange(false);
                 } catch (error) {
@@ -185,6 +206,32 @@ export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: U
             >
               {isSubmitting ? <Spinner className="size-4" /> : <Check className="size-4" />}
               {t('athletes.uploadClients.save')}
+            </Button>
+          )}
+          {uploadStep === 3 && (
+            <Button
+              type="button"
+              disabled={isSubmitting}
+              onClick={async () => {
+                setIsSubmitting(true);
+                try {
+                  await addClients({ clients: parsedClients });
+                  await queryClient.invalidateQueries({ queryKey: ['coach-clients'] });
+                  toast.success(t('athletes.addClient.invitationSent'));
+                  if (onClientsAdded) onClientsAdded();
+                  handleOpenChange(false);
+                } catch (error) {
+                  toast.error(t('athletes.uploadClients.errorProcessing'));
+                  console.error(error);
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
+              aria-label={t('athletes.uploadClients.send')}
+              className="gap-2"
+            >
+              {isSubmitting ? <Spinner className="size-4" /> : <Check className="size-4" />}
+              {t('athletes.uploadClients.send')}
             </Button>
           )}
         </div>
@@ -329,6 +376,35 @@ export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: U
                 </TableBody>
               </Table>
             </div>
+          </div>
+        )}
+
+        {/* Step 3: Select Onboarding (optional) */}
+        {uploadStep === 3 && (
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2 text-center">
+              <h3 className="text-lg font-semibold">
+                {t('athletes.uploadClients.onboardingTitle')}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {t('athletes.uploadClients.onboardingDescription')}
+              </p>
+            </div>
+            <Select
+              value={selectedOnboardingId}
+              onValueChange={setSelectedOnboardingId}
+            >
+              <SelectTrigger clearable className="w-full">
+                <SelectValue placeholder={t('general.none')} />
+              </SelectTrigger>
+              <SelectContent>
+                {onboardings.map((onboarding) => (
+                  <SelectItem key={onboarding.id} value={onboarding.id} description={onboarding.description}>
+                    {onboarding.name || 'Untitled'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>

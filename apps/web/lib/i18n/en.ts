@@ -173,6 +173,22 @@ export const enMessages = {
     yourListEmptyStateTitle: 'No tasks in your list',
     athliAssistant: 'Athli assistant',
     athliAssistantEmptyStateTitle: 'Athli Assistant is resting',
+    summaryCards: {
+      todos: 'To do',
+      checkIns: 'Check-ins',
+      outstanding: 'Outstanding',
+      awaitingReview: 'Awaiting review',
+      allCaughtUp: 'All caught up!',
+    },
+    atRiskClients: {
+      title: 'At Risk',
+      noActivity: 'No activity',
+      lastActivityOne: 'Last activity 1 day ago',
+      lastActivityOther: 'Last activity {count} days ago',
+      infoTooltip: 'What does at risk mean?',
+      infoDialogTitle: 'At Risk Clients',
+      infoDialogMessage: 'Clients shown here have not logged any training activity in the last 5 days. Regular check-ins can help keep them engaged and on track with their fitness goals.',
+    },
   },
   dashboard: {
     title: 'Dashboard',
@@ -622,9 +638,15 @@ export const enMessages = {
       openFlowAria: 'Open flow {name}',
       openConversationAria: 'Open conversation with {name}',
       sections: 'Sections',
+      checkIns: 'Check-ins',
+      questionnaires: 'Questionnaires',
+      metrics: 'Metrics',
+      todos: "To-do's",
       todosYourList: 'To Do - Your List',
       todosAthliAssistant: 'To Do - Athli Assistant',
-      conversations: 'Conversations',
+      conversations: 'Messages',
+      showMore: 'Show more',
+      showLess: 'Show less',
     },
     theme: {
       label: 'Theme',
@@ -1709,8 +1731,19 @@ export const enMessages = {
       cancelAria: 'Cancel adding athlete',
       fullNameRequiredError: 'Full name is required',
       emailInvalidError: 'Please enter a valid email address',
+      onboardingFlow: 'Onboarding flow',
       invitationSent: 'Invitation sent successfully',
       invitationSentDescription: 'An invitation has been sent to {fullName} at {email}',
+    },
+    inviteDialog: {
+      title: 'Your Invite Link',
+      askDescription: 'Would you like to add a specific onboarding flow to this invite link?',
+      copyDescription: 'Copy this link and share it with your client.',
+      noJustCopy: 'No, just copy link',
+      yesSelect: 'Yes, select onboarding',
+      selectOnboarding: 'Select an onboarding flow',
+      copyLink: 'Copy link',
+      linkCopied: 'Invite link copied!',
     },
     uploadClients: {
       title: 'Upload clients',
@@ -1738,6 +1771,9 @@ export const enMessages = {
       removeClient: 'Remove {name}',
       invalidCsv: 'Invalid CSV file',
       errorProcessing: 'Error processing CSV file',
+      onboardingTitle: 'Onboarding flow',
+      onboardingDescription: 'Optionally select an onboarding flow for these clients.',
+      send: 'Send',
     },
     restorePanel: {
       title: 'Restore Client',
@@ -2611,7 +2647,7 @@ export const enMessages = {
     columns: {
       name: 'Name',
       description: 'Description',
-      stepCount: '# Steps',
+      stepCount: 'Steps',
     },
     form: {
       name: 'Flow name',
@@ -2639,7 +2675,7 @@ export const enMessages = {
     columns: {
       name: 'Name',
       description: 'Description',
-      stepCount: '# Steps',
+      stepCount: 'Steps',
       status: 'Status',
     },
     status: {

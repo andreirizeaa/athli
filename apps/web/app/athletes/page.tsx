@@ -36,6 +36,8 @@ import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { PageHeader } from '@/components/app/page-header';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmArchiveDialog } from '@/components/app/confirm-archive-dialog';
+import { InviteLinkDialog, copyToClipboard } from '@/components/app/invite-link-dialog';
+import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
 import {
   User,
   Users,
@@ -151,19 +153,19 @@ const AthletesPage = () => {
   const router = useRouter();
   const { uniqueCode } = useGlobalData();
   const { clients: athletes, isLoading, archiveClient } = useCoachClients();
+  const { onboardings } = useCoachOnboardings();
   const [selectedAthletes, setSelectedAthletes] = useState<Set<string>>(new Set());
   const [revealedFields, setRevealedFields] = useState<Set<string>>(new Set());
   const [copiedFields, setCopiedFields] = useState<Set<string>>(new Set());
   const [isAddAthleteOpen, setIsAddAthleteOpen] = useState<boolean>(false);
   const [isUploadClientsOpen, setIsUploadClientsOpen] = useState<boolean>(false);
   const [isRestoreClientsOpen, setIsRestoreClientsOpen] = useState<boolean>(false);
-  const [isInviteLinkCopied, setIsInviteLinkCopied] = useState<boolean>(false);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState<boolean>(false);
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState<boolean>(false);
   const [filteredCount, setFilteredCount] = useState<number>(0);
   const itemsPerPage = 25;
   const timeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const copyTimeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const inviteLinkCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Data is now fetched and cached by useCoachClients hook
   useEffect(() => {
@@ -487,9 +489,6 @@ const AthletesPage = () => {
       timeoutRefs.current.clear();
       copyTimeoutRefs.current.forEach((timeout) => clearTimeout(timeout));
       copyTimeoutRefs.current.clear();
-      if (inviteLinkCopyTimeoutRef.current) {
-        clearTimeout(inviteLinkCopyTimeoutRef.current);
-      }
     };
   }, []);
 
@@ -504,49 +503,16 @@ const AthletesPage = () => {
     }
   };
 
-  const handleCopyInviteLink = async () => {
+  const handleCopyInviteLink = () => {
     if (!uniqueCode) {
       toast.error('Unable to generate invite link. Please try again.');
       return;
     }
-
-    const inviteLink = `${window.location.origin}/client/invite/${uniqueCode}`;
-    try {
-      await navigator.clipboard.writeText(inviteLink);
-    } catch (err) {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = inviteLink;
-      textArea.style.position = 'fixed';
-      textArea.style.opacity = '0';
-      document.body.appendChild(textArea);
-      textArea.select();
-      try {
-        document.execCommand('copy');
-      } catch (fallbackErr) {
-        // Ignore copy errors
-      }
-      document.body.removeChild(textArea);
-    }
-
-    setIsInviteLinkCopied(true);
-
-    // Clear existing timeout if any
-    if (inviteLinkCopyTimeoutRef.current) {
-      clearTimeout(inviteLinkCopyTimeoutRef.current);
-    }
-
-    // Set timeout to hide checkmark after 2 seconds
-    inviteLinkCopyTimeoutRef.current = setTimeout(() => {
-      setIsInviteLinkCopied(false);
-      inviteLinkCopyTimeoutRef.current = null;
-    }, 2000);
-  };
-
-  const handleInviteLinkKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      handleCopyInviteLink();
+    if (onboardings.length === 0) {
+      copyToClipboard(`${window.location.origin}/client/invite/${uniqueCode}`);
+      toast.success(t('athletes.inviteDialog.linkCopied'));
+    } else {
+      setIsInviteDialogOpen(true);
     }
   };
 
@@ -1184,11 +1150,10 @@ const AthletesPage = () => {
                 <Button
                   variant="ghost"
                   onClick={handleCopyInviteLink}
-                  onKeyDown={handleInviteLinkKeyDown}
                   className="gap-2 border border-primary"
                   aria-label={t('athletes.actions.copyInviteLink')}
                 >
-                  {isInviteLinkCopied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                  <Copy className="size-4" />
                   <span>{t('athletes.actions.yourInviteLink')}</span>
                 </Button>
                 <Button onClick={() => setIsAddAthleteOpen(true)} className="gap-2">
@@ -1406,6 +1371,13 @@ const AthletesPage = () => {
         onConfirm={handleConfirmArchive}
         count={selectedAthletes.size}
       />
+      {uniqueCode && (
+        <InviteLinkDialog
+          open={isInviteDialogOpen}
+          onOpenChange={setIsInviteDialogOpen}
+          uniqueCode={uniqueCode}
+        />
+      )}
       <RestoreClientsSidePanel
         open={isRestoreClientsOpen}
         onOpenChange={setIsRestoreClientsOpen}

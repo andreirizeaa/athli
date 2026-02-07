@@ -8,6 +8,8 @@ import { useTranslations } from '@/stores';
 import { addClient } from '@/services/client-service';
 import { InputBox, SelectInput } from '@/components/ui/form-inputs';
 import { Dialog } from '@/components/ui/dialog';
+import { useQuery } from '@tanstack/react-query';
+import { getOnboardings } from '@/services/coach/coach-onboarding-service';
 
 type AddClientContentProps = {
   onClose: () => void;
@@ -31,6 +33,13 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [category, setCategory] = useState<ClientCategory>('online');
+    const [selectedOnboardingId, setSelectedOnboardingId] = useState<string | null>(null);
+
+    const { data: onboardings = [] } = useQuery({
+      queryKey: ['coach-onboardings'],
+      queryFn: getOnboardings,
+      staleTime: 5 * 60 * 1000,
+    });
 
     // Dialog state
     const [showErrorDialog, setShowErrorDialog] = useState(false);
@@ -54,6 +63,7 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
         setName('');
         setEmail('');
         setCategory('online');
+        setSelectedOnboardingId(null);
         onClose();
         onClientAdded?.();
       },
@@ -92,6 +102,14 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
       { value: 'hybrid' as const, label: t('clients.addClientModal.hybrid') },
     ], [t]);
 
+    const onboardingOptions = useMemo(() =>
+      onboardings.map((o) => ({
+        value: o.id,
+        label: o.name || 'Untitled',
+        subtitle: o.description,
+      })),
+    [onboardings]);
+
     return (
       <ScrollView
         style={styles.scrollView}
@@ -127,6 +145,16 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
           required
           clearable={false}
         />
+
+        {onboardings.length > 0 && (
+          <SelectInput
+            label={t('clients.addClientModal.onboardingFlow')}
+            value={selectedOnboardingId}
+            onChange={setSelectedOnboardingId}
+            options={onboardingOptions}
+            placeholder={t('clients.addClientModal.onboardingPlaceholder')}
+          />
+        )}
 
         <Dialog
           visible={showErrorDialog}
