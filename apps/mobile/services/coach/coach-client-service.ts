@@ -148,6 +148,9 @@ export const updateClient = async (athleteId: string, data: UpdateClientData): P
   if (data.avatarUrl !== undefined) {
     updatePayload.avatar_url = data.avatarUrl;
   }
+  if (data.timezone !== undefined) {
+    updatePayload.timezone = data.timezone;
+  }
 
   // If there's an avatar file URI, use FormData and /client endpoint (like web app)
   if (data.avatarUri) {

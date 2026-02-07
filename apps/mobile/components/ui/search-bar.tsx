@@ -12,6 +12,7 @@ type SearchBarProps = {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
+  clearable?: boolean;
   rightIcon?: React.ReactNode;
   onRightIconPress?: () => void;
   onFocus?: () => void;
@@ -23,6 +24,7 @@ export const SearchBar = ({
   value,
   onChangeText,
   placeholder,
+  clearable = true,
   rightIcon,
   onRightIconPress,
   onFocus,
@@ -61,7 +63,7 @@ export const SearchBar = ({
         multiline={false}
         numberOfLines={1}
       />
-      {value.length > 0 && (
+      {clearable && value.length > 0 && (
         <PressableOpacity
           style={styles.clearIcon}
           onPressIn={handleClear}

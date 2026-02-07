@@ -6,6 +6,7 @@ import { demoDataService } from './demo-data.service';
 interface UpdateProfileInput {
   name?: string;
   profilePictureUrl?: string | null;
+  timezone?: string;
 }
 
 interface UserProfile {
@@ -15,6 +16,7 @@ interface UserProfile {
   userType: 'coach' | 'client';
   profilePictureUrl?: string | null;
   signinMethod: 'email' | 'google';
+  timezone?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -52,6 +54,7 @@ class UserService {
         userType: (authUser.user.user_metadata?.user_type as 'coach' | 'client') || 'coach',
         profilePictureUrl: authUser.user.user_metadata?.avatar_url || authUser.user.user_metadata?.picture || null,
         signinMethod: (authUser.user.app_metadata?.provider as 'email' | 'google') || 'email',
+        timezone: authUser.user.user_metadata?.timezone || null,
         isActive: true,
         createdAt: authUser.user.created_at,
         updatedAt: authUser.user.updated_at || authUser.user.created_at,
@@ -68,6 +71,7 @@ class UserService {
       userType: profile.user_type,
       profilePictureUrl: profile.profile_picture_url,
       signinMethod: profile.signin_method,
+      timezone: profile.timezone || null,
       isActive: profile.is_active,
       createdAt: authUser.user.created_at,
       updatedAt: profile.updated_at,
@@ -99,6 +103,11 @@ class UserService {
       userProfileUpdates.profile_picture_url = updates.profilePictureUrl;
       authMetadataUpdates.profile_picture_url = updates.profilePictureUrl;
       authMetadataUpdates.avatar_url = updates.profilePictureUrl;
+    }
+
+    if (updates.timezone !== undefined) {
+      userProfileUpdates.timezone = updates.timezone;
+      authMetadataUpdates.timezone = updates.timezone;
     }
 
     // Directly update user_profiles (don't rely solely on trigger)
@@ -802,15 +811,23 @@ class UserService {
       throw new Error('Coach profile not found');
     }
 
-    // Check if demo client already exists (coach has a client profile for themselves)
-    const { data: existingDemo } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .eq('id', coachId)
-      .eq('user_type', 'client')
-      .maybeSingle();
+    // Check if demo client is fully set up (user_profiles + assignment both exist)
+    const [{ data: existingDemo }, { data: existingAssignment }] = await Promise.all([
+      supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('id', coachId)
+        .eq('user_type', 'client')
+        .maybeSingle(),
+      supabase
+        .from('coach_client_assignments')
+        .select('client_id')
+        .eq('coach_id', coachId)
+        .eq('client_id', coachId)
+        .maybeSingle(),
+    ]);
 
-    if (existingDemo) {
+    if (existingDemo && existingAssignment) {
       console.log('[DemoData] Demo client already exists for coach:', coachId);
       return { seeded: false };
     }
@@ -834,7 +851,7 @@ class UserService {
     // Get coach profile data for demo client (same email, name, signin_method, profile_picture)
     const { data: userProfile } = await supabase
       .from('user_profiles')
-      .select('name, email, signin_method, profile_picture_url')
+      .select('name, email, signin_method, profile_picture_url, timezone')
       .eq('id', coachId)
       .eq('user_type', 'coach')
       .maybeSingle();
@@ -843,6 +860,7 @@ class UserService {
     const coachEmail = userProfile?.email || authUser.user.email || '';
     const signinMethod = (userProfile?.signin_method || 'email') as 'email' | 'google';
     const profilePictureUrl = userProfile?.profile_picture_url || null;
+    const timezone = userProfile?.timezone || null;
 
     // Seed demo client
     await demoDataService.seedDemoClient({
@@ -851,6 +869,7 @@ class UserService {
       coachEmail,
       signinMethod,
       profilePictureUrl,
+      timezone,
     });
 
     return { seeded: true };

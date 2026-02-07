@@ -130,7 +130,8 @@ export const CountryPickerModal = ({
                 <SearchBar
                   value={searchQuery}
                   onChangeText={onSearchChange}
-                  placeholder="Search countries..."
+                  placeholder="Search"
+                  clearable={false}
                 />
               </View>
             }

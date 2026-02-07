@@ -5,12 +5,16 @@ import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Archive, Trash2 } from 'lucide-react';
+import { Archive, Trash2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { useClientProfileContext } from '../client-profile-context';
+import { EditClientDetailsSidePanel } from '../components/edit-client-details-side-panel';
+import { TIMEZONE_OPTIONS } from '@athli/shared-types';
 
 const AthleteSettingsPage = () => {
   const t = useTranslations();
@@ -20,11 +24,12 @@ const AthleteSettingsPage = () => {
   const clientIdFromParams = params.clientId || params.contactId;
   const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
 
-  const { athlete } = useClientProfileContext();
-  const clientName = athlete?.name || '';
+  const { athlete, details } = useClientProfileContext();
+  const clientName = details?.name || athlete?.name || '';
 
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
 
   const { deleteClient, archiveClient } = useCoachClients();
 
@@ -58,11 +63,63 @@ const AthleteSettingsPage = () => {
     }
   };
 
+  const detailRows = [
+    { label: t('athletes.profile.athleteName'), value: clientName },
+    { label: t('athletes.profile.email'), value: details?.email || athlete?.email || '' },
+    { label: t('athletes.profile.birthDate'), value: details?.birthDate ? format(new Date(details.birthDate), 'd MMM, yyyy') : '' },
+    { label: t('athletes.profile.gender'), value: details?.gender ? t(`athletes.profile.${details.gender === 'prefer-not-to-say' ? 'preferNotToSay' : details.gender}`) : '' },
+    { label: t('athletes.profile.category'), value: details?.category ? t(`athletes.profile.${details.category === 'in-person' ? 'inPerson' : details.category}`) : '' },
+    { label: t('athletes.profile.phone'), value: details?.phone || '' },
+    { label: t('athletes.profile.country'), value: details?.country || '' },
+    { label: 'Timezone', value: details?.timezone ? (TIMEZONE_OPTIONS.find((tz) => tz.value === details.timezone)?.label || details.timezone) : '' },
+  ];
+
   return (
-    <div className="flex justify-center items-start px-4 pt-4 pb-2">
+    <div className="flex flex-col items-center px-4 pt-4 pb-2 gap-4">
+      {/* Client Details Card */}
       <Card className="bg-background max-w-3xl w-full">
         <CardHeader className="px-4">
-          <CardTitle>{t('athletes.profile.settings.danger.cardTitle')}</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Client Details</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs gap-2"
+              onClick={() => setIsEditPanelOpen(true)}
+            >
+              <Pencil className="h-3 w-3" />
+              Edit
+            </Button>
+          </div>
+        </CardHeader>
+        <Separator className="w-full mt-[-8px]" />
+        <div className="w-full">
+          <div className="space-y-0">
+            {detailRows.map((row, index) => (
+              <div
+                key={row.label}
+                className={`flex items-center justify-between px-4 py-1.5 ${index === 0 ? '-mt-3' : ''} ${index === detailRows.length - 1 ? '-mb-3' : ''} ${index < detailRows.length - 1 ? 'border-b' : ''}`}
+              >
+                <Label className="text-sm">{row.label}</Label>
+                <span className="text-sm text-muted-foreground text-right max-w-[60%] truncate">
+                  {row.value || '-'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      {/* Danger Zone Card */}
+      <Card className="bg-background max-w-3xl w-full">
+        <CardHeader className="px-4">
+          <div className="flex items-center justify-between">
+            <CardTitle>{t('athletes.profile.settings.danger.cardTitle')}</CardTitle>
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-2 invisible">
+              <Pencil className="h-3 w-3" />
+              Edit
+            </Button>
+          </div>
         </CardHeader>
         <Separator className="w-full mt-[-8px] mb-[-4px]" />
         <div className="w-full">
@@ -109,6 +166,12 @@ const AthleteSettingsPage = () => {
           </div>
         </div>
       </Card>
+
+      {/* Edit Details Side Panel */}
+      <EditClientDetailsSidePanel
+        open={isEditPanelOpen}
+        onOpenChange={setIsEditPanelOpen}
+      />
 
       {/* Archive Confirmation Dialog */}
       <ConfirmDeleteDialog
