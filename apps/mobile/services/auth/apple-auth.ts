@@ -52,7 +52,11 @@ export async function signInWithApple(): Promise<AppleAuthResult> {
       throw new Error('No user returned from Apple sign-in');
     }
 
-    // If this is a first-time sign-in and we have full name, update the user metadata
+    // Update user metadata with name (first-time) and timezone
+    const updateData: Record<string, string> = {
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
+
     if (credential.fullName?.givenName || credential.fullName?.familyName) {
       const fullName = [
         credential.fullName.givenName,
@@ -62,13 +66,11 @@ export async function signInWithApple(): Promise<AppleAuthResult> {
         .join(' ');
 
       if (fullName) {
-        await supabase.auth.updateUser({
-          data: {
-            name: fullName,
-          },
-        });
+        updateData.name = fullName;
       }
     }
+
+    await supabase.auth.updateUser({ data: updateData });
 
     return {
       userId: data.user.id,

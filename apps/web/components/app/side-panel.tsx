@@ -115,7 +115,7 @@ export const SidePanel = ({
   const hasFooter = !!footerContent;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
       <SheetContent
         side={side}
         className={cn(
@@ -123,6 +123,7 @@ export const SidePanel = ({
           contentClassName
         )}
         onOpenAutoFocus={onOpenAutoFocus}
+        onOverlayClick={() => onOpenChange(false)}
         style={{
           borderTopLeftRadius: '0px',
           borderBottomLeftRadius: '0px',

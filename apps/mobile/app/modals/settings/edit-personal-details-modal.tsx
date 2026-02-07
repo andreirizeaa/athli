@@ -37,6 +37,7 @@ export default function EditPersonalDetailsModal() {
   const [isSaving, setIsSaving] = useState(false);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   const hasChanges =
     field === 'name'
@@ -44,8 +45,12 @@ export default function EditPersonalDetailsModal() {
       : selectedImage !== null;
 
   const handleClose = useCallback(() => {
+    if (hasChanges) {
+      setShowDiscardDialog(true);
+      return;
+    }
     router.back();
-  }, [router]);
+  }, [router, hasChanges]);
 
   const getTitle = () => {
     switch (field) {
@@ -303,6 +308,17 @@ export default function EditPersonalDetailsModal() {
         message={errorMessage}
         showCloseIcon={false}
         buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
+      <Dialog
+        visible={showDiscardDialog}
+        onClose={() => setShowDiscardDialog(false)}
+        title={t('common.discardChanges')}
+        message={t('common.discardChangesMessage')}
+        showCloseIcon={false}
+        buttons={[
+          { label: t('common.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+          { label: t('common.discard'), onPress: () => { setShowDiscardDialog(false); router.back(); }, variant: 'destructive' },
+        ]}
       />
     </View>
   );

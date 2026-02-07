@@ -9,7 +9,7 @@ export class ClientAuthController {
      * Used when a client clicks the invite link from their coach
      */
     acceptInvite = asyncHandler(async (req: Request, res: Response) => {
-        const { inviteCode, email, password, name } = req.body;
+        const { inviteCode, email, password, name, timezone } = req.body;
         const supabase = getSupabaseClient();
 
         // Find coach by invite code using the full view (merges user_profiles)
@@ -32,6 +32,7 @@ export class ClientAuthController {
                 name,
                 user_type: 'client',
                 coach_id: coach.id,
+                timezone,
             },
         });
 
@@ -52,6 +53,7 @@ export class ClientAuthController {
                 email,
                 name,
                 signin_method: 'email',
+                timezone,
             });
 
         if (userProfileError) {

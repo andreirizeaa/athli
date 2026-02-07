@@ -1,5 +1,5 @@
 body {
-    @apply overscroll-none bg-transparent antialiased;
+    @apply overscroll-y-none bg-transparent antialiased;
     --text-family: var(--font-geist), sans-serif;
     --radius: 0.7rem;
 }

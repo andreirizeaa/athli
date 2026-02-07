@@ -52,10 +52,10 @@ export default async function RootLayout({
   );
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="overflow-x-hidden">
       <body
         suppressHydrationWarning
-        className={cn(`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`, 'bg-background group/layout font-sans')}
+        className={cn(`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen overflow-x-hidden`, 'bg-background group/layout font-sans')}
         {...bodyAttributes}
       >
         <ThemeProvider

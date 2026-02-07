@@ -84,7 +84,6 @@ export async function authenticateUser(
     });
 
     if (!profileResult.profileType || !profileResult.profile) {
-      console.error('🔴 [Auth Orchestrator] No profile found for user');
       throw new Error('NO_PROFILE_FOUND');
     }
 
@@ -100,6 +99,7 @@ export async function authenticateUser(
       userId,
       profileType: profileResult.profileType,
       profile: profileResult.profile,
+      coachAssignments: profileResult.coachAssignments,
     };
   } catch (error: any) {
     console.log('🔴 [Auth Orchestrator] Authentication error:', error);
@@ -159,7 +159,7 @@ export async function isAuthenticated(): Promise<boolean> {
 /**
  * Restore session from storage
  */
-export async function restoreSession(): Promise<AuthResult | null> {
+export async function restoreSession(options?: { signOutOnFailure?: boolean }): Promise<AuthResult | null> {
   try {
     const session = await getCurrentSession();
     if (!session) {
@@ -170,8 +170,10 @@ export async function restoreSession(): Promise<AuthResult | null> {
     const profileResult = await validateUserProfile(userId);
 
     if (!profileResult.profileType || !profileResult.profile) {
-      // Session exists but no profile - sign out
-      await signOut();
+      // Session exists but no profile - sign out unless caller opts out
+      if (options?.signOutOnFailure !== false) {
+        await signOut();
+      }
       return null;
     }
 
@@ -183,6 +185,7 @@ export async function restoreSession(): Promise<AuthResult | null> {
       userId,
       profileType: profileResult.profileType,
       profile: profileResult.profile,
+      coachAssignments: profileResult.coachAssignments,
     };
   } catch (error) {
     console.log('Error restoring session:', error);

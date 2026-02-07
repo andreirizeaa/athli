@@ -34,6 +34,7 @@ export default function ClientInvitePage() {
 
   const [coachId, setCoachId] = useState<string | null>(null);
   const [coachName, setCoachName] = useState<string | null>(null);
+  const [onboardingId, setOnboardingId] = useState<string | null>(null);
   const [isLoadingCoach, setIsLoadingCoach] = useState(true);
 
   // Fetch coach information on mount
@@ -49,7 +50,9 @@ export default function ClientInvitePage() {
         if (response.data && response.data.coach) {
           setCoachId(response.data.coach.id);
           setCoachName(response.data.coach.name);
-          // Could also use company name here if we wanted
+          if (response.data.onboardingId) {
+            setOnboardingId(response.data.onboardingId);
+          }
         }
       } catch (error: any) {
         console.error('Error fetching coach:', error);
@@ -147,6 +150,7 @@ export default function ClientInvitePage() {
       sessionStorage.setItem('auth_flow_data', JSON.stringify({
         coach_id: coachId,
         invitation_token: code,
+        onboarding_id: onboardingId,
         flow: 'client_invite',
         email: email,
       }));
@@ -174,6 +178,7 @@ export default function ClientInvitePage() {
       sessionStorage.setItem('auth_flow_data', JSON.stringify({
         coach_id: coachId,
         invitation_token: code,
+        onboarding_id: onboardingId,
         flow: 'client_invite',
       }));
 
@@ -207,6 +212,7 @@ export default function ClientInvitePage() {
       sessionStorage.setItem('auth_flow_data', JSON.stringify({
         coach_id: coachId,
         invitation_token: code,
+        onboarding_id: onboardingId,
         flow: 'client_invite',
       }));
 

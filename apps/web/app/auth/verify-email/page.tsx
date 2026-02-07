@@ -11,6 +11,7 @@ import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { AuthLayout } from '@/components/auth/auth-layout';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui/spinner';
+import { seedDemoData } from '@/api/user/user-service';
 
 export default function VerifyEmailPage() {
   const { verifyOTP, resendOTP } = useSupabaseAuth();
@@ -63,8 +64,16 @@ export default function VerifyEmailPage() {
         }
 
         // Register flow → redirect to /get-started
+        // New coach registration - seed demo data before redirect
         if (authFlowData?.flow === 'register') {
-          console.log('[Verify Email] Register flow, redirecting to get-started');
+          console.log('[Verify Email] Register flow, seeding demo data');
+          try {
+            await seedDemoData();
+          } catch (seedError) {
+            console.error('Failed to seed demo data:', seedError);
+            // Don't block verification if seeding fails
+          }
+          console.log('[Verify Email] Redirecting to get-started');
           window.location.href = '/get-started';
           return;
         }
@@ -84,6 +93,14 @@ export default function VerifyEmailPage() {
             // If user is a client (not a coach), redirect to download page
             if (userType === 'client') {
               finalRedirect = '/download/client';
+            } else {
+              // For coaches, seed demo data before redirecting
+              try {
+                await seedDemoData();
+              } catch (seedError) {
+                console.error('Failed to seed demo data:', seedError);
+                // Don't block verification if seeding fails
+              }
             }
           }
         } catch (profileError) {

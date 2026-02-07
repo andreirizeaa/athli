@@ -16,7 +16,12 @@ export const getSupabaseClient = (): SupabaseClient => {
       throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY');
     }
 
-    supabaseClient = createClient(supabaseUrl, supabaseKey);
+    supabaseClient = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
   }
 
   return supabaseClient;

@@ -22,7 +22,9 @@ import {
   BarChart3,
   Rocket,
   WandSparkles,
+  Zap,
 } from 'lucide-react';
+import { useCoachChecklist } from '@/hooks/use-coach-checklist';
 import {
   Sidebar,
   SidebarContent,
@@ -42,6 +44,21 @@ export function AppSidebar() {
   const { state } = useSidebar();
 
   const isCollapsed = state === 'collapsed';
+  const { data: checklist } = useCoachChecklist();
+
+  const isChecklistComplete = checklist
+    ? checklist.client_app_demo &&
+      checklist.coach_app_demo &&
+      checklist.workout_ai &&
+      checklist.program_templates &&
+      checklist.custom_exercises &&
+      checklist.automate_onboardings &&
+      checklist.check_ins_forms &&
+      checklist.powerful_flows &&
+      checklist.lifestyle_habits &&
+      checklist.track_metrics &&
+      checklist.on_demand_resources
+    : false;
 
   // Normalize pathname by removing trailing slashes (except for root)
   const normalizedPathname = pathname && pathname !== '/' ? pathname.replace(/\/$/, '') : pathname;
@@ -105,6 +122,11 @@ export function AppSidebar() {
 
   const automationsNavItems = [
     {
+      href: '/onboarding',
+      labelKey: 'sidebar.links.onboarding',
+      icon: Zap,
+    },
+    {
       href: '/flows',
       labelKey: 'sidebar.links.flows',
       icon: Workflow,
@@ -130,23 +152,25 @@ export function AppSidebar() {
           </div>
         )}
       </SidebarHeader>
-      <SidebarContent className="gap-0 overflow-y-auto">
+      <SidebarContent className="gap-0 overflow-y-auto overscroll-y-contain">
         <SidebarGroup className="pb-0">
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={activePath === '/get-started'}
-                  tooltip={t('sidebar.links.getStarted')}
-                  className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
-                >
-                  <Link href="/get-started">
-                    <Rocket className="shrink-0" />
-                    <span>{t('sidebar.links.getStarted')}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {!isChecklistComplete && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={activePath === '/get-started'}
+                    tooltip={t('sidebar.links.getStarted')}
+                    className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
+                  >
+                    <Link href="/get-started">
+                      <Rocket className="shrink-0" />
+                      <span>{t('sidebar.links.getStarted')}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
@@ -277,7 +301,7 @@ export function AppSidebar() {
                 const Icon = item.icon;
                 const href = item.href;
                 const isActive =
-                  href === '/flows'
+                  (href === '/flows' || href === '/onboarding')
                     ? activePath === href || activePath.startsWith(`${href}/`)
                     : activePath === href;
                 const label = t(item.labelKey);

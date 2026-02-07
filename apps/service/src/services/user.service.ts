@@ -1,9 +1,12 @@
 import { getSupabaseClient } from './supabase.service';
 import { avatarService } from './avatar.service';
+import { onboardingExecutor } from './onboarding-executor.service';
+import { demoDataService } from './demo-data.service';
 
 interface UpdateProfileInput {
   name?: string;
   profilePictureUrl?: string | null;
+  timezone?: string;
 }
 
 interface UserProfile {
@@ -13,6 +16,7 @@ interface UserProfile {
   userType: 'coach' | 'client';
   profilePictureUrl?: string | null;
   signinMethod: 'email' | 'google';
+  timezone?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -50,6 +54,7 @@ class UserService {
         userType: (authUser.user.user_metadata?.user_type as 'coach' | 'client') || 'coach',
         profilePictureUrl: authUser.user.user_metadata?.avatar_url || authUser.user.user_metadata?.picture || null,
         signinMethod: (authUser.user.app_metadata?.provider as 'email' | 'google') || 'email',
+        timezone: authUser.user.user_metadata?.timezone || null,
         isActive: true,
         createdAt: authUser.user.created_at,
         updatedAt: authUser.user.updated_at || authUser.user.created_at,
@@ -66,6 +71,7 @@ class UserService {
       userType: profile.user_type,
       profilePictureUrl: profile.profile_picture_url,
       signinMethod: profile.signin_method,
+      timezone: profile.timezone || null,
       isActive: profile.is_active,
       createdAt: authUser.user.created_at,
       updatedAt: profile.updated_at,
@@ -97,6 +103,11 @@ class UserService {
       userProfileUpdates.profile_picture_url = updates.profilePictureUrl;
       authMetadataUpdates.profile_picture_url = updates.profilePictureUrl;
       authMetadataUpdates.avatar_url = updates.profilePictureUrl;
+    }
+
+    if (updates.timezone !== undefined) {
+      userProfileUpdates.timezone = updates.timezone;
+      authMetadataUpdates.timezone = updates.timezone;
     }
 
     // Directly update user_profiles (don't rely solely on trigger)
@@ -363,7 +374,7 @@ class UserService {
    * Ensure client profile exists for a user
    * Creates a client profile if it doesn't exist, otherwise returns existing profile
    */
-  async ensureClientProfile(userId: string, coachId: string, invitationToken?: string): Promise<UserProfile> {
+  async ensureClientProfile(userId: string, coachId: string, invitationToken?: string, onboardingId?: string): Promise<UserProfile> {
     const supabase = getSupabaseClient();
 
     console.log('[Service] ensureClientProfile START', { userId, coachId, invitationToken });
@@ -451,6 +462,8 @@ class UserService {
 
       // Handle invitation token and coach_client_assignments
       let invitationProcessed = false;
+      let effectiveOnboardingId = onboardingId;
+
       if (invitationToken) {
         const { data: assignment } = await supabase
           .from('coach_client_assignments')
@@ -460,6 +473,11 @@ class UserService {
 
         if (assignment) {
           invitationProcessed = true;
+          // Read onboarding_id from the assignment if not provided via invite code
+          if (!effectiveOnboardingId && assignment.onboarding_id) {
+            effectiveOnboardingId = assignment.onboarding_id;
+          }
+
           if (assignment.client_id !== userId) {
             const stubClientId = assignment.client_id;
 
@@ -507,7 +525,8 @@ class UserService {
             coach_id: coachId,
             client_id: userId,
             status: 'accepted',
-            category: null // Will be set when coach categorizes the client
+            category: null, // Will be set when coach categorizes the client
+            onboarding_id: effectiveOnboardingId || null,
           }, { onConflict: 'coach_id, client_id' })
           .select();
 
@@ -523,6 +542,12 @@ class UserService {
         } else {
           console.log('[Service] ✅ coach_client_assignments created successfully', { data: assignmentData });
         }
+      }
+
+      // Fire-and-forget onboarding execution (executor handles idempotency)
+      if (effectiveOnboardingId) {
+        onboardingExecutor.execute({ coachId, clientId: userId, onboardingId: effectiveOnboardingId })
+          .catch(err => console.error('[Onboarding] Execution failed:', err));
       }
 
       return {
@@ -606,6 +631,8 @@ class UserService {
 
     // Handle invitation token if provided
     let invitationProcessed = false;
+    let effectiveOnboardingId = onboardingId;
+
     if (invitationToken) {
       const { data: assignment } = await supabase
         .from('coach_client_assignments')
@@ -615,6 +642,11 @@ class UserService {
 
       if (assignment) {
         invitationProcessed = true;
+        // Read onboarding_id from the assignment if not provided via invite code
+        if (!effectiveOnboardingId && assignment.onboarding_id) {
+          effectiveOnboardingId = assignment.onboarding_id;
+        }
+
         if (assignment.client_id !== userId) {
           const stubClientId = assignment.client_id;
 
@@ -660,8 +692,15 @@ class UserService {
           coach_id: coachId,
           client_id: userId,
           status: 'accepted',
-          connected_at: new Date().toISOString()
+          connected_at: new Date().toISOString(),
+          onboarding_id: effectiveOnboardingId || null,
         }, { onConflict: 'coach_id, client_id' });
+    }
+
+    // Fire-and-forget onboarding execution (executor handles idempotency)
+    if (effectiveOnboardingId) {
+      onboardingExecutor.execute({ coachId, clientId: userId, onboardingId: effectiveOnboardingId })
+        .catch(err => console.error('[Onboarding] Execution failed:', err));
     }
 
     return {
@@ -678,31 +717,162 @@ class UserService {
   }
 
   /**
+   * Mark a client as connected (called when client signs in via mobile app)
+   */
+  async markClientConnected(clientId: string): Promise<void> {
+    const supabase = getSupabaseClient();
+
+    const { error } = await supabase
+      .from('coach_client_assignments')
+      .update({
+        status: 'connected',
+        connected_at: new Date().toISOString(),
+      })
+      .eq('client_id', clientId)
+      .in('status', ['accepted', 'invited']);
+
+    if (error) {
+      console.error('[Service] Failed to mark client as connected:', error);
+    }
+  }
+
+  /**
    * Delete user account
+   * For coaches: Deletes coach_profiles which triggers storage cleanup and cascade deletion
+   * For clients: Deletes user_profiles (this shouldn't happen from web - only coaches use web)
    */
   async deleteAccount(userId: string): Promise<void> {
     const supabase = getSupabaseClient();
 
-    // Delete user profile from user_profiles table
-    const { error: profileError } = await supabase
-      .from('user_profiles')
-      .delete()
-      .eq('id', userId);
+    // Check if user is a coach
+    const { data: coachProfile } = await supabase
+      .from('coach_profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
 
-    if (profileError) {
-      throw new Error(`Failed to delete user profile: ${profileError.message}`);
+    if (coachProfile) {
+      // Delete coach_profiles - triggers handle storage and cascade cleanup
+      // See migration 132_coach_account_deletion_cleanup.sql for trigger details
+      const { error } = await supabase
+        .from('coach_profiles')
+        .delete()
+        .eq('id', userId);
+
+      if (error) {
+        throw new Error(`Failed to delete coach profile: ${error.message}`);
+      }
+    } else {
+      // Client deletion - use existing client deletion logic
+      // Note: This shouldn't typically happen from web settings - only coaches use web
+      const { error } = await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('id', userId);
+
+      if (error) {
+        throw new Error(`Failed to delete user profile: ${error.message}`);
+      }
     }
   }
 
   /**
    * Alias for ensureClientProfile to keep controller logic clean
    */
-  async handleNewClient(userId: string, coachId: string, invitationToken?: string) {
-    const profile = await this.ensureClientProfile(userId, coachId, invitationToken);
+  async handleNewClient(userId: string, coachId: string, invitationToken?: string, onboardingId?: string) {
+    const profile = await this.ensureClientProfile(userId, coachId, invitationToken, onboardingId);
     return {
       profile,
       isNew: true, // simplified for now
     };
+  }
+
+  /**
+   * Seed demo client data for a coach
+   * Idempotent - only seeds if no demo client exists for this coach
+   */
+  async seedDemoData(coachId: string): Promise<{ seeded: boolean }> {
+    const supabase = getSupabaseClient();
+
+    // Get coach info
+    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(coachId);
+    if (authError || !authUser.user) {
+      throw new Error('Coach not found');
+    }
+
+    // Check if coach profile exists
+    const { data: coachProfile } = await supabase
+      .from('coach_profiles')
+      .select('id')
+      .eq('id', coachId)
+      .maybeSingle();
+
+    if (!coachProfile) {
+      throw new Error('Coach profile not found');
+    }
+
+    // Check if demo client is fully set up (user_profiles + assignment both exist)
+    const [{ data: existingDemo }, { data: existingAssignment }] = await Promise.all([
+      supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('id', coachId)
+        .eq('user_type', 'client')
+        .maybeSingle(),
+      supabase
+        .from('coach_client_assignments')
+        .select('client_id')
+        .eq('coach_id', coachId)
+        .eq('client_id', coachId)
+        .maybeSingle(),
+    ]);
+
+    if (existingDemo && existingAssignment) {
+      console.log('[DemoData] Demo client already exists for coach:', coachId);
+      return { seeded: false };
+    }
+
+    // Check for orphaned client_profiles data (in case previous cleanup failed)
+    // This can happen if the coach deleted their account but cleanup didn't complete
+    const { data: orphanedClientProfile } = await supabase
+      .from('client_profiles')
+      .select('client_id')
+      .eq('client_id', coachId)
+      .maybeSingle();
+
+    if (orphanedClientProfile) {
+      console.log('[DemoData] Found orphaned client_profiles data, cleaning up for coach:', coachId);
+      // Clean up orphaned data before re-seeding
+      // Delete in order to respect FK constraints
+      await supabase.from('coach_client_assignments').delete().eq('client_id', coachId);
+      await supabase.from('client_profiles').delete().eq('client_id', coachId);
+    }
+
+    // Get coach profile data for demo client (same email, name, signin_method, profile_picture)
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('name, email, signin_method, profile_picture_url, timezone')
+      .eq('id', coachId)
+      .eq('user_type', 'coach')
+      .maybeSingle();
+
+    const coachName = userProfile?.name || authUser.user.user_metadata?.name || 'Coach';
+    const coachEmail = userProfile?.email || authUser.user.email || '';
+    const signinMethod = (userProfile?.signin_method || 'email') as 'email' | 'google';
+    const profilePictureUrl = userProfile?.profile_picture_url || null;
+    const timezone = userProfile?.timezone || null;
+
+    // Seed demo client
+    await demoDataService.seedDemoClient({
+      coachId,
+      coachName,
+      coachEmail,
+      signinMethod,
+      profilePictureUrl,
+      timezone,
+    });
+
+    return { seeded: true };
   }
 }
 

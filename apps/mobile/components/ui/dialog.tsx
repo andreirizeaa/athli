@@ -13,13 +13,16 @@ export type DialogButton = {
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'destructive';
   loading?: boolean;
+  disabled?: boolean;
 };
 
 export type DialogProps = {
   visible: boolean;
   onClose: () => void;
+  onDismiss?: () => void;
   title: string;
   message?: string;
+  children?: React.ReactNode;
   buttons: DialogButton[];
   buttonLayout?: 'vertical' | 'horizontal';
   showCloseIcon?: boolean;
@@ -28,8 +31,10 @@ export type DialogProps = {
 export function Dialog({
   visible,
   onClose,
+  onDismiss,
   title,
   message,
+  children,
   buttons,
   buttonLayout = 'horizontal',
   showCloseIcon = true,
@@ -72,7 +77,7 @@ export function Dialog({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} onDismiss={onDismiss}>
       <View style={styles.container}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.cardWrapper}>
@@ -98,15 +103,18 @@ export function Dialog({
               <Text style={[styles.message, { color: themeColors.mutedText }]}>{message}</Text>
             )}
 
+            {children}
+
             <View style={[styles.buttonContainer, buttonLayout === 'horizontal' && styles.buttonContainerHorizontal]}>
               {buttons.map((button, index) => {
                 const btnStyles = getButtonStyles(button.variant);
+                const isDisabled = button.loading || button.disabled;
                 return Platform.OS === 'ios' ? (
                     <PressableScale
                       key={index}
-                      style={[styles.buttonWrapper, buttonLayout === 'horizontal' && styles.buttonHorizontal]}
+                      style={[styles.buttonWrapper, buttonLayout === 'horizontal' && styles.buttonHorizontal, isDisabled && { opacity: 0.5 }]}
                       onPress={button.onPress}
-                      enabled={!button.loading}
+                      enabled={!isDisabled}
                     >
                       <SquircleView
                         cornerSmoothing={1}
@@ -132,10 +140,10 @@ export function Dialog({
                       style={({ pressed }) => [
                         styles.buttonWrapper,
                         buttonLayout === 'horizontal' && styles.buttonHorizontal,
-                        { opacity: pressed ? 0.7 : 1 },
+                        { opacity: isDisabled ? 0.5 : pressed ? 0.7 : 1 },
                       ]}
                       onPress={button.onPress}
-                      disabled={button.loading}
+                      disabled={isDisabled}
                     >
                       <SquircleView
                         cornerSmoothing={1}

@@ -17,7 +17,7 @@ import Link from 'next/link';
 // Forms are now split into check-ins and questionnaires services
 import { type Habit } from '@/api/coach/coach-habit-service';
 import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
-import { Search, X, ChevronRight, UserPlus, CalendarX, Activity, CheckCircle, MessageSquare, FileText, ClipboardCheck, FilePlus, Sprout, ArrowLeft, Clock, RotateCw, BarChart3 } from 'lucide-react';
+import { Search, X, ChevronRight, UserPlus, CalendarX, Activity, CheckCircle, MessageSquare, FileText, ClipboardCheck, FilePlus, Sprout, ArrowLeft, Clock, RotateCw, BarChart3, Loader2 } from 'lucide-react';
 
 export type PanelType = 'trigger' | 'action' | null;
 
@@ -42,6 +42,16 @@ export const TRIGGER_OPTIONS: TriggerOption[] = [
   {
     id: 'missed-check-in',
     name: 'Missed check in',
+    icon: CalendarX,
+  },
+  {
+    id: 'missed-habit-log',
+    name: 'Missed habit log',
+    icon: CalendarX,
+  },
+  {
+    id: 'missed-metric-log',
+    name: 'Missed metric log',
     icon: CalendarX,
   },
   {
@@ -135,6 +145,11 @@ interface FlowEditorSidePanelProps {
   onToggleFile: (id: string) => void;
   onToggleHabit: (id: string) => void;
   onToggleMetric: (id: string) => void;
+  onSetQuestionnaires: (ids: Set<string>) => void;
+  onSetCheckIns: (ids: Set<string>) => void;
+  onSetFiles: (ids: Set<string>) => void;
+  onSetHabits: (ids: Set<string>) => void;
+  onSetMetrics: (ids: Set<string>) => void;
   questionnaires: Array<{ id: string; name: string }>;
   checkIns: Array<{ id: string; name: string }>;
   files: Array<{ id: string; name: string }>;
@@ -148,6 +163,7 @@ interface FlowEditorSidePanelProps {
   onActionContinue: () => void;
   onSaveAction: () => void;
   onDeleteAction?: () => void;
+  isSavingAction?: boolean;
   editingActionNodeId: string | null;
   onAddMore: () => void;
   waitDuration: number;
@@ -196,6 +212,11 @@ export function FlowEditorSidePanel({
   onToggleFile,
   onToggleHabit,
   onToggleMetric,
+  onSetQuestionnaires,
+  onSetCheckIns,
+  onSetFiles,
+  onSetHabits,
+  onSetMetrics,
   questionnaires,
   checkIns,
   files,
@@ -209,6 +230,7 @@ export function FlowEditorSidePanel({
   onActionContinue,
   onSaveAction,
   onDeleteAction,
+  isSavingAction = false,
   editingActionNodeId,
   onAddMore,
   waitDuration,
@@ -549,6 +571,7 @@ export function FlowEditorSidePanel({
                         data: questionnaires,
                         selectedIds: selectedQuestionnaires,
                         onToggle: onToggleQuestionnaire,
+                        onSetSelection: onSetQuestionnaires,
                         label: 'Questionnaire',
                         gridKey: 'select-questionnaires',
                         searchPlaceholder: 'Search questionnaires...',
@@ -559,6 +582,7 @@ export function FlowEditorSidePanel({
                         data: checkIns,
                         selectedIds: selectedCheckIns,
                         onToggle: onToggleCheckIn,
+                        onSetSelection: onSetCheckIns,
                         label: 'Check-in',
                         gridKey: 'select-check-ins',
                         searchPlaceholder: 'Search check-ins...',
@@ -569,6 +593,7 @@ export function FlowEditorSidePanel({
                         data: files,
                         selectedIds: selectedFiles,
                         onToggle: onToggleFile,
+                        onSetSelection: onSetFiles,
                         label: 'File',
                         gridKey: 'select-files',
                         searchPlaceholder: 'Search files...',
@@ -579,6 +604,7 @@ export function FlowEditorSidePanel({
                         data: habits,
                         selectedIds: selectedHabits,
                         onToggle: onToggleHabit,
+                        onSetSelection: onSetHabits,
                         label: 'Habit',
                         gridKey: 'select-habits',
                         searchPlaceholder: 'Search habits...',
@@ -589,6 +615,7 @@ export function FlowEditorSidePanel({
                         data: metrics,
                         selectedIds: selectedMetrics,
                         onToggle: onToggleMetric,
+                        onSetSelection: onSetMetrics,
                         label: 'Metric',
                         gridKey: 'select-metrics',
                         searchPlaceholder: 'Search metrics...',
@@ -632,17 +659,7 @@ export function FlowEditorSidePanel({
                             enableRowSelection={true}
                             selectedRowIds={config.selectedIds}
                             onSelectionChange={(ids) => {
-                              const newSet = new Set(ids);
-                              config.selectedIds.forEach((id) => {
-                                if (!newSet.has(id)) {
-                                  config.onToggle(id);
-                                }
-                              });
-                              newSet.forEach((id) => {
-                                if (!config.selectedIds.has(id)) {
-                                  config.onToggle(id);
-                                }
-                              });
+                              config.onSetSelection(new Set(ids));
                             }}
                             onRowClick={(row, event) => {
                               const targetElement = event.target as HTMLElement;
@@ -830,6 +847,7 @@ export function FlowEditorSidePanel({
                       <Button
                         onClick={onActionContinue}
                         disabled={
+                          isSavingAction ||
                           (selectedActionOption?.id === 'assign-questionnaire' && selectedQuestionnaires.size === 0) ||
                           (selectedActionOption?.id === 'assign-check-in' && selectedCheckIns.size === 0) ||
                           (selectedActionOption?.id === 'add-file' && selectedFiles.size === 0) ||
@@ -845,9 +863,11 @@ export function FlowEditorSidePanel({
                         onClick={onSaveAction}
                         className="flex-1"
                         disabled={
+                          isSavingAction ||
                           (selectedActionOption?.id === 'send-message' && !messageText.trim())
                         }
                       >
+                        {isSavingAction && <Loader2 className="size-4 animate-spin" />}
                         Save
                       </Button>
                     )}
@@ -856,11 +876,12 @@ export function FlowEditorSidePanel({
                         variant="outline"
                         onClick={onDeleteAction}
                         className="flex-1"
+                        disabled={isSavingAction}
                       >
                         Delete
                       </Button>
                     )}
-                    <Button variant="outline" onClick={onBackToActionList} className="flex-1">
+                    <Button variant="outline" onClick={onBackToActionList} className="flex-1" disabled={isSavingAction}>
                       Cancel
                     </Button>
                   </>
@@ -870,12 +891,14 @@ export function FlowEditorSidePanel({
                       onClick={onSaveAction}
                       className="flex-1"
                       disabled={
+                        isSavingAction ||
                         (selectedActionOption?.id === 'send-message' && !messageText.trim())
                       }
                     >
+                      {isSavingAction && <Loader2 className="size-4 animate-spin" />}
                       Save
                     </Button>
-                    <Button variant="outline" onClick={onBackToActionList} className="flex-1">
+                    <Button variant="outline" onClick={onBackToActionList} className="flex-1" disabled={isSavingAction}>
                       Cancel
                     </Button>
                   </>
@@ -884,6 +907,7 @@ export function FlowEditorSidePanel({
                     <Button
                       onClick={onActionContinue}
                       disabled={
+                        isSavingAction ||
                         (selectedActionOption?.id === 'assign-questionnaire' && selectedQuestionnaires.size === 0) ||
                         (selectedActionOption?.id === 'assign-check-in' && selectedCheckIns.size === 0) ||
                         (selectedActionOption?.id === 'add-file' && selectedFiles.size === 0) ||
@@ -893,7 +917,7 @@ export function FlowEditorSidePanel({
                     >
                       Continue
                     </Button>
-                    <Button variant="outline" onClick={onBackToActionList} className="flex-1">
+                    <Button variant="outline" onClick={onBackToActionList} className="flex-1" disabled={isSavingAction}>
                       Cancel
                     </Button>
                   </>

@@ -12,7 +12,7 @@ export class CoachAuthController {
      * Register new coach
      */
     register = asyncHandler(async (req: Request, res: Response) => {
-        const { email, password, name } = req.body;
+        const { email, password, name, timezone } = req.body;
         const supabase = getSupabaseClient();
 
         // Create user in Supabase Auth
@@ -23,6 +23,7 @@ export class CoachAuthController {
             user_metadata: {
                 name,
                 user_type: 'coach',
+                timezone,
             },
         });
 
@@ -129,6 +130,7 @@ export class CoachAuthController {
                         picture: googleUser.picture,
                         provider: 'google',
                         provider_id: googleUser.sub,
+                        timezone: req.body.timezone,
                     },
                 });
 

@@ -12,6 +12,7 @@ import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { AuthErrorAlert } from '@/components/auth/auth-error-alert';
 import { AuthLayout } from '@/components/auth/auth-layout';
 import { toast } from 'sonner';
+import { seedDemoData } from '@/api/user/user-service';
 
 export default function SignInPage() {
   const { signIn, signInWithGoogle, signInWithApple } = useSupabaseAuth();
@@ -62,6 +63,15 @@ export default function SignInPage() {
             if (userType === 'client') {
               window.location.href = '/download/client';
               return;
+            }
+
+            // For coaches, seed demo data before redirecting
+            // This is idempotent - only creates data if it doesn't exist
+            try {
+              await seedDemoData();
+            } catch (seedError) {
+              console.error('Failed to seed demo data:', seedError);
+              // Don't block login if seeding fails
             }
           }
         } catch (profileError) {

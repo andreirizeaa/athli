@@ -801,36 +801,6 @@ $$;
 ALTER FUNCTION "public"."enforce_quest_assignment_integrity"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."enforce_quest_log_integrity"() RETURNS "trigger"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'pg_temp'
-    AS $$
-DECLARE v_coach uuid;
-BEGIN
-  SELECT cca.coach_id INTO v_coach
-  FROM public.coach_client_assignments cca
-  WHERE cca.client_id = NEW.client_id
-  LIMIT 1;
-
-  IF v_coach IS NULL THEN RAISE EXCEPTION 'client_id has no coach assignment'; END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM public.client_questionnaires cq
-    WHERE cq.client_id = NEW.client_id
-      AND cq.id = NEW.assignment_id
-  ) THEN
-    RAISE EXCEPTION 'assignment_id does not exist for this client';
-  END IF;
-
-  NEW.coach_id := v_coach;
-  RETURN NEW;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."enforce_quest_log_integrity"() OWNER TO "postgres";
-
-
 CREATE OR REPLACE FUNCTION "public"."enforce_todolist_client_belongs_to_coach"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -2390,6 +2360,7 @@ CREATE TABLE IF NOT EXISTS "public"."client_training_summary" (
     "last_30_days_training_total" integer DEFAULT 0 NOT NULL,
     "updated_by" "uuid",
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "coach_id" "uuid" NOT NULL,
     CONSTRAINT "chk_counts" CHECK ((("last_7_days_training_completed" >= 0) AND ("last_7_days_training_total" >= 0) AND ("last_30_days_training_completed" >= 0) AND ("last_30_days_training_total" >= 0) AND ("last_7_days_training_completed" <= "last_7_days_training_total") AND ("last_30_days_training_completed" <= "last_30_days_training_total")))
 );
 
@@ -2561,13 +2532,19 @@ CREATE TABLE IF NOT EXISTS "public"."client_checkins" (
     "questions" "jsonb" DEFAULT '[]'::"jsonb",
     "schedule_config" "jsonb",
     "cron_expression" "text",
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "status" "text" DEFAULT 'draft'::"text",
+    CONSTRAINT "client_checkins_status_check" CHECK (("status" = ANY (ARRAY['draft'::"text", 'live'::"text", 'paused'::"text"])))
 );
 
 ALTER TABLE ONLY "public"."client_checkins" FORCE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."client_checkins" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."client_checkins"."status" IS 'Status: draft (not published), live (active), paused (temporarily disabled)';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."client_files" (
@@ -2786,25 +2763,6 @@ Use this view to get full client data including name, email, and profile picture
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."client_questionnaire_logs" (
-    "client_id" "uuid" NOT NULL,
-    "coach_id" "uuid" NOT NULL,
-    "answers" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
-    "status" "text" DEFAULT 'assigned'::"text" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "assignment_id" "uuid" NOT NULL,
-    "submission_date" "date" DEFAULT CURRENT_DATE NOT NULL,
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    CONSTRAINT "client_questionnaire_logs_status_check" CHECK (("status" = ANY (ARRAY['assigned'::"text", 'in-progress'::"text", 'completed'::"text"])))
-);
-
-ALTER TABLE ONLY "public"."client_questionnaire_logs" FORCE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."client_questionnaire_logs" OWNER TO "postgres";
-
-
 CREATE TABLE IF NOT EXISTS "public"."client_questionnaires" (
     "client_id" "uuid" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -2813,13 +2771,34 @@ CREATE TABLE IF NOT EXISTS "public"."client_questionnaires" (
     "name" "text" NOT NULL,
     "description" "text",
     "questions" "jsonb" DEFAULT '[]'::"jsonb",
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "status" "text" DEFAULT 'draft'::"text",
+    "sent_at" timestamp with time zone,
+    "completed_at" timestamp with time zone,
+    "answers" "jsonb" DEFAULT '[]'::"jsonb",
+    CONSTRAINT "client_questionnaires_status_check" CHECK (("status" = ANY (ARRAY['draft'::"text", 'pending'::"text", 'completed'::"text"])))
 );
 
 ALTER TABLE ONLY "public"."client_questionnaires" FORCE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."client_questionnaires" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."client_questionnaires"."status" IS 'Status: draft (not sent), pending (sent, awaiting response), completed';
+
+
+
+COMMENT ON COLUMN "public"."client_questionnaires"."sent_at" IS 'Timestamp when the questionnaire was sent to the client';
+
+
+
+COMMENT ON COLUMN "public"."client_questionnaires"."completed_at" IS 'Timestamp when the questionnaire was completed by the client';
+
+
+
+COMMENT ON COLUMN "public"."client_questionnaires"."answers" IS 'Client responses to the questionnaire questions';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."client_training" (
@@ -2849,7 +2828,10 @@ CREATE TABLE IF NOT EXISTS "public"."client_training_exercise_history" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "row_id" bigint NOT NULL,
-    CONSTRAINT "chk_exercise_data_is_object" CHECK (("jsonb_typeof"("exercise_data") = 'object'::"text"))
+    "section_type" "text",
+    "section_completed_rounds" integer,
+    CONSTRAINT "chk_exercise_data_is_object" CHECK (("jsonb_typeof"("exercise_data") = 'object'::"text")),
+    CONSTRAINT "chk_section_type" CHECK ((("section_type" IS NULL) OR ("section_type" = ANY (ARRAY['amrap'::"text", 'tabata'::"text", 'hiit'::"text", 'emom'::"text", 'circuits'::"text"]))))
 );
 
 ALTER TABLE ONLY "public"."client_training_exercise_history" FORCE ROW LEVEL SECURITY;
@@ -3187,7 +3169,7 @@ CREATE TABLE IF NOT EXISTS "public"."coach_own_todolist" (
     "information" "text",
     "type" "text" NOT NULL,
     "client_id" "uuid",
-    "due_date" timestamp with time zone NOT NULL,
+    "due_date" timestamp with time zone,
     "completed" boolean DEFAULT false NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -3745,7 +3727,7 @@ ALTER TABLE ONLY "public"."client_bio"
 
 
 ALTER TABLE ONLY "public"."client_bio"
-    ADD CONSTRAINT "client_bio_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "client_bio_pkey" PRIMARY KEY ("client_id", "coach_id", "id");
 
 
 
@@ -3755,22 +3737,22 @@ ALTER TABLE ONLY "public"."client_checkin_logs"
 
 
 ALTER TABLE ONLY "public"."client_checkin_logs"
-    ADD CONSTRAINT "client_checkin_logs_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "client_checkin_logs_pkey" PRIMARY KEY ("client_id", "coach_id", "submission_date", "id");
 
 
 
 ALTER TABLE ONLY "public"."client_checkins"
-    ADD CONSTRAINT "client_checkins_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "client_checkins_pkey" PRIMARY KEY ("client_id", "coach_id", "id");
 
 
 
 ALTER TABLE ONLY "public"."client_files"
-    ADD CONSTRAINT "client_files_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "client_files_pkey" PRIMARY KEY ("client_id", "coach_id", "id");
 
 
 
 ALTER TABLE ONLY "public"."client_goals"
-    ADD CONSTRAINT "client_goals_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "client_goals_pkey" PRIMARY KEY ("client_id", "coach_id", "id");
 
 
 
@@ -3780,17 +3762,17 @@ ALTER TABLE ONLY "public"."client_habit_logs"
 
 
 ALTER TABLE ONLY "public"."client_habit_logs"
-    ADD CONSTRAINT "client_habit_logs_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "client_habit_logs_pkey" PRIMARY KEY ("client_id", "coach_id", "date", "id");
 
 
 
 ALTER TABLE ONLY "public"."client_habits"
-    ADD CONSTRAINT "client_habits_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "client_habits_pkey" PRIMARY KEY ("client_id", "coach_id", "id");
 
 
 
 ALTER TABLE ONLY "public"."client_injuries"
-    ADD CONSTRAINT "client_injuries_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "client_injuries_pkey" PRIMARY KEY ("client_id", "coach_id", "id");
 
 
 
@@ -3805,12 +3787,12 @@ ALTER TABLE ONLY "public"."client_metric_logs"
 
 
 ALTER TABLE ONLY "public"."client_metrics"
-    ADD CONSTRAINT "client_metrics_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "client_metrics_pkey" PRIMARY KEY ("client_id", "coach_id", "id");
 
 
 
 ALTER TABLE ONLY "public"."client_notes"
-    ADD CONSTRAINT "client_notes_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "client_notes_pkey" PRIMARY KEY ("client_id", "coach_id", "id");
 
 
 
@@ -3820,7 +3802,7 @@ ALTER TABLE ONLY "public"."client_photo_logs"
 
 
 ALTER TABLE ONLY "public"."client_photo_logs"
-    ADD CONSTRAINT "client_photo_logs_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "client_photo_logs_pkey" PRIMARY KEY ("client_id", "coach_id", "date", "id");
 
 
 
@@ -3829,18 +3811,8 @@ ALTER TABLE ONLY "public"."client_profiles"
 
 
 
-ALTER TABLE ONLY "public"."client_questionnaire_logs"
-    ADD CONSTRAINT "client_questionnaire_logs_assignment_submission_unique" UNIQUE ("assignment_id", "submission_date");
-
-
-
-ALTER TABLE ONLY "public"."client_questionnaire_logs"
-    ADD CONSTRAINT "client_questionnaire_logs_pkey" PRIMARY KEY ("id");
-
-
-
 ALTER TABLE ONLY "public"."client_questionnaires"
-    ADD CONSTRAINT "client_questionnaires_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "client_questionnaires_pkey" PRIMARY KEY ("client_id", "coach_id", "id");
 
 
 
@@ -3860,12 +3832,12 @@ ALTER TABLE ONLY "public"."client_training"
 
 
 ALTER TABLE ONLY "public"."client_training_summary"
-    ADD CONSTRAINT "client_training_summary_pkey" PRIMARY KEY ("client_id");
+    ADD CONSTRAINT "client_training_summary_pkey" PRIMARY KEY ("client_id", "coach_id");
 
 
 
 ALTER TABLE ONLY "public"."client_updates"
-    ADD CONSTRAINT "client_updates_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "client_updates_pkey" PRIMARY KEY ("client_id", "coach_id", "id");
 
 
 
@@ -4099,6 +4071,22 @@ ALTER TABLE ONLY "public"."user_profiles"
 
 
 
+CREATE UNIQUE INDEX "client_checkins_id_unique" ON "public"."client_checkins" USING "btree" ("id");
+
+
+
+CREATE UNIQUE INDEX "client_habits_id_unique" ON "public"."client_habits" USING "btree" ("id");
+
+
+
+CREATE UNIQUE INDEX "client_metrics_id_unique" ON "public"."client_metrics" USING "btree" ("id");
+
+
+
+CREATE UNIQUE INDEX "client_questionnaires_id_unique" ON "public"."client_questionnaires" USING "btree" ("id");
+
+
+
 CREATE INDEX "idx_attach_conversation" ON "public"."message_attachments" USING "btree" ("conversation_id");
 
 
@@ -4200,10 +4188,6 @@ CREATE INDEX "idx_client_photo_logs_client_date" ON "public"."client_photo_logs"
 
 
 CREATE INDEX "idx_client_photo_logs_date" ON "public"."client_photo_logs" USING "btree" ("date");
-
-
-
-CREATE INDEX "idx_client_questionnaires_assignment" ON "public"."client_questionnaire_logs" USING "btree" ("assignment_id");
 
 
 
@@ -4352,10 +4336,6 @@ CREATE INDEX "idx_cp_user_pinned" ON "public"."conversation_participants" USING 
 
 
 CREATE INDEX "idx_cq_client_id" ON "public"."client_questionnaires" USING "btree" ("client_id");
-
-
-
-CREATE INDEX "idx_cql_coach_status_created" ON "public"."client_questionnaire_logs" USING "btree" ("coach_id", "status", "created_at" DESC);
 
 
 
@@ -4563,14 +4543,6 @@ CREATE INDEX "idx_quest_coach" ON "public"."coach_questionnaires" USING "btree" 
 
 
 
-CREATE INDEX "idx_quest_logs_client" ON "public"."client_questionnaire_logs" USING "btree" ("client_id");
-
-
-
-CREATE INDEX "idx_quest_logs_coach" ON "public"."client_questionnaire_logs" USING "btree" ("coach_id");
-
-
-
 CREATE INDEX "idx_reaction_conversation" ON "public"."message_reactions" USING "btree" ("conversation_id");
 
 
@@ -4648,10 +4620,6 @@ CREATE OR REPLACE TRIGGER "enforce_metric_log_integrity_trigger" BEFORE INSERT O
 
 
 CREATE OR REPLACE TRIGGER "enforce_photo_log_integrity_trigger" BEFORE INSERT OR UPDATE ON "public"."client_photo_logs" FOR EACH ROW EXECUTE FUNCTION "public"."enforce_photo_log_integrity"();
-
-
-
-CREATE OR REPLACE TRIGGER "enforce_quest_log_integrity_trigger" BEFORE INSERT OR UPDATE ON "public"."client_questionnaire_logs" FOR EACH ROW EXECUTE FUNCTION "public"."enforce_quest_log_integrity"();
 
 
 
@@ -4983,6 +4951,16 @@ CREATE OR REPLACE TRIGGER "update_user_profiles_updated_at" BEFORE UPDATE ON "pu
 
 
 
+ALTER TABLE ONLY "public"."client_habit_logs"
+    ADD CONSTRAINT "client_habit_logs_assignment_id_fkey" FOREIGN KEY ("assignment_id") REFERENCES "public"."client_habits"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."client_metric_logs"
+    ADD CONSTRAINT "client_metric_logs_assignment_id_fkey" FOREIGN KEY ("assignment_id") REFERENCES "public"."client_metrics"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."coach_profiles"
     ADD CONSTRAINT "coach_profiles_id_fkey" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
@@ -5098,23 +5076,8 @@ ALTER TABLE ONLY "public"."client_checkin_logs"
 
 
 
-ALTER TABLE ONLY "public"."client_habit_logs"
-    ADD CONSTRAINT "fk_client_habit_logs_assignment" FOREIGN KEY ("assignment_id") REFERENCES "public"."client_habits"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."client_metric_logs"
-    ADD CONSTRAINT "fk_client_metric_logs_assignment" FOREIGN KEY ("assignment_id") REFERENCES "public"."client_metrics"("id") ON DELETE CASCADE;
-
-
-
 ALTER TABLE ONLY "public"."client_profiles"
     ADD CONSTRAINT "fk_client_profile" FOREIGN KEY ("client_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."client_questionnaire_logs"
-    ADD CONSTRAINT "fk_client_questionnaire_logs_assignment" FOREIGN KEY ("assignment_id") REFERENCES "public"."client_questionnaires"("id") ON DELETE CASCADE;
 
 
 
@@ -5245,11 +5208,6 @@ ALTER TABLE ONLY "public"."client_photo_logs"
 
 ALTER TABLE ONLY "public"."client_questionnaires"
     ADD CONSTRAINT "fk_cqa_client" FOREIGN KEY ("client_id") REFERENCES "public"."client_profiles"("client_id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."client_questionnaire_logs"
-    ADD CONSTRAINT "fk_cql_client" FOREIGN KEY ("client_id") REFERENCES "public"."client_profiles"("client_id") ON DELETE CASCADE;
 
 
 
@@ -5682,9 +5640,6 @@ ALTER TABLE "public"."client_photo_logs" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."client_profiles" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."client_questionnaire_logs" ENABLE ROW LEVEL SECURITY;
-
-
 ALTER TABLE "public"."client_questionnaires" ENABLE ROW LEVEL SECURITY;
 
 
@@ -5870,15 +5825,19 @@ CREATE POLICY "cprog_manage" ON "public"."coach_programs" TO "authenticated" USI
 
 
 
-CREATE POLICY "cq_all" ON "public"."client_questionnaires" TO "authenticated" USING ((("client_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("coach_id" = ( SELECT "auth"."uid"() AS "uid")))) WITH CHECK ((("client_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("coach_id" = ( SELECT "auth"."uid"() AS "uid"))));
-
-
-
 CREATE POLICY "cq_all" ON "public"."coach_questionnaires" TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "cql_shared" ON "public"."client_questionnaire_logs" TO "authenticated" USING (((( SELECT "auth"."uid"() AS "uid") = "client_id") OR (( SELECT "auth"."uid"() AS "uid") = "coach_id"))) WITH CHECK (((( SELECT "auth"."uid"() AS "uid") = "client_id") OR (( SELECT "auth"."uid"() AS "uid") = "coach_id")));
+CREATE POLICY "cq_client_select" ON "public"."client_questionnaires" FOR SELECT TO "authenticated" USING (("client_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "cq_client_update" ON "public"."client_questionnaires" FOR UPDATE TO "authenticated" USING (("client_id" = "auth"."uid"())) WITH CHECK (("client_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "cq_coach_all" ON "public"."client_questionnaires" TO "authenticated" USING (("coach_id" = "auth"."uid"())) WITH CHECK (("coach_id" = "auth"."uid"()));
 
 
 
@@ -6502,12 +6461,6 @@ GRANT ALL ON FUNCTION "public"."enforce_quest_assignment_integrity"() TO "servic
 
 
 
-REVOKE ALL ON FUNCTION "public"."enforce_quest_log_integrity"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."enforce_quest_log_integrity"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."enforce_quest_log_integrity"() TO "service_role";
-
-
-
 REVOKE ALL ON FUNCTION "public"."enforce_todolist_client_belongs_to_coach"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."enforce_todolist_client_belongs_to_coach"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."enforce_todolist_client_belongs_to_coach"() TO "service_role";
@@ -6925,12 +6878,6 @@ GRANT ALL ON TABLE "public"."client_photo_logs" TO "service_role";
 GRANT ALL ON TABLE "public"."client_profiles_full" TO "anon";
 GRANT ALL ON TABLE "public"."client_profiles_full" TO "authenticated";
 GRANT ALL ON TABLE "public"."client_profiles_full" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."client_questionnaire_logs" TO "anon";
-GRANT ALL ON TABLE "public"."client_questionnaire_logs" TO "authenticated";
-GRANT ALL ON TABLE "public"."client_questionnaire_logs" TO "service_role";
 
 
 
