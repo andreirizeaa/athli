@@ -101,7 +101,11 @@
       "Bash(keytool:*)",
       "Bash(xargs cat:*)",
       "Bash(expo run:android)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "WebFetch(domain:developers.intercom.com)",
+      "WebFetch(domain:glama.ai)",
+      "Bash(git -C /Users/andreirizea/abc/app/athli log --oneline -20)",
+      "Bash(git -C /Users/andreirizea/abc/app/athli diff --name-only)"
     ]
   }
 }

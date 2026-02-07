@@ -73,6 +73,7 @@ export default function EditCompanyDetailsModal() {
   const [isSaving, setIsSaving] = useState(false);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   const listRef = useRef<any>(null);
 
@@ -110,8 +111,12 @@ export default function EditCompanyDetailsModal() {
   }, [field, selectedImage, companyName, website, linkedin, location, specialities, currentValue]);
 
   const handleClose = useCallback(() => {
+    if (hasChanges) {
+      setShowDiscardDialog(true);
+      return;
+    }
     router.back();
-  }, [router]);
+  }, [router, hasChanges]);
 
   const getTitle = () => {
     switch (field) {
@@ -440,7 +445,8 @@ export default function EditCompanyDetailsModal() {
             <SearchBar
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder={t('settings.companyDetails.searchCountry')}
+              placeholder="Search"
+              clearable={false}
             />
           </View>
         }
@@ -500,7 +506,8 @@ export default function EditCompanyDetailsModal() {
             <SearchBar
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder={t('settings.companyDetails.searchSpecialities')}
+              placeholder="Search"
+              clearable={false}
             />
           </View>
         }
@@ -595,6 +602,17 @@ export default function EditCompanyDetailsModal() {
           showCloseIcon={false}
           buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
         />
+        <Dialog
+          visible={showDiscardDialog}
+          onClose={() => setShowDiscardDialog(false)}
+          title={t('common.discardChanges')}
+          message={t('common.discardChangesMessage')}
+          showCloseIcon={false}
+          buttons={[
+            { label: t('common.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+            { label: t('common.discard'), onPress: () => { setShowDiscardDialog(false); router.back(); }, variant: 'destructive' },
+          ]}
+        />
       </View>
     );
   }
@@ -641,6 +659,17 @@ export default function EditCompanyDetailsModal() {
         message={errorMessage}
         showCloseIcon={false}
         buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
+      <Dialog
+        visible={showDiscardDialog}
+        onClose={() => setShowDiscardDialog(false)}
+        title={t('common.discardChanges')}
+        message={t('common.discardChangesMessage')}
+        showCloseIcon={false}
+        buttons={[
+          { label: t('common.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+          { label: t('common.discard'), onPress: () => { setShowDiscardDialog(false); router.back(); }, variant: 'destructive' },
+        ]}
       />
     </View>
   );

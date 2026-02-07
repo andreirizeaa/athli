@@ -101,7 +101,7 @@ export const coachClientController = {
         let lastError: string | null = null;
 
         for (const clientData of clientsToCreate) {
-            const { email: rawEmail, fullName: rawFullName, category = 'online' } = clientData;
+            const { email: rawEmail, fullName: rawFullName, category = 'online', onboardingId } = clientData;
             const email = rawEmail.toLowerCase().trim();
             const fullName = rawFullName.trim();
 
@@ -211,7 +211,8 @@ export const coachClientController = {
                         client_id: clientId,
                         category,
                         status: 'invited',
-                        invitation_token: invitationToken
+                        invitation_token: invitationToken,
+                        onboarding_id: onboardingId || null,
                     }, { onConflict: 'coach_id, client_id' });
 
                 if (assignmentError) throw assignmentError;
@@ -275,7 +276,7 @@ export const coachClientController = {
 
             // 1. Separate assignment updates from profile updates
             const assignmentFields = ['category', 'status', 'is_archived'];
-            const profileFields = ['name', 'phone', 'gender', 'country', 'birth_date', 'unit_system', 'height_cm'];
+            const profileFields = ['name', 'phone', 'gender', 'country', 'birth_date', 'unit_system', 'height_cm', 'timezone'];
 
             const assignmentUpdates: any = {};
             const profileUpdates: any = {};
@@ -339,6 +340,7 @@ export const coachClientController = {
                 const userProfileUpdates: any = {};
                 if (profileUpdates.name) userProfileUpdates.name = profileUpdates.name;
                 if (profileUpdates.profile_picture_url) userProfileUpdates.profile_picture_url = profileUpdates.profile_picture_url;
+                if (profileUpdates.timezone) userProfileUpdates.timezone = profileUpdates.timezone;
 
                 if (Object.keys(userProfileUpdates).length > 0) {
                     await supabase
@@ -349,6 +351,7 @@ export const coachClientController = {
                     // Don't duplicate these fields in client_profiles - they belong in user_profiles
                     delete profileUpdates.name;
                     delete profileUpdates.profile_picture_url;
+                    delete profileUpdates.timezone;
                 }
 
                 // Update client_profiles
@@ -386,7 +389,7 @@ export const coachClientController = {
 
     /**
      * Delete client assignment (remove client from coach)
-     * Performs a comprehensive cleanup of all associated data.
+     * Performs a comprehensive cleanup of all associated data including storage.
      */
     deleteClient: async (req: Request, res: Response) => {
         const coachId = getActingCoachId(req);
@@ -403,25 +406,33 @@ export const coachClientController = {
 
         const supabase = getSupabaseClient();
 
-        // Helper to run deletions in parallel where possible, but we'll do sequential for safety and clarity first
-        // 1. Assignments
-        const assignmentsTables = [
-            'client_metric_assignments',
-            'client_habit_assignments',
-            'client_file_assignments',
-            'client_checkin_assignments',
-            'client_questionnaire_assignments'
-        ];
-
-        // 2. Logs
+        // All client data tables grouped by category (using current table names)
+        // 1. Logs (delete before assignments since logs reference assignments)
         const logsTables = [
-            'client_metric_entries',
+            'client_metric_logs',
             'client_habit_logs',
             'client_checkin_logs',
             'client_photo_logs'
         ];
 
-        // 3. Private Data
+        // 2. Assignments
+        const assignmentsTables = [
+            'client_metrics',
+            'client_habits',
+            'client_files',
+            'client_checkins',
+            'client_questionnaires'
+        ];
+
+        // 3. Training Data
+        const trainingTables = [
+            'client_training_exercise_history',
+            'client_training_history',
+            'client_training',
+            'client_updates'
+        ];
+
+        // 4. Private Data
         const privateDataTables = [
             'client_bio',
             'client_goals',
@@ -429,20 +440,107 @@ export const coachClientController = {
             'client_notes'
         ];
 
-        // 4. Todo Lists
+        // 5. Todo Lists
         const todoTables = [
             'coach_own_todolist',
             'coach_auto_todolist'
         ];
 
         try {
+            // ========================================
+            // STORAGE CLEANUP (before database deletes)
+            // ========================================
+
+            // 1. Clean up client_photos: {clientId}/{coachId}/*
+            const { data: photoPaths } = await supabase
+                .from('client_photo_logs')
+                .select('front_photo_path, side_photo_path, back_photo_path')
+                .eq('client_id', id)
+                .eq('coach_id', coachId);
+
+            if (photoPaths && photoPaths.length > 0) {
+                const photoPathsToDelete = photoPaths.flatMap(log => [
+                    log.front_photo_path,
+                    log.side_photo_path,
+                    log.back_photo_path
+                ].filter(Boolean) as string[]);
+
+                if (photoPathsToDelete.length > 0) {
+                    await supabase.storage.from('client_photos').remove(photoPathsToDelete);
+                }
+            }
+
+            // 2. Clean up form_files: {clientId}/{coachId}/*
+            // Get file paths from questionnaire responses (stored in answers JSON)
+            const { data: questionnaires } = await supabase
+                .from('client_questionnaires')
+                .select('responses')
+                .eq('client_id', id)
+                .eq('coach_id', coachId);
+
+            if (questionnaires && questionnaires.length > 0) {
+                const formFilePaths: string[] = [];
+                for (const q of questionnaires) {
+                    if (q.responses && Array.isArray(q.responses)) {
+                        for (const response of q.responses) {
+                            // Extract file paths from various answer formats
+                            if (typeof response.answer === 'string' && response.answer.includes(`${id}/${coachId}/`)) {
+                                formFilePaths.push(response.answer);
+                            } else if (Array.isArray(response.answer)) {
+                                for (const item of response.answer) {
+                                    if (typeof item === 'string' && item.includes(`${id}/${coachId}/`)) {
+                                        formFilePaths.push(item);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (formFilePaths.length > 0) {
+                    await supabase.storage.from('form_files').remove(formFilePaths);
+                }
+            }
+
+            // 3. Clean up message_attachments: {conversationId}/*
+            const { data: conversation } = await supabase
+                .from('conversations')
+                .select('id')
+                .eq('coach_id', coachId)
+                .eq('client_id', id)
+                .maybeSingle();
+
+            if (conversation) {
+                // Get attachment file paths before deleting
+                const { data: attachments } = await supabase
+                    .from('message_attachments')
+                    .select('file_path')
+                    .eq('conversation_id', conversation.id);
+
+                if (attachments && attachments.length > 0) {
+                    const attachmentPaths = attachments.map(a => a.file_path).filter(Boolean);
+                    if (attachmentPaths.length > 0) {
+                        await supabase.storage.from('message_attachments').remove(attachmentPaths);
+                    }
+                }
+            }
+
+            // ========================================
+            // DATABASE CLEANUP
+            // ========================================
+
+            // Delete Logs first (they reference assignments via FK)
+            for (const table of logsTables) {
+                await supabase.from(table).delete().eq('client_id', id).eq('coach_id', coachId);
+            }
+
             // Delete Assignments
             for (const table of assignmentsTables) {
                 await supabase.from(table).delete().eq('client_id', id).eq('coach_id', coachId);
             }
 
-            // Delete Logs
-            for (const table of logsTables) {
+            // Delete Training Data
+            for (const table of trainingTables) {
                 await supabase.from(table).delete().eq('client_id', id).eq('coach_id', coachId);
             }
 
@@ -463,7 +561,7 @@ export const coachClientController = {
                 .eq('coach_id', coachId)
                 .eq('client_id', id);
 
-            // 5. Finally delete the main assignment
+            // Delete the main assignment
             const { error } = await supabase
                 .from('coach_client_assignments')
                 .delete()
@@ -472,6 +570,19 @@ export const coachClientController = {
 
             if (error) {
                 throw error;
+            }
+
+            // Check if client has any remaining coach assignments (orphan check)
+            const { data: remainingAssignments } = await supabase
+                .from('coach_client_assignments')
+                .select('coach_id')
+                .eq('client_id', id)
+                .limit(1);
+
+            // If no coaches remain, delete the orphaned client_profiles entry
+            // Note: user_profiles and auth.users are preserved - client may return with a new coach
+            if (!remainingAssignments || remainingAssignments.length === 0) {
+                await supabase.from('client_profiles').delete().eq('client_id', id);
             }
 
             noContent(res);

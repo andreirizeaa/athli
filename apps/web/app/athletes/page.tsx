@@ -36,6 +36,8 @@ import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { PageHeader } from '@/components/app/page-header';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmArchiveDialog } from '@/components/app/confirm-archive-dialog';
+import { InviteLinkDialog, copyToClipboard } from '@/components/app/invite-link-dialog';
+import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
 import {
   User,
   Users,
@@ -70,7 +72,7 @@ type ColumnId =
   | 'last7DaysTraining'
   | 'last30DaysTraining'
   | 'category'
-  | 'connected'
+  | 'status'
   | 'email'
   | 'phone'
   | 'country'
@@ -82,7 +84,7 @@ const COLUMN_ORDER: ColumnId[] = [
   'last7DaysTraining',
   'last30DaysTraining',
   'category',
-  'connected',
+  'status',
   'email',
   'phone',
   'country',
@@ -96,7 +98,7 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
     last7DaysTraining: { class: 'min-w-[160px]', pixel: '200px' },
     last30DaysTraining: { class: 'min-w-[170px]', pixel: '200px' },
     category: { class: 'min-w-[140px]', pixel: '140px' },
-    connected: { class: 'min-w-[150px]', pixel: '150px' },
+    status: { class: 'min-w-[150px]', pixel: '150px' },
     email: { class: 'min-w-[220px]', pixel: '310px' },
     phone: { class: 'min-w-[160px]', pixel: '240px' },
     country: { class: 'min-w-[120px]', pixel: '120px' },
@@ -151,19 +153,19 @@ const AthletesPage = () => {
   const router = useRouter();
   const { uniqueCode } = useGlobalData();
   const { clients: athletes, isLoading, archiveClient } = useCoachClients();
+  const { onboardings } = useCoachOnboardings();
   const [selectedAthletes, setSelectedAthletes] = useState<Set<string>>(new Set());
   const [revealedFields, setRevealedFields] = useState<Set<string>>(new Set());
   const [copiedFields, setCopiedFields] = useState<Set<string>>(new Set());
   const [isAddAthleteOpen, setIsAddAthleteOpen] = useState<boolean>(false);
   const [isUploadClientsOpen, setIsUploadClientsOpen] = useState<boolean>(false);
   const [isRestoreClientsOpen, setIsRestoreClientsOpen] = useState<boolean>(false);
-  const [isInviteLinkCopied, setIsInviteLinkCopied] = useState<boolean>(false);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState<boolean>(false);
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState<boolean>(false);
   const [filteredCount, setFilteredCount] = useState<number>(0);
   const itemsPerPage = 25;
   const timeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const copyTimeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const inviteLinkCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Data is now fetched and cached by useCoachClients hook
   useEffect(() => {
@@ -260,12 +262,12 @@ const AthletesPage = () => {
               : row.category === null
                 ? t('athletes.filters.uncategorized', { defaultValue: 'Not set' })
                 : row.category,
-      [t('athletes.export.connected')]:
-        row.connected === true
+      [t('athletes.export.status')]:
+        row.status === 'connected'
           ? t('athletes.status.connected')
-          : row.connected === false
-            ? t('athletes.filters.notConnected')
-            : t('athletes.filters.invitationSent'),
+          : row.status === 'accepted'
+            ? t('athletes.status.accepted')
+            : t('athletes.status.invited'),
       [t('athletes.export.lastActivity')]: row.lastActivity,
       [t('athletes.export.last7DaysTraining')]: row.last7DaysTraining,
       [t('athletes.export.last30DaysTraining')]: row.last30DaysTraining,
@@ -345,38 +347,16 @@ const AthletesPage = () => {
 
   const censorEmail = (email: string): string => {
     const [localPart, domain] = email.split('@');
-    if (!domain) return '***';
+    if (!domain) return '******';
     const visibleChars = Math.min(2, localPart.length);
-    const censoredLocal =
-      localPart.slice(0, visibleChars) + '*'.repeat(Math.max(3, localPart.length - visibleChars));
     const [domainName, domainExt] = domain.split('.');
-    if (!domainExt) return `${censoredLocal}@***`;
+    if (!domainExt) return `${localPart.slice(0, visibleChars)}****@****`;
     const visibleDomainChars = Math.min(2, domainName.length);
-    const censoredDomain =
-      domainName.slice(0, visibleDomainChars) +
-      '*'.repeat(Math.max(2, domainName.length - visibleDomainChars));
-    return `${censoredLocal}@${censoredDomain}.${domainExt}`;
+    return `${localPart.slice(0, visibleChars)}****@${domainName.slice(0, visibleDomainChars)}****.${domainExt}`;
   };
 
-  const censorPhone = (phone: string): string => {
-    const digits = phone.replace(/\D/g, '');
-    if (digits.length === 0) return '***';
-    const visibleDigits = Math.min(3, digits.length);
-    const visiblePart = digits.slice(-visibleDigits);
-    let digitCount = 0;
-    return phone
-      .split('')
-      .map((char) => {
-        if (/\d/.test(char)) {
-          digitCount++;
-          if (digitCount > digits.length - visibleDigits) {
-            return visiblePart[digitCount - (digits.length - visibleDigits) - 1];
-          }
-          return '*';
-        }
-        return char;
-      })
-      .join('');
+  const censorPhone = (_phone: string): string => {
+    return '***-****-***';
   };
 
   const getFieldKey = (athleteId: string, fieldType: 'email' | 'phone' | 'name'): string => {
@@ -487,9 +467,6 @@ const AthletesPage = () => {
       timeoutRefs.current.clear();
       copyTimeoutRefs.current.forEach((timeout) => clearTimeout(timeout));
       copyTimeoutRefs.current.clear();
-      if (inviteLinkCopyTimeoutRef.current) {
-        clearTimeout(inviteLinkCopyTimeoutRef.current);
-      }
     };
   }, []);
 
@@ -504,49 +481,16 @@ const AthletesPage = () => {
     }
   };
 
-  const handleCopyInviteLink = async () => {
+  const handleCopyInviteLink = () => {
     if (!uniqueCode) {
       toast.error('Unable to generate invite link. Please try again.');
       return;
     }
-
-    const inviteLink = `${window.location.origin}/client/invite/${uniqueCode}`;
-    try {
-      await navigator.clipboard.writeText(inviteLink);
-    } catch (err) {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = inviteLink;
-      textArea.style.position = 'fixed';
-      textArea.style.opacity = '0';
-      document.body.appendChild(textArea);
-      textArea.select();
-      try {
-        document.execCommand('copy');
-      } catch (fallbackErr) {
-        // Ignore copy errors
-      }
-      document.body.removeChild(textArea);
-    }
-
-    setIsInviteLinkCopied(true);
-
-    // Clear existing timeout if any
-    if (inviteLinkCopyTimeoutRef.current) {
-      clearTimeout(inviteLinkCopyTimeoutRef.current);
-    }
-
-    // Set timeout to hide checkmark after 2 seconds
-    inviteLinkCopyTimeoutRef.current = setTimeout(() => {
-      setIsInviteLinkCopied(false);
-      inviteLinkCopyTimeoutRef.current = null;
-    }, 2000);
-  };
-
-  const handleInviteLinkKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      handleCopyInviteLink();
+    if (onboardings.length === 0) {
+      copyToClipboard(`${window.location.origin}/client/invite/${uniqueCode}`);
+      toast.success(t('athletes.inviteDialog.linkCopied'));
+    } else {
+      setIsInviteDialogOpen(true);
     }
   };
 
@@ -688,32 +632,36 @@ const AthletesPage = () => {
               );
             },
           };
-        case 'connected':
+        case 'status':
           return {
-            id: 'connected',
-            label: t('athletes.columns.connected'),
+            id: 'status',
+            label: t('athletes.columns.status'),
             icon: <HeartPulse className="size-3" />,
             width: {
-              class: getColumnWidth('connected', 'class'),
-              pixel: getColumnWidth('connected', 'pixel'),
+              class: getColumnWidth('status', 'class'),
+              pixel: getColumnWidth('status', 'pixel'),
             },
-            tooltip: t('athletes.columnTooltips.connected'),
-            getSortValue: (row) => (row.connected === true ? 1 : row.connected === false ? 0 : 0.5),
+            tooltip: t('athletes.columnTooltips.status'),
+            getSortValue: (row) => {
+              const order: Record<string, number> = { connected: 2, accepted: 1, invited: 0 };
+              return order[row.status] ?? -1;
+            },
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
             renderCell: (row) => {
-              let connectedLabel = '';
-              if (row.connected === true) {
-                connectedLabel = t('athletes.status.connected');
-              } else if (row.connected === false) {
-                connectedLabel = t('athletes.status.notConnected');
-              } else if (row.connected === 'invitation-sent') {
-                connectedLabel = t('athletes.status.invitationSent');
+              const statusMap: Record<string, { label: string; variant: 'default' | 'outline' | 'secondary' }> = {
+                connected: { label: t('athletes.status.connected'), variant: 'default' },
+                accepted: { label: t('athletes.status.accepted'), variant: 'outline' },
+                invited: { label: t('athletes.status.invited'), variant: 'secondary' },
+              };
+              const info = statusMap[row.status];
+              if (!info) {
+                return <span className="text-sm text-muted-foreground">--</span>;
               }
               return (
-                <div className="flex items-center w-full">
-                  <span className="text-sm">{connectedLabel}</span>
-                </div>
+                <Badge variant={info.variant} className="text-xs rounded-full">
+                  {info.label}
+                </Badge>
               );
             },
           };
@@ -979,20 +927,15 @@ const AthletesPage = () => {
       getFilterValue: (row) => row.category,
     },
     {
-      id: 'connected',
-      label: t('athletes.filters.connected'),
+      id: 'status',
+      label: t('athletes.filters.status'),
       icon: <HeartPulse className="size-4" />,
       options: [
-        { value: 'true', label: t('athletes.status.connected') },
-        { value: 'false', label: t('athletes.filters.notConnected') },
-        { value: 'invitation-sent', label: t('athletes.filters.invitationSent') },
+        { value: 'connected', label: t('athletes.status.connected') },
+        { value: 'accepted', label: t('athletes.status.accepted') },
+        { value: 'invited', label: t('athletes.status.invited') },
       ],
-      getFilterValue: (row) => {
-        if (row.connected === true) return 'true';
-        if (row.connected === false) return 'false';
-        if (row.connected === 'invitation-sent') return 'invitation-sent';
-        return null;
-      },
+      getFilterValue: (row) => row.status || null,
     },
   ];
 
@@ -1184,11 +1127,10 @@ const AthletesPage = () => {
                 <Button
                   variant="ghost"
                   onClick={handleCopyInviteLink}
-                  onKeyDown={handleInviteLinkKeyDown}
                   className="gap-2 border border-primary"
                   aria-label={t('athletes.actions.copyInviteLink')}
                 >
-                  {isInviteLinkCopied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                  <Copy className="size-4" />
                   <span>{t('athletes.actions.yourInviteLink')}</span>
                 </Button>
                 <Button onClick={() => setIsAddAthleteOpen(true)} className="gap-2">
@@ -1250,12 +1192,12 @@ const AthletesPage = () => {
                   : row.category === null
                     ? t('athletes.filters.uncategorized', { defaultValue: 'Not set' })
                     : row.category,
-          [t('athletes.export.connected')]:
-            row.connected === true
+          [t('athletes.export.status')]:
+            row.status === 'connected'
               ? t('athletes.status.connected')
-              : row.connected === false
-                ? t('athletes.status.notConnected')
-                : t('athletes.status.invitationSent'),
+              : row.status === 'accepted'
+                ? t('athletes.status.accepted')
+                : t('athletes.status.invited'),
           [t('athletes.export.lastActivity')]: row.lastActivity,
           [t('athletes.export.last7DaysTraining')]: row.last7DaysTraining,
           [t('athletes.export.last30DaysTraining')]: row.last30DaysTraining,
@@ -1406,6 +1348,13 @@ const AthletesPage = () => {
         onConfirm={handleConfirmArchive}
         count={selectedAthletes.size}
       />
+      {uniqueCode && (
+        <InviteLinkDialog
+          open={isInviteDialogOpen}
+          onOpenChange={setIsInviteDialogOpen}
+          uniqueCode={uniqueCode}
+        />
+      )}
       <RestoreClientsSidePanel
         open={isRestoreClientsOpen}
         onOpenChange={setIsRestoreClientsOpen}

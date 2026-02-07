@@ -79,7 +79,7 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
   return (
     <SidebarProvider
       defaultOpen={false}
-      className="h-svh bg-sidebar"
+      className="h-svh bg-sidebar overflow-hidden"
       style={
         {
           '--sidebar-width': '14rem',
@@ -111,15 +111,27 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
 
 const SidebarInsetWithBorder = ({ children }: { children: ReactNode }) => {
   const { state, setOpen } = useSidebar();
-  const { isOpen: isAIPanelOpen } = useAIPanel();
+  const { isOpen: isAIPanelOpen, setIsOpen: setAIPanelOpen } = useAIPanel();
   const showBorder = state === 'collapsed';
+  const prevAIPanelOpen = React.useRef(isAIPanelOpen);
+  const prevState = React.useRef(state);
 
-  // Close sidebar when AI panel opens to make more space
   React.useEffect(() => {
-    if (isAIPanelOpen && state === 'expanded') {
+    const aiPanelJustOpened = isAIPanelOpen && !prevAIPanelOpen.current;
+    const sidebarJustExpanded = state === 'expanded' && prevState.current !== 'expanded';
+
+    // Close sidebar when AI panel opens
+    if (aiPanelJustOpened && state === 'expanded') {
       setOpen(false);
     }
-  }, [isAIPanelOpen, state, setOpen]);
+    // Close AI panel when sidebar expands
+    if (sidebarJustExpanded && isAIPanelOpen) {
+      setAIPanelOpen(false);
+    }
+
+    prevAIPanelOpen.current = isAIPanelOpen;
+    prevState.current = state;
+  }, [isAIPanelOpen, state, setOpen, setAIPanelOpen]);
 
   return (
     <SidebarInset
@@ -127,10 +139,6 @@ const SidebarInsetWithBorder = ({ children }: { children: ReactNode }) => {
         'flex-1 flex flex-row overflow-hidden bg-background reset-sidebar-vars border-none shadow-none',
         showBorder && 'border-l border-sidebar-border'
       )}
-      style={{
-        borderTopLeftRadius: '22px',
-        borderBottomLeftRadius: '22px',
-      }}
     >
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {children}

@@ -85,6 +85,7 @@ export const clientProfileController = {
                 userUpdates.profile_picture_url = updates.profile_picture_url;
             }
 
+            if (updates.timezone) userUpdates.timezone = updates.timezone;
             if (updates.phone) clientUpdates.phone = updates.phone;
             if (updates.gender) clientUpdates.gender = updates.gender;
             if (updates.country) clientUpdates.country = updates.country;

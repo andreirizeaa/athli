@@ -32,7 +32,6 @@ export interface Athlete {
   last7DaysTraining: string;
   last30DaysTraining: string;
   clientFor: string;
-  connected: boolean | 'invitation-sent';
   invitationToken?: string;
 }
 
@@ -50,6 +49,7 @@ export interface AthleteDetails {
   height?: string | null;
   avatarUrl?: string | null;
   avatarFile?: File | null;
+  timezone?: string | null;
   status?: ClientStatus;
   createdAt?: number;
   clientFor?: string;
@@ -119,6 +119,7 @@ export interface CoachProfile {
   name: string;
   profile_picture_url: string | null;
   signin_method?: 'email' | 'google' | 'apple';
+  timezone?: string | null;
   is_active: boolean;
   is_archived: boolean;
   status: 'active' | 'inactive' | 'pending';
@@ -134,6 +135,7 @@ export interface ClientProfile {
   name: string;
   profile_picture_url: string | null;
   signin_method?: 'email' | 'google' | 'apple';
+  timezone?: string | null;
   date_of_birth: string | null;
   gender: string | null;
   height_cm: number | null;
@@ -146,10 +148,17 @@ export interface ClientProfile {
 
 export type ProfileType = 'coach' | 'client' | null;
 
+export interface CoachAssignment {
+  coach_id: string;
+  name: string;
+  profile_picture_url: string | null;
+}
+
 export interface AuthResult {
   userId: string;
   profileType: ProfileType;
   profile: CoachProfile | ClientProfile | null;
+  coachAssignments?: CoachAssignment[];
 }
 
 // =============================================================================
@@ -208,4 +217,5 @@ export interface UpdateClientData {
   coachingType?: CoachingType;
   avatarUrl?: string;
   avatarUri?: string;
+  timezone?: string | null;
 }

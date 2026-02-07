@@ -8,13 +8,15 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { type Contact } from '@/components/app/app-shell';
 
 interface ChatHeaderProps {
-    selectedContact: Contact;
+    selectedContact: Contact | null;
     isPowerViewOpen: boolean;
     onTogglePowerView: () => void;
 }
 
 export function ChatHeader({ selectedContact, isPowerViewOpen, onTogglePowerView }: ChatHeaderProps) {
     const t = useTranslations();
+
+    if (!selectedContact) return null;
 
     const getInitials = (name: string) => {
         return name

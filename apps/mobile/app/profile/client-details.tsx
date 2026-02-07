@@ -27,6 +27,7 @@ import {
   InputBox,
   PhoneNumberInput,
   ProfilePictureInput,
+  TimezoneSelectorInput,
   type Country,
   type GenderValue,
   type PhoneNumber,
@@ -41,6 +42,7 @@ type OriginalValues = {
   height: string;
   country: Country | null;
   phoneNumber: PhoneNumber | null;
+  timezone: string | null;
 };
 
 const findCountryByName = (name: string | null): Country | null => {
@@ -106,6 +108,7 @@ export default function ClientDetailsScreen() {
   const [height, setHeight] = useState('');
   const [country, setCountry] = useState<Country | null>(null);
   const [phoneNumber, setPhoneNumber] = useState<PhoneNumber | null>(null);
+  const [timezone, setTimezone] = useState<string | null>(null);
   const [originalValues, setOriginalValues] = useState<OriginalValues | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -114,6 +117,7 @@ export default function ClientDetailsScreen() {
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showPhotoSourceDialog, setShowPhotoSourceDialog] = useState(false);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -134,6 +138,7 @@ export default function ClientDetailsScreen() {
     const foundCountry = findCountryByName(profile.country);
     setCountry(foundCountry);
     setPhoneNumber(parsePhoneNumber(profile.phone));
+    setTimezone(profile.timezone || null);
 
     setOriginalValues({
       name: profile.name || '',
@@ -143,19 +148,9 @@ export default function ClientDetailsScreen() {
       height: profile.height_cm ? String(profile.height_cm) : '',
       country: foundCountry,
       phoneNumber: parsePhoneNumber(profile.phone),
+      timezone: profile.timezone || null,
     });
   }, [profile]);
-
-  const handleGoBack = useCallback(() => {
-    router.back();
-  }, [router]);
-
-  const handleBackPress = useCallback(
-    (_event?: GestureResponderEvent) => {
-      handleGoBack();
-    },
-    [handleGoBack]
-  );
 
   const handleDismissKeyboard = useCallback(() => {
     Keyboard.dismiss();
@@ -255,7 +250,7 @@ export default function ClientDetailsScreen() {
     setShowPhotoSourceDialog(true);
   }, []);
 
-  const { canSave } = useMemo(() => {
+  const { canSave, hasChanges } = useMemo(() => {
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
 
@@ -264,7 +259,7 @@ export default function ClientDetailsScreen() {
     const nameValid = trimmedName.length > 0;
     const formValid = nameValid && emailValid;
 
-    if (!originalValues) return { canSave: false };
+    if (!originalValues) return { canSave: false, hasChanges: false };
 
     const dateChanged =
       (dateOfBirth?.getTime() ?? null) !== (originalValues.dateOfBirth?.getTime() ?? null);
@@ -274,6 +269,8 @@ export default function ClientDetailsScreen() {
       (phoneNumber?.country?.code ?? null) !== (originalValues.phoneNumber?.country?.code ?? null) ||
       (phoneNumber?.number ?? '') !== (originalValues.phoneNumber?.number ?? '');
 
+    const timezoneChanged = (timezone ?? null) !== (originalValues.timezone ?? null);
+
     const hasChanges =
       trimmedName !== originalValues.name.trim() ||
       trimmedEmail !== originalValues.email.trim() ||
@@ -281,10 +278,26 @@ export default function ClientDetailsScreen() {
       dateChanged ||
       genderChanged ||
       countryChanged ||
-      phoneChanged;
+      phoneChanged ||
+      timezoneChanged;
 
-    return { canSave: formValid && hasChanges && !isLoadingProfile };
-  }, [country, dateOfBirth, email, gender, height, isLoadingProfile, name, originalValues, phoneNumber]);
+    return { canSave: formValid && hasChanges && !isLoadingProfile, hasChanges };
+  }, [country, dateOfBirth, email, gender, height, isLoadingProfile, name, originalValues, phoneNumber, timezone]);
+
+  const handleGoBack = useCallback(() => {
+    if (hasChanges) {
+      setShowDiscardDialog(true);
+      return;
+    }
+    router.back();
+  }, [router, hasChanges]);
+
+  const handleBackPress = useCallback(
+    (_event?: GestureResponderEvent) => {
+      handleGoBack();
+    },
+    [handleGoBack]
+  );
 
   const handleSave = useCallback(async () => {
     if (!canSave) return;
@@ -299,6 +312,7 @@ export default function ClientDetailsScreen() {
         height_cm: height.trim() ? Number(height.trim()) : null,
         country: country?.name ?? null,
         phone: formatPhoneForDatabase(phoneNumber),
+        timezone,
       });
       haptics.success();
       router.back();
@@ -307,7 +321,7 @@ export default function ClientDetailsScreen() {
       setErrorMessage(error?.message || t('general.tryAgain'));
       setShowErrorDialog(true);
     }
-  }, [canSave, country, dateOfBirth, email, gender, height, name, phoneNumber, router, t, updateProfile, userId]);
+  }, [canSave, country, dateOfBirth, email, gender, height, name, phoneNumber, timezone, router, t, updateProfile, userId]);
 
   // Current image to display (selected or original)
   const currentImage = selectedImage || profile?.profile_picture_url || null;
@@ -401,6 +415,14 @@ export default function ClientDetailsScreen() {
               placeholder={t('clients.editClientModal.phoneNumberPlaceholder')}
               modalTitle={t('clients.editClientModal.countryModalTitle')}
             />
+
+            <TimezoneSelectorInput
+              label={t('clients.editClientModal.timezone')}
+              value={timezone}
+              onChange={setTimezone}
+              placeholder={t('clients.editClientModal.timezonePlaceholder')}
+              modalTitle={t('clients.editClientModal.timezoneModalTitle')}
+            />
         </KeyboardAwareScrollView>
       </TouchableWithoutFeedback>
 
@@ -445,6 +467,17 @@ export default function ClientDetailsScreen() {
           { label: t('settings.personalDetails.takePhoto'), onPress: () => { setShowPhotoSourceDialog(false); pickImage(true); }, variant: 'primary' },
           { label: t('settings.personalDetails.chooseFromLibrary'), onPress: () => { setShowPhotoSourceDialog(false); pickImage(false); }, variant: 'primary' },
           { label: t('general.cancel'), onPress: () => setShowPhotoSourceDialog(false), variant: 'secondary' },
+        ]}
+      />
+      <Dialog
+        visible={showDiscardDialog}
+        onClose={() => setShowDiscardDialog(false)}
+        title={t('common.discardChanges')}
+        message={t('common.discardChangesMessage')}
+        showCloseIcon={false}
+        buttons={[
+          { label: t('common.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+          { label: t('common.discard'), onPress: () => { setShowDiscardDialog(false); router.back(); }, variant: 'destructive' },
         ]}
       />
     </View>

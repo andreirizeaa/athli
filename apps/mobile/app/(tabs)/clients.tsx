@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { StyleSheet, Text, View, Share, ActivityIndicator } from 'react-native';
 import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
@@ -8,6 +8,9 @@ import SquircleView from 'react-native-fast-squircle';
 
 import { useQuery } from '@tanstack/react-query';
 import { FlashList } from '@shopify/flash-list';
+import { getOnboardings } from '@/services/coach/coach-onboarding-service';
+import { Dialog } from '@/components/ui/dialog';
+import { SelectInput } from '@/components/ui/form-inputs';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
@@ -101,8 +104,19 @@ export default function ClientsScreen() {
   const { t } = useTranslations();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSharing, setIsSharing] = useState(false);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [inviteDialogStep, setInviteDialogStep] = useState<'ask' | 'select'>('ask');
+  const [selectedOnboardingId, setSelectedOnboardingId] = useState<string | null>(null);
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
+  const uniqueCode = coachProfile?.unique_code;
+
+  const { data: onboardings = [] } = useQuery({
+    queryKey: ['coach-onboardings'],
+    queryFn: getOnboardings,
+    staleTime: 5 * 60 * 1000,
+    enabled: isAuthenticated,
+  });
 
   // Fetch clients directly with TanStack Query
   const { data: clients = [], isLoading } = useQuery({
@@ -163,19 +177,62 @@ export default function ClientsScreen() {
     return parts.join(' · ');
   }, [t]);
 
-  const handleShare = useCallback(async () => {
-    haptics.medium();
+  const getInviteLink = useCallback((onboardingId?: string | null) => {
+    // TODO: Replace with actual web origin when configured
+    const base = `https://app.athli.io/client/invite/${uniqueCode}`;
+    if (onboardingId) {
+      return `${base}?onboarding=${onboardingId}`;
+    }
+    return base;
+  }, [uniqueCode]);
+
+  const pendingShareRef = useRef<string | null | undefined>(undefined);
+
+  const shareInviteLink = useCallback(async (onboardingId?: string | null) => {
     setIsSharing(true);
     try {
       await Share.share({
-        message: 'YOUR INVITE LINE HERE',
+        message: getInviteLink(onboardingId),
       });
     } catch (error: any) {
       console.error(error.message);
     } finally {
       setIsSharing(false);
     }
+  }, [getInviteLink]);
+
+  const shareAfterDialogClose = useCallback((onboardingId?: string | null) => {
+    pendingShareRef.current = onboardingId ?? null;
+    setShowInviteDialog(false);
   }, []);
+
+  const handleDialogClosed = useCallback(() => {
+    if (pendingShareRef.current !== undefined) {
+      const onboardingId = pendingShareRef.current;
+      pendingShareRef.current = undefined;
+      // Small delay to ensure Modal is fully dismissed on iOS
+      setTimeout(() => shareInviteLink(onboardingId), 300);
+    }
+  }, [shareInviteLink]);
+
+  const handleShare = useCallback(() => {
+    haptics.medium();
+    if (onboardings.length === 0) {
+      shareInviteLink();
+    } else {
+      setInviteDialogStep('ask');
+      setSelectedOnboardingId(null);
+      setShowInviteDialog(true);
+    }
+  }, [onboardings.length, shareInviteLink]);
+
+  const onboardingOptions = useMemo(() =>
+    onboardings.map((o) => ({
+      value: o.id,
+      label: o.name || 'Untitled',
+      subtitle: o.description,
+    })),
+  [onboardings]);
 
   return (
     <ScreenWrapper contentContainerStyle={styles.scrollContent}>
@@ -228,6 +285,59 @@ export default function ClientsScreen() {
           }
           contentContainerStyle={styles.listContainer}
         />
+      )}
+
+      {/* Invite Link Dialog - Step 1: Ask */}
+      {inviteDialogStep === 'ask' && (
+        <Dialog
+          visible={showInviteDialog}
+          onClose={() => setShowInviteDialog(false)}
+          onDismiss={handleDialogClosed}
+          title={t('clients.inviteDialog.title')}
+          message={t('clients.inviteDialog.message')}
+          buttonLayout="vertical"
+          buttons={[
+            {
+              label: t('clients.inviteDialog.noJustShare'),
+              variant: 'secondary',
+              onPress: () => shareAfterDialogClose(),
+            },
+            {
+              label: t('clients.inviteDialog.yesSelect'),
+              variant: 'primary',
+              onPress: () => setInviteDialogStep('select'),
+            },
+          ]}
+        />
+      )}
+
+      {/* Invite Link Dialog - Step 2: Select Onboarding */}
+      {inviteDialogStep === 'select' && (
+        <Dialog
+          visible={showInviteDialog}
+          onClose={() => setShowInviteDialog(false)}
+          onDismiss={handleDialogClosed}
+          title={t('clients.inviteDialog.title')}
+          buttonLayout="vertical"
+          buttons={[
+            {
+              label: t('clients.inviteDialog.shareLink'),
+              variant: 'primary',
+              disabled: !selectedOnboardingId,
+              onPress: () => shareAfterDialogClose(selectedOnboardingId),
+            },
+          ]}
+        >
+          <View style={{ marginBottom: 8 }}>
+            <SelectInput
+              label={t('clients.inviteDialog.selectOnboarding')}
+              value={selectedOnboardingId}
+              onChange={setSelectedOnboardingId}
+              options={onboardingOptions}
+              placeholder={t('clients.addClientModal.onboardingPlaceholder')}
+            />
+          </View>
+        </Dialog>
       )}
     </ScreenWrapper>
   );

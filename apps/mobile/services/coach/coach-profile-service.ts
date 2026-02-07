@@ -49,6 +49,7 @@ export async function updateCoachProfile(
     if (updates.email !== undefined) userProfileUpdates.email = updates.email;
     if (updates.profile_picture_url !== undefined) userProfileUpdates.profile_picture_url = updates.profile_picture_url;
     if (updates.signin_method !== undefined) userProfileUpdates.signin_method = updates.signin_method;
+    if (updates.timezone !== undefined) userProfileUpdates.timezone = updates.timezone;
 
     // coach_profiles fields (only coach-specific data)
     if (updates.is_active !== undefined) coachProfileUpdates.is_active = updates.is_active;

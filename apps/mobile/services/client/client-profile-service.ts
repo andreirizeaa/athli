@@ -19,6 +19,7 @@ interface ClientApiProfile {
   phone?: string | null;
   country?: string | null;
   unit_system?: 'metric' | 'imperial' | null;
+  timezone?: string | null;
   created_at?: string;
   updated_at?: string;
   category?: string;
@@ -76,6 +77,7 @@ export async function fetchClientProfile(
       phone: apiProfile.phone || null,
       country: apiProfile.country || null,
       unit_system: apiProfile.unit_system || null,
+      timezone: apiProfile.timezone || null,
       created_at: apiProfile.created_at || new Date().toISOString(),
       updated_at: apiProfile.updated_at || new Date().toISOString(),
     };
@@ -109,6 +111,7 @@ export async function updateClientProfile(
     if (updates.date_of_birth !== undefined) apiUpdates.birth_date = updates.date_of_birth;
     if (updates.height_cm !== undefined) apiUpdates.height_cm = updates.height_cm;
     if (updates.unit_system !== undefined) apiUpdates.unit_system = updates.unit_system;
+    if (updates.timezone !== undefined) apiUpdates.timezone = updates.timezone;
 
     const response = await apiFetch<{
       success: boolean;
@@ -142,6 +145,7 @@ export async function updateClientProfile(
       phone: apiProfile.phone || null,
       country: apiProfile.country || null,
       unit_system: apiProfile.unit_system || null,
+      timezone: apiProfile.timezone || null,
       created_at: apiProfile.created_at || new Date().toISOString(),
       updated_at: apiProfile.updated_at || new Date().toISOString(),
     };

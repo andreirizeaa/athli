@@ -10,6 +10,7 @@ export interface UserProfile {
     userType: 'coach' | 'client';
     profilePictureUrl?: string | null;
     signinMethod: 'email' | 'google';
+    timezone?: string | null;
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
@@ -19,6 +20,7 @@ export interface UpdateProfileInput {
     name?: string;
     profilePictureUrl?: string | null;
     avatarFile?: File | null;
+    timezone?: string;
 }
 
 /**
@@ -49,6 +51,7 @@ export async function getUserProfileSafe(authUser: User): Promise<UserProfile> {
             profilePictureUrl: (authUser.user_metadata?.avatar_url as string) ||
                 (authUser.user_metadata?.picture as string) || null,
             signinMethod: authUser.app_metadata?.provider === 'google' ? 'google' : 'email',
+            timezone: (authUser.user_metadata?.timezone as string) || null,
             isActive: true, // Default to true since they are logged in
             createdAt: authUser.created_at || new Date().toISOString(),
             updatedAt: authUser.updated_at || new Date().toISOString(),
@@ -67,6 +70,7 @@ export async function updateUserProfile(updates: UpdateProfileInput): Promise<Us
         formData.append('avatar', updates.avatarFile);
         if (updates.name) formData.append('name', updates.name);
         if (updates.profilePictureUrl) formData.append('profilePictureUrl', updates.profilePictureUrl);
+        if (updates.timezone) formData.append('timezone', updates.timezone);
         body = formData;
     }
 
@@ -113,4 +117,15 @@ export async function fetchUserById(userId: string): Promise<UserProfile> {
         throw new Error('Invalid response format from server');
     }
     return data.data.user;
+}
+
+/**
+ * Seed demo client data for a new coach
+ * Idempotent - only seeds if demo client doesn't exist
+ */
+export async function seedDemoData(): Promise<{ seeded: boolean }> {
+    const data = await apiFetch('/user/seed-demo-data', {
+        method: 'POST',
+    });
+    return data.data;
 }

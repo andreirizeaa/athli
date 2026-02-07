@@ -22,6 +22,7 @@ import { useCoachTodo } from '@/hooks/use-coach-todo';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { useConversations } from '@/hooks/use-conversations';
 import { usePrefetchAllExercises } from '@/hooks/use-all-exercises';
+import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
 
 interface GlobalContextType {
     user: UserProfile | null;
@@ -79,7 +80,8 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
     const { isLoadingOwn: isOwnTodoLoading, isLoadingAuto: isAutoTodoLoading } = useCoachTodo({ enabled: shouldPrefetch });
     const { isLoading: isClientsLoading } = useCoachClients({ enabled: shouldPrefetch });
     const { isLoading: isConversationsLoading } = useConversations({ enabled: shouldPrefetch });
-    
+    const { isLoading: isOnboardingsLoading } = useCoachOnboardings({ enabled: shouldPrefetch });
+
     // Prefetch all MuscleWiki exercises into React Query cache (1700+ exercises)
     // This runs in the background and doesn't block the UI
     usePrefetchAllExercises({ enabled: shouldPrefetch });
@@ -95,7 +97,8 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
         isOwnTodoLoading ||
         isAutoTodoLoading ||
         isClientsLoading ||
-        isConversationsLoading;
+        isConversationsLoading ||
+        isOnboardingsLoading;
 
     // We only show the full screen loader for prefetching if we are NOT on a specific athlete's page
     // This allows the athlete profile to load its own data without being blocked by global coach data loading

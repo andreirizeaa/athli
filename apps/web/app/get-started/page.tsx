@@ -184,7 +184,7 @@ const GetStartedPage = () => {
       case 'customExercises':
         return '/training/exercises?create=true';
       case 'automateOnboardings':
-        return newClientSignUpFlow ? `/flows/${newClientSignUpFlow.id}` : '/flows';
+        return '/onboarding';
       case 'checkInsForms':
         return '/forms/check-ins?create=true';
       case 'powerfulFlows':
@@ -325,7 +325,7 @@ const GetStartedPage = () => {
                             ? 'border-primary bg-primary'
                             : 'border-muted-foreground/30'
                         )}>
-                          {isCompleted && <Check className="h-3 w-3 text-white" />}
+                          {isCompleted && <Check className="h-3 w-3 text-primary-foreground" />}
                         </div>
                       </div>
                     );
@@ -485,7 +485,7 @@ const GetStartedPage = () => {
                     key={i}
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white border border-border text-primary shadow-sm pointer-events-none"
                   >
-                    <item.icon className="h-5 w-5" />
+                    <item.icon className="h-5 w-5 text-black" />
                   </div>
                 ))}
               </div>

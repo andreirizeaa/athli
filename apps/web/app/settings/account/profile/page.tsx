@@ -10,13 +10,124 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Upload, Loader2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
+import { Upload, Loader2, ChevronsUpDown, Check } from 'lucide-react';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useUnsavedChanges } from '@/app/settings/context/unsaved-changes-context';
 import { useAccountSave } from '../context/account-save-context';
 import { toast } from 'sonner';
 import { cn } from '@/lib/general/utils';
 import { ProfilePictureDialog } from '@/components/profile/profile-picture-dialog';
+import { TIMEZONE_GROUPS, TIMEZONE_OPTIONS } from '@athli/shared-types';
+
+const TimezoneCard = () => {
+  const { user, updateProfile, isUpdating } = useUserProfile();
+  const [timezone, setTimezone] = useState(user?.timezone || '');
+  const [savedTimezone, setSavedTimezone] = useState(user?.timezone || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setTimezone(user.timezone || '');
+      setSavedTimezone(user.timezone || '');
+    }
+  }, [user]);
+
+  const hasChanges = timezone !== savedTimezone;
+
+  const selectedLabel = TIMEZONE_OPTIONS.find((tz) => tz.value === timezone)?.label;
+
+  const handleSaveTimezone = async () => {
+    if (!timezone) return;
+    setIsSaving(true);
+    try {
+      await updateProfile({ timezone });
+      setSavedTimezone(timezone);
+      toast.success('Timezone updated successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update timezone');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <Card className="bg-background max-w-3xl w-full">
+      <CardHeader className="px-4">
+        <CardTitle>Timezone</CardTitle>
+      </CardHeader>
+      <Separator className="w-full mt-[-8px]" />
+      <CardContent className="px-0">
+        <div className="space-y-0">
+          <div className="flex items-center justify-between w-full pb-2 border-b px-4 -mt-1">
+            <Label className="text-sm">Timezone</Label>
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={open}
+                  className="w-64 justify-between font-normal"
+                  disabled={isSaving}
+                >
+                  <span className="truncate">
+                    {selectedLabel || 'Select timezone...'}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-0" align="end">
+                <Command>
+                  <CommandInput placeholder="Search timezone..." />
+                  <CommandList className="max-h-[300px]">
+                    <CommandEmpty>No timezone found.</CommandEmpty>
+                    {TIMEZONE_GROUPS.map((group) => (
+                      <CommandGroup key={group.label} heading={group.label}>
+                        {group.options.map((tz) => (
+                          <CommandItem
+                            key={tz.value}
+                            value={tz.label}
+                            onSelect={() => {
+                              setTimezone(tz.value);
+                              setOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                timezone === tz.value ? 'opacity-100' : 'opacity-0'
+                              )}
+                            />
+                            {tz.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    ))}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="flex justify-end pt-2 px-4">
+            <Button
+              onClick={handleSaveTimezone}
+              disabled={!hasChanges || isSaving || isUpdating}
+            >
+              {(isSaving || isUpdating) ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</>
+              ) : (
+                'Save'
+              )}
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const ProfilePage = () => {
   const t = useTranslations();
@@ -240,6 +351,8 @@ const ProfilePage = () => {
               </div>
             </CardContent>
           </Card>
+
+          <TimezoneCard />
         </div>
       </div>
     </>

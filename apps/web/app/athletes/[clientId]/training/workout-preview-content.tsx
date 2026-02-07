@@ -4,7 +4,6 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Link2, Play, History, CircleCheck, CircleX, Dumbbell, Loader2, Gauge, Star, Clock, Weight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/general/utils';
 import { useExerciseLookup } from '@/hooks/use-all-exercises';
 import { useExerciseThumbnails } from '@/hooks/use-exercise-thumbnails';
 import { VideoModal } from '@/components/training/builder/video-modal';
@@ -385,16 +384,13 @@ export const WorkoutPreviewContent = ({ workoutData, onHistoryClick, postStats }
                             return (
                                 <div key={index} className="flex flex-col gap-3">
                                     {exercise.isSuperset && index > 0 && enrichedExercises[index - 1]?.isSuperset && (
-                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                                             <Link2 className="size-3" />
                                             <span className="font-medium uppercase tracking-wider text-[10px]">Superset</span>
                                         </div>
                                     )}
                                     <div
-                                        className={cn(
-                                            'rounded-xl border border-border/50 bg-card overflow-hidden shadow-sm',
-                                            exercise.isSuperset && index > 0 && enrichedExercises[index - 1]?.isSuperset && 'ml-6'
-                                        )}
+                                        className="rounded-xl border border-border/50 bg-card overflow-hidden shadow-sm"
                                     >
                                         <div className="flex items-center justify-between p-2.5">
                                             <div className="flex items-center gap-2.5 min-w-0">

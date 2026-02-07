@@ -113,9 +113,9 @@ export class UserController {
    */
   newClient = asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const { coachId, invitationToken } = req.body;
+    const { coachId, invitationToken, onboardingId } = req.body;
 
-    console.log('[Controller] newClient called', { userId, coachId, invitationToken: invitationToken ? 'provided' : 'none' });
+    console.log('[Controller] newClient called', { userId, coachId, invitationToken: invitationToken ? 'provided' : 'none', onboardingId: onboardingId || 'none' });
 
     if (!userId) {
       console.error('[Controller] User not authenticated');
@@ -130,7 +130,7 @@ export class UserController {
     }
 
     try {
-      const result = await userService.handleNewClient(userId, coachId, invitationToken);
+      const result = await userService.handleNewClient(userId, coachId, invitationToken, onboardingId);
 
       console.log('[Controller] ✅ Client profile created/verified successfully', { userId, coachId, isNew: result.isNew });
 
@@ -150,6 +150,17 @@ export class UserController {
       });
       throw error; // Re-throw to let asyncHandler handle it
     }
+  });
+
+  /**
+   * Mark client as connected (called when client signs in via mobile app)
+   */
+  markConnected = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+
+    await userService.markClientConnected(userId);
+
+    success(res, { message: 'Client marked as connected' });
   });
 
   /**
@@ -181,6 +192,31 @@ export class UserController {
     } catch (error: any) {
       console.error('Failed to generate avatar:', error);
       return internalError(res, { message: 'Failed to generate avatar' });
+    }
+  });
+
+  /**
+   * Seed demo client data for a new coach
+   * Idempotent - only seeds if demo client doesn't exist
+   */
+  seedDemoData = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+
+    if (!userId) {
+      unauthorized(res, { message: 'User not authenticated' });
+      return;
+    }
+
+    try {
+      const result = await userService.seedDemoData(userId);
+
+      success(res, {
+        message: result.seeded ? 'Demo data seeded successfully' : 'Demo data already exists',
+        data: { seeded: result.seeded },
+      });
+    } catch (error: any) {
+      console.error('Failed to seed demo data:', error);
+      return internalError(res, { message: 'Failed to seed demo data' });
     }
   });
 }

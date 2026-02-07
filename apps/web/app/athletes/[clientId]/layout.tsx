@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useRouter, useSelectedLayoutSegments } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
@@ -17,7 +17,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { toast } from 'sonner';
-import { ChevronRight, MessageCircle, Users, Send, Copy, Check, Dna, Cake } from 'lucide-react';
+import { ChevronRight, MessageCircle, Users, Send, Copy, Dna, Cake } from 'lucide-react';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
@@ -27,6 +27,8 @@ import { resendClientInvite } from '@/api/coach/coach-client-invite-service';
 import { FullScreenLoader } from '@/components/ui/full-screen-loader';
 import { SectionLoader } from '@/components/ui/section-loader';
 import { EditClientDetailsSidePanel } from './components/edit-client-details-side-panel';
+import { InviteLinkDialog, copyToClipboard } from '@/components/app/invite-link-dialog';
+import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
 import { getFlagEmoji } from '@/lib/general/country-utils';
 
 export type ClientProfileLayoutProps = {
@@ -47,22 +49,14 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
   const params = useParams<{ clientId: string; contactId: string }>();
   const { user } = useSupabaseAuth();
   const { uniqueCode } = useGlobalData();
+  const { onboardings } = useCoachOnboardings();
   // Support both clientId (athletes context) and contactId (inbox context)
   const clientIdFromParams = params.clientId || params.contactId;
   const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
-  const [isInviteCopied, setIsInviteCopied] = useState<boolean>(false);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState<boolean>(false);
   const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
-  const inviteCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { athlete, details, isLoading, error } = useClientProfileContext();
-
-  useEffect(() => {
-    return () => {
-      if (inviteCopyTimeoutRef.current) {
-        clearTimeout(inviteCopyTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const tabs = [
     {
@@ -203,57 +197,16 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
     }
   };
 
-  const handleCopyInvite = async () => {
+  const handleCopyInvite = () => {
     if (!uniqueCode) {
       toast.error('Unable to generate invite link. Please try again.');
       return;
     }
-
-    const inviteLink = `${window.location.origin}/client/invite/${uniqueCode}`;
-    try {
-      await navigator.clipboard.writeText(inviteLink);
-    } catch (err) {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = inviteLink;
-      textArea.style.position = 'fixed';
-      textArea.style.opacity = '0';
-      document.body.appendChild(textArea);
-      textArea.select();
-      try {
-        document.execCommand('copy');
-      } catch (fallbackErr) {
-        // Ignore copy errors
-      }
-      document.body.removeChild(textArea);
-    }
-
-    setIsInviteCopied(true);
-
-    // Clear existing timeout if any
-    if (inviteCopyTimeoutRef.current) {
-      clearTimeout(inviteCopyTimeoutRef.current);
-    }
-
-    // Set timeout to hide checkmark after 2 seconds
-    inviteCopyTimeoutRef.current = setTimeout(() => {
-      setIsInviteCopied(false);
-      inviteCopyTimeoutRef.current = null;
-    }, 2000);
-
-    toast.success(t('athletes.profile.copyInvite'), {
-      style: {
-        background: 'rgb(220 252 231)',
-        color: 'rgb(20 83 45)',
-        border: '1px solid rgb(187 247 208)',
-      },
-    });
-  };
-
-  const handleCopyInviteKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      handleCopyInvite();
+    if (onboardings.length === 0) {
+      copyToClipboard(`${window.location.origin}/client/invite/${uniqueCode}`);
+      toast.success(t('athletes.inviteDialog.linkCopied'));
+    } else {
+      setIsInviteDialogOpen(true);
     }
   };
 
@@ -387,39 +340,42 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
         </div>
         <div className="absolute top-2 right-4 flex items-center gap-2">
           <ButtonGroup>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={handleResendInvite}
-                  variant="ghost"
-                  className="gap-2 border border-primary"
-                  aria-label={t('athletes.profile.resendInviteAria')}
-                >
-                  <Send className="size-4" />
-                  <span>{t('athletes.profile.resendInvite')}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('athletes.profile.resendInviteAria')}</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={handleCopyInvite}
-                  onKeyDown={handleCopyInviteKeyDown}
-                  variant="ghost"
-                  className="gap-2 border border-primary"
-                  aria-label={t('athletes.profile.copyInviteAria')}
-                >
-                  {isInviteCopied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                  <span>{t('athletes.profile.copyInvite')}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('athletes.profile.copyInviteAria')}</p>
-              </TooltipContent>
-            </Tooltip>
+            {athlete?.status !== 'accepted' && athlete?.status !== 'connected' && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleResendInvite}
+                      variant="ghost"
+                      className="gap-2 border border-primary"
+                      aria-label={t('athletes.profile.resendInviteAria')}
+                    >
+                      <Send className="size-4" />
+                      <span>{t('athletes.profile.resendInvite')}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('athletes.profile.resendInviteAria')}</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleCopyInvite}
+                      variant="ghost"
+                      className="gap-2 border border-primary"
+                      aria-label={t('athletes.profile.copyInviteAria')}
+                    >
+                      <Copy className="size-4" />
+                      <span>{t('athletes.profile.copyInvite')}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('athletes.profile.copyInviteAria')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </>
+            )}
             {!hideMessageButton && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -454,6 +410,13 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
         open={isEditDetailsOpen}
         onOpenChange={setIsEditDetailsOpen}
       />
+      {uniqueCode && (
+        <InviteLinkDialog
+          open={isInviteDialogOpen}
+          onOpenChange={setIsInviteDialogOpen}
+          uniqueCode={uniqueCode}
+        />
+      )}
     </div>
   );
 };

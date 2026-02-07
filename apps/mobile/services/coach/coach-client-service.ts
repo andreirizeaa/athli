@@ -62,7 +62,6 @@ export const getClients = async (): Promise<Athlete[]> => {
       age: calculateAge(client.date_of_birth),
       height: client.height_cm || null,
       clientFor: clientForDays.toString(),
-      connected: ((client.status === 'accepted' || client.status === 'connected') ? true : client.status === 'invited' ? 'invitation-sent' : false) as boolean | 'invitation-sent',
     };
   });
   console.log('[coach-client-service] getClients returned:', clients.length, 'clients');
@@ -108,7 +107,6 @@ export const addClient = async (data: AddClientData): Promise<Athlete> => {
     age: calculateAge(client.date_of_birth),
     height: client.height_cm || null,
     clientFor: clientForDays.toString(),
-    connected: (client.status === 'accepted' || client.status === 'connected') ? true : client.status === 'invited' ? 'invitation-sent' : false,
     invitationToken: client.invitation_token,
   };
 };
@@ -149,6 +147,9 @@ export const updateClient = async (athleteId: string, data: UpdateClientData): P
   }
   if (data.avatarUrl !== undefined) {
     updatePayload.avatar_url = data.avatarUrl;
+  }
+  if (data.timezone !== undefined) {
+    updatePayload.timezone = data.timezone;
   }
 
   // If there's an avatar file URI, use FormData and /client endpoint (like web app)

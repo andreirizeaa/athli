@@ -184,12 +184,12 @@ class AuthService {
         });
     }
 
-    async newClient(coachId: string, token?: string, invitationToken?: string): Promise<AuthResponse> {
+    async newClient(coachId: string, token?: string, invitationToken?: string, onboardingId?: string): Promise<AuthResponse> {
         return apiFetch('/user/new-client', {
             method: 'POST',
             authenticated: !token,
             headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-            body: JSON.stringify({ coachId, invitationToken }),
+            body: JSON.stringify({ coachId, invitationToken, onboardingId }),
         });
     }
 }

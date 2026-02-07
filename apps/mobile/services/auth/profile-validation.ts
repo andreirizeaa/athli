@@ -1,9 +1,11 @@
 import { supabase } from '@/lib/supabase';
-import type { CoachProfile, ClientProfile, ProfileType } from '@/types/profile';
+import { apiFetch } from '@/lib/api-client';
+import type { CoachProfile, ClientProfile, ProfileType, CoachAssignment } from '@/types/profile';
 
 export interface ProfileValidationResult {
   profileType: ProfileType;
   profile: CoachProfile | ClientProfile | null;
+  coachAssignments?: CoachAssignment[];
 }
 
 /**
@@ -65,17 +67,45 @@ export async function validateUserProfile(
     });
 
     if (!clientError && clientProfile) {
-      // Get coach_id from coach_client_assignments
-      const { data: assignment } = await supabase
+      // Get ALL coach assignments with coach profile info
+      const { data: assignments } = await supabase
         .from('coach_client_assignments')
-        .select('coach_id')
+        .select(`
+          coach_id,
+          status,
+          coach:user_profiles!coach_client_assignments_coach_id_fkey (
+            name,
+            profile_picture_url
+          )
+        `)
         .eq('client_id', userId)
-        .limit(1)
-        .single();
+        .in('status', ['connected', 'accepted', 'invited']);
+
+      console.log('[validateUserProfile] Coach assignments:', {
+        count: assignments?.length || 0,
+        assignments: assignments?.map(a => ({ coach_id: a.coach_id, status: a.status }))
+      });
+
+      // Mark client as connected if any assignment is not already connected (fire-and-forget)
+      const hasNonConnectedAssignment = assignments?.some(a => a.status !== 'connected');
+      if (hasNonConnectedAssignment) {
+        apiFetch('/user/mark-connected', { method: 'POST' })
+          .catch(err => console.error('[validateUserProfile] Failed to mark connected:', err));
+      }
+
+      // Build coach assignments array for selection
+      const coachAssignments: CoachAssignment[] = (assignments || []).map(a => ({
+        coach_id: a.coach_id,
+        name: (a.coach as any)?.name || 'Unknown Coach',
+        profile_picture_url: (a.coach as any)?.profile_picture_url || null,
+      }));
+
+      // Use first assignment's coach_id as default (will be overwritten if user selects different coach)
+      const defaultCoachId = assignments?.[0]?.coach_id || '';
 
       const mergedProfile: ClientProfile = {
         client_id: clientProfile.client_id,
-        coach_id: assignment?.coach_id || '',
+        coach_id: defaultCoachId,
         email: clientProfile.email || '',
         name: clientProfile.name || '',
         profile_picture_url: clientProfile.profile_picture_url || null,
@@ -93,6 +123,7 @@ export async function validateUserProfile(
       return {
         profileType: 'client',
         profile: mergedProfile,
+        coachAssignments,
       };
     }
 

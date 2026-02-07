@@ -21,11 +21,13 @@ import {
   CountrySelectorInput,
   PhoneNumberInput,
   ProfilePictureInput,
+  TimezoneSelectorInput,
   type Country,
   type PhoneNumber,
 } from '@/components/ui/form-inputs';
 import { COUNTRIES } from '@/components/ui/form-inputs/countries-data';
 import { getClients, updateClient, type Client, type UpdateClientData } from '@/services/client-service';
+import { fetchClientProfile } from '@/services/client/client-profile-service';
 import { hexToRgba } from '@/utils/colorUtils';
 import { Dialog } from '@/components/ui/dialog';
 
@@ -73,6 +75,7 @@ type OriginalValues = {
   country: Country | null;
   phoneNumber: PhoneNumber | null;
   avatarUrl: string;
+  timezone: string | null;
 };
 
 export default function EditClientDetailsModal() {
@@ -92,6 +95,7 @@ export default function EditClientDetailsModal() {
   const [height, setHeight] = useState('');
   const [country, setCountry] = useState<Country | null>(null);
   const [phoneNumber, setPhoneNumber] = useState<PhoneNumber | null>(null);
+  const [timezone, setTimezone] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [originalValues, setOriginalValues] = useState<OriginalValues | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -174,6 +178,11 @@ export default function EditClientDetailsModal() {
             const originalPhoneNum = originalValues.phoneNumber?.number ?? '';
             if (currentPhoneCountryCode !== originalPhoneCountryCode || currentPhoneNum !== originalPhoneNum) {
               changes = true;
+            } else {
+              // Timezone comparison
+              if ((timezone ?? null) !== (originalValues.timezone ?? null)) {
+                changes = true;
+              }
             }
           }
         }
@@ -185,7 +194,7 @@ export default function EditClientDetailsModal() {
       hasChanges: changes,
       canComplete: formValid && changes && !updateMutation.isPending,
     };
-  }, [name, email, category, dateOfBirth, height, country, phoneNumber, originalValues, selectedImage, updateMutation.isPending]);
+  }, [name, email, category, dateOfBirth, height, country, phoneNumber, timezone, originalValues, selectedImage, updateMutation.isPending]);
 
   // Load client data
   useEffect(() => {
@@ -223,6 +232,16 @@ export default function EditClientDetailsModal() {
             setDateOfBirth(dob);
           }
 
+          // Fetch the full client profile to get timezone
+          let clientTimezone: string | null = null;
+          try {
+            const fullProfile = await fetchClientProfile(clientId);
+            clientTimezone = fullProfile.timezone || null;
+            setTimezone(clientTimezone);
+          } catch {
+            // Non-critical - timezone just won't be populated
+          }
+
           // Store original values for change detection
           const calculatedDob = foundClient.age !== null && foundClient.age > 0
             ? new Date(new Date().getFullYear() - foundClient.age, 0, 1)
@@ -237,6 +256,7 @@ export default function EditClientDetailsModal() {
             country: foundCountry,
             phoneNumber: parsedPhone,
             avatarUrl: foundClient.avatarUrl || '',
+            timezone: clientTimezone,
           });
         }
       } catch (error) {
@@ -324,6 +344,7 @@ export default function EditClientDetailsModal() {
         email: email.trim(),
         coachingType: category,
         ...(selectedImage && { avatarUri: selectedImage }),
+        ...(timezone !== originalValues?.timezone && { timezone }),
       },
     });
   };
@@ -462,6 +483,14 @@ export default function EditClientDetailsModal() {
               onChange={setPhoneNumber}
               placeholder={t('clients.editClientModal.phoneNumberPlaceholder')}
               modalTitle={t('clients.editClientModal.countryModalTitle')}
+            />
+
+            <TimezoneSelectorInput
+              label={t('clients.editClientModal.timezone')}
+              value={timezone}
+              onChange={setTimezone}
+              placeholder={t('clients.editClientModal.timezonePlaceholder')}
+              modalTitle={t('clients.editClientModal.timezoneModalTitle')}
             />
           </KeyboardAwareScrollView>
         </View>

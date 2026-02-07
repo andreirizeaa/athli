@@ -65,6 +65,11 @@ export async function signInWithGoogle(): Promise<GoogleAuthResult> {
 
     console.log('🟢 [Google Auth] Authentication successful! User ID:', data.user.id);
 
+    // Set timezone in user metadata (not available during OAuth token exchange)
+    await supabase.auth.updateUser({
+      data: { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+    });
+
     return {
       userId: data.user.id,
     };

@@ -27,6 +27,7 @@ export default function NewClientPage() {
       const authFlowData = JSON.parse(storedData);
       const coachId = authFlowData.coach_id;
       const invitationToken = authFlowData.invitation_token;
+      const onboardingId = authFlowData.onboarding_id;
 
       if (!coachId) {
         toast.error('Missing coach ID');
@@ -65,7 +66,7 @@ export default function NewClientPage() {
         console.log('[New Client] Calling API', { coachId, invitationToken: invitationToken ? 'provided' : 'none' });
 
         // Call the new-client API endpoint
-        const response = await authService.newClient(coachId, token, invitationToken);
+        const response = await authService.newClient(coachId, token, invitationToken, onboardingId);
 
         console.log('[New Client] API response', { success: response.success, message: response.message });
 
@@ -90,7 +91,7 @@ export default function NewClientPage() {
     };
 
     handleNewClient();
-  }, [router, supabase.auth]);
+  }, []);
 
   if (isLoading) {
     return (

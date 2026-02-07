@@ -145,6 +145,15 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     retry: false,
   });
 
+  // Sync timezone to user metadata if missing (covers OAuth flows)
+  useEffect(() => {
+    if (supabaseUser && !supabaseUser.user_metadata?.timezone) {
+      supabase.auth.updateUser({
+        data: { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+      });
+    }
+  }, [supabaseUser]);
+
   const isLoading = isAuthLoading || (!!supabaseUser && isProfileLoading);
   const user = userProfile || null;
 
@@ -156,6 +165,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         data: {
           name: name,
           user_type: 'coach', // Default to coach for /auth registration
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         },
         emailRedirectTo: `${window.location.origin}/auth/verify-email`,
       },

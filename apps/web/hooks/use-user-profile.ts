@@ -6,6 +6,7 @@ export interface UpdateProfileInput {
   name?: string;
   profilePictureUrl?: string | null;
   avatarFile?: File | null;
+  timezone?: string;
 }
 
 export function useUserProfile() {
