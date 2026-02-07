@@ -445,7 +445,8 @@ export default function EditCompanyDetailsModal() {
             <SearchBar
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder={t('settings.companyDetails.searchCountry')}
+              placeholder="Search"
+              clearable={false}
             />
           </View>
         }
@@ -505,7 +506,8 @@ export default function EditCompanyDetailsModal() {
             <SearchBar
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder={t('settings.companyDetails.searchSpecialities')}
+              placeholder="Search"
+              clearable={false}
             />
           </View>
         }

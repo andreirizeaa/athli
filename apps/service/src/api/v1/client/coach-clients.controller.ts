@@ -276,7 +276,7 @@ export const coachClientController = {
 
             // 1. Separate assignment updates from profile updates
             const assignmentFields = ['category', 'status', 'is_archived'];
-            const profileFields = ['name', 'phone', 'gender', 'country', 'birth_date', 'unit_system', 'height_cm'];
+            const profileFields = ['name', 'phone', 'gender', 'country', 'birth_date', 'unit_system', 'height_cm', 'timezone'];
 
             const assignmentUpdates: any = {};
             const profileUpdates: any = {};
@@ -340,6 +340,7 @@ export const coachClientController = {
                 const userProfileUpdates: any = {};
                 if (profileUpdates.name) userProfileUpdates.name = profileUpdates.name;
                 if (profileUpdates.profile_picture_url) userProfileUpdates.profile_picture_url = profileUpdates.profile_picture_url;
+                if (profileUpdates.timezone) userProfileUpdates.timezone = profileUpdates.timezone;
 
                 if (Object.keys(userProfileUpdates).length > 0) {
                     await supabase
@@ -350,6 +351,7 @@ export const coachClientController = {
                     // Don't duplicate these fields in client_profiles - they belong in user_profiles
                     delete profileUpdates.name;
                     delete profileUpdates.profile_picture_url;
+                    delete profileUpdates.timezone;
                 }
 
                 // Update client_profiles

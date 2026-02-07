@@ -120,6 +120,7 @@ export const getAthleteDetails = async (athleteId?: string): Promise<AthleteDeta
     country: profile.country || '',
     height: profile.height_cm || null,
     avatarUrl: profile.profile_picture_url || null,
+    timezone: profile.timezone || null,
   };
 };
 
@@ -142,6 +143,7 @@ export const saveAthleteDetails = async (athleteId: string, details: AthleteDeta
     height_cm: details.height ? parseInt(details.height, 10) : null,
     height: details.height ? parseInt(details.height, 10) : null,
     category: details.category,  // Use 'category' for coach_client_assignments table
+    timezone: details.timezone || undefined,
   };
 
   if (details.avatarUrl) {

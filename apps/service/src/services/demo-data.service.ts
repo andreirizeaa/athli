@@ -7,11 +7,12 @@ interface SeedDemoClientParams {
   coachEmail: string;
   signinMethod: 'email' | 'google';
   profilePictureUrl: string | null;
+  timezone: string | null;
 }
 
 class DemoDataService {
   async seedDemoClient(params: SeedDemoClientParams): Promise<void> {
-    const { coachId, coachName, coachEmail, signinMethod, profilePictureUrl } = params;
+    const { coachId, coachName, coachEmail, signinMethod, profilePictureUrl, timezone } = params;
     const supabase = getSupabaseClient();
 
     // Debug: verify service role key is being used
@@ -36,15 +37,22 @@ class DemoDataService {
           name: demoName,
           profile_picture_url: profilePictureUrl,
           signin_method: signinMethod,
+          ...(timezone && { timezone }),
         });
 
       if (userProfileError) {
         if (userProfileError.code === '23505') {
-          console.log('[DemoData] Demo user_profiles already exists, skipping seed');
+          // Row already exists — ensure the name has the "- Demo" suffix and continue seeding
+          console.log('[DemoData] Demo user_profiles already exists, updating name and continuing');
+          await supabase
+            .from('user_profiles')
+            .update({ name: demoName })
+            .eq('id', clientId)
+            .eq('user_type', 'client');
+        } else {
+          console.error('[DemoData] Failed to create user_profiles:', userProfileError);
           return;
         }
-        console.error('[DemoData] Failed to create user_profiles:', userProfileError);
-        return;
       }
 
       console.log('[DemoData] Created demo user_profiles entry:', clientId);

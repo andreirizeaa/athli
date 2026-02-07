@@ -6,8 +6,11 @@ import { XIcon } from 'lucide-react';
 
 import { cn } from '@/lib/general/utils';
 
-function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />;
+function Sheet({
+  modal,
+  ...props
+}: React.ComponentProps<typeof SheetPrimitive.Root> & { modal?: boolean }) {
+  return <SheetPrimitive.Root data-slot="sheet" modal={modal} {...props} />;
 }
 
 function SheetTrigger({ ...props }: React.ComponentProps<typeof SheetPrimitive.Trigger>) {
@@ -42,13 +45,23 @@ function SheetContent({
   className,
   children,
   side = 'right',
+  onOverlayClick,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: 'top' | 'right' | 'bottom' | 'left';
+  onOverlayClick?: () => void;
 }) {
   return (
     <SheetPortal>
-      <SheetOverlay />
+      {onOverlayClick ? (
+        <div
+          data-slot="sheet-overlay"
+          className="animate-in fade-in-0 fixed inset-0 z-50 bg-black/50"
+          onClick={onOverlayClick}
+        />
+      ) : (
+        <SheetOverlay />
+      )}
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(

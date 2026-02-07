@@ -24,8 +24,10 @@ import {
 } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format } from 'date-fns';
-import { Camera, Loader2, Check, ChevronDown } from 'lucide-react';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
+import { Camera, Loader2, Check, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
+import { TIMEZONE_GROUPS, TIMEZONE_OPTIONS } from '@athli/shared-types';
 import { useClientProfileContext } from '../client-profile-context';
 import { useUpdateClientDetails } from '@/hooks/use-client-details';
 import type { AthleteDetails } from '@/api/client/client-service';
@@ -54,6 +56,7 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
         country: '',
         height: null,
         avatarUrl: null,
+        timezone: null,
     });
 
     const [hasChanges, setHasChanges] = useState(false);
@@ -61,6 +64,7 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const [isTimezoneOpen, setIsTimezoneOpen] = useState(false);
     const firstNameInputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const dragCounterRef = useRef(0);
@@ -73,6 +77,7 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
     const clientPhone = details?.phone || athlete?.phone || '';
     const clientCountry = details?.country || athlete?.country || '';
     const clientHeight = details?.height || null;
+    const clientTimezone = details?.timezone || null;
     const clientAvatar = previewUrl || athlete?.avatarUrl || null;
 
     const convertPhoneToE164 = (phone: string): PhoneValue | undefined => {
@@ -111,12 +116,13 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
                 country: clientCountry,
                 height: clientHeight,
                 avatarUrl: athlete?.avatarUrl || null,
+                timezone: clientTimezone,
             });
             setUploadedFile(null);
             setPreviewUrl(null);
         }
         wasOpenRef.current = open;
-    }, [open, details, athlete, clientName, clientEmail, clientCategory, clientGender, clientPhone, clientCountry, clientHeight]);
+    }, [open, details, athlete, clientName, clientEmail, clientCategory, clientGender, clientPhone, clientCountry, clientHeight, clientTimezone]);
 
     useEffect(() => {
         if (details || athlete) {
@@ -129,7 +135,8 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
                 formData.gender !== clientGender ||
                 formData.phone !== clientPhone ||
                 formData.country !== clientCountry ||
-                formData.height !== clientHeight;
+                formData.height !== clientHeight ||
+                formData.timezone !== clientTimezone;
 
             const hasRequiredFields =
                 formData.name.trim() !== '' &&
@@ -137,7 +144,7 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
 
             setHasChanges((hasFieldChanges || hasImageChange) && hasRequiredFields);
         }
-    }, [formData, details, athlete, uploadedFile, clientName, clientEmail, clientCategory, clientGender, clientPhone, clientCountry, clientHeight]);
+    }, [formData, details, athlete, uploadedFile, clientName, clientEmail, clientCategory, clientGender, clientPhone, clientCountry, clientHeight, clientTimezone]);
 
     const handleSaveDetails = async () => {
         if (!athlete?.id) return;
@@ -359,10 +366,61 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
 
                 <div className="space-y-2">
                     <Label htmlFor="country"><span>{t('athletes.profile.country')}</span></Label>
-                    <CountrySelect 
-                        value={getCountryCode(formData.country) as Country | undefined} 
-                        onChange={(country) => setFormData({ ...formData, country: getCountryName(country) || country })} 
+                    <CountrySelect
+                        value={getCountryCode(formData.country) as Country | undefined}
+                        onChange={(country) => setFormData({ ...formData, country: getCountryName(country) || country })}
                     />
+                </div>
+
+                <div className="space-y-2">
+                    <Label><span>Timezone</span></Label>
+                    <Popover open={isTimezoneOpen} onOpenChange={setIsTimezoneOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={isTimezoneOpen}
+                                className="w-full justify-between font-normal bg-sidebar border-muted-foreground/20 hover:border-primary/50 transition-colors"
+                            >
+                                <span className={cn("text-sm truncate", !formData.timezone && "text-muted-foreground")}>
+                                    {formData.timezone
+                                        ? TIMEZONE_OPTIONS.find((tz) => tz.value === formData.timezone)?.label || formData.timezone
+                                        : 'Select timezone...'}
+                                </span>
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-72 p-0" align="start">
+                            <Command>
+                                <CommandInput placeholder="Search timezone..." />
+                                <CommandList className="max-h-[300px]">
+                                    <CommandEmpty>No timezone found.</CommandEmpty>
+                                    {TIMEZONE_GROUPS.map((group) => (
+                                        <CommandGroup key={group.label} heading={group.label}>
+                                            {group.options.map((tz) => (
+                                                <CommandItem
+                                                    key={tz.value}
+                                                    value={tz.label}
+                                                    onSelect={() => {
+                                                        setFormData({ ...formData, timezone: tz.value });
+                                                        setIsTimezoneOpen(false);
+                                                    }}
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            'mr-2 h-4 w-4',
+                                                            formData.timezone === tz.value ? 'opacity-100' : 'opacity-0'
+                                                        )}
+                                                    />
+                                                    {tz.label}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    ))}
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
                 </div>
             </div>
         </SidePanel>

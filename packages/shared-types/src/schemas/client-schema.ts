@@ -49,6 +49,7 @@ export interface AthleteDetails {
   height?: string | null;
   avatarUrl?: string | null;
   avatarFile?: File | null;
+  timezone?: string | null;
   status?: ClientStatus;
   createdAt?: number;
   clientFor?: string;
@@ -118,6 +119,7 @@ export interface CoachProfile {
   name: string;
   profile_picture_url: string | null;
   signin_method?: 'email' | 'google' | 'apple';
+  timezone?: string | null;
   is_active: boolean;
   is_archived: boolean;
   status: 'active' | 'inactive' | 'pending';
@@ -133,6 +135,7 @@ export interface ClientProfile {
   name: string;
   profile_picture_url: string | null;
   signin_method?: 'email' | 'google' | 'apple';
+  timezone?: string | null;
   date_of_birth: string | null;
   gender: string | null;
   height_cm: number | null;
@@ -214,4 +217,5 @@ export interface UpdateClientData {
   coachingType?: CoachingType;
   avatarUrl?: string;
   avatarUri?: string;
+  timezone?: string | null;
 }

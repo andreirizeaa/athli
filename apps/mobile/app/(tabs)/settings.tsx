@@ -229,9 +229,9 @@ export default function SettingsScreen() {
       // Ensure demo client is seeded (idempotent)
       await apiFetch('/user/seed-demo-data', { method: 'POST' });
 
-      // Find the demo client's ID from coach_client_assignments via the clients list
+      // Find the demo client — demo uses same ID as coach (self-reference)
       const clients = await getClients();
-      const demoClient = clients.find(c => c.name.includes('- Demo'));
+      const demoClient = clients.find(c => c.id === coachProfile.id);
       if (!demoClient) {
         console.error('No demo client found for coach');
         return;

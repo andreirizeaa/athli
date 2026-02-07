@@ -4,6 +4,7 @@ export const updateProfileSchema = z.object({
   body: z.object({
     name: z.string().min(1, 'Name is required').optional(),
     profilePictureUrl: z.string().url('Invalid URL').nullable().optional(),
+    timezone: z.string().min(1, 'Timezone is required').optional(),
   }),
 });
 

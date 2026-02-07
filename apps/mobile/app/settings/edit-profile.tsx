@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { StyleSheet, Text, View, ScrollView, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -22,6 +22,10 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { DetailRow } from '@/components/ui/detail-row';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { findCountry } from '@/services/coach/coach-company-service';
+import { TimezonePickerModal } from '@/components/ui/form-inputs/timezone-picker-modal';
+import { TIMEZONE_OPTIONS } from '@athli/shared-types';
+import { haptics } from '@/utils/haptics';
+import { apiFetch } from '@/lib/api-client';
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -34,7 +38,63 @@ export default function EditProfileScreen() {
   const company = useCoachCompanyStore((state) => state.company);
   const clientProfile = useClientProfileStore((state) => state.profile);
 
+  const coachUpdateProfile = useCoachProfileStore((state) => state.updateProfile);
+  const clientUpdateProfile = useClientProfileStore((state) => state.updateProfile);
+
   const isAthleteView = appView === 'athlete';
+
+  const [timezoneModalVisible, setTimezoneModalVisible] = useState(false);
+  const [timezoneSearchQuery, setTimezoneSearchQuery] = useState('');
+  const [currentTimezone, setCurrentTimezone] = useState<string | null>(null);
+
+  // Fetch timezone from /user/me API (reads from user_profiles directly, works for both coach and client)
+  useEffect(() => {
+    const fetchTimezone = async () => {
+      try {
+        const response = await apiFetch<{ data: { user: { timezone?: string | null } } }>('/user/me');
+        setCurrentTimezone(response.data.user.timezone || null);
+      } catch {
+        // Non-critical — timezone just won't be shown
+      }
+    };
+    fetchTimezone();
+  }, []);
+
+  const timezoneDisplayLabel = useMemo(() => {
+    if (!currentTimezone) return null;
+    const option = TIMEZONE_OPTIONS.find((tz) => tz.value === currentTimezone);
+    const label = option?.label ?? currentTimezone;
+    return label.replace(/^\(UTC[^)]*\)\s*/, '');
+  }, [currentTimezone]);
+
+  const handleEditTimezone = useCallback(() => {
+    setTimezoneModalVisible(true);
+    setTimezoneSearchQuery('');
+  }, []);
+
+  const handleCloseTimezoneModal = useCallback(() => {
+    setTimezoneModalVisible(false);
+    setTimezoneSearchQuery('');
+  }, []);
+
+  const handleSelectTimezone = useCallback(async (tzValue: string): Promise<void> => {
+    const previousTimezone = currentTimezone;
+    setCurrentTimezone(tzValue);
+    try {
+      if (isAthleteView) {
+        await clientUpdateProfile({ timezone: tzValue });
+      } else {
+        await coachUpdateProfile({ timezone: tzValue });
+      }
+      haptics.success();
+      setTimezoneModalVisible(false);
+      setTimezoneSearchQuery('');
+    } catch (error) {
+      console.error('Failed to update timezone:', error);
+      setCurrentTimezone(previousTimezone);
+      haptics.error();
+    }
+  }, [isAthleteView, clientUpdateProfile, coachUpdateProfile, currentTimezone]);
 
   // Log client data when navigating to this screen
   useEffect(() => {
@@ -194,6 +254,18 @@ export default function EditProfileScreen() {
           />
         </Card>
 
+        {/* Timezone */}
+        <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>
+          {t('profile.timezone')}
+        </Text>
+        <Card>
+          <DetailRow
+            label={t('profile.timezone')}
+            value={timezoneDisplayLabel || t('profile.timezoneNotSet')}
+            onPress={handleEditTimezone}
+          />
+        </Card>
+
         {/* Security */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>
           {t('profile.security')}
@@ -333,6 +405,16 @@ export default function EditProfileScreen() {
         </Text>
         <View style={styles.headerPlaceholder} />
       </View>
+
+      <TimezonePickerModal
+        visible={timezoneModalVisible}
+        onClose={handleCloseTimezoneModal}
+        onSelect={handleSelectTimezone}
+        selectedTimezone={currentTimezone || null}
+        searchQuery={timezoneSearchQuery}
+        onSearchChange={setTimezoneSearchQuery}
+        confirmable
+      />
     </View>
   );
 }
