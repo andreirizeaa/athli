@@ -53,6 +53,7 @@ export async function signUpWithEmail(
       options: {
         data: {
           name,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         },
       },
     });
