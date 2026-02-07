@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Power, Plus } from 'lucide-react';
+import { FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Power, Plus, Hash } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +20,7 @@ import { Loader2 } from 'lucide-react';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
+import { ConfirmPublishDialog } from '@/components/app/confirm-publish-dialog';
 import {
   Tooltip,
   TooltipContent,
@@ -29,12 +30,14 @@ import {
 
 // Define the fixed order for flows - outside component to avoid recreation
 const FLOW_ORDER = [
-  'New Client Sign Up',
   'Missed Check-in',
   'Check-in Completed',
   'Missed Workout',
   'Workout Finished'
 ];
+
+const countActionNodes = (flowData?: { nodes?: any[]; edges?: any[] }) =>
+  flowData?.nodes?.filter((n: any) => n.type === 'action').length || 0;
 
 const FlowsPage = () => {
   const t = useTranslations();
@@ -44,6 +47,7 @@ const FlowsPage = () => {
   // Data is now fetched and cached by useCoachFlows hook
 
   const [optimisticFlows, setOptimisticFlows] = useState<Flow[]>([]);
+  const [publishDialogFlow, setPublishDialogFlow] = useState<{ flow: Flow; checked: boolean } | null>(null);
 
   // Update optimistic state when flows data changes, maintaining fixed order
   useEffect(() => {
@@ -136,6 +140,17 @@ const FlowsPage = () => {
       ),
     },
     {
+      id: 'steps',
+      label: t('flows.columns.stepCount'),
+      icon: <Hash className="size-3" />,
+      sortable: true,
+      width: { class: 'w-[100px]', pixel: '100px' },
+      getSortValue: (row) => countActionNodes(row.flow_data),
+      renderCell: (row) => (
+        <span className="text-sm text-muted-foreground">{countActionNodes(row.flow_data)}</span>
+      ),
+    },
+    {
       id: 'is_active',
       label: 'Published',
       icon: <Power className="size-3" />,
@@ -165,7 +180,7 @@ const FlowsPage = () => {
                 <div>
                   <Switch
                     checked={!!row.is_active}
-                    onCheckedChange={(checked) => handleToggleActive(row, checked)}
+                    onCheckedChange={(checked) => setPublishDialogFlow({ flow: row, checked })}
                     className="data-[state=checked]:bg-primary"
                   />
                 </div>
@@ -244,6 +259,19 @@ const FlowsPage = () => {
           />
         )}
       </div>
+
+      <ConfirmPublishDialog
+        open={!!publishDialogFlow}
+        onOpenChange={(open) => { if (!open) setPublishDialogFlow(null); }}
+        onConfirm={async () => {
+          if (publishDialogFlow) {
+            await handleToggleActive(publishDialogFlow.flow, publishDialogFlow.checked);
+            setPublishDialogFlow(null);
+          }
+        }}
+        isPublishing={!!publishDialogFlow?.checked}
+        itemName={publishDialogFlow?.flow.name}
+      />
     </div>
   );
 };

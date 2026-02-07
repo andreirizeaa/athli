@@ -487,3 +487,24 @@ export const searchNotes = async (contactId: string, coachId: string, query: str
   const allNotes = await getNotes(contactId, coachId);
   return allNotes.filter(n => n.body.toLowerCase().includes(query.toLowerCase()));
 };
+
+export interface AtRiskClient {
+  id: string;
+  name: string;
+  avatarUrl: string;
+  lastActivity: string | null;
+}
+
+export const getAtRiskClients = async (thresholdDays: number = 5): Promise<AtRiskClient[]> => {
+  const response = await apiFetch<{ data: { clients: any[]; thresholdDays: number } }>('/clients/at-risk', {
+    method: 'POST',
+    body: JSON.stringify({ thresholdDays }) as any,
+  });
+
+  return response.data.clients.map((client) => ({
+    id: client.client_id,
+    name: client.full_name || '',
+    avatarUrl: client.avatar_url || '',
+    lastActivity: client.last_activity || null,
+  }));
+};

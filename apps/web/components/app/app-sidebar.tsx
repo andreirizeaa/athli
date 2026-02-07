@@ -22,6 +22,7 @@ import {
   BarChart3,
   Rocket,
   WandSparkles,
+  Zap,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -105,6 +106,11 @@ export function AppSidebar() {
 
   const automationsNavItems = [
     {
+      href: '/onboarding',
+      labelKey: 'sidebar.links.onboarding',
+      icon: Zap,
+    },
+    {
       href: '/flows',
       labelKey: 'sidebar.links.flows',
       icon: Workflow,
@@ -130,7 +136,7 @@ export function AppSidebar() {
           </div>
         )}
       </SidebarHeader>
-      <SidebarContent className="gap-0 overflow-y-auto">
+      <SidebarContent className="gap-0 overflow-y-auto overscroll-y-contain">
         <SidebarGroup className="pb-0">
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
@@ -277,7 +283,7 @@ export function AppSidebar() {
                 const Icon = item.icon;
                 const href = item.href;
                 const isActive =
-                  href === '/flows'
+                  (href === '/flows' || href === '/onboarding')
                     ? activePath === href || activePath.startsWith(`${href}/`)
                     : activePath === href;
                 const label = t(item.labelKey);

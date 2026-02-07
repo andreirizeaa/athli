@@ -35,6 +35,8 @@ export const TRIGGER_OPTIONS: TriggerOption[] = [
   { id: 'new-client-signup', name: 'New client sign up', icon: UserPlus },
   { id: 'missed-workout', name: 'Missed workout', icon: Activity },
   { id: 'missed-check-in', name: 'Missed check in', icon: CalendarX },
+  { id: 'missed-habit-log', name: 'Missed habit log', icon: CalendarX },
+  { id: 'missed-metric-log', name: 'Missed metric log', icon: CalendarX },
   { id: 'workout-finished', name: 'Workout finished', icon: CheckCircle },
   { id: 'check-in-completed', name: 'Check in completed', icon: CheckCircle },
 ];

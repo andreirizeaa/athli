@@ -269,6 +269,8 @@ interface FlowEditorProps {
   onActionClick?: () => void;
   isOnboardingMode?: boolean;
   onSaveFlow?: (data: { nodes: Node[]; edges: Edge[] }) => Promise<void>;
+  forcedTriggerId?: string;
+  hideWaitActions?: boolean;
 }
 
 const FLOW_NAME_TO_TRIGGER_ID: Record<string, string> = {
@@ -277,6 +279,8 @@ const FLOW_NAME_TO_TRIGGER_ID: Record<string, string> = {
   'Check-in Completed': 'check-in-completed',
   'Missed Workout': 'missed-workout',
   'Missed Check-in': 'missed-check-in',
+  'Missed Habit Log': 'missed-habit-log',
+  'Missed Metric Log': 'missed-metric-log',
 };
 
 const DEFAULT_NODES: Node[] = [
@@ -341,7 +345,7 @@ type ActionNodeData = {
   };
 };
 
-export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, isOnboardingMode = false, onSaveFlow }: FlowEditorProps) => {
+export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, isOnboardingMode = false, onSaveFlow, forcedTriggerId, hideWaitActions: hideWaitActionsProp }: FlowEditorProps) => {
   const [panelType, setPanelType] = useState<PanelType>(null);
   const t = useTranslations();
   const [searchQuery, setSearchQuery] = useState('');
@@ -573,9 +577,12 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
     }
   }, [flow, isInitialized, setNodes, setEdges]);
 
-  // Enforce hardcoded trigger based on flow name
+  // Enforce hardcoded trigger based on forcedTriggerId or flow name
   useEffect(() => {
-    if (!selectedTrigger && flow?.name) {
+    if (forcedTriggerId && !selectedTrigger) {
+      const trigger = TRIGGER_OPTIONS.find(t => t.id === forcedTriggerId);
+      if (trigger) setSelectedTrigger(trigger);
+    } else if (!selectedTrigger && flow?.name) {
       const triggerId = FLOW_NAME_TO_TRIGGER_ID[flow.name];
       if (triggerId) {
         const trigger = TRIGGER_OPTIONS.find(t => t.id === triggerId);
@@ -584,7 +591,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
         }
       }
     }
-  }, [isOnboardingMode, selectedTrigger, setSelectedTrigger, flow?.name]);
+  }, [forcedTriggerId, selectedTrigger, flow?.name]);
 
   // Auto-save flow changes with debouncing - ONLY in onboarding mode
   useEffect(() => {
@@ -626,6 +633,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
     const logicalEdges: Edge[] = [];
 
     // 1. Trigger Node
+    const isTriggerLocked = !!forcedTriggerId;
     logicalNodes.push({
       id: 'trigger',
       type: 'trigger',
@@ -634,10 +642,10 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
         label: selectedTrigger ? 'Trigger' : 'Create Trigger',
         subtitle: selectedTrigger?.name,
         icon: selectedTrigger?.icon,
-        isOnboarding: isOnboardingMode,
-        onClick: undefined,
-        onEdit: undefined,
-        onDelete: undefined,
+        isOnboarding: isOnboardingMode || isTriggerLocked,
+        onClick: isTriggerLocked ? undefined : undefined,
+        onEdit: isTriggerLocked ? undefined : undefined,
+        onDelete: isTriggerLocked ? undefined : undefined,
       },
     });
 
@@ -1709,8 +1717,8 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
             return false;
           })()
         }
-        hideWaitActions={isOnboardingMode}
-        excludeTriggers={!isOnboardingMode ? ['new-client-signup'] : []}
+        hideWaitActions={hideWaitActionsProp ?? isOnboardingMode}
+        excludeTriggers={!isOnboardingMode && !forcedTriggerId ? ['new-client-signup'] : []}
       />
     </div>
   );

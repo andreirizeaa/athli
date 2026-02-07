@@ -45,6 +45,16 @@ export const TRIGGER_OPTIONS: TriggerOption[] = [
     icon: CalendarX,
   },
   {
+    id: 'missed-habit-log',
+    name: 'Missed habit log',
+    icon: CalendarX,
+  },
+  {
+    id: 'missed-metric-log',
+    name: 'Missed metric log',
+    icon: CalendarX,
+  },
+  {
     id: 'check-in-completed',
     name: 'Check in completed',
     icon: CheckCircle,
