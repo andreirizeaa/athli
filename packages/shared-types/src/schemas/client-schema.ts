@@ -32,7 +32,6 @@ export interface Athlete {
   last7DaysTraining: string;
   last30DaysTraining: string;
   clientFor: string;
-  connected: boolean | 'invitation-sent';
   invitationToken?: string;
 }
 
@@ -146,10 +145,17 @@ export interface ClientProfile {
 
 export type ProfileType = 'coach' | 'client' | null;
 
+export interface CoachAssignment {
+  coach_id: string;
+  name: string;
+  profile_picture_url: string | null;
+}
+
 export interface AuthResult {
   userId: string;
   profileType: ProfileType;
   profile: CoachProfile | ClientProfile | null;
+  coachAssignments?: CoachAssignment[];
 }
 
 // =============================================================================

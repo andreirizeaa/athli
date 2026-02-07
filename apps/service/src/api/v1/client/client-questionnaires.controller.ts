@@ -349,11 +349,12 @@ export const clientQuestionnairesController = {
 
                     if (fileType === 'progressPhoto') {
                         // Upload progress photo to client_photos bucket
+                        // Path: {client_id}/{coach_id}/{date}/{angle}/...
                         const angle = subType as 'front' | 'back' | 'side';
                         const filePath = await uploadFileToBucket(
                             file,
                             'client_photos',
-                            `${targetClientId}/${new Date().toISOString().split('T')[0]}/${angle}`
+                            `${targetClientId}/${targetCoachId}/${new Date().toISOString().split('T')[0]}/${angle}`
                         );
 
                         // Initialize answer object if needed
@@ -363,18 +364,20 @@ export const clientQuestionnairesController = {
                         responses[answerIndex].answer[angle] = filePath;
                     } else if (fileType === 'signature') {
                         // Upload signature to form_files bucket
+                        // Path: {client_id}/{coach_id}/signatures/{questionnaire_id}/...
                         const filePath = await uploadFileToBucket(
                             file,
                             'form_files',
-                            `${targetClientId}/signatures/${id}`
+                            `${targetClientId}/${targetCoachId}/signatures/${id}`
                         );
                         responses[answerIndex].answer = filePath;
                     } else if (fileType === 'images' || fileType === 'videos') {
                         // Upload media to form_files bucket
+                        // Path: {client_id}/{coach_id}/{type}/{questionnaire_id}/...
                         const filePath = await uploadFileToBucket(
                             file,
                             'form_files',
-                            `${targetClientId}/${fileType}/${id}`
+                            `${targetClientId}/${targetCoachId}/${fileType}/${id}`
                         );
 
                         // Initialize array if needed
@@ -429,8 +432,9 @@ export const clientQuestionnairesController = {
                             const extension = extensionMap[mimeType] || 'png';
 
                             // Upload to form_files bucket
+                            // Path: {client_id}/{coach_id}/signatures/{questionnaire_id}/{date}/...
                             const dateStr = new Date().toISOString().split('T')[0];
-                            const uniqueFileName = `${targetClientId}/signatures/${id}/${dateStr}/${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
+                            const uniqueFileName = `${targetClientId}/${targetCoachId}/signatures/${id}/${dateStr}/${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
 
                             const { error: uploadError } = await supabase.storage
                                 .from('form_files')
@@ -465,7 +469,8 @@ export const clientQuestionnairesController = {
                                     const base64Data = matches[2];
                                     const buffer = Buffer.from(base64Data, 'base64');
                                     const extension = mimeType.split('/')[1] || 'jpg';
-                                    const filePath = `${targetClientId}/images/${id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
+                                    // Path: {client_id}/{coach_id}/images/{questionnaire_id}/...
+                                    const filePath = `${targetClientId}/${targetCoachId}/images/${id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
 
                                     const { error: uploadError } = await supabase.storage
                                         .from('form_files')
@@ -503,7 +508,8 @@ export const clientQuestionnairesController = {
                                     const buffer = Buffer.from(base64Data, 'base64');
                                     const extension = mimeType.split('/')[1] || 'jpg';
                                     const dateStr = new Date().toISOString().split('T')[0];
-                                    const filePath = `${targetClientId}/${dateStr}/${angle}/${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
+                                    // Path: {client_id}/{coach_id}/{date}/{angle}/...
+                                    const filePath = `${targetClientId}/${targetCoachId}/${dateStr}/${angle}/${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
 
                                     const { error: uploadError } = await supabase.storage
                                         .from('client_photos')

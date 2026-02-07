@@ -4,7 +4,7 @@ import React from 'react';
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
-import { Check, Laptop, LogOut, Moon, Settings, Sun } from 'lucide-react';
+import { BookOpen, Check, CreditCard, Laptop, LogOut, Moon, Rocket, Settings, Sun } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -24,6 +24,7 @@ import { useThemeConfig } from '@/components/app/active-theme';
 import { DEFAULT_THEME, THEMES } from '@/lib/theme';
 import { useLogout } from '@/lib/providers/logout-provider';
 import { useGlobalData } from '@/providers/global-data-provider';
+import { useCoachChecklist } from '@/hooks/use-coach-checklist';
 
 type UserMenuProps = {
   isThemeMounted: boolean;
@@ -41,7 +42,22 @@ export function UserMenu({
   const { resolvedTheme, setTheme, theme } = useTheme();
   const { theme: themeConfig, setTheme: setThemeConfig } = useThemeConfig();
   const { user: globalUser, preferences, updatePreferences } = useGlobalData();
+  const { data: checklist } = useCoachChecklist();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
+
+  const isChecklistComplete = checklist
+    ? checklist.client_app_demo &&
+      checklist.coach_app_demo &&
+      checklist.workout_ai &&
+      checklist.program_templates &&
+      checklist.custom_exercises &&
+      checklist.automate_onboardings &&
+      checklist.check_ins_forms &&
+      checklist.powerful_flows &&
+      checklist.lifestyle_habits &&
+      checklist.track_metrics &&
+      checklist.on_demand_resources
+    : false;
 
   const displayName = globalUser
     ? globalUser.name || globalUser.email
@@ -136,6 +152,7 @@ export function UserMenu({
             )}
           </div>
         </div>
+        {/* Section: Appearance & Language */}
         <DropdownMenuSeparator className="my-0" />
         {isThemeMounted && (
           <DropdownMenuSub>
@@ -228,7 +245,7 @@ export function UserMenu({
           );
         })()}
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger className="px-3 py-2">
+          <DropdownMenuSubTrigger className={cn("px-3 py-2", isChecklistComplete ? "" : "rounded-b-none")}>
             <span className="mr-2 text-lg leading-none">
               {availableLanguages.find((lang) => lang.code === currentLanguage)?.flag || '🇬🇧'}
             </span>
@@ -250,12 +267,36 @@ export function UserMenu({
             </DropdownMenuRadioGroup>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+        {/* Section: Get Started (only when checklist is complete) */}
+        {isChecklistComplete && (
+          <>
+            <DropdownMenuItem className="cursor-pointer px-3 py-2 rounded-b-none" asChild>
+              <Link href="/get-started">
+                <Rocket className="mr-2 size-4" />
+                <span>{t('sidebar.links.getStarted')}</span>
+              </Link>
+            </DropdownMenuItem>
+          </>
+        )}
+        {/* Section: Help, Billing & Settings */}
+        <DropdownMenuSeparator className="my-0" />
+        <DropdownMenuItem className="cursor-pointer px-3 py-2 rounded-t-none">
+          <BookOpen className="mr-2 size-4" />
+          <span>{t('sidebar.profile.helpArticles')}</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-pointer px-3 py-2" asChild>
+          <Link href="/settings/account/billing">
+            <CreditCard className="mr-2 size-4" />
+            <span>{t('sidebar.profile.billing') || 'Billing'}</span>
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem className="cursor-pointer px-3 py-2 rounded-b-none" asChild>
           <Link href="/settings">
             <Settings className="mr-2 size-4" />
             <span>{t('sidebar.settings.label') || 'Settings'}</span>
           </Link>
         </DropdownMenuItem>
+        {/* Section: Logout */}
         <DropdownMenuSeparator className="my-0" />
         <DropdownMenuItem
           className="cursor-pointer px-3 py-2 rounded-t-none"

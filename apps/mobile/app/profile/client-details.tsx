@@ -114,6 +114,7 @@ export default function ClientDetailsScreen() {
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showPhotoSourceDialog, setShowPhotoSourceDialog] = useState(false);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -145,17 +146,6 @@ export default function ClientDetailsScreen() {
       phoneNumber: parsePhoneNumber(profile.phone),
     });
   }, [profile]);
-
-  const handleGoBack = useCallback(() => {
-    router.back();
-  }, [router]);
-
-  const handleBackPress = useCallback(
-    (_event?: GestureResponderEvent) => {
-      handleGoBack();
-    },
-    [handleGoBack]
-  );
 
   const handleDismissKeyboard = useCallback(() => {
     Keyboard.dismiss();
@@ -255,7 +245,7 @@ export default function ClientDetailsScreen() {
     setShowPhotoSourceDialog(true);
   }, []);
 
-  const { canSave } = useMemo(() => {
+  const { canSave, hasChanges } = useMemo(() => {
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
 
@@ -264,7 +254,7 @@ export default function ClientDetailsScreen() {
     const nameValid = trimmedName.length > 0;
     const formValid = nameValid && emailValid;
 
-    if (!originalValues) return { canSave: false };
+    if (!originalValues) return { canSave: false, hasChanges: false };
 
     const dateChanged =
       (dateOfBirth?.getTime() ?? null) !== (originalValues.dateOfBirth?.getTime() ?? null);
@@ -283,8 +273,23 @@ export default function ClientDetailsScreen() {
       countryChanged ||
       phoneChanged;
 
-    return { canSave: formValid && hasChanges && !isLoadingProfile };
+    return { canSave: formValid && hasChanges && !isLoadingProfile, hasChanges };
   }, [country, dateOfBirth, email, gender, height, isLoadingProfile, name, originalValues, phoneNumber]);
+
+  const handleGoBack = useCallback(() => {
+    if (hasChanges) {
+      setShowDiscardDialog(true);
+      return;
+    }
+    router.back();
+  }, [router, hasChanges]);
+
+  const handleBackPress = useCallback(
+    (_event?: GestureResponderEvent) => {
+      handleGoBack();
+    },
+    [handleGoBack]
+  );
 
   const handleSave = useCallback(async () => {
     if (!canSave) return;
@@ -445,6 +450,17 @@ export default function ClientDetailsScreen() {
           { label: t('settings.personalDetails.takePhoto'), onPress: () => { setShowPhotoSourceDialog(false); pickImage(true); }, variant: 'primary' },
           { label: t('settings.personalDetails.chooseFromLibrary'), onPress: () => { setShowPhotoSourceDialog(false); pickImage(false); }, variant: 'primary' },
           { label: t('general.cancel'), onPress: () => setShowPhotoSourceDialog(false), variant: 'secondary' },
+        ]}
+      />
+      <Dialog
+        visible={showDiscardDialog}
+        onClose={() => setShowDiscardDialog(false)}
+        title={t('common.discardChanges')}
+        message={t('common.discardChangesMessage')}
+        showCloseIcon={false}
+        buttons={[
+          { label: t('common.cancel'), onPress: () => setShowDiscardDialog(false), variant: 'secondary' },
+          { label: t('common.discard'), onPress: () => { setShowDiscardDialog(false); router.back(); }, variant: 'destructive' },
         ]}
       />
     </View>

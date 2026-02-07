@@ -86,7 +86,7 @@ export default function BroadcastModal() {
 
     // Filter to connected clients only
     const connectedClients = useMemo(() =>
-        clients.filter(c => c.connected === true),
+        clients.filter(c => c.status === 'accepted' || c.status === 'connected'),
         [clients]
     );
 

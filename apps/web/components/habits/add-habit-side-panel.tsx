@@ -61,6 +61,37 @@ export const AddHabitSidePanel = ({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [selectedLibraryHabits, setSelectedLibraryHabits] = useState<Set<string>>(new Set());
+  const [enableDuration, setEnableDuration] = useState<boolean>(false);
+  const [enableReminder, setEnableReminder] = useState<boolean>(false);
+
+  const habitSchema = z.object({
+    name: z
+      .string()
+      .min(1, t('habits.form.nameRequired'))
+      .max(60, t('habits.form.nameMaxLength')),
+    description: z.string().optional(),
+    amount: z.number().int().min(1, t('habits.form.amountRequired')),
+    unit: z.string().min(1, t('habits.form.unitRequired')),
+    period: z.union([z.literal('daily'), z.literal('weekly')]),
+    duration: z.number().int().positive().optional(),
+    reminderTime: z.string().optional(),
+    reminderMessage: z.string().optional(),
+  });
+
+  const form = useForm<HabitFormValues>({
+    resolver: zodResolver(habitSchema),
+    mode: 'onChange',
+    defaultValues: {
+      name: '',
+      description: '',
+      amount: 0,
+      unit: '',
+      period: 'daily',
+      duration: undefined,
+      reminderTime: undefined,
+      reminderMessage: undefined,
+    },
+  });
 
   useEffect(() => {
     if (open && activeTab === 'yourLibrary' && !isEditing) {
@@ -107,38 +138,6 @@ export const AddHabitSidePanel = ({
       setIsLoadingHabits(false);
     }
   };
-
-  const habitSchema = z.object({
-    name: z
-      .string()
-      .min(1, t('habits.form.nameRequired'))
-      .max(60, t('habits.form.nameMaxLength')),
-    description: z.string().optional(),
-    amount: z.number().int().min(1, t('habits.form.amountRequired')),
-    unit: z.string().min(1, t('habits.form.unitRequired')),
-    period: z.union([z.literal('daily'), z.literal('weekly')]),
-    duration: z.number().int().positive().optional(),
-    reminderTime: z.string().optional(),
-    reminderMessage: z.string().optional(),
-  });
-
-  const form = useForm<HabitFormValues>({
-    resolver: zodResolver(habitSchema),
-    mode: 'onChange',
-    defaultValues: {
-      name: '',
-      description: '',
-      amount: 0,
-      unit: '',
-      period: 'daily',
-      duration: undefined,
-      reminderTime: undefined,
-      reminderMessage: undefined,
-    },
-  });
-
-  const [enableDuration, setEnableDuration] = useState<boolean>(false);
-  const [enableReminder, setEnableReminder] = useState<boolean>(false);
 
   const handleClose = () => {
     form.reset();

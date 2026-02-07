@@ -70,3 +70,4 @@ export const coachChecklistRouter = Router();
  *         description: Internal server error
  */
 coachChecklistRouter.get('/', supabaseAuthenticate, coachChecklistController.getChecklist);
+coachChecklistRouter.patch('/', supabaseAuthenticate, coachChecklistController.updateChecklist);

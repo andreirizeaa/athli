@@ -2,12 +2,14 @@
 
 import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { getCheckIns } from '@/api/coach/coach-check-in-service';
 import { updateFlow, updateFlowStatus, type Flow } from '@/api/coach/coach-flow-service';
-import { getQuestionnaires } from '@/api/coach/coach-questionnaire-service';
-import { type Habit } from '@/api/coach/coach-habit-service';
+import { useCoachFiles } from '@/hooks/use-coach-files';
+import { useCoachQuestionnaires } from '@/hooks/use-coach-questionnaires';
+import { useCoachCheckIns } from '@/hooks/use-coach-check-ins';
+import { useCoachHabits } from '@/hooks/use-coach-habits';
+import { useCoachMetrics } from '@/hooks/use-coach-metrics';
 import { X, Plus, Play, Pencil, Trash2, UserPlus } from 'lucide-react';
-import { FlowEditorSidePanel, TRIGGER_OPTIONS, type PanelType, type TriggerOption, type ActionOption } from './flow-editor-side-panel';
+import { FlowEditorSidePanel, TRIGGER_OPTIONS, ACTION_OPTIONS, type PanelType, type TriggerOption, type ActionOption } from './flow-editor-side-panel';
 import ReactFlow, {
   Background,
   Controls,
@@ -348,6 +350,12 @@ type ActionNodeData = {
 export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, isOnboardingMode = false, onSaveFlow, forcedTriggerId, hideWaitActions: hideWaitActionsProp }: FlowEditorProps) => {
   const [panelType, setPanelType] = useState<PanelType>(null);
   const t = useTranslations();
+  const { files: coachFiles, isLoading: isLoadingFiles } = useCoachFiles();
+  const { questionnaires: coachQuestionnaires, isLoading: isLoadingQuestionnaires } = useCoachQuestionnaires();
+  const { checkIns: coachCheckIns, isLoading: isLoadingCheckIns } = useCoachCheckIns();
+  const { habits: coachHabits, isLoading: isLoadingHabits } = useCoachHabits();
+  const { metrics: coachMetrics, isLoading: isLoadingMetrics } = useCoachMetrics();
+  const isLoadingData = isLoadingFiles || isLoadingQuestionnaires || isLoadingCheckIns || isLoadingHabits || isLoadingMetrics;
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTrigger, setSelectedTrigger] = useState<TriggerOption | null>(null);
   const [actionNodes, setActionNodes] = useState<ActionNodeData[]>([]);
@@ -391,95 +399,16 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
   const [currentBranch, setCurrentBranch] = useState<'yes' | 'no' | null>(null); // Track which branch we're adding to
   const [currentCheckNodeId, setCurrentCheckNodeId] = useState<string | null>(null); // Track which check node the branch belongs to
 
-  // Data from services
-  const [questionnaires, setQuestionnaires] = useState<Array<{ id: string; name: string }>>([]);
-  const [checkIns, setCheckIns] = useState<Array<{ id: string; name: string }>>([]);
-  const [files, setFiles] = useState<Array<{ id: string; name: string }>>([]);
-  const [habits, setHabits] = useState<Array<{ id: string; name: string }>>([]);
-  const [metrics, setMetrics] = useState<Array<{ id: string; name: string }>>([]);
-  const [isLoadingData, setIsLoadingData] = useState(false);
+  // Pre-fetched data mapped for the side panel
+  const questionnaires = useMemo(() => coachQuestionnaires.map((q) => ({ id: q.id, name: q.name })), [coachQuestionnaires]);
+  const checkIns = useMemo(() => coachCheckIns.map((c) => ({ id: c.id, name: c.name })), [coachCheckIns]);
+  const files = useMemo(() => coachFiles.map((f) => ({ id: f.id, name: f.filename })), [coachFiles]);
+  const habits = useMemo(() => coachHabits.map((h) => ({ id: h.id, name: h.name })), [coachHabits]);
+  const metrics = useMemo(() => coachMetrics.map((m) => ({ id: m.id, name: m.name })), [coachMetrics]);
 
   // Flow initialization and auto-save state
   const [isInitialized, setIsInitialized] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Mock data for habits and files (matching the pages)
-  const mockHabits: Habit[] = [
-    {
-      id: '1',
-      name: 'Daily steps',
-      description: 'Track your daily step count to stay active',
-      amount: 10000,
-      unit: 'steps',
-      period: 'daily',
-      createdAt: Date.now() - 86400000 * 7,
-    },
-    {
-      id: '2',
-      name: 'Drink water',
-      description: 'Stay hydrated throughout the day',
-      amount: 8,
-      unit: 'cups',
-      period: 'daily',
-      reminderTime: '08:00',
-      reminderMessage: 'Time to hydrate!',
-      createdAt: Date.now() - 86400000 * 5,
-    },
-    {
-      id: '3',
-      name: 'Meditate',
-      description: 'Take time for mindfulness and mental clarity',
-      amount: 10,
-      unit: 'min',
-      period: 'daily',
-      duration: 10,
-      reminderTime: '07:00',
-      reminderMessage: 'Start your day with mindfulness',
-      createdAt: Date.now() - 86400000 * 3,
-    },
-  ];
-
-  const mockFiles: Array<{ id: string; name: string }> = [
-    { id: '1', name: 'Training Program Template.pdf' },
-    { id: '2', name: 'Nutrition Guide.docx' },
-    { id: '3', name: 'Recovery Protocol.pdf' },
-    { id: '4', name: 'Workout Video.mp4' },
-    { id: '5', name: 'Progress Tracking.xlsx' },
-  ];
-
-  const fetchData = useCallback(async () => {
-    if (!selectedActionOption) return;
-
-    setIsLoadingData(true);
-    try {
-      if (selectedActionOption.id === 'assign-questionnaire' || selectedActionOption.id === 'assign-check-in') {
-        const [checkInForms, questionnaireForms] = await Promise.all([
-          getCheckIns(),
-          getQuestionnaires(),
-        ]);
-
-        setCheckIns(checkInForms.map((form) => ({ id: form.id, name: form.name })));
-        setQuestionnaires(questionnaireForms.map((form) => ({ id: form.id, name: form.name })));
-      } else if (selectedActionOption.id === 'add-file') {
-        // Using mock data (matching files page)
-        setFiles(mockFiles);
-      } else if (selectedActionOption.id === 'add-habit') {
-        // Using mock data (matching habits page)
-        setHabits(mockHabits.map((habit) => ({ id: habit.id, name: habit.name })));
-      }
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-    } finally {
-      setIsLoadingData(false);
-    }
-  }, [selectedActionOption]);
-
-  // Fetch data when config step opens
-  useEffect(() => {
-    if (panelType === 'action' && actionStep === 'config' && selectedActionOption) {
-      fetchData();
-    }
-  }, [panelType, actionStep, selectedActionOption, fetchData]);
 
   const handleOpenTriggerPanel = useCallback(() => {
     // Reset action-related state when switching to trigger panel
@@ -564,18 +493,101 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
 
   const [isSaving, setIsSaving] = useState(false);
   const [pendingSave, setPendingSave] = useState(false);
+  const [isSavingAction, setIsSavingAction] = useState(false);
+  const isSavingActionRef = useRef(false);
 
-  // Load initial nodes and edges from flow data
+  // Load initial nodes and edges from flow data — restore actionNodes and checkNodes
   useEffect(() => {
     if (flow && flow.flow_data && !isInitialized) {
       const { nodes: flowNodes, edges: flowEdges } = flow.flow_data;
       if (flowNodes && flowNodes.length > 0) {
-        setNodes(flowNodes);
-        setEdges(flowEdges || []);
+        // Restore action nodes from saved data
+        const savedActionNodes = flowNodes.filter((n: Node) => n.type === 'action');
+        const savedCheckNodes = flowNodes.filter((n: Node) => n.type === 'check');
+
+        if (savedActionNodes.length > 0) {
+          // Determine correct ordering using edges: follow the chain from trigger → action → ... → end
+          const edgeMap = new Map<string, string[]>();
+          (flowEdges || []).forEach((e: Edge) => {
+            if (!edgeMap.has(e.source)) edgeMap.set(e.source, []);
+            edgeMap.get(e.source)!.push(e.target);
+          });
+
+          // Walk from trigger through the graph to determine order
+          const orderedActionIds: string[] = [];
+          const visited = new Set<string>();
+          const queue = ['trigger', 'add-action-trigger'];
+          while (queue.length > 0) {
+            const current = queue.shift()!;
+            if (visited.has(current)) continue;
+            visited.add(current);
+
+            // If this is an action node, record it
+            if (savedActionNodes.some((n: Node) => n.id === current)) {
+              orderedActionIds.push(current);
+            }
+
+            // Follow outgoing edges
+            const targets = edgeMap.get(current) || [];
+            for (const target of targets) {
+              if (!visited.has(target)) {
+                queue.push(target);
+              }
+            }
+          }
+
+          // Add any action nodes not reachable from trigger (shouldn't normally happen)
+          savedActionNodes.forEach((n: Node) => {
+            if (!orderedActionIds.includes(n.id)) {
+              orderedActionIds.push(n.id);
+            }
+          });
+
+          // Build a map for quick lookup
+          const savedActionMap = new Map(savedActionNodes.map((n: Node) => [n.id, n]));
+
+          const restoredActionNodes: ActionNodeData[] = orderedActionIds.map((id) => {
+            const node = savedActionMap.get(id)!;
+            const d = node.data;
+            const actionOption = ACTION_OPTIONS.find((o) => o.id === d.actionOptionId);
+            if (!actionOption) return null;
+
+            return {
+              id: node.id,
+              option: actionOption,
+              actionSchema: d.actionSchema,
+              messageText: d.messageText,
+              waitDuration: d.waitDuration,
+              waitUnit: d.waitUnit,
+              repeatLinkedActionId: d.repeatLinkedActionId,
+              selectedQuestionnaires: d.selectedQuestionnaires ? new Set<string>(d.selectedQuestionnaires) : undefined,
+              selectedCheckIns: d.selectedCheckIns ? new Set<string>(d.selectedCheckIns) : undefined,
+              selectedFiles: d.selectedFiles ? new Set<string>(d.selectedFiles) : undefined,
+              selectedHabits: d.selectedHabits ? new Set<string>(d.selectedHabits) : undefined,
+              selectedMetrics: d.selectedMetrics ? new Set<string>(d.selectedMetrics) : undefined,
+              branch: d.branch || undefined,
+              checkNodeId: d.checkNodeId || undefined,
+            } as ActionNodeData;
+          }).filter(Boolean) as ActionNodeData[];
+
+          setActionNodes(restoredActionNodes);
+        }
+
+        // Restore check nodes from saved data
+        if (savedCheckNodes.length > 0) {
+          const restoredCheckNodes = savedCheckNodes.map((n: Node) => ({
+            id: n.id,
+            linkedActionId: n.data.linkedActionId || '',
+            repeatActionId: n.data.repeatActionId || '',
+          }));
+          setCheckNodes(restoredCheckNodes);
+        }
+
+        // Do NOT call setNodes/setEdges — let buildLogicalGraph regenerate from restored state
       }
       setIsInitialized(true);
     }
-  }, [flow, isInitialized, setNodes, setEdges]);
+  }, [flow, isInitialized]);
 
   // Enforce hardcoded trigger based on forcedTriggerId or flow name
   useEffect(() => {
@@ -627,9 +639,31 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
     setPendingSave(true);
   };
 
+  const ACTION_OPTION_TO_NODE_TYPE: Record<string, string> = {
+    'send-message': 'message',
+    'assign-questionnaire': 'questionnaire',
+    'assign-check-in': 'check-in',
+    'add-file': 'file',
+    'add-habit': 'habit',
+    'add-metric': 'metric',
+    'wait': 'wait',
+    'check': 'check',
+  };
+
+  const ACTION_OPTION_TO_LABEL: Record<string, string> = {
+    'send-message': 'Message',
+    'assign-questionnaire': 'Questionnaire',
+    'assign-check-in': 'Check-in',
+    'add-file': 'File',
+    'add-habit': 'Habit',
+    'add-metric': 'Metric',
+    'wait': 'Wait',
+    'check': 'Check',
+  };
+
   // Function to build the logical graph nodes and edges
   const buildLogicalGraph = useCallback(() => {
-    const logicalNodes: Node[] = [];
+    const logicalNodes: (Node & { nodeType?: string })[] = [];
     const logicalEdges: Edge[] = [];
 
     // 1. Trigger Node
@@ -637,6 +671,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
     logicalNodes.push({
       id: 'trigger',
       type: 'trigger',
+      nodeType: 'trigger',
       position: { x: 0, y: 0 },
       data: {
         label: selectedTrigger ? 'Trigger' : 'Create Trigger',
@@ -653,6 +688,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
     logicalNodes.push({
       id: 'add-action-trigger',
       type: 'addAction',
+      nodeType: 'add-action',
       position: { x: 0, y: 0 },
       data: {
         onClick: () => handleOpenActionPanel(0),
@@ -734,13 +770,28 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
         logicalNodes.push({
           id: actionNode.id,
           type: 'action',
+          nodeType: ACTION_OPTION_TO_NODE_TYPE[actionNode.option.id] || 'action',
           position: { x: 0, y: 0 },
           data: {
-            label: actionNode.option.id === 'wait' ? 'Wait' : 'Action',
+            label: ACTION_OPTION_TO_LABEL[actionNode.option.id] || 'Action',
             subtitle,
             icon: actionNode.option.icon,
             isWait: actionNode.option.id === 'wait',
             isRepeat: actionNode.option.id === 'check',
+            // Serializable config for restore on reload
+            actionOptionId: actionNode.option.id,
+            actionSchema: actionNode.actionSchema,
+            messageText: actionNode.messageText,
+            waitDuration: actionNode.waitDuration,
+            waitUnit: actionNode.waitUnit,
+            repeatLinkedActionId: actionNode.repeatLinkedActionId,
+            selectedQuestionnaires: actionNode.selectedQuestionnaires ? Array.from(actionNode.selectedQuestionnaires) : undefined,
+            selectedCheckIns: actionNode.selectedCheckIns ? Array.from(actionNode.selectedCheckIns) : undefined,
+            selectedFiles: actionNode.selectedFiles ? Array.from(actionNode.selectedFiles) : undefined,
+            selectedHabits: actionNode.selectedHabits ? Array.from(actionNode.selectedHabits) : undefined,
+            selectedMetrics: actionNode.selectedMetrics ? Array.from(actionNode.selectedMetrics) : undefined,
+            branch: actionNode.branch,
+            checkNodeId: actionNode.checkNodeId,
             onClick: () => {
               setEditingActionNodeId(actionNode.id);
               setSelectedActionOption(actionNode.option);
@@ -760,7 +811,6 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
                 setSelectedHabits(actionNode.selectedHabits || new Set());
                 setSelectedMetrics(actionNode.selectedMetrics || new Set());
                 setActionStep('confirmation');
-                fetchData();
               }
             },
             onEdit: () => {
@@ -782,7 +832,6 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
                 setSelectedHabits(actionNode.selectedHabits || new Set());
                 setSelectedMetrics(actionNode.selectedMetrics || new Set());
                 setActionStep('confirmation');
-                fetchData();
               }
             },
             onDelete: () => handleDeleteAction(actionNode.id),
@@ -803,6 +852,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
         logicalNodes.push({
           id: addActionId,
           type: 'addAction',
+          nodeType: 'add-action',
           position: { x: 0, y: 0 },
           data: {
             onClick: () => handleOpenActionPanel(addActionInsertionIndex, actionNode.branch, actionNode.checkNodeId),
@@ -855,10 +905,14 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
         logicalNodes.push({
           id: checkNode.id,
           type: 'check',
+          nodeType: 'check',
           position: { x: 0, y: 0 },
           data: {
             label: 'Check',
             subtitle: 'Check in completed',
+            // Serializable config for restore on reload
+            linkedActionId: checkNode.linkedActionId,
+            repeatActionId: checkNode.repeatActionId,
             onDelete: () => setDeleteConfirmationId(checkNode.repeatActionId),
           },
         });
@@ -873,6 +927,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
             logicalNodes.push({
               id: addActionId,
               type: 'addAction',
+              nodeType: 'add-action',
               position: { x: 0, y: 0 },
               data: {
                 onClick: () => handleOpenActionPanel(0, branch as 'yes' | 'no', checkNode.id),
@@ -896,6 +951,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
             logicalNodes.push({
               id: branchEndId,
               type: 'end',
+              nodeType: 'end',
               position: { x: 0, y: 0 },
               data: { label: 'End' },
             });
@@ -926,6 +982,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
               logicalNodes.push({
                 id: branchEndId,
                 type: 'end',
+                nodeType: 'end',
                 position: { x: 0, y: 0 },
                 data: { label: 'End' },
               });
@@ -958,6 +1015,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
       logicalNodes.push({
         id: 'end',
         type: 'end',
+        nodeType: 'end',
         position: { x: 0, y: 0 },
         data: { label: 'End' },
       });
@@ -991,7 +1049,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
     });
 
     return { logicalNodes, logicalEdges };
-  }, [selectedTrigger, actionNodes, checkNodes, handleOpenTriggerPanel, handleOpenActionPanel, handleDeleteTrigger, handleDeleteAction, fetchData]);
+  }, [selectedTrigger, actionNodes, checkNodes, handleOpenTriggerPanel, handleOpenActionPanel, handleDeleteTrigger, handleDeleteAction]);
 
   // Derived schema for automation execution - easy for backend to implement
   const automationSchema = useMemo(() => {
@@ -1088,7 +1146,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
         }
       }
 
-      if (pendingSave && !isOnboardingMode && flow) {
+      if (pendingSave && (!isOnboardingMode || isSavingActionRef.current) && flow) {
         try {
           setIsSaving(true);
           if (onSaveFlow) {
@@ -1106,6 +1164,14 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
         } finally {
           setIsSaving(false);
           setPendingSave(false);
+
+          // Close the side panel after save completes
+          if (isSavingActionRef.current) {
+            isSavingActionRef.current = false;
+            setIsSavingAction(false);
+            handleBackToActionList();
+            handleCloseSidePanel();
+          }
         }
       }
     };
@@ -1476,27 +1542,21 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
       }
     }
 
-    // Reset and close
-    handleBackToActionList();
-    handleCloseSidePanel();
-
-    // Trigger save if not in onboarding mode
-    if (!isOnboardingMode) {
-      setPendingSave(true);
-    }
+    // Show loading on save button and trigger save
+    isSavingActionRef.current = true;
+    setIsSavingAction(true);
+    setPendingSave(true);
   };
 
   const handleDeleteActionFromEdit = () => {
     if (editingActionNodeId) {
       handleDeleteAction(editingActionNodeId);
       setEditingActionNodeId(null);
-      handleBackToActionList();
-      handleCloseSidePanel();
 
-      // Trigger save if not in onboarding mode
-      if (!isOnboardingMode) {
-        setPendingSave(true);
-      }
+      // Show loading and trigger save
+      isSavingActionRef.current = true;
+      setIsSavingAction(true);
+      setPendingSave(true);
     }
   };
 
@@ -1671,6 +1731,11 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
         onToggleFile={handleToggleFile}
         onToggleHabit={handleToggleHabit}
         onToggleMetric={handleToggleMetric}
+        onSetQuestionnaires={setSelectedQuestionnaires}
+        onSetCheckIns={setSelectedCheckIns}
+        onSetFiles={setSelectedFiles}
+        onSetHabits={setSelectedHabits}
+        onSetMetrics={setSelectedMetrics}
         questionnaires={questionnaires}
         checkIns={checkIns}
         files={files}
@@ -1684,6 +1749,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
         onActionContinue={handleActionContinue}
         onSaveAction={handleSaveAction}
         onDeleteAction={handleDeleteActionFromEdit}
+        isSavingAction={isSavingAction}
         editingActionNodeId={editingActionNodeId}
         onAddMore={handleAddMore}
         waitDuration={waitDuration}

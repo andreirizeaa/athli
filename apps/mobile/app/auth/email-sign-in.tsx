@@ -17,8 +17,9 @@ import { useThemePreference, useColorScheme, useTranslations, useCoachProfileSto
 import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, type InputBoxRef } from '@/components/ui/form-inputs/input-box';
 import { AuthLoadingOverlay } from '@/components/auth/auth-loading-overlay';
+import { CoachSelectionDialog } from '@/components/auth/coach-selection-dialog';
 import { authenticateUser } from '@/services/auth/supabase-auth';
-import type { CoachProfile, ClientProfile } from '@/types/profile';
+import type { CoachProfile, ClientProfile, AuthResult } from '@/types/profile';
 
 export default function EmailSignInScreen() {
     const router = useRouter();
@@ -39,6 +40,8 @@ export default function EmailSignInScreen() {
     const [isLoading, setIsLoading] = useState(false);
     const [showErrorDialog, setShowErrorDialog] = useState(false);
     const [errorDialog, setErrorDialog] = useState({ title: '', message: '' });
+    const [showCoachSelectionDialog, setShowCoachSelectionDialog] = useState(false);
+    const [pendingAuthResult, setPendingAuthResult] = useState<AuthResult | null>(null);
 
     const emailRef = useRef<InputBoxRef>(null);
     const passwordRef = useRef<InputBoxRef>(null);
@@ -62,17 +65,52 @@ export default function EmailSignInScreen() {
         router.back();
     };
 
-    const handleAuthSuccess = (profileType: 'coach' | 'client', profile: CoachProfile | ClientProfile) => {
+    const handleAuthSuccess = (result: AuthResult) => {
         // Note: We don't navigate here - the auth state listener in _layout.tsx
         // handles navigation to tabs when SIGNED_IN event fires.
         // Setting profile/appView here for faster UI update.
+        const { profileType, profile, coachAssignments } = result;
+
         if (profileType === 'coach') {
             setCoachProfile(profile as CoachProfile);
             setAppView('coach');
-        } else {
-            setClientProfile(profile as ClientProfile);
-            setAppView('athlete');
+            return;
         }
+
+        // Client flow - check coach assignments
+        if (!coachAssignments || coachAssignments.length === 0) {
+            // No coach assigned - show error
+            setErrorDialog({
+                title: t('auth.noCoachAssignment'),
+                message: t('auth.noCoachAssignmentMessage'),
+            });
+            setShowErrorDialog(true);
+            return;
+        }
+
+        if (coachAssignments.length === 1) {
+            // Single coach - auto-select
+            const clientProfile = profile as ClientProfile;
+            clientProfile.coach_id = coachAssignments[0].coach_id;
+            setClientProfile(clientProfile);
+            setAppView('athlete');
+            return;
+        }
+
+        // Multiple coaches - show selection dialog
+        setPendingAuthResult(result);
+        setShowCoachSelectionDialog(true);
+    };
+
+    const handleCoachSelected = (coachId: string) => {
+        if (!pendingAuthResult) return;
+
+        const clientProfile = pendingAuthResult.profile as ClientProfile;
+        clientProfile.coach_id = coachId;
+        setClientProfile(clientProfile);
+        setAppView('athlete');
+        setShowCoachSelectionDialog(false);
+        setPendingAuthResult(null);
     };
 
     const handleAuthError = (error: any) => {
@@ -146,7 +184,7 @@ export default function EmailSignInScreen() {
 
         try {
             const result = await authenticateUser('email', { email, password });
-            handleAuthSuccess(result.profileType!, result.profile as any);
+            handleAuthSuccess(result);
         } catch (error) {
             handleAuthError(error);
         } finally {
@@ -261,6 +299,12 @@ export default function EmailSignInScreen() {
                             variant: 'primary',
                         },
                     ]}
+                />
+
+                <CoachSelectionDialog
+                    visible={showCoachSelectionDialog}
+                    coaches={pendingAuthResult?.coachAssignments || []}
+                    onSelect={handleCoachSelected}
                 />
             </View>
         </TouchableWithoutFeedback>

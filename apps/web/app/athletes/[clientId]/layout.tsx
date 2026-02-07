@@ -340,38 +340,42 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
         </div>
         <div className="absolute top-2 right-4 flex items-center gap-2">
           <ButtonGroup>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={handleResendInvite}
-                  variant="ghost"
-                  className="gap-2 border border-primary"
-                  aria-label={t('athletes.profile.resendInviteAria')}
-                >
-                  <Send className="size-4" />
-                  <span>{t('athletes.profile.resendInvite')}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('athletes.profile.resendInviteAria')}</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={handleCopyInvite}
-                  variant="ghost"
-                  className="gap-2 border border-primary"
-                  aria-label={t('athletes.profile.copyInviteAria')}
-                >
-                  <Copy className="size-4" />
-                  <span>{t('athletes.profile.copyInvite')}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('athletes.profile.copyInviteAria')}</p>
-              </TooltipContent>
-            </Tooltip>
+            {athlete?.status !== 'accepted' && athlete?.status !== 'connected' && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleResendInvite}
+                      variant="ghost"
+                      className="gap-2 border border-primary"
+                      aria-label={t('athletes.profile.resendInviteAria')}
+                    >
+                      <Send className="size-4" />
+                      <span>{t('athletes.profile.resendInvite')}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('athletes.profile.resendInviteAria')}</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleCopyInvite}
+                      variant="ghost"
+                      className="gap-2 border border-primary"
+                      aria-label={t('athletes.profile.copyInviteAria')}
+                    >
+                      <Copy className="size-4" />
+                      <span>{t('athletes.profile.copyInvite')}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('athletes.profile.copyInviteAria')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </>
+            )}
             {!hideMessageButton && (
               <Tooltip>
                 <TooltipTrigger asChild>

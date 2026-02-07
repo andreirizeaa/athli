@@ -62,7 +62,6 @@ export const getClients = async (): Promise<Athlete[]> => {
       age: calculateAge(client.date_of_birth),
       height: client.height_cm || null,
       clientFor: clientForDays.toString(),
-      connected: ((client.status === 'accepted' || client.status === 'connected') ? true : client.status === 'invited' ? 'invitation-sent' : false) as boolean | 'invitation-sent',
     };
   });
   console.log('[coach-client-service] getClients returned:', clients.length, 'clients');
@@ -108,7 +107,6 @@ export const addClient = async (data: AddClientData): Promise<Athlete> => {
     age: calculateAge(client.date_of_birth),
     height: client.height_cm || null,
     clientFor: clientForDays.toString(),
-    connected: (client.status === 'accepted' || client.status === 'connected') ? true : client.status === 'invited' ? 'invitation-sent' : false,
     invitationToken: client.invitation_token,
   };
 };

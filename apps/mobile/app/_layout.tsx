@@ -24,6 +24,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { restoreSession } from '@/services/auth/supabase-auth';
+import { apiFetch } from '@/lib/api-client';
 import type { CoachProfile, ClientProfile } from '@/types/profile';
 import QueryProvider from '@/providers/query-provider';
 import { usePrefetchAllExercises } from '@/hooks/useAllExercises';
@@ -206,6 +207,11 @@ function RootLayoutNav() {
         // STEP 4: Load company data and chats if coach profile exists
         const finalCoachProfile = useCoachProfileStore.getState().profile;
         if (finalCoachProfile) {
+          // Mark coach app as explored (fire-and-forget)
+          apiFetch('/coach/new/checklist', {
+            method: 'PATCH',
+            body: JSON.stringify({ field: 'coach_app_demo' }),
+          }).catch(() => {});
           console.log('[RootLayout] Loading coach data...');
           // Load company and chats in parallel
           await Promise.all([
@@ -259,11 +265,16 @@ function RootLayoutNav() {
         } else if (event === 'SIGNED_IN') {
           // User signed in - update session and fetch profile
           useAuthSessionStore.getState().setSession(session);
-          const authResult = await restoreSession();
+          const authResult = await restoreSession({ signOutOnFailure: false });
           if (authResult && authResult.profile) {
             if (authResult.profileType === 'coach') {
               setCoachProfile(authResult.profile as CoachProfile);
               setAppView('coach');
+              // Mark coach app as explored (fire-and-forget)
+              apiFetch('/coach/new/checklist', {
+                method: 'PATCH',
+                body: JSON.stringify({ field: 'coach_app_demo' }),
+              }).catch(() => {});
               // Load company data and chats for coach
               await Promise.all([
                 useCoachCompanyStore.getState().loadCompany(),
@@ -804,6 +815,13 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="profile/client-details"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="profile/coach-profile"
             options={{
               headerShown: false,
               animation: 'slide_from_right',

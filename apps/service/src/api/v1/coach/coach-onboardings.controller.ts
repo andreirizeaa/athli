@@ -1,6 +1,17 @@
+import * as crypto from 'crypto';
 import { Request, Response } from 'express';
 import { success, unauthorized, created, noContent, notFound } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
+
+function generateCode(length: number = 12): string {
+    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    let result = '';
+    const bytes = crypto.randomBytes(length);
+    for (let i = 0; i < length; i++) {
+        result += chars[bytes[i] % chars.length];
+    }
+    return result;
+}
 
 export const coachOnboardingController = {
     /**
@@ -68,7 +79,7 @@ export const coachOnboardingController = {
      */
     createOnboarding: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { name, description, flow_data, is_active } = req.body;
+        const { name, description, flow_data } = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -84,7 +95,6 @@ export const coachOnboardingController = {
                     name,
                     description,
                     flow_data,
-                    is_active: is_active ?? false,
                 },
             ])
             .select()
@@ -92,6 +102,19 @@ export const coachOnboardingController = {
 
         if (error) {
             return res.status(500).json({ success: false, message: error.message });
+        }
+
+        // Auto-create an invite code for this onboarding
+        const { error: codeError } = await supabase
+            .from('coach_unique_codes')
+            .insert({
+                coach_id: userId,
+                code: generateCode(12),
+                onboarding_id: data.id,
+            });
+
+        if (codeError) {
+            console.error('Failed to create invite code for onboarding:', codeError);
         }
 
         created(res, {
@@ -106,7 +129,7 @@ export const coachOnboardingController = {
     updateOnboarding: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const { id } = req.params;
-        const updates = req.body;
+        const { is_active, ...updates } = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });

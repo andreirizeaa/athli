@@ -139,10 +139,6 @@ const SidebarInsetWithBorder = ({ children }: { children: ReactNode }) => {
         'flex-1 flex flex-row overflow-hidden bg-background reset-sidebar-vars border-none shadow-none',
         showBorder && 'border-l border-sidebar-border'
       )}
-      style={{
-        borderTopLeftRadius: '22px',
-        borderBottomLeftRadius: '22px',
-      }}
     >
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {children}

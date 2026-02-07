@@ -177,4 +177,21 @@ userRouter.post('/new-client', supabaseAuthenticate, userController.newClient);
  *       200:
  *         description: Avatar generated successfully
  */
+userRouter.post('/mark-connected', supabaseAuthenticate, userController.markConnected);
+
 userRouter.post('/generate-avatar', supabaseAuthenticate, userController.generateAvatar);
+
+/**
+ * @swagger
+ * /api/v1/user/seed-demo-data:
+ *   post:
+ *     summary: Seed demo client data for a new coach
+ *     description: Creates a demo client with sample data for coaches to explore the platform. Idempotent - only seeds if no demo client exists.
+ *     tags: [User]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Demo data seeded successfully (or already exists)
+ */
+userRouter.post('/seed-demo-data', supabaseAuthenticate, userController.seedDemoData);

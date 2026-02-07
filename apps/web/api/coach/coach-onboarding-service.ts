@@ -14,7 +14,6 @@ export type Onboarding = {
     nodes: Node[];
     edges: Edge[];
   };
-  is_active?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -59,7 +58,6 @@ export const createOnboarding = async (
       name: data.name,
       description: data.description,
       flow_data: { nodes: [], edges: [] },
-      is_active: false,
     }),
   });
 
@@ -94,21 +92,6 @@ export const updateOnboardingDetails = async (
     body: JSON.stringify({
       name: data.name,
       description: data.description,
-    }),
-  });
-};
-
-/**
- * Update onboarding status (is_active)
- */
-export const updateOnboardingStatus = async (
-  onboardingId: string,
-  isActive: boolean
-): Promise<void> => {
-  await apiFetch(`/coach/onboardings/${onboardingId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      is_active: isActive,
     }),
   });
 };

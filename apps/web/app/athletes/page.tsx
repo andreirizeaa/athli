@@ -72,7 +72,7 @@ type ColumnId =
   | 'last7DaysTraining'
   | 'last30DaysTraining'
   | 'category'
-  | 'connected'
+  | 'status'
   | 'email'
   | 'phone'
   | 'country'
@@ -84,7 +84,7 @@ const COLUMN_ORDER: ColumnId[] = [
   'last7DaysTraining',
   'last30DaysTraining',
   'category',
-  'connected',
+  'status',
   'email',
   'phone',
   'country',
@@ -98,7 +98,7 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
     last7DaysTraining: { class: 'min-w-[160px]', pixel: '200px' },
     last30DaysTraining: { class: 'min-w-[170px]', pixel: '200px' },
     category: { class: 'min-w-[140px]', pixel: '140px' },
-    connected: { class: 'min-w-[150px]', pixel: '150px' },
+    status: { class: 'min-w-[150px]', pixel: '150px' },
     email: { class: 'min-w-[220px]', pixel: '310px' },
     phone: { class: 'min-w-[160px]', pixel: '240px' },
     country: { class: 'min-w-[120px]', pixel: '120px' },
@@ -262,12 +262,12 @@ const AthletesPage = () => {
               : row.category === null
                 ? t('athletes.filters.uncategorized', { defaultValue: 'Not set' })
                 : row.category,
-      [t('athletes.export.connected')]:
-        row.connected === true
+      [t('athletes.export.status')]:
+        row.status === 'connected'
           ? t('athletes.status.connected')
-          : row.connected === false
-            ? t('athletes.filters.notConnected')
-            : t('athletes.filters.invitationSent'),
+          : row.status === 'accepted'
+            ? t('athletes.status.accepted')
+            : t('athletes.status.invited'),
       [t('athletes.export.lastActivity')]: row.lastActivity,
       [t('athletes.export.last7DaysTraining')]: row.last7DaysTraining,
       [t('athletes.export.last30DaysTraining')]: row.last30DaysTraining,
@@ -347,38 +347,16 @@ const AthletesPage = () => {
 
   const censorEmail = (email: string): string => {
     const [localPart, domain] = email.split('@');
-    if (!domain) return '***';
+    if (!domain) return '******';
     const visibleChars = Math.min(2, localPart.length);
-    const censoredLocal =
-      localPart.slice(0, visibleChars) + '*'.repeat(Math.max(3, localPart.length - visibleChars));
     const [domainName, domainExt] = domain.split('.');
-    if (!domainExt) return `${censoredLocal}@***`;
+    if (!domainExt) return `${localPart.slice(0, visibleChars)}****@****`;
     const visibleDomainChars = Math.min(2, domainName.length);
-    const censoredDomain =
-      domainName.slice(0, visibleDomainChars) +
-      '*'.repeat(Math.max(2, domainName.length - visibleDomainChars));
-    return `${censoredLocal}@${censoredDomain}.${domainExt}`;
+    return `${localPart.slice(0, visibleChars)}****@${domainName.slice(0, visibleDomainChars)}****.${domainExt}`;
   };
 
-  const censorPhone = (phone: string): string => {
-    const digits = phone.replace(/\D/g, '');
-    if (digits.length === 0) return '***';
-    const visibleDigits = Math.min(3, digits.length);
-    const visiblePart = digits.slice(-visibleDigits);
-    let digitCount = 0;
-    return phone
-      .split('')
-      .map((char) => {
-        if (/\d/.test(char)) {
-          digitCount++;
-          if (digitCount > digits.length - visibleDigits) {
-            return visiblePart[digitCount - (digits.length - visibleDigits) - 1];
-          }
-          return '*';
-        }
-        return char;
-      })
-      .join('');
+  const censorPhone = (_phone: string): string => {
+    return '***-****-***';
   };
 
   const getFieldKey = (athleteId: string, fieldType: 'email' | 'phone' | 'name'): string => {
@@ -654,32 +632,36 @@ const AthletesPage = () => {
               );
             },
           };
-        case 'connected':
+        case 'status':
           return {
-            id: 'connected',
-            label: t('athletes.columns.connected'),
+            id: 'status',
+            label: t('athletes.columns.status'),
             icon: <HeartPulse className="size-3" />,
             width: {
-              class: getColumnWidth('connected', 'class'),
-              pixel: getColumnWidth('connected', 'pixel'),
+              class: getColumnWidth('status', 'class'),
+              pixel: getColumnWidth('status', 'pixel'),
             },
-            tooltip: t('athletes.columnTooltips.connected'),
-            getSortValue: (row) => (row.connected === true ? 1 : row.connected === false ? 0 : 0.5),
+            tooltip: t('athletes.columnTooltips.status'),
+            getSortValue: (row) => {
+              const order: Record<string, number> = { connected: 2, accepted: 1, invited: 0 };
+              return order[row.status] ?? -1;
+            },
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
             renderCell: (row) => {
-              let connectedLabel = '';
-              if (row.connected === true) {
-                connectedLabel = t('athletes.status.connected');
-              } else if (row.connected === false) {
-                connectedLabel = t('athletes.status.notConnected');
-              } else if (row.connected === 'invitation-sent') {
-                connectedLabel = t('athletes.status.invitationSent');
+              const statusMap: Record<string, { label: string; variant: 'default' | 'outline' | 'secondary' }> = {
+                connected: { label: t('athletes.status.connected'), variant: 'default' },
+                accepted: { label: t('athletes.status.accepted'), variant: 'outline' },
+                invited: { label: t('athletes.status.invited'), variant: 'secondary' },
+              };
+              const info = statusMap[row.status];
+              if (!info) {
+                return <span className="text-sm text-muted-foreground">--</span>;
               }
               return (
-                <div className="flex items-center w-full">
-                  <span className="text-sm">{connectedLabel}</span>
-                </div>
+                <Badge variant={info.variant} className="text-xs rounded-full">
+                  {info.label}
+                </Badge>
               );
             },
           };
@@ -945,20 +927,15 @@ const AthletesPage = () => {
       getFilterValue: (row) => row.category,
     },
     {
-      id: 'connected',
-      label: t('athletes.filters.connected'),
+      id: 'status',
+      label: t('athletes.filters.status'),
       icon: <HeartPulse className="size-4" />,
       options: [
-        { value: 'true', label: t('athletes.status.connected') },
-        { value: 'false', label: t('athletes.filters.notConnected') },
-        { value: 'invitation-sent', label: t('athletes.filters.invitationSent') },
+        { value: 'connected', label: t('athletes.status.connected') },
+        { value: 'accepted', label: t('athletes.status.accepted') },
+        { value: 'invited', label: t('athletes.status.invited') },
       ],
-      getFilterValue: (row) => {
-        if (row.connected === true) return 'true';
-        if (row.connected === false) return 'false';
-        if (row.connected === 'invitation-sent') return 'invitation-sent';
-        return null;
-      },
+      getFilterValue: (row) => row.status || null,
     },
   ];
 
@@ -1215,12 +1192,12 @@ const AthletesPage = () => {
                   : row.category === null
                     ? t('athletes.filters.uncategorized', { defaultValue: 'Not set' })
                     : row.category,
-          [t('athletes.export.connected')]:
-            row.connected === true
+          [t('athletes.export.status')]:
+            row.status === 'connected'
               ? t('athletes.status.connected')
-              : row.connected === false
-                ? t('athletes.status.notConnected')
-                : t('athletes.status.invitationSent'),
+              : row.status === 'accepted'
+                ? t('athletes.status.accepted')
+                : t('athletes.status.invited'),
           [t('athletes.export.lastActivity')]: row.lastActivity,
           [t('athletes.export.last7DaysTraining')]: row.last7DaysTraining,
           [t('athletes.export.last30DaysTraining')]: row.last30DaysTraining,
