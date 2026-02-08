@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PressableOpacity, PressableScale } from 'pressto';
-import { ChevronRight, Sparkles, ListTodo, ClipboardList } from 'lucide-react-native';
+import { ChevronRight, Sparkles, ListTodo, ClipboardList, Bell } from 'lucide-react-native';
 import { SymbolView } from 'expo-symbols';
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -10,10 +10,12 @@ import { useThemePreference, useAuth } from '@/stores';
 import { useTranslations } from '@/stores';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { Card } from '@/components/ui/card';
+import { IconButton } from '@/components/ui/icon-button';
 import { DailyWorkoutsCard } from '@/components/features/home/daily-workouts-card';
 import { AtRiskClientsCard } from '@/components/features/home/at-risk-clients-card';
 import { useCoachOwnTodos, useCoachAutoTodos } from '@/hooks/useCoachTodo';
 import { useCheckInReviews } from '@/hooks/useCheckInReviews';
+import { useCoachNotifications } from '@/hooks/useCoachNotifications';
 
 // AI Assistant Card for coach view
 const AIAssistantCard = () => {
@@ -75,8 +77,13 @@ export const CoachHomeContent = () => {
   const { ownTodos } = useCoachOwnTodos();
   const { autoTodos } = useCoachAutoTodos();
   const { reviewCount } = useCheckInReviews();
+  const { unreadCount: notificationUnreadCount } = useCoachNotifications();
 
   const totalTodos = ownTodos.length + autoTodos.length;
+
+  const handleNotificationsPress = () => {
+    router.push('/notifications');
+  };
 
   const greeting = useMemo(() => {
     if (coachProfile?.name) {
@@ -100,7 +107,24 @@ export const CoachHomeContent = () => {
   return (
     <ScreenWrapper scrollable tabScreen>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: themeColors.text }]}>{greeting}</Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.title, { color: themeColors.text }]}>{greeting}</Text>
+          <View style={styles.headerButtonContainer}>
+            <IconButton
+              icon={{ sf: 'bell', IconComponent: Bell }}
+              onPress={handleNotificationsPress}
+              size="md"
+              color={themeColors.text}
+            />
+            {notificationUnreadCount > 0 && (
+              <View style={[styles.badge, { backgroundColor: '#EF4444' }]}>
+                <Text style={styles.badgeText}>
+                  {notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
         <Text style={[styles.subtitle, { color: themeColors.mutedText }]}>{dateSubtitle}</Text>
       </View>
       <View style={styles.cardsContainer}>
@@ -191,9 +215,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
   },
+  titleRow: {
+    position: 'relative',
+    marginBottom: 4,
+  },
   title: {
     ...typography.h1,
     textAlign: 'left',
+    paddingRight: 52,
+  },
+  headerButtonContainer: {
+    position: 'absolute',
+    right: 0,
+    top: '50%',
+    transform: [{ translateY: -22 }],
+  },
+  badge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
   },
   subtitle: {
     ...typography.h5,

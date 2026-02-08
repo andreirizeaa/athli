@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { success, unauthorized, created, noContent, notFound, forbidden } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
+import { createCoachNotification, resolveClientName } from '../../../services/notification.service';
+import { NOTIFICATION_TYPES, NOTIFICATION_TITLES } from '@athli/shared-types/src/constants/notification-constants';
 
 export const clientHabitsController = {
     /**
@@ -280,10 +282,10 @@ export const clientHabitsController = {
 
         const supabase = getSupabaseClient();
 
-        // Get habit for coach_id
+        // Get habit for coach_id and name
         const { data: habit, error: fetchError } = await supabase
             .from('client_habits')
-            .select('coach_id')
+            .select('coach_id, name')
             .eq('id', assignmentId)
             .eq('client_id', targetClientId)
             .single();
@@ -307,6 +309,22 @@ export const clientHabitsController = {
             .single();
 
         if (logError) return res.status(500).json({ success: false, message: logError.message });
+
+        // Send notification for client requests only
+        if (!isCoach) {
+            resolveClientName(targetClientId).then((clientName) => {
+                if (clientName) {
+                    createCoachNotification({
+                        coachId: habit.coach_id,
+                        clientId: targetClientId,
+                        notificationType: NOTIFICATION_TYPES.habit_logged,
+                        title: NOTIFICATION_TITLES.habit_logged,
+                        description: `${clientName} logged a habit`,
+                        metadata: { assignment_id: assignmentId, name: habit.name, date: date || new Date().toISOString().split('T')[0] },
+                    });
+                }
+            });
+        }
 
         success(res, { message: 'Habit logged', data: { log } });
     },

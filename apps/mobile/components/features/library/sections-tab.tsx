@@ -239,7 +239,7 @@ export const SectionsTab = () => {
         <SwipeableRow
           onDelete={() => deleteMutation.mutateAsync(item.id)}
           onOpen={registerOpenRow}
-          deleteConfirmTitle={`${t('general.delete')} ${item.program}?`}
+          deleteConfirmTitle={t('general.deleteSection')}
         >
           <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
             <PressableScale

@@ -268,7 +268,7 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
                 <div
                     className={cn(
                         'relative flex bg-sidebar px-2 py-0.5 transition-all duration-700 ease-in-out rounded-lg border border-input',
-                        'focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
+                        'focus-within:border-ring',
                         showExpandedInput
                             ? 'flex-col'
                             : 'items-center min-h-[36px]'
@@ -367,7 +367,7 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
                         return (
                             <div
                                 className={cn(
-                                    "mb-2 px-3 py-2 rounded-lg",
+                                    "mt-1.5 mb-2 px-3 py-2 rounded-lg",
                                     replyingToMessage.isSent
                                         ? "bg-primary/20"
                                         : "bg-sidebar"

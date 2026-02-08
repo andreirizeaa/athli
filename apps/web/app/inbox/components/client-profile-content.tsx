@@ -12,7 +12,6 @@ const ClientPhotosPage = dynamic(() => import('@/app/athletes/[clientId]/photos/
 const ClientFilesPage = dynamic(() => import('@/app/athletes/[clientId]/files/page'), { ssr: false });
 const ClientCheckInPage = dynamic(() => import('@/app/athletes/[clientId]/check-in/page'), { ssr: false });
 const ClientQuestionnairesPage = dynamic(() => import('@/app/athletes/[clientId]/questionnaires/page'), { ssr: false });
-const ClientUpdatesPage = dynamic(() => import('@/app/athletes/[clientId]/updates/page'), { ssr: false });
 const ClientSettingsPage = dynamic(() => import('@/app/athletes/[clientId]/settings/page'), { ssr: false });
 const TrainingCalendarPage = dynamic(() => import('@/app/athletes/[clientId]/training/page'), { ssr: false });
 
@@ -31,7 +30,6 @@ export const ClientProfileContent = React.memo(function ClientProfileContent({ t
         'files': ClientFilesPage,
         'check-in': ClientCheckInPage,
         'questionnaires': ClientQuestionnairesPage,
-        'updates': ClientUpdatesPage,
         'settings': ClientSettingsPage,
         'training': TrainingCalendarPage,
     };

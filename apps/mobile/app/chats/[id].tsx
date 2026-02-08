@@ -716,7 +716,7 @@ export default function ChatDetailScreen() {
   });
 
   // Merge saved, realtime, and optimistic messages - transforms to UIMessage[]
-  const mergedMessages = useMessageMerging(savedMessages, realtimeMessages, optimisticMessages, currentUserId);
+  const mergedMessages = useMessageMerging(savedMessages, realtimeMessages, optimisticMessages, currentUserId, 'coach');
 
   // Subscribe to read receipt updates for this conversation
   // This allows the sender to see when their messages are read in realtime
@@ -730,15 +730,19 @@ export default function ChatDetailScreen() {
   // Compute final message status using read receipts
   // For sent messages, check if recipient has read them based on their read receipt
   // This enhances the database-computed isRead with real-time read receipt data
+  const isSelfConversation = chat?.coach_id === chat?.client_id;
   const allMessages = useMemo(() => {
     if (!currentUserId) return mergedMessages;
 
     // Find the recipient's read receipt (not the current user's)
-    const recipientReceipt = readReceipts.find((r) => r.user_id !== currentUserId);
+    // For self-conversations (demo: coach_id === client_id), use the only receipt available
+    const recipientReceipt = isSelfConversation
+      ? readReceipts[0]
+      : readReceipts.find((r) => r.user_id !== currentUserId);
 
     return mergedMessages.map((msg) => {
       // Only update read status for own sent messages
-      if (msg.sender_id !== currentUserId) return msg;
+      if (!msg.isSent) return msg;
 
       // If already marked as read from database, preserve it
       if (msg.isRead) return msg;
@@ -755,7 +759,7 @@ export default function ChatDetailScreen() {
 
       return msg;
     });
-  }, [mergedMessages, readReceipts, currentUserId]);
+  }, [mergedMessages, readReceipts, currentUserId, isSelfConversation]);
 
   // Auto-sync read receipt when viewing the conversation
   // This marks messages as read for the coach (updates unread_count)

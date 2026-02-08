@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useState, useMemo } from 'react';
+import React, { useRef, useCallback, useState, useMemo, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -21,7 +21,7 @@ export default function MetricsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const HEADER_HEIGHT = 52;
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, assignmentId: assignmentIdParam } = useLocalSearchParams<{ id: string; assignmentId?: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const iconColor = themeColors.text;
@@ -34,6 +34,29 @@ export default function MetricsScreen() {
   const isLoadingMetrics = useClientDetailStore((state) => state.isLoadingMetrics);
   const coachId = useClientDetailStore((state) => state.coachId);
   const refreshSection = useClientDetailStore((state) => state.refreshSection);
+  const clientId = useClientDetailStore((state) => state.clientId);
+  const loadClientData = useClientDetailStore((state) => state.loadClientData);
+
+  // Load client data if navigating directly to this screen
+  useEffect(() => {
+    if (id && !clientId) {
+      loadClientData(id);
+    }
+  }, [id, clientId, loadClientData]);
+
+  // Track if we've already navigated to the metric detail from notification
+  const hasNavigatedToMetricRef = useRef(false);
+
+  // Navigate to metric detail if assignmentId param is present (from notification)
+  useEffect(() => {
+    if (assignmentIdParam && metrics.length > 0 && !hasNavigatedToMetricRef.current) {
+      const metricExists = metrics.some((m) => m.assignment_id === assignmentIdParam);
+      if (metricExists) {
+        hasNavigatedToMetricRef.current = true;
+        router.push(`/client/${id}/metric-detail?metricId=${assignmentIdParam}` as any);
+      }
+    }
+  }, [assignmentIdParam, metrics, id, router]);
 
   // Filter metrics based on search query
   const filteredMetrics = useMemo(() => {
@@ -180,7 +203,7 @@ export default function MetricsScreen() {
                   <View key={metric.id || metric.assignment_id}>
                     <SwipeableRow
                       onDelete={() => handleDeleteMetric(metric)}
-                      deleteConfirmTitle={`${t('general.delete')} ${metric.name}?`}
+                      deleteConfirmTitle={t('general.deleteMetric')}
                       onOpen={handleRowOpen}
                     >
                       <PressableScale onPress={() => handleMetricPress(metric.assignment_id || metric.id)}>

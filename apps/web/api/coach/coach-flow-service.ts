@@ -23,6 +23,7 @@ type UpdateFlowData = {
   id: string;
   nodes: Node[];
   edges: Edge[];
+  automationSchema?: any;
 };
 
 type UpdateFlowDetailsData = {
@@ -81,6 +82,7 @@ export const updateFlow = async (
         nodes: data.nodes,
         edges: data.edges,
       },
+      automation_schema: data.automationSchema,
     }),
   });
 };

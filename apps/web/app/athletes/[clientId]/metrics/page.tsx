@@ -9,7 +9,7 @@ import { ButtonGroup } from '@/components/ui/button-group';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, FileText, Search, X, Edit, ArrowUp, ArrowDown, Check, Trash2, Trash } from 'lucide-react';
+import { Plus, FileText, Search, X, Edit, ArrowUp, ArrowDown, Check, Trash2, LayoutGrid, ChevronRight } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -81,6 +81,7 @@ const ClientMetricsPage = () => {
   const [editingLogValue, setEditingLogValue] = useState<string>('');
   const [timeFilter, setTimeFilter] = useState<string>('all-time');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+  const [isViewAll, setIsViewAll] = useState<boolean>(true);
 
   const metrics = useMemo(() => {
     return rawData.map((item: any) => ({
@@ -213,6 +214,40 @@ const ClientMetricsPage = () => {
       },
     };
   }, [selectedMetric]);
+
+  // Helper to get chart data for any metric
+  const getMetricChartData = (metric: any) => {
+    const logs = (metric.logs || [])
+      .sort((a: any, b: any) => a.loggedAt.getTime() - b.loggedAt.getTime());
+    return logs.map((log: any) => ({
+      date: format(log.loggedAt, 'MMM d'),
+      value: log.value,
+    }));
+  };
+
+  // Helper to calculate movement for any metric
+  const getMetricMovement = (metric: any) => {
+    const logs = (metric.logs || [])
+      .sort((a: any, b: any) => a.loggedAt.getTime() - b.loggedAt.getTime());
+    if (logs.length < 2) return null;
+    const firstValue = logs[0].value;
+    const currentValue = logs[logs.length - 1].value;
+    const diff = currentValue - firstValue;
+    const percentage = firstValue !== 0 ? ((diff / firstValue) * 100) : 0;
+    return {
+      value: diff,
+      percentage: Math.abs(percentage),
+      isUp: diff > 0,
+    };
+  };
+
+  // Helper to calculate average for any metric
+  const getMetricAverage = (metric: any) => {
+    const logs = metric.logs || [];
+    if (logs.length === 0) return null;
+    const sum = logs.reduce((acc: number, log: any) => acc + log.value, 0);
+    return sum / logs.length;
+  };
 
   // Calculate nice rounded intervals for Y axis
   const calculateNiceInterval = (min: number, max: number) => {
@@ -511,6 +546,25 @@ const ClientMetricsPage = () => {
             <Separator className="absolute bottom-[-1px] left-0 right-0" />
           </div>
           <div className="flex-1 overflow-y-auto flex flex-col">
+            {/* View All option */}
+            <div className="flex-shrink-0">
+              <button
+                onClick={() => {
+                  setIsViewAll(true);
+                  setSelectedMetricId(null);
+                }}
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors text-left',
+                  isViewAll
+                    ? 'bg-accent/50 border-l-2 border-l-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                )}
+              >
+                <LayoutGrid className="size-4 flex-shrink-0" />
+                <span className="text-sm font-medium">{t('metrics.viewAll')}</span>
+              </button>
+              <Separator className="w-full" />
+            </div>
             {/* Metrics list */}
             <div className="space-y-0 flex-1 overflow-y-auto">
               {filteredMetrics.length === 0 ? (
@@ -519,14 +573,17 @@ const ClientMetricsPage = () => {
                 </div>
               ) : (
                 filteredMetrics.map((metric: any, index: number) => {
-                  const isSelected = selectedMetricId === metric.id;
+                  const isSelected = !isViewAll && selectedMetricId === metric.id;
                   const isLast = index === filteredMetrics.length - 1;
                   const isOnlyItem = filteredMetrics.length === 1;
 
                   return (
                     <React.Fragment key={metric.id}>
                       <button
-                        onClick={() => setSelectedMetricId(metric.id)}
+                        onClick={() => {
+                          setSelectedMetricId(metric.id);
+                          setIsViewAll(false);
+                        }}
                         className={cn(
                           'w-full flex items-start gap-3 px-4 py-3 text-sm transition-colors text-left',
                           isSelected
@@ -574,7 +631,137 @@ const ClientMetricsPage = () => {
           </div>
           {/* Content area */}
           <div className="flex-1 overflow-auto p-4 relative flex flex-col gap-6">
-            {selectedMetric ? (
+            {isViewAll ? (
+              /* View All Grid */
+              <div className="grid grid-cols-2 gap-4">
+                {filteredMetrics.map((metric: any) => {
+                  const metricChartData = getMetricChartData(metric);
+                  const metricMovement = getMetricMovement(metric);
+                  const metricAverage = getMetricAverage(metric);
+                  const metricChartConfig: ChartConfig = {
+                    value: {
+                      label: metric.name,
+                      color: 'var(--primary)',
+                    },
+                  };
+
+                  // Calculate Y axis domain and ticks for this metric
+                  const metricLogs = metric.logs || [];
+                  let metricYAxisDomain: [number | string, number | string] = ['auto', 'auto'];
+                  let metricYAxisTicks: number[] = [];
+                  if (metricLogs.length > 0) {
+                    const values = metricLogs.map((log: any) => log.value);
+                    const min = Math.min(...values);
+                    const max = Math.max(...values);
+                    const { min: niceMin, max: niceMax, step } = calculateNiceInterval(min, max);
+                    metricYAxisDomain = [niceMin, niceMax];
+                    for (let value = niceMin; value <= niceMax; value += step) {
+                      metricYAxisTicks.push(value);
+                    }
+                  }
+
+                  return (
+                    <div key={metric.id} className="border rounded-lg p-4 bg-background flex flex-col gap-4">
+                      {/* Card Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-sm font-semibold">{metric.name}</span>
+                          <span className="text-xs text-muted-foreground">{metric.unit}</span>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => {
+                            setSelectedMetricId(metric.id);
+                            setIsViewAll(false);
+                          }}
+                        >
+                          {t('metrics.view')}
+                          <ChevronRight className="size-4" />
+                        </Button>
+                      </div>
+
+                      {/* Stats Row - Same style as detail view */}
+                      <div className="flex items-center gap-4">
+                        <div className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold h-9 px-4 py-2 border bg-background shadow-xs dark:bg-input/30 dark:border-input cursor-default">
+                          Average: {metricAverage !== null ? `${metricAverage.toFixed(1)} ${metric.unit}` : `0 ${metric.unit}`}
+                        </div>
+                        <div
+                          className={cn(
+                            'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold h-9 px-4 py-2 border bg-background shadow-xs dark:bg-input/30 dark:border-input cursor-default',
+                            metricMovement?.percentage === 0 || metricMovement === null
+                              ? 'text-foreground'
+                              : metricMovement.isUp
+                                ? 'text-green-600'
+                                : 'text-red-600'
+                          )}
+                        >
+                          {metricMovement?.isUp === true && metricMovement.percentage !== 0 && <ArrowUp className="size-4" />}
+                          {metricMovement?.isUp === false && metricMovement.percentage !== 0 && <ArrowDown className="size-4" />}
+                          {metricMovement !== null ? `${metricMovement.percentage.toFixed(1)}%` : '0%'}
+                        </div>
+                      </div>
+
+                      {/* Chart - Same style as detail view */}
+                      <div className="w-full border rounded-lg p-4 bg-background relative z-0">
+                        {metricChartData.length > 0 ? (
+                          <ChartContainer
+                            config={metricChartConfig}
+                            className="w-full h-[200px]"
+                          >
+                            <LineChart
+                              accessibilityLayer
+                              data={metricChartData}
+                              margin={{
+                                left: 12,
+                                right: 12,
+                                top: 12,
+                                bottom: 12,
+                              }}
+                            >
+                              <CartesianGrid vertical={false} />
+                              <XAxis
+                                dataKey="date"
+                                tickLine={false}
+                                axisLine={false}
+                                tickMargin={8}
+                                interval="preserveStartEnd"
+                              />
+                              <YAxis
+                                tickLine={false}
+                                axisLine={false}
+                                tickMargin={8}
+                                domain={metricYAxisDomain}
+                                ticks={metricYAxisTicks.length > 0 ? metricYAxisTicks : undefined}
+                                tickFormatter={(value) => value.toFixed(1)}
+                              />
+                              <ChartTooltip
+                                cursor={false}
+                                content={<ChartTooltipContent hideLabel />}
+                              />
+                              <Line
+                                dataKey="value"
+                                type="monotoneX"
+                                stroke="var(--color-value)"
+                                strokeWidth={2}
+                                dot={false}
+                              />
+                            </LineChart>
+                          </ChartContainer>
+                        ) : (
+                          <div className="flex items-center justify-center h-[200px]">
+                            <div className="text-sm text-muted-foreground text-center">
+                              {t('metrics.noLogsMessage')}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : selectedMetric ? (
               <>
                 {/* Top row with filter and action buttons */}
                 <div className="flex items-center justify-between">
@@ -607,9 +794,6 @@ const ClientMetricsPage = () => {
                     <Button onClick={handleOpenEditMetric} className="gap-2" variant="outline">
                       <Edit className="size-4" />
                       <span>{t('metrics.editMetricTitle')}</span>
-                    </Button>
-                    <Button onClick={handleOpenDeleteDialog} className="gap-2" variant="outline">
-                      <Trash className="size-4" />
                     </Button>
                   </ButtonGroup>
                 </div>
@@ -808,7 +992,7 @@ const ClientMetricsPage = () => {
               </>
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                <p>Select a metric to view</p>
+                <p>{t('metrics.selectMetricMessage')}</p>
               </div>
             )}
           </div>

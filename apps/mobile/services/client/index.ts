@@ -24,8 +24,5 @@ export * from './client-file-service';
 // Form service (check-ins, questionnaires)
 export * from './client-form-service';
 
-// Updates/notes service
-export * from './client-updates-service';
-
 // Client profile service (existing)
 export * from './client-profile-service';

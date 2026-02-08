@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { success, unauthorized, notFound } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
+import { createCoachNotification, resolveCoachId, resolveClientName } from '../../../services/notification.service';
+import { NOTIFICATION_TYPES, NOTIFICATION_TITLES } from '@athli/shared-types/src/constants/notification-constants';
 
 /**
  * Helper to normalize workout data structure:
@@ -592,6 +594,26 @@ export const clientTrainingsController = {
             } catch (historyError) {
                 // Log but don't fail the request - history is secondary to the main save
                 console.error('Failed to insert exercise history:', historyError);
+            }
+
+            // Send notification for completed workouts from client requests only
+            if (workoutStatus === 'completed') {
+                const isCoachRequest = !!req.header('x-coach-id');
+                if (!isCoachRequest) {
+                    const workoutName = workoutToSave.program || workoutToSave.title || workoutToSave.name || workoutToSave.workoutName || 'Untitled Workout';
+                    Promise.all([resolveCoachId(clientId), resolveClientName(clientId)]).then(([resolvedCoachId, clientName]) => {
+                        if (resolvedCoachId && clientName) {
+                            createCoachNotification({
+                                coachId: resolvedCoachId,
+                                clientId,
+                                notificationType: NOTIFICATION_TYPES.workout_completed,
+                                title: NOTIFICATION_TITLES.workout_completed,
+                                description: `${clientName} completed ${workoutName} for ${date}`,
+                                metadata: { training_id: instanceKey, workout_name: workoutName, date },
+                            });
+                        }
+                    });
+                }
             }
         }
 

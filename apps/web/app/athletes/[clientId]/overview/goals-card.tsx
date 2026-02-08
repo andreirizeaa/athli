@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { SidePanel } from '@/components/app/side-panel';
 import { useClientProfileContext } from '../client-profile-context';
-import { useUpdateClientGoals } from '@/hooks/use-client-goals';
+import { useCreateClientGoal, useUpdateClientGoal, useDeleteClientGoal } from '@/hooks/use-client-goals';
 import type { AthleteGoal } from '@/api/client/client-service';
 import { format, parseISO } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -19,14 +19,18 @@ import { ChevronDownIcon, Plus, Check, ChevronRight, Trash2, Loader2 } from 'luc
 
 type GoalsCardProps = {
   clientId: string;
+  initialSelectedGoalId?: string | null;
 };
 
 type PanelMode = 'add' | 'edit';
 
-export const GoalsCard = ({ clientId }: GoalsCardProps) => {
+export const GoalsCard = ({ clientId, initialSelectedGoalId }: GoalsCardProps) => {
   const t = useTranslations();
   const { goals, isLoading } = useClientProfileContext();
-  const { mutateAsync: updateGoals, isPending: isSaving } = useUpdateClientGoals();
+  const { mutateAsync: createGoal, isPending: isCreating } = useCreateClientGoal();
+  const { mutateAsync: updateGoal, isPending: isUpdating } = useUpdateClientGoal();
+  const { mutateAsync: deleteGoal, isPending: isDeleting } = useDeleteClientGoal();
+  const isSaving = isCreating || isUpdating || isDeleting;
 
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [panelMode, setPanelMode] = useState<PanelMode>('add');
@@ -45,6 +49,18 @@ export const GoalsCard = ({ clientId }: GoalsCardProps) => {
       }, 100);
     }
   }, [isPanelOpen]);
+
+  // Auto-open goal from URL param
+  useEffect(() => {
+    if (initialSelectedGoalId && goals.length > 0 && !isLoading) {
+      const goal = goals.find((g) => g.id === initialSelectedGoalId);
+      if (goal) {
+        handleOpenEdit(goal);
+      }
+    }
+    // Only run when goals load or initialSelectedGoalId changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSelectedGoalId, goals, isLoading]);
 
   const resetForm = () => {
     setEditingGoal('');
@@ -78,22 +94,24 @@ export const GoalsCard = ({ clientId }: GoalsCardProps) => {
 
     try {
       if (panelMode === 'add') {
-        const newGoal = {
-          goal: editingGoal.trim(),
-          target_date: editingTargetDate,
-          details: editingDetails.trim() || undefined,
-        };
-        await updateGoals({
+        await createGoal({
           clientId,
-          goals: [...goals.map(g => ({ goal: g.goal, target_date: g.target_date, details: g.details })), newGoal],
+          goal: {
+            goal: editingGoal.trim(),
+            target_date: editingTargetDate,
+            details: editingDetails.trim() || undefined,
+          },
         });
-      } else {
-        const updatedGoals = goals.map(g =>
-          g.id === selectedGoalId
-            ? { goal: editingGoal.trim(), target_date: editingTargetDate, details: editingDetails.trim() || undefined }
-            : { goal: g.goal, target_date: g.target_date, details: g.details }
-        );
-        await updateGoals({ clientId, goals: updatedGoals });
+      } else if (selectedGoalId) {
+        await updateGoal({
+          clientId,
+          goalId: selectedGoalId,
+          goal: {
+            goal: editingGoal.trim(),
+            target_date: editingTargetDate,
+            details: editingDetails.trim() || undefined,
+          },
+        });
       }
       handleClose();
     } catch (error) {
@@ -105,10 +123,7 @@ export const GoalsCard = ({ clientId }: GoalsCardProps) => {
     if (!clientId || !selectedGoalId) return;
 
     try {
-      const remainingGoals = goals
-        .filter(g => g.id !== selectedGoalId)
-        .map(g => ({ goal: g.goal, target_date: g.target_date, details: g.details }));
-      await updateGoals({ clientId, goals: remainingGoals });
+      await deleteGoal({ clientId, goalId: selectedGoalId });
       handleClose();
     } catch (error) {
       console.error('Failed to delete goal:', error);

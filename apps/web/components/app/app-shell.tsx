@@ -112,7 +112,7 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
 const SidebarInsetWithBorder = ({ children }: { children: ReactNode }) => {
   const { state, setOpen } = useSidebar();
   const { isOpen: isAIPanelOpen, setIsOpen: setAIPanelOpen } = useAIPanel();
-  const showBorder = state === 'collapsed';
+
   const prevAIPanelOpen = React.useRef(isAIPanelOpen);
   const prevState = React.useRef(state);
 
@@ -136,8 +136,7 @@ const SidebarInsetWithBorder = ({ children }: { children: ReactNode }) => {
   return (
     <SidebarInset
       className={cn(
-        'flex-1 flex flex-row overflow-hidden bg-background reset-sidebar-vars border-none shadow-none',
-        showBorder && 'border-l border-sidebar-border'
+        'flex-1 flex flex-row overflow-hidden bg-background reset-sidebar-vars border-none shadow-none'
       )}
     >
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">

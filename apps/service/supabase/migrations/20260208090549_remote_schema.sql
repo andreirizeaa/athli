@@ -13,6 +13,13 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 
+CREATE EXTENSION IF NOT EXISTS "pg_cron" WITH SCHEMA "pg_catalog";
+
+
+
+
+
+
 COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
@@ -381,6 +388,25 @@ $$;
 ALTER FUNCTION "public"."check_attachments_complete"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."cleanup_missed_workout_logs"("p_retention_days" integer DEFAULT 30) RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_deleted INTEGER;
+BEGIN
+  DELETE FROM public.missed_workout_cron_log
+  WHERE created_at < now() - (p_retention_days || ' days')::INTERVAL;
+
+  GET DIAGNOSTICS v_deleted = ROW_COUNT;
+  RETURN v_deleted;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."cleanup_missed_workout_logs"("p_retention_days" integer) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."cleanup_musclewiki_audit_logs"("p_retention_days" integer DEFAULT 90) RETURNS integer
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -448,28 +474,30 @@ ALTER FUNCTION "public"."create_conversation_on_client_assignment"() OWNER TO "p
 
 CREATE OR REPLACE FUNCTION "public"."create_participant_records"() RETURNS "trigger"
     LANGUAGE "plpgsql"
-    SET "search_path" TO 'public', 'pg_temp'
     AS $$
 BEGIN
-  -- Create participant record for coach
+  -- Create participant record for coach (skip if exists)
   INSERT INTO public.conversation_participants (
     conversation_id, user_id, other_user_id
   ) VALUES (
     NEW.id, NEW.coach_id, NEW.client_id
-  );
+  )
+  ON CONFLICT (conversation_id, user_id) DO NOTHING;
 
-  -- Create participant record for client
+  -- Create participant record for client (skip if exists)
   INSERT INTO public.conversation_participants (
     conversation_id, user_id, other_user_id
   ) VALUES (
     NEW.id, NEW.client_id, NEW.coach_id
-  );
+  )
+  ON CONFLICT (conversation_id, user_id) DO NOTHING;
 
-  -- Create initial read receipt records
+  -- Create initial read receipt records (skip if exists)
   INSERT INTO public.message_read_receipts (conversation_id, user_id)
   VALUES
     (NEW.id, NEW.coach_id),
-    (NEW.id, NEW.client_id);
+    (NEW.id, NEW.client_id)
+  ON CONFLICT (conversation_id, user_id) DO NOTHING;
 
   RETURN NEW;
 END;
@@ -1063,10 +1091,7 @@ BEGIN
     RAISE EXCEPTION 'Unauthorized: You must be a participant in the conversation';
   END IF;
 
-  -- Ensure no self-messaging
-  IF p_coach_id = p_client_id THEN
-    RAISE EXCEPTION 'Cannot create conversation with yourself';
-  END IF;
+  -- Note: Self-messaging is allowed (coach can be their own demo client)
 
   -- Try to find existing conversation
   SELECT id INTO v_conversation_id
@@ -1358,96 +1383,341 @@ $$;
 ALTER FUNCTION "public"."handle_client_auth_cleanup"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."handle_coach_account_deletion"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'storage'
+    AS $$
+DECLARE
+  v_conversation_ids UUID[];
+  v_conversation_id UUID;
+BEGIN
+  -- 1. Delete coach_files bucket files
+  DELETE FROM storage.objects
+  WHERE bucket_id = 'coach_files'
+    AND name LIKE OLD.id::text || '/%';
+
+  -- 2. Delete coach-company bucket files
+  DELETE FROM storage.objects
+  WHERE bucket_id = 'coach-company'
+    AND name LIKE OLD.id::text || '/%';
+
+  -- 3. Delete exercise_videos bucket files
+  DELETE FROM storage.objects
+  WHERE bucket_id = 'exercise_videos'
+    AND name LIKE OLD.id::text || '/%';
+
+  -- 4. Delete profile-pictures bucket files
+  DELETE FROM storage.objects
+  WHERE bucket_id = 'profile-pictures'
+    AND name LIKE OLD.id::text || '/%';
+
+  -- 5. Delete client_photos for this coach (path: client_id/coach_id/...)
+  DELETE FROM storage.objects
+  WHERE bucket_id = 'client_photos'
+    AND name ~ ('^[^/]+/' || OLD.id::text || '/');
+
+  -- 6. Delete form_files for this coach (path: client_id/coach_id/...)
+  DELETE FROM storage.objects
+  WHERE bucket_id = 'form_files'
+    AND name ~ ('^[^/]+/' || OLD.id::text || '/');
+
+  -- 7. Delete message_attachments for all coach's conversations
+  SELECT ARRAY_AGG(id) INTO v_conversation_ids
+  FROM public.conversations
+  WHERE coach_id = OLD.id;
+
+  IF v_conversation_ids IS NOT NULL THEN
+    FOREACH v_conversation_id IN ARRAY v_conversation_ids
+    LOOP
+      DELETE FROM storage.objects
+      WHERE bucket_id = 'message_attachments'
+        AND name LIKE v_conversation_id::text || '/%';
+    END LOOP;
+  END IF;
+
+  RETURN OLD;
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE WARNING 'Error cleaning up coach storage for coach %: %', OLD.id, SQLERRM;
+    RETURN OLD;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."handle_coach_account_deletion"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."handle_coach_auth_cleanup"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'auth'
+    AS $$
+BEGIN
+  -- For demo clients, the coach is their own client (coach_id = client_id)
+  -- We need to clean up in the right order to avoid FK violations
+
+  -- Step 1: Delete any coach_client_assignments where this user is the client
+  -- (In case cascade from coach_profiles didn't catch all of them)
+  DELETE FROM public.coach_client_assignments
+  WHERE client_id = OLD.id;
+
+  -- Step 2: Delete client_profiles for this user (demo client)
+  -- Must happen before user_profiles due to FK constraint
+  DELETE FROM public.client_profiles
+  WHERE client_id = OLD.id;
+
+  -- Step 3: Delete user_profiles entry with user_type='client' (demo)
+  DELETE FROM public.user_profiles
+  WHERE id = OLD.id
+    AND user_type = 'client';
+
+  -- Step 4: Delete the coach's user_profiles entry
+  DELETE FROM public.user_profiles
+  WHERE id = OLD.id
+    AND user_type = 'coach';
+
+  -- Step 5: Delete from auth.users (cascades to other auth-related tables)
+  DELETE FROM auth.users
+  WHERE id = OLD.id;
+
+  RETURN OLD;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."handle_coach_auth_cleanup"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."handle_new_coach_setup"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
 BEGIN
-  -- This function is triggered from coach_profiles INSERT
-  -- No need to check user_type - if we're here, it's a coach
-  
-  -- 1. Create default preferences (theme, language, units, color_preset)
-  INSERT INTO public.coach_preferences (coach_id, theme, language, units, color_preset)
-  VALUES (NEW.id, 'light', 'en', 'metric', 'default')
-  ON CONFLICT (coach_id) DO NOTHING;
+  -- Only proceed if the new profile is a coach
+  IF NEW.user_type = 'coach' THEN
 
-  -- 2. Generate and insert unique coach code
-  INSERT INTO public.coach_unique_codes (coach_id, code)
-  VALUES (
-      NEW.id, 
-      upper(substring(md5(random()::text || clock_timestamp()::text) from 1 for 8))
-  )
-  ON CONFLICT (coach_id, code) DO NOTHING;
+    -- 1. Create default preferences (theme, language, units, color_preset)
+    INSERT INTO public.coach_preferences (coach_id, theme, language, units, color_preset)
+    VALUES (NEW.id, 'light', 'en', 'metric', 'default')
+    ON CONFLICT (coach_id) DO NOTHING;
 
-  -- 3. Create default notification preferences
-  INSERT INTO public.coach_notification_preferences (coach_id, event_id, enabled)
-  SELECT 
-    NEW.id, 
-    id, 
-    true -- We default all to enabled for new coaches
-  FROM public.available_notification_events
-  ON CONFLICT DO NOTHING;
+    -- 2. Generate and insert unique coach code
+    INSERT INTO public.coach_unique_codes (coach_id, code)
+    VALUES (
+        NEW.id,
+        upper(substring(md5(random()::text || clock_timestamp()::text) from 1 for 8))
+    )
+    ON CONFLICT (coach_id, code) DO NOTHING;
 
-  -- 3.5. Create Getting Started checklist row
-  INSERT INTO public.coach_getting_started_checklist (coach_id)
-  VALUES (NEW.id)
-  ON CONFLICT (coach_id) DO NOTHING;
-
-  -- 4. Create default flows (The 5 fixed flows)
-  -- Flow 1: New Client Sign Up
-  INSERT INTO public.coach_flows (coach_id, name, description, flow_data, is_active)
-  VALUES (
+    -- 3. Create default notification preferences
+    INSERT INTO public.coach_notification_preferences (coach_id, event_id, enabled)
+    SELECT
       NEW.id,
-      'New Client Sign Up',
-      'Triggered when a new client accepts your invitation.',
-      '{"nodes": [{"id": "trigger", "type": "trigger", "position": {"x": 400, "y": 50}, "data": {"label": "Trigger", "subtitle": "New client sign up", "option": {"id": "new-client-signup", "name": "New client sign up"}}}, {"id": "add-action-trigger", "type": "addAction", "position": {"x": 400, "y": 200}, "data": {"metadata": {"index": 0}}}, {"id": "end", "type": "end", "position": {"x": 400, "y": 300}, "data": {"label": "End"}}], "edges": [{"id": "trigger-to-add", "source": "trigger", "target": "add-action-trigger", "type": "smoothstep"}, {"id": "add-to-end", "source": "add-action-trigger", "target": "end", "type": "smoothstep"}]}'::jsonb,
-      false
-  )
-  ON CONFLICT DO NOTHING;
+      id,
+      true -- We default all to enabled for new coaches
+    FROM public.available_notification_events
+    ON CONFLICT (coach_id, event_id) DO NOTHING;
 
-  -- Flow 2: Missed Check-in
-  INSERT INTO public.coach_flows (coach_id, name, description, flow_data, is_active)
-  VALUES (
-      NEW.id,
-      'Missed Check-in',
-      'Triggered when a client misses a scheduled check-in.',
-      '{"nodes": [{"id": "trigger", "type": "trigger", "position": {"x": 400, "y": 50}, "data": {"label": "Trigger", "subtitle": "Missed check in", "option": {"id": "missed-check-in", "name": "Missed check in"}}}, {"id": "add-action-trigger", "type": "addAction", "position": {"x": 400, "y": 200}, "data": {"metadata": {"index": 0}}}, {"id": "end", "type": "end", "position": {"x": 400, "y": 300}, "data": {"label": "End"}}], "edges": [{"id": "trigger-to-add", "source": "trigger", "target": "add-action-trigger", "type": "smoothstep"}, {"id": "add-to-end", "source": "add-action-trigger", "target": "end", "type": "smoothstep"}]}'::jsonb,
-      false
-  )
-  ON CONFLICT DO NOTHING;
+    -- 3.5. Create Getting Started checklist row
+    INSERT INTO public.coach_getting_started_checklist (coach_id)
+    VALUES (NEW.id)
+    ON CONFLICT (coach_id) DO NOTHING;
 
-  -- Flow 3: Check-in Completed
-  INSERT INTO public.coach_flows (coach_id, name, description, flow_data, is_active)
-  VALUES (
-      NEW.id,
-      'Check-in Completed',
-      'Triggered when a client completes a check-in.',
-      '{"nodes": [{"id": "trigger", "type": "trigger", "position": {"x": 400, "y": 50}, "data": {"label": "Trigger", "subtitle": "Check in completed", "option": {"id": "check-in-completed", "name": "Check in completed"}}}, {"id": "add-action-trigger", "type": "addAction", "position": {"x": 400, "y": 200}, "data": {"metadata": {"index": 0}}}, {"id": "end", "type": "end", "position": {"x": 400, "y": 300}, "data": {"label": "End"}}], "edges": [{"id": "trigger-to-add", "source": "trigger", "target": "add-action-trigger", "type": "smoothstep"}, {"id": "add-to-end", "source": "add-action-trigger", "target": "end", "type": "smoothstep"}]}'::jsonb,
-      false
-  )
-  ON CONFLICT DO NOTHING;
+    -- 4. Create default flows (5 flows — "New Client Sign Up" removed, handled by coach_onboardings)
 
-  -- Flow 4: Missed Workout
-  INSERT INTO public.coach_flows (coach_id, name, description, flow_data, is_active)
-  VALUES (
-      NEW.id,
-      'Missed Workout',
-      'Triggered when a client misses a scheduled workout.',
-      '{"nodes": [{"id": "trigger", "type": "trigger", "position": {"x": 400, "y": 50}, "data": {"label": "Trigger", "subtitle": "Missed workout", "option": {"id": "missed-workout", "name": "Missed workout"}}}, {"id": "add-action-trigger", "type": "addAction", "position": {"x": 400, "y": 200}, "data": {"metadata": {"index": 0}}}, {"id": "end", "type": "end", "position": {"x": 400, "y": 300}, "data": {"label": "End"}}], "edges": [{"id": "trigger-to-add", "source": "trigger", "target": "add-action-trigger", "type": "smoothstep"}, {"id": "add-to-end", "source": "add-action-trigger", "target": "end", "type": "smoothstep"}]}'::jsonb,
-      false
-  )
-  ON CONFLICT DO NOTHING;
+    -- Flow 1: Workout Finished
+    INSERT INTO public.coach_flows (coach_id, name, description, flow_data, is_active)
+    VALUES (
+        NEW.id,
+        'Workout Finished',
+        'Triggered when a client completes a workout.',
+        '{
+          "nodes": [
+            { "id": "trigger", "type": "trigger", "position": { "x": 400, "y": 50 }, "data": { "label": "Trigger", "subtitle": "Workout finished", "option": { "id": "workout-finished", "name": "Workout finished" } } },
+            { "id": "add-action-trigger", "type": "addAction", "position": { "x": 400, "y": 200 }, "data": { "metadata": { "index": 0 } } },
+            { "id": "end", "type": "end", "position": { "x": 400, "y": 300 }, "data": { "label": "End" } }
+          ],
+          "edges": [
+            { "id": "trigger-to-add", "source": "trigger", "target": "add-action-trigger", "type": "smoothstep" },
+            { "id": "add-to-end", "source": "add-action-trigger", "target": "end", "type": "smoothstep" }
+          ]
+        }'::jsonb,
+        false
+    );
 
-  -- Flow 5: Workout Finished
-  INSERT INTO public.coach_flows (coach_id, name, description, flow_data, is_active)
-  VALUES (
-      NEW.id,
-      'Workout Finished',
-      'Triggered when a client completes a workout.',
-      '{"nodes": [{"id": "trigger", "type": "trigger", "position": {"x": 400, "y": 50}, "data": {"label": "Trigger", "subtitle": "Workout finished", "option": {"id": "workout-finished", "name": "Workout finished"}}}, {"id": "add-action-trigger", "type": "addAction", "position": {"x": 400, "y": 200}, "data": {"metadata": {"index": 0}}}, {"id": "end", "type": "end", "position": {"x": 400, "y": 300}, "data": {"label": "End"}}], "edges": [{"id": "trigger-to-add", "source": "trigger", "target": "add-action-trigger", "type": "smoothstep"}, {"id": "add-to-end", "source": "add-action-trigger", "target": "end", "type": "smoothstep"}]}'::jsonb,
-      false
-  )
-  ON CONFLICT DO NOTHING;
+    -- Flow 2: Check-in Completed
+    INSERT INTO public.coach_flows (coach_id, name, description, flow_data, is_active)
+    VALUES (
+        NEW.id,
+        'Check-in Completed',
+        'Triggered when a client completes a check-in.',
+        '{
+          "nodes": [
+            { "id": "trigger", "type": "trigger", "position": { "x": 400, "y": 50 }, "data": { "label": "Trigger", "subtitle": "Check in completed", "option": { "id": "check-in-completed", "name": "Check in completed" } } },
+            { "id": "add-action-trigger", "type": "addAction", "position": { "x": 400, "y": 200 }, "data": { "metadata": { "index": 0 } } },
+            { "id": "end", "type": "end", "position": { "x": 400, "y": 300 }, "data": { "label": "End" } }
+          ],
+          "edges": [
+            { "id": "trigger-to-add", "source": "trigger", "target": "add-action-trigger", "type": "smoothstep" },
+            { "id": "add-to-end", "source": "add-action-trigger", "target": "end", "type": "smoothstep" }
+          ]
+        }'::jsonb,
+        false
+    );
+
+    -- Flow 3: Missed Workout
+    INSERT INTO public.coach_flows (coach_id, name, description, flow_data, is_active)
+    VALUES (
+        NEW.id,
+        'Missed Workout',
+        'Triggered when a client misses a scheduled workout.',
+        '{
+          "nodes": [
+            { "id": "trigger", "type": "trigger", "position": { "x": 400, "y": 50 }, "data": { "label": "Trigger", "subtitle": "Missed workout", "option": { "id": "missed-workout", "name": "Missed workout" } } },
+            { "id": "add-action-trigger", "type": "addAction", "position": { "x": 400, "y": 200 }, "data": { "metadata": { "index": 0 } } },
+            { "id": "end", "type": "end", "position": { "x": 400, "y": 300 }, "data": { "label": "End" } }
+          ],
+          "edges": [
+            { "id": "trigger-to-add", "source": "trigger", "target": "add-action-trigger", "type": "smoothstep" },
+            { "id": "add-to-end", "source": "add-action-trigger", "target": "end", "type": "smoothstep" }
+          ]
+        }'::jsonb,
+        false
+    );
+
+    -- Flow 4: Missed Habit Log
+    INSERT INTO public.coach_flows (coach_id, name, description, flow_data, is_active)
+    VALUES (
+        NEW.id,
+        'Missed Habit Log',
+        'Triggered when a client misses logging a habit.',
+        '{
+          "nodes": [
+            { "id": "trigger", "type": "trigger", "position": { "x": 400, "y": 50 }, "data": { "label": "Trigger", "subtitle": "Missed habit log", "option": { "id": "missed-habit-log", "name": "Missed habit log" } } },
+            { "id": "add-action-trigger", "type": "addAction", "position": { "x": 400, "y": 200 }, "data": { "metadata": { "index": 0 } } },
+            { "id": "end", "type": "end", "position": { "x": 400, "y": 300 }, "data": { "label": "End" } }
+          ],
+          "edges": [
+            { "id": "trigger-to-add", "source": "trigger", "target": "add-action-trigger", "type": "smoothstep" },
+            { "id": "add-to-end", "source": "add-action-trigger", "target": "end", "type": "smoothstep" }
+          ]
+        }'::jsonb,
+        false
+    );
+
+    -- Flow 5: Missed Metric Log
+    INSERT INTO public.coach_flows (coach_id, name, description, flow_data, is_active)
+    VALUES (
+        NEW.id,
+        'Missed Metric Log',
+        'Triggered when a client misses logging a metric.',
+        '{
+          "nodes": [
+            { "id": "trigger", "type": "trigger", "position": { "x": 400, "y": 50 }, "data": { "label": "Trigger", "subtitle": "Missed metric log", "option": { "id": "missed-metric-log", "name": "Missed metric log" } } },
+            { "id": "add-action-trigger", "type": "addAction", "position": { "x": 400, "y": 200 }, "data": { "metadata": { "index": 0 } } },
+            { "id": "end", "type": "end", "position": { "x": 400, "y": 300 }, "data": { "label": "End" } }
+          ],
+          "edges": [
+            { "id": "trigger-to-add", "source": "trigger", "target": "add-action-trigger", "type": "smoothstep" },
+            { "id": "add-to-end", "source": "add-action-trigger", "target": "end", "type": "smoothstep" }
+          ]
+        }'::jsonb,
+        false
+    );
+
+    -- 5. Create default Onboarding Flow
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'coach_onboarding') THEN
+      INSERT INTO public.coach_onboarding (coach_id, flow_data, is_active)
+      VALUES (
+        NEW.id,
+        '{
+          "edges": [
+            {
+              "id": "trigger-to-add-trigger",
+              "type": "smoothstep",
+              "source": "trigger",
+              "target": "add-action-trigger"
+            },
+            {
+              "id": "add-trigger-to-end",
+              "type": "smoothstep",
+              "source": "add-action-trigger",
+              "target": "end"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "trigger",
+              "data": {
+                "icon": {},
+                "label": "Trigger",
+                "subtitle": "New client sign up",
+                "isOnboarding": true
+              },
+              "type": "trigger",
+              "dagre": {
+                "x": 150,
+                "y": 32,
+                "rank": 0,
+                "width": 300,
+                "height": 64
+              },
+              "width": 300,
+              "height": 56,
+              "position": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "id": "add-action-trigger",
+              "data": {
+                "metadata": {
+                  "index": 0
+                }
+              },
+              "type": "addAction",
+              "dagre": {
+                "x": 150,
+                "y": 114,
+                "rank": 2,
+                "width": 300,
+                "height": 40
+              },
+              "width": 300,
+              "height": 40,
+              "position": {
+                "x": 0,
+                "y": 94
+              }
+            },
+            {
+              "id": "end",
+              "data": {
+                "label": "End"
+              },
+              "type": "end",
+              "dagre": {
+                "x": 150,
+                "y": 184,
+                "rank": 4,
+                "width": 300,
+                "height": 40
+              },
+              "width": 300,
+              "height": 30,
+              "position": {
+                "x": 0,
+                "y": 164
+              }
+            }
+          ]
+        }'::jsonb,
+        false
+      )
+      ON CONFLICT (coach_id) DO NOTHING;
+    END IF;
+
+  END IF;
 
   RETURN NEW;
 EXCEPTION
@@ -1498,14 +1768,16 @@ BEGIN
     email,
     name,
     profile_picture_url,
-    signin_method
+    signin_method,
+    timezone
   ) VALUES (
     NEW.id,
     v_user_type,
     COALESCE(NEW.email, ''),
     COALESCE(NEW.raw_user_meta_data->>'name', NEW.raw_user_meta_data->>'full_name', ''),
     v_profile_picture_url,
-    v_signin_method
+    v_signin_method,
+    NEW.raw_user_meta_data->>'timezone'
   );
 
   RETURN NEW;
@@ -1567,15 +1839,13 @@ DECLARE
   v_profile_picture_url TEXT;
   v_profile_exists BOOLEAN;
   v_user_name TEXT;
+  v_timezone TEXT;
 BEGIN
-  -- Get current and previous user_type from metadata
   v_user_type := NEW.raw_user_meta_data->>'user_type';
   v_old_user_type := OLD.raw_user_meta_data->>'user_type';
-
-  -- Get profile picture URL (used for user_profiles)
   v_profile_picture_url := public.get_profile_picture_url(NEW.raw_user_meta_data);
+  v_timezone := NEW.raw_user_meta_data->>'timezone';
 
-  -- Get user name
   v_user_name := COALESCE(
     NULLIF(NEW.raw_user_meta_data->>'name', ''),
     NULLIF(NEW.raw_user_meta_data->>'full_name', ''),
@@ -1587,22 +1857,17 @@ BEGIN
   IF (v_old_user_type IS NULL OR v_old_user_type = '') AND
      (v_user_type IS NOT NULL AND v_user_type != '') THEN
 
-    -- Validate user_type
     IF v_user_type NOT IN ('coach', 'client') THEN
       RAISE WARNING 'Invalid user_type: %. Skipping profile creation for user: %', v_user_type, NEW.id;
     ELSE
-      -- Check if profile already exists in user_profiles
       SELECT EXISTS(
         SELECT 1 FROM public.user_profiles
         WHERE id = NEW.id AND user_type = v_user_type
       ) INTO v_profile_exists;
 
       IF NOT v_profile_exists THEN
-        -- Determine signin method
         v_signin_method := public.get_signin_method(NEW.raw_user_meta_data);
 
-        -- Create coach_profiles entry if user is a coach
-        -- coach_profiles only has: id, is_active, is_archived, status, unique_code, created_at, updated_at, getting_started_checklist_complete
         IF v_user_type = 'coach' THEN
           BEGIN
             INSERT INTO public.coach_profiles (
@@ -1616,14 +1881,12 @@ BEGIN
             );
           EXCEPTION
             WHEN unique_violation THEN
-              NULL; -- Profile already exists, continue
+              NULL;
             WHEN OTHERS THEN
               RAISE WARNING 'Error inserting coach_profiles for user %: %', NEW.id, SQLERRM;
           END;
         END IF;
 
-        -- Create user_profiles entry for ALL users (coaches and clients)
-        -- user_profiles has: id, user_type, email, name, profile_picture_url, signin_method, created_at, updated_at
         BEGIN
           INSERT INTO public.user_profiles (
             id,
@@ -1631,18 +1894,20 @@ BEGIN
             email,
             name,
             profile_picture_url,
-            signin_method
+            signin_method,
+            timezone
           ) VALUES (
             NEW.id,
             v_user_type,
             COALESCE(NEW.email, ''),
             v_user_name,
             v_profile_picture_url,
-            v_signin_method
+            v_signin_method,
+            v_timezone
           );
         EXCEPTION
           WHEN unique_violation THEN
-            NULL; -- Profile already exists, continue
+            NULL;
           WHEN OTHERS THEN
             RAISE WARNING 'Error inserting user_profiles for user %: %', NEW.id, SQLERRM;
         END;
@@ -1651,17 +1916,15 @@ BEGIN
   END IF;
 
   -- CASE 2: Update existing user_profiles with any metadata changes
-  -- Only user_profiles has email, name, profile_picture_url columns
   UPDATE public.user_profiles
   SET
     email = COALESCE(NEW.email, email),
     name = COALESCE(NULLIF(v_user_name, ''), name),
     profile_picture_url = COALESCE(v_profile_picture_url, profile_picture_url),
+    timezone = COALESCE(v_timezone, timezone),
     updated_at = NOW()
   WHERE id = NEW.id;
 
-  -- Update coach_profiles timestamp if it exists
-  -- coach_profiles does NOT have email, name, profile_picture_url columns
   UPDATE public.coach_profiles
   SET updated_at = NOW()
   WHERE id = NEW.id;
@@ -1669,7 +1932,6 @@ BEGIN
   RETURN NEW;
 EXCEPTION
   WHEN OTHERS THEN
-    -- Log error but don't fail the auth update
     RAISE WARNING 'Exception in handle_user_update for user %: %', NEW.id, SQLERRM;
     RETURN NEW;
 END;
@@ -1791,11 +2053,9 @@ CREATE OR REPLACE FUNCTION "public"."mark_checklist_automate_onboardings"() RETU
     SET "search_path" TO 'public'
     AS $$
 BEGIN
-  IF NEW.name = 'New Client Sign Up' AND NEW.is_active = true THEN
-    UPDATE public.coach_getting_started_checklist
-    SET automate_onboardings = true, updated_at = now()
-    WHERE coach_id = NEW.coach_id AND automate_onboardings = false;
-  END IF;
+  UPDATE public.coach_getting_started_checklist
+  SET automate_onboardings = true, updated_at = now()
+  WHERE coach_id = NEW.coach_id AND automate_onboardings = false;
   RETURN NEW;
 END;
 $$;
@@ -1947,6 +2207,67 @@ $$;
 
 
 ALTER FUNCTION "public"."mark_message_attachments_ready"("p_message_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."mark_missed_workouts"() RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_rows INTEGER;
+BEGIN
+  -- Insert a 'missed' row for every workout that exists in client_training
+  -- but has no corresponding row in client_training_history.
+  --
+  -- Timezone resolution order:
+  --   1. Client's own timezone (user_profiles where user_type='client')
+  --   2. Coach's timezone (user_profiles where id = coach_id)
+  --   3. 'UTC' fallback
+  --
+  -- We look back 2 days (yesterday + day before) as a catch-up window
+  -- in case a previous cron run failed.
+  --
+  -- The ON CONFLICT DO NOTHING makes this fully idempotent.
+
+  INSERT INTO public.client_training_history
+    (client_id, coach_id, date, workout_id, status)
+  SELECT
+    ct.client_id,
+    ct.coach_id,
+    ct.date,
+    wk.workout_id,
+    'missed'
+  FROM public.client_training ct
+  -- Client's timezone
+  LEFT JOIN public.user_profiles client_up
+    ON client_up.id = ct.client_id AND client_up.user_type = 'client'
+  -- Coach's timezone as fallback
+  LEFT JOIN public.user_profiles coach_up
+    ON coach_up.id = ct.coach_id AND coach_up.user_type = 'coach'
+  CROSS JOIN LATERAL jsonb_object_keys(ct.training_data) AS wk(workout_id)
+  LEFT JOIN public.client_training_history cth
+    ON  cth.client_id  = ct.client_id
+    AND cth.coach_id   = ct.coach_id
+    AND cth.date       = ct.date
+    AND cth.workout_id = wk.workout_id
+  WHERE
+    -- Only process dates before "today" in the resolved timezone
+    ct.date < (NOW() AT TIME ZONE COALESCE(client_up.timezone, coach_up.timezone, 'UTC'))::date
+    -- Limit lookback to 2 days to keep the query fast
+    AND ct.date >= (NOW() AT TIME ZONE COALESCE(client_up.timezone, coach_up.timezone, 'UTC'))::date - 2
+    -- No existing history row = workout was never started
+    AND cth.client_id IS NULL
+    -- Skip empty training_data objects
+    AND ct.training_data != '{}'::jsonb
+  ON CONFLICT (client_id, coach_id, date, workout_id) DO NOTHING;
+
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  RETURN v_rows;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."mark_missed_workouts"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."protect_checkin_review_fields"() RETURNS "trigger"
@@ -2236,6 +2557,47 @@ $$;
 ALTER FUNCTION "public"."trigger_exercise_cache_population"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."trigger_mark_missed_workouts"() RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_log_id UUID;
+  v_rows   INTEGER;
+BEGIN
+  -- Create log entry
+  INSERT INTO public.missed_workout_cron_log (started_at)
+  VALUES (now())
+  RETURNING id INTO v_log_id;
+
+  -- Run the core logic
+  v_rows := public.mark_missed_workouts();
+
+  -- Update log with result
+  UPDATE public.missed_workout_cron_log
+  SET completed_at = now(),
+      rows_inserted = v_rows
+  WHERE id = v_log_id;
+
+  IF v_rows > 0 THEN
+    RAISE NOTICE 'mark_missed_workouts: inserted % rows', v_rows;
+  END IF;
+
+EXCEPTION WHEN OTHERS THEN
+  -- Log the error but don't fail the cron job
+  UPDATE public.missed_workout_cron_log
+  SET completed_at = now(),
+      error_message = SQLERRM
+  WHERE id = v_log_id;
+
+  RAISE WARNING 'mark_missed_workouts failed: %', SQLERRM;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."trigger_mark_missed_workouts"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."update_conversation_on_message"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -2383,7 +2745,9 @@ CREATE TABLE IF NOT EXISTS "public"."coach_client_assignments" (
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "invitation_token" character varying(8),
     "email_bounced_at" timestamp with time zone,
-    CONSTRAINT "check_no_self_assignment" CHECK (("coach_id" <> "client_id")),
+    "onboarding_id" "uuid",
+    "onboarding_executed_at" timestamp with time zone,
+    "is_demo" boolean DEFAULT false,
     CONSTRAINT "coach_client_assignments_category_check" CHECK ((("category" IS NULL) OR ("category" = ANY (ARRAY['online'::"text", 'in-person'::"text", 'hybrid'::"text"])))),
     CONSTRAINT "coach_client_assignments_status_check" CHECK (("status" = ANY (ARRAY['invited'::"text", 'accepted'::"text", 'bounced'::"text", 'connected'::"text", 'archived'::"text"])))
 );
@@ -2424,6 +2788,8 @@ CREATE TABLE IF NOT EXISTS "public"."user_profiles" (
     "signin_method" character varying(20) NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "is_demo" boolean DEFAULT false,
+    "timezone" "text",
     CONSTRAINT "user_profiles_signin_method_check" CHECK ((("signin_method")::"text" = ANY (ARRAY[('email'::character varying)::"text", ('google'::character varying)::"text", ('apple'::character varying)::"text"]))),
     CONSTRAINT "user_profiles_user_type_check" CHECK ((("user_type")::"text" = ANY ((ARRAY['coach'::character varying, 'client'::character varying])::"text"[])))
 );
@@ -2743,6 +3109,7 @@ CREATE OR REPLACE VIEW "public"."client_profiles_full" WITH ("security_invoker"=
     COALESCE("up"."name", ''::character varying) AS "name",
     "up"."profile_picture_url",
     COALESCE("up"."signin_method", 'email'::character varying) AS "signin_method",
+    "up"."timezone",
     "cp"."date_of_birth",
     "cp"."gender",
     "cp"."height_cm",
@@ -2752,15 +3119,10 @@ CREATE OR REPLACE VIEW "public"."client_profiles_full" WITH ("security_invoker"=
     "cp"."created_at",
     "cp"."updated_at"
    FROM ("public"."client_profiles" "cp"
-     LEFT JOIN "public"."user_profiles" "up" ON (("up"."id" = "cp"."client_id")));
+     LEFT JOIN "public"."user_profiles" "up" ON ((("up"."id" = "cp"."client_id") AND (("up"."user_type")::"text" = 'client'::"text"))));
 
 
 ALTER VIEW "public"."client_profiles_full" OWNER TO "postgres";
-
-
-COMMENT ON VIEW "public"."client_profiles_full" IS 'Complete client profile view merging client_profiles with user_profiles.
-Use this view to get full client data including name, email, and profile picture.';
-
 
 
 CREATE TABLE IF NOT EXISTS "public"."client_questionnaires" (
@@ -2953,6 +3315,7 @@ CREATE OR REPLACE VIEW "public"."coach_clients_view" WITH ("security_invoker"='t
     "cca"."invitation_sent_at",
     "cca"."connected_at",
     "cca"."invitation_token",
+    "cca"."onboarding_id",
     "cca"."created_at",
     "cca"."updated_at",
     "cp"."date_of_birth",
@@ -2971,14 +3334,14 @@ CREATE OR REPLACE VIEW "public"."coach_clients_view" WITH ("security_invoker"='t
     "cts"."last_30_days_training_total"
    FROM ((("public"."coach_client_assignments" "cca"
      LEFT JOIN "public"."client_profiles" "cp" ON (("cp"."client_id" = "cca"."client_id")))
-     LEFT JOIN "public"."user_profiles" "up" ON (("up"."id" = "cca"."client_id")))
+     LEFT JOIN "public"."user_profiles" "up" ON ((("up"."id" = "cca"."client_id") AND (("up"."user_type")::"text" = 'client'::"text"))))
      LEFT JOIN "public"."client_training_summary" "cts" ON (("cts"."client_id" = "cca"."client_id")));
 
 
 ALTER VIEW "public"."coach_clients_view" OWNER TO "postgres";
 
 
-COMMENT ON VIEW "public"."coach_clients_view" IS 'Coach view of all their clients with merged profile data from user_profiles.';
+COMMENT ON VIEW "public"."coach_clients_view" IS 'Coach view of all their clients with merged profile data. Filters user_profiles by user_type=client to prevent duplicates when coach_id=client_id (demo clients).';
 
 
 
@@ -3163,6 +3526,22 @@ ALTER TABLE ONLY "public"."coach_notification_preferences" FORCE ROW LEVEL SECUR
 ALTER TABLE "public"."coach_notification_preferences" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."coach_onboardings" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "coach_id" "uuid" NOT NULL,
+    "name" "text" NOT NULL,
+    "description" "text",
+    "flow_data" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+ALTER TABLE ONLY "public"."coach_onboardings" FORCE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."coach_onboardings" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."coach_own_todolist" (
     "coach_id" "uuid" NOT NULL,
     "title" "text" NOT NULL,
@@ -3320,7 +3699,8 @@ ALTER TABLE "public"."coach_sections" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."coach_unique_codes" (
     "coach_id" "uuid" NOT NULL,
     "code" "text" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "onboarding_id" "uuid"
 );
 
 
@@ -3362,8 +3742,7 @@ CREATE TABLE IF NOT EXISTS "public"."conversation_participants" (
     "archived_at" timestamp with time zone,
     "muted_at" timestamp with time zone,
     "pinned_at" timestamp with time zone,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "chk_cp_no_self" CHECK (("user_id" <> "other_user_id"))
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
 
@@ -3379,8 +3758,7 @@ CREATE TABLE IF NOT EXISTS "public"."conversations" (
     "last_message_type" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "last_message_sender_id" "uuid",
-    CONSTRAINT "chk_no_self_messaging" CHECK (("coach_id" <> "client_id"))
+    "last_message_sender_id" "uuid"
 );
 
 
@@ -3519,6 +3897,19 @@ COMMENT ON COLUMN "public"."messages"."idempotency_key" IS 'Client-provided uniq
 
 COMMENT ON COLUMN "public"."messages"."attachments_ready" IS 'FALSE when message is waiting for attachments to be uploaded. TRUE when ready to display.';
 
+
+
+CREATE TABLE IF NOT EXISTS "public"."missed_workout_cron_log" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "started_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "completed_at" timestamp with time zone,
+    "rows_inserted" integer DEFAULT 0,
+    "error_message" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."missed_workout_cron_log" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."musclewiki_api_audit_log" (
@@ -3901,6 +4292,11 @@ ALTER TABLE ONLY "public"."coach_notification_preferences"
 
 
 
+ALTER TABLE ONLY "public"."coach_onboardings"
+    ADD CONSTRAINT "coach_onboardings_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."coach_own_todolist"
     ADD CONSTRAINT "coach_own_todolist_pkey" PRIMARY KEY ("id");
 
@@ -3998,6 +4394,11 @@ ALTER TABLE ONLY "public"."message_read_receipts"
 
 ALTER TABLE ONLY "public"."messages"
     ADD CONSTRAINT "messages_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."missed_workout_cron_log"
+    ADD CONSTRAINT "missed_workout_cron_log_pkey" PRIMARY KEY ("id");
 
 
 
@@ -4240,6 +4641,10 @@ CREATE INDEX "idx_coach_metrics_coach_id_lower_name" ON "public"."coach_metrics"
 
 
 CREATE INDEX "idx_coach_notif_prefs_owner" ON "public"."coach_notification_preferences" USING "btree" ("coach_id");
+
+
+
+CREATE INDEX "idx_coach_onboardings_coach_id" ON "public"."coach_onboardings" USING "btree" ("coach_id");
 
 
 
@@ -4491,6 +4896,10 @@ CREATE INDEX "idx_mwaal_endpoint" ON "public"."musclewiki_api_audit_log" USING "
 
 
 
+CREATE INDEX "idx_mwcl_started_at" ON "public"."missed_workout_cron_log" USING "btree" ("started_at" DESC);
+
+
+
 CREATE INDEX "idx_mwec_cache_expires" ON "public"."musclewiki_exercise_cache" USING "btree" ("cache_expires_at");
 
 
@@ -4627,6 +5036,10 @@ CREATE OR REPLACE TRIGGER "on_coach_profile_created" AFTER INSERT ON "public"."c
 
 
 
+CREATE OR REPLACE TRIGGER "on_coach_profile_created" AFTER INSERT ON "public"."user_profiles" FOR EACH ROW EXECUTE FUNCTION "public"."handle_new_coach_setup"();
+
+
+
 CREATE OR REPLACE TRIGGER "on_user_profile_deleted" AFTER DELETE ON "public"."user_profiles" FOR EACH ROW EXECUTE FUNCTION "public"."handle_user_profile_delete"();
 
 
@@ -4723,7 +5136,7 @@ CREATE OR REPLACE TRIGGER "trg_check_attachments_complete" AFTER INSERT OR UPDAT
 
 
 
-CREATE OR REPLACE TRIGGER "trg_checklist_automate_onboardings" AFTER INSERT OR UPDATE ON "public"."coach_flows" FOR EACH ROW EXECUTE FUNCTION "public"."mark_checklist_automate_onboardings"();
+CREATE OR REPLACE TRIGGER "trg_checklist_automate_onboardings" AFTER INSERT ON "public"."coach_onboardings" FOR EACH ROW EXECUTE FUNCTION "public"."mark_checklist_automate_onboardings"();
 
 
 
@@ -4792,6 +5205,14 @@ CREATE OR REPLACE TRIGGER "trg_cn_integrity" BEFORE INSERT OR UPDATE ON "public"
 
 
 CREATE OR REPLACE TRIGGER "trg_cn_updated_at" BEFORE UPDATE ON "public"."client_notes" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_coach_account_deletion" BEFORE DELETE ON "public"."coach_profiles" FOR EACH ROW EXECUTE FUNCTION "public"."handle_coach_account_deletion"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_coach_auth_cleanup" AFTER DELETE ON "public"."coach_profiles" FOR EACH ROW EXECUTE FUNCTION "public"."handle_coach_auth_cleanup"();
 
 
 
@@ -4891,6 +5312,10 @@ CREATE OR REPLACE TRIGGER "trg_mwsm_updated_at" BEFORE UPDATE ON "public"."muscl
 
 
 
+CREATE OR REPLACE TRIGGER "trg_onboardings_updated_at" BEFORE UPDATE ON "public"."coach_onboardings" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
+
+
+
 CREATE OR REPLACE TRIGGER "trg_participants_updated_at" BEFORE UPDATE ON "public"."conversation_participants" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
 
@@ -4961,6 +5386,16 @@ ALTER TABLE ONLY "public"."client_metric_logs"
 
 
 
+ALTER TABLE ONLY "public"."coach_client_assignments"
+    ADD CONSTRAINT "coach_client_assignments_onboarding_id_fkey" FOREIGN KEY ("onboarding_id") REFERENCES "public"."coach_onboardings"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."coach_onboardings"
+    ADD CONSTRAINT "coach_onboardings_coach_id_fkey" FOREIGN KEY ("coach_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."coach_profiles"
     ADD CONSTRAINT "coach_profiles_id_fkey" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
@@ -4968,6 +5403,11 @@ ALTER TABLE ONLY "public"."coach_profiles"
 
 ALTER TABLE ONLY "public"."coach_unique_codes"
     ADD CONSTRAINT "coach_unique_codes_coach_id_fkey" FOREIGN KEY ("coach_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."coach_unique_codes"
+    ADD CONSTRAINT "coach_unique_codes_onboarding_id_fkey" FOREIGN KEY ("onboarding_id") REFERENCES "public"."coach_onboardings"("id") ON DELETE SET NULL;
 
 
 
@@ -5354,10 +5794,6 @@ CREATE POLICY "Available events are viewable by authenticated users" ON "public"
 
 
 
-CREATE POLICY "Coaches can delete own profile" ON "public"."coach_profiles" FOR DELETE TO "authenticated" USING ((( SELECT "auth"."uid"() AS "uid") = "id"));
-
-
-
 CREATE POLICY "Coaches can delete their own notification preferences" ON "public"."coach_notification_preferences" FOR DELETE TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
@@ -5387,6 +5823,10 @@ CREATE POLICY "Coaches can view their own notification preferences" ON "public".
 
 
 CREATE POLICY "Service role can manage cache population log" ON "public"."musclewiki_cache_population_log" TO "service_role" USING (true) WITH CHECK (true);
+
+
+
+CREATE POLICY "Service role can manage missed workout log" ON "public"."missed_workout_cron_log" TO "service_role" USING (true) WITH CHECK (true);
 
 
 
@@ -5692,6 +6132,10 @@ CREATE POLICY "cn_manage" ON "public"."client_notes" TO "authenticated" USING ((
 
 
 
+CREATE POLICY "co_all" ON "public"."coach_onboardings" TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
 ALTER TABLE "public"."coach_auto_todolist" ENABLE ROW LEVEL SECURITY;
 
 
@@ -5725,6 +6169,9 @@ ALTER TABLE "public"."coach_metrics" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."coach_notification_preferences" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."coach_onboardings" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."coach_own_todolist" ENABLE ROW LEVEL SECURITY;
 
 
@@ -5748,6 +6195,10 @@ ALTER TABLE "public"."coach_preferences" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."coach_profiles" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "coach_profiles_delete_own" ON "public"."coach_profiles" FOR DELETE TO "authenticated" USING ((( SELECT "auth"."uid"() AS "uid") = "id"));
+
 
 
 ALTER TABLE "public"."coach_programs" ENABLE ROW LEVEL SECURITY;
@@ -5829,15 +6280,19 @@ CREATE POLICY "cq_all" ON "public"."coach_questionnaires" TO "authenticated" USI
 
 
 
-CREATE POLICY "cq_client_select" ON "public"."client_questionnaires" FOR SELECT TO "authenticated" USING (("client_id" = "auth"."uid"()));
+CREATE POLICY "cq_delete" ON "public"."client_questionnaires" FOR DELETE TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "cq_client_update" ON "public"."client_questionnaires" FOR UPDATE TO "authenticated" USING (("client_id" = "auth"."uid"())) WITH CHECK (("client_id" = "auth"."uid"()));
+CREATE POLICY "cq_insert" ON "public"."client_questionnaires" FOR INSERT TO "authenticated" WITH CHECK (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "cq_coach_all" ON "public"."client_questionnaires" TO "authenticated" USING (("coach_id" = "auth"."uid"())) WITH CHECK (("coach_id" = "auth"."uid"()));
+CREATE POLICY "cq_select" ON "public"."client_questionnaires" FOR SELECT TO "authenticated" USING ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("client_id" = ( SELECT "auth"."uid"() AS "uid"))));
+
+
+
+CREATE POLICY "cq_update" ON "public"."client_questionnaires" FOR UPDATE TO "authenticated" USING ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("client_id" = ( SELECT "auth"."uid"() AS "uid")))) WITH CHECK ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("client_id" = ( SELECT "auth"."uid"() AS "uid"))));
 
 
 
@@ -5956,6 +6411,9 @@ ALTER TABLE "public"."message_read_receipts" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."messages" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."missed_workout_cron_log" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."musclewiki_api_audit_log" ENABLE ROW LEVEL SECURITY;
 
 
@@ -6019,10 +6477,34 @@ ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."messages";
 
 
 
+
+
+
 GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6365,6 +6847,12 @@ GRANT ALL ON FUNCTION "public"."check_attachments_complete"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."cleanup_missed_workout_logs"("p_retention_days" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."cleanup_missed_workout_logs"("p_retention_days" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cleanup_missed_workout_logs"("p_retention_days" integer) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."cleanup_musclewiki_audit_logs"("p_retention_days" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."cleanup_musclewiki_audit_logs"("p_retention_days" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."cleanup_musclewiki_audit_logs"("p_retention_days" integer) TO "service_role";
@@ -6557,6 +7045,20 @@ GRANT ALL ON FUNCTION "public"."handle_client_auth_cleanup"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."handle_coach_account_deletion"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."handle_coach_account_deletion"() TO "anon";
+GRANT ALL ON FUNCTION "public"."handle_coach_account_deletion"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."handle_coach_account_deletion"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."handle_coach_auth_cleanup"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."handle_coach_auth_cleanup"() TO "anon";
+GRANT ALL ON FUNCTION "public"."handle_coach_auth_cleanup"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."handle_coach_auth_cleanup"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."handle_new_coach_setup"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."handle_new_coach_setup"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."handle_new_coach_setup"() TO "service_role";
@@ -6659,6 +7161,12 @@ GRANT ALL ON FUNCTION "public"."mark_message_attachments_ready"("p_message_id" "
 
 
 
+GRANT ALL ON FUNCTION "public"."mark_missed_workouts"() TO "anon";
+GRANT ALL ON FUNCTION "public"."mark_missed_workouts"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."mark_missed_workouts"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."protect_checkin_review_fields"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."protect_checkin_review_fields"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."protect_checkin_review_fields"() TO "service_role";
@@ -6725,6 +7233,12 @@ GRANT ALL ON FUNCTION "public"."trigger_exercise_cache_population"() TO "service
 
 
 
+GRANT ALL ON FUNCTION "public"."trigger_mark_missed_workouts"() TO "anon";
+GRANT ALL ON FUNCTION "public"."trigger_mark_missed_workouts"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."trigger_mark_missed_workouts"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."update_conversation_on_message"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."update_conversation_on_message"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_conversation_on_message"() TO "service_role";
@@ -6746,6 +7260,12 @@ GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."validate_coach_role"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."validate_coach_role"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."validate_coach_role"() TO "service_role";
+
+
+
+
+
+
 
 
 
@@ -6989,6 +7509,12 @@ GRANT ALL ON TABLE "public"."coach_notification_preferences" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."coach_onboardings" TO "anon";
+GRANT ALL ON TABLE "public"."coach_onboardings" TO "authenticated";
+GRANT ALL ON TABLE "public"."coach_onboardings" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."coach_own_todolist" TO "anon";
 GRANT ALL ON TABLE "public"."coach_own_todolist" TO "authenticated";
 GRANT ALL ON TABLE "public"."coach_own_todolist" TO "service_role";
@@ -7094,6 +7620,12 @@ GRANT ALL ON TABLE "public"."message_read_receipts" TO "service_role";
 GRANT ALL ON TABLE "public"."messages" TO "anon";
 GRANT ALL ON TABLE "public"."messages" TO "authenticated";
 GRANT ALL ON TABLE "public"."messages" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."missed_workout_cron_log" TO "anon";
+GRANT ALL ON TABLE "public"."missed_workout_cron_log" TO "authenticated";
+GRANT ALL ON TABLE "public"."missed_workout_cron_log" TO "service_role";
 
 
 
@@ -7326,16 +7858,6 @@ with check (((bucket_id = 'profile-pictures'::text) AND ((auth.uid())::text = (s
 
 
 
-  create policy "storage_client_photos_manage"
-  on "storage"."objects"
-  as permissive
-  for all
-  to authenticated
-using (((bucket_id = 'client_photos'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)))
-with check (((bucket_id = 'client_photos'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
-
-
-
   create policy "storage_client_read"
   on "storage"."objects"
   as permissive
@@ -7344,6 +7866,15 @@ with check (((bucket_id = 'client_photos'::text) AND ((storage.foldername(name))
 using (((bucket_id = 'coach_files'::text) AND (EXISTS ( SELECT 1
    FROM public.client_files cf
   WHERE ((cf.client_id = auth.uid()) AND (cf.file_path = objects.name))))));
+
+
+
+  create policy "storage_client_read_own_photos"
+  on "storage"."objects"
+  as permissive
+  for select
+  to authenticated
+using (((bucket_id = 'client_photos'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text)));
 
 
 
@@ -7357,14 +7888,49 @@ with check (((bucket_id = 'coach_files'::text) AND ((storage.foldername(name))[1
 
 
 
-  create policy "storage_coach_read_client_photos"
+  create policy "storage_coach_manage_client_photos"
+  on "storage"."objects"
+  as permissive
+  for all
+  to authenticated
+using (((bucket_id = 'client_photos'::text) AND ((storage.foldername(name))[2] = (( SELECT auth.uid() AS uid))::text) AND (EXISTS ( SELECT 1
+   FROM public.coach_client_assignments cca
+  WHERE ((cca.coach_id = ( SELECT auth.uid() AS uid)) AND ((cca.client_id)::text = (storage.foldername(objects.name))[1]))))))
+with check (((bucket_id = 'client_photos'::text) AND ((storage.foldername(name))[2] = (( SELECT auth.uid() AS uid))::text) AND (EXISTS ( SELECT 1
+   FROM public.coach_client_assignments cca
+  WHERE ((cca.coach_id = ( SELECT auth.uid() AS uid)) AND ((cca.client_id)::text = (storage.foldername(objects.name))[1]))))));
+
+
+
+  create policy "storage_form_files_client_read"
   on "storage"."objects"
   as permissive
   for select
   to authenticated
-using (((bucket_id = 'client_photos'::text) AND (EXISTS ( SELECT 1
+using (((bucket_id = 'form_files'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text)));
+
+
+
+  create policy "storage_form_files_client_upload"
+  on "storage"."objects"
+  as permissive
+  for insert
+  to authenticated
+with check (((bucket_id = 'form_files'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text)));
+
+
+
+  create policy "storage_form_files_coach_manage"
+  on "storage"."objects"
+  as permissive
+  for all
+  to authenticated
+using (((bucket_id = 'form_files'::text) AND ((storage.foldername(name))[2] = (( SELECT auth.uid() AS uid))::text) AND (EXISTS ( SELECT 1
    FROM public.coach_client_assignments cca
-  WHERE (((cca.client_id)::text = (storage.foldername(objects.name))[1]) AND ((cca.coach_id = ( SELECT auth.uid() AS uid)) OR (cca.client_id = ( SELECT auth.uid() AS uid))))))));
+  WHERE ((cca.coach_id = ( SELECT auth.uid() AS uid)) AND ((cca.client_id)::text = (storage.foldername(objects.name))[1]))))))
+with check (((bucket_id = 'form_files'::text) AND ((storage.foldername(name))[2] = (( SELECT auth.uid() AS uid))::text) AND (EXISTS ( SELECT 1
+   FROM public.coach_client_assignments cca
+  WHERE ((cca.coach_id = ( SELECT auth.uid() AS uid)) AND ((cca.client_id)::text = (storage.foldername(objects.name))[1]))))));
 
 
 

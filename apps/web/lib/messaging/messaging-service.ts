@@ -303,6 +303,7 @@ export const sendMessage = async ({
         message_type: messageType,
         parent_message_id: parentMessageId,
         status: 'sent',
+        sender_role: 'coach',
       })
       .select()
       .single();

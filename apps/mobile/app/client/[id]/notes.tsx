@@ -147,7 +147,7 @@ export default function ClientNotesScreen() {
       <SwipeableRow
         onDelete={() => handleDeleteNote(item.id)}
         onOpen={registerOpenRow}
-        deleteConfirmTitle={`${t('general.delete')}?`}
+        deleteConfirmTitle={t('general.deleteNote')}
       >
         <PressableScale onPress={() => handleNotePress(item.id)}>
           <View style={[styles.noteItem, { backgroundColor: themeColors.backgroundPrimary }]}>

@@ -25,7 +25,7 @@ import { TextAreaInput } from '@/components/ui/form-inputs/text-area-input';
 import { InputBox } from '@/components/ui/form-inputs/input-box';
 import { typography, iconSizes } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { submitMyQuestionnaire, type Question, type QuestionAnswer } from '@/services/client/client-form-service';
+import { submitMyQuestionnaire, submitMyCheckIn, type Question, type QuestionAnswer } from '@/services/client/client-form-service';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const HEADER_HEIGHT = 52;
@@ -157,11 +157,15 @@ export default function FormResponseSessionModal() {
     return { height };
   });
 
-  const { questionnaireId, questionnaireName, questionsJson } = useLocalSearchParams<{
+  const { questionnaireId, questionnaireName, questionsJson, formType, checkInId } = useLocalSearchParams<{
     questionnaireId: string;
     questionnaireName: string;
     questionsJson: string;
+    formType?: string;
+    checkInId?: string;
   }>();
+
+  const isCheckIn = formType === 'check_in';
 
   const questions: QuestionWithId[] = useMemo(() => {
     try {
@@ -251,9 +255,11 @@ export default function FormResponseSessionModal() {
     setCurrentPage((p) => p + 1);
   }, [canContinue]);
 
-  // Submit the questionnaire (called automatically when entering completion page)
+  // Submit the form (called automatically when entering completion page)
   const submitQuestionnaire = useCallback(async () => {
-    if (!questionnaireId || isSubmitting || !clientProfile) return;
+    if (isSubmitting || !clientProfile) return;
+    if (!isCheckIn && !questionnaireId) return;
+    if (isCheckIn && !checkInId) return;
 
     setIsSubmitting(true);
     try {
@@ -265,15 +271,24 @@ export default function FormResponseSessionModal() {
         answer: answers[q.id] ?? null,
       }));
 
-      await submitMyQuestionnaire(
-        { questionnaireId, answers: formattedAnswers },
-        clientProfile.client_id,
-        clientProfile.coach_id,
-      );
+      if (isCheckIn) {
+        await submitMyCheckIn(
+          { checkInId: checkInId!, answers: formattedAnswers },
+          clientProfile.client_id,
+          clientProfile.coach_id,
+        );
+      } else {
+        await submitMyQuestionnaire(
+          { questionnaireId: questionnaireId!, answers: formattedAnswers },
+          clientProfile.client_id,
+          clientProfile.coach_id,
+        );
+      }
 
       haptics.success();
-      // Invalidate questionnaires cache to refetch
+      // Invalidate caches to refetch
       await queryClient.invalidateQueries({ queryKey: ['athlete-questionnaires'] });
+      await queryClient.invalidateQueries({ queryKey: ['athlete-tasks'] });
       setSubmissionComplete(true);
     } catch (error) {
       haptics.error();
@@ -283,7 +298,7 @@ export default function FormResponseSessionModal() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [questionnaireId, questions, answers, queryClient, isSubmitting, clientProfile]);
+  }, [questionnaireId, checkInId, isCheckIn, questions, answers, queryClient, isSubmitting, clientProfile]);
 
   // Navigate to completion page and start submission
   const handleComplete = useCallback(() => {

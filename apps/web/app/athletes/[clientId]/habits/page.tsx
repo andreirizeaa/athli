@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
-import { Plus, FileText, Search, X, Edit, ArrowUp, ArrowDown, Check, Trash2, Flame, Trash, Loader2 } from 'lucide-react';
+import { Plus, FileText, Search, X, Edit, ArrowUp, ArrowDown, Check, Trash2, Flame, Loader2, LayoutGrid, ChevronRight } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -20,7 +20,7 @@ import { cn } from '@/lib/general/utils';
 import { AddHabitSidePanel, type HabitFormValues } from '@/components/habits/add-habit-side-panel';
 import { LogHabitSidePanel } from '@/components/habits/log-habit-side-panel';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { mockAthletes } from '@/components/app/app-shell';
 import { getAllHabits, type Habit } from '@/api/coach/coach-habit-service';
@@ -80,6 +80,7 @@ const ClientHabitsPage = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [streaks, setStreaks] = useState<HabitStreaks | null>(null);
   const [isLoadingStreaks, setIsLoadingStreaks] = useState<boolean>(false);
+  const [isViewAll, setIsViewAll] = useState<boolean>(true);
 
   const habits = useMemo(() => {
     return rawData.map((item: any) => ({
@@ -271,6 +272,40 @@ const ClientHabitsPage = () => {
     }));
   }, [selectedHabitLogs]);
 
+  // Helper to get chart data for any habit
+  const getHabitChartData = (habit: any) => {
+    const logs = (habit.logs || [])
+      .sort((a: any, b: any) => a.completedAt.getTime() - b.completedAt.getTime());
+    return logs.map((log: any) => ({
+      date: format(log.completedAt, 'MMM d'),
+      value: log.value,
+    }));
+  };
+
+  // Helper to calculate movement for any habit
+  const getHabitMovement = (habit: any) => {
+    const logs = (habit.logs || [])
+      .sort((a: any, b: any) => a.completedAt.getTime() - b.completedAt.getTime());
+    if (logs.length < 2) return null;
+    const firstValue = logs[0].value;
+    const currentValue = logs[logs.length - 1].value;
+    const diff = currentValue - firstValue;
+    const percentage = firstValue !== 0 ? ((diff / firstValue) * 100) : 0;
+    return {
+      value: diff,
+      percentage: Math.abs(percentage),
+      isUp: diff > 0,
+    };
+  };
+
+  // Helper to calculate average for any habit
+  const getHabitAverage = (habit: any) => {
+    const logs = habit.logs || [];
+    if (logs.length === 0) return null;
+    const sum = logs.reduce((acc: number, log: any) => acc + log.value, 0);
+    return sum / logs.length;
+  };
+
   // Chart config
   const chartConfig: ChartConfig = useMemo(() => {
     return {
@@ -303,24 +338,45 @@ const ClientHabitsPage = () => {
     return { min: niceMin, max: niceMax, step };
   };
 
-  // Calculate Y axis domain and ticks
+  // Calculate Y axis domain and ticks for habits (with target amount centered)
+  const calculateHabitYAxis = (logs: any[], targetAmount: number) => {
+    if (logs.length === 0 || !targetAmount) {
+      // Default: show 0 to 2x target if no logs
+      const defaultMax = targetAmount ? targetAmount * 2 : 10;
+      return {
+        domain: [0, defaultMax] as [number, number],
+        ticks: [0, targetAmount || 5, defaultMax]
+      };
+    }
+
+    const values = logs.map((log: any) => log.value);
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+
+    // Calculate the max deviation from the target
+    const deviationAbove = maxValue - targetAmount;
+    const deviationBelow = targetAmount - minValue;
+    const maxDeviation = Math.max(deviationAbove, deviationBelow, targetAmount * 0.5);
+
+    // Set domain so target is centered, with equal range above and below
+    const domainMin = Math.max(0, targetAmount - maxDeviation);
+    const domainMax = targetAmount + maxDeviation;
+
+    // Generate ticks: min, target, max (and optionally midpoints)
+    const ticks = [domainMin, targetAmount, domainMax];
+
+    return { domain: [domainMin, domainMax] as [number, number], ticks };
+  };
+
+  // Calculate Y axis domain and ticks for selected habit
   const { yAxisDomain, yAxisTicks } = useMemo(() => {
-    if (selectedHabitLogs.length === 0) {
-      return { yAxisDomain: ['auto', 'auto'], yAxisTicks: [] };
+    if (!selectedHabit) {
+      return { yAxisDomain: [0, 10] as [number, number], yAxisTicks: [0, 5, 10] };
     }
-    const values = selectedHabitLogs.map((log: any) => log.value);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const { min: niceMin, max: niceMax, step } = calculateNiceInterval(min, max);
-
-    // Generate tick values
-    const ticks: number[] = [];
-    for (let value = niceMin; value <= niceMax; value += step) {
-      ticks.push(value);
-    }
-
-    return { yAxisDomain: [niceMin, niceMax], yAxisTicks: ticks };
-  }, [selectedHabitLogs]);
+    const targetAmount = selectedHabit.amount || 1;
+    const { domain, ticks } = calculateHabitYAxis(selectedHabitLogs, targetAmount);
+    return { yAxisDomain: domain, yAxisTicks: ticks };
+  }, [selectedHabitLogs, selectedHabit]);
 
   const handleEditLog = (logId: string) => {
     const log = selectedHabitLogs.find((l: any) => l.id === logId);
@@ -589,6 +645,25 @@ const ClientHabitsPage = () => {
             <Separator className="absolute bottom-[-1px] left-0 right-0" />
           </div>
           <div className="flex-1 overflow-y-auto flex flex-col">
+            {/* View All option */}
+            <div className="flex-shrink-0">
+              <button
+                onClick={() => {
+                  setIsViewAll(true);
+                  setSelectedHabitId(null);
+                }}
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors text-left',
+                  isViewAll
+                    ? 'bg-accent/50 border-l-2 border-l-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                )}
+              >
+                <LayoutGrid className="size-4 flex-shrink-0" />
+                <span className="text-sm font-medium">{t('habits.viewAll')}</span>
+              </button>
+              <Separator className="w-full" />
+            </div>
             {/* Habits list */}
             <div className="space-y-0 flex-1 overflow-y-auto">
               {filteredHabits.length === 0 ? (
@@ -597,12 +672,15 @@ const ClientHabitsPage = () => {
                 </div>
               ) : (
                 filteredHabits.map((habit: any) => {
-                  const isSelected = selectedHabitId === habit.id;
+                  const isSelected = !isViewAll && selectedHabitId === habit.id;
 
                   return (
                     <React.Fragment key={habit.id}>
                       <button
-                        onClick={() => setSelectedHabitId(habit.id)}
+                        onClick={() => {
+                          setSelectedHabitId(habit.id);
+                          setIsViewAll(false);
+                        }}
                         className={cn(
                           'w-full flex items-start gap-3 px-4 py-3 text-sm transition-colors text-left',
                           isSelected
@@ -650,7 +728,138 @@ const ClientHabitsPage = () => {
           </div>
           {/* Content area */}
           <div className="flex-1 overflow-auto p-4 relative flex flex-col gap-6">
-            {selectedHabit ? (
+            {isViewAll ? (
+              /* View All Grid */
+              <div className="grid grid-cols-2 gap-4">
+                {filteredHabits.map((habit: any) => {
+                  const habitChartData = getHabitChartData(habit);
+                  const habitMovement = getHabitMovement(habit);
+                  const habitAverage = getHabitAverage(habit);
+                  const habitChartConfig: ChartConfig = {
+                    value: {
+                      label: habit.name,
+                      color: 'var(--primary)',
+                    },
+                  };
+
+                  // Calculate Y axis domain and ticks for this habit (with target centered)
+                  const habitLogs = habit.logs || [];
+                  const habitTargetAmount = habit.amount || 1;
+                  const { domain: habitYAxisDomain, ticks: habitYAxisTicks } = calculateHabitYAxis(habitLogs, habitTargetAmount);
+
+                  return (
+                    <div key={habit.id} className="border rounded-lg p-4 bg-background flex flex-col gap-4">
+                      {/* Card Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-sm font-semibold">{habit.name}</span>
+                          <span className="text-xs text-muted-foreground">{getAimText(habit)}</span>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => {
+                            setSelectedHabitId(habit.id);
+                            setIsViewAll(false);
+                          }}
+                        >
+                          {t('habits.view')}
+                          <ChevronRight className="size-4" />
+                        </Button>
+                      </div>
+
+                      {/* Stats Row - Same style as detail view */}
+                      <div className="flex items-center gap-4">
+                        {habitAverage !== null && (
+                          <div className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold h-9 px-4 py-2 border bg-background shadow-xs dark:bg-input/30 dark:border-input cursor-default">
+                            Average: {habitAverage.toFixed(1)} {t(`habits.form.units.${habit.unit || 'times'}` as any)}
+                          </div>
+                        )}
+                        <div
+                          className={cn(
+                            'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold h-9 px-4 py-2 border bg-background shadow-xs dark:bg-input/30 dark:border-input cursor-default',
+                            habitMovement?.percentage === 0 || habitMovement === null
+                              ? 'text-foreground'
+                              : habitMovement.isUp
+                                ? 'text-green-600'
+                                : 'text-red-600'
+                          )}
+                        >
+                          {habitMovement?.isUp === true && habitMovement.percentage !== 0 && <ArrowUp className="size-4" />}
+                          {habitMovement?.isUp === false && habitMovement.percentage !== 0 && <ArrowDown className="size-4" />}
+                          {habitMovement !== null ? `${habitMovement.percentage.toFixed(1)}%` : '0%'}
+                        </div>
+                      </div>
+
+                      {/* Chart - Same style as detail view */}
+                      <div className="w-full border rounded-lg p-4 bg-background relative z-0">
+                        {habitChartData.length > 0 ? (
+                          <ChartContainer
+                            config={habitChartConfig}
+                            className="w-full h-[200px]"
+                          >
+                            <LineChart
+                              accessibilityLayer
+                              data={habitChartData}
+                              margin={{
+                                left: 12,
+                                right: 12,
+                                top: 12,
+                                bottom: 12,
+                              }}
+                            >
+                              <CartesianGrid vertical={false} />
+                              <XAxis
+                                dataKey="date"
+                                tickLine={false}
+                                axisLine={false}
+                                tickMargin={8}
+                                interval="preserveStartEnd"
+                              />
+                              <YAxis
+                                tickLine={false}
+                                axisLine={false}
+                                tickMargin={8}
+                                domain={habitYAxisDomain}
+                                ticks={habitYAxisTicks.length > 0 ? habitYAxisTicks : undefined}
+                                tickFormatter={(value) => value.toFixed(1)}
+                              />
+                              <ChartTooltip
+                                cursor={false}
+                                content={<ChartTooltipContent hideLabel />}
+                              />
+                              {/* Target/Goal reference line */}
+                              {habitTargetAmount && (
+                                <ReferenceLine
+                                  y={habitTargetAmount}
+                                  stroke="var(--muted-foreground)"
+                                  strokeDasharray="4 4"
+                                  strokeWidth={1.5}
+                                />
+                              )}
+                              <Line
+                                dataKey="value"
+                                type="monotoneX"
+                                stroke="var(--color-value)"
+                                strokeWidth={2}
+                                dot={false}
+                              />
+                            </LineChart>
+                          </ChartContainer>
+                        ) : (
+                          <div className="flex items-center justify-center h-[200px]">
+                            <div className="text-sm text-muted-foreground text-center">
+                              {t('habits.noLogsMessage')}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : selectedHabit ? (
               <>
                 {/* Top row with filter and action buttons */}
                 <div className="flex items-center justify-between">
@@ -683,9 +892,6 @@ const ClientHabitsPage = () => {
                     <Button onClick={handleOpenEditHabit} className="gap-2" variant="outline">
                       <Edit className="size-4" />
                       <span>{t('habits.editHabitTitle')}</span>
-                    </Button>
-                    <Button onClick={handleOpenDeleteDialog} className="gap-2" variant="outline">
-                      <Trash className="size-4" />
                     </Button>
                   </ButtonGroup>
                 </div>
@@ -767,6 +973,15 @@ const ClientHabitsPage = () => {
                           cursor={false}
                           content={<ChartTooltipContent hideLabel />}
                         />
+                        {/* Target/Goal reference line */}
+                        {selectedHabit?.amount && (
+                          <ReferenceLine
+                            y={selectedHabit.amount}
+                            stroke="var(--muted-foreground)"
+                            strokeDasharray="4 4"
+                            strokeWidth={1.5}
+                          />
+                        )}
                         <Line
                           dataKey="value"
                           type="monotoneX"

@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { SidePanel } from '@/components/app/side-panel';
 import { useClientProfileContext } from '../client-profile-context';
-import { useUpdateClientInjuries } from '@/hooks/use-client-injuries';
+import { useCreateClientInjury, useUpdateClientInjury, useDeleteClientInjury } from '@/hooks/use-client-injuries';
 import type { AthleteInjury } from '@/api/client/client-service';
 import { format, parseISO } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -19,14 +19,18 @@ import { ChevronDownIcon, Plus, Check, ChevronRight, Trash2, Loader2 } from 'luc
 
 type InjuryCardProps = {
   clientId: string;
+  initialSelectedInjuryId?: string | null;
 };
 
 type PanelMode = 'add' | 'edit';
 
-export const InjuryCard = ({ clientId }: InjuryCardProps) => {
+export const InjuryCard = ({ clientId, initialSelectedInjuryId }: InjuryCardProps) => {
   const t = useTranslations();
   const { injuries, isLoading } = useClientProfileContext();
-  const { mutateAsync: updateInjuries, isPending: isSaving } = useUpdateClientInjuries();
+  const { mutateAsync: createInjury, isPending: isCreating } = useCreateClientInjury();
+  const { mutateAsync: updateInjury, isPending: isUpdating } = useUpdateClientInjury();
+  const { mutateAsync: deleteInjury, isPending: isDeleting } = useDeleteClientInjury();
+  const isSaving = isCreating || isUpdating || isDeleting;
 
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [panelMode, setPanelMode] = useState<PanelMode>('add');
@@ -45,6 +49,18 @@ export const InjuryCard = ({ clientId }: InjuryCardProps) => {
       }, 100);
     }
   }, [isPanelOpen]);
+
+  // Auto-open injury from URL param
+  useEffect(() => {
+    if (initialSelectedInjuryId && injuries.length > 0 && !isLoading) {
+      const injury = injuries.find((i) => i.id === initialSelectedInjuryId);
+      if (injury) {
+        handleOpenEdit(injury);
+      }
+    }
+    // Only run when injuries load or initialSelectedInjuryId changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSelectedInjuryId, injuries, isLoading]);
 
   const resetForm = () => {
     setEditingInjury('');
@@ -78,22 +94,24 @@ export const InjuryCard = ({ clientId }: InjuryCardProps) => {
 
     try {
       if (panelMode === 'add') {
-        const newInjury = {
-          injury: editingInjury.trim(),
-          date: editingDate,
-          details: editingDetails.trim() || undefined,
-        };
-        await updateInjuries({
+        await createInjury({
           clientId,
-          injuries: [...injuries.map(i => ({ injury: i.injury, date: i.date, details: i.details })), newInjury],
+          injury: {
+            injury: editingInjury.trim(),
+            date: editingDate,
+            details: editingDetails.trim() || undefined,
+          },
         });
-      } else {
-        const updatedInjuries = injuries.map(i =>
-          i.id === selectedInjuryId
-            ? { injury: editingInjury.trim(), date: editingDate, details: editingDetails.trim() || undefined }
-            : { injury: i.injury, date: i.date, details: i.details }
-        );
-        await updateInjuries({ clientId, injuries: updatedInjuries });
+      } else if (selectedInjuryId) {
+        await updateInjury({
+          clientId,
+          injuryId: selectedInjuryId,
+          injury: {
+            injury: editingInjury.trim(),
+            date: editingDate,
+            details: editingDetails.trim() || undefined,
+          },
+        });
       }
       handleClose();
     } catch (error) {
@@ -105,10 +123,7 @@ export const InjuryCard = ({ clientId }: InjuryCardProps) => {
     if (!clientId || !selectedInjuryId) return;
 
     try {
-      const remainingInjuries = injuries
-        .filter(i => i.id !== selectedInjuryId)
-        .map(i => ({ injury: i.injury, date: i.date, details: i.details }));
-      await updateInjuries({ clientId, injuries: remainingInjuries });
+      await deleteInjury({ clientId, injuryId: selectedInjuryId });
       handleClose();
     } catch (error) {
       console.error('Failed to delete injury:', error);
