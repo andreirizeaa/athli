@@ -623,6 +623,24 @@ const convertToBase64 = async (uri: string, mimeType: string): Promise<string> =
   });
 };
 
+/**
+ * Submit check-in answers (athlete self-access)
+ */
+export type SubmitCheckInData = {
+  checkInId: string;
+  answers: QuestionAnswerWithFormat[];
+};
+
+export const submitMyCheckIn = async (data: SubmitCheckInData, clientId: string, coachId: string): Promise<void> => {
+  await apiFetch(`/client/forms/check-ins/${data.checkInId}/submit`, {
+    method: 'POST',
+    headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+    body: JSON.stringify({
+      answers: data.answers,
+    }),
+  });
+};
+
 export const submitMyQuestionnaire = async (data: SubmitQuestionnaireData, clientId: string, coachId: string): Promise<void> => {
   // Check if we have any video files that need FormData (too large for base64)
   // Must check ALL answers, not use some() which stops early

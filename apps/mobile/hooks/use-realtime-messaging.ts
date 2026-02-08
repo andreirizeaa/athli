@@ -47,6 +47,7 @@ export const useMessageMerging = (
   realtimeMessages: Message[],
   optimisticMessages: OptimisticMessage[],
   currentUserId: string | null,
+  currentRole?: 'coach' | 'client',
 ): UIMessage[] => {
   return useMemo(() => {
     if (!currentUserId) return [];
@@ -57,8 +58,8 @@ export const useMessageMerging = (
       optimisticMessages,
     );
 
-    return transformMessages(allMessages, currentUserId);
-  }, [savedMessages, realtimeMessages, optimisticMessages, currentUserId]);
+    return transformMessages(allMessages, currentUserId, currentRole);
+  }, [savedMessages, realtimeMessages, optimisticMessages, currentUserId, currentRole]);
 };
 
 // ================================================

@@ -482,6 +482,13 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="athlete-forms"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
             name="client/[id]"
             options={{
               headerShown: false,
@@ -1413,6 +1420,30 @@ function RootLayoutNav() {
               animation: 'slide_from_bottom',
               animationDuration: 200,
               gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="modals/athlete/log-metric-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/athlete/log-habit-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
             }}
           />
           {/* Profile is now a tab, so profile/profile route is no longer needed */}

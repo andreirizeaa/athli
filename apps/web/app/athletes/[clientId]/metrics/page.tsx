@@ -9,7 +9,7 @@ import { ButtonGroup } from '@/components/ui/button-group';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, FileText, Search, X, Edit, ArrowUp, ArrowDown, Check, Trash2, Trash } from 'lucide-react';
+import { Plus, FileText, Search, X, Edit, ArrowUp, ArrowDown, Check, Trash2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -607,9 +607,6 @@ const ClientMetricsPage = () => {
                     <Button onClick={handleOpenEditMetric} className="gap-2" variant="outline">
                       <Edit className="size-4" />
                       <span>{t('metrics.editMetricTitle')}</span>
-                    </Button>
-                    <Button onClick={handleOpenDeleteDialog} className="gap-2" variant="outline">
-                      <Trash className="size-4" />
                     </Button>
                   </ButtonGroup>
                 </div>

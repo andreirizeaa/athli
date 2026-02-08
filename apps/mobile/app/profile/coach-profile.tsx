@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, ExternalLink, User } from 'lucide-react-native';
+import { ChevronLeft, User } from 'lucide-react-native';
 import { Image } from 'expo-image';
-import { PressableScale } from 'pressto';
+
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useClientProfileStore, useTranslations } from '@/stores';
@@ -49,11 +49,6 @@ export default function CoachProfileScreen() {
   }, [coachId]);
 
   const handleBack = () => router.back();
-
-  const handleOpenUrl = (url: string) => {
-    const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-    Linking.openURL(fullUrl).catch((err) => console.error('Failed to open URL:', err));
-  };
 
   const company = profile?.company;
   const country = company?.location ? findCountry(company.location) : undefined;
@@ -145,33 +140,9 @@ export default function CoachProfileScreen() {
               <Separator />
               <DetailRow label={t('coachProfile.specialities')} value={specialityLabels || notSet} />
               <Separator />
-              {company?.website ? (
-                <PressableScale
-                  style={styles.linkRow}
-                  onPress={() => handleOpenUrl(company!.website!)}
-                >
-                  <Text style={[styles.linkLabel, { color: themeColors.text }]}>
-                    {t('coachProfile.visitWebsite')}
-                  </Text>
-                  <ExternalLink {...({ size: 16, color: themeColors.primary } as any)} />
-                </PressableScale>
-              ) : (
-                <DetailRow label={t('coachProfile.visitWebsite')} value={notSet} />
-              )}
+              <DetailRow label={t('coachProfile.visitWebsite')} value={company?.website || notSet} />
               <Separator />
-              {company?.linkedin ? (
-                <PressableScale
-                  style={styles.linkRow}
-                  onPress={() => handleOpenUrl(company!.linkedin!)}
-                >
-                  <Text style={[styles.linkLabel, { color: themeColors.text }]}>
-                    {t('coachProfile.viewLinkedin')}
-                  </Text>
-                  <ExternalLink {...({ size: 16, color: themeColors.primary } as any)} />
-                </PressableScale>
-              ) : (
-                <DetailRow label={t('coachProfile.viewLinkedin')} value={notSet} />
-              )}
+              <DetailRow label={t('coachProfile.viewLinkedin')} value={company?.linkedin || notSet} />
               {company?.logo_url && (
                 <>
                   <Separator />
@@ -252,15 +223,5 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     marginBottom: 12,
     marginTop: 8,
-  },
-  linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-  },
-  linkLabel: {
-    ...typography.p1,
-    flex: 1,
   },
 });

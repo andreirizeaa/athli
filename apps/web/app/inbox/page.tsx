@@ -347,15 +347,19 @@ const InboxPage = () => {
   // Compute final message status using read receipts
   // For sent messages, check if recipient has read them based on their read receipt
   // This enhances the database-computed isRead with real-time read receipt data
+  const isSelfConversation = selectedConversation?.coach_id === selectedConversation?.client_id;
   const mergedMessages = React.useMemo(() => {
     if (!user?.id) return mergedMessagesRaw;
 
     // Find the recipient's read receipt (not the current user's)
-    const recipientReceipt = readReceipts.find((r) => r.user_id !== user.id);
+    // For self-conversations (demo: coach_id === client_id), use the only receipt available
+    const recipientReceipt = isSelfConversation
+      ? readReceipts[0]
+      : readReceipts.find((r) => r.user_id !== user.id);
 
     return mergedMessagesRaw.map((msg) => {
       // Only update read status for own sent messages
-      if (msg.sender_id !== user.id) return msg;
+      if (!msg.isSent) return msg;
 
       // If already marked as read from database, preserve it
       if (msg.isRead) return msg;
@@ -372,7 +376,7 @@ const InboxPage = () => {
 
       return msg;
     });
-  }, [mergedMessagesRaw, readReceipts, user?.id]);
+  }, [mergedMessagesRaw, readReceipts, user?.id, isSelfConversation]);
 
   // Collect attachments that need signed URL generation
   // Skip attachments that already have URLs (optimistic with local_uri, or API with signed_url)

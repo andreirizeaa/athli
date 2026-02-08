@@ -160,6 +160,9 @@ class DemoDataService {
       // Training must be done after the above since it's the most complex
       await this.seedTraining(supabase, clientId, coachId);
 
+      // Generate client tasks for today based on the seeded assignments
+      await this.generateTasks(supabase);
+
       console.log('[DemoData] Demo client seed complete for coach:', coachId);
     } catch (err) {
       console.error('[DemoData] Unexpected error during seeding:', err);
@@ -483,6 +486,8 @@ class DemoDataService {
       name: 'Weekly Check-in',
       description: 'Weekly progress check-in to track how you are feeling and identify any issues.',
       status: 'live',
+      schedule_config: { type: 'check-in', frequency: 'weekly', selectedDays: ['sunday'] },
+      cron_expression: '0 9 * * 0',
       questions: [
         { id: crypto.randomUUID(), format: 'scale', question: 'How are you feeling this week?', scaleFrom: '1', scaleTo: '10', required: true },
         { id: crypto.randomUUID(), format: 'yesNo', question: 'Any pain or discomfort?', required: true },
@@ -563,6 +568,17 @@ class DemoDataService {
     });
 
     if (error) console.error('[DemoData] Questionnaire insert failed:', error);
+  }
+
+  // ─── Generate client tasks ──────────────────────────────────
+
+  private async generateTasks(supabase: any) {
+    const { data, error } = await supabase.rpc('generate_daily_client_tasks');
+    if (error) {
+      console.error('[DemoData] Task generation failed:', error);
+      return;
+    }
+    console.log('[DemoData] Generated', data ?? 0, 'client tasks');
   }
 
   // ─── Steps 13-16: Training ────────────────────────────────────

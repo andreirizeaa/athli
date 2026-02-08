@@ -741,6 +741,8 @@ export type EditClientCheckInDetailsData = {
   checkInId: string;
   name: string;
   description?: string;
+  schedule_config?: Record<string, any>;
+  cron_expression?: string;
 };
 
 export type UpdateClientQuestionnaireData = {
@@ -857,7 +859,7 @@ export const updateClientCheckIn = async (data: UpdateClientCheckInData): Promis
 };
 
 /**
- * Edit client check-in details (name, description)
+ * Edit client check-in details (name, description, schedule)
  */
 export const editClientCheckInDetails = async (data: EditClientCheckInDetailsData): Promise<ClientCheckInDetail> => {
   const response = await apiFetch<{ data: ClientCheckInDetail }>(`/client/forms/check-ins/${data.checkInId}`, {
@@ -866,6 +868,8 @@ export const editClientCheckInDetails = async (data: EditClientCheckInDetailsDat
     body: JSON.stringify({
       name: data.name,
       description: data.description,
+      schedule_config: data.schedule_config,
+      cron_expression: data.cron_expression,
     }),
   });
 
