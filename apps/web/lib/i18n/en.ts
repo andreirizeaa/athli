@@ -2433,6 +2433,8 @@ export const enMessages = {
     logHabitTitle: 'Log habit',
     editHabitTitle: 'Edit habit',
     selectHabitMessage: 'Select a habit to view',
+    viewAll: 'All Habits',
+    view: 'View',
     noLogsMessage: 'No logs found for this period.',
     timeFilter: {
       lastWeek: 'Last week',
@@ -2742,6 +2744,9 @@ export const enMessages = {
       subtitle: 'Get started by adding your first metric to your library.',
     },
     noLogsMessage: 'No logs found for this period.',
+    viewAll: 'All Metrics',
+    view: 'View',
+    selectMetricMessage: 'Select a metric to view',
     tabs: {
       newMetric: 'New metric',
       athliLibrary: 'Athli library',
@@ -2855,6 +2860,16 @@ export const enMessages = {
       title: 'All caught up!',
       subtitle: 'No check-ins are currently awaiting your review. Great work!',
     },
+  },
+  notifications: {
+    title: 'Notifications',
+    showAll: 'Show all',
+    showUnread: 'Show unread',
+    markAllAsRead: 'Mark all as read',
+    markAsRead: 'Mark as read',
+    markAsUnread: 'Mark as unread',
+    empty: 'No notifications',
+    emptyUnread: 'No unread notifications',
   },
 } as const;
 

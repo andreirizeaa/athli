@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Pencil, Inbox, Pause, Play, Trash2, Send, Eye } from 'lucide-react-native';
@@ -33,6 +33,15 @@ export default function CheckInDetailScreen() {
   const coachId = useClientDetailStore((state) => state.coachId);
   const checkIns = useClientDetailStore((state) => state.checkIns);
   const refreshSection = useClientDetailStore((state) => state.refreshSection);
+  const clientId = useClientDetailStore((state) => state.clientId);
+  const loadClientData = useClientDetailStore((state) => state.loadClientData);
+
+  // Load client data if navigating directly to this screen
+  useEffect(() => {
+    if (params.id && !clientId) {
+      loadClientData(params.id);
+    }
+  }, [params.id, clientId, loadClientData]);
 
   // Find current check-in to get its status
   const currentCheckIn = checkIns.find((c) => c.id === params.checkInId);

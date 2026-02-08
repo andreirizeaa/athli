@@ -49,7 +49,16 @@ export default function ClientCheckInsScreen() {
   const isLoadingForms = useClientDetailStore((state) => state.isLoadingForms);
   const coachId = useClientDetailStore((state) => state.coachId);
   const refreshSection = useClientDetailStore((state) => state.refreshSection);
+  const clientId = useClientDetailStore((state) => state.clientId);
+  const loadClientData = useClientDetailStore((state) => state.loadClientData);
   const queryClient = useQueryClient();
+
+  // Load client data if navigating directly to this screen
+  useEffect(() => {
+    if (id && !clientId) {
+      loadClientData(id);
+    }
+  }, [id, clientId, loadClientData]);
 
   // Prefetch coach's check-ins for faster assign modal loading
   useEffect(() => {

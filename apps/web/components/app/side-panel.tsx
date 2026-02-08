@@ -129,7 +129,7 @@ export const SidePanel = ({
           borderBottomLeftRadius: '0px',
         }}
       >
-        <div className="px-4 pt-3 flex items-center justify-between">
+        <div className="px-4 pt-[11px] flex items-center justify-between">
           <h2 className="text-base font-semibold">{title}</h2>
           {!hideCloseButton && (
             <Button

@@ -19,11 +19,12 @@ import { ChevronDownIcon, Plus, Check, ChevronRight, Trash2, Loader2 } from 'luc
 
 type InjuryCardProps = {
   clientId: string;
+  initialSelectedInjuryId?: string | null;
 };
 
 type PanelMode = 'add' | 'edit';
 
-export const InjuryCard = ({ clientId }: InjuryCardProps) => {
+export const InjuryCard = ({ clientId, initialSelectedInjuryId }: InjuryCardProps) => {
   const t = useTranslations();
   const { injuries, isLoading } = useClientProfileContext();
   const { mutateAsync: createInjury, isPending: isCreating } = useCreateClientInjury();
@@ -48,6 +49,18 @@ export const InjuryCard = ({ clientId }: InjuryCardProps) => {
       }, 100);
     }
   }, [isPanelOpen]);
+
+  // Auto-open injury from URL param
+  useEffect(() => {
+    if (initialSelectedInjuryId && injuries.length > 0 && !isLoading) {
+      const injury = injuries.find((i) => i.id === initialSelectedInjuryId);
+      if (injury) {
+        handleOpenEdit(injury);
+      }
+    }
+    // Only run when injuries load or initialSelectedInjuryId changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSelectedInjuryId, injuries, isLoading]);
 
   const resetForm = () => {
     setEditingInjury('');
