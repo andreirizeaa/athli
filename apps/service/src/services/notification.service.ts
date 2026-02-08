@@ -12,6 +12,12 @@ export async function createCoachNotification(params: {
   description?: string;
   metadata?: Record<string, any>;
 }): Promise<void> {
+  console.log('[NotificationService] Creating notification:', {
+    coachId: params.coachId,
+    clientId: params.clientId,
+    notificationType: params.notificationType,
+    title: params.title,
+  });
   try {
     const supabase = getSupabaseClient();
     const { error } = await supabase.from('coach_notifications').insert({

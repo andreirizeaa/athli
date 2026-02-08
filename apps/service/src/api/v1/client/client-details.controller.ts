@@ -110,8 +110,9 @@ export const clientDetailsController = {
     createGoal: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const isCoachRequest = req.header('x-coach-id') === userId;
+        const isCoachRequest = !!req.header('x-client-id') && req.header('x-client-id') !== userId;
         const { goal, target_date, details } = req.body;
+        console.log('[ClientDetails] createGoal — isCoachRequest:', isCoachRequest, '| x-client-id:', req.header('x-client-id'), '| x-coach-id:', req.header('x-coach-id'), '| will notify coach:', !isCoachRequest);
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -167,7 +168,7 @@ export const clientDetailsController = {
     updateGoal: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const isCoachRequest = req.header('x-coach-id') === userId;
+        const isCoachRequest = !!req.header('x-client-id') && req.header('x-client-id') !== userId;
         const goalId = req.params.id;
         const { goal, target_date, details } = req.body;
 
@@ -223,7 +224,7 @@ export const clientDetailsController = {
     deleteGoal: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const isCoachRequest = req.header('x-coach-id') === userId;
+        const isCoachRequest = !!req.header('x-client-id') && req.header('x-client-id') !== userId;
         const goalId = req.params.id;
 
         if (!userId) {
@@ -305,8 +306,9 @@ export const clientDetailsController = {
     createInjury: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const isCoachRequest = req.header('x-coach-id') === userId;
+        const isCoachRequest = !!req.header('x-client-id') && req.header('x-client-id') !== userId;
         const { injury, date, details } = req.body;
+        console.log('[ClientDetails] createInjury — isCoachRequest:', isCoachRequest, '| x-client-id:', req.header('x-client-id'), '| x-coach-id:', req.header('x-coach-id'), '| will notify coach:', !isCoachRequest);
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -362,7 +364,7 @@ export const clientDetailsController = {
     updateInjury: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const isCoachRequest = req.header('x-coach-id') === userId;
+        const isCoachRequest = !!req.header('x-client-id') && req.header('x-client-id') !== userId;
         const injuryId = req.params.id;
         const { injury, date, details } = req.body;
 
@@ -418,7 +420,7 @@ export const clientDetailsController = {
     deleteInjury: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const isCoachRequest = req.header('x-coach-id') === userId;
+        const isCoachRequest = !!req.header('x-client-id') && req.header('x-client-id') !== userId;
         const injuryId = req.params.id;
 
         if (!userId) {

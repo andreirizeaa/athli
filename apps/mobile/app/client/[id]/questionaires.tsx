@@ -61,7 +61,7 @@ export default function ClientQuestionairesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const HEADER_HEIGHT = 52;
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, questionnaireId: questionnaireIdParam } = useLocalSearchParams<{ id: string; questionnaireId?: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const iconColor = themeColors.text;
@@ -75,7 +75,37 @@ export default function ClientQuestionairesScreen() {
   const isLoadingForms = useClientDetailStore((state) => state.isLoadingForms);
   const coachId = useClientDetailStore((state) => state.coachId);
   const refreshSection = useClientDetailStore((state) => state.refreshSection);
+  const clientId = useClientDetailStore((state) => state.clientId);
+  const loadClientData = useClientDetailStore((state) => state.loadClientData);
   const queryClient = useQueryClient();
+
+  // Load client data if navigating directly to this screen
+  useEffect(() => {
+    if (id && !clientId) {
+      loadClientData(id);
+    }
+  }, [id, clientId, loadClientData]);
+
+  // Track if we've already navigated to the questionnaire detail from notification
+  const hasNavigatedToQuestionnaireRef = useRef(false);
+
+  // Navigate to questionnaire detail if questionnaireId param is present (from notification)
+  useEffect(() => {
+    if (questionnaireIdParam && questionnaires.length > 0 && !hasNavigatedToQuestionnaireRef.current) {
+      const questionnaire = questionnaires.find((q) => q.id === questionnaireIdParam);
+      if (questionnaire) {
+        hasNavigatedToQuestionnaireRef.current = true;
+        router.push({
+          pathname: '/client/[id]/questionnaire-detail',
+          params: {
+            id,
+            questionnaireId: questionnaire.id,
+            questionnaireName: questionnaire.name,
+          },
+        } as any);
+      }
+    }
+  }, [questionnaireIdParam, questionnaires, id, router]);
 
   // Prefetch coach's questionnaires for faster assign modal loading
   useEffect(() => {

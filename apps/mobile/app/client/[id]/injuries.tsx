@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -39,7 +39,7 @@ export default function ClientInjuriesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const HEADER_HEIGHT = 52;
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, injuryId: injuryIdParam } = useLocalSearchParams<{ id: string; injuryId?: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
 
@@ -48,6 +48,32 @@ export default function ClientInjuriesScreen() {
   const isLoading = useClientDetailStore((state) => state.isLoading);
   const refreshSection = useClientDetailStore((state) => state.refreshSection);
   const coachProfile = useCoachProfileStore((state) => state.profile);
+  const clientId = useClientDetailStore((state) => state.clientId);
+  const loadClientData = useClientDetailStore((state) => state.loadClientData);
+
+  // Load client data if navigating directly to this screen
+  useEffect(() => {
+    if (id && !clientId) {
+      loadClientData(id);
+    }
+  }, [id, clientId, loadClientData]);
+
+  // Track if we've already navigated to the injury modal from notification
+  const hasNavigatedToInjuryRef = useRef(false);
+
+  // Open edit injury modal if injuryId param is present (from notification)
+  useEffect(() => {
+    if (injuryIdParam && injuries.length > 0 && !hasNavigatedToInjuryRef.current) {
+      const injuryExists = injuries.some((i) => i.id === injuryIdParam);
+      if (injuryExists) {
+        hasNavigatedToInjuryRef.current = true;
+        router.push({
+          pathname: '/modals/client/edit-client-injury-modal',
+          params: { id, injuryId: injuryIdParam },
+        } as any);
+      }
+    }
+  }, [injuryIdParam, injuries, id, router]);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');

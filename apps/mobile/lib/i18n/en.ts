@@ -1499,6 +1499,11 @@ export const en = {
     bulkActions: 'Bulk Actions',
     turnOffAllInApp: 'Turn off all in app',
     turnOffAllPush: 'Turn off all push',
+    empty: 'No notifications yet',
+    noUnread: 'No unread notifications',
+    markAllAsRead: 'Mark all read',
+    showUnread: 'Show unread',
+    showAll: 'Show all',
     categories: {
       training: 'Training',
       forms: 'Forms',

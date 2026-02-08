@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Gift, Headset, Lightbulb, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Bell, Gift, Headset, Lightbulb, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAIPanel } from '@/lib/providers/ai-panel-provider';
 import Lottie from 'lottie-react';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useSidebar } from '@/components/ui/sidebar';
 import { SearchComponent } from './search';
 import { UserMenu } from './user-menu';
+import { NotificationSidePanel } from './notification-side-panel';
+import { useCoachNotifications } from '@/hooks/use-coach-notifications';
 
 type AppHeaderProps = {
   isThemeMounted: boolean;
@@ -29,6 +31,9 @@ export function AppHeader({
   const { state, toggleSidebar } = useSidebar();
   const { toggle: toggleAIPanel } = useAIPanel();
   const [aiAnimationData, setAiAnimationData] = useState<object | null>(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  const { unreadCount } = useCoachNotifications();
 
   const isAssistantPage = pathname?.startsWith('/assistant');
 
@@ -85,23 +90,29 @@ export function AppHeader({
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            asChild
-            className="gap-2"
-            aria-label={t('sidebar.links.referAndEarn')}
-          >
-            <Link href="/refer-and-earn">
-              <Gift className="size-4" />
-              {t('sidebar.links.getFreeMonth')}
-            </Link>
-          </Button>
-          <Button
-            variant="outline"
             className="gap-2"
             aria-label={t('sidebar.helpAndSupport.label') || 'Help and support'}
           >
             <Headset className="size-4" />
             {t('general.help')}
           </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                asChild
+                aria-label={t('sidebar.links.referAndEarn') || 'Refer and Earn'}
+              >
+                <Link href="/refer-and-earn">
+                  <Gift className="size-4" />
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t('sidebar.links.referAndEarn') || 'Refer and Earn'}
+            </TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -118,6 +129,23 @@ export function AppHeader({
             <TooltipContent>
               {t('sidebar.featureRequests.label') || 'Feature Requests'}
             </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="relative"
+                onClick={() => setNotificationsOpen(true)}
+                aria-label={t('notifications.title')}
+              >
+                <Bell className="size-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 size-2.5 rounded-full bg-destructive" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('notifications.title')}</TooltipContent>
           </Tooltip>
           <Button
             className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90"
@@ -141,7 +169,10 @@ export function AppHeader({
           />
         </div>
       </div>
+      <NotificationSidePanel
+        open={notificationsOpen}
+        onOpenChange={setNotificationsOpen}
+      />
     </div>
   );
 }
-

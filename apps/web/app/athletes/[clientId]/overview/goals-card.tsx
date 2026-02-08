@@ -19,11 +19,12 @@ import { ChevronDownIcon, Plus, Check, ChevronRight, Trash2, Loader2 } from 'luc
 
 type GoalsCardProps = {
   clientId: string;
+  initialSelectedGoalId?: string | null;
 };
 
 type PanelMode = 'add' | 'edit';
 
-export const GoalsCard = ({ clientId }: GoalsCardProps) => {
+export const GoalsCard = ({ clientId, initialSelectedGoalId }: GoalsCardProps) => {
   const t = useTranslations();
   const { goals, isLoading } = useClientProfileContext();
   const { mutateAsync: createGoal, isPending: isCreating } = useCreateClientGoal();
@@ -48,6 +49,18 @@ export const GoalsCard = ({ clientId }: GoalsCardProps) => {
       }, 100);
     }
   }, [isPanelOpen]);
+
+  // Auto-open goal from URL param
+  useEffect(() => {
+    if (initialSelectedGoalId && goals.length > 0 && !isLoading) {
+      const goal = goals.find((g) => g.id === initialSelectedGoalId);
+      if (goal) {
+        handleOpenEdit(goal);
+      }
+    }
+    // Only run when goals load or initialSelectedGoalId changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSelectedGoalId, goals, isLoading]);
 
   const resetForm = () => {
     setEditingGoal('');

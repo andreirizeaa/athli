@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -37,7 +37,7 @@ const fuzzyMatch = (text: string, query: string): boolean => {
 
 export default function ClientGoalsScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, goalId: goalIdParam } = useLocalSearchParams<{ id: string; goalId?: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
@@ -48,6 +48,32 @@ export default function ClientGoalsScreen() {
   const isLoading = useClientDetailStore((state) => state.isLoading);
   const refreshSection = useClientDetailStore((state) => state.refreshSection);
   const coachProfile = useCoachProfileStore((state) => state.profile);
+  const clientId = useClientDetailStore((state) => state.clientId);
+  const loadClientData = useClientDetailStore((state) => state.loadClientData);
+
+  // Load client data if navigating directly to this screen
+  useEffect(() => {
+    if (id && !clientId) {
+      loadClientData(id);
+    }
+  }, [id, clientId, loadClientData]);
+
+  // Track if we've already navigated to the goal modal from notification
+  const hasNavigatedToGoalRef = useRef(false);
+
+  // Open edit goal modal if goalId param is present (from notification)
+  useEffect(() => {
+    if (goalIdParam && goals.length > 0 && !hasNavigatedToGoalRef.current) {
+      const goalExists = goals.some((g) => g.id === goalIdParam);
+      if (goalExists) {
+        hasNavigatedToGoalRef.current = true;
+        router.push({
+          pathname: '/modals/client/edit-client-goal-modal',
+          params: { id, goalId: goalIdParam },
+        });
+      }
+    }
+  }, [goalIdParam, goals, id, router]);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');

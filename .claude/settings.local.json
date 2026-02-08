@@ -106,7 +106,9 @@
       "WebFetch(domain:glama.ai)",
       "Bash(git -C /Users/andreirizea/abc/app/athli log --oneline -20)",
       "Bash(git -C /Users/andreirizea/abc/app/athli diff --name-only)",
-      "Bash(sort:*)"
+      "Bash(sort:*)",
+      "Bash(xargs grep:*)",
+      "Bash(pnpm tsc:*)"
     ]
   }
 }
