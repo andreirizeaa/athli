@@ -7,3 +7,4 @@
 export * from './training-constants';
 export * from './messaging-constants';
 export * from './timezone-constants';
+export * from './notification-constants';

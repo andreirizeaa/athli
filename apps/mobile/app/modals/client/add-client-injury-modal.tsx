@@ -13,7 +13,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SelectionInput } from '@/components/ui/form-inputs';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { hexToRgba } from '@/utils/colorUtils';
-import { saveAthleteInjuries } from '@/services/client/client-service';
+import { createAthleteInjury } from '@/services/client/client-service';
 import { Dialog } from '@/components/ui/dialog';
 
 export default function AddClientInjuryModal() {
@@ -32,7 +32,6 @@ export default function AddClientInjuryModal() {
     const [errorMessage, setErrorMessage] = useState('');
 
     const coachId = useClientDetailStore((state) => state.coachId);
-    const injuries = useClientDetailStore((state) => state.injuries);
     const refreshSection = useClientDetailStore((state) => state.refreshSection);
 
     const isFormValid = title.trim().length > 0;
@@ -49,21 +48,11 @@ export default function AddClientInjuryModal() {
 
         setIsSubmitting(true);
         try {
-            // Create new injury and add to existing injuries
-            const newInjury = {
+            await createAthleteInjury(id, coachId, {
                 injury: title.trim(),
                 date: date ? date.toISOString().split('T')[0] : null,
                 details: body.trim() || undefined,
-            };
-
-            // Save all injuries including the new one
-            const updatedInjuries = [...injuries.map(i => ({
-                injury: i.injury,
-                date: i.date,
-                details: i.details || undefined,
-            })), newInjury];
-
-            await saveAthleteInjuries(id, coachId, updatedInjuries);
+            });
             haptics.success();
             await refreshSection('injuries');
             handleClose();
@@ -74,7 +63,7 @@ export default function AddClientInjuryModal() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [canSave, id, coachId, title, body, date, injuries, refreshSection, handleClose, t]);
+    }, [canSave, id, coachId, title, body, date, refreshSection, handleClose, t]);
 
     const handleSelectDatePress = useCallback(() => {
         setDateSelectCallback((newDate: Date) => {

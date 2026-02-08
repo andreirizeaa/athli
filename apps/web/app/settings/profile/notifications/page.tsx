@@ -1,156 +1,113 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-
-// Actually, let's import NotificationEvent from service
-import { type NotificationEvent } from '@/api/settings/coach/coach-notifications-service';
 import { useGlobalData } from '@/providers/global-data-provider';
 import { useUnsavedChanges } from '@/app/settings/context/unsaved-changes-context';
 import { toast } from 'sonner';
-
-type NotificationKey =
-  | 'newClientSignup'
-  | 'clientActivity'
-  | 'clientMessages'
-  | 'preAppointmentInformation'
-  | 'systemDowntimes'
-  | 'newFeatures';
+import { Loader2 } from 'lucide-react';
+import { type NotificationPreference } from '@/api/settings/coach/coach-notifications-service';
 
 interface NotificationGroup {
-  id: 'clients' | 'system';
+  id: string;
   titleKey: string;
   descriptionKey: string;
-  emailKey: string;
-  options: Array<{
-    id: NotificationKey;
+  types: Array<{
+    type: string;
     labelKey: string;
   }>;
 }
 
-const UI_TO_DB_KEY: Record<NotificationKey, string> = {
-  newClientSignup: 'new_client_signup',
-  clientActivity: 'client_activity',
-  clientMessages: 'client_messages',
-  preAppointmentInformation: 'pre_appointment_info',
-  systemDowntimes: 'system_downtime',
-  newFeatures: 'new_features',
-};
+const notificationGroups: NotificationGroup[] = [
+  {
+    id: 'training',
+    titleKey: 'settings.notifications.training.title',
+    descriptionKey: 'settings.notifications.training.description',
+    types: [
+      { type: 'workout_completed', labelKey: 'settings.notifications.training.options.workoutCompleted' },
+      { type: 'workout_missed', labelKey: 'settings.notifications.training.options.workoutMissed' },
+    ],
+  },
+  {
+    id: 'forms',
+    titleKey: 'settings.notifications.forms.title',
+    descriptionKey: 'settings.notifications.forms.description',
+    types: [
+      { type: 'checkin_completed', labelKey: 'settings.notifications.forms.options.checkinCompleted' },
+      { type: 'questionnaire_completed', labelKey: 'settings.notifications.forms.options.questionnaireCompleted' },
+    ],
+  },
+  {
+    id: 'tracking',
+    titleKey: 'settings.notifications.tracking.title',
+    descriptionKey: 'settings.notifications.tracking.description',
+    types: [
+      { type: 'metric_logged', labelKey: 'settings.notifications.tracking.options.metricLogged' },
+      { type: 'habit_logged', labelKey: 'settings.notifications.tracking.options.habitLogged' },
+      { type: 'photo_uploaded', labelKey: 'settings.notifications.tracking.options.photoUploaded' },
+    ],
+  },
+  {
+    id: 'profile',
+    titleKey: 'settings.notifications.profile.title',
+    descriptionKey: 'settings.notifications.profile.description',
+    types: [
+      { type: 'client_connected', labelKey: 'settings.notifications.profile.options.clientConnected' },
+      { type: 'goal_added', labelKey: 'settings.notifications.profile.options.goalAdded' },
+      { type: 'goal_edited', labelKey: 'settings.notifications.profile.options.goalEdited' },
+      { type: 'goal_deleted', labelKey: 'settings.notifications.profile.options.goalDeleted' },
+      { type: 'injury_added', labelKey: 'settings.notifications.profile.options.injuryAdded' },
+      { type: 'injury_edited', labelKey: 'settings.notifications.profile.options.injuryEdited' },
+      { type: 'injury_deleted', labelKey: 'settings.notifications.profile.options.injuryDeleted' },
+    ],
+  },
+];
 
-const DB_TO_UI_KEY: Record<string, NotificationKey> = {
-  new_client_signup: 'newClientSignup',
-  client_activity: 'clientActivity',
-  client_messages: 'clientMessages',
-  pre_appointment_info: 'preAppointmentInformation',
-  system_downtime: 'systemDowntimes',
-  new_features: 'newFeatures',
-};
+type PrefsState = Record<string, { in_app: boolean; push: boolean }>;
 
 const NotificationsPage = () => {
   const t = useTranslations();
   const { setHasUnsavedChanges: setContextHasUnsavedChanges } = useUnsavedChanges();
-  const { notifications: globalNotifications, toggleNotification, isLoading } = useGlobalData();
+  const { notificationPreferences, batchUpdateNotificationPreferences, isLoading } = useGlobalData();
 
-  const [notifications, setNotifications] = useState<Record<NotificationKey, boolean>>({
-    newClientSignup: false,
-    clientActivity: false,
-    clientMessages: false,
-    preAppointmentInformation: false,
-    systemDowntimes: false,
-    newFeatures: false,
-  });
-  const [savedNotifications, setSavedNotifications] = useState<Record<NotificationKey, boolean>>({
-    newClientSignup: false,
-    clientActivity: false,
-    clientMessages: false,
-    preAppointmentInformation: false,
-    systemDowntimes: false,
-    newFeatures: false,
-  });
+  const [prefs, setPrefs] = useState<PrefsState>({});
+  const [savedPrefs, setSavedPrefs] = useState<PrefsState>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const skipNextSyncRef = useRef(false);
 
-  // Initialize from global data
+  // Initialize from global data — skip while saving and skip stale sync after save
   useEffect(() => {
-    if (globalNotifications && globalNotifications.length > 0) {
-      const newNotifications: Record<NotificationKey, boolean> = {
-        newClientSignup: false,
-        clientActivity: false,
-        clientMessages: false,
-        preAppointmentInformation: false,
-        systemDowntimes: false,
-        newFeatures: false,
-      };
-
-      globalNotifications.forEach(n => {
-        const uiKey = DB_TO_UI_KEY[n.event_key];
-        if (uiKey) {
-          newNotifications[uiKey] = n.enabled;
-        }
-      });
-
-      setNotifications(newNotifications);
-      setSavedNotifications(newNotifications);
+    if (isSaving) return;
+    if (skipNextSyncRef.current) {
+      skipNextSyncRef.current = false;
+      return;
     }
-  }, [globalNotifications]);
+    if (notificationPreferences && notificationPreferences.length > 0) {
+      const state: PrefsState = {};
+      notificationPreferences.forEach((p: NotificationPreference) => {
+        state[p.notification_type] = {
+          in_app: p.in_app_enabled,
+          push: p.push_enabled,
+        };
+      });
+      setPrefs(state);
+      setSavedPrefs(state);
+    }
+  }, [notificationPreferences, isSaving]);
 
-  const notificationGroups: NotificationGroup[] = [
-    {
-      id: 'clients',
-      titleKey: 'settings.notifications.clients.title',
-      descriptionKey: 'settings.notifications.clients.description',
-      emailKey: 'settings.notifications.clients.email',
-      options: [
-        {
-          id: 'newClientSignup',
-          labelKey: 'settings.notifications.clients.options.newClientSignup.label',
-        },
-        {
-          id: 'clientActivity',
-          labelKey: 'settings.notifications.clients.options.clientActivity.label',
-        },
-        {
-          id: 'clientMessages',
-          labelKey: 'settings.notifications.clients.options.clientMessages.label',
-        },
-        {
-          id: 'preAppointmentInformation',
-          labelKey: 'settings.notifications.clients.options.preAppointmentInformation.label',
-        },
-      ],
-    },
-    {
-      id: 'system',
-      titleKey: 'settings.notifications.system.title',
-      descriptionKey: 'settings.notifications.system.description',
-      emailKey: 'settings.notifications.system.email',
-      options: [
-        {
-          id: 'systemDowntimes',
-          labelKey: 'settings.notifications.system.options.systemDowntimes.label',
-        },
-        {
-          id: 'newFeatures',
-          labelKey: 'settings.notifications.system.options.newFeatures.label',
-        },
-      ],
-    },
-  ];
-
-  // Check if there are unsaved changes
+  // Check for unsaved changes
   useEffect(() => {
-    // Basic shallow comparison
-    const hasChanges = Object.keys(notifications).some(
-      key => notifications[key as NotificationKey] !== savedNotifications[key as NotificationKey]
+    const hasChanges = Object.keys(prefs).some(
+      key => prefs[key]?.in_app !== savedPrefs[key]?.in_app || prefs[key]?.push !== savedPrefs[key]?.push
     );
-
     setHasUnsavedChanges(hasChanges);
     setContextHasUnsavedChanges(hasChanges);
-  }, [notifications, savedNotifications, setContextHasUnsavedChanges]);
+  }, [prefs, savedPrefs, setContextHasUnsavedChanges]);
 
   // Handle browser navigation
   useEffect(() => {
@@ -160,50 +117,74 @@ const NotificationsPage = () => {
         e.returnValue = '';
       }
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  const handleNotificationChange = (key: NotificationKey, checked: boolean) => {
-    setNotifications((prev) => ({
+  const handleToggle = useCallback((type: string, channel: 'in_app' | 'push', checked: boolean) => {
+    setPrefs(prev => ({
       ...prev,
-      [key]: checked,
+      [type]: {
+        ...prev[type],
+        [channel]: checked,
+      },
     }));
-  };
+  }, []);
+
+  const allTypes = notificationGroups.flatMap(g => g.types.map(t => t.type));
+
+  const handleTurnOffAll = useCallback((channel: 'in_app' | 'push', checked: boolean) => {
+    setPrefs(prev => {
+      const next = { ...prev };
+      for (const type of allTypes) {
+        const existing = next[type] || { in_app: true, push: true };
+        next[type] = { ...existing, [channel]: !checked };
+      }
+      return next;
+    });
+  }, [allTypes]);
+
+  // Derived: are ALL currently off for each channel?
+  const allInAppOff = Object.keys(prefs).length > 0 && Object.values(prefs).every(p => !p.in_app);
+  const allPushOff = Object.keys(prefs).length > 0 && Object.values(prefs).every(p => !p.push);
 
   const handleSave = async () => {
     setIsSaving(true);
+    // Snapshot what we're saving so the UI stays stable
+    const prefsSnapshot = { ...prefs };
     try {
-      // Find changes and update
-      const promises: Promise<void>[] = [];
-      const keys = Object.keys(notifications) as NotificationKey[];
+      const changed: Array<{ notificationType: string; inAppEnabled: boolean; pushEnabled: boolean }> = [];
 
-      for (const key of keys) {
-        if (notifications[key] !== savedNotifications[key]) {
-          // Find ID from globalNotifications
-          const dbKey = UI_TO_DB_KEY[key];
-          const notification = globalNotifications?.find(n => n.event_key === dbKey);
-          if (notification) {
-            promises.push(toggleNotification({ eventId: notification.event_id, enabled: notifications[key] }));
-          }
+      for (const type of Object.keys(prefsSnapshot)) {
+        const current = prefsSnapshot[type];
+        const saved = savedPrefs[type];
+        if (!saved || current.in_app !== saved.in_app || current.push !== saved.push) {
+          changed.push({
+            notificationType: type,
+            inAppEnabled: current.in_app,
+            pushEnabled: current.push,
+          });
         }
       }
 
-      await Promise.all(promises);
-
-      setSavedNotifications(notifications);
+      if (changed.length > 0) {
+        await batchUpdateNotificationPreferences(changed);
+      }
+      // Update saved state to match what we just saved
+      setSavedPrefs(prefsSnapshot);
+      setPrefs(prefsSnapshot);
       setHasUnsavedChanges(false);
       setContextHasUnsavedChanges(false);
       toast.success(t('settings.notifications.savedSuccessfully'));
     } catch (error) {
       toast.error(t('settings.notifications.saveFailed'));
     } finally {
+      // Skip the next useEffect sync — it would run with stale React Query data
+      // before the refetch resolves. The subsequent refetch will trigger a clean sync.
+      skipNextSyncRef.current = true;
       setIsSaving(false);
     }
   };
-
-
 
   return (
     <>
@@ -213,17 +194,17 @@ const NotificationsPage = () => {
             {t('settings.sections.notifications')}
           </h1>
           <Button
-            className="mb-2 mt-2"
+            className="mb-2 mt-2 min-w-[70px]"
             onClick={handleSave}
             disabled={!hasUnsavedChanges || isSaving}
           >
-            {isSaving ? t('general.saving') : t('general.save')}
+            {isSaving ? <Loader2 className="size-4 animate-spin" /> : t('general.save')}
           </Button>
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
       <div className="w-full flex-1 overflow-auto px-4 pt-4 pb-2 bg-background flex flex-col items-center gap-4">
-        {notificationGroups.map((group, groupIndex) => (
+        {notificationGroups.map((group) => (
           <Card key={group.id} className="bg-background max-w-3xl w-full">
             <CardHeader className="px-4">
               <CardTitle>{t(group.titleKey)}</CardTitle>
@@ -234,21 +215,26 @@ const NotificationsPage = () => {
                 {t(group.descriptionKey)}
               </p>
             </CardContent>
+            {/* Column headers */}
             <div className="px-4">
-              <div className="flex justify-end">
-                <div className="text-xs font-semibold uppercase text-muted-foreground">
-                  {t(group.emailKey)}
+              <div className="flex justify-end gap-6">
+                <div className="text-xs font-semibold uppercase text-muted-foreground w-[60px] text-center">
+                  {t('settings.notifications.inApp')}
+                </div>
+                <div className="text-xs font-semibold uppercase text-muted-foreground w-[60px] text-center">
+                  {t('settings.notifications.push')}
                 </div>
               </div>
             </div>
             <Separator className="w-full" />
             <div className="w-full">
               <div className="space-y-0">
-                {group.options.map((option, optionIndex) => {
-                  const isLast = optionIndex === group.options.length - 1;
+                {group.types.map((option, optionIndex) => {
+                  const isLast = optionIndex === group.types.length - 1;
+                  const pref = prefs[option.type];
                   return (
                     <div
-                      key={option.id}
+                      key={option.type}
                       className={`grid grid-cols-[1fr_auto] gap-4 ${optionIndex === 0
                         ? 'pb-2 pt-[-1px] px-4 border-b items-center'
                         : isLast
@@ -256,20 +242,33 @@ const NotificationsPage = () => {
                           : 'py-2 px-4 border-b items-center'
                         }`}
                     >
-                      <label
-                        htmlFor={option.id}
-                        className="text-sm cursor-pointer"
-                      >
+                      <label className="text-sm cursor-pointer">
                         {t(option.labelKey)}
                       </label>
-                      <Checkbox
-                        id={option.id}
-                        checked={notifications[option.id]}
-                        onCheckedChange={(checked) =>
-                          handleNotificationChange(option.id, checked === true)
-                        }
-                        aria-label={t(option.labelKey)}
-                      />
+                      <div className="flex gap-6">
+                        <div className="w-[60px] flex justify-center">
+                          <Checkbox
+                            id={`${option.type}-in-app`}
+                            checked={pref?.in_app ?? true}
+                            onCheckedChange={(checked) =>
+                              handleToggle(option.type, 'in_app', checked === true)
+                            }
+                            className="size-5 rounded-[5px]"
+                            aria-label={`${t(option.labelKey)} - ${t('settings.notifications.inApp')}`}
+                          />
+                        </div>
+                        <div className="w-[60px] flex justify-center">
+                          <Checkbox
+                            id={`${option.type}-push`}
+                            checked={pref?.push ?? true}
+                            onCheckedChange={(checked) =>
+                              handleToggle(option.type, 'push', checked === true)
+                            }
+                            className="size-5 rounded-[5px]"
+                            aria-label={`${t(option.labelKey)} - ${t('settings.notifications.push')}`}
+                          />
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
@@ -277,6 +276,52 @@ const NotificationsPage = () => {
             </div>
           </Card>
         ))}
+        {/* Turn off all */}
+        <Card className="bg-background max-w-3xl w-full">
+          <CardHeader className="px-4">
+            <CardTitle>{t('settings.notifications.bulkActions')}</CardTitle>
+          </CardHeader>
+          <Separator className="w-full mt-[-8px]" />
+          {/* Column headers */}
+          <div className="px-4">
+            <div className="flex justify-end gap-6">
+              <div className="text-xs font-semibold uppercase text-muted-foreground w-[60px] text-center">
+                {t('settings.notifications.inApp')}
+              </div>
+              <div className="text-xs font-semibold uppercase text-muted-foreground w-[60px] text-center">
+                {t('settings.notifications.push')}
+              </div>
+            </div>
+          </div>
+          <Separator className="w-full" />
+          <div className="w-full">
+            <div className="grid grid-cols-[1fr_auto] gap-4 py-2 px-4 items-center">
+              <label className="text-sm cursor-pointer">
+                {t('settings.notifications.turnOffAll')}
+              </label>
+              <div className="flex gap-6">
+                <div className="w-[60px] flex justify-center">
+                  <Checkbox
+                    id="turn-off-all-in-app"
+                    checked={allInAppOff}
+                    onCheckedChange={(checked) => handleTurnOffAll('in_app', checked === true)}
+                    className="size-5 rounded-[5px]"
+                    aria-label={`${t('settings.notifications.turnOffAll')} - ${t('settings.notifications.inApp')}`}
+                  />
+                </div>
+                <div className="w-[60px] flex justify-center">
+                  <Checkbox
+                    id="turn-off-all-push"
+                    checked={allPushOff}
+                    onCheckedChange={(checked) => handleTurnOffAll('push', checked === true)}
+                    className="size-5 rounded-[5px]"
+                    aria-label={`${t('settings.notifications.turnOffAll')} - ${t('settings.notifications.push')}`}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
       </div>
     </>
   );

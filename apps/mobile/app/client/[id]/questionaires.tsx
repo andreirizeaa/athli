@@ -304,7 +304,7 @@ export default function ClientQuestionairesScreen() {
                   <View key={questionnaire.id}>
                     <SwipeableRow
                       onDelete={() => handleDeleteQuestionnaire(questionnaire)}
-                      deleteConfirmTitle={`${t('general.delete')} ${questionnaire.name}?`}
+                      deleteConfirmTitle={t('general.deleteQuestionnaire')}
                       onOpen={handleRowOpen}
                     >
                       <PressableScale onPress={() => handleQuestionnairePress(questionnaire)}>

@@ -4,8 +4,8 @@ import { getSupabaseClient } from '../../../services/supabase.service';
 
 export const settingsController = {
     /**
-     * Get coach notifications settings
-     * Merges available events with coach-specific overrides
+     * Get coach notification preferences
+     * Returns preferences for all notification types with in_app and push toggles
      */
     getNotifications: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
@@ -15,80 +15,117 @@ export const settingsController = {
         }
 
         const supabase = getSupabaseClient();
+        const { data, error } = await supabase
+            .from('coach_notification_preferences')
+            .select('*')
+            .eq('coach_id', userId);
 
-        // Fetch available events and the coach's specific preferences in parallel
-        const [eventsRes, prefsRes] = await Promise.all([
-            supabase
-                .from('available_notification_events')
-                .select('*')
-                .order('category', { ascending: true }),
-            supabase
-                .from('coach_notification_preferences')
-                .select('*')
-                .eq('coach_id', userId)
-        ]);
-
-        if (eventsRes.error) {
+        if (error) {
+            console.error('[getNotifications] Supabase error:', error);
             return res.status(500).json({ success: false, message: 'Failed to fetch notification settings' });
         }
-
-        if (prefsRes.error) {
-            return res.status(500).json({ success: false, message: 'Failed to fetch notification settings' });
-        }
-
-        // Merge preferences with available events, fallback to default_enabled if no preference row exists
-        const notifications = eventsRes.data.map(event => {
-            const pref = prefsRes.data.find(p => p.event_id === event.id);
-            return {
-                event_id: event.id,
-                event_key: event.event_key,
-                name: event.name,
-                description: event.description,
-                category: event.category,
-                enabled: pref ? pref.enabled : event.default_enabled
-            };
-        });
 
         success(res, {
             message: 'Coach notifications settings retrieved successfully',
-            data: { notifications },
+            data: { preferences: data || [] },
         });
     },
 
     /**
-     * Update coach notifications settings
-     * Upserts into coach_notification_preferences
+     * Update notification preferences
+     * Accepts either a single preference or an array:
+     *   Single: { notificationType, inAppEnabled?, pushEnabled? }
+     *   Batch:  { preferences: [{ notificationType, inAppEnabled?, pushEnabled? }, ...] }
      */
     updateNotifications: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { eventId, enabled } = req.body;
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const { preferences, notificationType, inAppEnabled, pushEnabled } = req.body;
+        const now = new Date().toISOString();
+
+        // Build array of upsert rows
+        let rows: Record<string, any>[];
+        if (Array.isArray(preferences)) {
+            rows = preferences.map((p: any) => {
+                const row: Record<string, any> = {
+                    coach_id: userId,
+                    notification_type: p.notificationType,
+                    updated_at: now,
+                };
+                if (p.inAppEnabled !== undefined) row.in_app_enabled = p.inAppEnabled;
+                if (p.pushEnabled !== undefined) row.push_enabled = p.pushEnabled;
+                return row;
+            });
+        } else if (notificationType) {
+            const row: Record<string, any> = {
+                coach_id: userId,
+                notification_type: notificationType,
+                updated_at: now,
+            };
+            if (inAppEnabled !== undefined) row.in_app_enabled = inAppEnabled;
+            if (pushEnabled !== undefined) row.push_enabled = pushEnabled;
+            rows = [row];
+        } else {
+            return res.status(400).json({ success: false, message: 'notificationType or preferences array is required' });
+        }
+
+        const supabase = getSupabaseClient();
+        const { error } = await supabase
+            .from('coach_notification_preferences')
+            .upsert(rows, {
+                onConflict: 'coach_id,notification_type'
+            });
+
+        if (error) {
+            console.error('[updateNotifications] Supabase error:', error);
+            return res.status(500).json({ success: false, message: 'An unexpected error occurred. Please try again later.' });
+        }
+
+        success(res, {
+            message: 'Coach notifications settings updated successfully',
+        });
+    },
+
+    /**
+     * Bulk update notification preferences
+     * Sets all notification types to the same in_app_enabled and/or push_enabled value
+     */
+    bulkUpdateNotifications: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { inAppEnabled, pushEnabled } = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
             return;
         }
 
-        if (!eventId || enabled === undefined) {
-            return res.status(400).json({ success: false, message: 'eventId and enabled are required' });
+        if (inAppEnabled === undefined && pushEnabled === undefined) {
+            return res.status(400).json({ success: false, message: 'At least one of inAppEnabled or pushEnabled is required' });
         }
+
+        const updates: Record<string, any> = {
+            updated_at: new Date().toISOString(),
+        };
+        if (inAppEnabled !== undefined) updates.in_app_enabled = inAppEnabled;
+        if (pushEnabled !== undefined) updates.push_enabled = pushEnabled;
 
         const supabase = getSupabaseClient();
         const { error } = await supabase
             .from('coach_notification_preferences')
-            .upsert({
-                coach_id: userId,
-                event_id: eventId,
-                enabled,
-            }, {
-                onConflict: 'coach_id,event_id'
-            });
+            .update(updates)
+            .eq('coach_id', userId);
 
         if (error) {
+            console.error('[bulkUpdateNotifications] Supabase error:', error);
             return res.status(500).json({ success: false, message: 'An unexpected error occurred. Please try again later.' });
         }
 
         success(res, {
-            message: 'Coach notifications settings updated successfully',
+            message: 'All notification preferences updated successfully',
         });
     },
 

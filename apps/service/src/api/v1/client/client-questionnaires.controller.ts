@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { success, unauthorized, created, notFound, noContent, forbidden } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
+import { createCoachNotification, resolveClientName } from '../../../services/notification.service';
+import { NOTIFICATION_TYPES, NOTIFICATION_TITLES } from '@athli/shared-types/src/constants/notification-constants';
 
 export const clientQuestionnairesController = {
     /**
@@ -584,6 +586,22 @@ export const clientQuestionnairesController = {
                 .single();
 
             if (error) return res.status(500).json({ success: false, message: error.message });
+
+            // Send notification for client submissions only
+            if (!isCoach) {
+                resolveClientName(targetClientId).then((clientName) => {
+                    if (clientName) {
+                        createCoachNotification({
+                            coachId: targetCoachId,
+                            clientId: targetClientId,
+                            notificationType: NOTIFICATION_TYPES.questionnaire_completed,
+                            title: NOTIFICATION_TITLES.questionnaire_completed,
+                            description: `${clientName} completed a questionnaire`,
+                            metadata: { questionnaire_id: id },
+                        });
+                    }
+                });
+            }
 
             success(res, {
                 message: 'Questionnaire submitted successfully',

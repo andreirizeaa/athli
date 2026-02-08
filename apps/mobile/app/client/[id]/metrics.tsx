@@ -180,7 +180,7 @@ export default function MetricsScreen() {
                   <View key={metric.id || metric.assignment_id}>
                     <SwipeableRow
                       onDelete={() => handleDeleteMetric(metric)}
-                      deleteConfirmTitle={`${t('general.delete')} ${metric.name}?`}
+                      deleteConfirmTitle={t('general.deleteMetric')}
                       onOpen={handleRowOpen}
                     >
                       <PressableScale onPress={() => handleMetricPress(metric.assignment_id || metric.id)}>

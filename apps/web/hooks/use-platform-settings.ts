@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { getCoachPreferences, updateCoachPreferences, type CoachPreferences } from '@/api/settings/coach/coach-preferences-service';
 import { getCoachCompany, updateCoachCompany, uploadCompanyLogo, type CoachCompanyInfo } from '@/api/settings/coach/coach-company-service';
-import { getCoachNotifications, updateCoachNotifications, type NotificationEvent } from '@/api/settings/coach/coach-notifications-service';
+import { getCoachNotificationPreferences, updateCoachNotificationPreference, batchUpdateCoachNotificationPreferences, type NotificationPreference } from '@/api/settings/coach/coach-notifications-service';
 import { getCoachUniqueCode } from '@/api/settings/coach/coach-code-service';
 
 export function usePlatformSettings() {
@@ -70,23 +70,32 @@ export function usePlatformSettings() {
         },
     });
 
-    // --- NOTIFICATIONS ---
-    const notificationsQuery = useQuery({
-        queryKey: ['coach-notifications', user?.id],
+    // --- NOTIFICATION PREFERENCES ---
+    const notificationPrefsQuery = useQuery({
+        queryKey: ['coach-notification-preferences', user?.id],
         queryFn: async () => {
-            const res = await getCoachNotifications();
-            return res.data?.notifications || [];
+            const res = await getCoachNotificationPreferences();
+            return res.data?.preferences || [];
         },
         enabled: isEnabled,
         staleTime: 5 * 60 * 1000,
     });
 
-    const updateNotificationMutation = useMutation({
-        mutationFn: async ({ eventId, enabled }: { eventId: string; enabled: boolean }) => {
-            return updateCoachNotifications(eventId, enabled);
+    const updateNotificationPrefMutation = useMutation({
+        mutationFn: async ({ notificationType, inAppEnabled, pushEnabled }: { notificationType: string; inAppEnabled?: boolean; pushEnabled?: boolean }) => {
+            return updateCoachNotificationPreference(notificationType, { inAppEnabled, pushEnabled });
         },
         onSuccess: () => {
-            notificationsQuery.refetch();
+            notificationPrefsQuery.refetch();
+        },
+    });
+
+    const batchUpdateNotificationPrefsMutation = useMutation({
+        mutationFn: async (preferences: Array<{ notificationType: string; inAppEnabled?: boolean; pushEnabled?: boolean }>) => {
+            return batchUpdateCoachNotificationPreferences(preferences);
+        },
+        onSuccess: () => {
+            notificationPrefsQuery.refetch();
         },
     });
 
@@ -104,16 +113,17 @@ export function usePlatformSettings() {
     return {
         preferences: preferencesQuery.data,
         company: companyQuery.data, // null if not set up
-        notifications: notificationsQuery.data || [],
+        notificationPreferences: notificationPrefsQuery.data || [],
         uniqueCode: uniqueCodeQuery.data || null,
 
-        isLoading: isAuthLoading || preferencesQuery.isLoading || companyQuery.isLoading || notificationsQuery.isLoading || uniqueCodeQuery.isLoading,
+        isLoading: isAuthLoading || preferencesQuery.isLoading || companyQuery.isLoading || notificationPrefsQuery.isLoading || uniqueCodeQuery.isLoading,
         isUploadingLogo: uploadCompanyLogoMutation.isPending,
         isUpdatingCompany: updateCompanyMutation.isPending,
 
         updatePreferences: updatePreferencesMutation.mutateAsync,
         updateCompany: updateCompanyMutation.mutateAsync,
         uploadAndSetCompanyLogo: uploadCompanyLogoMutation.mutateAsync,
-        toggleNotification: updateNotificationMutation.mutateAsync,
+        updateNotificationPreference: updateNotificationPrefMutation.mutateAsync,
+        batchUpdateNotificationPreferences: batchUpdateNotificationPrefsMutation.mutateAsync,
     };
 }

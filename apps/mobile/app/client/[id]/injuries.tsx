@@ -144,7 +144,7 @@ export default function ClientInjuriesScreen() {
       <SwipeableRow
         onDelete={() => handleDeleteInjury(item.id)}
         onOpen={registerOpenRow}
-        deleteConfirmTitle={`${t('general.delete')}?`}
+        deleteConfirmTitle={t('general.deleteInjury')}
       >
         <PressableScale onPress={() => handleInjuryPress(item.id)}>
           <View style={[styles.injuryItem, { backgroundColor: themeColors.backgroundPrimary }]}>

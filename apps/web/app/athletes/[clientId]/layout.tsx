@@ -99,11 +99,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
       value: 'questionnaires',
       label: t('athletes.profile.questionnaires.title'),
     },
-    {
-      value: 'updates',
-      label: t('athletes.profile.updates'),
-    },
-    {
+{
       value: 'settings',
       label: t('athletes.profile.settings.title'),
     },
@@ -112,12 +108,11 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
   const validTabValues = tabs.map((tab) => tab.value);
   const lastSegment = segments[segments.length - 1];
 
-  // Check if we're in a check-in, questionnaires, photos, settings, updates, or training-calendar route (either list or detail page)
+  // Check if we're in a check-in, questionnaires, photos, settings, or training-calendar route (either list or detail page)
   const isCheckInRoute = segments.includes('check-in');
   const isQuestionnairesRoute = segments.includes('questionnaires');
   const isPhotosRoute = segments.includes('photos');
   const isSettingsRoute = segments.includes('settings');
-  const isUpdatesRoute = segments.includes('updates');
   const isTrainingCalendarRoute = segments.includes('training');
   const isExerciseHistoryRoute = segments.includes('exercise-history');
 
@@ -130,9 +125,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
         ? 'photos'
         : isSettingsRoute
           ? 'settings'
-          : isUpdatesRoute
-            ? 'updates'
-            : isTrainingCalendarRoute
+          : isTrainingCalendarRoute
               ? 'training'
               : isExerciseHistoryRoute
                 ? 'exercise-history'

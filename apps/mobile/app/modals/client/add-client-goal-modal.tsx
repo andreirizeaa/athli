@@ -13,7 +13,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SelectionInput } from '@/components/ui/form-inputs';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { hexToRgba } from '@/utils/colorUtils';
-import { saveAthleteGoals } from '@/services/client/client-service';
+import { createAthleteGoal } from '@/services/client/client-service';
 import { Dialog } from '@/components/ui/dialog';
 
 export default function AddClientGoalModal() {
@@ -32,7 +32,6 @@ export default function AddClientGoalModal() {
     const [errorMessage, setErrorMessage] = useState('');
 
     const coachId = useClientDetailStore((state) => state.coachId);
-    const goals = useClientDetailStore((state) => state.goals);
     const refreshSection = useClientDetailStore((state) => state.refreshSection);
 
     const isFormValid = title.trim().length > 0;
@@ -49,21 +48,11 @@ export default function AddClientGoalModal() {
 
         setIsSubmitting(true);
         try {
-            // Create new goal and add to existing goals
-            const newGoal = {
+            await createAthleteGoal(id, coachId, {
                 goal: title.trim(),
                 target_date: date ? date.toISOString().split('T')[0] : null,
                 details: body.trim() || undefined,
-            };
-
-            // Save all goals including the new one
-            const updatedGoals = [...goals.map(g => ({
-                goal: g.goal,
-                target_date: g.target_date,
-                details: g.details || undefined,
-            })), newGoal];
-
-            await saveAthleteGoals(id, coachId, updatedGoals);
+            });
             haptics.success();
             await refreshSection('goals');
             handleClose();
@@ -74,7 +63,7 @@ export default function AddClientGoalModal() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [canSave, id, coachId, title, body, date, goals, refreshSection, handleClose, t]);
+    }, [canSave, id, coachId, title, body, date, refreshSection, handleClose, t]);
 
     const handleSelectDatePress = useCallback(() => {
         setDateSelectCallback((newDate: Date) => {

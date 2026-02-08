@@ -9,6 +9,7 @@ import { SymbolView } from 'expo-symbols';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { LucideIcon } from 'lucide-react-native';
 import {
+  Bell,
   BookOpen,
   ChevronRight,
   Cog,
@@ -128,6 +129,10 @@ export default function SettingsScreen() {
 
   const handleOpenPreferences = () => {
     router.push({ pathname: '/settings/preferences' });
+  };
+
+  const handleOpenNotifications = () => {
+    router.push({ pathname: '/settings/notifications' });
   };
 
   const handleOpenProfile = () => {
@@ -260,21 +265,21 @@ export default function SettingsScreen() {
 
         {/* Account */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.account')}</Text>
-        <PressableScale onPress={handleOpenPreferences}>
-          <Card>
-            <View style={styles.profileRow}>
-              <View style={styles.optionIconContainer}>
-                <PlatformIcon sf="gear" mdi="settings" IconComponent={Cog} size={iconSize} color={iconColor} />
-              </View>
-              <View style={styles.profileTextContainer}>
-                <Text style={[styles.optionTitle, { color: themeColors.text }]}>
-                  {t('profile.preferences')}
-                </Text>
-              </View>
-              <PlatformIcon sf="chevron.right" mdi="chevron-right" IconComponent={ChevronRight} size={iconSizes.extraSmallIcons} color={themeColors.mutedText} />
-            </View>
-          </Card>
-        </PressableScale>
+        <Card>
+          <SettingsOption
+            icon={<PlatformIcon sf="gear" mdi="settings" IconComponent={Cog} size={iconSize} color={iconColor} />}
+            title={t('profile.preferences')}
+            onPress={handleOpenPreferences}
+            showChevron
+          />
+          <Separator />
+          <SettingsOption
+            icon={<PlatformIcon sf="bell" mdi="notifications" IconComponent={Bell} size={iconSize} color={iconColor} />}
+            title={t('profile.notifications')}
+            onPress={handleOpenNotifications}
+            showChevron
+          />
+        </Card>
 
         {/* Explore - only for coaches */}
         {isCoach && !isAthleteView && (

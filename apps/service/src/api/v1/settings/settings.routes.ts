@@ -45,6 +45,7 @@ settingsRouter.get('/coach/notifications', supabaseAuthenticate, settingsControl
  *         description: Notifications settings updated successfully
  */
 settingsRouter.patch('/coach/notifications', supabaseAuthenticate, settingsController.updateNotifications);
+settingsRouter.patch('/coach/notifications/bulk', supabaseAuthenticate, settingsController.bulkUpdateNotifications);
 
 // Preferences
 /**
