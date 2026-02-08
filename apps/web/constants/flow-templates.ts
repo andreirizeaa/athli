@@ -1,7 +1,7 @@
 import type { Node, Edge } from 'reactflow';
 import type { TriggerOption, ActionOption } from '@/components/flows/flow-editor-side-panel';
 import { TRIGGER_OPTIONS, ACTION_OPTIONS } from '@/components/flows/flow-editor-side-panel';
-import { UserPlus, CalendarX, Activity, CheckCircle } from 'lucide-react';
+import { CalendarX, Activity, UserX } from 'lucide-react';
 
 export type FlowTemplate = {
   id: string;
@@ -51,7 +51,7 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
       },
       {
         option: getActionById('assign-check-in'),
-        selectedCheckIns: [], // Template - user will need to select
+        selectedCheckIns: [],
       },
     ],
   },
@@ -74,84 +74,20 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
       },
       {
         option: getActionById('repeat'),
-        // repeatLinkedActionId will be null initially - user needs to set it when editing
-        // This will link to the first action (send-message) but user can change it
       },
     ],
   },
   {
-    id: 'new-client-onboarding',
-    name: 'New Client Onboarding',
-    description: 'Welcome new clients and guide them through the onboarding process',
-    icon: UserPlus,
-    trigger: getTriggerById('new-client-signup'),
+    id: 'inactive-7-days',
+    name: 'Inactive for 7 Days',
+    description: 'Re-engage clients who have been inactive for a week',
+    icon: UserX,
+    trigger: getTriggerById('inactive-7-days'),
     hasTemplateNodes: true,
     actionNodes: [
       {
         option: getActionById('send-message'),
-        messageText: 'Welcome! We\'re excited to have you on board. Let\'s get started with your onboarding.',
-      },
-      {
-        option: getActionById('assign-questionnaire'),
-        selectedQuestionnaires: [], // Template - user will need to select
-      },
-      {
-        option: getActionById('wait'),
-        waitDuration: 1,
-        waitUnit: 'days',
-      },
-      {
-        option: getActionById('assign-check-in'),
-        selectedCheckIns: [], // Template - user will need to select
-      },
-      {
-        option: getActionById('add-file'),
-        selectedFiles: [], // Template - user will need to select
-      },
-      {
-        option: getActionById('add-habit'),
-        selectedHabits: [], // Template - user will need to select
-      },
-    ],
-  },
-  {
-    id: 'workout-completion-celebration',
-    name: 'Workout Completion Celebration',
-    description: 'Celebrate and motivate clients after completing workouts',
-    icon: CheckCircle,
-    trigger: getTriggerById('workout-finished'),
-    hasTemplateNodes: true,
-    actionNodes: [
-      {
-        option: getActionById('send-message'),
-        messageText: 'Great job completing your workout! Keep up the excellent work!',
-      },
-      {
-        option: getActionById('assign-check-in'),
-        selectedCheckIns: [], // Template - user will need to select
-      },
-    ],
-  },
-  {
-    id: 'check-in-follow-up',
-    name: 'Check-in Follow-up',
-    description: 'Follow up after clients complete their check-ins',
-    icon: CheckCircle,
-    trigger: getTriggerById('check-in-completed'),
-    hasTemplateNodes: true,
-    actionNodes: [
-      {
-        option: getActionById('send-message'),
-        messageText: 'Thank you for completing your check-in. We\'ll review your responses and get back to you soon.',
-      },
-      {
-        option: getActionById('wait'),
-        waitDuration: 2,
-        waitUnit: 'hours',
-      },
-      {
-        option: getActionById('assign-questionnaire'),
-        selectedQuestionnaires: [], // Template - user will need to select
+        messageText: 'We noticed you\'ve been away for a while. How are things going? Let us know if you need any adjustments to your plan.',
       },
     ],
   },

@@ -17,7 +17,7 @@ import Link from 'next/link';
 // Forms are now split into check-ins and questionnaires services
 import { type Habit } from '@/api/coach/coach-habit-service';
 import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
-import { Search, X, ChevronRight, UserPlus, CalendarX, Activity, CheckCircle, MessageSquare, FileText, ClipboardCheck, FilePlus, Sprout, ArrowLeft, Clock, RotateCw, BarChart3, Loader2 } from 'lucide-react';
+import { Search, X, ChevronRight, UserPlus, CalendarX, Activity, CheckCircle, MessageSquare, FileText, ClipboardCheck, FilePlus, Sprout, ArrowLeft, Clock, RotateCw, BarChart3, Loader2, UserX } from 'lucide-react';
 
 export type PanelType = 'trigger' | 'action' | null;
 
@@ -35,9 +35,9 @@ export type ActionOption = {
 
 export const TRIGGER_OPTIONS: TriggerOption[] = [
   {
-    id: 'new-client-signup',
-    name: 'New client sign up',
-    icon: UserPlus,
+    id: 'missed-workout',
+    name: 'Missed workout',
+    icon: Activity,
   },
   {
     id: 'missed-check-in',
@@ -55,19 +55,9 @@ export const TRIGGER_OPTIONS: TriggerOption[] = [
     icon: CalendarX,
   },
   {
-    id: 'check-in-completed',
-    name: 'Check in completed',
-    icon: CheckCircle,
-  },
-  {
-    id: 'missed-workout',
-    name: 'Missed workout',
-    icon: Activity,
-  },
-  {
-    id: 'workout-finished',
-    name: 'Workout finished',
-    icon: CheckCircle,
+    id: 'inactive-7-days',
+    name: 'Inactive for 7 days',
+    icon: UserX,
   },
 ];
 
