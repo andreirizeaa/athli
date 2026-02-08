@@ -285,6 +285,20 @@ const FLOW_NAME_TO_TRIGGER_ID: Record<string, string> = {
   'Missed Metric Log': 'missed-metric-log',
 };
 
+const NON_CHECKABLE_TRIGGERS = ['missed-workout', 'inactive-7-days'];
+
+const CHECK_SUBTITLES: Record<string, string> = {
+  'missed-check-in': 'Check in completed',
+  'missed-habit-log': 'Habit logged',
+  'missed-metric-log': 'Metric logged',
+};
+
+const CHECK_PAYLOADS: Record<string, string> = {
+  'missed-check-in': 'check-in-completed',
+  'missed-habit-log': 'habit-logged',
+  'missed-metric-log': 'metric-logged',
+};
+
 const DEFAULT_NODES: Node[] = [
   {
     id: 'trigger',
@@ -909,7 +923,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
           position: { x: 0, y: 0 },
           data: {
             label: 'Check',
-            subtitle: 'Check in completed',
+            subtitle: CHECK_SUBTITLES[selectedTrigger?.id ?? ''] ?? 'Check condition',
             // Serializable config for restore on reload
             linkedActionId: checkNode.linkedActionId,
             repeatActionId: checkNode.repeatActionId,
@@ -1089,7 +1103,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
         acc[node.id] = {
           type: node.option.id,
           payload: node.actionSchema?.payload ?? (
-            isCheck ? 'check-in-completed' :
+            isCheck ? (CHECK_PAYLOADS[selectedTrigger?.id ?? ''] ?? 'check-completed') :
               (node.option.id === 'wait' ? (node.waitDuration || 1) * (
                 node.waitUnit === 'days' ? 1440 :
                   node.waitUnit === 'hours' ? 60 : 1
@@ -1156,6 +1170,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
               id: flow.id,
               nodes: layoutedNodes,
               edges: layoutedEdges,
+              automationSchema: automationSchema,
             });
           }
           onFlowChange?.(layoutedNodes, layoutedEdges);
@@ -1432,7 +1447,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
                     waitUnit === 'days' ? waitDuration * 24 * 60 :
                       waitUnit === 'hours' ? waitDuration * 60 :
                         waitDuration
-                  ) : selectedActionOption.id === 'check' ? 'check-in-completed'
+                  ) : selectedActionOption.id === 'check' ? (CHECK_PAYLOADS[selectedTrigger?.id ?? ''] ?? 'check-completed')
                     : ['assign-questionnaire', 'assign-check-in', 'add-file', 'add-habit', 'add-metric'].includes(selectedActionOption.id) ? (
                       selectedActionOption.id === 'assign-questionnaire' ? Array.from(selectedQuestionnaires)
                         : selectedActionOption.id === 'assign-check-in' ? Array.from(selectedCheckIns)
@@ -1483,7 +1498,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
               waitUnit === 'days' ? waitDuration * 24 * 60 :
                 waitUnit === 'hours' ? waitDuration * 60 :
                   waitDuration
-            ) : selectedActionOption.id === 'check' ? 'check-in-completed'
+            ) : selectedActionOption.id === 'check' ? (CHECK_PAYLOADS[selectedTrigger?.id ?? ''] ?? 'check-completed')
               : ['assign-questionnaire', 'assign-check-in', 'add-file', 'add-habit', 'add-metric'].includes(selectedActionOption.id) ? (
                 selectedActionOption.id === 'assign-questionnaire' ? Array.from(selectedQuestionnaires)
                   : selectedActionOption.id === 'assign-check-in' ? Array.from(selectedCheckIns)
@@ -1783,7 +1798,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
             return false;
           })()
         }
-        hideWaitActions={hideWaitActionsProp ?? isOnboardingMode}
+        hideWaitActions={hideWaitActionsProp ?? isOnboardingMode ?? NON_CHECKABLE_TRIGGERS.includes(selectedTrigger?.id ?? '')}
         excludeTriggers={!isOnboardingMode && !forcedTriggerId ? ['new-client-signup'] : []}
       />
     </div>
