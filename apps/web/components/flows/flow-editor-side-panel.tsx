@@ -19,6 +19,13 @@ import { type Habit } from '@/api/coach/coach-habit-service';
 import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
 import { Search, X, ChevronRight, UserPlus, CalendarX, Activity, CheckCircle, MessageSquare, FileText, ClipboardCheck, FilePlus, Sprout, ArrowLeft, Clock, RotateCw, BarChart3, Loader2, UserX } from 'lucide-react';
 
+const CHECKABLE_TRIGGERS = ['missed-check-in', 'missed-habit-log', 'missed-metric-log'];
+const CHECK_LABELS: Record<string, string> = {
+  'missed-check-in': 'Is check in completed',
+  'missed-habit-log': 'Is habit logged',
+  'missed-metric-log': 'Is metric logged',
+};
+
 export type PanelType = 'trigger' | 'action' | null;
 
 export type TriggerOption = {
@@ -259,15 +266,14 @@ export function FlowEditorSidePanel({
       option.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-  const filteredCheckInActions = CHECK_IN_ACTION_OPTIONS.filter((option) =>
+  const checkLabel = CHECK_LABELS[selectedTrigger?.id ?? ''];
+  const filteredCheckInActions = (
+    CHECKABLE_TRIGGERS.includes(selectedTrigger?.id ?? '') && !isPreviousActionCheck && checkLabel
+      ? [{ id: 'check', name: checkLabel, icon: RotateCw } as ActionOption]
+      : []
+  ).filter((option) =>
     option.name.toLowerCase().includes(searchQuery.toLowerCase())
-  ).filter((option) => {
-    // Show "Is check in completed" only if trigger is "missed check in" AND previous action is not a check
-    if (option.id === 'check') {
-      return selectedTrigger?.id === 'missed-check-in' && !isPreviousActionCheck;
-    }
-    return true;
-  });
+  );
 
   const filteredClientActions = CLIENT_ACTION_OPTIONS.filter((option) =>
     option.name.toLowerCase().includes(searchQuery.toLowerCase())
