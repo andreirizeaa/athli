@@ -316,7 +316,7 @@ export default function ClientCheckInsScreen() {
                   <View key={checkIn.id}>
                     <SwipeableRow
                       onDelete={() => handleDeleteCheckIn(checkIn)}
-                      deleteConfirmTitle={`${t('general.delete')} ${checkIn.name}?`}
+                      deleteConfirmTitle={t('general.deleteCheckIn')}
                       onOpen={handleRowOpen}
                     >
                       <PressableScale onPress={() => handleCheckInPress(checkIn)}>

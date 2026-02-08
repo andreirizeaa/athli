@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAthleteGoals, saveAthleteGoals, type AthleteGoal } from '@/api/client/client-service';
+import { getAthleteGoals, createAthleteGoal, updateAthleteGoal, deleteAthleteGoal, type AthleteGoal } from '@/api/client/client-service';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 export function useClientGoals(clientId: string | undefined) {
@@ -26,17 +26,44 @@ export function useClientGoals(clientId: string | undefined) {
     };
 }
 
-export function useUpdateClientGoals() {
+export function useCreateClientGoal() {
     const queryClient = useQueryClient();
     const { user } = useUserProfile();
     const coachId = user?.id;
 
     return useMutation({
-        mutationFn: ({ clientId, goals }: { clientId: string; goals: Partial<AthleteGoal>[] }) =>
-            saveAthleteGoals(clientId, coachId!, goals),
+        mutationFn: ({ clientId, goal }: { clientId: string; goal: Partial<AthleteGoal> }) =>
+            createAthleteGoal(clientId, coachId!, goal),
         onSuccess: (_, { clientId }) => {
             queryClient.invalidateQueries({ queryKey: ['client-goals', clientId] });
         },
     });
 }
 
+export function useUpdateClientGoal() {
+    const queryClient = useQueryClient();
+    const { user } = useUserProfile();
+    const coachId = user?.id;
+
+    return useMutation({
+        mutationFn: ({ clientId, goalId, goal }: { clientId: string; goalId: string; goal: Partial<AthleteGoal> }) =>
+            updateAthleteGoal(clientId, coachId!, goalId, goal),
+        onSuccess: (_, { clientId }) => {
+            queryClient.invalidateQueries({ queryKey: ['client-goals', clientId] });
+        },
+    });
+}
+
+export function useDeleteClientGoal() {
+    const queryClient = useQueryClient();
+    const { user } = useUserProfile();
+    const coachId = user?.id;
+
+    return useMutation({
+        mutationFn: ({ clientId, goalId }: { clientId: string; goalId: string }) =>
+            deleteAthleteGoal(clientId, coachId!, goalId),
+        onSuccess: (_, { clientId }) => {
+            queryClient.invalidateQueries({ queryKey: ['client-goals', clientId] });
+        },
+    });
+}

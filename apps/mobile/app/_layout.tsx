@@ -438,6 +438,8 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen name="settings/preferences" options={{ headerShown: false }} />
+          <Stack.Screen name="settings/notifications" options={{ headerShown: false }} />
+          <Stack.Screen name="settings/notification-status" options={{ headerShown: false }} />
           <Stack.Screen name="settings/feature-requests" options={{ headerShown: false }} />
           <Stack.Screen
             name="settings/feature-request-detail"
@@ -483,6 +485,13 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="athlete-forms"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="athlete-goals-injuries"
             options={{
               headerShown: false,
               animation: 'slide_from_right',

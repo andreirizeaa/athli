@@ -173,7 +173,7 @@ export default function ClientHabitsScreen() {
                   <View key={habit.id || habit.assignment_id}>
                     <SwipeableRow
                       onDelete={() => handleDeleteHabit(habit)}
-                      deleteConfirmTitle={`${t('general.delete')} ${habit.name}?`}
+                      deleteConfirmTitle={t('general.deleteHabit')}
                       onOpen={handleRowOpen}
                     >
                       <PressableScale onPress={() => handleHabitPress(habit.assignment_id || habit.id)}>

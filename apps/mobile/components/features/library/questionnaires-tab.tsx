@@ -182,7 +182,7 @@ export const QuestionnairesTab = () => {
         <SwipeableRow
           onDelete={() => deleteMutation.mutateAsync(item.id)}
           onOpen={registerOpenRow}
-          deleteConfirmTitle={`${t('general.delete')} ${item.name}?`}
+          deleteConfirmTitle={t('general.deleteQuestionnaire')}
         >
           <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
             <PressableScale

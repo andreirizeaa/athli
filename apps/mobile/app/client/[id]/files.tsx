@@ -333,7 +333,7 @@ export default function ClientFilesScreen() {
                       <SwipeableRow
                         onDelete={() => handleDeleteFile(file.id)}
                         onOpen={registerOpenRow}
-                        deleteConfirmTitle={`${t('general.delete')} ${fileName}?`}
+                        deleteConfirmTitle={t('general.deleteFile')}
                       >
                         <PressableScale onPress={() => handleFilePress(file)}>
                           <View style={[styles.fileItem, { backgroundColor: themeColors.backgroundPrimary }]}>

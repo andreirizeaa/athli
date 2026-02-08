@@ -2,11 +2,9 @@ import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
-import { ChevronRight, FileText, Dumbbell, Moon, ListChecks, CircleCheck, ClipboardList, Send, CheckCircle } from 'lucide-react-native';
+import { ChevronRight, FileText, Dumbbell, Moon, ListChecks, CircleCheck, ClipboardList, Send, CheckCircle, Target } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
-import SquircleView from 'react-native-fast-squircle';
-
 import { Separator } from '@/components/ui/separator';
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -178,6 +176,10 @@ export const AthleteHomeContent = () => {
 
   const handleOpenForms = () => {
     router.push('/athlete-forms');
+  };
+
+  const handleOpenGoalsInjuries = () => {
+    router.push('/athlete-goals-injuries');
   };
 
   const handleCoachMessagePress = useCallback(async () => {
@@ -473,13 +475,11 @@ export const AthleteHomeContent = () => {
         <Card style={styles.coachMessageCard}>
           <View style={styles.coachMessageContent}>
             <View style={styles.coachAvatarContainer}>
-              <SquircleView cornerSmoothing={1} style={styles.coachAvatar}>
-                {coachConversation.other_user_avatar ? (
-                  <Image source={{ uri: coachConversation.other_user_avatar }} style={styles.coachAvatarImage} />
-                ) : (
-                  <View style={[styles.coachAvatarPlaceholder, { backgroundColor: themeColors.border }]} />
-                )}
-              </SquircleView>
+              {coachConversation.other_user_avatar ? (
+                <Image source={{ uri: coachConversation.other_user_avatar }} style={styles.coachAvatarImage} contentFit="cover" />
+              ) : (
+                <View style={[styles.coachAvatarPlaceholder, { backgroundColor: themeColors.border }]} />
+              )}
             </View>
             <View style={styles.coachMessageTextContainer}>
               <View style={styles.coachMessageHeader}>
@@ -567,8 +567,27 @@ export const AthleteHomeContent = () => {
         </Text>
         {tasksCard}
 
-        {/* Available Resources + Forms */}
+        {/* Goals & Injuries + Available Resources + Forms */}
         <Card>
+          <PressableScale onPress={handleOpenGoalsInjuries}>
+            <View style={styles.optionRow}>
+              <View style={styles.optionIconContainer}>
+                <PlatformIcon sf="target" IconComponent={Target} size={iconSize} color={iconColor} />
+              </View>
+              <View style={styles.optionTextContainer}>
+                <Text style={[styles.optionTitle, { color: themeColors.text }]}>
+                  {t('athlete.goalsInjuries.title')}
+                </Text>
+              </View>
+              <PlatformIcon
+                sf="chevron.right"
+                IconComponent={ChevronRight}
+                size={iconSizes.extraSmallIcons}
+                color={themeColors.mutedText}
+              />
+            </View>
+          </PressableScale>
+          <Separator />
           <PressableScale onPress={handleOpenFiles}>
             <View style={styles.optionRow}>
               <View style={styles.optionIconContainer}>
@@ -726,30 +745,31 @@ const styles = StyleSheet.create({
   // Coach messages card
   coachMessageCard: {
     marginBottom: 24,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    overflow: 'hidden',
   },
   coachMessageContent: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'stretch',
+    height: 72,
   },
   coachAvatarContainer: {
-    marginRight: 12,
-  },
-  coachAvatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 8,
-    overflow: 'hidden',
+    width: 72,
   },
   coachAvatarImage: {
-    width: 54,
-    height: 54,
+    width: 72,
+    height: '100%',
   },
   coachAvatarPlaceholder: {
-    width: 54,
-    height: 54,
+    width: 72,
+    height: '100%',
   },
   coachMessageTextContainer: {
     flex: 1,
+    paddingLeft: 12,
+    paddingRight: 16,
+    paddingVertical: 10,
   },
   coachMessageHeader: {
     flexDirection: 'row',

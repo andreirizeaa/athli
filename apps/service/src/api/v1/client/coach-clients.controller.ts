@@ -428,8 +428,7 @@ export const coachClientController = {
         const trainingTables = [
             'client_training_exercise_history',
             'client_training_history',
-            'client_training',
-            'client_updates'
+            'client_training'
         ];
 
         // 4. Private Data

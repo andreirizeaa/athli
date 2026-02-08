@@ -4,6 +4,8 @@ import { asyncHandler } from '../../../utils/async-handler';
 import { success, unauthorized, internalError, badRequest } from '../../../utils/http-response';
 import { avatarService } from '../../../services/avatar.service';
 import { getSupabaseClient } from '../../../services/supabase.service';
+import { createCoachNotification, resolveCoachId, resolveClientName } from '../../../services/notification.service';
+import { NOTIFICATION_TYPES, NOTIFICATION_TITLES } from '@athli/shared-types/src/constants/notification-constants';
 
 export class UserController {
   /**
@@ -226,6 +228,20 @@ export class UserController {
     const userId = (req as any).userId;
 
     await userService.markClientConnected(userId);
+
+    // Send notification - this is always a client action
+    Promise.all([resolveCoachId(userId), resolveClientName(userId)]).then(([coachId, clientName]) => {
+      if (coachId && clientName) {
+        createCoachNotification({
+          coachId,
+          clientId: userId,
+          notificationType: NOTIFICATION_TYPES.client_connected,
+          title: NOTIFICATION_TITLES.client_connected,
+          description: `${clientName} connected to the app`,
+          metadata: {},
+        });
+      }
+    });
 
     success(res, { message: 'Client marked as connected' });
   });

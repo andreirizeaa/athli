@@ -23,7 +23,9 @@
     "./messaging-utils": "./src/functions/messaging-utils.ts",
     "./training-constants": "./src/constants/training-constants.ts",
     "./pdf-template": "./src/functions/pdf-template.ts",
-    "./src/functions/pdf-template": "./src/functions/pdf-template.ts"
+    "./src/functions/pdf-template": "./src/functions/pdf-template.ts",
+    "./notification-constants": "./src/constants/notification-constants.ts",
+    "./src/constants/notification-constants": "./src/constants/notification-constants.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit"

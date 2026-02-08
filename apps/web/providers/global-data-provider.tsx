@@ -6,7 +6,7 @@ import { usePlatformSettings } from '@/hooks/use-platform-settings';
 import { UserProfile } from '@/api/user/user-service';
 import { CoachPreferences } from '@/api/settings/coach/coach-preferences-service';
 import { CoachCompanyInfo } from '@/api/settings/coach/coach-company-service';
-import { NotificationEvent } from '@/api/settings/coach/coach-notifications-service';
+import { NotificationPreference } from '@/api/settings/coach/coach-notifications-service';
 import { FullScreenLoader } from '@/components/ui/full-screen-loader';
 
 // Hooks for prefetching
@@ -28,7 +28,7 @@ interface GlobalContextType {
     user: UserProfile | null;
     preferences: CoachPreferences | null;
     company: CoachCompanyInfo | null;
-    notifications: NotificationEvent[];
+    notificationPreferences: NotificationPreference[];
     uniqueCode: string | null;
 
     isLoading: boolean;
@@ -37,7 +37,8 @@ interface GlobalContextType {
     updatePreferences: (updates: Partial<CoachPreferences>) => Promise<any>;
     updateCompany: (updates: Partial<CoachCompanyInfo>) => Promise<any>;
     uploadAndSetCompanyLogo: (file: File) => Promise<any>;
-    toggleNotification: (args: { eventId: string; enabled: boolean }) => Promise<any>;
+    updateNotificationPreference: (args: { notificationType: string; inAppEnabled?: boolean; pushEnabled?: boolean }) => Promise<any>;
+    batchUpdateNotificationPreferences: (preferences: Array<{ notificationType: string; inAppEnabled?: boolean; pushEnabled?: boolean }>) => Promise<any>;
     isUploadingLogo: boolean;
     isUpdatingCompany: boolean;
 }
@@ -46,13 +47,14 @@ const GlobalContext = createContext<GlobalContextType>({
     user: null,
     preferences: null,
     company: null,
-    notifications: [],
+    notificationPreferences: [],
     uniqueCode: null,
     isLoading: true,
     updatePreferences: async () => { },
     updateCompany: async () => { },
     uploadAndSetCompanyLogo: async () => { },
-    toggleNotification: async () => { },
+    updateNotificationPreference: async () => { },
+    batchUpdateNotificationPreferences: async () => { },
     isUploadingLogo: false,
     isUpdatingCompany: false,
 });
@@ -117,13 +119,14 @@ export default function GlobalDataProvider({ children }: { children: ReactNode }
     const {
         preferences,
         company,
-        notifications,
+        notificationPreferences,
         uniqueCode,
         isLoading: isSettingsLoading,
         updatePreferences,
         updateCompany,
         uploadAndSetCompanyLogo,
-        toggleNotification,
+        updateNotificationPreference,
+        batchUpdateNotificationPreferences,
         isUploadingLogo,
         isUpdatingCompany
     } = usePlatformSettings();
@@ -134,16 +137,17 @@ export default function GlobalDataProvider({ children }: { children: ReactNode }
         user: userProfile as UserProfile, // Casting assuming user is loaded or handled by layout check
         preferences: preferences as CoachPreferences,
         company: company as CoachCompanyInfo,
-        notifications,
+        notificationPreferences,
         uniqueCode,
         isLoading,
         updatePreferences,
         updateCompany,
         uploadAndSetCompanyLogo,
-        toggleNotification,
+        updateNotificationPreference,
+        batchUpdateNotificationPreferences,
         isUploadingLogo,
         isUpdatingCompany
-    }), [userProfile, preferences, company, notifications, uniqueCode, isLoading, updatePreferences, updateCompany, uploadAndSetCompanyLogo, toggleNotification, isUploadingLogo, isUpdatingCompany]);
+    }), [userProfile, preferences, company, notificationPreferences, uniqueCode, isLoading, updatePreferences, updateCompany, uploadAndSetCompanyLogo, updateNotificationPreference, batchUpdateNotificationPreferences, isUploadingLogo, isUpdatingCompany]);
 
     // Don't show loader on auth routes, error pages, client routes, download routes, or athlete profiles
     const isAuthRoute = pathname?.startsWith('/auth/');

@@ -35,10 +35,6 @@ import {
   type ClientQuestionnaire,
 } from '@/services/client/client-form-service';
 import {
-  getClientUpdates,
-  type ClientUpdate,
-} from '@/services/client/client-updates-service';
-import {
   getClientNotes,
   type ClientNote,
 } from '@/services/client/client-notes-service';
@@ -64,7 +60,6 @@ interface ClientDetailStore {
   files: ClientFile[];
   checkIns: ClientCheckIn[];
   questionnaires: ClientQuestionnaire[];
-  updates: ClientUpdate[];
   notes: ClientNote[];
   trainingCalendar: TrainingCalendarSchema;
   uniqueExercises: UniqueExercise[];
@@ -80,7 +75,6 @@ interface ClientDetailStore {
   isLoadingPhotos: boolean;
   isLoadingFiles: boolean;
   isLoadingForms: boolean;
-  isLoadingUpdates: boolean;
   isLoadingNotes: boolean;
   isLoadingTraining: boolean;
   isLoadingUniqueExercises: boolean;
@@ -103,7 +97,6 @@ interface ClientDetailStore {
       | 'files'
       | 'check-ins'
       | 'questionnaires'
-      | 'updates'
       | 'notes'
       | 'training'
       | 'unique-exercises'
@@ -120,6 +113,8 @@ interface ClientDetailStore {
   setClientId: (clientId: string) => void;
   setCoachId: (coachId: string) => void;
   setUniqueExercises: (exercises: UniqueExercise[]) => void;
+  setGoals: (goals: AthleteGoal[]) => void;
+  setInjuries: (injuries: AthleteInjury[]) => void;
 }
 
 // Helper to format date as YYYY-MM-DD
@@ -223,7 +218,6 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
   files: [],
   checkIns: [],
   questionnaires: [],
-  updates: [],
   notes: [],
   trainingCalendar: {},
   uniqueExercises: [],
@@ -235,7 +229,6 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
   isLoadingPhotos: false,
   isLoadingFiles: false,
   isLoadingForms: false,
-  isLoadingUpdates: false,
   isLoadingNotes: false,
   isLoadingTraining: false,
   isLoadingUniqueExercises: false,
@@ -278,7 +271,6 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       files: [],
       checkIns: [],
       questionnaires: [],
-      updates: [],
       notes: [],
       trainingCalendar: {},
       uniqueExercises: [],
@@ -290,7 +282,6 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       isLoadingPhotos: true,
       isLoadingFiles: true,
       isLoadingForms: true,
-      isLoadingUpdates: true,
       isLoadingNotes: true,
       isLoadingTraining: true,
       isLoadingUniqueExercises: true,
@@ -327,7 +318,6 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         filesData,
         checkInsData,
         questionnairesData,
-        updatesData,
         notesData,
         trainingData,
         uniqueExercisesData,
@@ -341,7 +331,6 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         getClientFiles(clientId, coachId).catch(() => []),
         getClientCheckIns(clientId, coachId).catch(() => []),
         getClientQuestionnaires(clientId, coachId).catch(() => []),
-        getClientUpdates(clientId, coachId).catch(() => []),
         getClientNotes(clientId, coachId).catch(() => []),
         getTrainingCalendarRange(clientId, coachId, startDate, endDate).catch(() => ({})),
         getClientUniqueExercises({ clientId, coachId }).catch(() => []),
@@ -357,7 +346,6 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         files: filesData,
         checkIns: checkInsData,
         questionnaires: questionnairesData,
-        updates: updatesData,
         notes: notesData,
         trainingCalendar: trainingData,
         uniqueExercises: uniqueExercisesData,
@@ -368,7 +356,6 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         isLoadingPhotos: false,
         isLoadingFiles: false,
         isLoadingForms: false,
-        isLoadingUpdates: false,
         isLoadingNotes: false,
         isLoadingTraining: false,
         isLoadingUniqueExercises: false,
@@ -386,7 +373,6 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         isLoadingPhotos: false,
         isLoadingFiles: false,
         isLoadingForms: false,
-        isLoadingUpdates: false,
         isLoadingNotes: false,
         isLoadingTraining: false,
         isLoadingUniqueExercises: false,
@@ -473,12 +459,6 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
           set({ isLoadingForms: true });
           const questionnairesData = await getClientQuestionnaires(clientId, coachId);
           set({ questionnaires: questionnairesData, isLoadingForms: false });
-          break;
-
-        case 'updates':
-          set({ isLoadingUpdates: true });
-          const updatesData = await getClientUpdates(clientId, coachId);
-          set({ updates: updatesData, isLoadingUpdates: false });
           break;
 
         case 'notes':
@@ -711,7 +691,6 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       files: [],
       checkIns: [],
       questionnaires: [],
-      updates: [],
       notes: [],
       trainingCalendar: {},
       uniqueExercises: [],
@@ -723,7 +702,6 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       isLoadingPhotos: false,
       isLoadingFiles: false,
       isLoadingForms: false,
-      isLoadingUpdates: false,
       isLoadingNotes: false,
       isLoadingTraining: false,
       isLoadingUniqueExercises: false,
@@ -754,5 +732,13 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
 
   setFiles: (files: ClientFile[]) => {
     set({ files, isLoadingFiles: false });
+  },
+
+  setGoals: (goals: AthleteGoal[]) => {
+    set({ goals });
+  },
+
+  setInjuries: (injuries: AthleteInjury[]) => {
+    set({ injuries });
   },
 }));

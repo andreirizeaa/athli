@@ -368,7 +368,7 @@ export const FilesTab = () => {
           <SwipeableRow
             onDelete={() => deleteMutation.mutateAsync(item.id)}
             onOpen={registerOpenRow}
-            deleteConfirmTitle={`${t('general.delete')} ${item.filename}?`}
+            deleteConfirmTitle={t('general.deleteFile')}
           >
             <PressableScale onPress={() => handleFilePress(item)}>
               <View style={[styles.fileItem, { backgroundColor: 'transparent' }]}>

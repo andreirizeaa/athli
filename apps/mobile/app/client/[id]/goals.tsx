@@ -144,7 +144,7 @@ export default function ClientGoalsScreen() {
       <SwipeableRow
         onDelete={() => handleDeleteGoal(item.id)}
         onOpen={registerOpenRow}
-        deleteConfirmTitle={`${t('general.delete')}?`}
+        deleteConfirmTitle={t('general.deleteGoal')}
       >
         <PressableScale onPress={() => handleGoalPress(item.id)}>
           <View style={[styles.goalItem, { backgroundColor: themeColors.backgroundPrimary }]}>
