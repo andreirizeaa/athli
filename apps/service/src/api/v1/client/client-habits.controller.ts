@@ -282,10 +282,10 @@ export const clientHabitsController = {
 
         const supabase = getSupabaseClient();
 
-        // Get habit for coach_id
+        // Get habit for coach_id and name
         const { data: habit, error: fetchError } = await supabase
             .from('client_habits')
-            .select('coach_id')
+            .select('coach_id, name')
             .eq('id', assignmentId)
             .eq('client_id', targetClientId)
             .single();
@@ -320,7 +320,7 @@ export const clientHabitsController = {
                         notificationType: NOTIFICATION_TYPES.habit_logged,
                         title: NOTIFICATION_TITLES.habit_logged,
                         description: `${clientName} logged a habit`,
-                        metadata: { assignment_id: assignmentId, date: date || new Date().toISOString().split('T')[0] },
+                        metadata: { assignment_id: assignmentId, name: habit.name, date: date || new Date().toISOString().split('T')[0] },
                     });
                 }
             });

@@ -191,7 +191,7 @@ export const coachMessagingController = {
                     *,
                     attachments:message_attachments(*),
                     reactions:message_reactions(*),
-                    parent_message:messages!parent_message_id(id, content, message_type, sender_id, sent_at, is_deleted, attachments:message_attachments(*))
+                    parent_message:messages!parent_message_id(id, content, message_type, sender_id, sender_role, sent_at, is_deleted, attachments:message_attachments(*))
                 `,
                 )
                 .eq('conversation_id', conversationId)
@@ -264,7 +264,7 @@ export const coachMessagingController = {
                         *,
                         attachments:message_attachments(*),
                         reactions:message_reactions(*),
-                        parent_message:messages!parent_message_id(id, content, message_type, sender_id, sent_at, is_deleted, attachments:message_attachments(*))
+                        parent_message:messages!parent_message_id(id, content, message_type, sender_id, sender_role, sent_at, is_deleted, attachments:message_attachments(*))
                     `)
                     .eq('idempotency_key', idempotencyKey)
                     .single();
@@ -316,7 +316,7 @@ export const coachMessagingController = {
                     *,
                     attachments:message_attachments(*),
                     reactions:message_reactions(*),
-                    parent_message:messages!parent_message_id(id, content, message_type, sender_id, sent_at, is_deleted, attachments:message_attachments(*))
+                    parent_message:messages!parent_message_id(id, content, message_type, sender_id, sender_role, sent_at, is_deleted, attachments:message_attachments(*))
                 `)
                 .single();
 

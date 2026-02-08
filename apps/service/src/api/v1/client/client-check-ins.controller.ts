@@ -251,7 +251,7 @@ export const clientCheckInsController = {
         // 1. Fetch assignment details
         const { data: assignmentDetails, error: detailsError } = await supabase
             .from('client_checkins')
-            .select('client_id, coach_id')
+            .select('client_id, coach_id, name')
             .eq('id', id)
             .eq('client_id', targetClientId)
             .single();
@@ -298,7 +298,7 @@ export const clientCheckInsController = {
                         notificationType: NOTIFICATION_TYPES.checkin_completed,
                         title: NOTIFICATION_TITLES.checkin_completed,
                         description: `${clientName} completed a check-in`,
-                        metadata: { checkin_id: id },
+                        metadata: { checkin_id: id, name: assignmentDetails.name },
                     });
                 }
             });

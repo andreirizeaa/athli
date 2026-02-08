@@ -261,8 +261,8 @@ export const MessageList = React.memo(function MessageList({
                                     'relative',
                                     // Audio-only messages use full width, others use w-fit
                                     audioOnly
-                                        ? (isClientPanelOpen ? 'w-[60%]' : 'w-[50%]')
-                                        : cn('w-fit', isClientPanelOpen ? 'max-w-[60%]' : 'max-w-[50%]')
+                                        ? (isClientPanelOpen ? 'w-[60%]' : 'w-[30%]')
+                                        : cn('w-fit', isClientPanelOpen ? 'max-w-[60%]' : 'max-w-[30%]')
                                 )}>
                                     {/* WhatsApp-style dropdown button - positioned outside bubble to avoid overflow clipping */}
                                     <div
@@ -581,8 +581,21 @@ export const MessageList = React.memo(function MessageList({
                                     </div>
                                 </div>
 
-                                {/* Emoji quick reaction button - outside bubble with gap */}
-                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                {/* Quick action buttons - outside bubble with gap */}
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 flex items-center gap-1">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className={cn(
+                                            'h-7 w-7 rounded-full',
+                                            'bg-background border border-border shadow-sm',
+                                            'hover:border-primary'
+                                        )}
+                                        onClick={() => onReply(message)}
+                                    >
+                                        <Reply className="h-3.5 w-3.5" />
+                                    </Button>
                                     <ReactionPicker
                                         trigger={
                                             <Button

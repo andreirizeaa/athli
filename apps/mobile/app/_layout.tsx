@@ -28,6 +28,7 @@ import { apiFetch } from '@/lib/api-client';
 import type { CoachProfile, ClientProfile } from '@/types/profile';
 import QueryProvider from '@/providers/query-provider';
 import { usePrefetchAllExercises } from '@/hooks/useAllExercises';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { ErrorBoundary as CustomErrorBoundary } from '@/components/ui/error-boundary';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
@@ -131,6 +132,9 @@ function RootLayoutNav() {
 
   // Prefetch MuscleWiki exercises in background once coach is loaded
   usePrefetchAllExercises({ enabled: coachLoaded });
+
+  // Initialize push notifications for coaches
+  const { unregisterPushNotifications } = usePushNotifications();
 
   // Initialize stores synchronously before paint (useLayoutEffect runs after render but before paint)
   // Each store's initialize() is idempotent - it checks if already initialized
@@ -295,6 +299,8 @@ function RootLayoutNav() {
         } else if (event === 'SIGNED_OUT') {
           // User signed out or session expired - clear everything
           console.log('[RootLayout] User signed out, clearing state');
+          // Unregister push notifications before clearing session
+          unregisterPushNotifications().catch(console.error);
           useAuthSessionStore.getState().clearSession();
           clearCoachProfile();
           useCoachCompanyStore.getState().clearCompany();

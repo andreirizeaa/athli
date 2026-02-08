@@ -14,11 +14,24 @@ export const notificationsController = {
         const supabase = getSupabaseClient();
 
         try {
+            // Fetch notification types where in-app is disabled
+            const { data: disabledPrefs } = await supabase
+                .from('coach_notification_preferences')
+                .select('notification_type')
+                .eq('coach_id', userId)
+                .eq('in_app_enabled', false);
+
+            const disabledTypes = (disabledPrefs || []).map((p: any) => p.notification_type);
+
             let query = supabase
                 .from('coach_notifications')
                 .select('*')
                 .eq('coach_id', userId)
                 .order('created_at', { ascending: false });
+
+            if (disabledTypes.length > 0) {
+                query = query.not('notification_type', 'in', `(${disabledTypes.join(',')})`);
+            }
 
             if (unreadOnly) {
                 query = query.is('read_at', null);

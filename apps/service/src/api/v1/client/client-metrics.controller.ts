@@ -307,10 +307,10 @@ export const clientMetricsController = {
 
         const supabase = getSupabaseClient();
 
-        // Get the metric to find its coach_id
+        // Get the metric to find its coach_id and name
         const { data: metric, error: fetchError } = await supabase
             .from('client_metrics')
-            .select('coach_id')
+            .select('coach_id, name')
             .eq('id', assignmentId)
             .eq('client_id', targetClientId)
             .single();
@@ -344,7 +344,7 @@ export const clientMetricsController = {
                         notificationType: NOTIFICATION_TYPES.metric_logged,
                         title: NOTIFICATION_TITLES.metric_logged,
                         description: `${clientName} logged a metric`,
-                        metadata: { assignment_id: assignmentId, date: date || new Date().toISOString().split('T')[0] },
+                        metadata: { assignment_id: assignmentId, name: metric.name, date: date || new Date().toISOString().split('T')[0] },
                     });
                 }
             });

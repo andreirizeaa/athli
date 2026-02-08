@@ -20,6 +20,7 @@ import { getTrainingCalendarRange, type TrainingCalendarItem } from '@/services/
 import { getCoaches, getInboxMessages, type Coach } from '@/services/inbox-service';
 import { formatDateDDMMYYYY, formatDateYYYYMMDD } from '@/lib/utils/date-formatters';
 import { haptics } from '@/utils/haptics';
+import { useRealtimeConversations } from '@/hooks/use-realtime-messaging';
 
 // Helper to get ordinal suffix
 const getOrdinalSuffix = (day: number): string => {
@@ -145,6 +146,23 @@ export const AthleteHomeContent = () => {
       fetchConversation();
     }, [])
   );
+
+  // Realtime conversation updates for coach message card
+  useRealtimeConversations({
+    userId: userId || '',
+    onConversationUpdated: (realtimeConversation) => {
+      setCoachConversation((prev) => {
+        if (!prev || prev.id !== realtimeConversation.id) return prev;
+        return {
+          ...prev,
+          ...realtimeConversation,
+          // Preserve joined fields that don't come from realtime
+          other_user_name: prev.other_user_name,
+          other_user_avatar: prev.other_user_avatar,
+        };
+      });
+    },
+  });
 
   // Fetch files on mount
   useEffect(() => {

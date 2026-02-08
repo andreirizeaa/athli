@@ -318,7 +318,7 @@ const AthletesPage = () => {
 
 
   const handleNavigateToMessages = (athleteId: string) => {
-    router.push(`/messaging/${athleteId}`);
+    router.push(`/inbox/${athleteId}`);
   };
 
   const handleNavigateToTrainingCalendar = (athleteId: string) => {
