@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { success, unauthorized, created, noContent } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
+import { createCoachNotification, resolveCoachId, resolveClientName } from '../../../services/notification.service';
+import { NOTIFICATION_TYPES, NOTIFICATION_TITLES } from '@athli/shared-types/src/constants/notification-constants';
 
 export const clientPhotosController = {
     /**
@@ -156,6 +158,23 @@ export const clientPhotosController = {
 
             if (error) {
                 return res.status(500).json({ success: false, message: error.message });
+            }
+
+            // Send notification for client uploads only (no x-client-id means client is uploading)
+            const isCoachRequest = !!req.header('x-client-id');
+            if (!isCoachRequest) {
+                Promise.all([resolveCoachId(targetClientId), resolveClientName(targetClientId)]).then(([resolvedCoachId, clientName]) => {
+                    if (resolvedCoachId && clientName) {
+                        createCoachNotification({
+                            coachId: resolvedCoachId,
+                            clientId: targetClientId,
+                            notificationType: NOTIFICATION_TYPES.photo_uploaded,
+                            title: NOTIFICATION_TITLES.photo_uploaded,
+                            description: `${clientName} uploaded a progress photo`,
+                            metadata: { date: date || new Date().toISOString().split('T')[0] },
+                        });
+                    }
+                });
             }
 
             created(res, {

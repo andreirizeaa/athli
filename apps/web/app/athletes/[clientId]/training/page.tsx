@@ -983,6 +983,54 @@ const ClientTrainingCalendarPage = () => {
     }
   }, [searchParams, clientId, router]);
 
+  // Handle URL params for opening a specific completed workout (from notifications)
+  useEffect(() => {
+    const openWorkoutId = searchParams.get('openWorkout');
+    const workoutDate = searchParams.get('workoutDate'); // Format: dd-mm-yyyy
+
+    if (!openWorkoutId || !workoutDate) return;
+
+    // Convert dd-mm-yyyy to our internal date key format
+    const [day, month, year] = workoutDate.split('-').map(Number);
+    if (!day || !month || !year) return;
+
+    const date = new Date(year, month - 1, day);
+    const dateKey = getDateKey(date);
+
+    // Wait for workoutsByDate to have data for this date
+    const workoutsForDate = workoutsByDate[dateKey];
+    if (!workoutsForDate || workoutsForDate.length === 0) return;
+
+    // Find the workout with matching ID (check both the full ID and the base template ID)
+    const workout = workoutsForDate.find((w) => {
+      const baseId = w.id.split('__')[0];
+      return w.id === openWorkoutId || baseId === openWorkoutId || w.templateId === openWorkoutId;
+    });
+
+    if (workout) {
+      // Check if the workout is completed
+      const status = getWorkoutStatus(workout.id);
+      if (status === 'completed') {
+        handleOpenCompletedSummary(dateKey, workout);
+      } else if (status === 'in_progress') {
+        handleOpenInProgressSummary(dateKey, workout);
+      } else {
+        // For not_started workouts, open the workout details panel
+        setSelectedWorkoutDetails({ dateKey, workout });
+      }
+
+      // Clean up URL params after opening
+      const newSearchParams = new URLSearchParams(searchParams.toString());
+      newSearchParams.delete('openWorkout');
+      newSearchParams.delete('workoutDate');
+      const newUrl = newSearchParams.toString()
+        ? `/athletes/${clientId}/training?${newSearchParams.toString()}`
+        : `/athletes/${clientId}/training`;
+      router.replace(newUrl, { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, workoutsByDate, clientId, router]);
+
   // Log schema and update service whenever workoutsByDate changes
   useEffect(() => {
     const schema = buildTrainingCalendarSchema(workoutsByDate);

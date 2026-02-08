@@ -128,6 +128,20 @@ userRouter.delete('/delete-account', supabaseAuthenticate, userController.delete
 
 /**
  * @swagger
+ * /api/v1/user/request-deletion:
+ *   post:
+ *     summary: Request account deletion (creates todo for coach)
+ *     tags: [User]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Deletion request submitted
+ */
+userRouter.post('/request-deletion', supabaseAuthenticate, userController.requestDeletion);
+
+/**
+ * @swagger
  * /api/v1/user/new-client:
  *   post:
  *     summary: Handle new client signup

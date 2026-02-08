@@ -12,3 +12,4 @@ export * from './habit-schema';
 export * from './todo-schema';
 export * from './file-schema';
 export * from './client-schema';
+export * from './task-schema';

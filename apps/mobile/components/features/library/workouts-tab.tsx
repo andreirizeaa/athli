@@ -182,7 +182,7 @@ export const WorkoutsTab = () => {
               <SwipeableRow
                 onDelete={() => deleteMutation.mutateAsync(workout.id)}
                 onOpen={registerOpenRow}
-                deleteConfirmTitle={`${t('general.delete')} ${workout.name}?`}
+                deleteConfirmTitle={t('general.deleteWorkout')}
               >
                 <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
                   <PressableScale

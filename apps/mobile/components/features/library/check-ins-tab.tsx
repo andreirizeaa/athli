@@ -196,7 +196,7 @@ export const CheckInsTab = () => {
         <SwipeableRow
           onDelete={() => deleteMutation.mutateAsync(item.id)}
           onOpen={registerOpenRow}
-          deleteConfirmTitle={`${t('general.delete')} ${item.name}?`}
+          deleteConfirmTitle={t('general.deleteCheckIn')}
         >
           <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
             <PressableScale

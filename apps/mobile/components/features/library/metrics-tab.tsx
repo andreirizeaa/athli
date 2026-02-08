@@ -188,7 +188,7 @@ export const MetricsTab = () => {
         <SwipeableRow
           onDelete={() => deleteMutation.mutateAsync(item.id)}
           onOpen={registerOpenRow}
-          deleteConfirmTitle={`${t('general.delete')} ${item.name}?`}
+          deleteConfirmTitle={t('general.deleteMetric')}
         >
           <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
             <PressableScale

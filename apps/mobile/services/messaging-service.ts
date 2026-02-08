@@ -159,8 +159,10 @@ export const getConversations = async ({
         const unreadCount = await getUnreadCount(conv.id, coachId, receipt);
 
         // Compute last_message_is_read: true if we sent the last message and other user has read it
-        let lastMessageIsRead = false;
-        if (conv.last_message_sender_id === coachId && conv.last_message_at) {
+        // For self-conversations (demo: coach_id === client_id), always treat as read (same person)
+        const isSelfConversation = conv.coach_id === conv.client_id;
+        let lastMessageIsRead = isSelfConversation;
+        if (!isSelfConversation && conv.last_message_sender_id === coachId && conv.last_message_at) {
           const otherReceipt = allReadReceipts?.find(
             (r) => r.conversation_id === conv.id && r.user_id === otherUserId,
           );
@@ -366,6 +368,11 @@ type SendMessageOptions = {
    * If > 0, message will be created with attachments_ready=false
    */
   attachmentCount?: number;
+  /**
+   * Role of the sender ('coach' | 'client').
+   * Used for self-conversations (demo) where coach_id === client_id.
+   */
+  senderRole?: 'coach' | 'client';
 };
 
 /**
@@ -386,6 +393,7 @@ export const sendMessage = async ({
   messageId,
   idempotencyKey,
   attachmentCount = 0,
+  senderRole,
 }: SendMessageOptions): Promise<Message> => {
   try {
     // Check for idempotency - if a message with this key already exists, return it
@@ -423,6 +431,7 @@ export const sendMessage = async ({
       status: 'sent',
       attachment_count: attachmentCount,
       attachments_ready: attachmentsReady,
+      ...(senderRole && { sender_role: senderRole }),
     };
 
     // Add client-provided ID if provided

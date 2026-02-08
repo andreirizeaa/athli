@@ -92,6 +92,16 @@ export default function ChatsScreen() {
         console.log('[Chats Realtime] New conversation:', realtimeConversation.id);
         updateChat(realtimeConversation);
       }
+
+      // Debounced full reload to refresh computed fields (e.g. unread_count)
+      if (conversationDebounceRef.current) {
+        clearTimeout(conversationDebounceRef.current);
+      }
+      conversationDebounceRef.current = setTimeout(() => {
+        console.log('[Chats Realtime] Reloading chats after debounce');
+        loadChats();
+        conversationDebounceRef.current = null;
+      }, 1000);
     },
   });
 
@@ -101,8 +111,9 @@ export default function ChatsScreen() {
   // Store reference for loadChats
   const loadChats = useChatsStore((state) => state.loadChats);
 
-  // Debounce timer ref to prevent excessive API calls
+  // Debounce timer refs to prevent excessive API calls
   const readReceiptDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const conversationDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Subscribe to read receipt changes to update "read" status in chat list
   // When a client reads a message, this triggers and refreshes the chat list

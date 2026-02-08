@@ -14,7 +14,7 @@ import { InputBox, TextAreaInput, SelectionInput } from '@/components/ui/form-in
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { hexToRgba } from '@/utils/colorUtils';
 import { Dialog } from '@/components/ui/dialog';
-import { saveAthleteInjuries } from '@/services/client/client-service';
+import { updateAthleteInjury, deleteAthleteInjury } from '@/services/client/client-service';
 
 export default function EditClientInjuryModal() {
     const router = useRouter();
@@ -78,23 +78,11 @@ export default function EditClientInjuryModal() {
 
         setIsSubmitting(true);
         try {
-            // Update the specific injury in the list
-            const updatedInjuries = injuries.map(i => {
-                if (i.id === injuryId) {
-                    return {
-                        injury: title.trim(),
-                        date: date ? date.toISOString().split('T')[0] : null,
-                        details: body.trim() || undefined,
-                    };
-                }
-                return {
-                    injury: i.injury,
-                    date: i.date,
-                    details: i.details || undefined,
-                };
+            await updateAthleteInjury(id, coachId, injuryId, {
+                injury: title.trim(),
+                date: date ? date.toISOString().split('T')[0] : null,
+                details: body.trim() || undefined,
             });
-
-            await saveAthleteInjuries(id, coachId, updatedInjuries);
             haptics.success();
             await refreshSection('injuries');
             handleClose();
@@ -105,7 +93,7 @@ export default function EditClientInjuryModal() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [canSave, id, coachId, injuryId, title, body, date, injuries, refreshSection, handleClose, t, isEmpty]);
+    }, [canSave, id, coachId, injuryId, title, body, date, refreshSection, handleClose, t, isEmpty]);
 
     const handleDeleteConfirm = useCallback(async () => {
         if (!id || !coachId || !injuryId) return;
@@ -113,16 +101,7 @@ export default function EditClientInjuryModal() {
         setShowDeleteDialog(false);
         setIsDeleting(true);
         try {
-            // Remove the injury from the list
-            const updatedInjuries = injuries
-                .filter(i => i.id !== injuryId)
-                .map(i => ({
-                    injury: i.injury,
-                    date: i.date,
-                    details: i.details || undefined,
-                }));
-
-            await saveAthleteInjuries(id, coachId, updatedInjuries);
+            await deleteAthleteInjury(id, coachId, injuryId);
             haptics.success();
             await refreshSection('injuries');
             handleClose();
@@ -133,7 +112,7 @@ export default function EditClientInjuryModal() {
         } finally {
             setIsDeleting(false);
         }
-    }, [id, coachId, injuryId, injuries, refreshSection, handleClose, t]);
+    }, [id, coachId, injuryId, refreshSection, handleClose, t]);
 
     const handleDelete = useCallback(() => {
         setShowDeleteDialog(true);

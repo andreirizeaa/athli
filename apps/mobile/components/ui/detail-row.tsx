@@ -55,11 +55,8 @@ export function DetailRow({
 
   const showAvatar = avatarUrl !== undefined || avatarFallback;
 
-  return (
-    <PressableScale
-      style={[styles.row, style]}
-      onPress={onPress ? handlePress as any : undefined}
-    >
+  const content = (
+    <>
       <Text style={[styles.label, { color: themeColors.text }]}>{label}</Text>
       <View style={styles.rightSection}>
         {showAvatar ? (
@@ -87,7 +84,21 @@ export function DetailRow({
           </View>
         )}
       </View>
-    </PressableScale>
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <PressableScale style={[styles.row, style]} onPress={handlePress as any}>
+        {content}
+      </PressableScale>
+    );
+  }
+
+  return (
+    <View style={[styles.row, style]}>
+      {content}
+    </View>
   );
 }
 

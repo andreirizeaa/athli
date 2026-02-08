@@ -114,8 +114,10 @@ export const coachMessagingController = {
                     }
 
                     // Compute last_message_is_read: true if we sent the last message and other user has read it
-                    let lastMessageIsRead = false;
-                    if (conv.last_message_sender_id === userId && conv.last_message_at) {
+                    // For self-conversations (demo: coach_id === client_id), always treat as read (same person)
+                    const isSelfConversation = conv.coach_id === conv.client_id;
+                    let lastMessageIsRead = isSelfConversation;
+                    if (!isSelfConversation && conv.last_message_sender_id === userId && conv.last_message_at) {
                         const otherReceipt = allReadReceipts?.find(
                             (r) => r.conversation_id === conv.id && r.user_id === otherUserId,
                         );
@@ -189,7 +191,7 @@ export const coachMessagingController = {
                     *,
                     attachments:message_attachments(*),
                     reactions:message_reactions(*),
-                    parent_message:messages!parent_message_id(id, content, message_type, sender_id, sent_at, is_deleted, attachments:message_attachments(*))
+                    parent_message:messages!parent_message_id(id, content, message_type, sender_id, sender_role, sent_at, is_deleted, attachments:message_attachments(*))
                 `,
                 )
                 .eq('conversation_id', conversationId)
@@ -262,7 +264,7 @@ export const coachMessagingController = {
                         *,
                         attachments:message_attachments(*),
                         reactions:message_reactions(*),
-                        parent_message:messages!parent_message_id(id, content, message_type, sender_id, sent_at, is_deleted, attachments:message_attachments(*))
+                        parent_message:messages!parent_message_id(id, content, message_type, sender_id, sender_role, sent_at, is_deleted, attachments:message_attachments(*))
                     `)
                     .eq('idempotency_key', idempotencyKey)
                     .single();
@@ -301,6 +303,7 @@ export const coachMessagingController = {
                     id: messageId, // Client-provided UUID
                     conversation_id: conversationId,
                     sender_id: userId,
+                    sender_role: 'coach',
                     content,
                     message_type: messageType,
                     parent_message_id: parentMessageId,
@@ -313,7 +316,7 @@ export const coachMessagingController = {
                     *,
                     attachments:message_attachments(*),
                     reactions:message_reactions(*),
-                    parent_message:messages!parent_message_id(id, content, message_type, sender_id, sent_at, is_deleted, attachments:message_attachments(*))
+                    parent_message:messages!parent_message_id(id, content, message_type, sender_id, sender_role, sent_at, is_deleted, attachments:message_attachments(*))
                 `)
                 .single();
 

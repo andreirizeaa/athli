@@ -29,7 +29,6 @@ import {
   Home,
   Cog,
   Dumbbell,
-  Mail,
   MessagesSquare,
   User,
   Users,
@@ -100,11 +99,6 @@ const NativeTabsAthleteView = ({ primaryColor }: NativeTabsCoachViewProps) => {
         <Label>Progress</Label>
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="inbox">
-        <Icon sf="envelope.fill" />
-        <Label>Inbox</Label>
-      </NativeTabs.Trigger>
-
       <NativeTabs.Trigger name="profile">
         <Icon sf="person.fill" />
         <Label>Profile</Label>
@@ -168,7 +162,7 @@ export default function TabLayout() {
   // Helper to check if pathname matches the current app view
   const isValidRouteForView = useCallback((path: string, view: 'coach' | 'athlete') => {
     const coachRoutes = ['/home', '/clients', '/chats', '/library', '/settings'];
-    const athleteRoutes = ['/home', '/training', '/progress', '/inbox', '/profile'];
+    const athleteRoutes = ['/home', '/training', '/progress', '/profile'];
     const validRoutes = view === 'coach' ? coachRoutes : athleteRoutes;
     return validRoutes.some(route => path.startsWith(route));
   }, []);
@@ -331,13 +325,6 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="inbox"
-          options={{
-            title: t('inbox.title'),
-            href: appView === 'athlete' ? '/inbox' : null,
-          }}
-        />
-        <Tabs.Screen
           name="profile"
           options={{
             title: t('profile.title'),
@@ -464,13 +451,6 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       sf: 'chart.bar.fill',
       mdi: 'bar-chart',
       IconComponent: ChartNoAxesColumn,
-    },
-    {
-      name: 'inbox',
-      label: t('inbox.title'),
-      sf: 'envelope.fill',
-      mdi: 'mail',
-      IconComponent: Mail,
     },
     {
       name: 'profile',

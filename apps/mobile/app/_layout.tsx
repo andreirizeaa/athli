@@ -28,6 +28,7 @@ import { apiFetch } from '@/lib/api-client';
 import type { CoachProfile, ClientProfile } from '@/types/profile';
 import QueryProvider from '@/providers/query-provider';
 import { usePrefetchAllExercises } from '@/hooks/useAllExercises';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { ErrorBoundary as CustomErrorBoundary } from '@/components/ui/error-boundary';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
@@ -131,6 +132,9 @@ function RootLayoutNav() {
 
   // Prefetch MuscleWiki exercises in background once coach is loaded
   usePrefetchAllExercises({ enabled: coachLoaded });
+
+  // Initialize push notifications for coaches
+  const { unregisterPushNotifications } = usePushNotifications();
 
   // Initialize stores synchronously before paint (useLayoutEffect runs after render but before paint)
   // Each store's initialize() is idempotent - it checks if already initialized
@@ -295,6 +299,8 @@ function RootLayoutNav() {
         } else if (event === 'SIGNED_OUT') {
           // User signed out or session expired - clear everything
           console.log('[RootLayout] User signed out, clearing state');
+          // Unregister push notifications before clearing session
+          unregisterPushNotifications().catch(console.error);
           useAuthSessionStore.getState().clearSession();
           clearCoachProfile();
           useCoachCompanyStore.getState().clearCompany();
@@ -438,6 +444,8 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen name="settings/preferences" options={{ headerShown: false }} />
+          <Stack.Screen name="settings/notifications" options={{ headerShown: false }} />
+          <Stack.Screen name="settings/notification-status" options={{ headerShown: false }} />
           <Stack.Screen name="settings/feature-requests" options={{ headerShown: false }} />
           <Stack.Screen
             name="settings/feature-request-detail"
@@ -448,6 +456,13 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="todos"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="notifications"
             options={{
               headerShown: false,
               animation: 'slide_from_right',
@@ -476,6 +491,20 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="athlete-questionnaires"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="athlete-forms"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="athlete-goals-injuries"
             options={{
               headerShown: false,
               animation: 'slide_from_right',
@@ -1413,6 +1442,30 @@ function RootLayoutNav() {
               animation: 'slide_from_bottom',
               animationDuration: 200,
               gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="modals/athlete/log-metric-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/athlete/log-habit-modal"
+            options={{
+              presentation: 'modal',
+              gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
             }}
           />
           {/* Profile is now a tab, so profile/profile route is no longer needed */}

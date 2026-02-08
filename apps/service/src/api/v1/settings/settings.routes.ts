@@ -45,6 +45,7 @@ settingsRouter.get('/coach/notifications', supabaseAuthenticate, settingsControl
  *         description: Notifications settings updated successfully
  */
 settingsRouter.patch('/coach/notifications', supabaseAuthenticate, settingsController.updateNotifications);
+settingsRouter.patch('/coach/notifications/bulk', supabaseAuthenticate, settingsController.bulkUpdateNotifications);
 
 // Preferences
 /**
@@ -122,6 +123,112 @@ settingsRouter.get('/coach/company', supabaseAuthenticate, settingsController.ge
  *         description: Company information updated successfully
  */
 settingsRouter.patch('/coach/company', supabaseAuthenticate, settingsController.updateCompany);
+
+// Push Tokens
+/**
+ * @swagger
+ * /api/v1/settings/coach/push-token:
+ *   post:
+ *     summary: Register a push token for the coach
+ *     tags: [Settings]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - expoPushToken
+ *             properties:
+ *               expoPushToken:
+ *                 type: string
+ *               deviceId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Push token registered successfully
+ */
+settingsRouter.post('/coach/push-token', supabaseAuthenticate, settingsController.registerPushToken);
+
+/**
+ * @swagger
+ * /api/v1/settings/coach/push-token:
+ *   delete:
+ *     summary: Delete a push token (e.g., on logout)
+ *     tags: [Settings]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - expoPushToken
+ *             properties:
+ *               expoPushToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Push token deleted successfully
+ */
+settingsRouter.delete('/coach/push-token', supabaseAuthenticate, settingsController.deletePushToken);
+
+// Client Push Tokens
+/**
+ * @swagger
+ * /api/v1/settings/client/push-token:
+ *   post:
+ *     summary: Register a push token for a client
+ *     tags: [Settings]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - expoPushToken
+ *             properties:
+ *               expoPushToken:
+ *                 type: string
+ *               deviceId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Client push token registered successfully
+ */
+settingsRouter.post('/client/push-token', supabaseAuthenticate, settingsController.registerClientPushToken);
+
+/**
+ * @swagger
+ * /api/v1/settings/client/push-token:
+ *   delete:
+ *     summary: Delete a client push token (e.g., on logout)
+ *     tags: [Settings]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - expoPushToken
+ *             properties:
+ *               expoPushToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Client push token deleted successfully
+ */
+settingsRouter.delete('/client/push-token', supabaseAuthenticate, settingsController.deleteClientPushToken);
 
 // Unique Code
 /**

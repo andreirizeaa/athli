@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { success, unauthorized, created, noContent } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
+import { createCoachNotification, resolveCoachId, resolveClientName } from '../../../services/notification.service';
+import { NOTIFICATION_TYPES, NOTIFICATION_TITLES } from '@athli/shared-types/src/constants/notification-constants';
 
 export const clientDetailsController = {
     /**
@@ -9,7 +11,6 @@ export const clientDetailsController = {
     getBio: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const isCoachView = !!req.header('x-client-id');
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -104,12 +105,14 @@ export const clientDetailsController = {
     },
 
     /**
-     * Update client goals (Sync)
+     * Create a single goal
      */
-    updateGoals: async (req: Request, res: Response) => {
+    createGoal: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const { goals } = req.body; // Array of { goal: string, target_date: string | null }
+        const isCoachRequest = !!req.header('x-client-id') && req.header('x-client-id') !== userId;
+        const { goal, target_date, details } = req.body;
+        console.log('[ClientDetails] createGoal — isCoachRequest:', isCoachRequest, '| x-client-id:', req.header('x-client-id'), '| x-coach-id:', req.header('x-coach-id'), '| will notify coach:', !isCoachRequest);
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -118,42 +121,154 @@ export const clientDetailsController = {
 
         const supabase = getSupabaseClient();
 
-        // This table requires coach_id. We'll get it from context or relationship.
         let coachId = userId;
-        if (!req.header('x-client-id')) {
-            // If client is updating (though usually coach does this), we need to find their coach
-            const { data: assignment } = await supabase
-                .from('coach_client_assignments')
-                .select('coach_id')
-                .eq('client_id', targetClientId)
-                .single();
-            if (assignment) coachId = assignment.coach_id;
+        if (!isCoachRequest) {
+            const resolved = await resolveCoachId(targetClientId);
+            if (resolved) coachId = resolved;
         }
 
-        try {
-            // Simple sync: delete all and re-insert for this specific coach-client pair
-            await supabase.from('client_goals')
-                .delete()
-                .eq('client_id', targetClientId)
-                .eq('coach_id', coachId);
+        const { data, error } = await supabase
+            .from('client_goals')
+            .insert({
+                client_id: targetClientId,
+                coach_id: coachId,
+                goal,
+                target_date: target_date || null,
+                details: details || null,
+            })
+            .select()
+            .single();
 
-            if (goals && goals.length > 0) {
-                const inserts = goals.map((g: any) => ({
-                    client_id: targetClientId,
-                    coach_id: coachId,
-                    goal: g.goal,
-                    target_date: g.target_date || null,
-                    details: g.details || null,
-                }));
-
-                const { error: insertError } = await supabase.from('client_goals').insert(inserts);
-                if (insertError) throw insertError;
-            }
-
-            success(res, { message: 'Client goals updated successfully' });
-        } catch (error: any) {
+        if (error) {
             return res.status(500).json({ success: false, message: error.message });
         }
+
+        // Notify coach if client created the goal
+        if (!isCoachRequest) {
+            const clientName = await resolveClientName(targetClientId);
+            createCoachNotification({
+                coachId,
+                clientId: targetClientId,
+                notificationType: NOTIFICATION_TYPES.goal_added,
+                title: NOTIFICATION_TITLES.goal_added,
+                description: `${clientName || 'Client'} added a goal: ${goal}`,
+                metadata: { goal_id: data.id, name: goal },
+            });
+        }
+
+        created(res, {
+            message: 'Goal created successfully',
+            data: { goal: data },
+        });
+    },
+
+    /**
+     * Update a single goal
+     */
+    updateGoal: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
+        const isCoachRequest = !!req.header('x-client-id') && req.header('x-client-id') !== userId;
+        const goalId = req.params.id;
+        const { goal, target_date, details } = req.body;
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const supabase = getSupabaseClient();
+
+        const updateFields: any = {};
+        if (goal !== undefined) updateFields.goal = goal;
+        if (target_date !== undefined) updateFields.target_date = target_date || null;
+        if (details !== undefined) updateFields.details = details || null;
+
+        const { data, error } = await supabase
+            .from('client_goals')
+            .update(updateFields)
+            .eq('id', goalId)
+            .eq('client_id', targetClientId)
+            .select()
+            .single();
+
+        if (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+
+        // Notify coach if client edited the goal
+        if (!isCoachRequest) {
+            const coachId = await resolveCoachId(targetClientId);
+            if (coachId) {
+                const clientName = await resolveClientName(targetClientId);
+                createCoachNotification({
+                    coachId,
+                    clientId: targetClientId,
+                    notificationType: NOTIFICATION_TYPES.goal_edited,
+                    title: NOTIFICATION_TITLES.goal_edited,
+                    description: `${clientName || 'Client'} updated a goal: ${data.goal}`,
+                    metadata: { goal_id: goalId, name: data.goal },
+                });
+            }
+        }
+
+        success(res, {
+            message: 'Goal updated successfully',
+            data: { goal: data },
+        });
+    },
+
+    /**
+     * Delete a single goal
+     */
+    deleteGoal: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
+        const isCoachRequest = !!req.header('x-client-id') && req.header('x-client-id') !== userId;
+        const goalId = req.params.id;
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const supabase = getSupabaseClient();
+
+        // Fetch goal name before deleting (for notification)
+        const { data: existing } = await supabase
+            .from('client_goals')
+            .select('goal')
+            .eq('id', goalId)
+            .eq('client_id', targetClientId)
+            .single();
+
+        const { error } = await supabase
+            .from('client_goals')
+            .delete()
+            .eq('id', goalId)
+            .eq('client_id', targetClientId);
+
+        if (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+
+        // Notify coach if client deleted the goal
+        if (!isCoachRequest && existing) {
+            const coachId = await resolveCoachId(targetClientId);
+            if (coachId) {
+                const clientName = await resolveClientName(targetClientId);
+                createCoachNotification({
+                    coachId,
+                    clientId: targetClientId,
+                    notificationType: NOTIFICATION_TYPES.goal_deleted,
+                    title: NOTIFICATION_TITLES.goal_deleted,
+                    description: `${clientName || 'Client'} removed a goal: ${existing.goal}`,
+                    metadata: { goal_id: goalId, name: existing.goal },
+                });
+            }
+        }
+
+        noContent(res);
     },
 
     /**
@@ -186,12 +301,14 @@ export const clientDetailsController = {
     },
 
     /**
-     * Update client injuries (Sync)
+     * Create a single injury
      */
-    updateInjuries: async (req: Request, res: Response) => {
+    createInjury: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const { injuries } = req.body; // Array of { injury: string, date: string | null }
+        const isCoachRequest = !!req.header('x-client-id') && req.header('x-client-id') !== userId;
+        const { injury, date, details } = req.body;
+        console.log('[ClientDetails] createInjury — isCoachRequest:', isCoachRequest, '| x-client-id:', req.header('x-client-id'), '| x-coach-id:', req.header('x-coach-id'), '| will notify coach:', !isCoachRequest);
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -201,38 +318,152 @@ export const clientDetailsController = {
         const supabase = getSupabaseClient();
 
         let coachId = userId;
-        if (!req.header('x-client-id')) {
-            const { data: assignment } = await supabase
-                .from('coach_client_assignments')
-                .select('coach_id')
-                .eq('client_id', targetClientId)
-                .single();
-            if (assignment) coachId = assignment.coach_id;
+        if (!isCoachRequest) {
+            const resolved = await resolveCoachId(targetClientId);
+            if (resolved) coachId = resolved;
         }
 
-        try {
-            // Simple sync: delete all and re-insert for this specific coach-client pair
-            await supabase.from('client_injuries')
-                .delete()
-                .eq('client_id', targetClientId)
-                .eq('coach_id', coachId);
+        const { data, error } = await supabase
+            .from('client_injuries')
+            .insert({
+                client_id: targetClientId,
+                coach_id: coachId,
+                injury,
+                date: date || null,
+                details: details || null,
+            })
+            .select()
+            .single();
 
-            if (injuries && injuries.length > 0) {
-                const inserts = injuries.map((i: any) => ({
-                    client_id: targetClientId,
-                    coach_id: coachId,
-                    injury: i.injury,
-                    date: i.date || null,
-                    details: i.details || null,
-                }));
-
-                const { error: insertError } = await supabase.from('client_injuries').insert(inserts);
-                if (insertError) throw insertError;
-            }
-
-            success(res, { message: 'Client injuries updated successfully' });
-        } catch (error: any) {
+        if (error) {
             return res.status(500).json({ success: false, message: error.message });
         }
+
+        // Notify coach if client created the injury
+        if (!isCoachRequest) {
+            const clientName = await resolveClientName(targetClientId);
+            createCoachNotification({
+                coachId,
+                clientId: targetClientId,
+                notificationType: NOTIFICATION_TYPES.injury_added,
+                title: NOTIFICATION_TITLES.injury_added,
+                description: `${clientName || 'Client'} added an injury: ${injury}`,
+                metadata: { injury_id: data.id, name: injury },
+            });
+        }
+
+        created(res, {
+            message: 'Injury created successfully',
+            data: { injury: data },
+        });
+    },
+
+    /**
+     * Update a single injury
+     */
+    updateInjury: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
+        const isCoachRequest = !!req.header('x-client-id') && req.header('x-client-id') !== userId;
+        const injuryId = req.params.id;
+        const { injury, date, details } = req.body;
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const supabase = getSupabaseClient();
+
+        const updateFields: any = {};
+        if (injury !== undefined) updateFields.injury = injury;
+        if (date !== undefined) updateFields.date = date || null;
+        if (details !== undefined) updateFields.details = details || null;
+
+        const { data, error } = await supabase
+            .from('client_injuries')
+            .update(updateFields)
+            .eq('id', injuryId)
+            .eq('client_id', targetClientId)
+            .select()
+            .single();
+
+        if (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+
+        // Notify coach if client edited the injury
+        if (!isCoachRequest) {
+            const coachId = await resolveCoachId(targetClientId);
+            if (coachId) {
+                const clientName = await resolveClientName(targetClientId);
+                createCoachNotification({
+                    coachId,
+                    clientId: targetClientId,
+                    notificationType: NOTIFICATION_TYPES.injury_edited,
+                    title: NOTIFICATION_TITLES.injury_edited,
+                    description: `${clientName || 'Client'} updated an injury: ${data.injury}`,
+                    metadata: { injury_id: injuryId, name: data.injury },
+                });
+            }
+        }
+
+        success(res, {
+            message: 'Injury updated successfully',
+            data: { injury: data },
+        });
+    },
+
+    /**
+     * Delete a single injury
+     */
+    deleteInjury: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
+        const isCoachRequest = !!req.header('x-client-id') && req.header('x-client-id') !== userId;
+        const injuryId = req.params.id;
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const supabase = getSupabaseClient();
+
+        // Fetch injury name before deleting (for notification)
+        const { data: existing } = await supabase
+            .from('client_injuries')
+            .select('injury')
+            .eq('id', injuryId)
+            .eq('client_id', targetClientId)
+            .single();
+
+        const { error } = await supabase
+            .from('client_injuries')
+            .delete()
+            .eq('id', injuryId)
+            .eq('client_id', targetClientId);
+
+        if (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+
+        // Notify coach if client deleted the injury
+        if (!isCoachRequest && existing) {
+            const coachId = await resolveCoachId(targetClientId);
+            if (coachId) {
+                const clientName = await resolveClientName(targetClientId);
+                createCoachNotification({
+                    coachId,
+                    clientId: targetClientId,
+                    notificationType: NOTIFICATION_TYPES.injury_deleted,
+                    title: NOTIFICATION_TITLES.injury_deleted,
+                    description: `${clientName || 'Client'} removed an injury: ${existing.injury}`,
+                    metadata: { injury_id: injuryId, name: existing.injury },
+                });
+            }
+        }
+
+        noContent(res);
     },
 };

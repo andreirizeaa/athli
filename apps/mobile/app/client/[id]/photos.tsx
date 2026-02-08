@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { StyleSheet, Text, View, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
 
 import { Dialog } from '@/components/ui/dialog';
@@ -53,6 +53,15 @@ export default function ClientPhotosScreen() {
   // Get photos from store (already loaded by parent screen)
   const photos = useClientDetailStore((state) => state.photos);
   const isLoadingPhotos = useClientDetailStore((state) => state.isLoadingPhotos);
+  const clientId = useClientDetailStore((state) => state.clientId);
+  const loadClientData = useClientDetailStore((state) => state.loadClientData);
+
+  // Load client data if navigating directly to this screen
+  useEffect(() => {
+    if (id && !clientId) {
+      loadClientData(id);
+    }
+  }, [id, clientId, loadClientData]);
 
   // Segmented control segments
   const photoViewSegments = useMemo(() => [

@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { success, unauthorized, created, notFound, noContent, forbidden } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
+import { createCoachNotification, resolveClientName } from '../../../services/notification.service';
+import { NOTIFICATION_TYPES, NOTIFICATION_TITLES } from '@athli/shared-types/src/constants/notification-constants';
 
 export const clientCheckInsController = {
     /**
@@ -249,7 +251,7 @@ export const clientCheckInsController = {
         // 1. Fetch assignment details
         const { data: assignmentDetails, error: detailsError } = await supabase
             .from('client_checkins')
-            .select('client_id, coach_id')
+            .select('client_id, coach_id, name')
             .eq('id', id)
             .eq('client_id', targetClientId)
             .single();
@@ -285,6 +287,22 @@ export const clientCheckInsController = {
             .single();
 
         if (error) return res.status(500).json({ success: false, message: error.message });
+
+        // Send notification for client submissions only
+        if (!isCoach) {
+            resolveClientName(targetClientId).then((clientName) => {
+                if (clientName) {
+                    createCoachNotification({
+                        coachId: assignmentDetails.coach_id,
+                        clientId: targetClientId,
+                        notificationType: NOTIFICATION_TYPES.checkin_completed,
+                        title: NOTIFICATION_TITLES.checkin_completed,
+                        description: `${clientName} completed a check-in`,
+                        metadata: { checkin_id: id, name: assignmentDetails.name },
+                    });
+                }
+            });
+        }
 
         success(res, {
             message: 'Check-in submitted successfully',
@@ -459,6 +477,8 @@ export const clientCheckInsController = {
                 name: data.name,
                 description: data.description,
                 questions: data.questions || [],
+                scheduleConfig: data.schedule_config,
+                cronExpression: data.cron_expression,
             },
         });
     },

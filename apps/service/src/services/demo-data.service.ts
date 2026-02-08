@@ -160,6 +160,9 @@ class DemoDataService {
       // Training must be done after the above since it's the most complex
       await this.seedTraining(supabase, clientId, coachId);
 
+      // Generate client tasks for today based on the seeded assignments
+      await this.generateTasks(supabase);
+
       console.log('[DemoData] Demo client seed complete for coach:', coachId);
     } catch (err) {
       console.error('[DemoData] Unexpected error during seeding:', err);
@@ -409,11 +412,13 @@ class DemoDataService {
 
     const habitLogs: any[] = [];
 
-    // Water habit logs - daily over 3 weeks, mix of completed/partial
+    // Water habit logs - daily over 3 weeks, with values above/below target (3L)
+    // Realistic range: 1.5L to 4L - some days exceed, some days fall short
+    const waterValues = [2.5, 3.0, 3.5, 2.0, 3.0, 4.0, 3.5, 2.5, 3.0, 3.5, 2.0, 3.0, 3.5, 4.0, 2.5, 3.0, 2.0, 3.5, 3.0, 4.0, 3.0];
     for (let i = 0; i < 21; i++) {
       const date = addDays(now, -(21 - i));
-      const rand = Math.random();
-      const status = rand > 0.3 ? 'completed' : rand > 0.1 ? 'partial' : 'skipped';
+      const value = waterValues[i];
+      const status = value >= 3 ? 'completed' : 'partial';
       habitLogs.push({
         id: crypto.randomUUID(),
         client_id: clientId,
@@ -422,16 +427,18 @@ class DemoDataService {
         date: date.toISOString().split('T')[0],
         status,
         completed: status === 'completed',
-        value: status === 'completed' ? 3 : status === 'partial' ? 2 : 0,
+        value,
         created_by: clientId,
       });
     }
 
-    // Steps habit logs - daily, mix of completed/skipped
+    // Steps habit logs - daily with varied values above/below target (10,000)
+    // Realistic range: 4,000 to 15,000 - shows days exceeding goal and days falling short
+    const stepsValues = [8500, 12000, 6500, 10500, 14000, 9000, 11500, 5000, 13000, 10000, 7500, 15000, 8000, 12500, 4500, 11000, 9500, 13500, 6000, 10500, 12000];
     for (let i = 0; i < 21; i++) {
       const date = addDays(now, -(21 - i));
-      const rand = Math.random();
-      const status = rand > 0.25 ? 'completed' : 'skipped';
+      const value = stepsValues[i];
+      const status = value >= 10000 ? 'completed' : 'partial';
       habitLogs.push({
         id: crypto.randomUUID(),
         client_id: clientId,
@@ -440,17 +447,22 @@ class DemoDataService {
         date: date.toISOString().split('T')[0],
         status,
         completed: status === 'completed',
-        value: status === 'completed' ? 10000 : 0,
+        value,
         created_by: clientId,
       });
     }
 
-    // Stretch habit logs - Mon/Wed/Fri only, mostly completed
+    // Stretch habit logs - Mon/Wed/Fri only, with values above/below target (15 min)
+    // Realistic range: 8 to 25 min - some sessions longer, some shorter
+    const stretchValues = [12, 18, 15, 10, 20, 15, 22, 14, 16, 8, 25, 15];
+    let stretchIndex = 0;
     for (let i = 0; i < 21; i++) {
       const date = addDays(now, -(21 - i));
       const dow = date.getDay(); // 0=Sun, 1=Mon, ...
       if (dow === 1 || dow === 3 || dow === 5) {
-        const status = Math.random() > 0.15 ? 'completed' : 'skipped';
+        const value = stretchValues[stretchIndex % stretchValues.length];
+        stretchIndex++;
+        const status = value >= 15 ? 'completed' : 'partial';
         habitLogs.push({
           id: crypto.randomUUID(),
           client_id: clientId,
@@ -459,7 +471,7 @@ class DemoDataService {
           date: date.toISOString().split('T')[0],
           status,
           completed: status === 'completed',
-          value: status === 'completed' ? 15 : 0,
+          value,
           created_by: clientId,
         });
       }
@@ -483,6 +495,8 @@ class DemoDataService {
       name: 'Weekly Check-in',
       description: 'Weekly progress check-in to track how you are feeling and identify any issues.',
       status: 'live',
+      schedule_config: { type: 'check-in', frequency: 'weekly', selectedDays: ['sunday'] },
+      cron_expression: '0 9 * * 0',
       questions: [
         { id: crypto.randomUUID(), format: 'scale', question: 'How are you feeling this week?', scaleFrom: '1', scaleTo: '10', required: true },
         { id: crypto.randomUUID(), format: 'yesNo', question: 'Any pain or discomfort?', required: true },
@@ -563,6 +577,17 @@ class DemoDataService {
     });
 
     if (error) console.error('[DemoData] Questionnaire insert failed:', error);
+  }
+
+  // ─── Generate client tasks ──────────────────────────────────
+
+  private async generateTasks(supabase: any) {
+    const { data, error } = await supabase.rpc('generate_daily_client_tasks');
+    if (error) {
+      console.error('[DemoData] Task generation failed:', error);
+      return;
+    }
+    console.log('[DemoData] Generated', data ?? 0, 'client tasks');
   }
 
   // ─── Steps 13-16: Training ────────────────────────────────────

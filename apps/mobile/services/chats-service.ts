@@ -104,6 +104,7 @@ export async function sendMessage(
     messageId: options?.messageId,
     idempotencyKey: options?.idempotencyKey,
     attachmentCount: options?.attachmentCount || 0,
+    senderRole: 'coach',
   });
   return result;
 }

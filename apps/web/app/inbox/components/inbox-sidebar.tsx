@@ -120,7 +120,7 @@ export const InboxSidebar = React.memo(function InboxSidebar({
                             )}
                         >
                             <Button
-                                variant="default"
+                                variant="outline"
                                 className="w-full justify-start gap-2 pl-[7px]"
                                 onClick={onOpenBroadcast}
                             >

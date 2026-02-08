@@ -485,36 +485,46 @@ export const enMessages = {
     notifications: {
       savedSuccessfully: 'Notification settings saved successfully',
       saveFailed: 'Failed to save notification settings',
-      clients: {
-        title: 'Clients',
-        description: 'Select the notifications you want to receive from users.',
-        email: 'EMAIL',
+      inApp: 'IN-APP',
+      push: 'PUSH',
+      bulkActions: 'Bulk Actions',
+      turnOffAll: 'Turn off all',
+      training: {
+        title: 'Training',
+        description: 'Notifications related to workout activity.',
         options: {
-          newClientSignup: {
-            label: 'Receive a notification every time a new client signs up',
-          },
-          clientActivity: {
-            label: 'Receive a notification when a client completes a workout',
-          },
-          clientMessages: {
-            label: 'Receive notifications when clients send messages ',
-          },
-          preAppointmentInformation: {
-            label: 'Get a notification with all information for a client before a session',
-          },
+          workoutCompleted: 'Client completed a workout',
+          workoutMissed: 'Client missed a workout',
         },
       },
-      system: {
-        title: 'System',
-        description: 'Select the notifications you want to receive regarding the system.',
-        email: 'EMAIL',
+      forms: {
+        title: 'Forms',
+        description: 'Notifications when clients submit forms.',
         options: {
-          systemDowntimes: {
-            label: 'Receive messages to inform you about system downtimes',
-          },
-          newFeatures: {
-            label: 'Receive messages to inform you about new features',
-          },
+          checkinCompleted: 'Client completed a check-in',
+          questionnaireCompleted: 'Client completed a questionnaire',
+        },
+      },
+      tracking: {
+        title: 'Tracking',
+        description: 'Notifications related to client tracking activity.',
+        options: {
+          metricLogged: 'Client logged a metric',
+          habitLogged: 'Client logged a habit',
+          photoUploaded: 'Client uploaded a progress photo',
+        },
+      },
+      profile: {
+        title: 'Profile',
+        description: 'Notifications related to client profile changes.',
+        options: {
+          clientConnected: 'Client connected to the app',
+          goalAdded: 'Client added a goal',
+          goalEdited: 'Client edited a goal',
+          goalDeleted: 'Client deleted a goal',
+          injuryAdded: 'Client added an injury',
+          injuryEdited: 'Client edited an injury',
+          injuryDeleted: 'Client deleted an injury',
         },
       },
     },
@@ -2423,6 +2433,8 @@ export const enMessages = {
     logHabitTitle: 'Log habit',
     editHabitTitle: 'Edit habit',
     selectHabitMessage: 'Select a habit to view',
+    viewAll: 'All Habits',
+    view: 'View',
     noLogsMessage: 'No logs found for this period.',
     timeFilter: {
       lastWeek: 'Last week',
@@ -2732,6 +2744,9 @@ export const enMessages = {
       subtitle: 'Get started by adding your first metric to your library.',
     },
     noLogsMessage: 'No logs found for this period.',
+    viewAll: 'All Metrics',
+    view: 'View',
+    selectMetricMessage: 'Select a metric to view',
     tabs: {
       newMetric: 'New metric',
       athliLibrary: 'Athli library',
@@ -2845,6 +2860,16 @@ export const enMessages = {
       title: 'All caught up!',
       subtitle: 'No check-ins are currently awaiting your review. Great work!',
     },
+  },
+  notifications: {
+    title: 'Notifications',
+    showAll: 'Show all',
+    showUnread: 'Show unread',
+    markAllAsRead: 'Mark all as read',
+    markAsRead: 'Mark as read',
+    markAsUnread: 'Mark as unread',
+    empty: 'No notifications',
+    emptyUnread: 'No unread notifications',
   },
 } as const;
 

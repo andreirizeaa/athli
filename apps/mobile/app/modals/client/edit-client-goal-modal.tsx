@@ -14,7 +14,7 @@ import { InputBox, TextAreaInput, SelectionInput } from '@/components/ui/form-in
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { hexToRgba } from '@/utils/colorUtils';
 import { Dialog } from '@/components/ui/dialog';
-import { saveAthleteGoals } from '@/services/client/client-service';
+import { updateAthleteGoal, deleteAthleteGoal } from '@/services/client/client-service';
 
 export default function EditClientGoalModal() {
     const router = useRouter();
@@ -78,23 +78,11 @@ export default function EditClientGoalModal() {
 
         setIsSubmitting(true);
         try {
-            // Update the specific goal in the list
-            const updatedGoals = goals.map(g => {
-                if (g.id === goalId) {
-                    return {
-                        goal: title.trim(),
-                        target_date: date ? date.toISOString().split('T')[0] : null,
-                        details: body.trim() || undefined,
-                    };
-                }
-                return {
-                    goal: g.goal,
-                    target_date: g.target_date,
-                    details: g.details || undefined,
-                };
+            await updateAthleteGoal(id, coachId, goalId, {
+                goal: title.trim(),
+                target_date: date ? date.toISOString().split('T')[0] : null,
+                details: body.trim() || undefined,
             });
-
-            await saveAthleteGoals(id, coachId, updatedGoals);
             haptics.success();
             await refreshSection('goals');
             handleClose();
@@ -105,7 +93,7 @@ export default function EditClientGoalModal() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [canSave, id, coachId, goalId, title, body, date, goals, refreshSection, handleClose, t, isEmpty]);
+    }, [canSave, id, coachId, goalId, title, body, date, refreshSection, handleClose, t, isEmpty]);
 
     const handleDeleteConfirm = useCallback(async () => {
         if (!id || !coachId || !goalId) return;
@@ -113,16 +101,7 @@ export default function EditClientGoalModal() {
         setShowDeleteDialog(false);
         setIsDeleting(true);
         try {
-            // Remove the goal from the list
-            const updatedGoals = goals
-                .filter(g => g.id !== goalId)
-                .map(g => ({
-                    goal: g.goal,
-                    target_date: g.target_date,
-                    details: g.details || undefined,
-                }));
-
-            await saveAthleteGoals(id, coachId, updatedGoals);
+            await deleteAthleteGoal(id, coachId, goalId);
             haptics.success();
             await refreshSection('goals');
             handleClose();
@@ -133,7 +112,7 @@ export default function EditClientGoalModal() {
         } finally {
             setIsDeleting(false);
         }
-    }, [id, coachId, goalId, goals, refreshSection, handleClose, t]);
+    }, [id, coachId, goalId, refreshSection, handleClose, t]);
 
     const handleDelete = useCallback(() => {
         setShowDeleteDialog(true);

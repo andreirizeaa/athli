@@ -92,9 +92,13 @@ coachClientRouter.patch('/', supabaseAuthenticate, upload.single('avatar'), coac
 coachClientRouter.get('/bio', supabaseAuthenticate, clientDetailsController.getBio);
 coachClientRouter.patch('/bio', supabaseAuthenticate, clientDetailsController.updateBio);
 coachClientRouter.get('/goals', supabaseAuthenticate, clientDetailsController.getGoals);
-coachClientRouter.patch('/goals', supabaseAuthenticate, clientDetailsController.updateGoals);
+coachClientRouter.post('/goals', supabaseAuthenticate, clientDetailsController.createGoal);
+coachClientRouter.patch('/goals/:id', supabaseAuthenticate, clientDetailsController.updateGoal);
+coachClientRouter.delete('/goals/:id', supabaseAuthenticate, clientDetailsController.deleteGoal);
 coachClientRouter.get('/injuries', supabaseAuthenticate, clientDetailsController.getInjuries);
-coachClientRouter.patch('/injuries', supabaseAuthenticate, clientDetailsController.updateInjuries);
+coachClientRouter.post('/injuries', supabaseAuthenticate, clientDetailsController.createInjury);
+coachClientRouter.patch('/injuries/:id', supabaseAuthenticate, clientDetailsController.updateInjury);
+coachClientRouter.delete('/injuries/:id', supabaseAuthenticate, clientDetailsController.deleteInjury);
 
 /**
  * @swagger

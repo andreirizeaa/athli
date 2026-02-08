@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useState, useMemo } from 'react';
+import React, { useRef, useCallback, useState, useMemo, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -21,7 +21,7 @@ export default function ClientHabitsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const HEADER_HEIGHT = 52;
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, assignmentId: assignmentIdParam } = useLocalSearchParams<{ id: string; assignmentId?: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const iconColor = themeColors.text;
@@ -34,6 +34,29 @@ export default function ClientHabitsScreen() {
   const isLoadingHabits = useClientDetailStore((state) => state.isLoadingHabits);
   const coachId = useClientDetailStore((state) => state.coachId);
   const refreshSection = useClientDetailStore((state) => state.refreshSection);
+  const clientId = useClientDetailStore((state) => state.clientId);
+  const loadClientData = useClientDetailStore((state) => state.loadClientData);
+
+  // Load client data if navigating directly to this screen
+  useEffect(() => {
+    if (id && !clientId) {
+      loadClientData(id);
+    }
+  }, [id, clientId, loadClientData]);
+
+  // Track if we've already navigated to the habit detail from notification
+  const hasNavigatedToHabitRef = useRef(false);
+
+  // Navigate to habit detail if assignmentId param is present (from notification)
+  useEffect(() => {
+    if (assignmentIdParam && habits.length > 0 && !hasNavigatedToHabitRef.current) {
+      const habitExists = habits.some((h) => h.assignment_id === assignmentIdParam);
+      if (habitExists) {
+        hasNavigatedToHabitRef.current = true;
+        router.push(`/client/${id}/habit-detail?habitId=${assignmentIdParam}` as any);
+      }
+    }
+  }, [assignmentIdParam, habits, id, router]);
 
   // Filter habits based on search query
   const filteredHabits = useMemo(() => {
@@ -173,7 +196,7 @@ export default function ClientHabitsScreen() {
                   <View key={habit.id || habit.assignment_id}>
                     <SwipeableRow
                       onDelete={() => handleDeleteHabit(habit)}
-                      deleteConfirmTitle={`${t('general.delete')} ${habit.name}?`}
+                      deleteConfirmTitle={t('general.deleteHabit')}
                       onOpen={handleRowOpen}
                     >
                       <PressableScale onPress={() => handleHabitPress(habit.assignment_id || habit.id)}>

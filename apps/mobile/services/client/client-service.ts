@@ -146,20 +146,58 @@ export const getAthleteGoals = async (clientId: string, coachId: string): Promis
 };
 
 /**
- * Save athlete goals
+ * Create a single athlete goal
  */
-export const saveAthleteGoals = async (
+export const createAthleteGoal = async (
   clientId: string,
   coachId: string,
-  goals: Partial<AthleteGoal>[]
-): Promise<void> => {
-  await apiFetch('/clients/goals', {
+  goal: Partial<AthleteGoal>
+): Promise<AthleteGoal> => {
+  const response = await apiFetch<{ success: boolean; data: { goal: AthleteGoal } }>('/clients/goals', {
+    method: 'POST',
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId,
+    },
+    body: JSON.stringify({ goal: goal.goal, target_date: goal.target_date, details: goal.details }),
+  });
+  return response.data.goal;
+};
+
+/**
+ * Update a single athlete goal
+ */
+export const updateAthleteGoal = async (
+  clientId: string,
+  coachId: string,
+  goalId: string,
+  goal: Partial<AthleteGoal>
+): Promise<AthleteGoal> => {
+  const response = await apiFetch<{ success: boolean; data: { goal: AthleteGoal } }>(`/clients/goals/${goalId}`, {
     method: 'PATCH',
     headers: {
       'x-client-id': clientId,
       'x-coach-id': coachId,
     },
-    body: JSON.stringify({ goals }),
+    body: JSON.stringify({ goal: goal.goal, target_date: goal.target_date, details: goal.details }),
+  });
+  return response.data.goal;
+};
+
+/**
+ * Delete a single athlete goal
+ */
+export const deleteAthleteGoal = async (
+  clientId: string,
+  coachId: string,
+  goalId: string
+): Promise<void> => {
+  await apiFetch(`/clients/goals/${goalId}`, {
+    method: 'DELETE',
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId,
+    },
   });
 };
 
@@ -177,20 +215,58 @@ export const getAthleteInjuries = async (clientId: string, coachId: string): Pro
 };
 
 /**
- * Save athlete injuries
+ * Create a single athlete injury
  */
-export const saveAthleteInjuries = async (
+export const createAthleteInjury = async (
   clientId: string,
   coachId: string,
-  injuries: Partial<AthleteInjury>[]
-): Promise<void> => {
-  await apiFetch('/clients/injuries', {
+  injury: Partial<AthleteInjury>
+): Promise<AthleteInjury> => {
+  const response = await apiFetch<{ success: boolean; data: { injury: AthleteInjury } }>('/clients/injuries', {
+    method: 'POST',
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId,
+    },
+    body: JSON.stringify({ injury: injury.injury, date: injury.date, details: injury.details }),
+  });
+  return response.data.injury;
+};
+
+/**
+ * Update a single athlete injury
+ */
+export const updateAthleteInjury = async (
+  clientId: string,
+  coachId: string,
+  injuryId: string,
+  injury: Partial<AthleteInjury>
+): Promise<AthleteInjury> => {
+  const response = await apiFetch<{ success: boolean; data: { injury: AthleteInjury } }>(`/clients/injuries/${injuryId}`, {
     method: 'PATCH',
     headers: {
       'x-client-id': clientId,
       'x-coach-id': coachId,
     },
-    body: JSON.stringify({ injuries }),
+    body: JSON.stringify({ injury: injury.injury, date: injury.date, details: injury.details }),
+  });
+  return response.data.injury;
+};
+
+/**
+ * Delete a single athlete injury
+ */
+export const deleteAthleteInjury = async (
+  clientId: string,
+  coachId: string,
+  injuryId: string
+): Promise<void> => {
+  await apiFetch(`/clients/injuries/${injuryId}`, {
+    method: 'DELETE',
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId,
+    },
   });
 };
 
