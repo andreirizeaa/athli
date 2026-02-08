@@ -98,6 +98,7 @@ function convertBroadcastToMessage(payload: Record<string, unknown>): Message {
 
   return {
     ...payload,
+    sender_role: payload.sender_role as string | null | undefined,
     sent_at: payload.sent_at ? new Date(payload.sent_at as string) : new Date(),
     read_at: payload.read_at ? new Date(payload.read_at as string) : null,
     edited_at: payload.edited_at ? new Date(payload.edited_at as string) : null,
@@ -187,7 +188,9 @@ export const useRealtimeMessages = ({
           const eventType = data.type as string;
 
           if (eventType === 'INSERT') {
+            console.log('[Realtime] Broadcast INSERT sender_role:', data.sender_role, 'sender_id:', data.sender_id);
             const message = convertBroadcastToMessage(data);
+            console.log('[Realtime] Converted message sender_role:', message.sender_role);
             const hasAttachments = message.attachments && message.attachments.length > 0;
 
             // Check if we should skip adding this message to state
@@ -575,6 +578,41 @@ export const useSyncReadReceipt = ({
 
     return () => clearTimeout(timer);
   }, [isVisible, enabled, syncReadReceipt]);
+
+  // ---- Conversation presence tracking (suppresses push notifications) ----
+  useEffect(() => {
+    if (!isVisible || !enabled || !conversationId || !userId) return;
+
+    const sb = createClient();
+
+    const upsertPresence = () => {
+      sb.from('conversation_presence')
+        .upsert(
+          { conversation_id: conversationId, user_id: userId, last_active_at: new Date().toISOString() },
+          { onConflict: 'conversation_id,user_id' },
+        )
+        .then(({ error }) => {
+          if (error) console.error('[Presence] upsert error:', error.message);
+        });
+    };
+
+    upsertPresence();
+
+    // Heartbeat every 30 seconds
+    const heartbeat = setInterval(upsertPresence, 30_000);
+
+    return () => {
+      clearInterval(heartbeat);
+      // Delete presence row on hidden / unmount
+      sb.from('conversation_presence')
+        .delete()
+        .eq('conversation_id', conversationId)
+        .eq('user_id', userId)
+        .then(({ error }) => {
+          if (error) console.error('[Presence] delete error:', error.message);
+        });
+    };
+  }, [isVisible, enabled, conversationId, userId]);
 
   return { syncReadReceipt, isSyncing: isSyncingRef.current };
 };

@@ -269,7 +269,7 @@ export const clientQuestionnairesController = {
         // Fetch assignment details
         const { data: assignmentDetails, error: detailsError } = await supabase
             .from('client_questionnaires')
-            .select('client_id, coach_id')
+            .select('client_id, coach_id, name')
             .eq('id', id)
             .eq('client_id', targetClientId)
             .single();
@@ -597,7 +597,7 @@ export const clientQuestionnairesController = {
                             notificationType: NOTIFICATION_TYPES.questionnaire_completed,
                             title: NOTIFICATION_TITLES.questionnaire_completed,
                             description: `${clientName} completed a questionnaire`,
-                            metadata: { questionnaire_id: id },
+                            metadata: { questionnaire_id: id, name: assignmentDetails.name },
                         });
                     }
                 });

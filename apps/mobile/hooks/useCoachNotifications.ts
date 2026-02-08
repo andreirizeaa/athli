@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getCoachNotifications,
   markNotificationAsRead,
@@ -7,38 +8,23 @@ import {
   type CoachNotification,
 } from '@/services/coach-notifications-service';
 
+const NOTIFICATIONS_KEY = ['coach-notifications'];
+
 export function useCoachNotifications() {
-  const [notifications, setNotifications] = useState<CoachNotification[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const unreadCount = notifications.filter((n) => !n.read_at).length;
+  const { data: notifications = [], isLoading } = useQuery({
+    queryKey: NOTIFICATIONS_KEY,
+    queryFn: () => getCoachNotifications(),
+    refetchInterval: 60_000,
+  });
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const data = await getCoachNotifications();
-      setNotifications(data);
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
-
-  // Refresh notifications periodically (every 60 seconds)
-  useEffect(() => {
-    const interval = setInterval(fetchNotifications, 60_000);
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
+  const unreadCount = notifications.filter((n: CoachNotification) => !n.read_at).length;
 
   const markAsRead = useCallback(async (id: string) => {
-    // Optimistic update
-    setNotifications((prev) =>
-      prev.map((n) =>
+    // Optimistic update on shared cache
+    queryClient.setQueryData<CoachNotification[]>(NOTIFICATIONS_KEY, (old) =>
+      (old || []).map((n) =>
         n.id === id ? { ...n, read_at: new Date().toISOString() } : n
       )
     );
@@ -47,30 +33,28 @@ export function useCoachNotifications() {
       await markNotificationAsRead(id);
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
-      // Revert on error
-      fetchNotifications();
+      queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
     }
-  }, [fetchNotifications]);
+  }, [queryClient]);
 
   const markAsUnread = useCallback(async (id: string) => {
-    // Optimistic update
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read_at: null } : n))
+    queryClient.setQueryData<CoachNotification[]>(NOTIFICATIONS_KEY, (old) =>
+      (old || []).map((n) =>
+        n.id === id ? { ...n, read_at: null } : n
+      )
     );
 
     try {
       await markNotificationAsUnread(id);
     } catch (error) {
       console.error('Failed to mark notification as unread:', error);
-      // Revert on error
-      fetchNotifications();
+      queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
     }
-  }, [fetchNotifications]);
+  }, [queryClient]);
 
   const markAllAsRead = useCallback(async () => {
-    // Optimistic update
-    setNotifications((prev) =>
-      prev.map((n) => ({
+    queryClient.setQueryData<CoachNotification[]>(NOTIFICATIONS_KEY, (old) =>
+      (old || []).map((n) => ({
         ...n,
         read_at: n.read_at || new Date().toISOString(),
       }))
@@ -80,10 +64,13 @@ export function useCoachNotifications() {
       await markAllNotificationsAsRead();
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
-      // Revert on error
-      fetchNotifications();
+      queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
     }
-  }, [fetchNotifications]);
+  }, [queryClient]);
+
+  const refresh = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
+  }, [queryClient]);
 
   return {
     notifications,
@@ -92,6 +79,6 @@ export function useCoachNotifications() {
     markAsRead,
     markAsUnread,
     markAllAsRead,
-    refresh: fetchNotifications,
+    refresh,
   };
 }

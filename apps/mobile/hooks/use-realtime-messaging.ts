@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { AppState } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import type {
   RealtimeChannel,
@@ -522,6 +523,19 @@ export const useSyncReadReceipt = ({
   messageCount = 0,
 }: SyncReadReceiptOptions) => {
   const isFocused = useIsFocused();
+
+  // Track app foreground/background — isFocused only covers navigation, not app state
+  const [isAppActive, setIsAppActive] = useState(AppState.currentState === 'active');
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      setIsAppActive(state === 'active');
+    });
+    return () => sub.remove();
+  }, []);
+
+  // Combined: screen is focused AND app is in foreground
+  const isActive = isFocused && isAppActive;
+
   // Use ref to avoid infinite loop - isSyncing in deps would cause recreation
   const isSyncingRef = useRef(false);
   // Track last synced message count to avoid redundant syncs
@@ -586,7 +600,7 @@ export const useSyncReadReceipt = ({
 
   // Sync on focus change or when message count changes
   useEffect(() => {
-    if (!isFocused || !enabled || !conversationId || !userId) return;
+    if (!isActive || !enabled || !conversationId || !userId) return;
 
     // Clear any pending timer
     if (syncTimerRef.current) {
@@ -603,7 +617,42 @@ export const useSyncReadReceipt = ({
         clearTimeout(syncTimerRef.current);
       }
     };
-  }, [isFocused, enabled, conversationId, userId, messageCount, syncReadReceipt]);
+  }, [isActive, enabled, conversationId, userId, messageCount, syncReadReceipt]);
+
+  // ---- Conversation presence tracking (suppresses push notifications) ----
+  useEffect(() => {
+    if (!isActive || !enabled || !conversationId || !userId) return;
+
+    const upsertPresence = () => {
+      supabase
+        .from('conversation_presence')
+        .upsert(
+          { conversation_id: conversationId, user_id: userId, last_active_at: new Date().toISOString() },
+          { onConflict: 'conversation_id,user_id' },
+        )
+        .then(({ error }) => {
+          if (error) console.error('[Presence] upsert error:', error.message);
+        });
+    };
+
+    upsertPresence();
+
+    // Heartbeat every 30 seconds
+    const heartbeat = setInterval(upsertPresence, 30_000);
+
+    return () => {
+      clearInterval(heartbeat);
+      // Delete presence row on blur / background / unmount
+      supabase
+        .from('conversation_presence')
+        .delete()
+        .eq('conversation_id', conversationId)
+        .eq('user_id', userId)
+        .then(({ error }) => {
+          if (error) console.error('[Presence] delete error:', error.message);
+        });
+    };
+  }, [isActive, enabled, conversationId, userId]);
 
   return { syncReadReceipt };
 };

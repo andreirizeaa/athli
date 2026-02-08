@@ -273,6 +273,148 @@ export const settingsController = {
         });
     },
     /**
+     * Register/update a push token for the coach
+     */
+    registerPushToken: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const { expoPushToken, deviceId } = req.body;
+
+        if (!expoPushToken) {
+            return res.status(400).json({ success: false, message: 'expoPushToken is required' });
+        }
+
+        const supabase = getSupabaseClient();
+        const { error } = await supabase
+            .from('coach_push_tokens')
+            .upsert({
+                coach_id: userId,
+                expo_push_token: expoPushToken,
+                device_id: deviceId || null,
+                updated_at: new Date().toISOString(),
+            }, {
+                onConflict: 'coach_id,expo_push_token'
+            });
+
+        if (error) {
+            console.error('[registerPushToken] Supabase error:', error);
+            return res.status(500).json({ success: false, message: 'Failed to register push token' });
+        }
+
+        success(res, {
+            message: 'Push token registered successfully',
+        });
+    },
+
+    /**
+     * Delete a push token (e.g., on logout)
+     */
+    deletePushToken: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const { expoPushToken } = req.body;
+
+        if (!expoPushToken) {
+            return res.status(400).json({ success: false, message: 'expoPushToken is required' });
+        }
+
+        const supabase = getSupabaseClient();
+        const { error } = await supabase
+            .from('coach_push_tokens')
+            .delete()
+            .eq('coach_id', userId)
+            .eq('expo_push_token', expoPushToken);
+
+        if (error) {
+            console.error('[deletePushToken] Supabase error:', error);
+            return res.status(500).json({ success: false, message: 'Failed to delete push token' });
+        }
+
+        success(res, {
+            message: 'Push token deleted successfully',
+        });
+    },
+
+    /**
+     * Register/update a push token for a client
+     */
+    registerClientPushToken: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const { expoPushToken, deviceId } = req.body;
+
+        if (!expoPushToken) {
+            return res.status(400).json({ success: false, message: 'expoPushToken is required' });
+        }
+
+        const supabase = getSupabaseClient();
+        const { error } = await supabase
+            .from('client_push_tokens')
+            .upsert({
+                client_id: userId,
+                expo_push_token: expoPushToken,
+                device_id: deviceId || null,
+                updated_at: new Date().toISOString(),
+            }, {
+                onConflict: 'client_id,expo_push_token'
+            });
+
+        if (error) {
+            console.error('[registerClientPushToken] Supabase error:', error);
+            return res.status(500).json({ success: false, message: 'Failed to register push token' });
+        }
+
+        success(res, {
+            message: 'Client push token registered successfully',
+        });
+    },
+
+    /**
+     * Delete a client push token (e.g., on logout)
+     */
+    deleteClientPushToken: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const { expoPushToken } = req.body;
+
+        if (!expoPushToken) {
+            return res.status(400).json({ success: false, message: 'expoPushToken is required' });
+        }
+
+        const supabase = getSupabaseClient();
+        const { error } = await supabase
+            .from('client_push_tokens')
+            .delete()
+            .eq('client_id', userId)
+            .eq('expo_push_token', expoPushToken);
+
+        if (error) {
+            console.error('[deleteClientPushToken] Supabase error:', error);
+            return res.status(500).json({ success: false, message: 'Failed to delete push token' });
+        }
+
+        success(res, {
+            message: 'Client push token deleted successfully',
+        });
+    },
+
+    /**
      * Get coach unique code
      */
     getUniqueCode: async (req: Request, res: Response) => {

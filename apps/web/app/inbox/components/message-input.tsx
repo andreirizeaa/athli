@@ -367,7 +367,7 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({ selectedC
                         return (
                             <div
                                 className={cn(
-                                    "mb-2 px-3 py-2 rounded-lg",
+                                    "mt-1.5 mb-2 px-3 py-2 rounded-lg",
                                     replyingToMessage.isSent
                                         ? "bg-primary/20"
                                         : "bg-sidebar"
