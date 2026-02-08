@@ -3,6 +3,7 @@ import { userService } from '../../../services/user.service';
 import { asyncHandler } from '../../../utils/async-handler';
 import { success, unauthorized, internalError, badRequest } from '../../../utils/http-response';
 import { avatarService } from '../../../services/avatar.service';
+import { getSupabaseClient } from '../../../services/supabase.service';
 
 export class UserController {
   /**
@@ -105,6 +106,72 @@ export class UserController {
 
     success(res, {
       message: 'Account deleted successfully',
+    });
+  });
+
+  /**
+   * Request account deletion — creates a todo for the client's coach(es)
+   */
+  requestDeletion = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+
+    if (!userId) {
+      unauthorized(res, { message: 'User not authenticated' });
+      return;
+    }
+
+    const supabase = getSupabaseClient();
+
+    // Find the client's coach(es) via assignments
+    const { data: assignments, error: assignError } = await supabase
+      .from('coach_client_assignments')
+      .select('coach_id')
+      .eq('client_id', userId);
+
+    if (assignError) {
+      return internalError(res, { message: 'Failed to look up coach assignments' });
+    }
+
+    if (!assignments || assignments.length === 0) {
+      return badRequest(res, { message: 'No coach assignment found' });
+    }
+
+    // Check if a pending deletion request already exists
+    const { data: existing } = await supabase
+      .from('coach_own_todolist')
+      .select('id')
+      .eq('client_id', userId)
+      .eq('title', 'Requested account deletion')
+      .eq('completed', false)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      return success(res, {
+        message: 'Deletion request already submitted',
+        data: { alreadyRequested: true },
+      });
+    }
+
+    // Create a todo for each coach
+    const todosToInsert = assignments.map((a) => ({
+      coach_id: a.coach_id,
+      title: 'Requested account deletion',
+      type: 'client' as const,
+      client_id: userId,
+      completed: false,
+    }));
+
+    const { error: insertError } = await supabase
+      .from('coach_own_todolist')
+      .insert(todosToInsert);
+
+    if (insertError) {
+      return internalError(res, { message: 'Failed to create deletion request' });
+    }
+
+    success(res, {
+      message: 'Deletion request submitted successfully',
+      data: { alreadyRequested: false },
     });
   });
 

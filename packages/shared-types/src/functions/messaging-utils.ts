@@ -58,11 +58,13 @@ export interface UIMessage {
  *
  * @param msg - Message from database or optimistic message
  * @param currentUserId - ID of current user (for isSent calculation)
+ * @param currentRole - Optional role context ('coach' | 'client') for self-conversations where coach_id === client_id
  * @returns UIMessage with computed fields
  */
 export function transformToUIMessage(
   msg: Message | OptimisticMessage,
   currentUserId: string,
+  currentRole?: 'coach' | 'client',
 ): UIMessage {
   // Defensive check: parent_message might be [] instead of null from API
   const parentMsg = (msg as Message).parent_message;
@@ -71,6 +73,12 @@ export function transformToUIMessage(
     !Array.isArray(parentMsg) &&
     typeof parentMsg === 'object' &&
     'id' in parentMsg;
+
+  // For self-conversations (demo), use sender_role if available
+  const senderRole = (msg as Message).sender_role;
+  const isSent = currentRole && senderRole
+    ? senderRole === currentRole
+    : msg.sender_id === currentUserId;
 
   return {
     id: msg.id,
@@ -91,10 +99,10 @@ export function transformToUIMessage(
 
     // Computed fields
     text: msg.content,
-    isSent: msg.sender_id === currentUserId,
+    isSent,
     isRead: Boolean((msg as Message).read_at),
     replyTo: hasValidParent
-      ? transformToUIMessage(parentMsg as Message, currentUserId)
+      ? transformToUIMessage(parentMsg as Message, currentUserId, currentRole)
       : undefined,
   };
 }
@@ -111,6 +119,7 @@ export function transformToUIMessage(
 export function transformMessages(
   messages: Array<Message | OptimisticMessage>,
   currentUserId: string,
+  currentRole?: 'coach' | 'client',
 ): UIMessage[] {
   // Create a map for quick parent message lookup
   const messageMap = new Map<string, Message | OptimisticMessage>();
@@ -143,7 +152,7 @@ export function transformMessages(
       }
     }
 
-    return transformToUIMessage(m, currentUserId);
+    return transformToUIMessage(m, currentUserId, currentRole);
   });
 }
 

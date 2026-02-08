@@ -7,9 +7,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { Plus, FileText, X, Trash2, MoreHorizontal, Pause, Play } from 'lucide-react';
-import { deleteClientCheckIns, updateClientCheckInStatus, type ClientCheckIn } from '@/api/client/client-form-service';
+import { Plus, FileText, X, Trash2, MoreHorizontal, Pause, Play, Edit } from 'lucide-react';
+import { deleteClientCheckIns, updateClientCheckInStatus, getClientCheckInById, type ClientCheckIn, type ClientCheckInDetail } from '@/api/client/client-form-service';
 import { AssignCheckInSidePanel } from '@/components/forms/assign-check-in-side-panel';
+import { EditClientCheckInFormSidePanel } from '@/components/forms/edit-client-check-in-form-side-panel';
 import { Badge } from '@/components/ui/badge';
 import { useClientCheckIns } from '@/hooks/use-client-check-ins';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -39,6 +40,8 @@ const ClientCheckInPage = () => {
   const [isAddCheckInOpen, setIsAddCheckInOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [checkInToDelete, setCheckInToDelete] = useState<ClientCheckIn | null>(null);
+  const [isEditCheckInOpen, setIsEditCheckInOpen] = useState<boolean>(false);
+  const [editingCheckIn, setEditingCheckIn] = useState<ClientCheckInDetail | null>(null);
 
   // Format schedule text
   const formatSchedule = (schedule: string): string => {
@@ -206,6 +209,18 @@ const ClientCheckInPage = () => {
     setIsDeleteDialogOpen(true);
   };
 
+  const handleEditCheckIn = async (checkIn: ClientCheckIn) => {
+    if (!user?.id) return;
+    try {
+      const detail = await getClientCheckInById(clientId, user.id, checkIn.id);
+      setEditingCheckIn(detail);
+      setIsEditCheckInOpen(true);
+    } catch (error) {
+      console.error('Failed to fetch check-in details:', error);
+      toast.error(t('general.error'));
+    }
+  };
+
   const columns: ColumnDefinition<ClientCheckIn>[] = [
     {
       id: 'name',
@@ -371,7 +386,7 @@ const ClientCheckInPage = () => {
       getSearchValue: () => '',
       renderHeader: () => <></>,
       renderCell: (row) => {
-        // Draft state: show Publish button
+        // Draft state: show Publish button + ellipsis
         if (row.status === 'draft') {
           return (
             <div className="flex items-center justify-end gap-2" data-no-row-link="true">
@@ -386,6 +401,39 @@ const ClientCheckInPage = () => {
               >
                 {t('athletes.profile.checkIns.publish')}
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditCheckIn(row);
+                    }}
+                  >
+                    <Edit className="size-4 mr-2" />
+                    <span>{t('general.edit')}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteSingle(row);
+                    }}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="size-4 mr-2 text-destructive" />
+                    <span>{t('general.delete')}</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           );
         }
@@ -405,6 +453,15 @@ const ClientCheckInPage = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditCheckIn(row);
+                  }}
+                >
+                  <Edit className="size-4 mr-2" />
+                  <span>{t('general.edit')}</span>
+                </DropdownMenuItem>
                 {row.status === 'live' ? (
                   <DropdownMenuItem
                     onClick={(e) => {
@@ -532,6 +589,17 @@ const ClientCheckInPage = () => {
           clientId={clientId}
           coachId={user.id}
           clientName={client?.name}
+        />
+      )}
+      {user?.id && (
+        <EditClientCheckInFormSidePanel
+          open={isEditCheckInOpen}
+          onOpenChange={setIsEditCheckInOpen}
+          form={editingCheckIn}
+          clientId={clientId}
+          coachId={user.id}
+          onSave={() => refetch()}
+          onDelete={() => refetch()}
         />
       )}
 

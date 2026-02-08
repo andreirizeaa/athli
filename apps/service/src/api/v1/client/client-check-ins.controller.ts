@@ -459,6 +459,8 @@ export const clientCheckInsController = {
                 name: data.name,
                 description: data.description,
                 questions: data.questions || [],
+                scheduleConfig: data.schedule_config,
+                cronExpression: data.cron_expression,
             },
         });
     },

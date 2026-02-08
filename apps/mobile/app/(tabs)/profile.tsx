@@ -30,6 +30,8 @@ import { Separator } from '@/components/ui/separator';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { signOut } from '@/services/auth/supabase-auth';
+import { apiFetch } from '@/lib/api-client';
+import { haptics } from '@/utils/haptics';
 
 export default function ProfileTabScreen() {
   const router = useRouter();
@@ -49,6 +51,10 @@ export default function ProfileTabScreen() {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showDeletionDialog, setShowDeletionDialog] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isRequestingDeletion, setIsRequestingDeletion] = useState(false);
+  const [showDeletionSuccessDialog, setShowDeletionSuccessDialog] = useState(false);
+  const [showDeletionErrorDialog, setShowDeletionErrorDialog] = useState(false);
+  const [showDeletionAlreadySentDialog, setShowDeletionAlreadySentDialog] = useState(false);
 
   const handleOpenPreferences = () => {
     router.push({ pathname: '/settings/preferences' });
@@ -109,9 +115,24 @@ export default function ProfileTabScreen() {
     });
   };
 
-  const handleDeletionConfirm = () => {
-    // TODO: Implement deletion request to coach
-    setShowDeletionDialog(false);
+  const handleDeletionConfirm = async () => {
+    setIsRequestingDeletion(true);
+    try {
+      const res = await apiFetch<{ data?: { alreadyRequested?: boolean } }>('/user/request-deletion', { method: 'POST' });
+      setShowDeletionDialog(false);
+      if (res.data?.alreadyRequested) {
+        setShowDeletionAlreadySentDialog(true);
+      } else {
+        haptics.success();
+        setShowDeletionSuccessDialog(true);
+      }
+    } catch (error) {
+      console.error('Failed to request account deletion:', error);
+      setShowDeletionDialog(false);
+      setShowDeletionErrorDialog(true);
+    } finally {
+      setIsRequestingDeletion(false);
+    }
   };
 
   const handleDeletionCancel = () => {
@@ -421,6 +442,46 @@ export default function ProfileTabScreen() {
           label: t('profile.requestDeletion'),
           onPress: handleDeletionConfirm,
           variant: 'destructive',
+          loading: isRequestingDeletion,
+        },
+      ]}
+    />
+    <Dialog
+      visible={showDeletionSuccessDialog}
+      onClose={() => setShowDeletionSuccessDialog(false)}
+      title={t('profile.requestDeletionTitle')}
+      message={t('profile.deleteAccountRequestSent')}
+      buttons={[
+        {
+          label: t('general.ok'),
+          onPress: () => setShowDeletionSuccessDialog(false),
+          variant: 'primary',
+        },
+      ]}
+    />
+    <Dialog
+      visible={showDeletionErrorDialog}
+      onClose={() => setShowDeletionErrorDialog(false)}
+      title={t('general.error')}
+      message={t('profile.deleteAccountError')}
+      buttons={[
+        {
+          label: t('general.ok'),
+          onPress: () => setShowDeletionErrorDialog(false),
+          variant: 'primary',
+        },
+      ]}
+    />
+    <Dialog
+      visible={showDeletionAlreadySentDialog}
+      onClose={() => setShowDeletionAlreadySentDialog(false)}
+      title={t('profile.requestDeletionTitle')}
+      message={t('profile.deleteAccountAlreadyRequested')}
+      buttons={[
+        {
+          label: t('general.ok'),
+          onPress: () => setShowDeletionAlreadySentDialog(false),
+          variant: 'primary',
         },
       ]}
     />

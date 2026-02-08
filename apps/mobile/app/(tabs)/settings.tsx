@@ -177,41 +177,10 @@ export default function SettingsScreen() {
     setShowLogoutDialog(false);
   };
 
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      t('profile.deleteAccount'),
-      t('profile.deleteAccountMessage'),
-      [
-        {
-          text: t('general.cancel'),
-          style: 'cancel',
-        },
-        {
-          text: t('profile.deleteAccount'),
-          style: 'destructive',
-          onPress: async () => {
-            setIsDeletingAccount(true);
-            try {
-              await apiFetch('/user/delete-account', {
-                method: 'DELETE',
-              });
-              await signOut();
-              router.replace('/welcome');
-            } catch (error) {
-              console.error('Failed to delete account:', error);
-              Alert.alert(
-                t('general.error'),
-                t('profile.deleteAccountError'),
-              );
-            } finally {
-              setIsDeletingAccount(false);
-            }
-          },
-        },
-      ],
-    );
+    setShowDeleteAccountDialog(true);
   };
 
   const [isSwitchingToClient, setIsSwitchingToClient] = useState(false);
@@ -413,6 +382,19 @@ export default function SettingsScreen() {
           onPress: handleLogoutConfirm,
           variant: 'destructive',
           loading: isLoggingOut,
+        },
+      ]}
+    />
+    <Dialog
+      visible={showDeleteAccountDialog}
+      onClose={() => setShowDeleteAccountDialog(false)}
+      title={t('profile.deleteAccountModal.title')}
+      message={t('profile.deleteAccountModal.message')}
+      buttons={[
+        {
+          label: t('general.ok'),
+          onPress: () => setShowDeleteAccountDialog(false),
+          variant: 'primary',
         },
       ]}
     />

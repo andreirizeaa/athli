@@ -25,6 +25,7 @@ export interface YourListTask {
 export interface AthliAssistantTask {
   id: string;
   title: string;
+  description?: string;
   type: TaskType;
   clientName?: string;
   clientAvatar?: string;

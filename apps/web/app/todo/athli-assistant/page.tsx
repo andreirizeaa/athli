@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CheckSquare, Tag, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { useCoachTodo } from '@/hooks/use-coach-todo';
@@ -49,7 +50,7 @@ const AthliAssistantPage = () => {
       sortable: true,
       width: { class: 'flex-1', pixel: '1fr' },
       getSortValue: (row) => row.title.toLowerCase(),
-      getSearchValue: (row) => row.title,
+      getSearchValue: (row) => `${row.title} ${row.description || ''} ${row.clientName || ''}`,
       renderHeader: () => (
         <div className="flex items-center gap-2">
           <CheckSquare className="size-3 text-muted-foreground" />
@@ -57,9 +58,24 @@ const AthliAssistantPage = () => {
         </div>
       ),
       renderCell: (row) => (
-        <span className={cn('text-sm font-medium', row.completed && 'line-through text-muted-foreground')}>
-          {row.title}
-        </span>
+        <div className="flex items-center gap-3 min-w-0">
+          {row.type === 'client' && row.clientAvatar && (
+            <Avatar className="h-8 w-8 flex-shrink-0">
+              <AvatarImage src={row.clientAvatar} alt={row.clientName} />
+              <AvatarFallback>{row.clientName?.charAt(0) || 'C'}</AvatarFallback>
+            </Avatar>
+          )}
+          <div className="flex flex-col min-w-0">
+            <span className={cn('text-sm font-medium', row.completed && 'line-through text-muted-foreground')}>
+              {row.title}
+            </span>
+            {row.description && (
+              <span className={cn('text-xs text-muted-foreground', row.completed && 'line-through')}>
+                {row.description.length > 80 ? `${row.description.slice(0, 80)}...` : row.description}
+              </span>
+            )}
+          </div>
+        </div>
       ),
     },
     {
@@ -116,7 +132,7 @@ const AthliAssistantPage = () => {
         itemsPerPage={25}
         enableSearch={true}
         searchPlaceholder={t('general.search')}
-        searchFields={['title']}
+        searchFields={['title', 'description', 'clientName']}
         filterBarActions={
           <div className="flex items-center gap-2 ml-auto">
             <Select value={athliTaskTypeFilter} onValueChange={(value) => setAthliTaskTypeFilter(value as 'all' | 'client' | 'general')}>

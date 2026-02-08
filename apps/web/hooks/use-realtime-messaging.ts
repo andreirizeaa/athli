@@ -56,7 +56,7 @@ export const useMessageMerging = (
       optimisticMessages,
     );
 
-    return transformMessages(allMessages, currentUserId);
+    return transformMessages(allMessages, currentUserId, 'coach');
   }, [savedMessages, realtimeMessages, optimisticMessages, currentUserId]);
 };
 

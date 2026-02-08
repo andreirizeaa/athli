@@ -64,6 +64,9 @@ export interface Message {
   // Reliability fields (added in migration 104)
   idempotency_key?: string | null;
   attachments_ready?: boolean;
+
+  // Sender context for self-conversations (demo: coach_id = client_id)
+  sender_role?: 'coach' | 'client' | null;
 }
 
 /**

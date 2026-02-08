@@ -181,6 +181,12 @@ export const en = {
       preparingData: 'Preparing your data...',
     },
     availableResources: 'Available resources',
+    forms: {
+      title: 'Completed Forms',
+      tabs: { checkIns: 'Check Ins', questionnaires: 'Questionnaires' },
+      emptyCheckIns: 'No completed check-ins yet',
+      emptyQuestionnaires: 'No completed questionnaires yet',
+    },
     checkIns: {
       title: 'Check Ins',
       outstanding: 'outstanding',
@@ -466,6 +472,24 @@ export const en = {
   },
   tasks: {
     title: 'Tasks',
+  },
+  coachMessages: {
+    title: 'Coach Messages',
+    noConversation: 'No conversation yet',
+  },
+  tasksCard: {
+    title: 'Tasks',
+    hasTasks: 'You have 1 task today',
+    hasTasksPlural: 'You have {{count}} tasks today',
+    noTasks: 'All done!',
+    noTasks0: 'Nothing to do - you earned this free time',
+    noTasks1: 'All tasks complete - you are on fire',
+    noTasks2: 'Zero tasks left - go enjoy your day',
+    noTasks3: 'Everything done - your coach would be proud',
+    noTasks4: 'Clean slate - sit back and relax',
+    noTasks5: 'All caught up - you are crushing it',
+    noTasks6: 'Task list empty - gold star for you',
+    noTasks7: 'All done for today - well played',
   },
   library: {
     title: 'Library',
@@ -951,6 +975,8 @@ export const en = {
     deleteAccount: 'Delete Account',
     deleteAccountMessage: 'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed.',
     deleteAccountError: 'Failed to delete your account. Please try again.',
+    deleteAccountRequestSent: 'Your deletion request has been sent to your coach. They will review and process it.',
+    deleteAccountAlreadyRequested: 'A deletion request has already been sent to your coach. Please wait for them to review it.',
     requestDeletion: 'Request Deletion',
     requestDeletionTitle: 'Request Deletion',
     requestDeletionMessage: 'This will send a deletion request to your coach. They will review and process your request.',

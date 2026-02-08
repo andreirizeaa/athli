@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
-import { Plus, FileText, Search, X, Edit, ArrowUp, ArrowDown, Check, Trash2, Flame, Trash, Loader2 } from 'lucide-react';
+import { Plus, FileText, Search, X, Edit, ArrowUp, ArrowDown, Check, Trash2, Flame, Loader2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -683,9 +683,6 @@ const ClientHabitsPage = () => {
                     <Button onClick={handleOpenEditHabit} className="gap-2" variant="outline">
                       <Edit className="size-4" />
                       <span>{t('habits.editHabitTitle')}</span>
-                    </Button>
-                    <Button onClick={handleOpenDeleteDialog} className="gap-2" variant="outline">
-                      <Trash className="size-4" />
                     </Button>
                   </ButtonGroup>
                 </div>
