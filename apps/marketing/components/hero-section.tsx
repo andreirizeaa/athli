@@ -137,7 +137,7 @@ function HeroChatPreview() {
   const leftPath = w > 0 ? `M ${cx} 0 L ${r} 0 A ${r} ${r} 0 0 0 0 ${r} L 0 ${h - r} A ${r} ${r} 0 0 0 ${r} ${h} L ${cx + 1} ${h}` : '';
 
   return (
-    <div ref={borderRef} className="relative mx-auto h-[700px] w-[80%]">
+    <div ref={borderRef} className="relative mx-auto h-[700px] w-[80%] max-w-[1100px]">
       {w > 0 && (
         <svg className="pointer-events-none absolute inset-0 z-10" width={w} height={h} fill="none">
           <defs>

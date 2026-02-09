@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+
 import { useRouter } from 'next/navigation';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -110,11 +110,6 @@ export default function ResetPasswordPage() {
     <AuthLayout>
       <div className="space-y-6">
         <div className="text-center space-y-4">
-          <div className="flex justify-center">
-            <div className="w-14 h-14 rounded-xl bg-zinc-900 border border-white/20 flex items-center justify-center">
-              <Image src="/icons/athli.png" alt="Athli" width={64} height={64} />
-            </div>
-          </div>
           <h2 className="text-3xl font-bold text-white">Reset Your Password</h2>
           <p className="text-white/60 text-sm">
             Enter your new password below.

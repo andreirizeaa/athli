@@ -4,7 +4,7 @@ import React from 'react';
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+import { AthliLogo, AthliIcon } from '@/components/athli-logo';
 import {
   // CalendarDays,
   Dumbbell,
@@ -136,21 +136,10 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        {isCollapsed ? (
-          <div className="flex items-center justify-center h-14">
-            <Image
-              src="/icons/athli.png"
-              alt="Athli"
-              width={48}
-              height={48}
-              className="object-contain"
-            />
-          </div>
-        ) : (
-          <div className="flex items-center px-2 h-14">
-            <span className="text-base font-semibold">Athli</span>
-          </div>
-        )}
+        <div className="flex items-center h-14 px-2 -ml-[6px]">
+          <AthliIcon className="size-7 shrink-0" />
+          {!isCollapsed && <span className="ml-2 text-2xl font-semibold">Athli</span>}
+        </div>
       </SidebarHeader>
       <SidebarContent className="gap-0 overflow-y-auto overscroll-y-contain">
         <SidebarGroup className="pb-0">
