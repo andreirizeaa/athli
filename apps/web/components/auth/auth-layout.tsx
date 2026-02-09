@@ -78,15 +78,21 @@ export function AuthLayout({ children, showHomeButton = true }: AuthLayoutProps)
               <Image src="/icons/excel.png" alt="" width={40} height={40} className="size-10 object-contain" />
             </OrbitingCircles>
 
-            {/* Outer orbit - 3 icons */}
+            {/* Outer orbit - 5 icons */}
             <OrbitingCircles radius={210} duration={45} reverse>
-              <Image src="/icons/zap.png" alt="" width={40} height={40} className="size-10 object-contain" />
+              <Image src="/icons/zapier.png" alt="" width={40} height={40} className="size-10 object-contain" />
             </OrbitingCircles>
-            <OrbitingCircles radius={210} duration={45} delay={15} reverse>
-              <Image src="/icons/docs.png" alt="" width={40} height={40} className="size-10 object-contain" />
+            <OrbitingCircles radius={210} duration={45} delay={9} reverse>
+              <Image src="/icons/drive.png" alt="" width={40} height={40} className="size-10 object-contain" />
             </OrbitingCircles>
-            <OrbitingCircles radius={210} duration={45} delay={30} reverse>
+            <OrbitingCircles radius={210} duration={45} delay={18} reverse>
               <Image src="/icons/notion.png" alt="" width={40} height={40} className="size-10 object-contain dark:invert" />
+            </OrbitingCircles>
+            <OrbitingCircles radius={210} duration={45} delay={27} reverse>
+              <Image src="/icons/stripe-icon.png" alt="" width={40} height={40} className="size-10 object-contain" />
+            </OrbitingCircles>
+            <OrbitingCircles radius={210} duration={45} delay={36} reverse>
+              <Image src="/icons/docusign.png" alt="" width={40} height={40} className="size-10 object-contain" />
             </OrbitingCircles>
           </div>
 

@@ -110,7 +110,7 @@ function HeroChatPreview() {
             strokeLinecap="round"
             strokeDasharray="0.15 0.85"
             animate={{ strokeDashoffset: [0, -1] }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
           />
           {/* Trail 2 */}
           <motion.rect
@@ -126,7 +126,7 @@ function HeroChatPreview() {
             strokeLinecap="round"
             strokeDasharray="0.15 0.85"
             animate={{ strokeDashoffset: [-0.5, -1.5] }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
           />
         </svg>
       )}
@@ -314,7 +314,7 @@ export default function HeroSection() {
                   onClick={() => setActiveIcon('zapier')}
                   className="absolute bottom-[22%] right-[12%] pointer-events-auto flex size-24 rotate-6 cursor-pointer items-center justify-center rounded-[20px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(255,159,28,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
                 >
-                  <img src="/icons/zap.png" alt="" className="size-[68px] object-contain drop-shadow-[0_0_8px_rgba(255,159,28,0.35)]" />
+                  <img src="/icons/zapier.png" alt="" className="size-[68px] object-contain drop-shadow-[0_0_8px_rgba(255,159,28,0.35)]" />
                 </motion.div>
                 {/* Google Docs - right of pill */}
                 <motion.div
@@ -325,7 +325,7 @@ export default function HeroSection() {
                   onClick={() => setActiveIcon('docs')}
                   className="absolute top-[-6%] right-[14%] pointer-events-auto flex size-20 rotate-3 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 hover:scale-110 transition-transform"
                 >
-                  <img src="/icons/docs.png" alt="" className="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(66,133,244,0.3)]" />
+                  <img src="/icons/drive.png" alt="" className="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(66,133,244,0.3)]" />
                 </motion.div>
                 {/* Notion - left of Grow Today button */}
                 <motion.div
@@ -454,7 +454,7 @@ export default function HeroSection() {
             <DialogHeader>
               <div className="flex items-center gap-3">
                 <img
-                  src={`/icons/${activeIcon === 'zapier' ? 'zap' : activeIcon}.png`}
+                  src={`/icons/${activeIcon}.png`}
                   alt=""
                   className={cn('size-10 object-contain', (activeIcon === 'chatgpt' || activeIcon === 'notion') && 'dark:invert')}
                 />
