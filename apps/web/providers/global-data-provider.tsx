@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
+import { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePlatformSettings } from '@/hooks/use-platform-settings';
 import { UserProfile } from '@/api/user/user-service';
@@ -23,6 +23,7 @@ import { useCoachClients } from '@/hooks/use-coach-clients';
 import { useConversations } from '@/hooks/use-conversations';
 import { usePrefetchAllExercises } from '@/hooks/use-all-exercises';
 import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
+import { useCoachSequences } from '@/hooks/use-coach-sequences';
 
 interface GlobalContextType {
     user: UserProfile | null;
@@ -67,9 +68,7 @@ import { usePathname } from 'next/navigation';
 const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
     const pathname = usePathname();
     const isAthleteProfile = pathname?.includes('/athletes/') && pathname?.split('/').filter(Boolean).length >= 2;
-    const isDownloadRoute = pathname?.startsWith('/download/');
-    const isAuthRoute = pathname?.startsWith('/auth/');
-    const shouldPrefetch = !isAthleteProfile && !isDownloadRoute && !isAuthRoute;
+    const shouldPrefetch = !isAthleteProfile;
 
     const { isLoading: isFilesLoading } = useCoachFiles({ enabled: shouldPrefetch });
     const { isLoading: isHabitsLoading } = useCoachHabits({ enabled: shouldPrefetch });
@@ -83,6 +82,7 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
     const { isLoading: isClientsLoading } = useCoachClients({ enabled: shouldPrefetch });
     const { isLoading: isConversationsLoading } = useConversations({ enabled: shouldPrefetch });
     const { isLoading: isOnboardingsLoading } = useCoachOnboardings({ enabled: shouldPrefetch });
+    const { isLoading: isSequencesLoading } = useCoachSequences({ enabled: shouldPrefetch });
 
     // Prefetch all MuscleWiki exercises into React Query cache (1700+ exercises)
     // This runs in the background and doesn't block the UI
@@ -100,7 +100,8 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
         isAutoTodoLoading ||
         isClientsLoading ||
         isConversationsLoading ||
-        isOnboardingsLoading;
+        isOnboardingsLoading ||
+        isSequencesLoading;
 
     // We only show the full screen loader for prefetching if we are NOT on a specific athlete's page
     // This allows the athlete profile to load its own data without being blocked by global coach data loading
@@ -114,7 +115,6 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
 };
 
 export default function GlobalDataProvider({ children }: { children: ReactNode }) {
-    const pathname = usePathname();
     const { user: userProfile, isLoading: isUserLoading } = useUserProfile();
     const {
         preferences,
@@ -134,7 +134,7 @@ export default function GlobalDataProvider({ children }: { children: ReactNode }
     const isLoading = isUserLoading || isSettingsLoading;
 
     const value = useMemo(() => ({
-        user: userProfile as UserProfile, // Casting assuming user is loaded or handled by layout check
+        user: userProfile as UserProfile,
         preferences: preferences as CoachPreferences,
         company: company as CoachCompanyInfo,
         notificationPreferences,
@@ -149,32 +149,11 @@ export default function GlobalDataProvider({ children }: { children: ReactNode }
         isUpdatingCompany
     }), [userProfile, preferences, company, notificationPreferences, uniqueCode, isLoading, updatePreferences, updateCompany, uploadAndSetCompanyLogo, updateNotificationPreference, batchUpdateNotificationPreferences, isUploadingLogo, isUpdatingCompany]);
 
-    // Don't show loader on auth routes, error pages, client routes, download routes, or athlete profiles
-    const isAuthRoute = pathname?.startsWith('/auth/');
-    const isErrorRoute = pathname?.startsWith('/pages/error');
-    const isClientRoute = pathname?.startsWith('/client/');
-    const isCoachReferralRoute = pathname?.startsWith('/coach/referral/');
-    const isDownloadRoute = pathname?.startsWith('/download/');
-    const isAthleteProfile = pathname?.includes('/athletes/') && pathname?.split('/').filter(Boolean).length >= 2;
-    const shouldShowLoader = isLoading && !isAuthRoute && !isErrorRoute && !isClientRoute && !isCoachReferralRoute && !isDownloadRoute && !isAthleteProfile;
-
-    if (shouldShowLoader) {
+    if (isLoading) {
         return <FullScreenLoader subtitle="Just setting up your workspace, Coach..." />;
     }
 
-    // If user is logged in, wrap with prefetcher to ensure data is loaded
-    // Skip prefetcher for download routes (clients don't need coach data)
     if (userProfile) {
-        const isDownloadRoute = pathname?.startsWith('/download/');
-
-        if (isDownloadRoute) {
-            return (
-                <GlobalContext.Provider value={value}>
-                    {children}
-                </GlobalContext.Provider>
-            );
-        }
-
         return (
             <GlobalContext.Provider value={value}>
                 <CoachDataPrefetcher>
@@ -184,7 +163,6 @@ export default function GlobalDataProvider({ children }: { children: ReactNode }
         );
     }
 
-    // Not logged in, just provide context (likely null user) and children
     return (
         <GlobalContext.Provider value={value}>
             {children}

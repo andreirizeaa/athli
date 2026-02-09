@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { SidebarInset, SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import { Spinner } from '@/components/ui/spinner';
-import { UnsavedChangesProvider } from '@/app/settings/context/unsaved-changes-context';
+import { UnsavedChangesProvider } from '@/app/(app)/settings/context/unsaved-changes-context';
 import { useLanguage } from '@/lib/providers/intl-provider';
 import { AppSidebar } from './app-sidebar';
 import { AppHeader } from './app-header';

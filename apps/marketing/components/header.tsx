@@ -1,33 +1,40 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { ChevronDown, GitBranch, FileText, Inbox, BarChart3, TrendingUp, Dumbbell, ClipboardList, Menu, X, Smartphone, Users } from 'lucide-react';
+import NextLink from 'next/link';
+import { Link } from '@/lib/i18n/navigation';
+import { ArrowRight, ChevronDown, GitBranch, FileText, Inbox, BarChart3, TrendingUp, Dumbbell, ClipboardList, Menu, X, Smartphone, Users } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useTranslations } from 'next-intl';
 
 import { AthliLogo } from '@/components/athli-logo';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { featureKeys } from '@/lib/features-data';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
 
-const featureItems = [
-  { label: 'Flows', headline: 'Automated accountability, beyond just check-ins', icon: GitBranch },
-  { label: 'Forms', headline: 'Fully customizable forms that feed your data', icon: FileText },
-  { label: 'Inbox', headline: 'Message clients with their full profile in view', icon: Inbox },
-  { label: 'Metrics', headline: 'Track any metric that matters to you', icon: BarChart3 },
-  { label: 'Progress', headline: 'Detailed tracking across every exercise and variant', icon: TrendingUp },
-  { label: 'Training', headline: 'Plan everything from one calendar view', icon: Dumbbell },
-  { label: 'Workouts', headline: 'Over 1,700 exercises, fully customizable', icon: ClipboardList },
-];
+const featureIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  flows: GitBranch,
+  forms: FileText,
+  inbox: Inbox,
+  metrics: BarChart3,
+  progress: TrendingUp,
+  training: Dumbbell,
+  workouts: ClipboardList,
+};
 
 export const HeroHeader = () => {
   const [menuState, setMenuState] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [featuresOpen, setFeaturesOpen] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [mobileFeatures, setMobileFeatures] = React.useState(false);
+  const [mobileMobileApp, setMobileMobileApp] = React.useState(false);
   const featuresTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const mobileTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const t = useTranslations('nav');
+  const tf = useTranslations('features');
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -98,7 +105,7 @@ export const HeroHeader = () => {
                     className="flex cursor-pointer items-center gap-1 text-muted-foreground duration-150 hover:text-accent-foreground"
                     onClick={() => scrollTo('features')}
                   >
-                    <span>Features</span>
+                    <span>{t('features')}</span>
                     <ChevronDown className={cn('size-3.5 transition-transform duration-200', featuresOpen && 'rotate-180')} />
                   </button>
 
@@ -113,26 +120,23 @@ export const HeroHeader = () => {
                       >
                         <div className="w-[520px] overflow-hidden rounded-2xl border bg-background p-2 shadow-lg shadow-zinc-950/10 dark:shadow-zinc-950/40">
                           <div className="grid grid-cols-2 gap-1">
-                            {featureItems.map((item) => {
-                              const Icon = item.icon;
+                            {featureKeys.map((key) => {
+                              const Icon = featureIcons[key];
                               return (
-                                <button
-                                  key={item.label}
-                                  onClick={() => {
-                                    setFeaturesOpen(false);
-                                    window.dispatchEvent(new CustomEvent('set-feature', { detail: item.label.toLowerCase() }));
-                                    scrollTo('features');
-                                  }}
-                                  className="flex cursor-pointer items-start gap-3 rounded-xl p-3 text-left transition-colors hover:bg-muted"
+                                <Link
+                                  key={key}
+                                  href={`/features/${key}`}
+                                  onClick={() => setFeaturesOpen(false)}
+                                  className="flex items-start gap-3 rounded-xl p-3 text-left transition-colors hover:bg-muted"
                                 >
                                   <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border bg-background">
                                     <Icon className="size-4 text-muted-foreground" />
                                   </div>
                                   <div>
-                                    <p className="text-sm font-medium">{item.label}</p>
-                                    <p className="text-xs text-muted-foreground leading-snug">{item.headline}</p>
+                                    <p className="text-sm font-medium">{tf(`${key}.label`)}</p>
+                                    <p className="text-xs text-muted-foreground leading-snug">{tf(`${key}.headline`)}</p>
                                   </div>
-                                </button>
+                                </Link>
                               );
                             })}
                           </div>
@@ -142,12 +146,12 @@ export const HeroHeader = () => {
                   </AnimatePresence>
                 </li>
                 <li>
-                  <button
-                    onClick={() => scrollTo('pricing')}
-                    className="cursor-pointer text-muted-foreground duration-150 hover:text-accent-foreground"
+                  <Link
+                    href="/pricing"
+                    className="text-muted-foreground duration-150 hover:text-accent-foreground"
                   >
-                    <span>Pricing</span>
-                  </button>
+                    <span>{t('pricing')}</span>
+                  </Link>
                 </li>
                 <li
                   className="relative"
@@ -158,7 +162,7 @@ export const HeroHeader = () => {
                     className="flex cursor-pointer items-center gap-1 text-muted-foreground duration-150 hover:text-accent-foreground"
                     onClick={() => scrollTo('mobile-apps')}
                   >
-                    <span>Mobile App</span>
+                    <span>{t('mobileApp')}</span>
                     <ChevronDown className={cn('size-3.5 transition-transform duration-200', mobileOpen && 'rotate-180')} />
                   </button>
 
@@ -181,8 +185,8 @@ export const HeroHeader = () => {
                               <Smartphone className="size-4 text-muted-foreground" />
                             </div>
                             <div>
-                              <p className="text-sm font-medium">Coach</p>
-                              <p className="text-xs text-muted-foreground leading-snug">Your full coaching toolkit on mobile</p>
+                              <p className="text-sm font-medium">{t('coach')}</p>
+                              <p className="text-xs text-muted-foreground leading-snug">{t('coachHeadline')}</p>
                             </div>
                           </Link>
                           <Link
@@ -194,8 +198,8 @@ export const HeroHeader = () => {
                               <Users className="size-4 text-muted-foreground" />
                             </div>
                             <div>
-                              <p className="text-sm font-medium">Client</p>
-                              <p className="text-xs text-muted-foreground leading-snug">Your clients' main app experience</p>
+                              <p className="text-sm font-medium">{t('client')}</p>
+                              <p className="text-xs text-muted-foreground leading-snug">{t('clientHeadline')}</p>
                             </div>
                           </Link>
                         </div>
@@ -209,55 +213,109 @@ export const HeroHeader = () => {
             {/* Mobile nav */}
             <div className="bg-background mb-6 hidden w-full flex-wrap items-center justify-end space-y-8 rounded-3xl border p-6 shadow-2xl shadow-zinc-300/20 in-data-[state=active]:block md:flex-nowrap lg:m-0 lg:flex lg:w-fit lg:gap-6 lg:space-y-0 lg:border-transparent lg:bg-transparent lg:p-0 lg:shadow-none dark:shadow-none dark:lg:bg-transparent">
               <div className="lg:hidden">
-                <ul className="space-y-6 text-base">
+                <ul className="space-y-4 text-base">
+                  {/* Features with sub-menu */}
                   <li>
                     <button
-                      onClick={() => scrollTo('features')}
-                      className="cursor-pointer text-muted-foreground duration-150 hover:text-accent-foreground"
+                      onClick={() => setMobileFeatures(!mobileFeatures)}
+                      className="flex w-full cursor-pointer items-center justify-between text-muted-foreground duration-150 hover:text-accent-foreground"
                     >
-                      <span>Features</span>
+                      <span>{t('features')}</span>
+                      <ChevronDown className={cn('size-4 transition-transform duration-200', mobileFeatures && 'rotate-180')} />
                     </button>
-                  </li>
-                  <li>
-                    <button
-                      onClick={() => scrollTo('pricing')}
-                      className="cursor-pointer text-muted-foreground duration-150 hover:text-accent-foreground"
-                    >
-                      <span>Pricing</span>
-                    </button>
+                    <AnimatePresence>
+                      {mobileFeatures && (
+                        <motion.ul
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-3 space-y-1 pl-1">
+                            {featureKeys.map((key) => {
+                              const Icon = featureIcons[key];
+                              return (
+                                <Link
+                                  key={key}
+                                  href={`/features/${key}`}
+                                  onClick={() => setMenuState(false)}
+                                  className="flex items-center gap-3 rounded-lg p-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-accent-foreground"
+                                >
+                                  <Icon className="size-4 shrink-0" />
+                                  <span>{tf(`${key}.label`)}</span>
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </motion.ul>
+                      )}
+                    </AnimatePresence>
                   </li>
                   <li>
                     <Link
-                      href="/mobile/coach"
+                      href="/pricing"
                       onClick={() => setMenuState(false)}
                       className="text-muted-foreground duration-150 hover:text-accent-foreground"
                     >
-                      <span>Coach App</span>
+                      <span>{t('pricing')}</span>
                     </Link>
                   </li>
+                  {/* Mobile App with sub-menu */}
                   <li>
-                    <Link
-                      href="/mobile/client"
-                      onClick={() => setMenuState(false)}
-                      className="text-muted-foreground duration-150 hover:text-accent-foreground"
+                    <button
+                      onClick={() => setMobileMobileApp(!mobileMobileApp)}
+                      className="flex w-full cursor-pointer items-center justify-between text-muted-foreground duration-150 hover:text-accent-foreground"
                     >
-                      <span>Client App</span>
-                    </Link>
+                      <span>{t('mobileApp')}</span>
+                      <ChevronDown className={cn('size-4 transition-transform duration-200', mobileMobileApp && 'rotate-180')} />
+                    </button>
+                    <AnimatePresence>
+                      {mobileMobileApp && (
+                        <motion.ul
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-3 space-y-1 pl-1">
+                            <Link
+                              href="/mobile/coach"
+                              onClick={() => setMenuState(false)}
+                              className="flex items-center gap-3 rounded-lg p-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-accent-foreground"
+                            >
+                              <Smartphone className="size-4 shrink-0" />
+                              <span>{t('coach')}</span>
+                            </Link>
+                            <Link
+                              href="/mobile/client"
+                              onClick={() => setMenuState(false)}
+                              className="flex items-center gap-3 rounded-lg p-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-accent-foreground"
+                            >
+                              <Users className="size-4 shrink-0" />
+                              <span>{t('client')}</span>
+                            </Link>
+                          </div>
+                        </motion.ul>
+                      )}
+                    </AnimatePresence>
                   </li>
                 </ul>
               </div>
               <div className="flex w-full justify-end md:w-fit">
                 <div className="flex items-center gap-2">
-                  <Link href={`${APP_URL}/auth/login`}>
+                  <NextLink href={`${APP_URL}/auth/login`}>
                     <Button variant="ghost" size="sm">
-                      <span>Log in</span>
+                      <span>{t('logIn')}</span>
                     </Button>
-                  </Link>
-                  <Link href={`${APP_URL}/auth/register`}>
-                    <Button size="default">
-                      <span>Sign up</span>
+                  </NextLink>
+                  <NextLink href={`${APP_URL}/auth/register`}>
+                    <Button size="lg" className="rounded-xl px-5 text-base">
+                      <span className="text-nowrap">{t('coachForFree')}</span>
+                      <ArrowRight className="size-4" />
                     </Button>
-                  </Link>
+                  </NextLink>
                 </div>
               </div>
             </div>

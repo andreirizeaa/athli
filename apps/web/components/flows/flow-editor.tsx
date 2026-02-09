@@ -1835,7 +1835,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
           })()
         }
         hideWaitActions={hideWaitActionsProp ?? isOnboardingMode ?? NON_CHECKABLE_TRIGGERS.includes(selectedTrigger?.id ?? '')}
-        excludeTriggers={!isOnboardingMode && !forcedTriggerId ? ['new-client-signup'] : []}
+        excludeTriggers={!isOnboardingMode && !forcedTriggerId ? ['new-client-signup', 'payment-completed'] : []}
       />
     </div>
   );
