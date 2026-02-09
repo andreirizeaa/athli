@@ -4,7 +4,7 @@ import React from 'react';
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+import { AthliLogo, AthliIcon } from '@/components/athli-logo';
 import {
   // CalendarDays,
   Dumbbell,
@@ -23,6 +23,7 @@ import {
   Rocket,
   WandSparkles,
   Zap,
+  CreditCard,
 } from 'lucide-react';
 import { useCoachChecklist } from '@/hooks/use-coach-checklist';
 import {
@@ -92,6 +93,14 @@ export function AppSidebar() {
     },
   ] as const;
 
+  const businessNavItems = [
+    {
+      href: '/business/packages',
+      labelKey: 'sidebar.links.packages',
+      icon: CreditCard,
+    },
+  ] as const;
+
   const libraryNavItems = [
     {
       href: '/training/workouts',
@@ -136,21 +145,10 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        {isCollapsed ? (
-          <div className="flex items-center justify-center h-14">
-            <Image
-              src="/icons/athli.png"
-              alt="Athli"
-              width={48}
-              height={48}
-              className="object-contain"
-            />
-          </div>
-        ) : (
-          <div className="flex items-center px-2 h-14">
-            <span className="text-base font-semibold">Athli</span>
-          </div>
-        )}
+        <div className="flex items-center h-14 px-2 -ml-[6px]">
+          <AthliIcon className="size-7 shrink-0" />
+          {!isCollapsed && <span className="ml-2 text-2xl font-semibold">Athli</span>}
+        </div>
       </SidebarHeader>
       <SidebarContent className="gap-0 overflow-y-auto overscroll-y-contain">
         <SidebarGroup className="pb-0">
@@ -213,6 +211,43 @@ export function AppSidebar() {
                 ) {
                   isActive = activePath === href || activePath.startsWith(`${href}/`);
                 }
+                const label = t(item.labelKey);
+
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={label}
+                      className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
+                    >
+                      <Link href={item.href}>
+                        <Icon className="shrink-0" />
+                        <span>{label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup className="pb-0">
+          <div className="flex h-6 items-center px-2">
+            {isCollapsed ? (
+              <div className="mx-auto h-px w-8 bg-sidebar-foreground/70" />
+            ) : (
+              <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
+                {t('sidebar.group.business')}
+              </span>
+            )}
+          </div>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0.5">
+              {businessNavItems.map((item) => {
+                const Icon = item.icon;
+                const href = item.href;
+                const isActive = activePath.startsWith('/business');
                 const label = t(item.labelKey);
 
                 return (

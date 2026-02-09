@@ -29,6 +29,7 @@ import type { CoachProfile, ClientProfile } from '@/types/profile';
 import QueryProvider from '@/providers/query-provider';
 import { usePrefetchAllExercises } from '@/hooks/useAllExercises';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import { ErrorBoundary as CustomErrorBoundary } from '@/components/ui/error-boundary';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
@@ -165,6 +166,7 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { primaryColor, colors: themeColors } = useThemePreference();
   const segments = useSegments();
+  useProtectedRoute();
   const systemScheme = useNativeColorScheme() ?? 'light';
 
   // Initialize auth session and restore profile on mount

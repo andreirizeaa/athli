@@ -7,14 +7,13 @@ import { IntlProvider } from '@/lib/providers/intl-provider';
 import SupabaseProvider from '@/lib/providers/supabase-provider';
 import { SupabaseAuthProvider } from '@/lib/providers/supabase-auth-provider';
 import QueryProvider from '@/providers/query-provider';
-import GlobalDataProvider from '@/providers/global-data-provider';
 import { Toaster } from '@/components/ui/sonner';
-import { ConditionalAppShell } from '@/components/app/conditional-app-shell';
 import { IntercomProvider } from '@/components/intercom-provider';
 import { ActiveThemeProvider } from '@/components/app/active-theme';
 import { DEFAULT_THEME } from '@/lib/theme';
 import { cn } from '@/lib/general/utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { RateLimitOverlay } from '@/components/app/rate-limit-overlay';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -27,7 +26,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Athli - App',
+  title: {
+    default: 'Athli',
+    template: '%s - Athli',
+  },
   description: 'Athli application',
 };
 
@@ -69,11 +71,10 @@ export default async function RootLayout({
                 <IntercomProvider />
                 <SupabaseProvider>
                   <IntlProvider>
-                    <GlobalDataProvider>
-                      <TooltipProvider>
-                        <ConditionalAppShell>{children}</ConditionalAppShell>
-                      </TooltipProvider>
-                    </GlobalDataProvider>
+                    <TooltipProvider>
+                      {children}
+                    </TooltipProvider>
+                    <RateLimitOverlay />
                   </IntlProvider>
                 </SupabaseProvider>
               </SupabaseAuthProvider>

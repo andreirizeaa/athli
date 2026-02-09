@@ -127,6 +127,7 @@ export default function WorkoutDetailScreen() {
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['workouts'] });
             haptics.success();
+            setIsDirty(false);
             if (router.canGoBack()) {
                 router.back();
             }
@@ -144,6 +145,7 @@ export default function WorkoutDetailScreen() {
         onSuccess: async () => {
             await queryClient.refetchQueries({ queryKey: ['workouts'] });
             haptics.success();
+            setIsDirty(false);
             if (router.canGoBack()) {
                 router.back();
             }
@@ -182,6 +184,7 @@ export default function WorkoutDetailScreen() {
             queryClient.invalidateQueries({ queryKey: ['client-workout-instance', params.clientId] });
             queryClient.invalidateQueries({ queryKey: ['client-training-calendar', params.clientId] });
             haptics.success();
+            setIsDirty(false);
             if (router.canGoBack()) {
                 router.back();
             }

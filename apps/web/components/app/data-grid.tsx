@@ -1098,7 +1098,7 @@ export function DataGrid<T extends Record<string, any>>({
                 </div>
               </Card>
             )}
-            <div className="flex items-center gap-4 flex-1">
+            <div className="flex items-center gap-4 shrink-0">
               {enableSearch && (
                 <div className="relative w-[250px] px-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
@@ -1122,7 +1122,7 @@ export function DataGrid<T extends Record<string, any>>({
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-1 justify-end">
               {filters.map((filter) => {
                 const filterValue = filterValues[filter.id];
                 const filterValueStr = Array.isArray(filterValue)

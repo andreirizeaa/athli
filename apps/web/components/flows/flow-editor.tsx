@@ -519,7 +519,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
         const savedActionNodes = flowNodes.filter((n: Node) => n.type === 'action');
         const savedCheckNodes = flowNodes.filter((n: Node) => n.type === 'check');
 
-        if (savedActionNodes.length > 0) {
+        if (savedActionNodes.length > 0 || savedCheckNodes.length > 0) {
           // Determine correct ordering using edges: follow the chain from trigger → action → ... → end
           const edgeMap = new Map<string, string[]>();
           (flowEdges || []).forEach((e: Edge) => {
@@ -527,8 +527,16 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
             edgeMap.get(e.source)!.push(e.target);
           });
 
+          // Build lookup maps
+          const savedActionMap = new Map(savedActionNodes.map((n: Node) => [n.id, n]));
+          const checkNodeMap = new Map(savedCheckNodes.map((n: Node) => [n.id, n]));
+          const checkActionOption = ACTION_OPTIONS.find((o) => o.id === 'check');
+
           // Walk from trigger through the graph to determine order
+          // Also recreate virtual check action nodes (they aren't saved as action nodes
+          // because buildLogicalGraph skips them, but they must exist in actionNodes)
           const orderedActionIds: string[] = [];
+          const virtualCheckActions = new Map<string, ActionNodeData>();
           const visited = new Set<string>();
           const queue = ['trigger', 'add-action-trigger'];
           while (queue.length > 0) {
@@ -537,8 +545,34 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
             visited.add(current);
 
             // If this is an action node, record it
-            if (savedActionNodes.some((n: Node) => n.id === current)) {
+            if (savedActionMap.has(current)) {
               orderedActionIds.push(current);
+            }
+
+            // If this is a check node, recreate the virtual check action
+            const checkNodeData = checkNodeMap.get(current);
+            if (checkNodeData && checkNodeData.data.repeatActionId && checkActionOption) {
+              const repeatActionId = checkNodeData.data.repeatActionId;
+
+              // Determine branch context from the incoming edge's source node metadata
+              let branch: 'yes' | 'no' | undefined;
+              let parentCheckNodeId: string | undefined;
+              const incomingEdge = (flowEdges || []).find((e: Edge) => e.target === current);
+              if (incomingEdge) {
+                const sourceNode = flowNodes.find((n: Node) => n.id === incomingEdge.source);
+                if (sourceNode?.data?.metadata?.branch) {
+                  branch = sourceNode.data.metadata.branch;
+                  parentCheckNodeId = sourceNode.data.metadata.checkNodeId;
+                }
+              }
+
+              virtualCheckActions.set(repeatActionId, {
+                id: repeatActionId,
+                option: checkActionOption,
+                branch,
+                checkNodeId: parentCheckNodeId,
+              });
+              orderedActionIds.push(repeatActionId);
             }
 
             // Follow outgoing edges
@@ -557,11 +591,13 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
             }
           });
 
-          // Build a map for quick lookup
-          const savedActionMap = new Map(savedActionNodes.map((n: Node) => [n.id, n]));
-
           const restoredActionNodes: ActionNodeData[] = orderedActionIds.map((id) => {
-            const node = savedActionMap.get(id)!;
+            // Check if this is a virtual check action
+            const virtualAction = virtualCheckActions.get(id);
+            if (virtualAction) return virtualAction;
+
+            const node = savedActionMap.get(id);
+            if (!node) return null;
             const d = node.data;
             const actionOption = ACTION_OPTIONS.find((o) => o.id === d.actionOptionId);
             if (!actionOption) return null;
@@ -1799,7 +1835,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
           })()
         }
         hideWaitActions={hideWaitActionsProp ?? isOnboardingMode ?? NON_CHECKABLE_TRIGGERS.includes(selectedTrigger?.id ?? '')}
-        excludeTriggers={!isOnboardingMode && !forcedTriggerId ? ['new-client-signup'] : []}
+        excludeTriggers={!isOnboardingMode && !forcedTriggerId ? ['new-client-signup', 'payment-completed'] : []}
       />
     </div>
   );

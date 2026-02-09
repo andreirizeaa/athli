@@ -55,7 +55,7 @@ export const InviteLinkDialog = ({ open, onOpenChange, uniqueCode }: InviteLinkD
   const [isCopying, setIsCopying] = useState(false);
 
   const getInviteLink = (code: string) => {
-    return `${window.location.origin}/client/invite/${code}`;
+    return `${window.location.origin}/invite/${code}`;
   };
 
   const handleCopyLink = async (onboardingId?: string) => {

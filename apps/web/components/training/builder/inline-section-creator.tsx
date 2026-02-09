@@ -13,7 +13,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { getSectionTypeOptions, type SectionType } from '@/app/training/sections/section-type-utils';
+import { getSectionTypeOptions, type SectionType } from '@/app/(app)/training/sections/section-type-utils';
 
 import { useTranslations } from 'next-intl';
 
