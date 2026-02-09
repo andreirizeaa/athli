@@ -1,7 +1,7 @@
 'use client'
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
 export default function FAQsTwo() {
     const faqItems = [
@@ -37,11 +37,6 @@ export default function FAQsTwo() {
         },
         {
             id: 'item-7',
-            question: 'What integrations does Athli support?',
-            answer: 'Athli integrates with WhatsApp for client messaging, Google Docs and Excel for import/export, and supports connections to popular tools via Zapier. More integrations are added regularly.',
-        },
-        {
-            id: 'item-8',
             question: 'Can I cancel or change my plan at any time?',
             answer: 'Yes. You can upgrade, downgrade, or cancel your subscription at any time from your account settings. Changes take effect at the start of your next billing cycle.',
         },
@@ -73,14 +68,12 @@ export default function FAQsTwo() {
                         ))}
                     </Accordion>
 
-                    <p className="text-muted-foreground mt-6 px-8">
-                        Can't find what you're looking for? Contact our{' '}
-                        <Link
-                            href="#"
-                            className="text-primary font-medium hover:underline">
-                            customer support team
-                        </Link>
-                    </p>
+                    <div className="mt-6 px-8 text-center">
+                        <p className="text-muted-foreground">Can't find what you're looking for?</p>
+                        <a href="mailto:support@athli.io">
+                            <Button className="mt-3">Reach out</Button>
+                        </a>
+                    </div>
                 </div>
             </div>
         </section>

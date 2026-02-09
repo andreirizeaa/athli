@@ -27,7 +27,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Athli - App',
+  title: {
+    default: 'Athli',
+    template: '%s - Athli',
+  },
   description: 'Athli application',
 };
 

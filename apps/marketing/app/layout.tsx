@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Athli - Marketing Site',
+  title: 'Athli',
   description: 'Athli marketing and documentation site',
 };
 

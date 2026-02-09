@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+
 import { useRouter, usePathname } from 'next/navigation';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -117,11 +117,6 @@ export default function SignInPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
-          <div className="flex justify-center">
-            <div className="w-14 h-14 rounded-xl bg-zinc-900 border border-white/20 flex items-center justify-center">
-              <Image src="/icons/athli.png" alt="Athli" width={64} height={64} />
-            </div>
-          </div>
           <h2 className="text-3xl font-bold text-white">Log in to Athli</h2>
           <p className="text-sm text-white/60">
             Don&apos;t have an account?{' '}
@@ -281,13 +276,13 @@ export default function SignInPage() {
         {/* Terms */}
         <div className="text-center text-sm text-white/50">
           By signing in, you agree to our{' '}
-          <Link href="/terms" className="underline hover:text-white/70">
+          <a href={`${process.env.NEXT_PUBLIC_LANDING_PAGE || '/'}/terms-of-use`} target="_blank" rel="noopener noreferrer" className="underline hover:text-white/70">
             Terms
-          </Link>{' '}
+          </a>{' '}
           and{' '}
-          <Link href="/privacy" className="underline hover:text-white/70">
+          <a href={`${process.env.NEXT_PUBLIC_LANDING_PAGE || '/'}/privacy-policy`} target="_blank" rel="noopener noreferrer" className="underline hover:text-white/70">
             Privacy Policy
-          </Link>
+          </a>
           .
         </div>
       </div>

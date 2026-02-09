@@ -702,6 +702,7 @@ export default function FormResponseSessionModal() {
                         >
                           <IconComponent
                             size={20}
+                            color={themeColors.text}
                           />
                         </View>
                         <Text

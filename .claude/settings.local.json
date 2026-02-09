@@ -108,7 +108,10 @@
       "Bash(git -C /Users/andreirizea/abc/app/athli diff --name-only)",
       "Bash(sort:*)",
       "Bash(xargs grep:*)",
-      "Bash(pnpm tsc:*)"
+      "Bash(pnpm tsc:*)",
+      "Bash(sips:*)",
+      "Bash(md5:*)",
+      "WebFetch(domain:shipixen.com)"
     ]
   }
 }

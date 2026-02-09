@@ -58,6 +58,12 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
 
   const { athlete, details, isLoading, error } = useClientProfileContext();
 
+  React.useEffect(() => {
+    if (athlete?.name) {
+      document.title = `${athlete.name} - Athli`;
+    }
+  }, [athlete?.name]);
+
   const tabs = [
     {
       value: 'overview',
