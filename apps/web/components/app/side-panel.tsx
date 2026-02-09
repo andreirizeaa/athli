@@ -38,6 +38,8 @@ type SidePanelProps = {
   onCancel?: () => void;
   /** Text for the cancel button. Defaults to t('general.cancel'). */
   cancelText?: string;
+  /** Content rendered on the left side of the structured footer. */
+  footerLeft?: React.ReactNode;
 };
 
 export const SidePanel = ({
@@ -59,6 +61,7 @@ export const SidePanel = ({
   isDeleting = false,
   onCancel,
   cancelText,
+  footerLeft,
 }: SidePanelProps) => {
   const t = useTranslations();
 
@@ -70,7 +73,9 @@ export const SidePanel = ({
     footerContent = footer;
   } else if (onSave) {
     footerContent = (
-      <div className="flex w-full justify-end gap-2">
+      <div className="flex w-full items-center gap-2">
+        {footerLeft && <div className="flex-1 min-w-0">{footerLeft}</div>}
+        <div className={cn("flex gap-2", !footerLeft && "flex-1 justify-end")}>
         <Button
           type="button"
           variant="outline"
@@ -108,6 +113,7 @@ export const SidePanel = ({
           )}
           {saveText || t('general.save')}
         </Button>
+        </div>
       </div>
     );
   }

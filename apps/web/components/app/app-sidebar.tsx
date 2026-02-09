@@ -23,6 +23,7 @@ import {
   Rocket,
   WandSparkles,
   Zap,
+  CreditCard,
 } from 'lucide-react';
 import { useCoachChecklist } from '@/hooks/use-coach-checklist';
 import {
@@ -89,6 +90,14 @@ export function AppSidebar() {
       href: '/check-ins',
       labelKey: 'sidebar.links.checkIns',
       icon: ClipboardCheck,
+    },
+  ] as const;
+
+  const businessNavItems = [
+    {
+      href: '/business/packages',
+      labelKey: 'sidebar.links.packages',
+      icon: CreditCard,
     },
   ] as const;
 
@@ -202,6 +211,43 @@ export function AppSidebar() {
                 ) {
                   isActive = activePath === href || activePath.startsWith(`${href}/`);
                 }
+                const label = t(item.labelKey);
+
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={label}
+                      className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
+                    >
+                      <Link href={item.href}>
+                        <Icon className="shrink-0" />
+                        <span>{label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup className="pb-0">
+          <div className="flex h-6 items-center px-2">
+            {isCollapsed ? (
+              <div className="mx-auto h-px w-8 bg-sidebar-foreground/70" />
+            ) : (
+              <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
+                {t('sidebar.group.business')}
+              </span>
+            )}
+          </div>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0.5">
+              {businessNavItems.map((item) => {
+                const Icon = item.icon;
+                const href = item.href;
+                const isActive = activePath.startsWith('/business');
                 const label = t(item.labelKey);
 
                 return (

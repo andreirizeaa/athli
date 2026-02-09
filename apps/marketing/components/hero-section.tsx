@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
+import NextLink from 'next/link';
 import {
   ArrowRight,
   ArrowUpIcon,
@@ -28,6 +28,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { useTranslations } from 'next-intl';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
 
@@ -46,52 +47,10 @@ const transitionVariants = {
   },
 };
 
-const suggestionGroups = [
-  {
-    icon: BrainIcon,
-    label: 'Training',
-    highlight: 'Create',
-    items: [
-      'Create a workout plan',
-      'Create a training program',
-      'Create exercise variations',
-      'Create a warm-up routine',
-    ],
-  },
-  {
-    icon: CodeIcon,
-    label: 'Analytics',
-    highlight: 'Analyze',
-    items: [
-      'Analyze client progress',
-      'Analyze training load',
-      'Analyze recovery metrics',
-      'Analyze performance trends',
-    ],
-  },
-  {
-    icon: DribbbleIcon,
-    label: 'Nutrition',
-    highlight: 'Plan',
-    items: [
-      'Plan a meal prep',
-      'Plan macros for cutting',
-      'Plan supplements stack',
-      'Plan hydration strategy',
-    ],
-  },
-  {
-    icon: GlobeIcon,
-    label: 'Research',
-    highlight: 'Research',
-    items: [
-      'Research best practices for hypertrophy',
-      'Research injury prevention',
-      'Research periodization models',
-      'Research recovery protocols',
-    ],
-  },
-];
+const suggestionIcons = [BrainIcon, CodeIcon, DribbbleIcon, GlobeIcon] as const;
+const suggestionKeys = ['training', 'analytics', 'nutrition', 'research'] as const;
+
+type IconId = 'chatgpt' | 'whatsapp' | 'excel' | 'zapier' | 'docs' | 'notion';
 
 function HeroChatPreview() {
   const [activeCategory, setActiveCategory] = useState('');
@@ -100,13 +59,7 @@ function HeroChatPreview() {
   const borderRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [dims, setDims] = React.useState({ w: 0, h: 0, r: 16 });
-
-  const { scrollYProgress: borderProgress } = useScroll({
-    target: borderRef,
-    offset: ['start 0.35', 'center center'],
-  });
-
-  const pathLength = useTransform(borderProgress, [0, 1], [0, 1]);
+  const t = useTranslations('hero');
 
   React.useEffect(() => {
     const el = borderRef.current;
@@ -128,13 +81,10 @@ function HeroChatPreview() {
       .catch((err) => console.error('Failed to load animation:', err));
   }, []);
 
-  const activeCategoryData = suggestionGroups.find((group) => group.label === activeCategory);
+  const activeCategoryData = suggestionKeys.find((key) => key === activeCategory);
   const showCategorySuggestions = activeCategory !== '';
 
   const { w, h, r } = dims;
-  const cx = Math.round(w / 2);
-  const rightPath = w > 0 ? `M ${cx} 0 L ${w - r} 0 A ${r} ${r} 0 0 1 ${w} ${r} L ${w} ${h - r} A ${r} ${r} 0 0 1 ${w - r} ${h} L ${cx - 1} ${h}` : '';
-  const leftPath = w > 0 ? `M ${cx} 0 L ${r} 0 A ${r} ${r} 0 0 0 0 ${r} L 0 ${h - r} A ${r} ${r} 0 0 0 ${r} ${h} L ${cx + 1} ${h}` : '';
 
   return (
     <div ref={borderRef} className="relative mx-auto h-[700px] w-[80%] max-w-[1100px]">
@@ -146,21 +96,37 @@ function HeroChatPreview() {
               <stop offset="100%" stopColor="rgb(165,180,252)" />
             </linearGradient>
           </defs>
-          <motion.path
-            d={rightPath}
+          {/* Trail 1 */}
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
             stroke="url(#border-grad)"
-            strokeWidth="5"
-            strokeLinecap="butt"
-            strokeLinejoin="round"
-            style={{ pathLength }}
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [0, -1] }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
           />
-          <motion.path
-            d={leftPath}
+          {/* Trail 2 */}
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
             stroke="url(#border-grad)"
-            strokeWidth="5"
-            strokeLinecap="butt"
-            strokeLinejoin="round"
-            style={{ pathLength }}
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [-0.5, -1.5] }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
           />
         </svg>
       )}
@@ -173,9 +139,9 @@ function HeroChatPreview() {
           </div>
 
           <h1 className="text-center text-2xl leading-normal font-medium lg:text-4xl">
-            Hey Coach <br /> How Can I{' '}
+            {t('chatGreeting')} <br /> {t('chatAssist')}{' '}
             <span className="bg-gradient-to-r from-purple-400 to-indigo-300 bg-clip-text text-transparent">
-              Assist You Today?
+              {t('chatAssistHighlight')}
             </span>
           </h1>
         </div>
@@ -184,7 +150,7 @@ function HeroChatPreview() {
         <div className="bg-primary/10 w-full rounded-2xl p-1">
           <div className="bg-background rounded-2xl w-full overflow-hidden shadow-none">
             <div className="min-h-[44px] w-full resize-none border-none bg-transparent p-4 text-sm text-muted-foreground">
-              {prompt || 'Ask me anything...'}
+              {prompt || t('chatPlaceholder')}
             </div>
 
             <div className="flex items-center justify-between gap-2 p-3">
@@ -194,7 +160,7 @@ function HeroChatPreview() {
                 </div>
                 <Button variant="outline" size="sm" className="rounded-full gap-2">
                   <UserIcon className="size-4" />
-                  <span className="hidden lg:inline">Generic</span>
+                  <span className="hidden lg:inline">{t('generic')}</span>
                   <ChevronsUpDownIcon className="size-3.5 opacity-50" />
                 </Button>
               </div>
@@ -214,10 +180,10 @@ function HeroChatPreview() {
         {/* Suggestions */}
         <div className="relative flex w-full flex-col items-center justify-center space-y-2">
           <div className="h-[70px] w-full">
-            {showCategorySuggestions ? (
+            {showCategorySuggestions && activeCategoryData ? (
               <div className="flex w-full flex-col space-y-1">
-                {activeCategoryData?.items.map((suggestion) => {
-                  const highlight = activeCategoryData.highlight;
+                {(t.raw(`suggestions.${activeCategoryData}.items`) as string[]).map((suggestion) => {
+                  const highlight = t(`suggestions.${activeCategoryData}.highlight`);
                   const lower = suggestion.toLowerCase();
                   const hlLower = highlight.toLowerCase();
                   const idx = lower.indexOf(hlLower);
@@ -252,21 +218,24 @@ function HeroChatPreview() {
               </div>
             ) : (
               <div className="relative flex w-full flex-wrap items-stretch justify-center gap-2">
-                {suggestionGroups.map((suggestion) => (
-                  <Button
-                    key={suggestion.label}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setActiveCategory(suggestion.label);
-                      setPrompt('');
-                    }}
-                    className="rounded-full capitalize"
-                  >
-                    {suggestion.icon && <suggestion.icon className="size-3.5" />}
-                    {suggestion.label}
-                  </Button>
-                ))}
+                {suggestionKeys.map((key, i) => {
+                  const Icon = suggestionIcons[i];
+                  return (
+                    <Button
+                      key={key}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setActiveCategory(key);
+                        setPrompt('');
+                      }}
+                      className="rounded-full capitalize"
+                    >
+                      <Icon className="size-3.5" />
+                      {t(`suggestions.${key}.label`)}
+                    </Button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -277,40 +246,12 @@ function HeroChatPreview() {
   );
 }
 
-type IconId = 'chatgpt' | 'whatsapp' | 'excel' | 'zapier' | 'docs' | 'notion';
-
-const iconDialogs: Record<IconId, { title: string; description: string }> = {
-  chatgpt: {
-    title: 'No More Generic AI',
-    description: 'ChatGPT doesn\'t know your clients, their goals, or their history. Our AI assistant is built specifically for coaching. It plans periodised programs, tracks client progress, generates workouts, and gives evidence-based answers using your actual client data. One conversation replaces hours of manual work.',
-  },
-  excel: {
-    title: 'No More Spreadsheets',
-    description: 'Tracking clients in Excel means scattered data, broken formulas, and zero automation. Athli centralises every client\'s profile, metrics, check-ins, and progress in one platform. Searchable, always up to date, and accessible from any device. Your data finally works for you, not against you.',
-  },
-  notion: {
-    title: 'No More Notion Workouts',
-    description: 'Copying and pasting workouts between Notion pages doesn\'t scale. Athli gives you a library of 1,743 exercises with built-in video demos, drag-and-drop program building, and one-click assignment to any client. Build better programs in a fraction of the time.',
-  },
-  zapier: {
-    title: 'No More Manual Follow-ups',
-    description: 'You shouldn\'t need Zapier to keep clients accountable. Athli has built-in automation flows that trigger reminders, follow-ups, and check-in prompts based on client activity. Set it once and your clients stay on track without you chasing them.',
-  },
-  whatsapp: {
-    title: 'No More App Switching',
-    description: 'Managing clients across WhatsApp, email, and spreadsheets means things get missed. Athli puts communication, programming, check-ins, and progress tracking in one place for both you and your clients. One app, zero context switching.',
-  },
-  docs: {
-    title: 'No More Google Drive Chaos',
-    description: 'Digging through shared drives for client files wastes your time. Athli\'s Files feature lets you store contracts, meal plans, progress photos, and any resource with unlimited storage, organised per client and accessible instantly.',
-  },
-};
-
 export default function HeroSection() {
   const [entranceDone, setEntranceDone] = React.useState(false);
   const [activeIcon, setActiveIcon] = React.useState<IconId | null>(null);
   const sectionRef = React.useRef<HTMLDivElement>(null);
   const chatRef = React.useRef<HTMLDivElement>(null);
+  const t = useTranslations('hero');
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ['start start', 'end start'],
@@ -402,12 +343,12 @@ export default function HeroSection() {
 
               <div className="text-center sm:mx-auto lg:mr-auto lg:mt-0">
                 <AnimatedGroup variants={transitionVariants}>
-                  <Link
+                  <NextLink
                     href={`${APP_URL}/auth/register`}
                     className="hover:bg-background dark:hover:border-t-border bg-muted group mx-auto flex w-fit items-center gap-4 rounded-full border p-1 pl-4 shadow-md shadow-zinc-950/5 transition-colors duration-300 dark:border-t-white/5 dark:shadow-zinc-950"
                   >
                     <span className="text-foreground text-sm">
-                      Introducing our AI-Powered Coaching Assistant
+                      {t('pill')}
                     </span>
                     <span className="dark:border-background block h-4 w-0.5 border-l bg-white dark:bg-zinc-700"></span>
 
@@ -421,7 +362,7 @@ export default function HeroSection() {
                         </span>
                       </div>
                     </div>
-                  </Link>
+                  </NextLink>
                 </AnimatedGroup>
 
                 <TextEffect
@@ -430,7 +371,7 @@ export default function HeroSection() {
                   as="h1"
                   className="mx-auto max-w-4xl mt-4 text-balance text-5xl max-md:font-semibold md:text-7xl lg:mt-6 xl:text-[5.25rem]"
                 >
-                  Scale Your Coaching Business with Athli
+                  {t('heading')}
                 </TextEffect>
                 <TextEffect
                   per="line"
@@ -440,7 +381,7 @@ export default function HeroSection() {
                   as="p"
                   className="mx-auto mt-8 max-w-2xl text-balance text-lg"
                 >
-                  An all-in-one app letting you provide the best experience to your clients regardless of location
+                  {t('subheading')}
                 </TextEffect>
 
                 <AnimatedGroup
@@ -468,18 +409,18 @@ export default function HeroSection() {
                       onClick={() => chatRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                     >
                       <SparklesIcon className="size-4" />
-                      <span className="text-nowrap">Try our AI</span>
+                      <span className="text-nowrap">{t('tryAi')}</span>
                     </Button>
                   </div>
-                  <Link key={1} href={`${APP_URL}/auth/register`}>
+                  <NextLink key={1} href={`${APP_URL}/auth/register`}>
                     <Button
                       size="lg"
                       className="h-[calc(2.5rem+4px)] rounded-xl px-5 text-base"
                     >
-                      <span className="text-nowrap">Grow Today</span>
+                      <span className="text-nowrap">{t('growToday')}</span>
                       <ArrowRight className="size-4" />
                     </Button>
-                  </Link>
+                  </NextLink>
                 </AnimatedGroup>
               </div>
             </div>
@@ -517,11 +458,11 @@ export default function HeroSection() {
                   alt=""
                   className={cn('size-10 object-contain', (activeIcon === 'chatgpt' || activeIcon === 'notion') && 'dark:invert')}
                 />
-                <DialogTitle>{iconDialogs[activeIcon].title}</DialogTitle>
+                <DialogTitle>{t(`iconDialogs.${activeIcon}.title`)}</DialogTitle>
               </div>
             </DialogHeader>
             <DialogDescription className="text-sm leading-relaxed">
-              {iconDialogs[activeIcon].description}
+              {t(`iconDialogs.${activeIcon}.description`)}
             </DialogDescription>
           </DialogContent>
         )}

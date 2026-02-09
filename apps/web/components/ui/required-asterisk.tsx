@@ -7,7 +7,7 @@ interface RequiredAsteriskProps {
 
 export const RequiredAsterisk = ({ className }: RequiredAsteriskProps) => {
   return (
-    <span className={cn('text-destructive ml-1 mb-1 inline-block', className)}>*</span>
+    <span className={cn('text-destructive ml-1 -mb-0.5 inline-block', className)}>*</span>
   );
 };
 

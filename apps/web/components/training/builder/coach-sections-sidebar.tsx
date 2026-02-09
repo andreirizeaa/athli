@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { useTrainingData } from '@/app/training/training-data-context';
+import { useTrainingData } from '@/app/(app)/training/training-data-context';
 import { cn } from '@/lib/general/utils';
 import type { Section } from '@/api/coach/coach-section-service';
 
