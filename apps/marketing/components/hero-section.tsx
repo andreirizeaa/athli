@@ -103,7 +103,7 @@ function HeroChatPreview() {
 
   const { scrollYProgress: borderProgress } = useScroll({
     target: borderRef,
-    offset: ['start 0.7', 'center center'],
+    offset: ['start 0.35', 'center center'],
   });
 
   const pathLength = useTransform(borderProgress, [0, 1], [0, 1]);
