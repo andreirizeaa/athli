@@ -508,7 +508,7 @@ const MetricsPage = () => {
           open={isEditMetricOpen}
           onOpenChange={setIsEditMetricOpen}
           metric={editingMetric as any}
-          onSave={async (name, unit, description, scheduleConfig, cronExpression) => {
+          onSave={async (name, unit, description, _existingMetricId, scheduleConfig, cronExpression) => {
             await handleSaveMetric(name, unit, description, undefined, scheduleConfig, cronExpression);
           }}
           onDelete={async (metricId) => {

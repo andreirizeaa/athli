@@ -29,11 +29,13 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
+          storageKey="athli-marketing-theme"
         >
-          <IntlProvider>{children}</IntlProvider>
+          <div className="pointer-events-none fixed inset-0 z-0 opacity-40" style={{ backgroundImage: 'linear-gradient(to right, var(--color-border) 1px, transparent 1px), linear-gradient(to bottom, var(--color-border) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
+          <IntlProvider><div className="relative z-10">{children}</div></IntlProvider>
         </ThemeProvider>
       </body>
     </html>

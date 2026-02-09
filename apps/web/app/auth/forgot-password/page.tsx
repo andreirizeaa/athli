@@ -209,7 +209,7 @@ export default function ForgotPasswordPage() {
       <div className="space-y-6">
         <div className="text-center space-y-4">
           <div className="flex justify-center">
-            <div className="w-14 h-14 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-xl bg-zinc-900 border border-white/20 flex items-center justify-center">
               <Image src="/icons/athli.png" alt="Athli" width={64} height={64} />
             </div>
           </div>
@@ -243,7 +243,7 @@ export default function ForgotPasswordPage() {
                         id="email"
                         type="email"
                         autoComplete="email"
-                        className="w-full h-12 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
+                        className="w-full h-12 rounded-xl bg-zinc-900 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
                         placeholder="you@example.com"
                         disabled={isSubmitting}
                       />
@@ -314,7 +314,7 @@ export default function ForgotPasswordPage() {
                 setProvider(null);
                 form.reset();
               }}
-              className="w-full h-12 rounded-xl !bg-white/10 !border-white/20 !text-white hover:!bg-white hover:!text-black hover:!border-white transition-all"
+              className="w-full h-12 rounded-xl !bg-zinc-900 !border-white/20 !text-white hover:!bg-white hover:!text-black hover:!border-white transition-all"
             >
               Use Different Email
             </Button>
@@ -369,7 +369,7 @@ export default function ForgotPasswordPage() {
                 setOtp('');
                 form.reset();
               }}
-              className="w-full h-12 rounded-xl !bg-white/10 !border-white/20 !text-white hover:!bg-white hover:!text-black hover:!border-white transition-all"
+              className="w-full h-12 rounded-xl !bg-zinc-900 !border-white/20 !text-white hover:!bg-white hover:!text-black hover:!border-white transition-all"
             >
               Use Different Email
             </Button>
@@ -391,7 +391,7 @@ export default function ForgotPasswordPage() {
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="new-password"
                     required
-                    className="w-full h-12 pr-10 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
+                    className="w-full h-12 pr-10 rounded-xl bg-zinc-900 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
                     placeholder="Create a new password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
@@ -427,7 +427,7 @@ export default function ForgotPasswordPage() {
                     type={showConfirmPassword ? 'text' : 'password'}
                     autoComplete="new-password"
                     required
-                    className="w-full h-12 pr-10 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
+                    className="w-full h-12 pr-10 rounded-xl bg-zinc-900 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
                     placeholder="Confirm your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}

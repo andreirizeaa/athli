@@ -111,7 +111,7 @@ export default function ResetPasswordPage() {
       <div className="space-y-6">
         <div className="text-center space-y-4">
           <div className="flex justify-center">
-            <div className="w-14 h-14 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-xl bg-zinc-900 border border-white/20 flex items-center justify-center">
               <Image src="/icons/athli.png" alt="Athli" width={64} height={64} />
             </div>
           </div>
@@ -134,7 +134,7 @@ export default function ResetPasswordPage() {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  className="w-full h-12 pr-10 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
+                  className="w-full h-12 pr-10 rounded-xl bg-zinc-900 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
                   placeholder="Create a new password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -170,7 +170,7 @@ export default function ResetPasswordPage() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  className="w-full h-12 pr-10 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
+                  className="w-full h-12 pr-10 rounded-xl bg-zinc-900 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
                   placeholder="Confirm your password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}

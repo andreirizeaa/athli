@@ -11,17 +11,15 @@ export function AuthLayout({ children, showHomeButton = true }: AuthLayoutProps)
   const landingPageUrl = process.env.NEXT_PUBLIC_LANDING_PAGE || '/';
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-zinc-950">
-      {/* Background Image */}
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-black">
+      {/* Grid Background */}
       <div
-        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+        className="absolute inset-0 z-0 opacity-40"
         style={{
-          backgroundImage: 'url(/backgrounds/auth.jpg)',
+          backgroundImage: 'linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)',
+          backgroundSize: '60px 60px',
         }}
       />
-
-      {/* Dark Overlay */}
-      <div className="absolute inset-0 z-0 bg-black/40" />
 
       {/* Home Button */}
       {showHomeButton && (
@@ -30,7 +28,7 @@ export function AuthLayout({ children, showHomeButton = true }: AuthLayoutProps)
             <Button
               variant="outline"
               size="sm"
-              className="!bg-white/10 !border-white/20 !text-white hover:!bg-white hover:!text-black hover:!border-white"
+              className="!bg-zinc-900 !border-white/20 !text-white hover:!bg-white hover:!text-black hover:!border-white"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Home

@@ -146,7 +146,7 @@ export default function VerifyEmailPage() {
       <div className="space-y-6">
         <div className="text-center space-y-4">
           <div className="flex justify-center">
-            <div className="w-14 h-14 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-xl bg-zinc-900 border border-white/20 flex items-center justify-center">
               <Image src="/icons/athli.png" alt="Athli" width={64} height={64} />
             </div>
           </div>

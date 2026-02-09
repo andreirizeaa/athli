@@ -1,17 +1,18 @@
 import HeroSection from '@/components/hero-section';
-import Features from '@/components/features-4';
 import Footer from '@/components/footer';
-import FAQsTwo from '@/components/faqs-2';
 import Pricing from '@/components/pricing';
-import FeaturesSection from '@/components/features-7';
+import FAQsTwo from '@/components/faqs-2';
+import CallToAction from '@/components/call-to-action';
+import FeaturesSection from '@/components/features-6';
 
 export default function Home() {
   return (
     <>
       <HeroSection />
-      <Features />
       <FeaturesSection />
+      <Pricing />
       <FAQsTwo />
+      <CallToAction />
       <Footer />
     </>
   );

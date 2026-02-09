@@ -32,7 +32,7 @@ type AddAthleteFormValues = {
   fullName: string;
   email: string;
   coachingType: 'online' | 'in-person' | 'hybrid';
-  onboardingId: string;
+  onboardingId?: string;
 };
 
 interface AddClientSidePanelProps {
