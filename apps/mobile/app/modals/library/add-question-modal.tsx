@@ -333,7 +333,9 @@ export default function AddQuestionModal() {
     // Pass the question to the parent via callback (no API call)
     haptics.success();
     triggerQuestionSelect(newQuestion);
-    handleClose();
+    if (router.canGoBack()) {
+      router.back();
+    }
   }, [canSave, questionText, isRequired, selectedFormat, options, mediaCount, selectedMetricId, selectedMetricName, triggerQuestionSelect, handleClose, isEditMode, params.questionId]);
 
   const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;

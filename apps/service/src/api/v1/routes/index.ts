@@ -12,6 +12,7 @@ import { settingsRouter } from '../settings/settings.routes';
 import searchRouter from '../search';
 import { featureRequestsRouter } from '../feature-requests/feature-requests.routes';
 import { notificationsRouter } from '../notifications/notifications.routes';
+import { paymentsRouter } from '../payments/payments.routes';
 
 export const v1Router = Router();
 
@@ -30,3 +31,4 @@ v1Router.use('/settings', settingsRouter);
 v1Router.use('/search', searchRouter);
 v1Router.use('/feature-requests', featureRequestsRouter);
 v1Router.use('/notifications', notificationsRouter);
+v1Router.use('/payments', paymentsRouter);

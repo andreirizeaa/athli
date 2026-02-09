@@ -66,6 +66,16 @@ export const TRIGGER_OPTIONS: TriggerOption[] = [
     name: 'Inactive for 7 days',
     icon: UserX,
   },
+  {
+    id: 'new-client-signup',
+    name: 'New client sign up',
+    icon: UserPlus,
+  },
+  {
+    id: 'payment-completed',
+    name: 'Payment completed',
+    icon: CheckCircle,
+  },
 ];
 
 export const GENERAL_ACTION_OPTIONS: ActionOption[] = [

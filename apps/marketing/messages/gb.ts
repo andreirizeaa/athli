@@ -1,0 +1,438 @@
+const messages = {
+  nav: {
+    features: 'Features',
+    pricing: 'Pricing',
+    mobileApp: 'Mobile App',
+    coach: 'Coach',
+    client: 'Client',
+    coachHeadline: 'Your full coaching toolkit on mobile',
+    clientHeadline: "Your clients' main app experience",
+    logIn: 'Log in',
+    signUp: 'Sign up',
+    coachForFree: 'Coach for Free',
+    coachApp: 'Coach App',
+    clientApp: 'Client App',
+  },
+  hero: {
+    pill: 'Train your clients for free',
+    heading: 'Scale Your Coaching Business with Athli',
+    subheading: 'An all-in-one app letting you provide the best experience to your clients regardless of location',
+    tryAi: 'Try our AI',
+    growToday: 'Grow Today',
+    chatGreeting: 'Hey Coach',
+    chatAssist: 'How Can I',
+    chatAssistHighlight: 'Assist You Today?',
+    chatPlaceholder: 'Ask me anything...',
+    generic: 'Generic',
+    suggestions: {
+      training: {
+        label: 'Training',
+        highlight: 'Create',
+        items: [
+          'Create a workout plan',
+          'Create a training program',
+          'Create exercise variations',
+          'Create a warm-up routine',
+        ],
+      },
+      analytics: {
+        label: 'Analytics',
+        highlight: 'Analyze',
+        items: [
+          'Analyze client progress',
+          'Analyze training load',
+          'Analyze recovery metrics',
+          'Analyze performance trends',
+        ],
+      },
+      nutrition: {
+        label: 'Nutrition',
+        highlight: 'Plan',
+        items: [
+          'Plan a meal prep',
+          'Plan macros for cutting',
+          'Plan supplements stack',
+          'Plan hydration strategy',
+        ],
+      },
+      research: {
+        label: 'Research',
+        highlight: 'Research',
+        items: [
+          'Research best practices for hypertrophy',
+          'Research injury prevention',
+          'Research periodization models',
+          'Research recovery protocols',
+        ],
+      },
+    },
+    iconDialogs: {
+      chatgpt: {
+        title: 'No More Generic AI',
+        description: "ChatGPT doesn't know your clients, their goals, or their history. Our AI assistant is built specifically for coaching. It plans periodised programs, tracks client progress, generates workouts, and gives evidence-based answers using your actual client data. One conversation replaces hours of manual work.",
+      },
+      excel: {
+        title: 'No More Spreadsheets',
+        description: "Tracking clients in Excel means scattered data, broken formulas, and zero automation. Athli centralises every client's profile, metrics, check-ins, and progress in one platform. Searchable, always up to date, and accessible from any device. Your data finally works for you, not against you.",
+      },
+      notion: {
+        title: 'No More Notion Workouts',
+        description: "Copying and pasting workouts between Notion pages doesn't scale. Athli gives you a library of 1,743 exercises with built-in video demos, drag-and-drop program building, and one-click assignment to any client. Build better programs in a fraction of the time.",
+      },
+      zapier: {
+        title: 'No More Manual Follow-ups',
+        description: "You shouldn't need Zapier to keep clients accountable. Athli has built-in automation flows that trigger reminders, follow-ups, and check-in prompts based on client activity. Set it once and your clients stay on track without you chasing them.",
+      },
+      whatsapp: {
+        title: 'No More App Switching',
+        description: 'Managing clients across WhatsApp, email, and spreadsheets means things get missed. Athli puts communication, programming, check-ins, and progress tracking in one place for both you and your clients. One app, zero context switching.',
+      },
+      docs: {
+        title: 'No More Google Drive Chaos',
+        description: "Digging through shared drives for client files wastes your time. Athli's Files feature lets you store contracts, meal plans, progress photos, and any resource with unlimited storage, organised per client and accessible instantly.",
+      },
+    },
+  },
+  features: {
+    sectionTitle: 'Our features',
+    sectionSubtitle: 'Keep your clients accountable and simplify your business',
+    flows: {
+      label: 'Flows',
+      headline: 'Automated accountability, beyond just check-ins',
+      description: "Set up custom flows that trigger automatically when clients fall behind. Whether it's a missed session, an overdue check-in, or a stalled habit, predefined automations step in so nothing slips through the cracks.",
+      highlights: ['Custom trigger conditions', 'Predefined automated sequences', 'Keeps clients on track without manual follow-up'],
+      pageTitle: 'Flows that Keep Clients Accountable',
+      pageSubtitle: 'Automate follow-ups and nudges so no client falls through the cracks. Set conditions, define actions, and let Athli handle the rest.',
+      benefits: [
+        { title: 'Trigger on Any Condition', description: 'Missed a session? Skipped a check-in? Define the conditions that matter and Athli will automatically respond with the right action.' },
+        { title: 'Predefined Action Sequences', description: 'Build multi-step flows with messages, reminders, and tasks that fire in order, keeping your clients engaged without you lifting a finger.' },
+        { title: 'Scale Without Losing the Personal Touch', description: 'Manage 10 or 100 clients with the same level of care. Automated flows handle the follow-up so you can focus on coaching.' },
+      ],
+    },
+    forms: {
+      label: 'Forms',
+      headline: 'Fully customizable forms that feed your data',
+      description: 'Build forms tailored to any question you need answered. Responses connect directly to client metrics and progress photos, so every submission automatically updates their profile. You design the questions, and your clients fill them in on schedule.',
+      highlights: ['Connect responses to metrics and progress photos', 'Automated submission schedules', 'Coach review dashboard for all responses'],
+      pageTitle: 'Forms That Feed Your Coaching Data',
+      pageSubtitle: 'Design custom check-in forms, connect responses to metrics and progress photos, and review everything from one dashboard.',
+      benefits: [
+        { title: 'Connect to Metrics Automatically', description: 'Link form fields directly to client metrics. Every response updates their profile instantly, no manual data entry required.' },
+        { title: 'Scheduled Submissions', description: 'Set submission schedules so clients fill in forms on time. Daily, weekly, or custom, you decide the cadence.' },
+        { title: 'Review Everything in One Place', description: 'All form responses land in your coach dashboard. Quickly scan, compare, and act on what your clients report.' },
+      ],
+    },
+    inbox: {
+      label: 'Inbox',
+      headline: 'Message clients with their full profile in view',
+      description: 'A built-in inbox with a client power panel right alongside the conversation. See their metrics, progress, and profile without switching screens, so you can give informed, contextual advice without ever leaving the chat.',
+      highlights: ['Client profile panel beside every conversation', 'Metrics and progress at a glance', 'Everything in one window'],
+      pageTitle: 'An Inbox Built for Coaching',
+      pageSubtitle: "Message your clients with their full profile, metrics, and progress visible right beside the conversation. Context-rich coaching, no tab-switching.",
+      benefits: [
+        { title: 'Client Power Panel', description: "See your client's metrics, progress photos, and profile details right alongside the conversation, no need to switch screens." },
+        { title: 'Contextual Coaching', description: 'Give better advice because you always have the full picture. Reference recent check-ins, training data, and trends in real time.' },
+        { title: 'Everything in One Window', description: 'Stop juggling tabs and apps. Your inbox, client data, and messaging all live in one place.' },
+      ],
+    },
+    metrics: {
+      label: 'Metrics',
+      headline: 'Track any metric that matters to you',
+      description: 'Define and track any metric, from body measurements to sleep quality, energy levels, or anything unique to your coaching method. Every metric is fully customizable, giving you the data you need to make better decisions for your clients.',
+      highlights: ['Define unlimited custom metrics', 'Track anything relevant to your coaching', 'Clear visualizations over time'],
+      pageTitle: 'Metrics Tailored to Your Method',
+      pageSubtitle: 'Define and track any metric, body measurements, sleep, energy, or anything unique to your coaching. Fully customizable, beautifully visualized.',
+      benefits: [
+        { title: 'Define Unlimited Metrics', description: 'Create metrics for anything you want to track. Body weight, body fat, sleep hours, energy levels, if it matters, you can measure it.' },
+        { title: 'Beautiful Visualizations', description: 'See trends over time with clear, easy-to-read charts. Spot patterns, celebrate progress, and adjust plans based on real data.' },
+        { title: 'Data-Driven Decisions', description: 'Stop guessing. Use real client data to inform your programming, nutrition advice, and coaching conversations.' },
+      ],
+    },
+    progress: {
+      label: 'Progress',
+      headline: 'Detailed tracking across every exercise and variant',
+      description: "Every set, rep, and variation is tracked and clearly presented. See detailed performance data for all exercise types, compare progress across sessions, and identify trends so you and your clients always know what's improving.",
+      highlights: ['Track all exercise types and variants', 'Session-by-session comparisons', 'Clear progress visualizations'],
+      pageTitle: 'Progress Tracking That Shows the Full Picture',
+      pageSubtitle: 'Every set, rep, and variation tracked and visualized. Compare sessions, spot trends, and show your clients exactly how far they have come.',
+      benefits: [
+        { title: 'Every Rep Accounted For', description: 'Track sets, reps, weight, tempo, RPE, and more for every exercise type. Nothing gets missed.' },
+        { title: 'Session Comparisons', description: 'Compare performance across sessions side by side. See exactly what improved and where to push harder.' },
+        { title: 'Visual Progress Over Time', description: "Clear charts and timelines that make progress undeniable. Great for client motivation and showing the value of your coaching." },
+      ],
+    },
+    training: {
+      label: 'Training',
+      headline: 'Plan everything from one calendar view',
+      description: 'A clear, drag-and-drop calendar where you can plan, copy, and rearrange workouts with ease. View past sessions and future plans side by side, so programming an entire training block takes minutes, not hours.',
+      highlights: ['Drag-and-drop calendar', 'Copy and reuse workouts across days', 'View past and future sessions in one place'],
+      pageTitle: 'Training Planning Made Simple',
+      pageSubtitle: 'A drag-and-drop calendar where you can plan, copy, and rearrange workouts in minutes. Program entire training blocks with ease.',
+      benefits: [
+        { title: 'Drag-and-Drop Calendar', description: 'Move, copy, and rearrange workouts visually. Planning a full week or month of training has never been faster.' },
+        { title: 'Reuse and Repeat', description: 'Copy workouts across days, weeks, or clients. Build once, deploy many times, saving you hours every week.' },
+        { title: 'Past and Future in One View', description: 'See completed sessions and upcoming plans side by side. Adjust programming based on what actually happened.' },
+      ],
+    },
+    workouts: {
+      label: 'Workouts',
+      headline: 'Over 1,700 exercises, fully customizable',
+      description: 'Access an extensive library of 1,734 exercises and build workouts exactly how you want. Every section type is supported, and every detail is fully customizable to match your programming style.',
+      highlights: ['1,734 exercises built in', 'AMRAPs, EMOMs, tabatas, HIITs, and circuits', 'Fully customizable sections and structure'],
+      pageTitle: 'Workouts Built Your Way',
+      pageSubtitle: 'Access 1,734 exercises and build workouts with full control. AMRAPs, EMOMs, circuits, supersets, every section type, fully customizable.',
+      benefits: [
+        { title: '1,734 Exercises Built In', description: 'A comprehensive exercise library with videos, instructions, and muscle group tags. Find what you need instantly.' },
+        { title: 'Every Section Type Supported', description: 'Build workouts with AMRAPs, EMOMs, tabatas, HIITs, circuits, supersets, and more. Structure sessions exactly how you coach.' },
+        { title: 'Fully Customizable', description: 'Control every detail, sets, reps, rest, tempo, RPE, notes. Your workouts, your way, with no compromises.' },
+      ],
+    },
+  },
+  pricing: {
+    sectionTitle: 'Pricing that Scales with You',
+    sectionSubtitle: 'Start free, upgrade as you grow. Simple plans built for coaches at every stage.',
+    perEditor: 'Per editor',
+    getStarted: 'Get Started',
+    popular: 'Popular',
+    free: {
+      name: 'Free',
+      price: '$0 / mo',
+      features: ['Basic Analytics Dashboard', '5GB Cloud Storage', 'Email and Chat Support'],
+    },
+    pro: {
+      name: 'Pro',
+      price: '$19 / mo',
+      features: ['Everything in Free Plan', '5GB Cloud Storage', 'Email and Chat Support', 'Access to Community Forum', 'Single User Access', 'Access to Basic Templates', 'Mobile App Access', '1 Custom Report Per Month', 'Monthly Product Updates', 'Standard Security Features'],
+    },
+    startup: {
+      name: 'Startup',
+      price: '$29 / mo',
+      features: ['Everything in Pro Plan', '5GB Cloud Storage', 'Email and Chat Support'],
+    },
+  },
+  pricingComparison: {
+    title: 'Compare Plans in Detail',
+    subtitle: 'See exactly what you get at every tier.',
+    featuresHeader: 'Features',
+    sections: [
+      {
+        title: 'AI & Automation',
+        features: ['AI Coaching Assistant', 'Automation Flows', 'Custom Onboarding Flows'],
+      },
+      {
+        title: 'Training & Programming',
+        features: ['Workout Builder', 'Training Calendar', 'Exercise Library (1,700+)', 'Advanced Sections (AMRAPs, EMOMs, Circuits)'],
+      },
+      {
+        title: 'Client Management',
+        features: ['Client Profiles', 'Progress Photos & Metrics', 'Custom Questionnaires', 'Habit Tracking'],
+      },
+      {
+        title: 'Accountability & Data',
+        features: ['Scheduled Check-ins', 'Custom Forms', 'Detailed Progress Analytics'],
+      },
+      {
+        title: 'Communication',
+        features: ['Built-in Inbox', 'Client Power Panel'],
+      },
+      {
+        title: 'Platform',
+        features: ['Payment Packages', 'File & Resource Storage', 'Priority Support'],
+      },
+    ],
+  },
+  faqs: {
+    sectionTitle: 'Frequently Asked Questions',
+    sectionSubtitle: 'Discover quick and comprehensive answers to common questions about our platform, services, and features.',
+    cantFind: "Can't find what you're looking for?",
+    reachOut: 'Reach out',
+    items: [
+      { question: 'How many clients can I manage on Athli?', answer: 'There is no hard limit. Athli is built to scale with your business, whether you coach 5 clients or 500. Your plan determines the number of active client slots available.' },
+      { question: 'What does the AI assistant actually do?', answer: 'It helps you create workout programs, meal plans, and training templates in seconds. You can also use it to analyse client progress, generate exercise variations, and draft check-in responses, all from a single chat interface.' },
+      { question: 'Can my clients use the app too?', answer: 'Yes. Clients get their own mobile app where they can view programs, log workouts, submit check-ins, complete questionnaires, and communicate with you directly.' },
+      { question: 'How do client check-ins work?', answer: 'You configure a check-in schedule and your clients receive reminders to submit updates including progress photos, measurements, and notes. All submissions appear in your dashboard for easy review.' },
+      { question: 'Can I import my existing clients and programs?', answer: 'Yes. You can bulk-invite clients via email and import existing training programs from spreadsheets. Our onboarding flow guides you through the entire setup.' },
+      { question: "Is my data and my clients' data secure?", answer: 'Absolutely. All data is encrypted in transit and at rest. We use industry-standard authentication and never share your data with third parties. You own your data completely.' },
+      { question: 'Can I cancel or change my plan at any time?', answer: 'Yes. You can upgrade, downgrade, or cancel your subscription at any time from your account settings. Changes take effect at the start of your next billing cycle.' },
+    ],
+  },
+  cta: {
+    title: 'Grow Your Business Today',
+    subtitle: 'Give your clients the best experience and keep them accountable, all from one platform.',
+    button: 'Get Started for Free',
+  },
+  mobileApps: {
+    title: 'Mobile Apps',
+    description: 'Everything you can do on the web, you can do on mobile. Both the coach and client apps are built to be fast, modern, and intuitive, so managing your business or following your program feels effortless from anywhere.',
+    coach: 'Coach',
+    client: 'Client',
+  },
+  mobileCoach: {
+    appName: 'Coaches',
+    tagline: 'Your full coaching toolkit, in your pocket',
+    description: 'Manage clients, programme training, review workouts, and communicate, all from one mobile app built specifically for coaches.',
+    getAppTitle: 'Get the Coach App Today',
+    getAppSubtitle: 'Available on iOS and Android. Free to get started.',
+    features: {
+      'workout-builder': {
+        label: 'Workout Builder',
+        headline: '1,700+ exercises at your fingertips',
+        description: 'Build workouts exactly how you want them. Every section type is supported, from AMRAPs to supersets to circuits. Search the full exercise library, add your own, and customise every detail to match your programming style.',
+        highlights: ['AMRAPs, EMOMs, circuits & more', 'Full exercise library with demos', 'Fully customisable structure'],
+      },
+      training: {
+        label: 'Training',
+        headline: 'Program entire blocks from your phone',
+        description: 'A visual training calendar that makes programming effortless. View past sessions, plan future workouts, and rearrange everything on the fly. Build an entire week in minutes, right from your phone.',
+        highlights: ['Visual calendar overview', 'Copy and reuse sessions', 'Plan weeks in minutes'],
+      },
+      'review-workouts': {
+        label: 'Review',
+        headline: 'See exactly what your clients did',
+        description: "Every set, rep, and note from your client's session lands directly in your feed. Review completed workouts, spot missed exercises, and give targeted feedback, all from one screen.",
+        highlights: ['Set-by-set session breakdowns', 'Client notes and feedback', 'Instant post-workout review'],
+      },
+      'manage-client': {
+        label: 'Manage Client',
+        headline: 'Complete client profiles, always current',
+        description: 'Everything you need to know about a client, in one place. Metrics, progress photos, training history, habits, and forms, all updating in real time. Make better coaching decisions with the full picture.',
+        highlights: ['Centralised client data', 'Real-time metric updates', 'Progress photos and history'],
+      },
+      habits: {
+        label: 'Habits & Metrics',
+        headline: 'Build accountability beyond the gym',
+        description: "Assign daily habits, track custom metrics, and monitor adherence from anywhere. Whether it's hydration, sleep, body weight, or energy levels, you'll see who's consistent and who needs a nudge.",
+        highlights: ['Assign any daily habit', 'Track custom metrics', 'Spot patterns early'],
+      },
+      'exercise-history': {
+        label: 'Exercise History',
+        headline: 'Every rep, every session, every trend',
+        description: "Dive into detailed performance data for any exercise in your client's history. See progression over weeks and months, spot plateaus before they stall, and make programme adjustments backed by real data.",
+        highlights: ['Full exercise performance history', 'Progression tracking over time', 'Data-driven programme decisions'],
+      },
+      forms: {
+        label: 'Forms',
+        headline: 'Collect data on autopilot',
+        description: 'Build check-in forms, intake questionnaires, and feedback surveys that clients complete on schedule. Responses feed directly into their profile, so your data stays current without you chasing anyone.',
+        highlights: ['Custom form builder', 'Automated schedules', 'Responses linked to profiles'],
+      },
+      chats: {
+        label: 'Chats',
+        headline: 'Message with full client context',
+        description: "Have conversations that actually move the needle. See your client's metrics, recent workouts, and progress right alongside the chat. Give personalised, data-backed advice without switching screens.",
+        highlights: ['In-chat client profile panel', 'Metrics and progress at a glance', 'No more app-switching'],
+      },
+    },
+  },
+  mobileClient: {
+    appName: 'Clients',
+    tagline: 'Everything you need, in one place',
+    description: 'See your workouts, track your habits, message your coach, and watch your progress, all from one app designed to keep you on track.',
+    getAppTitle: 'Get the Client App Today',
+    getAppSubtitle: 'Available on iOS and Android. Free to get started.',
+    features: {
+      workouts: {
+        label: 'Workouts',
+        headline: 'Follow your programme with confidence',
+        description: 'Clear, guided workout sessions designed by your coach. See exercise demos, log every set and rep as you go, and leave notes for your coach to review. Training has never been this straightforward.',
+        highlights: ['Step-by-step workout guidance', 'Built-in exercise demos', 'Log sets and reps live'],
+      },
+      progress: {
+        label: 'Progress',
+        headline: 'Your transformation, visualised',
+        description: "Track body measurements, progress photos, and custom metrics all in one place. See the bigger picture of your journey and stay motivated by how far you've come.",
+        highlights: ['Progress photo comparisons', 'Body measurement tracking', 'Custom metric support'],
+      },
+      'exercise-history': {
+        label: 'Exercise History',
+        headline: 'Watch your numbers climb',
+        description: "Every exercise you've ever done, tracked and visualised. See how your bench press, squat, or any movement has progressed over weeks and months. Real proof that the work is paying off.",
+        highlights: ['Full performance timeline', 'Visual progression charts', 'Personal records tracked'],
+      },
+      habits: {
+        label: 'Habits & Metrics',
+        headline: 'Small daily wins, lasting change',
+        description: "Track the daily habits and metrics your coach assigns and build streaks that stick. Whether it's drinking water, logging your weight, or getting enough sleep, consistency is where real results come from.",
+        highlights: ['Daily habit tracking', 'Custom metric logging', 'Streak-based motivation'],
+      },
+      forms: {
+        label: 'Forms',
+        headline: 'Quick check-ins that drive results',
+        description: "Fill in scheduled forms and questionnaires that help your coach understand exactly how you're doing. Recovery, nutrition, energy levels, your feedback shapes better programming.",
+        highlights: ['Scheduled check-in reminders', 'Quick and easy to complete', 'Your input improves your plan'],
+      },
+      chat: {
+        label: 'Chat',
+        headline: 'Your coach, always within reach',
+        description: 'Message your coach directly and get personalised guidance when you need it. No more lost messages scattered across WhatsApp, email, and text. Everything stays in one place.',
+        highlights: ['Direct messaging with your coach', 'All communication in one place', 'Fast, responsive chat'],
+      },
+    },
+  },
+  comparison: {
+    featuresHeader: 'Features',
+    sections: [
+      {
+        title: 'AI & Automation',
+        features: [
+          { name: 'AI Coaching Assistant', description: 'Generate workouts, analyse progress, and plan programmes from a single chat' },
+          { name: 'Automation Flows', description: 'Event-driven automation that triggers actions when clients miss sessions, check-ins, or logs' },
+          { name: 'Custom Onboarding', description: 'Automated onboarding flows that welcome new clients and assign programmes on signup' },
+        ],
+      },
+      {
+        title: 'Training & Programming',
+        features: [
+          { name: 'Advanced Workout Builder', description: 'AMRAPs, EMOMs, supersets, circuits, custom trackable fields, and fully customisable sections' },
+        ],
+      },
+      {
+        title: 'Accountability & Data',
+        features: [
+          { name: 'Custom Forms', description: 'Build check-in forms and questionnaires with automated schedules' },
+          { name: 'Habit & Metric Tracking', description: 'Assign daily habits and track any custom metric for every client' },
+        ],
+      },
+      {
+        title: 'Platform',
+        features: [
+          { name: 'Payment Packages', description: 'Sell coaching packages with recurring subscriptions and automated onboarding' },
+          { name: 'File & Resource Storage', description: 'Upload documents, meal plans, and resources per client' },
+        ],
+      },
+    ],
+  },
+  footer: {
+    features: 'Features',
+    mobileApp: 'Mobile App',
+    company: 'Company',
+    legal: 'Legal',
+    faqs: 'FAQs',
+    pricing: 'Pricing',
+    howWeCompare: 'How We Compare',
+    contact: 'Contact',
+    privacy: 'Privacy',
+    terms: 'Terms',
+    copyright: 'Athli, All rights reserved',
+    coach: 'Coach',
+    client: 'Client',
+  },
+  pages: {
+    pricing: {
+      title: 'Pricing that Scales with You',
+      subtitle: 'Start free, upgrade as you grow. Simple plans built for coaches at every stage.',
+    },
+    faqs: {
+      title: 'Frequently Asked Questions',
+      subtitle: 'Quick answers to common questions about Athli, our features, and how it all works.',
+    },
+    howWeCompare: {
+      title: 'See How Athli Stacks Up',
+      subtitle: 'A side-by-side look at the features that matter most to coaches. See where Athli leads and why coaches are making the switch.',
+    },
+  },
+} as const;
+
+export default messages;
+
+export type Messages = typeof messages;

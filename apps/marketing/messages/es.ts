@@ -1,0 +1,438 @@
+const messages = {
+  nav: {
+    features: 'Funcionalidades',
+    pricing: 'Precios',
+    mobileApp: 'App Móvil',
+    coach: 'Entrenador',
+    client: 'Cliente',
+    coachHeadline: 'Tu kit completo de entrenamiento en el móvil',
+    clientHeadline: 'La experiencia principal de tus clientes en la app',
+    logIn: 'Iniciar sesión',
+    signUp: 'Registrarse',
+    coachForFree: 'Entrena Gratis',
+    coachApp: 'App Entrenador',
+    clientApp: 'App Cliente',
+  },
+  hero: {
+    pill: 'Entrena a tus clientes gratis',
+    heading: 'Escala tu Negocio de Entrenamiento con Athli',
+    subheading: 'Una app todo en uno que te permite ofrecer la mejor experiencia a tus clientes sin importar la ubicación',
+    tryAi: 'Prueba nuestra IA',
+    growToday: 'Crece Hoy',
+    chatGreeting: 'Hola Entrenador',
+    chatAssist: 'Cómo Puedo',
+    chatAssistHighlight: 'Ayudarte Hoy?',
+    chatPlaceholder: 'Pregúntame lo que quieras...',
+    generic: 'Genérico',
+    suggestions: {
+      training: {
+        label: 'Entrenamiento',
+        highlight: 'Crear',
+        items: [
+          'Crear un plan de entrenamiento',
+          'Crear un programa de entrenamiento',
+          'Crear variaciones de ejercicios',
+          'Crear una rutina de calentamiento',
+        ],
+      },
+      analytics: {
+        label: 'Analítica',
+        highlight: 'Analizar',
+        items: [
+          'Analizar el progreso del cliente',
+          'Analizar la carga de entrenamiento',
+          'Analizar métricas de recuperación',
+          'Analizar tendencias de rendimiento',
+        ],
+      },
+      nutrition: {
+        label: 'Nutrición',
+        highlight: 'Planificar',
+        items: [
+          'Planificar preparación de comidas',
+          'Planificar macros para definición',
+          'Planificar combinación de suplementos',
+          'Planificar estrategia de hidratación',
+        ],
+      },
+      research: {
+        label: 'Investigación',
+        highlight: 'Investigar',
+        items: [
+          'Investigar mejores prácticas para hipertrofia',
+          'Investigar prevención de lesiones',
+          'Investigar modelos de periodización',
+          'Investigar protocolos de recuperación',
+        ],
+      },
+    },
+    iconDialogs: {
+      chatgpt: {
+        title: 'Basta de IA Genérica',
+        description: 'ChatGPT no conoce a tus clientes, sus objetivos ni su historial. Nuestro asistente de IA está diseñado específicamente para el entrenamiento. Planifica programas periodizados, registra el progreso de los clientes, genera entrenamientos y da respuestas basadas en evidencia usando los datos reales de tus clientes. Una conversación reemplaza horas de trabajo manual.',
+      },
+      excel: {
+        title: 'Basta de Hojas de Cálculo',
+        description: 'Llevar el seguimiento de clientes en Excel significa datos dispersos, fórmulas rotas y cero automatización. Athli centraliza el perfil, las métricas, los check-ins y el progreso de cada cliente en una sola plataforma. Buscable, siempre actualizado y accesible desde cualquier dispositivo. Tus datos por fin trabajan para ti, no en tu contra.',
+      },
+      notion: {
+        title: 'Basta de Entrenamientos en Notion',
+        description: 'Copiar y pegar entrenamientos entre páginas de Notion no escala. Athli te ofrece una biblioteca de 1.743 ejercicios con vídeos demostrativos integrados, construcción de programas con arrastrar y soltar, y asignación con un clic a cualquier cliente. Crea mejores programas en una fracción del tiempo.',
+      },
+      zapier: {
+        title: 'Basta de Seguimientos Manuales',
+        description: 'No deberías necesitar Zapier para mantener a tus clientes comprometidos. Athli tiene flujos de automatización integrados que envían recordatorios, seguimientos y avisos de check-in según la actividad del cliente. Configúralo una vez y tus clientes se mantienen en el camino sin que tengas que perseguirlos.',
+      },
+      whatsapp: {
+        title: 'Basta de Cambiar de App',
+        description: 'Gestionar clientes entre WhatsApp, correo electrónico y hojas de cálculo hace que se pierdan cosas. Athli pone la comunicación, la programación, los check-ins y el seguimiento del progreso en un solo lugar, tanto para ti como para tus clientes. Una app, cero cambios de contexto.',
+      },
+      docs: {
+        title: 'Basta del Caos en Google Drive',
+        description: 'Buscar archivos de clientes en carpetas compartidas es una pérdida de tiempo. La función de Archivos de Athli te permite almacenar contratos, planes de comidas, fotos de progreso y cualquier recurso con almacenamiento ilimitado, organizado por cliente y accesible al instante.',
+      },
+    },
+  },
+  features: {
+    sectionTitle: 'Nuestras funcionalidades',
+    sectionSubtitle: 'Mantén a tus clientes comprometidos y simplifica tu negocio',
+    flows: {
+      label: 'Flujos',
+      headline: 'Responsabilidad automatizada, más allá de los check-ins',
+      description: 'Configura flujos personalizados que se activan automáticamente cuando los clientes se quedan atrás. Ya sea una sesión perdida, un check-in pendiente o un hábito estancado, las automatizaciones predefinidas intervienen para que nada se escape.',
+      highlights: ['Condiciones de activación personalizadas', 'Secuencias automatizadas predefinidas', 'Mantiene a los clientes en el camino sin seguimiento manual'],
+      pageTitle: 'Flujos que Mantienen a los Clientes Comprometidos',
+      pageSubtitle: 'Automatiza seguimientos y recordatorios para que ningún cliente quede olvidado. Define condiciones, configura acciones y deja que Athli se encargue del resto.',
+      benefits: [
+        { title: 'Activación por Cualquier Condición', description: '¿Sesión perdida? ¿Check-in omitido? Define las condiciones que importan y Athli responderá automáticamente con la acción correcta.' },
+        { title: 'Secuencias de Acciones Predefinidas', description: 'Crea flujos de varios pasos con mensajes, recordatorios y tareas que se ejecutan en orden, manteniendo a tus clientes comprometidos sin que muevas un dedo.' },
+        { title: 'Escala Sin Perder el Toque Personal', description: 'Gestiona 10 o 100 clientes con el mismo nivel de atención. Los flujos automatizados se encargan del seguimiento para que tú puedas enfocarte en entrenar.' },
+      ],
+    },
+    forms: {
+      label: 'Formularios',
+      headline: 'Formularios totalmente personalizables que alimentan tus datos',
+      description: 'Crea formularios adaptados a cualquier pregunta que necesites responder. Las respuestas se conectan directamente con las métricas y fotos de progreso del cliente, así que cada envío actualiza automáticamente su perfil. Tú diseñas las preguntas, y tus clientes las completan según el calendario.',
+      highlights: ['Conecta respuestas a métricas y fotos de progreso', 'Calendarios de envío automatizados', 'Panel de revisión para el entrenador con todas las respuestas'],
+      pageTitle: 'Formularios que Alimentan tus Datos de Entrenamiento',
+      pageSubtitle: 'Diseña formularios de check-in personalizados, conecta las respuestas a métricas y fotos de progreso, y revisa todo desde un solo panel.',
+      benefits: [
+        { title: 'Conexión Automática con Métricas', description: 'Vincula campos del formulario directamente a las métricas del cliente. Cada respuesta actualiza su perfil al instante, sin entrada manual de datos.' },
+        { title: 'Envíos Programados', description: 'Configura calendarios de envío para que los clientes completen los formularios a tiempo. Diario, semanal o personalizado, tú decides la frecuencia.' },
+        { title: 'Revisa Todo en un Solo Lugar', description: 'Todas las respuestas de los formularios llegan a tu panel de entrenador. Revisa, compara y actúa rápidamente sobre lo que reportan tus clientes.' },
+      ],
+    },
+    inbox: {
+      label: 'Bandeja de Entrada',
+      headline: 'Envía mensajes a tus clientes con su perfil completo a la vista',
+      description: 'Una bandeja de entrada integrada con un panel potente del cliente junto a la conversación. Consulta sus métricas, progreso y perfil sin cambiar de pantalla, para que puedas dar consejos informados y contextuales sin salir del chat.',
+      highlights: ['Panel del perfil del cliente junto a cada conversación', 'Métricas y progreso de un vistazo', 'Todo en una sola ventana'],
+      pageTitle: 'Una Bandeja de Entrada Diseñada para Entrenar',
+      pageSubtitle: 'Envía mensajes a tus clientes con su perfil completo, métricas y progreso visibles junto a la conversación. Entrenamiento con contexto, sin cambiar de pestaña.',
+      benefits: [
+        { title: 'Panel Potente del Cliente', description: 'Consulta las métricas, fotos de progreso y detalles del perfil de tu cliente junto a la conversación, sin necesidad de cambiar de pantalla.' },
+        { title: 'Entrenamiento Contextual', description: 'Da mejores consejos porque siempre tienes la imagen completa. Consulta check-ins recientes, datos de entrenamiento y tendencias en tiempo real.' },
+        { title: 'Todo en una Sola Ventana', description: 'Deja de hacer malabarismos con pestañas y apps. Tu bandeja de entrada, datos del cliente y mensajería, todo en un solo lugar.' },
+      ],
+    },
+    metrics: {
+      label: 'Métricas',
+      headline: 'Registra cualquier métrica que te importe',
+      description: 'Define y registra cualquier métrica, desde medidas corporales hasta calidad del sueño, niveles de energía o cualquier dato único de tu método de entrenamiento. Cada métrica es totalmente personalizable, dándote los datos que necesitas para tomar mejores decisiones para tus clientes.',
+      highlights: ['Define métricas personalizadas ilimitadas', 'Registra cualquier cosa relevante para tu entrenamiento', 'Visualizaciones claras a lo largo del tiempo'],
+      pageTitle: 'Métricas Adaptadas a tu Método',
+      pageSubtitle: 'Define y registra cualquier métrica: medidas corporales, sueño, energía o cualquier dato único de tu entrenamiento. Totalmente personalizable, con visualizaciones claras.',
+      benefits: [
+        { title: 'Define Métricas Ilimitadas', description: 'Crea métricas para cualquier cosa que quieras registrar. Peso corporal, grasa corporal, horas de sueño, niveles de energía, si importa, puedes medirlo.' },
+        { title: 'Visualizaciones Claras', description: 'Observa tendencias a lo largo del tiempo con gráficos claros y fáciles de leer. Detecta patrones, celebra el progreso y ajusta planes basándote en datos reales.' },
+        { title: 'Decisiones Basadas en Datos', description: 'Deja de adivinar. Usa datos reales de tus clientes para informar tu programación, consejos de nutrición y conversaciones de entrenamiento.' },
+      ],
+    },
+    progress: {
+      label: 'Progreso',
+      headline: 'Seguimiento detallado de cada ejercicio y variante',
+      description: 'Cada serie, repetición y variación se registra y presenta con claridad. Consulta datos detallados de rendimiento para todos los tipos de ejercicios, compara el progreso entre sesiones e identifica tendencias para que tú y tus clientes siempre sepan qué está mejorando.',
+      highlights: ['Registra todos los tipos de ejercicios y variantes', 'Comparaciones sesión por sesión', 'Visualizaciones claras del progreso'],
+      pageTitle: 'Seguimiento del Progreso con la Imagen Completa',
+      pageSubtitle: 'Cada serie, repetición y variación registrada y visualizada. Compara sesiones, detecta tendencias y muestra a tus clientes exactamente cuánto han avanzado.',
+      benefits: [
+        { title: 'Cada Repetición Contabilizada', description: 'Registra series, repeticiones, peso, tempo, RPE y más para cada tipo de ejercicio. Nada se pierde.' },
+        { title: 'Comparaciones de Sesiones', description: 'Compara el rendimiento entre sesiones lado a lado. Observa exactamente qué mejoró y dónde hay que empujar más.' },
+        { title: 'Progreso Visual a lo Largo del Tiempo', description: 'Gráficos claros y líneas de tiempo que hacen innegable el progreso. Ideal para la motivación del cliente y para demostrar el valor de tu entrenamiento.' },
+      ],
+    },
+    training: {
+      label: 'Entrenamiento',
+      headline: 'Planifica todo desde una vista de calendario',
+      description: 'Un calendario claro con arrastrar y soltar donde puedes planificar, copiar y reorganizar entrenamientos fácilmente. Consulta sesiones pasadas y planes futuros lado a lado, para que programar un bloque de entrenamiento completo tome minutos, no horas.',
+      highlights: ['Calendario con arrastrar y soltar', 'Copia y reutiliza entrenamientos entre días', 'Consulta sesiones pasadas y futuras en un solo lugar'],
+      pageTitle: 'Planificación de Entrenamiento Simplificada',
+      pageSubtitle: 'Un calendario con arrastrar y soltar donde puedes planificar, copiar y reorganizar entrenamientos en minutos. Programa bloques de entrenamiento completos fácilmente.',
+      benefits: [
+        { title: 'Calendario con Arrastrar y Soltar', description: 'Mueve, copia y reorganiza entrenamientos visualmente. Planificar una semana o un mes completo de entrenamiento nunca fue tan rápido.' },
+        { title: 'Reutiliza y Repite', description: 'Copia entrenamientos entre días, semanas o clientes. Crea una vez, despliega muchas veces, ahorrando horas cada semana.' },
+        { title: 'Pasado y Futuro en una Sola Vista', description: 'Consulta sesiones completadas y planes próximos lado a lado. Ajusta la programación según lo que realmente ocurrió.' },
+      ],
+    },
+    workouts: {
+      label: 'Entrenamientos',
+      headline: 'Más de 1.700 ejercicios, totalmente personalizables',
+      description: 'Accede a una extensa biblioteca de 1.734 ejercicios y crea entrenamientos exactamente como quieras. Todos los tipos de sección están disponibles, y cada detalle es totalmente personalizable para adaptarse a tu estilo de programación.',
+      highlights: ['1.734 ejercicios incluidos', 'AMRAP, EMOM, Tabata, HIIT y circuitos', 'Secciones y estructura totalmente personalizables'],
+      pageTitle: 'Entrenamientos a tu Manera',
+      pageSubtitle: 'Accede a 1.734 ejercicios y crea entrenamientos con control total. AMRAP, EMOM, circuitos, superseries, todos los tipos de sección, totalmente personalizables.',
+      benefits: [
+        { title: '1.734 Ejercicios Incluidos', description: 'Una biblioteca completa de ejercicios con vídeos, instrucciones y etiquetas de grupos musculares. Encuentra lo que necesitas al instante.' },
+        { title: 'Todos los Tipos de Sección Disponibles', description: 'Crea entrenamientos con AMRAP, EMOM, Tabata, HIIT, circuitos, superseries y más. Estructura las sesiones exactamente como entrenas.' },
+        { title: 'Totalmente Personalizable', description: 'Controla cada detalle: series, repeticiones, descanso, tempo, RPE, notas. Tus entrenamientos, a tu manera, sin compromisos.' },
+      ],
+    },
+  },
+  pricing: {
+    sectionTitle: 'Precios que Escalan Contigo',
+    sectionSubtitle: 'Empieza gratis, mejora a medida que crezcas. Planes simples pensados para entrenadores en cada etapa.',
+    perEditor: 'Por editor',
+    getStarted: 'Comenzar',
+    popular: 'Popular',
+    free: {
+      name: 'Gratis',
+      price: '$0 / mes',
+      features: ['Panel de Analítica Básico', '5GB de Almacenamiento en la Nube', 'Soporte por Email y Chat'],
+    },
+    pro: {
+      name: 'Pro',
+      price: '$19 / mes',
+      features: ['Todo lo del Plan Gratis', '5GB de Almacenamiento en la Nube', 'Soporte por Email y Chat', 'Acceso al Foro de la Comunidad', 'Acceso de Usuario Único', 'Acceso a Plantillas Básicas', 'Acceso a la App Móvil', '1 Informe Personalizado al Mes', 'Actualizaciones Mensuales del Producto', 'Funciones de Seguridad Estándar'],
+    },
+    startup: {
+      name: 'Startup',
+      price: '$29 / mes',
+      features: ['Todo lo del Plan Pro', '5GB de Almacenamiento en la Nube', 'Soporte por Email y Chat'],
+    },
+  },
+  pricingComparison: {
+    title: 'Compara los Planes en Detalle',
+    subtitle: 'Mira exactamente lo que incluye cada nivel.',
+    featuresHeader: 'Funcionalidades',
+    sections: [
+      {
+        title: 'IA y Automatización',
+        features: ['Asistente de Coaching con IA', 'Flujos de Automatización', 'Flujos de Incorporación Personalizados'],
+      },
+      {
+        title: 'Entrenamiento y Programación',
+        features: ['Constructor de Entrenamientos', 'Calendario de Entrenamiento', 'Biblioteca de Ejercicios (1.700+)', 'Secciones Avanzadas (AMRAPs, EMOMs, Circuitos)'],
+      },
+      {
+        title: 'Gestión de Clientes',
+        features: ['Perfiles de Clientes', 'Fotos de Progreso y Métricas', 'Cuestionarios Personalizados', 'Seguimiento de Hábitos'],
+      },
+      {
+        title: 'Responsabilidad y Datos',
+        features: ['Check-ins Programados', 'Formularios Personalizados', 'Análisis Detallado de Progreso'],
+      },
+      {
+        title: 'Comunicación',
+        features: ['Bandeja de Entrada Integrada', 'Panel de Cliente'],
+      },
+      {
+        title: 'Plataforma',
+        features: ['Paquetes de Pago', 'Almacenamiento de Archivos y Recursos', 'Soporte Prioritario'],
+      },
+    ],
+  },
+  faqs: {
+    sectionTitle: 'Preguntas Frecuentes',
+    sectionSubtitle: 'Descubre respuestas rápidas y completas a las preguntas más comunes sobre nuestra plataforma, servicios y funcionalidades.',
+    cantFind: '¿No encuentras lo que buscas?',
+    reachOut: 'Contáctanos',
+    items: [
+      { question: '¿Cuántos clientes puedo gestionar en Athli?', answer: 'No hay un límite fijo. Athli está diseñado para escalar con tu negocio, ya sea que entrenes a 5 clientes o a 500. Tu plan determina la cantidad de espacios activos disponibles para clientes.' },
+      { question: '¿Qué hace realmente el asistente de IA?', answer: 'Te ayuda a crear programas de entrenamiento, planes de comidas y plantillas de entrenamiento en segundos. También puedes usarlo para analizar el progreso del cliente, generar variaciones de ejercicios y redactar respuestas de check-in, todo desde una única interfaz de chat.' },
+      { question: '¿Mis clientes también pueden usar la app?', answer: 'Sí. Los clientes tienen su propia app móvil donde pueden ver programas, registrar entrenamientos, enviar check-ins, completar cuestionarios y comunicarse contigo directamente.' },
+      { question: '¿Cómo funcionan los check-ins de los clientes?', answer: 'Tú configuras un calendario de check-ins y tus clientes reciben recordatorios para enviar actualizaciones incluyendo fotos de progreso, medidas y notas. Todos los envíos aparecen en tu panel para una revisión fácil.' },
+      { question: '¿Puedo importar mis clientes y programas existentes?', answer: 'Sí. Puedes invitar clientes de forma masiva por correo electrónico e importar programas de entrenamiento existentes desde hojas de cálculo. Nuestro flujo de incorporación te guía a través de toda la configuración.' },
+      { question: '¿Mis datos y los de mis clientes están seguros?', answer: 'Totalmente. Todos los datos están cifrados en tránsito y en reposo. Usamos autenticación estándar de la industria y nunca compartimos tus datos con terceros. Tus datos son completamente tuyos.' },
+      { question: '¿Puedo cancelar o cambiar mi plan en cualquier momento?', answer: 'Sí. Puedes mejorar, reducir o cancelar tu suscripción en cualquier momento desde la configuración de tu cuenta. Los cambios se aplican al inicio de tu siguiente ciclo de facturación.' },
+    ],
+  },
+  cta: {
+    title: 'Haz Crecer tu Negocio Hoy',
+    subtitle: 'Ofrece a tus clientes la mejor experiencia y mantenlos comprometidos, todo desde una sola plataforma.',
+    button: 'Comenzar Gratis',
+  },
+  mobileApps: {
+    title: 'Apps Móviles',
+    description: 'Todo lo que puedes hacer en la web, lo puedes hacer en el móvil. Tanto la app del entrenador como la del cliente están diseñadas para ser rápidas, modernas e intuitivas, para que gestionar tu negocio o seguir tu programa se sienta fácil desde cualquier lugar.',
+    coach: 'Entrenador',
+    client: 'Cliente',
+  },
+  mobileCoach: {
+    appName: 'Entrenadores',
+    tagline: 'Tu kit completo de entrenamiento, en tu bolsillo',
+    description: 'Gestiona clientes, programa entrenamientos, revisa sesiones y comunícate, todo desde una app móvil diseñada específicamente para entrenadores.',
+    getAppTitle: 'Obtén la App de Entrenador Hoy',
+    getAppSubtitle: 'Disponible en iOS y Android. Gratis para empezar.',
+    features: {
+      'workout-builder': {
+        label: 'Constructor de Entrenamientos',
+        headline: 'Más de 1.700 ejercicios a tu alcance',
+        description: 'Crea entrenamientos exactamente como los quieres. Todos los tipos de sección están disponibles, desde AMRAP hasta superseries y circuitos. Busca en la biblioteca completa de ejercicios, añade los tuyos propios y personaliza cada detalle para que se ajuste a tu estilo de programación.',
+        highlights: ['AMRAP, EMOM, circuitos y más', 'Biblioteca completa de ejercicios con demos', 'Estructura totalmente personalizable'],
+      },
+      training: {
+        label: 'Entrenamiento',
+        headline: 'Programa bloques completos desde tu teléfono',
+        description: 'Un calendario visual de entrenamiento que hace la programación muy fácil. Consulta sesiones pasadas, planifica futuros entrenamientos y reorganiza todo sobre la marcha. Crea una semana entera en minutos, directamente desde tu teléfono.',
+        highlights: ['Vista general del calendario visual', 'Copia y reutiliza sesiones', 'Planifica semanas en minutos'],
+      },
+      'review-workouts': {
+        label: 'Revisión',
+        headline: 'Observa exactamente lo que hicieron tus clientes',
+        description: 'Cada serie, repetición y nota de la sesión de tu cliente llega directamente a tu feed. Revisa entrenamientos completados, detecta ejercicios omitidos y da retroalimentación específica, todo desde una sola pantalla.',
+        highlights: ['Desglose serie por serie de cada sesión', 'Notas y retroalimentación del cliente', 'Revisión instantánea post-entrenamiento'],
+      },
+      'manage-client': {
+        label: 'Gestionar Cliente',
+        headline: 'Perfiles de cliente completos, siempre actualizados',
+        description: 'Todo lo que necesitas saber sobre un cliente, en un solo lugar. Métricas, fotos de progreso, historial de entrenamiento, hábitos y formularios, todo actualizándose en tiempo real. Toma mejores decisiones de entrenamiento con la imagen completa.',
+        highlights: ['Datos centralizados del cliente', 'Actualizaciones de métricas en tiempo real', 'Fotos de progreso e historial'],
+      },
+      habits: {
+        label: 'Hábitos y Métricas',
+        headline: 'Crea responsabilidad más allá del gimnasio',
+        description: 'Asigna hábitos diarios, registra métricas personalizadas y monitorea el cumplimiento desde cualquier lugar. Ya sea hidratación, sueño, peso corporal o niveles de energía, verás quién es constante y quién necesita un empujón.',
+        highlights: ['Asigna cualquier hábito diario', 'Registra métricas personalizadas', 'Detecta patrones a tiempo'],
+      },
+      'exercise-history': {
+        label: 'Historial de Ejercicios',
+        headline: 'Cada repetición, cada sesión, cada tendencia',
+        description: 'Profundiza en los datos detallados de rendimiento de cualquier ejercicio en el historial de tu cliente. Observa la progresión a lo largo de semanas y meses, detecta estancamientos antes de que frenen el avance y realiza ajustes de programación respaldados por datos reales.',
+        highlights: ['Historial completo de rendimiento por ejercicio', 'Seguimiento de progresión a lo largo del tiempo', 'Decisiones de programación basadas en datos'],
+      },
+      forms: {
+        label: 'Formularios',
+        headline: 'Recopila datos en piloto automático',
+        description: 'Crea formularios de check-in, cuestionarios de incorporación y encuestas de retroalimentación que los clientes completan según el calendario. Las respuestas se vinculan directamente a su perfil, para que tus datos estén siempre actualizados sin perseguir a nadie.',
+        highlights: ['Constructor de formularios personalizados', 'Calendarios automatizados', 'Respuestas vinculadas a perfiles'],
+      },
+      chats: {
+        label: 'Chats',
+        headline: 'Mensajea con el contexto completo del cliente',
+        description: 'Mantén conversaciones que realmente marquen la diferencia. Consulta las métricas, entrenamientos recientes y progreso de tu cliente junto al chat. Da consejos personalizados y respaldados por datos sin cambiar de pantalla.',
+        highlights: ['Panel del perfil del cliente en el chat', 'Métricas y progreso de un vistazo', 'Sin más cambios de app'],
+      },
+    },
+  },
+  mobileClient: {
+    appName: 'Clientes',
+    tagline: 'Todo lo que necesitas, en un solo lugar',
+    description: 'Consulta tus entrenamientos, registra tus hábitos, envía mensajes a tu entrenador y observa tu progreso, todo desde una app diseñada para mantenerte en el camino.',
+    getAppTitle: 'Obtén la App de Cliente Hoy',
+    getAppSubtitle: 'Disponible en iOS y Android. Gratis para empezar.',
+    features: {
+      workouts: {
+        label: 'Entrenamientos',
+        headline: 'Sigue tu programa con confianza',
+        description: 'Sesiones de entrenamiento claras y guiadas, diseñadas por tu entrenador. Mira las demos de los ejercicios, registra cada serie y repetición sobre la marcha y deja notas para que tu entrenador las revise. Entrenar nunca fue tan sencillo.',
+        highlights: ['Guía paso a paso del entrenamiento', 'Demos de ejercicios integradas', 'Registra series y repeticiones en vivo'],
+      },
+      progress: {
+        label: 'Progreso',
+        headline: 'Tu transformación, visualizada',
+        description: 'Registra medidas corporales, fotos de progreso y métricas personalizadas, todo en un solo lugar. Observa la imagen completa de tu camino y mantente motivado por lo lejos que has llegado.',
+        highlights: ['Comparaciones de fotos de progreso', 'Seguimiento de medidas corporales', 'Soporte para métricas personalizadas'],
+      },
+      'exercise-history': {
+        label: 'Historial de Ejercicios',
+        headline: 'Observa cómo suben tus números',
+        description: 'Cada ejercicio que has hecho, registrado y visualizado. Mira cómo tu press de banca, sentadilla o cualquier movimiento ha progresado a lo largo de semanas y meses. Prueba real de que el esfuerzo está dando resultados.',
+        highlights: ['Línea de tiempo completa de rendimiento', 'Gráficos visuales de progresión', 'Récords personales registrados'],
+      },
+      habits: {
+        label: 'Hábitos y Métricas',
+        headline: 'Pequeñas victorias diarias, cambios duraderos',
+        description: 'Registra los hábitos diarios y las métricas que te asigna tu entrenador y crea rachas que perduran. Ya sea beber agua, registrar tu peso o dormir lo suficiente, la constancia es donde nacen los verdaderos resultados.',
+        highlights: ['Seguimiento de hábitos diarios', 'Registro de métricas personalizadas', 'Motivación basada en rachas'],
+      },
+      forms: {
+        label: 'Formularios',
+        headline: 'Check-ins rápidos que impulsan resultados',
+        description: 'Completa formularios y cuestionarios programados que ayudan a tu entrenador a entender exactamente cómo estás. Recuperación, nutrición, niveles de energía, tu retroalimentación da forma a una mejor programación.',
+        highlights: ['Recordatorios de check-in programados', 'Rápidos y fáciles de completar', 'Tu opinión mejora tu plan'],
+      },
+      chat: {
+        label: 'Chat',
+        headline: 'Tu entrenador, siempre a tu alcance',
+        description: 'Envía mensajes a tu entrenador directamente y obtén orientación personalizada cuando la necesites. No más mensajes perdidos repartidos entre WhatsApp, correo electrónico y SMS. Todo queda en un solo lugar.',
+        highlights: ['Mensajería directa con tu entrenador', 'Toda la comunicación en un solo lugar', 'Chat rápido y ágil'],
+      },
+    },
+  },
+  comparison: {
+    featuresHeader: 'Funcionalidades',
+    sections: [
+      {
+        title: 'IA y Automatización',
+        features: [
+          { name: 'Asistente de IA para Entrenamiento', description: 'Genera entrenamientos, analiza el progreso y planifica programas desde un solo chat' },
+          { name: 'Flujos de Automatización', description: 'Automatización basada en eventos que se activa cuando los clientes pierden sesiones, check-ins o registros' },
+          { name: 'Incorporación Personalizada', description: 'Flujos de incorporación automatizados que dan la bienvenida a nuevos clientes y asignan programas al registrarse' },
+        ],
+      },
+      {
+        title: 'Entrenamiento y Programación',
+        features: [
+          { name: 'Constructor Avanzado de Entrenamientos', description: 'AMRAP, EMOM, superseries, circuitos, campos de seguimiento personalizados y secciones totalmente configurables' },
+        ],
+      },
+      {
+        title: 'Responsabilidad y Datos',
+        features: [
+          { name: 'Formularios Personalizados', description: 'Crea formularios de check-in y cuestionarios con calendarios automatizados' },
+          { name: 'Seguimiento de Hábitos y Métricas', description: 'Asigna hábitos diarios y registra cualquier métrica personalizada para cada cliente' },
+        ],
+      },
+      {
+        title: 'Plataforma',
+        features: [
+          { name: 'Paquetes de Pago', description: 'Vende paquetes de entrenamiento con suscripciones recurrentes e incorporación automatizada' },
+          { name: 'Almacenamiento de Archivos y Recursos', description: 'Sube documentos, planes de comidas y recursos por cliente' },
+        ],
+      },
+    ],
+  },
+  footer: {
+    features: 'Funcionalidades',
+    mobileApp: 'App Móvil',
+    company: 'Empresa',
+    legal: 'Legal',
+    faqs: 'Preguntas Frecuentes',
+    pricing: 'Precios',
+    howWeCompare: 'Cómo nos Comparamos',
+    contact: 'Contacto',
+    privacy: 'Privacidad',
+    terms: 'Términos',
+    copyright: 'Athli, Todos los derechos reservados',
+    coach: 'Entrenador',
+    client: 'Cliente',
+  },
+  pages: {
+    pricing: {
+      title: 'Precios que Escalan Contigo',
+      subtitle: 'Empieza gratis, mejora a medida que crezcas. Planes simples pensados para entrenadores en cada etapa.',
+    },
+    faqs: {
+      title: 'Preguntas Frecuentes',
+      subtitle: 'Respuestas rápidas a las preguntas más comunes sobre Athli, nuestras funcionalidades y cómo funciona todo.',
+    },
+    howWeCompare: {
+      title: 'Descubre Cómo se Compara Athli',
+      subtitle: 'Una comparación lado a lado de las funcionalidades que más importan a los entrenadores. Descubre dónde lidera Athli y por qué los entrenadores están haciendo el cambio.',
+    },
+  },
+} as const;
+
+export default messages;
+
+export type Messages = typeof messages;

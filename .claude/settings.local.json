@@ -108,7 +108,26 @@
       "Bash(git -C /Users/andreirizea/abc/app/athli diff --name-only)",
       "Bash(sort:*)",
       "Bash(xargs grep:*)",
-      "Bash(pnpm tsc:*)"
+      "Bash(pnpm tsc:*)",
+      "Bash(sips:*)",
+      "Bash(md5:*)",
+      "WebFetch(domain:shipixen.com)",
+      "WebFetch(domain:www.untitledui.com)",
+      "WebFetch(domain:trainheroic.com)",
+      "WebFetch(domain:magicui.design)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:v3.magicui.design)",
+      "WebFetch(domain:kahunas.io)",
+      "Bash(identify:*)",
+      "WebFetch(domain:docs.stripe.com)",
+      "Bash(git mv:*)",
+      "Bash(for dir in home athletes training forms todo inbox settings business refer-and-earn files flows habits metrics nutrition onboarding get-started features check-ins assistant)",
+      "Bash(do if [ -d \"apps/web/app/$dir\" ])",
+      "Bash(then git mv \"apps/web/app/$dir\" \"apps/web/app/\\(app\\)/$dir\")",
+      "Bash(fi)",
+      "Bash(git rm:*)",
+      "Bash(do sed -i '' \"s|from ''''@/app/training/|from ''''@/app/\\(app\\)/training/|g; s|from ''''@/app/athletes/|from ''''@/app/\\(app\\)/athletes/|g; s|from ''''@/app/inbox/|from ''''@/app/\\(app\\)/inbox/|g; s|from ''''@/app/settings/|from ''''@/app/\\(app\\)/settings/|g; s|from ''''@/app/home/|from ''''@/app/\\(app\\)/home/|g\" \"$file\")",
+      "Bash(echo:*)"
     ]
   }
 }

@@ -1,31 +1,37 @@
 {
-  "fill" : {
-    "automatic-gradient" : "display-p3:0.00000,0.00000,0.00000,1.00000"
-  },
-  "groups" : [
+  "fill-specializations" : [
     {
-      "layers" : [
-
-      ],
-      "shadow" : {
-        "kind" : "neutral",
-        "opacity" : 0.5
-      },
-      "translucency" : {
-        "enabled" : true,
-        "value" : 0.5
+      "value" : {
+        "automatic-gradient" : "srgb:0.00000,0.00000,0.00000,1.00000",
+        "orientation" : {
+          "start" : {
+            "x" : 0.5,
+            "y" : 0
+          },
+          "stop" : {
+            "x" : 0.5,
+            "y" : 0.7
+          }
+        }
       }
     },
     {
+      "appearance" : "dark",
+      "value" : "automatic"
+    }
+  ],
+  "groups" : [
+    {
       "layers" : [
         {
-          "image-name" : "ChatGPT Image Jan 11, 2026, 10_46_11 PM.png",
-          "name" : "ChatGPT Image Jan 11, 2026, 10_46_11 PM",
+          "hidden" : false,
+          "image-name" : "Untitled design (2).png",
+          "name" : "Untitled design (2)",
           "position" : {
-            "scale" : 1.2,
+            "scale" : 0.75,
             "translation-in-points" : [
-              -11.564470620602947,
-              16.199999999999818
+              -6.375,
+              9.375
             ]
           }
         }

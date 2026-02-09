@@ -19,7 +19,7 @@ export const coachChecklistController = {
         .from('coach_getting_started_checklist')
         .select('*')
         .eq('coach_id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching checklist:', error);

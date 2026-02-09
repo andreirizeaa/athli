@@ -16,12 +16,12 @@ export const coachPublicController = {
 
         const supabase = getSupabaseClient();
 
-        // 1. Look up coach_id from unique code or invitation token
         let coachId: string | null = null;
-
-        // Try unique code first
+        let coachName: string | null = null;
+        let profilePictureUrl: string | null = null;
         let onboardingId: string | null = null;
 
+        // 1. Try coach_unique_codes table (handles both main codes and onboarding-specific codes)
         const { data: codeData } = await supabase
             .from('coach_unique_codes')
             .select('coach_id, onboarding_id')
@@ -31,8 +31,10 @@ export const coachPublicController = {
         if (codeData) {
             coachId = codeData.coach_id;
             onboardingId = codeData.onboarding_id;
-        } else {
-            // Try invitation token
+        }
+
+        // 2. Fallback: try invitation token
+        if (!coachId) {
             const { data: assignmentData } = await supabase
                 .from('coach_client_assignments')
                 .select('coach_id')
@@ -44,35 +46,51 @@ export const coachPublicController = {
             }
         }
 
-        if (!coachId) {
-            return notFound(res, { message: 'Invalid coach code or invitation token' });
+        // 3. Resolve coach profile via coach_profiles_full view
+        if (coachId) {
+            const { data: profile } = await supabase
+                .from('coach_profiles_full')
+                .select('id, name, profile_picture_url')
+                .eq('id', coachId)
+                .maybeSingle();
+
+            if (profile) {
+                coachName = profile.name;
+                profilePictureUrl = profile.profile_picture_url;
+            }
+        } else {
+            // Last resort: look up directly by unique_code on the view
+            const { data: profile } = await supabase
+                .from('coach_profiles_full')
+                .select('id, name, profile_picture_url')
+                .eq('unique_code', code.toUpperCase())
+                .maybeSingle();
+
+            if (profile) {
+                coachId = profile.id;
+                coachName = profile.name;
+                profilePictureUrl = profile.profile_picture_url;
+            }
         }
 
-        // 2. Fetch coach profile and company info
-        // We fetching profile name/picture and company name to display on invite page
-        const { data: profileData, error: profileError } = await supabase
-            .from('user_profiles')
-            .select('name, profile_picture_url')
-            .eq('id', coachId)
-            .single();
+        if (!coachId || !coachName) {
+            return notFound(res, { message: 'Coach not found' });
+        }
 
+        // Get company info
         const { data: companyData } = await supabase
             .from('coach_company_information')
             .select('company_name, logo_url')
             .eq('coach_id', coachId)
-            .single();
-
-        if (profileError || !profileData) {
-            return notFound(res, { message: 'Coach profile not found' });
-        }
+            .maybeSingle();
 
         success(res, {
             message: 'Coach profile retrieved successfully',
             data: {
                 coach: {
                     id: coachId,
-                    name: profileData.name,
-                    profilePictureUrl: profileData.profile_picture_url,
+                    name: coachName,
+                    profilePictureUrl,
                     companyName: companyData?.company_name || null,
                     companyLogoUrl: companyData?.logo_url || null,
                 },

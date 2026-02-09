@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { createClient } from '@/supabase/client';
 import { authEvents } from '@/lib/auth-events';
+import { rateLimitEvents } from '@/lib/rate-limit-events';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '') || 'http://localhost:3002';
 const API_VERSION = process.env.NEXT_PUBLIC_API_VERSION?.replace(/^\/+|\/+$/g, '') || 'api/v1';
@@ -49,6 +50,12 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
     (response) => response,
     (error) => {
+        // Handle 429 Too Many Requests globally - show rate limit overlay
+        if (error.response?.status === 429) {
+            rateLimitEvents.emitRateLimited();
+            return Promise.reject(error);
+        }
+
         // Handle 401 Unauthorized globally - show session expired dialog
         if (error.response?.status === 401) {
             const errorData = error.response?.data;

@@ -109,6 +109,9 @@ export function createExpressApp() {
   // Body parsing with size limits to prevent memory exhaustion
   // Route-specific limits must come BEFORE the general limit
 
+  // Stripe webhook needs raw body for signature verification — must come before express.json()
+  app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));
+
   // Stricter limits for auth routes (they don't need large payloads)
   app.use('/api/v1/auth', express.json({ limit: '16kb' }));
   app.use('/api/v1/auth', express.urlencoded({ extended: true, limit: '16kb' }));
