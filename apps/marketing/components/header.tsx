@@ -2,20 +2,11 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Check, Laptop, Menu, Moon, Sun, X } from 'lucide-react';
-import { useTheme } from 'next-themes';
+import { Menu, X } from 'lucide-react';
 
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { availableLanguages } from '@/lib/intl-provider';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
 
@@ -29,15 +20,8 @@ const menuItems = [
 export const HeroHeader = () => {
   const [menuState, setMenuState] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
-  const [isThemeMounted, setIsThemeMounted] = React.useState(false);
-  const [currentLanguage, setCurrentLanguage] = React.useState('en');
-  const { resolvedTheme, setTheme, theme } = useTheme();
-
-  const currentTheme = theme || 'system';
 
   React.useEffect(() => {
-    setIsThemeMounted(true);
-
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
@@ -101,99 +85,17 @@ export const HeroHeader = () => {
                 </ul>
               </div>
               <div className="flex w-full justify-end md:w-fit">
-                <div className="flex items-center gap-1.5">
-                  {!isScrolled && (
-                    <Link href={`${APP_URL}/auth/login`}>
-                      <Button variant="outline" size="sm">
-                      <span>Login</span>
+                <div className="flex items-center gap-2">
+                  <Link href={`${APP_URL}/auth/login`}>
+                    <Button variant="ghost" size="sm">
+                      <span>Log in</span>
                     </Button>
-                    </Link>
-                  )}
-                  {isScrolled && (
-                    <Link href={`${APP_URL}/auth/register`}>
-                      <Button size="sm">
-                      <span>Grow Today</span>
+                  </Link>
+                  <Link href={`${APP_URL}/auth/register`}>
+                    <Button size="default">
+                      <span>Sign up</span>
                     </Button>
-                    </Link>
-                  )}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label={`Select language (current: ${availableLanguages.find((lang) => lang.code === currentLanguage)?.label || 'English'})`}
-                      >
-                        <span className="text-lg leading-none">
-                          {availableLanguages.find((lang) => lang.code === currentLanguage)?.flag ||
-                            '🇬🇧'}
-                        </span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuRadioGroup
-                        value={currentLanguage}
-                        onValueChange={setCurrentLanguage}
-                      >
-                        {availableLanguages.map((language) => (
-                          <DropdownMenuRadioItem
-                            key={language.code}
-                            value={language.code}
-                            className={cn(currentLanguage === language.code && 'bg-accent')}
-                          >
-                            <span className="mr-2 text-lg leading-none">{language.flag}</span>
-                            <span className="flex-1">{language.label}</span>
-                            {currentLanguage === language.code && <Check className="ml-2 size-4" />}
-                          </DropdownMenuRadioItem>
-                        ))}
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  {isThemeMounted && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon-sm" aria-label="Toggle theme">
-                          {currentTheme === 'dark' ? (
-                            <Moon className="size-4" />
-                          ) : currentTheme === 'light' ? (
-                            <Sun className="size-4" />
-                          ) : (
-                            <Laptop className="size-4" />
-                          )}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuRadioGroup
-                          value={currentTheme}
-                          onValueChange={(value) => setTheme(value)}
-                        >
-                          <DropdownMenuRadioItem
-                            value="light"
-                            className={cn(currentTheme === 'light' && 'bg-accent')}
-                          >
-                            <Sun className="mr-2 size-4" />
-                            <span className="flex-1">Light</span>
-                            {currentTheme === 'light' && <Check className="ml-2 size-4" />}
-                          </DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem
-                            value="dark"
-                            className={cn(currentTheme === 'dark' && 'bg-accent')}
-                          >
-                            <Moon className="mr-2 size-4" />
-                            <span className="flex-1">Dark</span>
-                            {currentTheme === 'dark' && <Check className="ml-2 size-4" />}
-                          </DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem
-                            value="system"
-                            className={cn(currentTheme === 'system' && 'bg-accent')}
-                          >
-                            <Laptop className="mr-2 size-4" />
-                            <span className="flex-1">System</span>
-                            {currentTheme === 'system' && <Check className="ml-2 size-4" />}
-                          </DropdownMenuRadioItem>
-                        </DropdownMenuRadioGroup>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+                  </Link>
                 </div>
               </div>
             </div>

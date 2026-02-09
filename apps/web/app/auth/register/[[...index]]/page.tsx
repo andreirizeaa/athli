@@ -81,7 +81,7 @@ export default function SignUpPage() {
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex justify-center">
-            <div className="w-14 h-14 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-xl bg-zinc-900 border border-white/20 flex items-center justify-center">
               <Image src="/icons/athli.png" alt="Athli" width={64} height={64} />
             </div>
           </div>
@@ -101,7 +101,7 @@ export default function SignUpPage() {
         <div className="grid grid-cols-2 gap-3">
           <Button
             variant="outline"
-            className="h-12 rounded-xl !bg-white/10 !border-white/20 !text-white hover:!bg-white hover:!text-black hover:!border-white transition-all"
+            className="h-12 rounded-xl !bg-zinc-900 !border-white/20 !text-white hover:!bg-white hover:!text-black hover:!border-white transition-all"
             onClick={handleGoogleSignIn}
             disabled={isSigningUp || isGoogleLoading || isAppleLoading}
           >
@@ -122,7 +122,7 @@ export default function SignUpPage() {
 
           <Button
             variant="outline"
-            className="h-12 rounded-xl !bg-white/10 !border-white/20 !text-white hover:!bg-white hover:!text-black hover:!border-white transition-all"
+            className="h-12 rounded-xl !bg-zinc-900 !border-white/20 !text-white hover:!bg-white hover:!text-black hover:!border-white transition-all"
             onClick={handleAppleSignIn}
             disabled={isSigningUp || isGoogleLoading || isAppleLoading}
           >
@@ -158,7 +158,7 @@ export default function SignUpPage() {
                 name="name"
                 type="text"
                 required
-                className="w-full h-12 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
+                className="w-full h-12 rounded-xl bg-zinc-900 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
                 placeholder="John Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -175,7 +175,7 @@ export default function SignUpPage() {
                 type="email"
                 autoComplete="email"
                 required
-                className="w-full h-12 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
+                className="w-full h-12 rounded-xl bg-zinc-900 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -193,7 +193,7 @@ export default function SignUpPage() {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  className="w-full h-12 pr-10 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
+                  className="w-full h-12 pr-10 rounded-xl bg-zinc-900 border-white/20 text-white placeholder:text-white/50 focus-visible:border-white/40 focus-visible:ring-white/20 selection:bg-white/30 selection:text-white"
                   placeholder="Create a password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

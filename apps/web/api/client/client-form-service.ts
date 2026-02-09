@@ -50,7 +50,10 @@ const mockClientCheckIns: ClientCheckIn[] = [
     questionCount: 5,
     schedule: 'Every Monday',
     nextScheduledAt: new Date(2025, 11, 23),
+    createdAt: new Date(2025, 9, 1),
     description: 'Weekly progress check-in form',
+    status: 'live',
+    submissionCount: 12,
   },
   {
     id: 'checkin-2',
@@ -58,7 +61,10 @@ const mockClientCheckIns: ClientCheckIn[] = [
     questionCount: 12,
     schedule: 'First of each month',
     nextScheduledAt: new Date(2026, 0, 1),
+    createdAt: new Date(2025, 8, 15),
     description: 'Comprehensive monthly assessment',
+    status: 'live',
+    submissionCount: 3,
   },
   {
     id: 'checkin-3',
@@ -66,7 +72,10 @@ const mockClientCheckIns: ClientCheckIn[] = [
     questionCount: 3,
     schedule: 'Daily',
     nextScheduledAt: new Date(2025, 11, 20),
+    createdAt: new Date(2025, 10, 1),
     description: 'Quick daily check-in',
+    status: 'draft',
+    submissionCount: 0,
   },
 ];
 
