@@ -330,7 +330,7 @@ export default function HeroSection() {
 
             <div className="relative mx-auto max-w-7xl px-6">
               {/* Floating icon containers */}
-              <div className="absolute inset-0 hidden lg:block">
+              <div className="pointer-events-none absolute inset-0 z-10 hidden lg:block">
                 {/* ChatGPT - top left, larger */}
                 <motion.div
                   initial={{ opacity: 0, x: -60, scale: 0.8, filter: 'blur(8px)' }}
@@ -338,7 +338,7 @@ export default function HeroSection() {
                   transition={{ type: 'spring', bounce: 0.3, duration: 1.2, delay: 0.5 }}
                   style={entranceDone ? { x: leftX, opacity: iconOpacity, scale: iconScale } : undefined}
                   onClick={() => setActiveIcon('chatgpt')}
-                  className="absolute top-[12%] left-[6%] flex size-24 -rotate-12 cursor-pointer items-center justify-center rounded-[20px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.06)] dark:shadow-[0_0_25px_rgba(255,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
+                  className="absolute top-[12%] left-[6%] pointer-events-auto flex size-24 -rotate-12 cursor-pointer items-center justify-center rounded-[20px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.06)] dark:shadow-[0_0_25px_rgba(255,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
                 >
                   <img src="/icons/chatgpt.png" alt="" className="size-[68px] object-contain drop-shadow-[0_0_8px_rgba(0,0,0,0.3)] dark:invert dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
                 </motion.div>
@@ -349,7 +349,7 @@ export default function HeroSection() {
                   transition={{ type: 'spring', bounce: 0.3, duration: 1.2, delay: 0.65 }}
                   style={entranceDone ? { x: rightX, opacity: iconOpacity, scale: iconScale } : undefined}
                   onClick={() => setActiveIcon('whatsapp')}
-                  className="absolute top-[22%] right-[8%] flex size-20 rotate-12 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(37,211,102,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
+                  className="absolute top-[22%] right-[8%] pointer-events-auto flex size-20 rotate-12 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(37,211,102,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
                 >
                   <img src="/icons/whatsapp.png" alt="" className="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(37,211,102,0.35)]" />
                 </motion.div>
@@ -360,7 +360,7 @@ export default function HeroSection() {
                   transition={{ type: 'spring', bounce: 0.3, duration: 1.2, delay: 0.8 }}
                   style={entranceDone ? { x: leftX, opacity: iconOpacity, scale: iconScale } : undefined}
                   onClick={() => setActiveIcon('excel')}
-                  className="absolute bottom-[30%] left-[5%] flex size-20 -rotate-[18deg] cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(33,185,110,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
+                  className="absolute bottom-[30%] left-[5%] pointer-events-auto flex size-20 -rotate-[18deg] cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(33,185,110,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
                 >
                   <img src="/icons/excel.png" alt="" className="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(33,115,70,0.35)]" />
                 </motion.div>
@@ -371,7 +371,7 @@ export default function HeroSection() {
                   transition={{ type: 'spring', bounce: 0.3, duration: 1.2, delay: 0.95 }}
                   style={entranceDone ? { x: rightX, opacity: iconOpacity, scale: iconScale } : undefined}
                   onClick={() => setActiveIcon('zapier')}
-                  className="absolute bottom-[22%] right-[12%] flex size-24 rotate-6 cursor-pointer items-center justify-center rounded-[20px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(255,159,28,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
+                  className="absolute bottom-[22%] right-[12%] pointer-events-auto flex size-24 rotate-6 cursor-pointer items-center justify-center rounded-[20px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(255,159,28,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
                 >
                   <img src="/icons/zap.png" alt="" className="size-[68px] object-contain drop-shadow-[0_0_8px_rgba(255,159,28,0.35)]" />
                 </motion.div>
@@ -382,7 +382,7 @@ export default function HeroSection() {
                   transition={{ type: 'spring', bounce: 0.3, duration: 1.2, delay: 1.1 }}
                   style={entranceDone ? { x: rightX, opacity: iconOpacity, scale: iconScale, boxShadow: '-5px -5px 15px rgba(251,188,4,0.12), 5px -5px 15px rgba(234,67,53,0.1), 5px 5px 15px rgba(66,133,244,0.12), -5px 5px 15px rgba(52,168,83,0.12), inset 0 1px 0 rgba(255,255,255,0.06)' } : { boxShadow: '-5px -5px 15px rgba(251,188,4,0.12), 5px -5px 15px rgba(234,67,53,0.1), 5px 5px 15px rgba(66,133,244,0.12), -5px 5px 15px rgba(52,168,83,0.12), inset 0 1px 0 rgba(255,255,255,0.06)' }}
                   onClick={() => setActiveIcon('docs')}
-                  className="absolute top-[-6%] right-[14%] flex size-20 rotate-3 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 hover:scale-110 transition-transform"
+                  className="absolute top-[-6%] right-[14%] pointer-events-auto flex size-20 rotate-3 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 hover:scale-110 transition-transform"
                 >
                   <img src="/icons/docs.png" alt="" className="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(66,133,244,0.3)]" />
                 </motion.div>
@@ -394,7 +394,7 @@ export default function HeroSection() {
                   onAnimationComplete={() => setEntranceDone(true)}
                   style={entranceDone ? { x: leftX, opacity: iconOpacity, scale: iconScale } : undefined}
                   onClick={() => setActiveIcon('notion')}
-                  className="absolute bottom-[6%] left-[15%] flex size-20 -rotate-3 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.06)] dark:shadow-[0_0_25px_rgba(255,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
+                  className="absolute bottom-[6%] left-[15%] pointer-events-auto flex size-20 -rotate-3 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.06)] dark:shadow-[0_0_25px_rgba(255,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
                 >
                   <img src="/icons/notion.png" alt="" className="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(0,0,0,0.3)] dark:invert dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
                 </motion.div>
