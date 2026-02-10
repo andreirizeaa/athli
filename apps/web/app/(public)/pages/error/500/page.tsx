@@ -14,8 +14,8 @@ export async function generateMetadata() {
 export default function Page() {
   return (
     <div className="from-background to-secondary/10 flex min-h-screen flex-col items-center justify-center bg-gradient-to-b p-4">
-      <div className="w-full max-w-3xl space-y-4 lg:space-y-8">
-        <div className="relative flex h-64 items-center justify-center overflow-hidden rounded-lg border border-red-600/10 bg-red-500/5 sm:h-80">
+      <div className="w-full max-w-3xl">
+        <div className="relative flex min-h-64 items-center justify-center overflow-hidden rounded-lg border border-red-600/10 bg-red-500/5 py-12 sm:min-h-80">
           <div className="absolute inset-0 grid grid-cols-10 grid-rows-10 opacity-10">
             {Array.from({ length: 100 }).map((_, i) => (
               <div
@@ -33,15 +33,14 @@ export default function Page() {
               500
             </div>
             <div className="text-foreground text-xl font-medium sm:text-2xl">Server Error</div>
+            <div className="mt-6">
+              <Button asChild variant="outline" size="lg">
+                <Link href="/home">Back to Home</Link>
+              </Button>
+            </div>
           </div>
 
           <div className="from-background/80 absolute right-0 bottom-0 left-0 h-1/3 bg-gradient-to-t to-transparent" />
-        </div>
-
-        <div className="flex justify-center">
-          <Button asChild variant="outline" size="lg">
-            <Link href="/home">Back to Home</Link>
-          </Button>
         </div>
       </div>
     </div>

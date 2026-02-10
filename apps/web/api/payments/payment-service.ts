@@ -1,5 +1,5 @@
 import { apiFetch } from '@/api/api-client';
-import type { CoachStripeAccount, CoachPackage, DiscountCode } from '@athli/shared-types';
+import type { CoachStripeAccount, CoachPackage, Coupon } from '@athli/shared-types';
 
 interface GetStripeStatusResponse {
   data: {
@@ -46,6 +46,10 @@ export async function getStripeDashboardLink(): Promise<string> {
   return response.data.url;
 }
 
+export async function disconnectStripe(): Promise<void> {
+  await apiFetch('/payments/connect/disconnect', { method: 'DELETE' });
+}
+
 export async function getCoachPackages(): Promise<CoachPackage[]> {
   const response = await apiFetch<GetPackagesResponse>('/payments/packages');
   return response.data.packages;
@@ -71,10 +75,10 @@ export interface CreatePackageData {
   amount_cents: number;
   currency: string;
   interval: string;
-  benefits?: string[];
+  interval_count?: number;
+  features?: string[];
   free_trial_days?: number;
   initial_fee_cents?: number;
-  duration_months?: number | null;
   onboarding_id?: string | null;
   sequence_id?: string | null;
 }
@@ -107,17 +111,17 @@ export async function togglePackage(id: string, field: 'is_active' | 'is_visible
   return response.data.package;
 }
 
-// --- Discount Codes ---
+// --- Coupons ---
 
-interface GetCodesResponse {
-  data: { codes: DiscountCode[] };
+interface GetCouponsResponse {
+  data: { coupons: Coupon[] };
 }
 
-interface CodeResponse {
-  data: { code: DiscountCode };
+interface CouponResponse {
+  data: { coupon: Coupon };
 }
 
-export interface CreateCodeData {
+export interface CreateCouponData {
   name: string;
   code: string;
   discount_type: 'percentage' | 'fixed';
@@ -128,29 +132,29 @@ export interface CreateCodeData {
   expires_at?: string | null;
 }
 
-export async function getDiscountCodes(): Promise<DiscountCode[]> {
-  const response = await apiFetch<GetCodesResponse>('/payments/codes');
-  return response.data.codes;
+export async function getCoupons(): Promise<Coupon[]> {
+  const response = await apiFetch<GetCouponsResponse>('/payments/coupons');
+  return response.data.coupons;
 }
 
-export async function createDiscountCode(data: CreateCodeData): Promise<DiscountCode> {
-  const response = await apiFetch<CodeResponse>('/payments/codes', {
+export async function createCoupon(data: CreateCouponData): Promise<Coupon> {
+  const response = await apiFetch<CouponResponse>('/payments/coupons', {
     method: 'POST',
     body: data as unknown as Record<string, unknown>,
   });
-  return response.data.code;
+  return response.data.coupon;
 }
 
-export async function updateDiscountCode(id: string, data: Partial<CreateCodeData & { is_active: boolean }>): Promise<DiscountCode> {
-  const response = await apiFetch<CodeResponse>(`/payments/codes/${id}`, {
+export async function updateCoupon(id: string, data: Partial<CreateCouponData & { is_active: boolean }>): Promise<Coupon> {
+  const response = await apiFetch<CouponResponse>(`/payments/coupons/${id}`, {
     method: 'PATCH',
     body: data as unknown as Record<string, unknown>,
   });
-  return response.data.code;
+  return response.data.coupon;
 }
 
-export async function deleteDiscountCode(id: string): Promise<void> {
-  await apiFetch(`/payments/codes/${id}`, { method: 'DELETE' });
+export async function deleteCoupon(id: string): Promise<void> {
+  await apiFetch(`/payments/coupons/${id}`, { method: 'DELETE' });
 }
 
 // --- Coach Onboardings ---

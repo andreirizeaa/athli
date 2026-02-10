@@ -24,6 +24,7 @@ import { useConversations } from '@/hooks/use-conversations';
 import { usePrefetchAllExercises } from '@/hooks/use-all-exercises';
 import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
 import { useCoachSequences } from '@/hooks/use-coach-sequences';
+import { useStripeConnection, useCoachPackages, useCoupons } from '@/hooks/use-coach-packages';
 
 interface GlobalContextType {
     user: UserProfile | null;
@@ -81,12 +82,13 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
     const { isLoadingOwn: isOwnTodoLoading, isLoadingAuto: isAutoTodoLoading } = useCoachTodo({ enabled: shouldPrefetch });
     const { isLoading: isClientsLoading } = useCoachClients({ enabled: shouldPrefetch });
     const { isLoading: isConversationsLoading } = useConversations({ enabled: shouldPrefetch });
-    const { isLoading: isOnboardingsLoading } = useCoachOnboardings({ enabled: shouldPrefetch });
-    const { isLoading: isSequencesLoading } = useCoachSequences({ enabled: shouldPrefetch });
-
-    // Prefetch all MuscleWiki exercises into React Query cache (1700+ exercises)
-    // This runs in the background and doesn't block the UI
+    // Background prefetch — warm the cache but don't block the full-screen loader
     usePrefetchAllExercises({ enabled: shouldPrefetch });
+    useCoachOnboardings({ enabled: shouldPrefetch });
+    useCoachSequences({ enabled: shouldPrefetch });
+    useStripeConnection();
+    useCoachPackages();
+    useCoupons();
 
     const isLoading = isFilesLoading ||
         isHabitsLoading ||
@@ -99,9 +101,7 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
         isOwnTodoLoading ||
         isAutoTodoLoading ||
         isClientsLoading ||
-        isConversationsLoading ||
-        isOnboardingsLoading ||
-        isSequencesLoading;
+        isConversationsLoading;
 
     // We only show the full screen loader for prefetching if we are NOT on a specific athlete's page
     // This allows the athlete profile to load its own data without being blocked by global coach data loading

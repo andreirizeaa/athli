@@ -12,6 +12,7 @@ paymentsRouter.post('/webhook', paymentsController.webhook);
 paymentsRouter.get('/connect/status', supabaseAuthenticate, paymentsController.getStatus);
 paymentsRouter.post('/connect/onboard', supabaseAuthenticate, paymentsController.onboard);
 paymentsRouter.post('/connect/dashboard-link', supabaseAuthenticate, paymentsController.dashboardLink);
+paymentsRouter.delete('/connect/disconnect', supabaseAuthenticate, paymentsController.disconnect);
 
 // Coach: Packages
 paymentsRouter.get('/packages', supabaseAuthenticate, paymentsController.getPackages);
@@ -24,11 +25,11 @@ paymentsRouter.delete('/packages/:packageId', supabaseAuthenticate, paymentsCont
 // Stripe Sync
 paymentsRouter.post('/sync-to-stripe', supabaseAuthenticate, paymentsController.backfillStripe);
 
-// Discount Codes
-paymentsRouter.get('/codes', supabaseAuthenticate, paymentsController.getCodes);
-paymentsRouter.post('/codes', supabaseAuthenticate, paymentsController.createCode);
-paymentsRouter.patch('/codes/:codeId', supabaseAuthenticate, paymentsController.updateCode);
-paymentsRouter.delete('/codes/:codeId', supabaseAuthenticate, paymentsController.deleteCode);
+// Coupons
+paymentsRouter.get('/coupons', supabaseAuthenticate, paymentsController.getCoupons);
+paymentsRouter.post('/coupons', supabaseAuthenticate, paymentsController.createCoupon);
+paymentsRouter.patch('/coupons/:couponId', supabaseAuthenticate, paymentsController.updateCoupon);
+paymentsRouter.delete('/coupons/:couponId', supabaseAuthenticate, paymentsController.deleteCoupon);
 
 // Coach: Onboardings (for package creation dropdown)
 paymentsRouter.get('/onboardings', supabaseAuthenticate, paymentsController.getOnboardings);

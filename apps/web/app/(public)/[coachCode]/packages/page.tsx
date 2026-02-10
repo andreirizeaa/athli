@@ -17,8 +17,11 @@ function formatAmount(amountCents: number, currency: string): string {
   }).format(amountCents / 100);
 }
 
-function formatInterval(interval: string): string {
+function formatInterval(interval: string, intervalCount?: number | null): string {
   if (interval === 'one_time') return '';
+  const count = intervalCount ?? 1;
+  if (count > 1) return `/ ${count} ${interval}s`;
+  if (interval === 'day') return '/ day';
   if (interval === 'week') return '/ week';
   if (interval === 'month') return '/ month';
   if (interval === 'year') return '/ year';
@@ -117,7 +120,7 @@ export default function PublicPackagesPage() {
                       {formatAmount(pkg.amount_cents, pkg.currency)}
                     </span>
                     {pkg.interval !== 'one_time' && (
-                      <span className="text-muted-foreground ml-1">{formatInterval(pkg.interval)}</span>
+                      <span className="text-muted-foreground ml-1">{formatInterval(pkg.interval, pkg.interval_count)}</span>
                     )}
                   </div>
 
@@ -127,18 +130,15 @@ export default function PublicPackagesPage() {
                     {(pkg.free_trial_days ?? 0) > 0 && (
                       <Badge variant="outline">{pkg.free_trial_days}-day free trial</Badge>
                     )}
-                    {pkg.duration_months && (
-                      <Badge variant="outline">{pkg.duration_months} month{pkg.duration_months > 1 ? 's' : ''}</Badge>
-                    )}
                   </div>
 
-                  {/* Benefits */}
-                  {pkg.benefits && pkg.benefits.length > 0 && (
+                  {/* Features */}
+                  {pkg.features && pkg.features.length > 0 && (
                     <ul className="space-y-2 mb-6">
-                      {pkg.benefits.map((benefit, i) => (
+                      {pkg.features.map((feature, i) => (
                         <li key={i} className="flex items-start gap-2 text-sm">
                           <Check className="size-4 text-green-500 mt-0.5 shrink-0" />
-                          <span>{benefit}</span>
+                          <span>{feature}</span>
                         </li>
                       ))}
                     </ul>

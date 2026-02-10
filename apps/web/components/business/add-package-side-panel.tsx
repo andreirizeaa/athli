@@ -15,6 +15,18 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useCoachSequencesDropdown } from '@/hooks/use-coach-packages';
 import type { CoachPackage } from '@athli/shared-types';
 
+function toBillingType(interval: string, intervalCount: number | null): string {
+  if (interval === 'month' && intervalCount === 3) return 'month_3';
+  if (interval === 'month' && intervalCount === 6) return 'month_6';
+  return interval;
+}
+
+function fromBillingType(billingType: string): { interval: string; interval_count: number } {
+  if (billingType === 'month_3') return { interval: 'month', interval_count: 3 };
+  if (billingType === 'month_6') return { interval: 'month', interval_count: 6 };
+  return { interval: billingType, interval_count: 1 };
+}
+
 type AddPackageSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -26,10 +38,10 @@ type AddPackageSidePanelProps = {
 export type PackageFormData = {
   name: string;
   description: string;
-  benefits: string[];
+  features: string[];
   currency: string;
   interval: string;
-  duration_months: number | null;
+  interval_count: number;
   free_trial_days: number;
   initial_fee_cents: number;
   amount_cents: number;
@@ -48,12 +60,11 @@ export const AddPackageSidePanel = ({
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [hasBenefits, setHasBenefits] = useState(false);
-  const [benefits, setBenefits] = useState<string[]>([]);
-  const [newBenefit, setNewBenefit] = useState('');
+  const [hasFeatures, setHasFeatures] = useState(false);
+  const [features, setFeatures] = useState<string[]>([]);
+  const [newFeature, setNewFeature] = useState('');
   const [currency, setCurrency] = useState('usd');
-  const [interval, setInterval] = useState('month');
-  const [durationMonths, setDurationMonths] = useState<string>('null');
+  const [billingType, setBillingType] = useState('month');
   const [hasFreeTrial, setHasFreeTrial] = useState(false);
   const [freeTrialDays, setFreeTrialDays] = useState(7);
   const [hasInitialFee, setHasInitialFee] = useState(false);
@@ -65,6 +76,7 @@ export const AddPackageSidePanel = ({
 
   const isEditing = !!pkg;
   const hasSequences = sequences && sequences.length > 0;
+  const { interval, interval_count } = fromBillingType(billingType);
   const isRecurring = interval !== 'one_time';
 
   useEffect(() => {
@@ -72,11 +84,10 @@ export const AddPackageSidePanel = ({
       if (pkg) {
         setName(pkg.name);
         setDescription(pkg.description || '');
-        setHasBenefits((pkg.benefits || []).length > 0);
-        setBenefits(pkg.benefits || []);
+        setHasFeatures((pkg.features || []).length > 0);
+        setFeatures(pkg.features || []);
         setCurrency(pkg.currency);
-        setInterval(pkg.interval);
-        setDurationMonths(pkg.duration_months != null ? String(pkg.duration_months) : 'null');
+        setBillingType(toBillingType(pkg.interval, pkg.interval_count));
         setHasFreeTrial((pkg.free_trial_days || 0) > 0);
         setFreeTrialDays(pkg.free_trial_days || 7);
         setHasInitialFee((pkg.initial_fee_cents || 0) > 0);
@@ -86,12 +97,11 @@ export const AddPackageSidePanel = ({
       } else {
         setName('');
         setDescription('');
-        setHasBenefits(false);
-        setBenefits([]);
-        setNewBenefit('');
+        setHasFeatures(false);
+        setFeatures([]);
+        setNewFeature('');
         setCurrency('usd');
-        setInterval('month');
-        setDurationMonths('null');
+        setBillingType('month');
         setHasFreeTrial(false);
         setFreeTrialDays(7);
         setHasInitialFee(false);
@@ -104,36 +114,51 @@ export const AddPackageSidePanel = ({
     }
   }, [open, pkg]);
 
-  const handleAddBenefit = () => {
-    const trimmed = newBenefit.trim();
+  const handleAddFeature = () => {
+    const trimmed = newFeature.trim();
     if (trimmed) {
-      setBenefits((prev) => [...prev, trimmed]);
-      setNewBenefit('');
+      setFeatures((prev) => [...prev, trimmed]);
+      setNewFeature('');
     }
   };
 
-  const handleRemoveBenefit = (index: number) => {
-    setBenefits((prev) => prev.filter((_, i) => i !== index));
+  const handleUpdateFeature = (index: number, value: string) => {
+    setFeatures((prev) => prev.map((f, i) => (i === index ? value : f)));
+  };
+
+  const handleBlurFeature = (index: number) => {
+    if (!features[index]?.trim()) {
+      setFeatures((prev) => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleRemoveFeature = (index: number) => {
+    setFeatures((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSave = async () => {
     const amountCents = Math.round(parseFloat(priceDisplay || '0') * 100);
-    if (!name.trim() || !description.trim() || amountCents < 0) return;
+    if (!name.trim() || amountCents < 0) return;
     if (isRecurring && hasFreeTrial && freeTrialDays < 1) return;
 
     const initialFeeCents = isRecurring && hasInitialFee
       ? Math.round(parseFloat(initialFeeDisplay || '0') * 100)
       : 0;
 
+    // Auto-include any pending feature text that hasn't been explicitly added
+    const allFeatures = hasFeatures
+      ? [...features, ...(newFeature.trim() ? [newFeature.trim()] : [])]
+      : [];
+
     setIsSaving(true);
     try {
       await onSave({
         name: name.trim(),
         description: description.trim(),
-        benefits: hasBenefits ? benefits : [],
+        features: allFeatures,
         currency,
         interval,
-        duration_months: isRecurring ? (durationMonths === 'null' ? null : parseInt(durationMonths)) : null,
+        interval_count,
         free_trial_days: isRecurring && hasFreeTrial ? freeTrialDays : 0,
         initial_fee_cents: initialFeeCents,
         amount_cents: amountCents,
@@ -174,15 +199,15 @@ export const AddPackageSidePanel = ({
       ? ` + ${new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase() }).format(initialFeeCents / 100)}`
       : '';
     if (interval === 'one_time') return `${formatted} one time`;
-    return `${formatted}/${interval}${feeFormatted}`;
+    const intervalLabel = billingType === 'month_3' ? '3 months' : billingType === 'month_6' ? '6 months' : interval;
+    return `${formatted}/${intervalLabel}${feeFormatted}`;
   })();
 
   const canSave =
     name.trim().length > 0 &&
-    description.trim().length > 0 &&
     priceDisplay &&
     parseFloat(priceDisplay) >= 0 &&
-    (!hasBenefits || benefits.length > 0) &&
+    (!hasFeatures || features.length > 0 || newFeature.trim().length > 0) &&
     (!isRecurring || !hasFreeTrial || freeTrialDays >= 1) &&
     (!isRecurring || !hasInitialFee || (initialFeeDisplay && parseFloat(initialFeeDisplay) > 0));
 
@@ -208,19 +233,19 @@ export const AddPackageSidePanel = ({
           setName={setName}
           description={description}
           setDescription={setDescription}
-          hasBenefits={hasBenefits}
-          setHasBenefits={setHasBenefits}
-          benefits={benefits}
-          newBenefit={newBenefit}
-          setNewBenefit={setNewBenefit}
-          onAddBenefit={handleAddBenefit}
-          onRemoveBenefit={handleRemoveBenefit}
+          hasFeatures={hasFeatures}
+          setHasFeatures={setHasFeatures}
+          features={features}
+          newFeature={newFeature}
+          setNewFeature={setNewFeature}
+          onAddFeature={handleAddFeature}
+          onUpdateFeature={handleUpdateFeature}
+          onBlurFeature={handleBlurFeature}
+          onRemoveFeature={handleRemoveFeature}
           currency={currency}
           setCurrency={setCurrency}
-          interval={interval}
-          setInterval={setInterval}
-          durationMonths={durationMonths}
-          setDurationMonths={setDurationMonths}
+          billingType={billingType}
+          setBillingType={setBillingType}
           hasFreeTrial={hasFreeTrial}
           setHasFreeTrial={setHasFreeTrial}
           freeTrialDays={freeTrialDays}
@@ -274,11 +299,10 @@ export const AddPackageSidePanel = ({
 function PackageDetailsForm({
   name, setName,
   description, setDescription,
-  hasBenefits, setHasBenefits,
-  benefits, newBenefit, setNewBenefit, onAddBenefit, onRemoveBenefit,
+  hasFeatures, setHasFeatures,
+  features, newFeature, setNewFeature, onAddFeature, onUpdateFeature, onBlurFeature, onRemoveFeature,
   currency, setCurrency,
-  interval, setInterval,
-  durationMonths, setDurationMonths,
+  billingType, setBillingType,
   hasFreeTrial, setHasFreeTrial,
   freeTrialDays, setFreeTrialDays,
   hasInitialFee, setHasInitialFee,
@@ -288,12 +312,11 @@ function PackageDetailsForm({
 }: {
   name: string; setName: (v: string) => void;
   description: string; setDescription: (v: string) => void;
-  hasBenefits: boolean; setHasBenefits: (v: boolean) => void;
-  benefits: string[]; newBenefit: string; setNewBenefit: (v: string) => void;
-  onAddBenefit: () => void; onRemoveBenefit: (i: number) => void;
+  hasFeatures: boolean; setHasFeatures: (v: boolean) => void;
+  features: string[]; newFeature: string; setNewFeature: (v: string) => void;
+  onAddFeature: () => void; onUpdateFeature: (i: number, v: string) => void; onBlurFeature: (i: number) => void; onRemoveFeature: (i: number) => void;
   currency: string; setCurrency: (v: string) => void;
-  interval: string; setInterval: (v: string) => void;
-  durationMonths: string; setDurationMonths: (v: string) => void;
+  billingType: string; setBillingType: (v: string) => void;
   hasFreeTrial: boolean; setHasFreeTrial: (v: boolean) => void;
   freeTrialDays: number; setFreeTrialDays: (v: number) => void;
   hasInitialFee: boolean; setHasInitialFee: (v: boolean) => void;
@@ -318,7 +341,7 @@ function PackageDetailsForm({
 
       {/* Description */}
       <div className="space-y-2">
-        <Label htmlFor="pkg-desc"><span>{t('business.packages.form.description')}<RequiredAsterisk /></span></Label>
+        <Label htmlFor="pkg-desc">{t('business.packages.form.description')}</Label>
         <Textarea
           id="pkg-desc"
           value={description}
@@ -341,76 +364,64 @@ function PackageDetailsForm({
         />
       </div>
 
-      {/* Plan Type & Duration */}
-      <div className="flex gap-2">
-        <div className="space-y-2 flex-1 min-w-0">
-          <Label><span>{t('business.packages.form.planType')}<RequiredAsterisk /></span></Label>
-          <Select value={interval} onValueChange={setInterval}>
-            <SelectTrigger className="w-full h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="one_time">{t('business.packages.form.oneTime')}</SelectItem>
-              <SelectItem value="week">{t('business.packages.form.weekly')}</SelectItem>
-              <SelectItem value="month">{t('business.packages.form.monthly')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        {isRecurring && (
-          <div className="space-y-2 flex-1 min-w-0">
-            <Label><span>{t('business.packages.form.duration')}<RequiredAsterisk /></span></Label>
-            <Select value={durationMonths} onValueChange={setDurationMonths}>
-              <SelectTrigger className="w-full h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="null">{t('business.packages.form.untilCancelled')}</SelectItem>
-                <SelectItem value="1">{t('business.packages.form.month', { count: 1 })}</SelectItem>
-                <SelectItem value="2">{t('business.packages.form.months', { count: 2 })}</SelectItem>
-                <SelectItem value="3">{t('business.packages.form.months', { count: 3 })}</SelectItem>
-                <SelectItem value="6">{t('business.packages.form.months', { count: 6 })}</SelectItem>
-                <SelectItem value="12">{t('business.packages.form.months', { count: 12 })}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+      {/* Billing Type */}
+      <div className="space-y-2">
+        <Label><span>{t('business.packages.form.billingType')}<RequiredAsterisk /></span></Label>
+        <Select value={billingType} onValueChange={setBillingType}>
+          <SelectTrigger className="w-full h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="day">{t('business.packages.form.daily')}</SelectItem>
+            <SelectItem value="week">{t('business.packages.form.weekly')}</SelectItem>
+            <SelectItem value="month">{t('business.packages.form.monthly')}</SelectItem>
+            <SelectItem value="year">{t('business.packages.form.yearly')}</SelectItem>
+            <SelectItem value="month_3">{t('business.packages.form.every3Months')}</SelectItem>
+            <SelectItem value="month_6">{t('business.packages.form.every6Months')}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Benefits */}
+      {/* Features */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Checkbox
-            id="benefits-toggle"
-            checked={hasBenefits}
-            onCheckedChange={(checked) => setHasBenefits(checked === true)}
+            id="features-toggle"
+            checked={hasFeatures}
+            onCheckedChange={(checked) => setHasFeatures(checked === true)}
           />
-          <Label htmlFor="benefits-toggle" className="cursor-pointer">
-            <span>{t('business.packages.form.benefits')}<RequiredAsterisk className={hasBenefits ? '' : 'invisible'} /></span>
+          <Label htmlFor="features-toggle" className="cursor-pointer">
+            <span>{t('business.packages.form.features')}<RequiredAsterisk className={hasFeatures ? '' : 'invisible'} /></span>
           </Label>
         </div>
-        {hasBenefits && (
+        {hasFeatures && (
           <>
-            {benefits.map((benefit, i) => (
+            {features.map((feature, i) => (
               <div key={i} className="flex gap-2">
-                <Input value={benefit} readOnly className="flex-1" />
-                <Button type="button" variant="outline" size="icon" onClick={() => onRemoveBenefit(i)} className="shrink-0 h-9 w-9 text-muted-foreground hover:text-destructive">
+                <Input
+                  value={feature}
+                  onChange={(e) => onUpdateFeature(i, e.target.value)}
+                  onBlur={() => onBlurFeature(i)}
+                  className="flex-1"
+                />
+                <Button type="button" variant="outline" size="icon" onClick={() => onRemoveFeature(i)} className="shrink-0 h-9 w-9 text-muted-foreground hover:text-destructive">
                   <Trash2 className="size-4" />
                 </Button>
               </div>
             ))}
             <div className="flex gap-2">
               <Input
-                value={newBenefit}
-                onChange={(e) => setNewBenefit(e.target.value)}
-                placeholder={t('business.packages.form.benefitPlaceholder')}
+                value={newFeature}
+                onChange={(e) => setNewFeature(e.target.value)}
+                placeholder={t('business.packages.form.featurePlaceholder')}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    onAddBenefit();
+                    onAddFeature();
                   }
                 }}
               />
-              <Button type="button" variant="outline" size="icon" onClick={onAddBenefit} className="shrink-0 h-9 w-9">
+              <Button type="button" variant="outline" size="icon" onClick={onAddFeature} className="shrink-0 h-9 w-9">
                 <Plus className="size-4" />
               </Button>
             </div>
