@@ -17,6 +17,10 @@ import {
   deleteCoupon,
   getCoachOnboardings,
   getCoachSequences,
+  getSummaryAnalytics,
+  getSummaryActivity,
+  getAllPackageStats,
+  getPackageCouponRedemptions,
   type CreatePackageData,
   type CreateCouponData,
 } from '@/api/payments/payment-service';
@@ -191,6 +195,32 @@ export const useCoupons = () => {
   };
 };
 
+export const useAllPackageStats = () => {
+  return useQuery({
+    queryKey: ['all-package-stats'],
+    queryFn: () => getAllPackageStats(),
+    staleTime: 60 * 1000,
+  });
+};
+
+export const useSummaryAnalytics = () => {
+  return useQuery({
+    queryKey: ['summary-analytics'],
+    queryFn: () => getSummaryAnalytics(),
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+};
+
+export const useSummaryActivity = () => {
+  return useQuery({
+    queryKey: ['summary-activity'],
+    queryFn: () => getSummaryActivity(),
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+};
+
 export const useCoachOnboardings = () => {
   return useQuery({
     queryKey: ['coach-onboardings'],
@@ -204,5 +234,14 @@ export const useCoachSequencesDropdown = () => {
     queryKey: ['coach-sequences-dropdown'],
     queryFn: () => getCoachSequences(),
     staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const usePackageCouponRedemptions = (packageId: string | null) => {
+  return useQuery({
+    queryKey: ['package-coupon-redemptions', packageId],
+    queryFn: () => getPackageCouponRedemptions(packageId!),
+    enabled: !!packageId,
+    staleTime: 60 * 1000,
   });
 };

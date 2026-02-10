@@ -262,6 +262,8 @@ export async function syncCouponToStripe(code: {
 
     if (code.duration_months === null) {
       couponData.duration = 'once';
+    } else if (code.duration_months === 0) {
+      couponData.duration = 'forever';
     } else {
       couponData.duration = 'repeating';
       couponData.duration_in_months = code.duration_months;

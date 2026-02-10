@@ -19,8 +19,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { AddPackageSidePanel, type PackageFormData } from '@/components/business/add-package-side-panel';
-import { useStripeConnection, useCoachPackages } from '@/hooks/use-coach-packages';
+import { PackageRedemptionsDialog } from '@/components/business/package-redemptions-dialog';
+import { useStripeConnection, useCoachPackages, useAllPackageStats } from '@/hooks/use-coach-packages';
 import { usePlatformSettings } from '@/hooks/use-platform-settings';
+import { DEFAULT_PACKAGE_IMAGE } from '@/lib/constants/package-presets';
 import type { CoachPackage } from '@athli/shared-types';
 
 function formatAmount(amountCents: number, currency: string): string {
@@ -45,6 +47,7 @@ const PackagesPage = () => {
   } = useCoachPackages();
 
   const { uniqueCode } = usePlatformSettings();
+  const { data: packageStats } = useAllPackageStats();
 
   const isConnected = stripeAccount?.onboarding_complete && stripeAccount?.charges_enabled;
 
@@ -55,6 +58,7 @@ const PackagesPage = () => {
   const [showArchived, setShowArchived] = useState(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [packageToDelete, setPackageToDelete] = useState<string | null>(null);
+  const [redemptionsPackage, setRedemptionsPackage] = useState<CoachPackage | null>(null);
 
   const filteredPackages = packages.filter((p) => showArchived ? !p.is_active : p.is_active);
 
@@ -173,21 +177,81 @@ const PackagesPage = () => {
               }}
             />
           </div>
+          <img
+            src={row.image_url || DEFAULT_PACKAGE_IMAGE}
+            alt=""
+            className="h-8 w-12 rounded object-cover flex-shrink-0"
+          />
           <span className="text-sm font-medium truncate">{row.name}</span>
         </div>
       ),
     },
     {
-      id: 'description',
-      label: t('business.packages.columns.description'),
+      id: 'sales',
+      label: t('business.packages.columns.sales'),
       sortable: true,
-      width: { class: 'w-[250px]', pixel: '250px' },
-      getSortValue: (row) => (row.description || '').toLowerCase(),
-      getSearchValue: (row) => row.description || '',
+      width: { class: 'w-[80px]', pixel: '80px' },
+      getSortValue: (row) => packageStats?.[row.id]?.total_purchases ?? 0,
+      renderCell: (row) => {
+        const value = packageStats?.[row.id]?.total_purchases ?? 0;
+        return <span className="text-sm">{value === 0 ? '--' : value}</span>;
+      },
+    },
+    {
+      id: 'refunds',
+      label: t('business.packages.columns.refunds'),
+      sortable: true,
+      width: { class: 'w-[80px]', pixel: '80px' },
+      getSortValue: (row) => packageStats?.[row.id]?.total_refunds ?? 0,
+      renderCell: (row) => {
+        const value = packageStats?.[row.id]?.total_refunds ?? 0;
+        return <span className="text-sm">{value === 0 ? '--' : value}</span>;
+      },
+    },
+    {
+      id: 'cancellations',
+      label: t('business.packages.columns.cancellations'),
+      sortable: true,
+      width: { class: 'w-[100px]', pixel: '100px' },
+      getSortValue: (row) => packageStats?.[row.id]?.total_cancellations ?? 0,
+      renderCell: (row) => {
+        const value = packageStats?.[row.id]?.total_cancellations ?? 0;
+        return <span className="text-sm">{value === 0 ? '--' : value}</span>;
+      },
+    },
+    {
+      id: 'revenue',
+      label: t('business.packages.columns.revenue'),
+      sortable: true,
+      width: { class: 'w-[120px]', pixel: '120px' },
+      getSortValue: (row) => packageStats?.[row.id]?.total_revenue_cents ?? 0,
+      renderCell: (row) => {
+        const stats = packageStats?.[row.id];
+        if (!stats || stats.total_revenue_cents === 0) return <span className="text-sm">--</span>;
+        return (
+          <span className="text-sm font-medium">
+            {formatAmount(stats.total_revenue_cents, stats.currency || row.currency)}
+          </span>
+        );
+      },
+    },
+    {
+      id: 'redemptions',
+      label: t('business.packages.columns.redemptions'),
+      sortable: false,
+      width: { class: 'w-[110px]', pixel: '110px' },
       renderCell: (row) => (
-        <span className="text-sm truncate block">
-          {row.description || '-'}
-        </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setRedemptionsPackage(row);
+          }}
+          className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+          data-no-row-link="true"
+        >
+          {t('business.packages.viewStats')}
+        </button>
       ),
     },
     {
@@ -321,7 +385,7 @@ const PackagesPage = () => {
           {isOnboarding ? (
             <Loader2 className="size-4 animate-spin text-[#635BFF]" />
           ) : (
-            <img src="/icons/stripe.png" alt="" className="size-5" />
+            <img src="/icons/stripe-icon.png" alt="" className="size-5" />
           )}
           {stripeAccount ? t('business.packages.stripe.continueSetup') : t('business.packages.stripe.connect')}
         </button>
@@ -355,11 +419,11 @@ const PackagesPage = () => {
         enableRowSelection={true}
         selectedRowIds={selectedIds}
         onSelectionChange={setSelectedIds}
-        showPagination={true}
+        showPagination={!!isConnected}
         gridPadding={true}
         compactPagination={true}
         emptyState={emptyState}
-        searchBarExtra={
+        searchBarExtra={(
           <Tabs value={showArchived ? 'archived' : 'active'} onValueChange={(v) => { setShowArchived(v === 'archived'); setSelectedIds(new Set()); }}>
             <TabsList>
               <TabsTrigger
@@ -376,8 +440,8 @@ const PackagesPage = () => {
               </TabsTrigger>
             </TabsList>
           </Tabs>
-        }
-        filterBarActions={
+        )}
+        filterBarActions={(
           <div className="flex items-center gap-2">
             {uniqueCode && (
               <Button
@@ -394,7 +458,7 @@ const PackagesPage = () => {
               <span>{t('business.packages.addPackage')}</span>
             </Button>
           </div>
-        }
+        )}
         selectionActions={
           selectedIds.size > 0 ? (
             <div className="flex items-center gap-1">
@@ -467,6 +531,12 @@ const PackagesPage = () => {
         onConfirm={handleDeleteSingle}
         itemName={packages.find((p) => p.id === packageToDelete)?.name}
         itemType="package"
+      />
+
+      <PackageRedemptionsDialog
+        open={redemptionsPackage !== null}
+        onOpenChange={(open) => !open && setRedemptionsPackage(null)}
+        package={redemptionsPackage}
       />
     </div>
   );

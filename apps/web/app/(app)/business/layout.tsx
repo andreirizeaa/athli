@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSelectedLayoutSegments, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Loader2, ChevronDown, Unplug } from 'lucide-react';
+import { Loader2, ChevronDown, Unplug, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageTabs } from '@/components/page-tabs';
 import { Separator } from '@/components/ui/separator';
@@ -22,8 +22,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
 import { Spinner } from '@/components/ui/spinner';
 import { useStripeConnection, useCoachPackages } from '@/hooks/use-coach-packages';
+import { useGlobalData } from '@/providers/global-data-provider';
 
 type BusinessLayoutProps = {
   children: React.ReactNode;
@@ -43,12 +45,17 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
     disconnectStripe,
     isDisconnecting,
   } = useCoachPackages();
+  const { uniqueCode } = useGlobalData();
 
   const isConnected = stripeAccount?.onboarding_complete && stripeAccount?.charges_enabled;
 
   const [isDisconnectOpen, setIsDisconnectOpen] = useState(false);
 
   const tabs = [
+    {
+      value: 'summary',
+      label: t('business.tabs.summary'),
+    },
     {
       value: 'packages',
       label: t('business.tabs.packages'),
@@ -64,7 +71,7 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
   ];
 
   const validTabValues = tabs.map((tab) => tab.value);
-  const activeTab = segments.find((segment) => validTabValues.includes(segment)) || 'packages';
+  const activeTab = segments.find((segment) => validTabValues.includes(segment)) || 'summary';
 
   const shouldShowHeader = segments.length === 1 && validTabValues.includes(segments[0]);
 
@@ -118,29 +125,37 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
     router.push(`/business/${value}`);
   };
 
-  const stripeButton = isConnected ? (
+  const headerActions = isConnected ? (
     <DropdownMenu>
-      <div className="flex items-stretch">
-        <button
+      <ButtonGroup>
+        <Button
+          variant="ghost"
+          disabled={!uniqueCode}
+          onClick={() => uniqueCode && window.open(`/${uniqueCode}/packages`, '_blank')}
+          className="gap-2 border border-[#635BFF] border-r-0 text-[#635BFF] hover:bg-[#635BFF]/5"
+        >
+          <ExternalLink className="size-4" />
+          <span>Preview Packages</span>
+        </Button>
+        <Button
           onClick={handleOpenDashboard}
           disabled={isGettingDashboardLink}
-          className="flex items-center justify-center gap-2 rounded-l-md border border-[#635BFF] px-3 h-9 text-sm font-medium text-[#635BFF] hover:bg-[#635BFF]/5 transition-colors disabled:opacity-50"
+          className="gap-2 bg-[#635BFF] hover:bg-[#635BFF]/90 text-white"
         >
           {isGettingDashboardLink ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (
-            <img src="/icons/stripe-icon.png" alt="" className="size-5" />
+            <img src="/icons/stripe-icon.png" alt="" className="size-5 brightness-0 invert" />
           )}
-          {t('business.packages.stripe.dashboard')}
-        </button>
+          <span>{t('business.packages.stripe.dashboard')}</span>
+        </Button>
+        <ButtonGroupSeparator />
         <DropdownMenuTrigger asChild>
-          <button
-            className="flex items-center justify-center rounded-r-md border border-l-0 border-[#635BFF] px-2.5 h-9 text-[#635BFF] hover:bg-[#635BFF]/5 transition-colors"
-          >
+          <Button className="px-2 bg-[#635BFF] hover:bg-[#635BFF]/90 text-white">
             <ChevronDown className="size-4" />
-          </button>
+          </Button>
         </DropdownMenuTrigger>
-      </div>
+      </ButtonGroup>
       <DropdownMenuContent align="end">
         <DropdownMenuItem
           onClick={() => setIsDisconnectOpen(true)}
@@ -172,7 +187,7 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
         <div className="w-full relative flex-shrink-0">
           <div className="pl-4 pr-4 flex items-center justify-between mb-2 mt-2">
             <h1 className="text-[22px] font-semibold">{t('business.title')}</h1>
-            {stripeButton}
+            {headerActions}
           </div>
           <div className="px-4">
             <PageTabs

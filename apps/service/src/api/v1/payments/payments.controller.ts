@@ -227,6 +227,339 @@ export const paymentsController = {
     }
   },
 
+  // ─── Summary Dashboard ─────────────────────────────────
+
+  getSummaryAnalytics: async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    if (!userId) {
+      unauthorized(res, { message: 'User not authenticated' });
+      return;
+    }
+
+    const supabase = getSupabaseClient();
+
+    try {
+      // Get coach's default currency
+      const { data: stripeAccount } = await supabase
+        .from('coach_stripe_accounts')
+        .select('default_currency')
+        .eq('coach_id', userId)
+        .maybeSingle();
+
+      const currency = stripeAccount?.default_currency || 'usd';
+
+      // All-time gross revenue
+      const { data: grossData } = await supabase
+        .from('payments')
+        .select('amount_cents')
+        .eq('coach_id', userId)
+        .eq('status', 'succeeded');
+
+      const gross_revenue_cents = (grossData || []).reduce((sum, p) => sum + (p.amount_cents || 0), 0);
+
+      // This month revenue
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+      const { data: thisMonthData } = await supabase
+        .from('payments')
+        .select('amount_cents')
+        .eq('coach_id', userId)
+        .eq('status', 'succeeded')
+        .gte('paid_at', startOfMonth);
+
+      const this_month_revenue_cents = (thisMonthData || []).reduce((sum, p) => sum + (p.amount_cents || 0), 0);
+
+      // Last month revenue
+      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+      const endOfLastMonth = startOfMonth;
+
+      const { data: lastMonthData } = await supabase
+        .from('payments')
+        .select('amount_cents')
+        .eq('coach_id', userId)
+        .eq('status', 'succeeded')
+        .gte('paid_at', startOfLastMonth)
+        .lt('paid_at', endOfLastMonth);
+
+      const last_month_revenue_cents = (lastMonthData || []).reduce((sum, p) => sum + (p.amount_cents || 0), 0);
+
+      // Active subscriptions count
+      const { count: active_subscriptions_count } = await supabase
+        .from('client_subscriptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('coach_id', userId)
+        .eq('status', 'active');
+
+      // Paying clients count (distinct client_id from succeeded payments)
+      const { data: payingClients } = await supabase
+        .from('payments')
+        .select('client_id')
+        .eq('coach_id', userId)
+        .eq('status', 'succeeded');
+
+      const paying_clients_count = new Set((payingClients || []).map(p => p.client_id)).size;
+
+      success(res, {
+        message: 'Summary analytics retrieved',
+        data: {
+          analytics: {
+            gross_revenue_cents,
+            this_month_revenue_cents,
+            last_month_revenue_cents,
+            active_subscriptions_count: active_subscriptions_count || 0,
+            paying_clients_count,
+            currency,
+          },
+        },
+      });
+    } catch (error: any) {
+      logger.error({ err: error.message }, 'Failed to fetch summary analytics');
+      return internalError(res, { message: 'Failed to fetch summary analytics' });
+    }
+  },
+
+  getSummaryActivity: async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    if (!userId) {
+      unauthorized(res, { message: 'User not authenticated' });
+      return;
+    }
+
+    const supabase = getSupabaseClient();
+
+    try {
+      // Try with joins first
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*, client:user_profiles!payments_client_id_fkey(name, email), package:coach_packages!payments_package_id_fkey(name)')
+        .eq('coach_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (error) {
+        // Fallback without joins
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('coach_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(200);
+
+        if (fallbackError) {
+          return internalError(res, { message: 'Failed to fetch payment activity' });
+        }
+
+        const rows = (fallbackData || []).map((p: any) => ({
+          id: p.id,
+          client_id: p.client_id,
+          client_name: null,
+          client_email: null,
+          package_id: p.package_id,
+          package_name: null,
+          amount_cents: p.amount_cents,
+          currency: p.currency,
+          status: p.status,
+          failure_reason: p.failure_reason,
+          payment_type: 'one_time' as const,
+          paid_at: p.paid_at,
+          created_at: p.created_at,
+        }));
+
+        return success(res, {
+          message: 'Payment activity retrieved',
+          data: { activity: rows },
+        });
+      }
+
+      // Get active subscriptions to determine payment_type
+      const { data: activeSubs } = await supabase
+        .from('client_subscriptions')
+        .select('client_id, package_id')
+        .eq('coach_id', userId)
+        .eq('status', 'active');
+
+      const subSet = new Set(
+        (activeSubs || []).map(s => `${s.client_id}:${s.package_id}`)
+      );
+
+      const rows = (data || []).map((p: any) => ({
+        id: p.id,
+        client_id: p.client_id,
+        client_name: p.client?.name || null,
+        client_email: p.client?.email || null,
+        package_id: p.package_id,
+        package_name: p.package?.name || null,
+        amount_cents: p.amount_cents,
+        currency: p.currency,
+        status: p.status,
+        failure_reason: p.failure_reason,
+        payment_type: subSet.has(`${p.client_id}:${p.package_id}`) ? 'subscription' as const : 'one_time' as const,
+        paid_at: p.paid_at,
+        created_at: p.created_at,
+      }));
+
+      success(res, {
+        message: 'Payment activity retrieved',
+        data: { activity: rows },
+      });
+    } catch (error: any) {
+      logger.error({ err: error.message }, 'Failed to fetch payment activity');
+      return internalError(res, { message: 'Failed to fetch payment activity' });
+    }
+  },
+
+  // ─── Package Stats ─────────────────────────────────────
+
+  getAllPackageStats: async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    if (!userId) {
+      unauthorized(res, { message: 'User not authenticated' });
+      return;
+    }
+
+    const supabase = getSupabaseClient();
+
+    try {
+      // Get all payments for this coach that have a package_id
+      const { data: payments } = await supabase
+        .from('payments')
+        .select('package_id, status, amount_cents')
+        .eq('coach_id', userId)
+        .not('package_id', 'is', null);
+
+      // Get cancelled subscriptions for this coach
+      const { data: subscriptions } = await supabase
+        .from('client_subscriptions')
+        .select('package_id, status')
+        .eq('coach_id', userId)
+        .eq('status', 'cancelled')
+        .not('package_id', 'is', null);
+
+      // Get currency from packages
+      const { data: packages } = await supabase
+        .from('coach_packages')
+        .select('id, currency')
+        .eq('coach_id', userId);
+
+      const currencyMap: Record<string, string> = {};
+      for (const pkg of packages || []) {
+        currencyMap[pkg.id] = pkg.currency;
+      }
+
+      // Aggregate per package
+      const statsMap: Record<string, { total_purchases: number; total_refunds: number; total_cancellations: number; total_revenue_cents: number; currency: string }> = {};
+
+      for (const p of payments || []) {
+        const pid = p.package_id!;
+        if (!statsMap[pid]) {
+          statsMap[pid] = { total_purchases: 0, total_refunds: 0, total_cancellations: 0, total_revenue_cents: 0, currency: currencyMap[pid] || 'usd' };
+        }
+        if (p.status === 'succeeded') {
+          statsMap[pid].total_purchases++;
+          statsMap[pid].total_revenue_cents += p.amount_cents || 0;
+        } else if (p.status === 'refunded') {
+          statsMap[pid].total_refunds++;
+        }
+      }
+
+      // Count cancellations from subscriptions
+      for (const sub of subscriptions || []) {
+        const pid = sub.package_id!;
+        if (!statsMap[pid]) {
+          statsMap[pid] = { total_purchases: 0, total_refunds: 0, total_cancellations: 0, total_revenue_cents: 0, currency: currencyMap[pid] || 'usd' };
+        }
+        statsMap[pid].total_cancellations++;
+      }
+
+      success(res, {
+        message: 'Package stats retrieved',
+        data: { stats: statsMap },
+      });
+    } catch (error: any) {
+      logger.error({ err: error.message }, 'Failed to fetch package stats');
+      return internalError(res, { message: 'Failed to fetch package stats' });
+    }
+  },
+
+  // Get coupon redemptions for a specific package
+  getPackageCouponRedemptions: async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    const { packageId } = req.params;
+
+    if (!userId) {
+      unauthorized(res, { message: 'User not authenticated' });
+      return;
+    }
+
+    const supabase = getSupabaseClient();
+
+    try {
+      // Verify package belongs to coach
+      const { data: pkg } = await supabase
+        .from('coach_packages')
+        .select('id')
+        .eq('id', packageId)
+        .eq('coach_id', userId)
+        .single();
+
+      if (!pkg) {
+        return notFound(res, { message: 'Package not found' });
+      }
+
+      // Get all payments for this package that have a coupon_id
+      const { data: payments } = await supabase
+        .from('payments')
+        .select('coupon_id')
+        .eq('coach_id', userId)
+        .eq('package_id', packageId)
+        .eq('status', 'succeeded')
+        .not('coupon_id', 'is', null);
+
+      // Count redemptions per coupon
+      const couponCounts: Record<string, number> = {};
+      for (const p of payments || []) {
+        const cid = p.coupon_id!;
+        couponCounts[cid] = (couponCounts[cid] || 0) + 1;
+      }
+
+      // Get coupon details
+      const couponIds = Object.keys(couponCounts);
+      if (couponIds.length === 0) {
+        return success(res, {
+          message: 'Package coupon redemptions retrieved',
+          data: { redemptions: [] },
+        });
+      }
+
+      const { data: coupons } = await supabase
+        .from('coach_coupons')
+        .select('id, name, code, discount_type, discount_value, currency')
+        .in('id', couponIds);
+
+      const redemptions = (coupons || []).map((c: any) => ({
+        coupon_id: c.id,
+        coupon_name: c.name,
+        coupon_code: c.code,
+        discount_type: c.discount_type,
+        discount_value: c.discount_value,
+        currency: c.currency,
+        redemption_count: couponCounts[c.id] || 0,
+      }));
+
+      // Sort by redemption count descending
+      redemptions.sort((a: any, b: any) => b.redemption_count - a.redemption_count);
+
+      success(res, {
+        message: 'Package coupon redemptions retrieved',
+        data: { redemptions },
+      });
+    } catch (error: any) {
+      logger.error({ err: error.message }, 'Failed to fetch package coupon redemptions');
+      return internalError(res, { message: 'Failed to fetch package coupon redemptions' });
+    }
+  },
+
   // ─── Packages ───────────────────────────────────────────
 
   getPackages: async (req: Request, res: Response) => {
@@ -477,7 +810,7 @@ export const paymentsController = {
       return;
     }
 
-    const { name, description, amount_cents, currency, interval, interval_count, features, free_trial_days, onboarding_id, sequence_id, initial_fee_cents } = req.body;
+    const { name, description, amount_cents, currency, interval, interval_count, features, free_trial_days, onboarding_id, sequence_id, initial_fee_cents, image_url } = req.body;
 
     if (!name || amount_cents == null || !currency || !interval) {
       return badRequest(res, { message: 'name, amount_cents, currency, and interval are required' });
@@ -503,11 +836,13 @@ export const paymentsController = {
           initial_fee_cents: initial_fee_cents || 0,
           onboarding_id: onboarding_id || null,
           sequence_id: sequence_id || null,
+          image_url: image_url || null,
         })
         .select()
         .single();
 
       if (error) {
+        logger.error({ err: error.message, code: error.code }, 'Failed to create package');
         return internalError(res, { message: 'Failed to create package' });
       }
 
@@ -578,6 +913,7 @@ export const paymentsController = {
         .single();
 
       if (error) {
+        logger.error({ err: error.message, code: error.code, packageId, updates }, 'Failed to update package');
         return internalError(res, { message: 'Failed to update package' });
       }
 
@@ -1047,6 +1383,180 @@ export const paymentsController = {
     }
   },
 
+  // ─── Client Checkout ──────────────────────────────────
+
+  createCheckoutSession: async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    if (!userId) {
+      unauthorized(res, { message: 'User not authenticated' });
+      return;
+    }
+
+    const { packageId, coachCode } = req.body;
+
+    if (!packageId || !coachCode) {
+      return badRequest(res, { message: 'packageId and coachCode are required' });
+    }
+
+    const supabase = getSupabaseClient();
+    const stripe = getStripeClient();
+    const webAppUrl = env.WEB_APP_URL;
+
+    try {
+      // Look up coach by code
+      let coachId: string | null = null;
+
+      const { data: codeRow } = await supabase
+        .from('coach_unique_codes')
+        .select('coach_id, onboarding_id, sequence_id')
+        .eq('code', coachCode)
+        .maybeSingle();
+
+      if (codeRow) {
+        coachId = codeRow.coach_id;
+      } else {
+        // Fallback: try coach_profiles_full view
+        const { data: profileMatch } = await supabase
+          .from('coach_profiles_full')
+          .select('id')
+          .eq('unique_code', coachCode.toUpperCase())
+          .maybeSingle();
+
+        if (profileMatch) {
+          coachId = profileMatch.id;
+        }
+      }
+
+      if (!coachId) {
+        return notFound(res, { message: 'Coach not found' });
+      }
+
+      // Get coach's Stripe account
+      const { data: stripeAccount } = await supabase
+        .from('coach_stripe_accounts')
+        .select('stripe_account_id, onboarding_complete, charges_enabled')
+        .eq('coach_id', coachId)
+        .maybeSingle();
+
+      if (!stripeAccount?.stripe_account_id || !stripeAccount.charges_enabled) {
+        return badRequest(res, { message: 'Coach has not set up payments' });
+      }
+
+      // Get the package
+      const { data: pkg } = await supabase
+        .from('coach_packages')
+        .select('*')
+        .eq('id', packageId)
+        .eq('coach_id', coachId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (!pkg) {
+        return notFound(res, { message: 'Package not found or not available' });
+      }
+
+      if (!pkg.stripe_price_id) {
+        return badRequest(res, { message: 'Package not synced to Stripe' });
+      }
+
+      // Get client email
+      const { data: clientProfile } = await supabase
+        .from('user_profiles')
+        .select('email, name')
+        .eq('id', userId)
+        .maybeSingle();
+
+      // Build line items
+      const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+        {
+          price: pkg.stripe_price_id,
+          quantity: 1,
+        },
+      ];
+
+      // Add initial fee as a separate line item if applicable
+      if ((pkg.initial_fee_cents ?? 0) > 0) {
+        // Create a price for the initial fee on-the-fly
+        const initialFeePrice = await stripe.prices.create(
+          {
+            unit_amount: pkg.initial_fee_cents,
+            currency: pkg.currency,
+            product_data: {
+              name: `${pkg.name} - Initial Fee`,
+            },
+          },
+          { stripeAccount: stripeAccount.stripe_account_id }
+        );
+
+        lineItems.push({
+          price: initialFeePrice.id,
+          quantity: 1,
+        });
+      }
+
+      // Determine checkout mode
+      const mode: Stripe.Checkout.SessionCreateParams.Mode =
+        pkg.interval === 'one_time' ? 'payment' : 'subscription';
+
+      // Build session params
+      const sessionParams: Stripe.Checkout.SessionCreateParams = {
+        mode,
+        line_items: lineItems,
+        success_url: `${webAppUrl}/auth/checkout/${coachCode}/${packageId}/complete?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${webAppUrl}/auth/checkout/${coachCode}/${packageId}`,
+        customer_email: clientProfile?.email,
+        metadata: {
+          coach_id: coachId,
+          client_id: userId,
+          package_id: packageId,
+          coach_code: coachCode,
+          onboarding_id: codeRow?.onboarding_id || '',
+          sequence_id: codeRow?.sequence_id || '',
+        },
+        allow_promotion_codes: true,
+      };
+
+      // Add free trial if applicable (only for subscriptions)
+      if (mode === 'subscription' && (pkg.free_trial_days ?? 0) > 0) {
+        sessionParams.subscription_data = {
+          trial_period_days: pkg.free_trial_days,
+          metadata: {
+            coach_id: coachId,
+            client_id: userId,
+            package_id: packageId,
+          },
+        };
+      }
+
+      // Create checkout session on the connected account
+      const session = await stripe.checkout.sessions.create(
+        sessionParams,
+        { stripeAccount: stripeAccount.stripe_account_id }
+      );
+
+      // Create a pending payment record
+      await supabase
+        .from('payments')
+        .insert({
+          coach_id: coachId,
+          client_id: userId,
+          package_id: packageId,
+          stripe_checkout_session_id: session.id,
+          amount_cents: pkg.amount_cents + (pkg.initial_fee_cents || 0),
+          currency: pkg.currency,
+          status: 'pending',
+        });
+
+      success(res, {
+        message: 'Checkout session created',
+        data: { url: session.url },
+      });
+    } catch (error: any) {
+      logger.error({ err: error.message, stack: error.stack }, 'Failed to create checkout session');
+      return internalError(res, { message: 'Failed to create checkout session' });
+    }
+  },
+
   // ─── Public Packages ──────────────────────────────────
 
   getPublicPackages: async (req: Request, res: Response) => {
@@ -1082,36 +1592,68 @@ export const paymentsController = {
         return notFound(res, { message: 'Coach not found' });
       }
 
+      // Check if coach has Stripe connected
+      const { data: stripeAccount } = await supabase
+        .from('coach_stripe_accounts')
+        .select('onboarding_complete, charges_enabled')
+        .eq('coach_id', coachId)
+        .maybeSingle();
+
+      const stripeEnabled = !!(stripeAccount?.onboarding_complete && stripeAccount?.charges_enabled);
+
+      if (!stripeEnabled) {
+        return success(res, {
+          message: 'Coach does not have payments enabled',
+          data: {
+            stripe_enabled: false,
+            packages: [],
+            coach: null,
+            company: null,
+          },
+        });
+      }
+
       // Get visible packages (includes inactive ones so they can be shown as unavailable)
       const { data: packages } = await supabase
         .from('coach_packages')
-        .select('id, name, description, amount_cents, currency, interval, interval_count, is_active, features, free_trial_days')
+        .select('id, name, description, amount_cents, currency, interval, interval_count, is_active, features, free_trial_days, initial_fee_cents, image_url')
         .eq('coach_id', coachId)
         .eq('is_visible', true)
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true });
 
-      // Get coach display info
+      // Get coach profile
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('name, profile_picture_url')
         .eq('id', coachId)
+        .eq('user_type', 'coach')
         .maybeSingle();
 
+      // Get full company details
       const { data: company } = await supabase
         .from('coach_company_information')
-        .select('company_name, logo_url')
+        .select('company_name, website, linkedin, location, specialities, logo_url')
         .eq('coach_id', coachId)
         .maybeSingle();
 
       success(res, {
         message: 'Public packages retrieved',
         data: {
+          stripe_enabled: true,
           packages: packages || [],
           coach: {
             name: company?.company_name || profile?.name || 'Coach',
             logo_url: company?.logo_url || profile?.profile_picture_url || null,
           },
+          company: company ? {
+            company_name: company.company_name,
+            website: company.website,
+            linkedin: company.linkedin,
+            location: company.location,
+            specialities: company.specialities,
+            logo_url: company.logo_url,
+          } : null,
         },
       });
     } catch (error: any) {
@@ -1728,6 +2270,14 @@ async function handleCouponOrPromoCodeChange(event: Stripe.Event, supabase: any)
       // For updated events, always process — the coach may have edited in Stripe dashboard.
       if (event.type === 'coupon.created' && coupon.metadata?.athli_coupon_id) return;
 
+      // Map Stripe duration to duration_months: 'once' → null, 'forever' → 0, 'repeating' → duration_in_months
+      let durationMonths: number | null = null;
+      if (coupon.duration === 'forever') {
+        durationMonths = 0;
+      } else if (coupon.duration === 'repeating') {
+        durationMonths = coupon.duration_in_months ?? null;
+      }
+
       const row: any = {
         coach_id: coachId,
         stripe_coupon_id: coupon.id,
@@ -1735,7 +2285,7 @@ async function handleCouponOrPromoCodeChange(event: Stripe.Event, supabase: any)
         discount_type: coupon.percent_off ? 'percentage' : 'fixed',
         discount_value: coupon.percent_off ?? (coupon.amount_off ? coupon.amount_off / 100 : 0),
         currency: coupon.currency || 'usd',
-        duration_months: coupon.duration === 'repeating' ? coupon.duration_in_months : null,
+        duration_months: durationMonths,
         is_active: coupon.valid !== false,
       };
 

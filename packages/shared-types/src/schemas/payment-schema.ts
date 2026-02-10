@@ -43,6 +43,7 @@ export interface CoachPackage {
   initial_fee_cents: number;
   onboarding_id: string | null;
   sequence_id: string | null;
+  image_url: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -79,6 +80,7 @@ export interface Payment {
   coach_id: string;
   client_id: string;
   package_id: string | null;
+  coupon_id: string | null;
   stripe_checkout_session_id: string | null;
   stripe_payment_intent_id: string | null;
   amount_cents: number;
@@ -91,6 +93,18 @@ export interface Payment {
   // Joined fields
   package?: CoachPackage;
   client_name?: string;
+}
+
+// --- Per-Package Coupon Redemptions ---
+
+export interface PackageCouponRedemption {
+  coupon_id: string;
+  coupon_name: string;
+  coupon_code: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  currency: string;
+  redemption_count: number;
 }
 
 // --- Client Subscriptions ---
@@ -128,6 +142,43 @@ export interface ClientAccessStatus {
   grace_period_ends_at: string | null;
   assigned_packages: ClientPackageAssignment[];
   available_packages: CoachPackage[];
+}
+
+// --- Dashboard Summary ---
+
+export interface CoachPaymentDashboard {
+  gross_revenue_cents: number;
+  this_month_revenue_cents: number;
+  last_month_revenue_cents: number;
+  active_subscriptions_count: number;
+  paying_clients_count: number;
+  currency: string;
+}
+
+export interface PaymentActivityRow {
+  id: string;
+  client_id: string;
+  client_name: string | null;
+  client_email: string | null;
+  package_id: string | null;
+  package_name: string | null;
+  amount_cents: number;
+  currency: string;
+  status: PaymentStatus;
+  failure_reason: string | null;
+  payment_type: 'one_time' | 'subscription';
+  paid_at: string | null;
+  created_at: string;
+}
+
+// --- Package Payment Stats ---
+
+export interface PackagePaymentStats {
+  total_purchases: number;
+  total_refunds: number;
+  total_cancellations: number;
+  total_revenue_cents: number;
+  currency: string;
 }
 
 // --- Analytics ---

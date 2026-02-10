@@ -25,7 +25,8 @@ function formatDiscount(coupon: Coupon): string {
 }
 
 function formatDuration(months: number | null): string {
-  if (months === null) return 'One-time';
+  if (months === null) return 'Once';
+  if (months === 0) return 'Forever';
   if (months === 1) return '1 month';
   return `${months} months`;
 }
@@ -284,7 +285,7 @@ const CouponsPage = () => {
           {isOnboarding ? (
             <Loader2 className="size-4 animate-spin text-[#635BFF]" />
           ) : (
-            <img src="/icons/stripe.png" alt="" className="size-5" />
+            <img src="/icons/stripe-icon.png" alt="" className="size-5" />
           )}
           {stripeAccount ? t('business.packages.stripe.continueSetup') : t('business.packages.stripe.connect')}
         </button>
@@ -318,16 +319,16 @@ const CouponsPage = () => {
         enableRowSelection={true}
         selectedRowIds={selectedIds}
         onSelectionChange={setSelectedIds}
-        showPagination={true}
+        showPagination={!!isConnected}
         gridPadding={true}
         compactPagination={true}
         emptyState={emptyState}
-        filterBarActions={
+        filterBarActions={(
           <Button onClick={() => setIsAddOpen(true)} className="gap-2" disabled={!isConnected}>
             <Plus className="size-4" />
             <span>{t('business.coupons.addCoupon')}</span>
           </Button>
-        }
+        )}
         selectionActions={
           selectedIds.size > 0 ? (
             <div className="flex items-center gap-1">

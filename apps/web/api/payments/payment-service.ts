@@ -1,5 +1,6 @@
 import { apiFetch } from '@/api/api-client';
-import type { CoachStripeAccount, CoachPackage, Coupon } from '@athli/shared-types';
+import { createClient } from '@/supabase/client';
+import type { CoachStripeAccount, CoachPackage, Coupon, CoachPaymentDashboard, PaymentActivityRow, PackagePaymentStats, PackageCouponRedemption } from '@athli/shared-types';
 
 interface GetStripeStatusResponse {
   data: {
@@ -63,6 +64,28 @@ export async function syncPackages(): Promise<CoachPackage[]> {
   return response.data.packages;
 }
 
+// --- Package Stats ---
+
+interface GetAllPackageStatsResponse {
+  data: { stats: Record<string, PackagePaymentStats> };
+}
+
+export async function getAllPackageStats(): Promise<Record<string, PackagePaymentStats>> {
+  const response = await apiFetch<GetAllPackageStatsResponse>('/payments/packages/stats');
+  return response.data.stats;
+}
+
+// --- Package Coupon Redemptions ---
+
+interface GetPackageCouponRedemptionsResponse {
+  data: { redemptions: PackageCouponRedemption[] };
+}
+
+export async function getPackageCouponRedemptions(packageId: string): Promise<PackageCouponRedemption[]> {
+  const response = await apiFetch<GetPackageCouponRedemptionsResponse>(`/payments/packages/${packageId}/redemptions`);
+  return response.data.redemptions;
+}
+
 // --- Package CRUD ---
 
 interface PackageResponse {
@@ -81,6 +104,7 @@ export interface CreatePackageData {
   initial_fee_cents?: number;
   onboarding_id?: string | null;
   sequence_id?: string | null;
+  image_url?: string | null;
 }
 
 export async function createPackage(data: CreatePackageData): Promise<CoachPackage> {
@@ -179,12 +203,83 @@ export async function getCoachSequences(): Promise<{ id: string; name: string }[
   return response.data.sequences;
 }
 
+// --- Summary Dashboard ---
+
+interface GetSummaryAnalyticsResponse {
+  data: { analytics: CoachPaymentDashboard };
+}
+
+interface GetSummaryActivityResponse {
+  data: { activity: PaymentActivityRow[] };
+}
+
+export async function getSummaryAnalytics(): Promise<CoachPaymentDashboard> {
+  const response = await apiFetch<GetSummaryAnalyticsResponse>('/payments/summary/analytics');
+  return response.data.analytics;
+}
+
+export async function getSummaryActivity(): Promise<PaymentActivityRow[]> {
+  const response = await apiFetch<GetSummaryActivityResponse>('/payments/summary/activity');
+  return response.data.activity;
+}
+
+// --- Package Photo Upload ---
+
+export async function uploadPackagePhoto(file: File, coachId: string, packageId: string): Promise<string> {
+  const supabase = createClient();
+
+  if (!file.type.startsWith('image/')) {
+    throw new Error('File must be an image');
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error('Image size must be less than 5MB');
+  }
+
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${packageId}-${Date.now()}.${fileExt}`;
+  const filePath = `${coachId}/${fileName}`;
+
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from('package_photos')
+    .upload(filePath, file, {
+      upsert: true,
+      contentType: file.type,
+      cacheControl: '3600',
+    });
+
+  if (uploadError) {
+    throw new Error(`Upload failed: ${uploadError.message}`);
+  }
+
+  if (!uploadData) {
+    throw new Error('Upload succeeded but no data returned');
+  }
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('package_photos')
+    .getPublicUrl(filePath);
+
+  return publicUrl;
+}
+
 // --- Public Packages ---
+
+interface PublicCompany {
+  company_name: string;
+  website: string | null;
+  linkedin: string | null;
+  location: string | null;
+  specialities: string[];
+  logo_url: string | null;
+}
 
 interface GetPublicPackagesResponse {
   data: {
+    stripe_enabled: boolean;
     packages: CoachPackage[];
-    coach: { name: string; logo_url: string | null };
+    coach: { name: string; logo_url: string | null } | null;
+    company: PublicCompany | null;
   };
 }
 
@@ -193,4 +288,18 @@ export async function getPublicPackages(coachCode: string): Promise<GetPublicPac
     authenticated: false,
   });
   return response.data;
+}
+
+// --- Client Checkout ---
+
+interface CreateCheckoutSessionResponse {
+  data: { url: string };
+}
+
+export async function createCheckoutSession(packageId: string, coachCode: string): Promise<string> {
+  const response = await apiFetch<CreateCheckoutSessionResponse>('/payments/checkout/session', {
+    method: 'POST',
+    body: { packageId, coachCode },
+  });
+  return response.data.url;
 }

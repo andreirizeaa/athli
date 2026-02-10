@@ -2,7 +2,7 @@
 
 import { TextEffect } from '@/components/ui/text-effect'
 
-export default function PageHero({ title, subtitle }: { title: string; subtitle: string }) {
+export default function PageHero({ title, titleLine2, subtitle }: { title: string; titleLine2?: string; subtitle: string }) {
     return (
         <section className="pb-8 md:pb-12">
             <div className="relative mx-auto max-w-7xl px-6">
@@ -14,6 +14,16 @@ export default function PageHero({ title, subtitle }: { title: string; subtitle:
                         className="mx-auto max-w-4xl text-balance text-5xl max-md:font-semibold md:text-7xl xl:text-[5.25rem]">
                         {title}
                     </TextEffect>
+                    {titleLine2 && (
+                        <TextEffect
+                            preset="fade-in-blur"
+                            speedSegment={0.3}
+                            delay={0.25}
+                            as="p"
+                            className="mx-auto max-w-4xl text-balance text-5xl max-md:font-semibold md:text-7xl xl:text-[5.25rem]">
+                            {titleLine2}
+                        </TextEffect>
+                    )}
                     <TextEffect
                         per="line"
                         preset="fade-in-blur"

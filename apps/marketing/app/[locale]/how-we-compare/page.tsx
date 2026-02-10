@@ -3,6 +3,7 @@ import { HeroHeader } from '@/components/header'
 import Footer from '@/components/footer'
 import PageHero from '@/components/page-hero'
 import ComparisonTable from '@/components/comparison-table'
+import ComparePricesNav from '@/components/compare-prices-nav'
 
 export default async function HowWeComparePage({ params }: { params: Promise<{ locale: string }> }) {
     const { locale } = await params
@@ -18,6 +19,7 @@ export default async function HowWeComparePage({ params }: { params: Promise<{ l
                     subtitle={t('howWeCompare.subtitle')}
                 />
                 <ComparisonTable />
+                <ComparePricesNav />
             </main>
             <Footer />
         </div>

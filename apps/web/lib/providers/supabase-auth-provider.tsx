@@ -31,8 +31,8 @@ interface AuthContextType {
   verifyRecoveryOTP: (email: string, token: string) => Promise<any>;
   resendRecoveryOTP: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
-  signInWithApple: () => Promise<void>;
+  signInWithGoogle: (options?: { redirectTo?: string }) => Promise<void>;
+  signInWithApple: (options?: { redirectTo?: string }) => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -275,11 +275,11 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     router.push('/auth/login');
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (options?: { redirectTo?: string }) => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: options?.redirectTo || `${window.location.origin}/auth/callback`,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
@@ -292,11 +292,11 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
-  const signInWithApple = async () => {
+  const signInWithApple = async (options?: { redirectTo?: string }) => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'apple',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: options?.redirectTo || `${window.location.origin}/auth/callback`,
         scopes: 'email name',
       },
     });
