@@ -14,7 +14,13 @@ paymentsRouter.post('/connect/onboard', supabaseAuthenticate, paymentsController
 paymentsRouter.post('/connect/dashboard-link', supabaseAuthenticate, paymentsController.dashboardLink);
 paymentsRouter.delete('/connect/disconnect', supabaseAuthenticate, paymentsController.disconnect);
 
+// Coach: Summary Dashboard
+paymentsRouter.get('/summary/analytics', supabaseAuthenticate, paymentsController.getSummaryAnalytics);
+paymentsRouter.get('/summary/activity', supabaseAuthenticate, paymentsController.getSummaryActivity);
+
 // Coach: Packages
+paymentsRouter.get('/packages/stats', supabaseAuthenticate, paymentsController.getAllPackageStats);
+paymentsRouter.get('/packages/:packageId/redemptions', supabaseAuthenticate, paymentsController.getPackageCouponRedemptions);
 paymentsRouter.get('/packages', supabaseAuthenticate, paymentsController.getPackages);
 paymentsRouter.post('/packages/sync', supabaseAuthenticate, paymentsController.syncPackages);
 paymentsRouter.post('/packages', supabaseAuthenticate, paymentsController.createPackage);
@@ -39,6 +45,9 @@ paymentsRouter.get('/sequences', supabaseAuthenticate, paymentsController.getSeq
 
 // Public: Packages by coach code (no auth)
 paymentsRouter.get('/public/packages/:coachCode', paymentsController.getPublicPackages);
+
+// Client: Create checkout session (requires auth)
+paymentsRouter.post('/checkout/session', supabaseAuthenticate, paymentsController.createCheckoutSession);
 
 // Coach: Package Assignments
 paymentsRouter.post('/packages/:packageId/assign', supabaseAuthenticate, paymentsController.assignPackage);

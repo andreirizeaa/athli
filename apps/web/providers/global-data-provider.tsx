@@ -24,7 +24,7 @@ import { useConversations } from '@/hooks/use-conversations';
 import { usePrefetchAllExercises } from '@/hooks/use-all-exercises';
 import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
 import { useCoachSequences } from '@/hooks/use-coach-sequences';
-import { useStripeConnection, useCoachPackages, useCoupons } from '@/hooks/use-coach-packages';
+import { useStripeConnection, useCoachPackages, useCoupons, useSummaryAnalytics, useSummaryActivity, useAllPackageStats } from '@/hooks/use-coach-packages';
 
 interface GlobalContextType {
     user: UserProfile | null;
@@ -89,6 +89,9 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
     useStripeConnection();
     useCoachPackages();
     useCoupons();
+    useSummaryAnalytics();
+    useSummaryActivity();
+    useAllPackageStats();
 
     const isLoading = isFilesLoading ||
         isHabitsLoading ||

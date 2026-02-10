@@ -49,7 +49,8 @@ export const AddCouponSidePanel = ({
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
   const [discountValue, setDiscountValue] = useState('');
   const [currency, setCurrency] = useState('usd');
-  const [durationMonths, setDurationMonths] = useState<string>('null');
+  const [durationType, setDurationType] = useState<'once' | 'forever' | 'repeating'>('once');
+  const [durationMonths, setDurationMonths] = useState<string>('3');
   const [hasRedemptionLimit, setHasRedemptionLimit] = useState(false);
   const [maxRedemptions, setMaxRedemptions] = useState('');
   const [hasExpiration, setHasExpiration] = useState(false);
@@ -68,7 +69,17 @@ export const AddCouponSidePanel = ({
         setDiscountType(coupon.discount_type);
         setDiscountValue(String(coupon.discount_value));
         setCurrency(coupon.currency);
-        setDurationMonths(coupon.duration_months != null ? String(coupon.duration_months) : 'null');
+        // Map duration_months to durationType and durationMonths
+        if (coupon.duration_months === null) {
+          setDurationType('once');
+          setDurationMonths('3');
+        } else if (coupon.duration_months === 0) {
+          setDurationType('forever');
+          setDurationMonths('3');
+        } else {
+          setDurationType('repeating');
+          setDurationMonths(String(coupon.duration_months));
+        }
         setHasRedemptionLimit(coupon.max_redemptions != null);
         setMaxRedemptions(coupon.max_redemptions != null ? String(coupon.max_redemptions) : '');
         setHasExpiration(!!coupon.expires_at);
@@ -79,7 +90,8 @@ export const AddCouponSidePanel = ({
         setDiscountType('percentage');
         setDiscountValue('');
         setCurrency('usd');
-        setDurationMonths('null');
+        setDurationType('once');
+        setDurationMonths('3');
         setHasRedemptionLimit(false);
         setMaxRedemptions('');
         setHasExpiration(false);
@@ -95,7 +107,17 @@ export const AddCouponSidePanel = ({
     if (!name.trim() || !code.trim() || value <= 0) return;
     if (hasRedemptionLimit && (!maxRedemptions || parseInt(maxRedemptions) < 1)) return;
     if (hasExpiration && !expiresAt) return;
+    if (durationType === 'repeating' && (!durationMonths || parseInt(durationMonths) < 1)) return;
 
+    // Convert durationType to duration_months value
+    let durationMonthsValue: number | null = null;
+    if (durationType === 'once') {
+      durationMonthsValue = null;
+    } else if (durationType === 'forever') {
+      durationMonthsValue = 0;
+    } else {
+      durationMonthsValue = parseInt(durationMonths);
+    }
 
     setIsSaving(true);
     try {
@@ -105,7 +127,7 @@ export const AddCouponSidePanel = ({
         discount_type: discountType,
         discount_value: value,
         currency,
-        duration_months: durationMonths === 'null' ? null : parseInt(durationMonths),
+        duration_months: durationMonthsValue,
         max_redemptions: hasRedemptionLimit && maxRedemptions ? parseInt(maxRedemptions) : null,
         expires_at: hasExpiration && expiresAt ? expiresAt.toISOString() : null,
       });
@@ -136,6 +158,7 @@ export const AddCouponSidePanel = ({
     code.trim().length > 0 &&
     parsedDiscount > 0 &&
     (discountType !== 'percentage' || parsedDiscount <= 100) &&
+    (durationType !== 'repeating' || (durationMonths && parseInt(durationMonths) >= 1)) &&
     (!hasRedemptionLimit || (maxRedemptions && parseInt(maxRedemptions) >= 1)) &&
     (!hasExpiration || !!expiresAt);
 
@@ -190,36 +213,56 @@ export const AddCouponSidePanel = ({
           />
         </div>
 
-        {/* Discount Type & Duration */}
-        <div className="flex gap-2">
-          <div className="space-y-2 flex-1 min-w-0">
-            <Label><span>{t('business.coupons.form.discountType')}<RequiredAsterisk /></span></Label>
-            <Select value={discountType} onValueChange={(v) => setDiscountType(v as 'percentage' | 'fixed')}>
+        {/* Discount Type */}
+        <div className="space-y-2">
+          <Label><span>{t('business.coupons.form.discountType')}<RequiredAsterisk /></span></Label>
+          <Select value={discountType} onValueChange={(v) => setDiscountType(v as 'percentage' | 'fixed')}>
+            <SelectTrigger className="w-full h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="percentage">{t('business.coupons.form.percentage')}</SelectItem>
+              <SelectItem value="fixed">{t('business.coupons.form.fixedAmount')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Duration */}
+        <div className="space-y-2">
+          <Label><span>{t('business.coupons.form.duration')}<RequiredAsterisk /></span></Label>
+          <div className="flex gap-2">
+            <Select value={durationType} onValueChange={(v) => {
+              setDurationType(v as 'once' | 'forever' | 'repeating');
+              if (v === 'repeating' && !durationMonths) {
+                setDurationMonths('3');
+              }
+            }}>
               <SelectTrigger className="w-full h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="percentage">{t('business.coupons.form.percentage')}</SelectItem>
-                <SelectItem value="fixed">{t('business.coupons.form.fixedAmount')}</SelectItem>
+                <SelectItem value="once">{t('business.coupons.form.once')}</SelectItem>
+                <SelectItem value="forever">{t('business.coupons.form.forever')}</SelectItem>
+                <SelectItem value="repeating">{t('business.coupons.form.repeating')}</SelectItem>
               </SelectContent>
             </Select>
+            {durationType === 'repeating' && (
+              <Input
+                type="number"
+                min={1}
+                max={36}
+                value={durationMonths}
+                onChange={(e) => setDurationMonths(e.target.value)}
+                placeholder="Months"
+                className="w-24"
+              />
+            )}
           </div>
-          <div className="space-y-2 flex-1 min-w-0">
-            <Label><span>{t('business.coupons.form.duration')}<RequiredAsterisk /></span></Label>
-            <Select value={durationMonths} onValueChange={setDurationMonths}>
-              <SelectTrigger className="w-full h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="null">{t('business.coupons.form.oneTime')}</SelectItem>
-                {[1, 2, 3, 6, 12].map((m) => (
-                  <SelectItem key={m} value={String(m)}>
-                    {m === 1 ? t('business.coupons.form.month', { count: 1 }) : t('business.coupons.form.months', { count: m })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            {durationType === 'once' && t('business.coupons.form.onceHint')}
+            {durationType === 'forever' && t('business.coupons.form.foreverHint')}
+            {durationType === 'repeating' && t('business.coupons.form.repeatingHint', { months: durationMonths || 0 })}
+          </p>
         </div>
 
         {/* Discount Value */}

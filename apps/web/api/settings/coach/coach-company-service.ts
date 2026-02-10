@@ -21,6 +21,12 @@ export async function updateCoachCompany(updates: Partial<CoachCompanyInfo>) {
     });
 }
 
+export async function markOnboardingComplete() {
+    return apiFetch('/settings/coach/complete-onboarding', {
+        method: 'POST',
+    });
+}
+
 /**
  * Upload company logo to Supabase Storage
  */

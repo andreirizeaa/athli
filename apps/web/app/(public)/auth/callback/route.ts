@@ -104,12 +104,17 @@ export async function GET(request: NextRequest) {
         console.log('=== CHECKING USER_TYPE ===');
         console.log('session.user.user_metadata:', JSON.stringify(session.user.user_metadata, null, 2));
         console.log('session.user.user_metadata?.user_type:', session.user.user_metadata?.user_type);
+        console.log('flow:', flow);
 
         let userType = session.user.user_metadata?.user_type;
+        let isNewAccount = false;
 
         if (!userType) {
-          userType = coachId ? 'client' : 'coach';
-          console.log('=== CALLING updateUser with user_type:', userType, '===');
+          // This is a new account - no user_type set yet
+          isNewAccount = true;
+          // Checkout flow users are always clients
+          userType = (flow === 'checkout' || coachId) ? 'client' : 'coach';
+          console.log('=== CALLING updateUser with user_type:', userType, '(new account) ===');
 
           const { data: updateData, error: updateError } = await supabase.auth.updateUser({
             data: {
@@ -188,7 +193,6 @@ export async function GET(request: NextRequest) {
         }
 
         // Check user type and redirect accordingly
-        // If user is a client (not a coach), redirect to download page
         console.log('=== REDIRECT DECISION ===');
         console.log('userType:', userType);
         console.log('coachId:', coachId);
@@ -196,8 +200,14 @@ export async function GET(request: NextRequest) {
         console.log('current redirectPath:', redirectPath);
 
         if (userType === 'client') {
-          console.log('=== User is client-only, redirecting to /download/client ===');
-          redirectPath = '/download/client';
+          // For checkout flow, use the provided redirect path (to checkout page)
+          // For other client flows, redirect to download page
+          if (flow === 'checkout') {
+            console.log('=== Checkout flow client, using redirectPath:', redirectPath, '===');
+          } else {
+            console.log('=== User is client-only, redirecting to /download/client ===');
+            redirectPath = '/download/client';
+          }
         } else {
           console.log('=== User is coach, seeding demo data ===');
           // Seed demo data for coaches (idempotent - only creates if doesn't exist)
@@ -220,7 +230,27 @@ export async function GET(request: NextRequest) {
             console.error('Error seeding demo data:', seedError);
             // Don't block auth flow if seeding fails
           }
-          console.log('=== User is coach, using redirectPath:', redirectPath, '===');
+
+          // New coach accounts go to welcome/onboarding page
+          // Existing coaches check onboarding_complete flag
+          if (isNewAccount) {
+            console.log('=== New coach account, redirecting to /welcome ===');
+            redirectPath = '/welcome';
+          } else {
+            // Check if existing coach has completed onboarding
+            const { data: coachProfile } = await supabase
+              .from('coach_profiles')
+              .select('onboarding_complete')
+              .eq('id', session.user.id)
+              .single();
+
+            if (coachProfile && !coachProfile.onboarding_complete) {
+              console.log('=== Existing coach has not completed onboarding, redirecting to /welcome ===');
+              redirectPath = '/welcome';
+            } else {
+              console.log('=== Existing coach, using redirectPath:', redirectPath, '===');
+            }
+          }
         }
 
         console.log('=== FINAL REDIRECT ===');
