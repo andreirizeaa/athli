@@ -16,6 +16,7 @@ export interface CoachStripeAccount {
   details_submitted: boolean;
   default_currency: string | null;
   country: string | null;
+  account_type: 'express' | 'standard';
   created_at: string;
   updated_at: string;
 }
@@ -37,9 +38,8 @@ export interface CoachPackage {
   interval_count: number | null;
   is_active: boolean;
   is_visible: boolean;
-  benefits: string[];
+  features: string[];
   free_trial_days: number;
-  duration_months: number | null;
   initial_fee_cents: number;
   onboarding_id: string | null;
   sequence_id: string | null;
@@ -164,9 +164,9 @@ export interface CoachSequence {
   updated_at: string;
 }
 
-// --- Discount Codes ---
+// --- Coupons ---
 
-export interface DiscountCode {
+export interface Coupon {
   id: string;
   coach_id: string;
   stripe_coupon_id: string | null;

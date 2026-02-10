@@ -29,6 +29,7 @@ export async function syncPackageToStripe(pkg: {
   interval_count: number | null;
   free_trial_days: number;
   initial_fee_cents: number;
+  features?: string[];
 }): Promise<{ stripe_product_id: string; stripe_price_id: string } | null> {
   try {
     const stripeAccountId = await getCoachStripeAccountId(pkg.coach_id);
@@ -41,6 +42,7 @@ export async function syncPackageToStripe(pkg: {
       name: pkg.name,
       description: pkg.description || undefined,
       metadata: { athli_package_id: pkg.id },
+      marketing_features: (pkg.features || []).map(name => ({ name })),
     }, opts);
 
     const priceData: any = {
@@ -68,8 +70,8 @@ export async function syncPackageToStripe(pkg: {
 }
 
 export async function updatePackageInStripe(
-  oldPkg: { stripe_product_id: string; stripe_price_id: string; amount_cents: number; currency: string; interval: string; interval_count: number | null },
-  newPkg: { id: string; coach_id: string; name: string; description: string | null; amount_cents: number; currency: string; interval: string; interval_count: number | null },
+  oldPkg: { stripe_product_id: string; stripe_price_id: string; amount_cents: number; currency: string; interval: string; interval_count: number | null; features?: string[] },
+  newPkg: { id: string; coach_id: string; name: string; description: string | null; amount_cents: number; currency: string; interval: string; interval_count: number | null; features?: string[] },
 ): Promise<{ stripe_price_id: string } | null> {
   try {
     const stripeAccountId = await getCoachStripeAccountId(newPkg.coach_id);
@@ -78,10 +80,11 @@ export async function updatePackageInStripe(
     const stripe = getStripeClient();
     const opts = { stripeAccount: stripeAccountId };
 
-    // Update product name/description
+    // Update product name/description/features
     await stripe.products.update(oldPkg.stripe_product_id, {
       name: newPkg.name,
       description: newPkg.description || '',
+      marketing_features: (newPkg.features || []).map(name => ({ name })),
     }, opts);
 
     // If price changed, archive old and create new
@@ -147,9 +150,86 @@ export async function togglePackageInStripe(coachId: string, stripeProductId: st
   }
 }
 
-// ─── Discount Code Sync ──────────────────────────────────────
+// ─── Pull Products FROM Stripe ────────────────────────────────
 
-export async function syncDiscountCodeToStripe(code: {
+/**
+ * Pulls all active products + prices + features from a coach's Stripe account
+ * into our coach_packages table. Used on initial connect and on charges_enabled transition.
+ */
+export async function syncProductsFromStripe(coachId: string): Promise<{ synced: number }> {
+  const stripeAccountId = await getCoachStripeAccountId(coachId);
+  if (!stripeAccountId) return { synced: 0 };
+
+  const stripe = getStripeClient();
+  const supabase = getSupabaseClient();
+  const opts = { stripeAccount: stripeAccountId };
+
+  const products = await stripe.products.list({ limit: 100, active: true }, opts);
+  const upsertRows: any[] = [];
+
+  for (const product of products.data) {
+    // Fetch prices
+    const prices = await stripe.prices.list(
+      { product: product.id, active: true, limit: 100 },
+      opts,
+    );
+
+    // Read marketing features from product object
+    const features = (product.marketing_features || []).map((f: any) => f.name);
+
+    for (const price of prices.data) {
+      upsertRows.push({
+        coach_id: coachId,
+        stripe_product_id: product.id,
+        stripe_price_id: price.id,
+        name: product.name,
+        description: product.description || null,
+        amount_cents: price.unit_amount || 0,
+        currency: price.currency,
+        interval: price.recurring ? price.recurring.interval : 'one_time',
+        interval_count: price.recurring?.interval_count || null,
+        is_active: true,
+        is_visible: true,
+        features,
+        free_trial_days: 0,
+        initial_fee_cents: 0,
+      });
+    }
+  }
+
+  if (upsertRows.length > 0) {
+    await supabase
+      .from('coach_packages')
+      .upsert(upsertRows, { onConflict: 'coach_id,stripe_product_id,stripe_price_id' });
+  }
+
+  // Deactivate packages that no longer exist in Stripe
+  const syncedKeys = upsertRows.map(r => `${r.stripe_product_id}:${r.stripe_price_id}`);
+  const { data: allPackages } = await supabase
+    .from('coach_packages')
+    .select('id, stripe_product_id, stripe_price_id')
+    .eq('coach_id', coachId)
+    .eq('is_active', true)
+    .not('stripe_product_id', 'is', null);
+
+  const toDeactivate = (allPackages || [])
+    .filter(p => p.stripe_product_id && p.stripe_price_id && !syncedKeys.includes(`${p.stripe_product_id}:${p.stripe_price_id}`))
+    .map(p => p.id);
+
+  if (toDeactivate.length > 0) {
+    await supabase
+      .from('coach_packages')
+      .update({ is_active: false })
+      .in('id', toDeactivate);
+  }
+
+  logger.info({ coachId, synced: upsertRows.length, deactivated: toDeactivate.length }, 'Products synced from Stripe');
+  return { synced: upsertRows.length };
+}
+
+// ─── Coupon Sync ─────────────────────────────────────────────
+
+export async function syncCouponToStripe(code: {
   id: string;
   coach_id: string;
   name: string;
@@ -170,7 +250,7 @@ export async function syncDiscountCodeToStripe(code: {
 
     const couponData: any = {
       name: code.name,
-      metadata: { athli_discount_code_id: code.id },
+      metadata: { athli_coupon_id: code.id },
     };
 
     if (code.discount_type === 'percentage') {
@@ -201,18 +281,18 @@ export async function syncDiscountCodeToStripe(code: {
       promotion: { type: 'coupon', coupon: coupon.id },
       code: code.code,
       active: true,
-      metadata: { athli_discount_code_id: code.id },
+      metadata: { athli_coupon_id: code.id },
     }, opts);
 
-    logger.info({ codeId: code.id, couponId: coupon.id, promoCodeId: promoCode.id }, 'Discount code synced to Stripe');
+    logger.info({ codeId: code.id, couponId: coupon.id, promoCodeId: promoCode.id }, 'Coupon synced to Stripe');
     return { stripe_coupon_id: coupon.id, stripe_promo_code_id: promoCode.id };
   } catch (err: any) {
-    logger.error({ err: err.message, codeId: code.id }, 'Failed to sync discount code to Stripe');
+    logger.error({ err: err.message, codeId: code.id }, 'Failed to sync coupon to Stripe');
     return null;
   }
 }
 
-export async function updateDiscountCodeInStripe(
+export async function updateCouponInStripe(
   oldCode: {
     stripe_coupon_id: string;
     stripe_promo_code_id: string;
@@ -257,7 +337,7 @@ export async function updateDiscountCodeInStripe(
       } catch { /* coupon may already be deleted */ }
 
       // Create new coupon + promo code
-      return await syncDiscountCodeToStripe(newCode);
+      return await syncCouponToStripe(newCode);
     }
 
     // Only name or is_active changed — update in place
@@ -268,24 +348,24 @@ export async function updateDiscountCodeInStripe(
     // Toggle promo code active state
     await stripe.promotionCodes.update(oldCode.stripe_promo_code_id, { active: newCode.is_active }, opts);
 
-    logger.info({ codeId: newCode.id }, 'Discount code updated in Stripe');
+    logger.info({ codeId: newCode.id }, 'Coupon updated in Stripe');
     return null; // IDs unchanged
   } catch (err: any) {
-    logger.error({ err: err.message, codeId: newCode.id }, 'Failed to update discount code in Stripe');
+    logger.error({ err: err.message, codeId: newCode.id }, 'Failed to update coupon in Stripe');
     return null;
   }
 }
 
-export async function deleteDiscountCodeInStripe(coachId: string, stripeCouponId: string): Promise<void> {
+export async function deleteCouponInStripe(coachId: string, stripeCouponId: string): Promise<void> {
   try {
     const stripeAccountId = await getCoachStripeAccountId(coachId);
     if (!stripeAccountId) return;
 
     const stripe = getStripeClient();
     await stripe.coupons.del(stripeCouponId, { stripeAccount: stripeAccountId });
-    logger.info({ stripeCouponId }, 'Discount code deleted from Stripe');
+    logger.info({ stripeCouponId }, 'Coupon deleted from Stripe');
   } catch (err: any) {
-    logger.error({ err: err.message, stripeCouponId }, 'Failed to delete discount code from Stripe');
+    logger.error({ err: err.message, stripeCouponId }, 'Failed to delete coupon from Stripe');
   }
 }
 
@@ -318,20 +398,20 @@ export async function backfillStripeForCoach(coachId: string): Promise<{
     }
   }
 
-  // Backfill discount codes without Stripe IDs
-  const { data: codes } = await supabase
-    .from('discount_codes')
+  // Backfill coupons without Stripe IDs
+  const { data: coupons } = await supabase
+    .from('coach_coupons')
     .select('*')
     .eq('coach_id', coachId)
     .is('stripe_coupon_id', null);
 
-  for (const code of codes || []) {
-    const ids = await syncDiscountCodeToStripe(code);
+  for (const coupon of coupons || []) {
+    const ids = await syncCouponToStripe(coupon);
     if (ids) {
       await supabase
-        .from('discount_codes')
+        .from('coach_coupons')
         .update({ stripe_coupon_id: ids.stripe_coupon_id, stripe_promo_code_id: ids.stripe_promo_code_id })
-        .eq('id', code.id);
+        .eq('id', coupon.id);
       result.codes.synced++;
     } else {
       result.codes.failed++;

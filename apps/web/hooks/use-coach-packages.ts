@@ -1,23 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CoachPackage } from '@athli/shared-types';
+import type { CoachPackage, Coupon } from '@athli/shared-types';
 import {
   getCoachPackages,
   syncPackages,
   getStripeConnectionStatus,
   startStripeOnboarding,
   getStripeDashboardLink,
+  disconnectStripe,
   createPackage,
   updatePackage,
   deletePackage,
   togglePackage,
-  getDiscountCodes,
-  createDiscountCode,
-  updateDiscountCode,
-  deleteDiscountCode,
+  getCoupons,
+  createCoupon,
+  updateCoupon,
+  deleteCoupon,
   getCoachOnboardings,
   getCoachSequences,
   type CreatePackageData,
-  type CreateCodeData,
+  type CreateCouponData,
 } from '@/api/payments/payment-service';
 
 export const useStripeConnection = () => {
@@ -51,6 +52,14 @@ export const useCoachPackages = () => {
 
   const dashboardLinkMutation = useMutation({
     mutationFn: () => getStripeDashboardLink(),
+  });
+
+  const disconnectMutation = useMutation({
+    mutationFn: () => disconnectStripe(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stripe-connection'] });
+      queryClient.invalidateQueries({ queryKey: ['coach-packages'] });
+    },
   });
 
   const createMutation = useMutation({
@@ -104,6 +113,8 @@ export const useCoachPackages = () => {
     isOnboarding: onboardMutation.isPending,
     getDashboardLink: dashboardLinkMutation.mutateAsync,
     isGettingDashboardLink: dashboardLinkMutation.isPending,
+    disconnectStripe: disconnectMutation.mutateAsync,
+    isDisconnecting: disconnectMutation.isPending,
     createPackage: createMutation.mutateAsync,
     isCreating: createMutation.isPending,
     updatePackage: updateMutation.mutateAsync,
@@ -115,46 +126,68 @@ export const useCoachPackages = () => {
   };
 };
 
-export const useDiscountCodes = () => {
+export const useCoupons = () => {
   const queryClient = useQueryClient();
 
-  const codesQuery = useQuery({
-    queryKey: ['discount-codes'],
-    queryFn: () => getDiscountCodes(),
+  const couponsQuery = useQuery({
+    queryKey: ['coupons'],
+    queryFn: () => getCoupons(),
     staleTime: 60 * 1000,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: CreateCodeData) => createDiscountCode(data),
+    mutationFn: (data: CreateCouponData) => createCoupon(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['discount-codes'] });
+      queryClient.invalidateQueries({ queryKey: ['coupons'] });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateCodeData & { is_active: boolean }> }) =>
-      updateDiscountCode(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateCouponData & { is_active: boolean }> }) =>
+      updateCoupon(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['discount-codes'] });
+      queryClient.invalidateQueries({ queryKey: ['coupons'] });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteDiscountCode(id),
+    mutationFn: (id: string) => deleteCoupon(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['discount-codes'] });
+      queryClient.invalidateQueries({ queryKey: ['coupons'] });
+    },
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, value }: { id: string; value: boolean }) =>
+      updateCoupon(id, { is_active: value }),
+    onMutate: async ({ id, value }) => {
+      await queryClient.cancelQueries({ queryKey: ['coupons'] });
+      const previous = queryClient.getQueryData<Coupon[]>(['coupons']);
+      queryClient.setQueryData<Coupon[]>(['coupons'], (old) =>
+        old?.map((c) => (c.id === id ? { ...c, is_active: value } : c))
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['coupons'], context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['coupons'] });
     },
   });
 
   return {
-    codes: codesQuery.data || [],
-    isLoading: codesQuery.isLoading,
-    createCode: createMutation.mutateAsync,
+    coupons: couponsQuery.data || [],
+    isLoading: couponsQuery.isLoading,
+    createCoupon: createMutation.mutateAsync,
     isCreating: createMutation.isPending,
-    updateCode: updateMutation.mutateAsync,
+    updateCoupon: updateMutation.mutateAsync,
     isUpdating: updateMutation.isPending,
-    deleteCode: deleteMutation.mutateAsync,
+    deleteCoupon: deleteMutation.mutateAsync,
     isDeleting: deleteMutation.isPending,
+    toggleCoupon: toggleMutation.mutateAsync,
   };
 };
 
