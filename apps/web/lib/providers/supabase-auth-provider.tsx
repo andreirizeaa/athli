@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { createClient } from '@/supabase/client';
+import { createClient, clearCachedSession } from '@/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { UserProfile, getUserProfileSafe } from '@/api/user/user-service';
@@ -199,6 +199,9 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     // Set flag to prevent auth state change listener from updating state
     // This keeps the loading overlay visible until navigation completes
     isSigningOutRef.current = true;
+
+    // Clear cached session to ensure clean state
+    clearCachedSession();
 
     const { error } = await supabase.auth.signOut();
     if (error) {
