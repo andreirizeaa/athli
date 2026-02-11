@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams, usePathname, useSearchParams } from 'next/navigation';
+import { useParams, usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { Loader2, Eye, EyeOff, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -413,6 +413,7 @@ function RedirectingStep() {
 export default function CheckoutLoginPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const coachCode = params.coachCode as string;
   const packageId = params.packageId as string;
   const pathname = usePathname();
@@ -463,10 +464,16 @@ export default function CheckoutLoginPage() {
   }, [user, isAuthLoading, isLoading, searchParams]);
 
   const handleStripeRedirect = async () => {
+    if (!user?.id) {
+      // No valid session, go to auth step
+      setStep('auth');
+      return;
+    }
+
     setStep('redirecting');
 
     try {
-      const checkoutUrl = await createCheckoutSession(packageId, coachCode);
+      const checkoutUrl = await createCheckoutSession(packageId, coachCode, user.id, user.email ?? undefined);
 
       // Clear the auth flow data
       sessionStorage.removeItem('auth_flow_data');
@@ -474,8 +481,19 @@ export default function CheckoutLoginPage() {
       // Redirect to Stripe
       window.location.href = checkoutUrl;
     } catch (err: any) {
-      toast.error(err.message || 'Failed to create checkout session');
-      setStep('preview');
+      const errorMessage = err.message || '';
+
+      // If user already has this package, redirect to packages page with message
+      if (errorMessage.includes('already have access')) {
+        sessionStorage.removeItem('auth_flow_data');
+        toast.success('You already have access to this package');
+        router.push(`/${coachCode}/packages`);
+        return;
+      }
+
+      // For other errors, redirect to auth step
+      console.warn('Checkout session creation failed, redirecting to auth:', errorMessage);
+      setStep('auth');
     }
   };
 

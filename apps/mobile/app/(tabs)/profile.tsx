@@ -7,6 +7,7 @@ import {
   Briefcase,
   ChevronRight,
   Cog,
+  CreditCard,
   FileText,
   Lock,
   LogOut,
@@ -159,6 +160,10 @@ export default function ProfileTabScreen() {
     setAppView('coach');
   }, [setAppView]);
 
+  const handleOpenBilling = useCallback(() => {
+    router.push('/profile/billing');
+  }, [router]);
+
   return (
     <>
     <ScreenWrapper tabScreen>
@@ -212,8 +217,8 @@ export default function ProfileTabScreen() {
 
         {/* Account */}
         <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.account')}</Text>
-        <PressableScale onPress={handleOpenPreferences}>
-          <Card>
+        <Card>
+          <PressableScale onPress={handleOpenPreferences}>
             <View style={styles.optionRow}>
               <View style={styles.optionIconContainer}>
                 <PlatformIcon sf="gear" IconComponent={Cog} size={iconSize} color={iconColor} />
@@ -230,8 +235,32 @@ export default function ProfileTabScreen() {
                 color={themeColors.mutedText}
               />
             </View>
-          </Card>
-        </PressableScale>
+          </PressableScale>
+          {/* Billing - only show for athlete view (not coach's demo client view) */}
+          {isAthleteView && clientProfile?.coach_id !== clientProfile?.client_id && (
+            <>
+              <Separator />
+              <PressableScale onPress={handleOpenBilling}>
+                <View style={styles.optionRow}>
+                  <View style={styles.optionIconContainer}>
+                    <PlatformIcon sf="creditcard" IconComponent={CreditCard} size={iconSize} color={iconColor} />
+                  </View>
+                  <View style={styles.optionTextContainer}>
+                    <Text style={[styles.optionTitle, { color: themeColors.text }]}>
+                      {t('profile.billing')}
+                    </Text>
+                  </View>
+                  <PlatformIcon
+                    sf="chevron.right"
+                    IconComponent={ChevronRight}
+                    size={iconSizes.extraSmallIcons}
+                    color={themeColors.mutedText}
+                  />
+                </View>
+              </PressableScale>
+            </>
+          )}
+        </Card>
 
         {/* Security - hidden for coach's demo client view */}
         {clientProfile?.coach_id !== clientProfile?.client_id && (

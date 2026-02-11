@@ -30,6 +30,11 @@ const axiosInstance = axios.create({
 // Request interceptor to add Auth token
 axiosInstance.interceptors.request.use(
     async (config) => {
+        // Skip auth for public endpoints
+        if ((config as any).skipAuth) {
+            return config;
+        }
+
         // Use cached access token to avoid hitting Supabase auth endpoint on every request
         const accessToken = await getCachedAccessToken();
 

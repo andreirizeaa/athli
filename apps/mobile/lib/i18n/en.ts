@@ -1009,6 +1009,13 @@ export const en = {
     manageWithApple: 'Manage with Apple',
     changePassword: 'Change Password',
     changeEmail: 'Change Email',
+    billing: 'Billing',
+    noPackages: 'No packages yet',
+    manageWithStripe: 'Manage with Stripe',
+    manageSubscriptionMessage: 'You can manage your subscription, update payment methods, or cancel through Stripe.',
+    subscriptionCancellingMessage: 'Your subscription is scheduled to be cancelled on',
+    oneTimePackageMessage: 'This is a one-time purchase. No subscription management is available.',
+    billingPortalError: 'Failed to open billing portal. Please try again.',
     passwordChange: {
       title: 'Change Password',
       newPassword: 'New Password',

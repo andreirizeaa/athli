@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams, usePathname, useSearchParams } from 'next/navigation';
+import { useParams, usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { Loader2, Eye, EyeOff, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,14 +20,22 @@ import type { CoachPackage } from '@athli/shared-types';
 function PackagePreviewStep({
   pkg,
   coachName,
+  coachAvatar,
   coachCode,
   onContinue,
 }: {
   pkg: CoachPackage;
   coachName: string;
+  coachAvatar: string | null;
   coachCode: string;
   onContinue: () => void;
 }) {
+  const coachInitials = coachName
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
   return (
     <div className="relative min-h-screen bg-background">
       {/* Logo */}
@@ -68,7 +76,13 @@ function PackagePreviewStep({
           </div>
 
           {/* Package Card */}
-          <PackageCard pkg={pkg} className="!max-w-[320px]" />
+          <PackageCard
+            pkg={pkg}
+            coachAvatar={coachAvatar}
+            coachInitials={coachInitials}
+            showCoachInfo={true}
+            className="!max-w-[320px]"
+          />
 
           {/* Actions */}
           <div className="w-full max-w-[320px] mt-6 space-y-3">
@@ -136,7 +150,7 @@ function AuthFormStep({
         packageId,
       }));
 
-      await signUp(email, password, name);
+      await signUp(email, password, name, 'client');
       toast.success('Account created! Please check your email for verification code.');
       // After email verification, user will be redirected back here with ?verified=true
     } catch (err: any) {
@@ -425,6 +439,7 @@ function RedirectingStep() {
 export default function CheckoutPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const coachCode = params.coachCode as string;
   const packageId = params.packageId as string;
   const pathname = usePathname();
@@ -434,6 +449,7 @@ export default function CheckoutPage() {
   const [step, setStep] = useState<'preview' | 'auth' | 'redirecting'>('preview');
   const [pkg, setPkg] = useState<CoachPackage | null>(null);
   const [coachName, setCoachName] = useState('');
+  const [coachAvatar, setCoachAvatar] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -447,7 +463,8 @@ export default function CheckoutPage() {
         const foundPkg = data.packages.find((p) => p.id === packageId);
         if (foundPkg) {
           setPkg(foundPkg);
-          setCoachName(data.company?.company_name || data.coach?.name?.split(' ')[0] || 'your coach');
+          setCoachName(data.company?.company_name || data.coach?.name || 'your coach');
+          setCoachAvatar(data.coach?.logo_url || null);
         } else {
           setError(true);
         }
@@ -475,10 +492,17 @@ export default function CheckoutPage() {
   }, [user, isAuthLoading, isLoading, searchParams]);
 
   const handleStripeRedirect = async () => {
+    if (!user?.id) {
+      // No valid session, go to auth step
+      setStep('auth');
+      return;
+    }
+
     setStep('redirecting');
 
     try {
-      const checkoutUrl = await createCheckoutSession(packageId, coachCode);
+      // Pass user's ID and email to create checkout session
+      const checkoutUrl = await createCheckoutSession(packageId, coachCode, user.id, user.email ?? undefined);
 
       // Clear the auth flow data
       sessionStorage.removeItem('auth_flow_data');
@@ -486,8 +510,20 @@ export default function CheckoutPage() {
       // Redirect to Stripe
       window.location.href = checkoutUrl;
     } catch (err: any) {
-      toast.error(err.message || 'Failed to create checkout session');
-      setStep('preview');
+      const errorMessage = err.message || '';
+
+      // If user already has this package, redirect to packages page with message
+      if (errorMessage.includes('already have access')) {
+        sessionStorage.removeItem('auth_flow_data');
+        toast.success('You already have access to this package');
+        router.push(`/${coachCode}/packages`);
+        return;
+      }
+
+      // For other errors (invalid session, profile not found, etc.)
+      // redirect to auth step
+      console.warn('Checkout session creation failed, redirecting to auth:', errorMessage);
+      setStep('auth');
     }
   };
 
@@ -537,6 +573,7 @@ export default function CheckoutPage() {
       <PackagePreviewStep
         pkg={pkg}
         coachName={coachName}
+        coachAvatar={coachAvatar}
         coachCode={coachCode}
         onContinue={handleContinue}
       />

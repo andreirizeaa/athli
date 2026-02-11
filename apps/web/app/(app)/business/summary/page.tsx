@@ -1,14 +1,22 @@
 'use client';
 
+import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { DollarSign, TrendingUp, CreditCard, Users, Loader2 } from 'lucide-react';
+import { DollarSign, TrendingUp, CreditCard, Users, Loader2, CalendarIcon, RotateCcw, ChevronDown, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { useStripeConnection, useSummaryAnalytics, useSummaryActivity, useCoachPackages } from '@/hooks/use-coach-packages';
 import type { PaymentActivityRow } from '@athli/shared-types';
+import type { DateRange } from 'react-day-picker';
 
 function formatCurrency(cents: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
@@ -40,13 +48,28 @@ function getChangePercent(current: number, previous: number): number | null {
   return Math.round(((current - previous) / previous) * 100);
 }
 
-const statusColors: Record<string, string> = {
-  succeeded: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  pending: 'bg-amber-100 text-amber-800 border-amber-200',
-  failed: 'bg-red-100 text-red-800 border-red-200',
-  refunded: 'bg-blue-100 text-blue-800 border-blue-200',
-  disputed: 'bg-orange-100 text-orange-800 border-orange-200',
-  cancelled: 'bg-gray-100 text-gray-800 border-gray-200',
+function getInitials(name: string | null): string {
+  if (!name) return '?';
+  return name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+// Event type colors and labels
+const eventTypeConfig: Record<string, { color: string; label: string }> = {
+  payment_succeeded: { color: 'bg-emerald-100 text-emerald-800 border-emerald-200', label: 'Payment' },
+  payment_failed: { color: 'bg-red-100 text-red-800 border-red-200', label: 'Failed' },
+  subscription_created: { color: 'bg-blue-100 text-blue-800 border-blue-200', label: 'New Subscription' },
+  subscription_renewed: { color: 'bg-emerald-100 text-emerald-800 border-emerald-200', label: 'Renewed' },
+  subscription_cancelling: { color: 'bg-amber-100 text-amber-800 border-amber-200', label: 'Cancelling' },
+  subscription_cancelled: { color: 'bg-gray-100 text-gray-800 border-gray-200', label: 'Cancelled' },
+  subscription_reactivated: { color: 'bg-blue-100 text-blue-800 border-blue-200', label: 'Reactivated' },
+  subscription_past_due: { color: 'bg-orange-100 text-orange-800 border-orange-200', label: 'Past Due' },
+  refund_issued: { color: 'bg-purple-100 text-purple-800 border-purple-200', label: 'Refund' },
+  dispute_created: { color: 'bg-red-100 text-red-800 border-red-200', label: 'Dispute' },
 };
 
 const SummaryPage = () => {
@@ -55,6 +78,10 @@ const SummaryPage = () => {
   const { startOnboarding, isOnboarding } = useCoachPackages();
   const { data: analytics, isLoading: isAnalyticsLoading } = useSummaryAnalytics();
   const { data: activity, isLoading: isActivityLoading } = useSummaryActivity();
+
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
 
   const isConnected = stripeAccount?.onboarding_complete && stripeAccount?.charges_enabled;
 
@@ -66,6 +93,46 @@ const SummaryPage = () => {
       toast.error('Failed to start Stripe connection');
     }
   };
+
+  const handleResetToToday = () => {
+    const today = new Date();
+    setDateRange({ from: today, to: today });
+  };
+
+  // Filter activity by date range and event type
+  const filteredActivity = useMemo(() => {
+    if (!activity) return [];
+
+    let filtered = activity;
+
+    // Filter by date range
+    if (dateRange?.from) {
+      filtered = filtered.filter((row) => {
+        const rowDate = new Date(row.created_at);
+        rowDate.setHours(0, 0, 0, 0);
+
+        const fromDate = new Date(dateRange.from!);
+        fromDate.setHours(0, 0, 0, 0);
+
+        if (dateRange.to) {
+          const toDate = new Date(dateRange.to);
+          toDate.setHours(23, 59, 59, 999);
+          return rowDate >= fromDate && rowDate <= toDate;
+        }
+
+        // Single day selection
+        return rowDate.getTime() === fromDate.getTime();
+      });
+    }
+
+    // Filter by event type
+    if (selectedStatuses.length > 0) {
+      filtered = filtered.filter((row) => selectedStatuses.includes(row.event_type));
+    }
+
+    return filtered;
+  }, [activity, dateRange, selectedStatuses]);
+
   const currency = analytics?.currency || 'usd';
   const changePercent = analytics
     ? getChangePercent(analytics.this_month_revenue_cents, analytics.last_month_revenue_cents)
@@ -95,15 +162,31 @@ const SummaryPage = () => {
     },
   ];
 
+  // Columns: Event Type, Description, Client, Amount, Date
   const columns: ColumnDefinition<PaymentActivityRow>[] = [
     {
-      id: 'date',
-      label: t('business.summary.columns.date'),
+      id: 'event_type',
+      label: t('business.summary.columns.event'),
       sortable: true,
       width: { class: 'w-[140px]', pixel: '140px' },
-      getSortValue: (row) => row.paid_at || row.created_at,
+      getSortValue: (row) => row.event_type,
+      renderCell: (row) => {
+        const config = eventTypeConfig[row.event_type] || { color: 'bg-gray-100 text-gray-800 border-gray-200', label: row.event_type };
+        return (
+          <Badge variant="outline" className={config.color}>
+            {config.label}
+          </Badge>
+        );
+      },
+    },
+    {
+      id: 'description',
+      label: t('business.summary.columns.description'),
+      sortable: false,
+      width: { class: 'flex-1 min-w-[280px]', pixel: '280px' },
+      getSearchValue: (row) => row.description,
       renderCell: (row) => (
-        <span className="text-sm">{formatDate(row.paid_at || row.created_at)}</span>
+        <span className="text-sm">{row.description}</span>
       ),
     },
     {
@@ -114,78 +197,57 @@ const SummaryPage = () => {
       getSortValue: (row) => (row.client_name || '').toLowerCase(),
       getSearchValue: (row) => `${row.client_name || ''} ${row.client_email || ''}`,
       renderCell: (row) => (
-        <div className="flex flex-col">
-          <span className="text-sm font-medium truncate">{row.client_name || '-'}</span>
-          {row.client_email && (
-            <span className="text-xs text-muted-foreground truncate">{row.client_email}</span>
-          )}
+        <div className="flex items-center gap-3">
+          <Avatar className="h-8 w-8 flex-shrink-0">
+            <AvatarImage src={row.client_avatar_url || undefined} alt={row.client_name || ''} />
+            <AvatarFallback>{getInitials(row.client_name)}</AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-medium truncate">{row.client_name || '-'}</span>
+          </div>
         </div>
-      ),
-    },
-    {
-      id: 'package',
-      label: t('business.summary.columns.package'),
-      sortable: true,
-      width: { class: 'w-[180px]', pixel: '180px' },
-      getSortValue: (row) => (row.package_name || '').toLowerCase(),
-      getSearchValue: (row) => row.package_name || '',
-      renderCell: (row) => (
-        <span className="text-sm truncate">{row.package_name || '-'}</span>
       ),
     },
     {
       id: 'amount',
       label: t('business.summary.columns.amount'),
       sortable: true,
-      width: { class: 'w-[120px]', pixel: '120px' },
+      width: { class: 'w-[100px]', pixel: '100px' },
       getSortValue: (row) => row.amount_cents,
       renderCell: (row) => (
         <span className="text-sm font-medium">
-          {formatCurrencyPrecise(row.amount_cents, row.currency)}
+          {row.amount_cents > 0 ? formatCurrencyPrecise(row.amount_cents, row.currency) : '-'}
         </span>
       ),
     },
     {
-      id: 'type',
-      label: t('business.summary.columns.type'),
+      id: 'date',
+      label: t('business.summary.columns.date'),
       sortable: true,
-      width: { class: 'w-[120px]', pixel: '120px' },
-      getSortValue: (row) => row.payment_type,
+      width: { class: 'w-[140px]', pixel: '140px' },
+      getSortValue: (row) => row.created_at,
       renderCell: (row) => (
-        <Badge variant="outline" className="border-primary text-primary">
-          {t(`business.summary.type.${row.payment_type}` as any)}
-        </Badge>
-      ),
-    },
-    {
-      id: 'status',
-      label: t('business.summary.columns.status'),
-      sortable: true,
-      width: { class: 'w-[120px]', pixel: '120px' },
-      getSortValue: (row) => row.status,
-      renderCell: (row) => (
-        <Badge
-          variant="outline"
-          className={statusColors[row.status] || 'bg-gray-100 text-gray-800 border-gray-200'}
-        >
-          {t(`business.summary.status.${row.status}` as any)}
-        </Badge>
+        <span className="text-sm">{formatDate(row.created_at)}</span>
       ),
     },
   ];
 
-  const statusFilter: FilterDefinition<PaymentActivityRow> = {
-    id: 'status',
-    label: t('business.summary.columns.status'),
-    options: [
-      { value: 'succeeded', label: t('business.summary.status.succeeded') },
-      { value: 'pending', label: t('business.summary.status.pending') },
-      { value: 'failed', label: t('business.summary.status.failed') },
-      { value: 'refunded', label: t('business.summary.status.refunded') },
-      { value: 'disputed', label: t('business.summary.status.disputed') },
-      { value: 'cancelled', label: t('business.summary.status.cancelled') },
-    ],
-    getFilterValue: (row) => row.status,
+  const eventTypeOptions = [
+    { value: 'payment_succeeded', label: 'Payment' },
+    { value: 'subscription_created', label: 'New Subscription' },
+    { value: 'subscription_renewed', label: 'Renewed' },
+    { value: 'subscription_cancelling', label: 'Cancelling' },
+    { value: 'subscription_cancelled', label: 'Cancelled' },
+    { value: 'subscription_reactivated', label: 'Reactivated' },
+    { value: 'payment_failed', label: 'Failed' },
+    { value: 'refund_issued', label: 'Refund' },
+    { value: 'dispute_created', label: 'Dispute' },
+  ];
+
+  const handleStatusToggle = (value: string) => {
+    setSelectedStatuses((prev) =>
+      prev.includes(value) ? prev.filter((s) => s !== value) : [...prev, value]
+    );
   };
 
   const emptyState = !isConnected ? (
@@ -253,29 +315,107 @@ const SummaryPage = () => {
       {/* Activity Table */}
       <div className="flex-1 min-h-0">
         <DataGrid
-          data={activity || []}
+          data={filteredActivity}
           columns={columns}
           getRowId={(row) => row.id}
           gridKey="payment-activity"
           enableSearch={true}
           searchPlaceholder="Search..."
           searchFields={['client_name', 'package_name']}
-          filters={[statusFilter]}
           enableExport={true}
           exportFileName="payment-activity"
           exportDataTransform={(row) => ({
-            Date: formatDate(row.paid_at || row.created_at),
+            Event: eventTypeConfig[row.event_type]?.label || row.event_type,
+            Description: row.description,
             Client: row.client_name || '-',
-            Email: row.client_email || '-',
             Package: row.package_name || '-',
-            Amount: formatCurrencyPrecise(row.amount_cents, row.currency),
-            Type: row.payment_type,
-            Status: row.status,
+            Amount: row.amount_cents > 0 ? formatCurrencyPrecise(row.amount_cents, row.currency) : '-',
+            Date: formatDate(row.created_at),
           })}
           showPagination={!!isConnected}
           gridPadding={true}
           compactPagination={true}
           emptyState={emptyState}
+          filterBarActions={
+            <div className="flex items-center gap-2">
+              {/* Date picker */}
+              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 justify-start px-2.5 font-normal"
+                  >
+                    <CalendarIcon className="size-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, 'LLL dd, y')} - {format(dateRange.to, 'LLL dd, y')}
+                        </>
+                      ) : (
+                        format(dateRange.from, 'LLL dd, y')
+                      )
+                    ) : (
+                      <span>{t('business.summary.allDates')}</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end" collisionPadding={16}>
+                  <Calendar
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                  />
+                  <div className="flex justify-end p-3 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        handleResetToToday();
+                        setIsCalendarOpen(false);
+                      }}
+                    >
+                      <RotateCcw className="size-4" />
+                      {t('business.summary.today')}
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              {/* Event type dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 px-2.5 font-normal">
+                    {t('business.summary.columns.event')}
+                    {selectedStatuses.length > 0 && (
+                      <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">
+                        {selectedStatuses.length}
+                      </Badge>
+                    )}
+                    <ChevronDown className="size-4 ml-1 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {eventTypeOptions.map((option) => (
+                    <DropdownMenuItem
+                      key={option.value}
+                      onClick={() => handleStatusToggle(option.value)}
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        <div className="w-4 h-4 flex items-center justify-center">
+                          {selectedStatuses.includes(option.value) && (
+                            <Check className="size-4" />
+                          )}
+                        </div>
+                        {option.label}
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          }
         />
       </div>
     </div>

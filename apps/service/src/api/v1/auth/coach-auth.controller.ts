@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
 import { asyncHandler } from '../../../utils/async-handler';
 import { success, created, unauthorized } from '../../../utils/http-response';
 import { OAuth2Client } from 'google-auth-library';
@@ -6,6 +7,16 @@ import { getSupabaseClient } from '../../../services/supabase.service';
 import { avatarService } from '../../../services/avatar.service';
 
 const googleClient = new OAuth2Client(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
+
+function generateCode(length: number = 12): string {
+    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    let result = '';
+    const bytes = crypto.randomBytes(length);
+    for (let i = 0; i < length; i++) {
+        result += chars[bytes[i] % chars.length];
+    }
+    return result;
+}
 
 export class CoachAuthController {
     /**
@@ -38,7 +49,7 @@ export class CoachAuthController {
 
         // The trigger will automatically create the coach_profile
         // Generate unique code for the coach
-        const uniqueCode = authData.user.id.substring(0, 8).toUpperCase();
+        const uniqueCode = generateCode(12);
 
         // Generate default avatar for new coach
         try {

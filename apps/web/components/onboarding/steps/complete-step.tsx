@@ -1,6 +1,7 @@
 'use client';
 
-import { ArrowRight } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import { TextEffect } from '@/components/ui/text-effect';
 import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,13 @@ interface CompleteStepProps {
 }
 
 export function CompleteStep({ onComplete }: CompleteStepProps) {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleClick = () => {
+    setIsLoading(true);
+    onComplete();
+  };
+
   return (
     <div className="flex flex-col items-center justify-center text-center">
       <TextEffect
@@ -35,11 +43,18 @@ export function CompleteStep({ onComplete }: CompleteStepProps) {
         transition={{ delay: 0.4, duration: 0.4 }}
       >
         <Button
-          onClick={onComplete}
-          className="h-12 px-8 rounded-xl text-base"
+          onClick={handleClick}
+          disabled={isLoading}
+          className="h-12 min-w-[220px] rounded-xl text-base"
         >
-          Go to my dashboard
-          <ArrowRight className="ml-2 size-5" />
+          {isLoading ? (
+            <Loader2 className="size-5 animate-spin" />
+          ) : (
+            <>
+              Go to my dashboard
+              <ArrowRight className="ml-2 size-5" />
+            </>
+          )}
         </Button>
       </motion.div>
     </div>

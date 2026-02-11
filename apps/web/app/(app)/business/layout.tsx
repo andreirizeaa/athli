@@ -132,7 +132,7 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
           variant="ghost"
           disabled={!uniqueCode}
           onClick={() => uniqueCode && window.open(`/${uniqueCode}/packages`, '_blank')}
-          className="gap-2 border border-[#635BFF] border-r-0 text-[#635BFF] hover:bg-[#635BFF]/5"
+          className="h-9 gap-2 border border-[#635BFF] border-r-0 bg-transparent hover:bg-[#635BFF]/5 dark:bg-transparent dark:hover:bg-[#635BFF]/10 text-[#635BFF] dark:text-white"
         >
           <ExternalLink className="size-4" />
           <span>Preview Packages</span>
@@ -140,18 +140,18 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
         <Button
           onClick={handleOpenDashboard}
           disabled={isGettingDashboardLink}
-          className="gap-2 bg-[#635BFF] hover:bg-[#635BFF]/90 text-white"
+          className="h-9 gap-2 bg-[#635BFF] hover:bg-[#635BFF]/90 dark:bg-[#635BFF] dark:hover:bg-[#635BFF]/90 text-white dark:text-white"
         >
           {isGettingDashboardLink ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (
-            <img src="/icons/stripe-icon.png" alt="" className="size-5 brightness-0 invert" />
+            <img src="/icons/stripe-icon.png" alt="" className="size-4 brightness-0 invert" />
           )}
           <span>{t('business.packages.stripe.dashboard')}</span>
         </Button>
-        <ButtonGroupSeparator />
+        <ButtonGroupSeparator className="bg-[#4B44C9]" />
         <DropdownMenuTrigger asChild>
-          <Button className="px-2 bg-[#635BFF] hover:bg-[#635BFF]/90 text-white">
+          <Button className="h-9 px-2 bg-[#635BFF] hover:bg-[#635BFF]/90 dark:bg-[#635BFF] dark:hover:bg-[#635BFF]/90 text-white dark:text-white">
             <ChevronDown className="size-4" />
           </Button>
         </DropdownMenuTrigger>
@@ -159,9 +159,9 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
       <DropdownMenuContent align="end">
         <DropdownMenuItem
           onClick={() => setIsDisconnectOpen(true)}
-          className="text-[#635BFF] focus:text-[#635BFF]"
+          className="text-[#635BFF] focus:text-[#635BFF] dark:text-white dark:focus:text-white"
         >
-          <Unplug className="h-4 w-4 mr-2 text-[#635BFF]" />
+          <Unplug className="h-4 w-4 mr-2 text-[#635BFF] dark:text-white" />
           Disconnect Stripe
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -185,7 +185,7 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
     <div className="h-full w-full flex flex-col bg-background overflow-auto">
       {shouldShowHeader && (
         <div className="w-full relative flex-shrink-0">
-          <div className="pl-4 pr-4 flex items-center justify-between mb-2 mt-2">
+          <div className="pl-4 pr-4 flex items-center justify-between h-[38px] mt-2">
             <h1 className="text-[22px] font-semibold">{t('business.title')}</h1>
             {headerActions}
           </div>

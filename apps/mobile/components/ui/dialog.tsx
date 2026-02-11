@@ -26,6 +26,7 @@ export type DialogProps = {
   buttons: DialogButton[];
   buttonLayout?: 'vertical' | 'horizontal';
   showCloseIcon?: boolean;
+  disableCloseIcon?: boolean;
 };
 
 export function Dialog({
@@ -38,6 +39,7 @@ export function Dialog({
   buttons,
   buttonLayout = 'horizontal',
   showCloseIcon = true,
+  disableCloseIcon = false,
 }: DialogProps) {
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
@@ -89,13 +91,15 @@ export function Dialog({
             <View style={styles.header}>
               <Text style={[styles.title, { color: themeColors.text }]}>{title}</Text>
               {showCloseIcon && (
-                <IconButton
-                  icon={{ sf: 'xmark', IconComponent: X }}
-                  onPress={onClose}
-                  size="sm"
-                  color={themeColors.mutedText}
-                  backgroundColor={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}
-                />
+                <View style={disableCloseIcon ? { opacity: 0.4 } : undefined}>
+                  <IconButton
+                    icon={{ sf: 'xmark', IconComponent: X }}
+                    onPress={disableCloseIcon ? undefined : onClose}
+                    size="sm"
+                    color={themeColors.mutedText}
+                    backgroundColor={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}
+                  />
+                </View>
               )}
             </View>
 

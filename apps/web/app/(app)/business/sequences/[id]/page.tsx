@@ -157,6 +157,9 @@ const SequenceDetailPage = () => {
       nodes: data.nodes,
       edges: data.edges,
     });
+    // Invalidate cache so the sequences list shows updated step counts
+    queryClient.invalidateQueries({ queryKey: ['coach-sequences'] });
+    queryClient.invalidateQueries({ queryKey: ['coach-sequences-dropdown'] });
   };
 
   if (isLoading) {

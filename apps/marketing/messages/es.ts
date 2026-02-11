@@ -69,27 +69,63 @@ const messages = {
     iconDialogs: {
       chatgpt: {
         title: 'Basta de IA Genérica',
-        description: 'ChatGPT no conoce a tus clientes, sus objetivos ni su historial. Nuestro asistente de IA está diseñado específicamente para el entrenamiento. Planifica programas periodizados, registra el progreso de los clientes, genera entrenamientos y da respuestas basadas en evidencia usando los datos reales de tus clientes. Una conversación reemplaza horas de trabajo manual.',
+        problem: 'ChatGPT no conoce a tus clientes ni su historial',
+        benefits: [
+          'IA entrenada específicamente para coaching',
+          'Usa los datos reales de tus clientes',
+          'Planifica programas en segundos',
+        ],
+        highlight: 'Ahorra 15+ horas/semana',
       },
       excel: {
         title: 'Basta de Hojas de Cálculo',
-        description: 'Llevar el seguimiento de clientes en Excel significa datos dispersos, fórmulas rotas y cero automatización. Athli centraliza el perfil, las métricas, los check-ins y el progreso de cada cliente en una sola plataforma. Buscable, siempre actualizado y accesible desde cualquier dispositivo. Tus datos por fin trabajan para ti, no en tu contra.',
+        problem: 'Datos dispersos, fórmulas rotas, cero automatización',
+        benefits: [
+          'Todos los datos en un solo lugar',
+          'Siempre actualizado',
+          'Accesible desde cualquier dispositivo',
+        ],
+        highlight: 'Una única fuente de verdad',
       },
       notion: {
         title: 'Basta de Entrenamientos en Notion',
-        description: 'Copiar y pegar entrenamientos entre páginas de Notion no escala. Athli te ofrece una biblioteca de 1.743 ejercicios con vídeos demostrativos integrados, construcción de programas con arrastrar y soltar, y asignación con un clic a cualquier cliente. Crea mejores programas en una fracción del tiempo.',
+        problem: 'Copiar y pegar entrenamientos no escala',
+        benefits: [
+          '1.743 ejercicios con vídeos',
+          'Constructor arrastrar y soltar',
+          'Asignación con un clic',
+        ],
+        highlight: 'Crea programas 10x más rápido',
       },
       zapier: {
         title: 'Basta de Seguimientos Manuales',
-        description: 'No deberías necesitar Zapier para mantener a tus clientes comprometidos. Athli tiene flujos de automatización integrados que envían recordatorios, seguimientos y avisos de check-in según la actividad del cliente. Configúralo una vez y tus clientes se mantienen en el camino sin que tengas que perseguirlos.',
+        problem: 'Perseguir clientes es perder el tiempo',
+        benefits: [
+          'Flujos de automatización integrados',
+          'Se activan según la actividad',
+          'Configura una vez, funciona siempre',
+        ],
+        highlight: 'Cero persecución manual',
       },
       whatsapp: {
         title: 'Basta de Cambiar de App',
-        description: 'Gestionar clientes entre WhatsApp, correo electrónico y hojas de cálculo hace que se pierdan cosas. Athli pone la comunicación, la programación, los check-ins y el seguimiento del progreso en un solo lugar, tanto para ti como para tus clientes. Una app, cero cambios de contexto.',
+        problem: 'Mensajes dispersos entre apps',
+        benefits: [
+          'Toda la comunicación en un lugar',
+          'Contexto siempre visible',
+          'Nada se pierde',
+        ],
+        highlight: '100% integrado',
       },
       docs: {
         title: 'Basta del Caos en Google Drive',
-        description: 'Buscar archivos de clientes en carpetas compartidas es una pérdida de tiempo. La función de Archivos de Athli te permite almacenar contratos, planes de comidas, fotos de progreso y cualquier recurso con almacenamiento ilimitado, organizado por cliente y accesible al instante.',
+        problem: 'Buscar en carpetas compartidas pierde tiempo',
+        benefits: [
+          'Archivos organizados por cliente',
+          'Contratos, planes, fotos',
+          'Almacenamiento ilimitado incluido',
+        ],
+        highlight: 'Acceso instantáneo',
       },
     },
   },

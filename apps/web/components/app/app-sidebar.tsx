@@ -38,6 +38,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { SidebarMenuItemWithTabs } from '@/components/app/sidebar-menu-item-with-tabs';
 
 export function AppSidebar() {
   const t = useTranslations();
@@ -95,7 +96,7 @@ export function AppSidebar() {
 
   const businessNavItems = [
     {
-      href: '/business/packages',
+      href: '/business/summary',
       labelKey: 'sidebar.links.packages',
       icon: CreditCard,
     },
@@ -141,6 +142,31 @@ export function AppSidebar() {
       icon: Workflow,
     },
   ] as const;
+
+  // Tab configurations for items with sub-navigation
+  const todoTabs = [
+    { value: 'your-list', labelKey: 'home.yourList' },
+    { value: 'athli-assistant', labelKey: 'home.athliAssistant' },
+  ];
+
+  const trainingTabs = [
+    { value: 'workouts', labelKey: 'library.workouts' },
+    { value: 'sections', labelKey: 'library.sections.title' },
+    { value: 'programs', labelKey: 'library.programs' },
+    { value: 'exercises', labelKey: 'library.exercises' },
+  ];
+
+  const formsTabs = [
+    { value: 'check-ins', labelKey: 'forms.tabs.checkIns' },
+    { value: 'questionnaires', labelKey: 'forms.tabs.questionnaires' },
+  ];
+
+  const businessTabs = [
+    { value: 'summary', labelKey: 'business.tabs.summary' },
+    { value: 'packages', labelKey: 'business.tabs.packages' },
+    { value: 'coupons', labelKey: 'business.tabs.coupons' },
+    { value: 'sequences', labelKey: 'business.tabs.sequences' },
+  ];
 
   return (
     <Sidebar collapsible="icon">
@@ -200,11 +226,23 @@ export function AppSidebar() {
               {mainNavItems.map((item) => {
                 const Icon = item.icon;
                 const href = item.href;
-                let isActive = activePath === href;
 
+                // Use SidebarMenuItemWithTabs for Todo
                 if (href === '/todo/your-list') {
-                  isActive = activePath.startsWith('/todo');
-                } else if (
+                  return (
+                    <SidebarMenuItemWithTabs
+                      key={item.href}
+                      href={href}
+                      labelKey={item.labelKey}
+                      icon={Icon}
+                      basePath="/todo"
+                      tabs={todoTabs}
+                    />
+                  );
+                }
+
+                let isActive = activePath === href;
+                if (
                   href === '/athletes' ||
                   href === '/inbox' ||
                   href === '/check-ins'
@@ -246,24 +284,16 @@ export function AppSidebar() {
             <SidebarMenu className="gap-0.5">
               {businessNavItems.map((item) => {
                 const Icon = item.icon;
-                const href = item.href;
-                const isActive = activePath.startsWith('/business');
-                const label = t(item.labelKey);
 
                 return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      tooltip={label}
-                      className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
-                    >
-                      <Link href={item.href}>
-                        <Icon className="shrink-0" />
-                        <span>{label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <SidebarMenuItemWithTabs
+                    key={item.href}
+                    href={item.href}
+                    labelKey={item.labelKey}
+                    icon={Icon}
+                    basePath="/business"
+                    tabs={businessTabs}
+                  />
                 );
               })}
             </SidebarMenu>
@@ -284,12 +314,37 @@ export function AppSidebar() {
               {libraryNavItems.map((item) => {
                 const Icon = item.icon;
                 const href = item.href;
-                let isActive = false;
+
+                // Use SidebarMenuItemWithTabs for Training
                 if (href === '/training/workouts') {
-                  isActive = activePath.startsWith('/training');
-                } else if (href === '/forms/check-ins') {
-                  isActive = activePath.startsWith('/forms');
-                } else if (
+                  return (
+                    <SidebarMenuItemWithTabs
+                      key={item.href}
+                      href={href}
+                      labelKey={item.labelKey}
+                      icon={Icon}
+                      basePath="/training"
+                      tabs={trainingTabs}
+                    />
+                  );
+                }
+
+                // Use SidebarMenuItemWithTabs for Forms
+                if (href === '/forms/check-ins') {
+                  return (
+                    <SidebarMenuItemWithTabs
+                      key={item.href}
+                      href={href}
+                      labelKey={item.labelKey}
+                      icon={Icon}
+                      basePath="/forms"
+                      tabs={formsTabs}
+                    />
+                  );
+                }
+
+                let isActive = false;
+                if (
                   href === '/metrics' ||
                   href === '/files' ||
                   href === '/habits'

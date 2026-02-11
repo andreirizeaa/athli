@@ -69,27 +69,63 @@ const messages = {
     iconDialogs: {
       chatgpt: {
         title: 'No More Generic AI',
-        description: "ChatGPT doesn't know your clients, their goals, or their history. Our AI assistant is built specifically for coaching. It plans periodised programs, tracks client progress, generates workouts, and gives evidence-based answers using your actual client data. One conversation replaces hours of manual work.",
+        problem: "ChatGPT doesn't know your clients or their history",
+        benefits: [
+          'AI trained specifically for coaching',
+          'Uses your actual client data',
+          'Plans programs in seconds',
+        ],
+        highlight: 'Save 15+ hours/week',
       },
       excel: {
         title: 'No More Spreadsheets',
-        description: "Tracking clients in Excel means scattered data, broken formulas, and zero automation. Athli centralises every client's profile, metrics, check-ins, and progress in one platform. Searchable, always up to date, and accessible from any device. Your data finally works for you, not against you.",
+        problem: 'Scattered data, broken formulas, zero automation',
+        benefits: [
+          'All client data in one place',
+          'Always up to date',
+          'Accessible from any device',
+        ],
+        highlight: 'Single source of truth',
       },
       notion: {
         title: 'No More Notion Workouts',
-        description: "Copying and pasting workouts between Notion pages doesn't scale. Athli gives you a library of 1,743 exercises with built-in video demos, drag-and-drop program building, and one-click assignment to any client. Build better programs in a fraction of the time.",
+        problem: "Copy-pasting workouts doesn't scale",
+        benefits: [
+          '1,743 exercises with video demos',
+          'Drag-and-drop program builder',
+          'One-click client assignment',
+        ],
+        highlight: 'Build programs 10x faster',
       },
       zapier: {
         title: 'No More Manual Follow-ups',
-        description: "You shouldn't need Zapier to keep clients accountable. Athli has built-in automation flows that trigger reminders, follow-ups, and check-in prompts based on client activity. Set it once and your clients stay on track without you chasing them.",
+        problem: 'Chasing clients wastes your time',
+        benefits: [
+          'Built-in automation flows',
+          'Triggers based on activity',
+          'Set once, runs forever',
+        ],
+        highlight: 'Zero manual chasing',
       },
       whatsapp: {
         title: 'No More App Switching',
-        description: 'Managing clients across WhatsApp, email, and spreadsheets means things get missed. Athli puts communication, programming, check-ins, and progress tracking in one place for both you and your clients. One app, zero context switching.',
+        problem: 'Messages scattered across apps',
+        benefits: [
+          'All communication in one place',
+          'Context always visible',
+          'Nothing gets missed',
+        ],
+        highlight: '100% integrated',
       },
       docs: {
         title: 'No More Google Drive Chaos',
-        description: "Digging through shared drives for client files wastes your time. Athli's Files feature lets you store contracts, meal plans, progress photos, and any resource with unlimited storage, organised per client and accessible instantly.",
+        problem: 'Digging through shared drives wastes time',
+        benefits: [
+          'Files organised per client',
+          'Contracts, meal plans, photos',
+          'Unlimited storage included',
+        ],
+        highlight: 'Instant access',
       },
     },
   },

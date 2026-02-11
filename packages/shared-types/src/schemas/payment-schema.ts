@@ -155,19 +155,32 @@ export interface CoachPaymentDashboard {
   currency: string;
 }
 
+// Billing activity event types
+export type BillingEventType =
+  | 'payment_succeeded'
+  | 'payment_failed'
+  | 'subscription_created'
+  | 'subscription_renewed'
+  | 'subscription_cancelling'
+  | 'subscription_cancelled'
+  | 'subscription_reactivated'
+  | 'subscription_past_due'
+  | 'refund_issued'
+  | 'dispute_created';
+
 export interface PaymentActivityRow {
   id: string;
-  client_id: string;
+  client_id: string | null;
   client_name: string | null;
   client_email: string | null;
+  client_avatar_url: string | null;
   package_id: string | null;
   package_name: string | null;
+  event_type: BillingEventType;
+  description: string;
   amount_cents: number;
   currency: string;
-  status: PaymentStatus;
-  failure_reason: string | null;
-  payment_type: 'one_time' | 'subscription';
-  paid_at: string | null;
+  metadata: Record<string, any>;
   created_at: string;
 }
 

@@ -2275,6 +2275,8 @@ export const esMessages = {
         amount: 'Monto',
         type: 'Tipo',
         status: 'Estado',
+        event: 'Evento',
+        description: 'Descripción',
       },
       type: {
         one_time: 'Único',
@@ -2288,10 +2290,12 @@ export const esMessages = {
         disputed: 'Disputado',
         cancelled: 'Cancelado',
       },
-      noPayments: 'Aún no hay pagos',
-      noPaymentsSubtitle: 'Los pagos aparecerán aquí cuando los clientes comiencen a pagar',
+      noPayments: 'Sin actividad aún',
+      noPaymentsSubtitle: 'La actividad de facturación aparecerá aquí cuando los clientes se suscriban, paguen y realicen cambios',
       noStripe: 'Conecta Stripe para empezar a aceptar pagos',
       noStripeSubtitle: 'Configura tu cuenta de Stripe para habilitar el procesamiento de pagos',
+      allDates: 'Todas las Fechas',
+      today: 'Hoy',
     },
     packages: {
       addPackage: 'Añadir Paquete',

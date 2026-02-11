@@ -46,7 +46,11 @@ paymentsRouter.get('/sequences', supabaseAuthenticate, paymentsController.getSeq
 // Public: Packages by coach code (no auth)
 paymentsRouter.get('/public/packages/:coachCode', paymentsController.getPublicPackages);
 
-// Client: Create checkout session (requires auth)
+// Public: Create checkout session (no auth, but validates clientId exists)
+// Security: Validates client exists in DB, package is active, checks for duplicates
+paymentsRouter.post('/public/checkout/session', paymentsController.createPublicCheckoutSession);
+
+// Client: Create checkout session (requires auth) - kept for backwards compatibility
 paymentsRouter.post('/checkout/session', supabaseAuthenticate, paymentsController.createCheckoutSession);
 
 // Coach: Package Assignments
@@ -54,3 +58,7 @@ paymentsRouter.post('/packages/:packageId/assign', supabaseAuthenticate, payment
 paymentsRouter.delete('/packages/:packageId/assign/:clientId', supabaseAuthenticate, paymentsController.unassignPackage);
 paymentsRouter.get('/packages/:packageId/assignments', supabaseAuthenticate, paymentsController.getPackageAssignments);
 paymentsRouter.get('/clients/:clientId/assignments', supabaseAuthenticate, paymentsController.getClientAssignments);
+
+// Client: Self-service billing
+paymentsRouter.get('/client/packages', supabaseAuthenticate, paymentsController.getMyPackages);
+paymentsRouter.post('/client/billing-portal', supabaseAuthenticate, paymentsController.createBillingPortalSession);
