@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useGlobalData } from '@/providers/global-data-provider';
 
-const FREE_TRIAL_DAYS = 14;
+const FREE_TRIAL_DAYS = 30;
 
 interface FreeTrialStatus {
   isOnTrial: boolean;
@@ -45,7 +45,7 @@ export function useFreeTrial(): FreeTrialStatus {
     const creationDate = new Date(createdAt);
     const today = new Date();
 
-    // Calculate trial end date (14 days from creation, at end of day)
+    // Calculate trial end date (30 days from creation, at end of day)
     const trialEndDate = new Date(creationDate);
     trialEndDate.setDate(trialEndDate.getDate() + FREE_TRIAL_DAYS);
     trialEndDate.setHours(23, 59, 59, 999);

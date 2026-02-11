@@ -7,7 +7,7 @@ import { AthliLogo } from '@/components/athli-logo';
 import { Confetti } from '@/components/ui/confetti';
 import { MobileDownloadOverlay } from '@/components/app/mobile-download-overlay';
 import { useIsMobileWithLoading } from '@/hooks/use-mobile';
-import { WelcomeStep } from './steps/welcome-step';
+import { FreeTrialStep } from './steps/free-trial-step';
 import { CompanyNameStep } from './steps/company-name-step';
 import { CountryStep } from './steps/country-step';
 import { SpecialitiesStep } from './steps/specialities-step';
@@ -27,14 +27,14 @@ export type OnboardingData = {
   logoUrl: string | null;
 };
 
-// 0: welcome, 1: name, 2: country, 3: specialities, 4: website, 5: linkedin, 6: logo, 7: complete
+// 0: free trial, 1: name, 2: country, 3: specialities, 4: website, 5: linkedin, 6: logo, 7: complete
 const TOTAL_STEPS = 8;
 
 export function CoachOnboarding() {
   const router = useRouter();
   const isMobile = useIsMobileWithLoading();
   const [currentStep, setCurrentStep] = useState(0);
-  const [showConfetti, setShowConfetti] = useState(true); // Show on welcome
+  const [showConfetti, setShowConfetti] = useState(true); // Show on free trial step
   const [showMobileOverlay, setShowMobileOverlay] = useState(false);
   const [data, setData] = useState<OnboardingData>({
     companyName: '',
@@ -118,7 +118,7 @@ export function CoachOnboarding() {
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
-        return <WelcomeStep onContinue={handleNext} />;
+        return <FreeTrialStep onContinue={handleNext} />;
       case 1:
         return <CompanyNameStep value={data.companyName} onChange={(v) => updateData({ companyName: v })} />;
       case 2:

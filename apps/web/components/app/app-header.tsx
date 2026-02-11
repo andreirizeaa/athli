@@ -94,19 +94,29 @@ export function AppHeader({
           {isOnTrial && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-600 dark:text-amber-400">
+                <Link
+                  href="/settings/billing"
+                  className="flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
+                >
                   <Clock className="size-3.5" />
                   <span>
                     {trialDaysRemaining === 1
                       ? t('trial.daysLeft.one', { defaultValue: '1 day left' })
                       : t('trial.daysLeft.other', { count: trialDaysRemaining, defaultValue: `${trialDaysRemaining} days left` })}
                   </span>
-                </div>
+                </Link>
               </TooltipTrigger>
               <TooltipContent>
-                {t('trial.tooltip', { defaultValue: 'Free trial period' })}
+                {t('trial.viewPlanDetails', { defaultValue: 'View plan details' })}
               </TooltipContent>
             </Tooltip>
+          )}
+          {status === 'expired' && (
+            <Button asChild variant="default" size="sm">
+              <Link href="/settings/billing">
+                {t('trial.upgrade', { defaultValue: 'Upgrade' })}
+              </Link>
+            </Button>
           )}
           <Button
             variant="outline"
