@@ -1912,6 +1912,9 @@ export const esMessages = {
       deleteSelected: 'Eliminar seleccionados',
       addToClients: 'Asignar a clientes',
     },
+    assignSuccessSingle: 'Se asignó {habitName} a {clientName} exitosamente',
+    assignSuccessHabitMultiClient: 'Se asignó {habitName} a {count} clientes exitosamente',
+    assignSuccessMultiHabitSingleClient: 'Se asignaron {count} hábitos a {clientName} exitosamente',
     form: {
       name: 'Nombre del hábito',
       namePlaceholder: 'Ingrese el nombre del hábito...',
@@ -2049,6 +2052,9 @@ export const esMessages = {
       tags: 'Etiquetas',
       allTags: 'Todas las etiquetas',
     },
+    assignSuccessSingle: 'Se asignó {fileName} a {clientName} exitosamente',
+    assignSuccessFileMultiClient: 'Se asignó {fileName} a {count} clientes exitosamente',
+    assignSuccessMultiFileSingleClient: 'Se asignaron {count} archivos a {clientName} exitosamente',
   },
   forms: {
     title: 'Formularios',
@@ -2187,6 +2193,11 @@ export const esMessages = {
         success: 'Pregunta eliminada exitosamente',
       },
     },
+  },
+  metrics: {
+    assignSuccessSingle: 'Se asignó {metricName} a {clientName} exitosamente',
+    assignSuccessMetricMultiClient: 'Se asignó {metricName} a {count} clientes exitosamente',
+    assignSuccessMultiMetricSingleClient: 'Se asignaron {count} métricas a {clientName} exitosamente',
   },
   error: {
     notFound: {
@@ -2515,7 +2526,7 @@ export const esMessages = {
     sectionTitle: 'Precios que Escalan Contigo',
     sectionSubtitle: 'Empieza gratis, mejora a medida que creces. Planes simples diseñados para entrenadores en cada etapa.',
     getStarted: 'Comenzar',
-    popular: 'Recomendado',
+    popular: 'Más Popular',
     monthly: 'Mensual',
     annual: 'Anual',
     twoMonthsFree: '2 meses gratis con facturación anual',

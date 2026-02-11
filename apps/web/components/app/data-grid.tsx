@@ -516,6 +516,21 @@ export function DataGrid<T extends Record<string, any>>({
     }
   }, [filters]);
 
+  // Clear selection when Escape key is pressed
+  useEffect(() => {
+    if (!enableRowSelection) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedRowIds.size > 0) {
+        setSelectedRowIds(new Set());
+        setPagesFullySelected(new Set());
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [enableRowSelection, selectedRowIds.size]);
+
   // Load column preferences from localStorage
   useEffect(() => {
     if (!enableEditColumns) {

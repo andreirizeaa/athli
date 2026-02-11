@@ -9,6 +9,7 @@ import { motion } from 'motion/react'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import Lottie from 'lottie-react'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
@@ -26,31 +27,31 @@ interface AddonConfig {
 // Pro plan pricing tiers - lower base price, higher per-client at scale
 const PRO_PRICING: Record<number, [number, number]> = {
     5: [15, 12],      // $3.00/client
-    10: [28, 23],     // $2.80/client
-    20: [48, 40],     // $2.40/client
-    50: [95, 79],     // $1.90/client
-    75: [130, 108],   // $1.73/client
-    100: [160, 133],  // $1.60/client
-    125: [185, 154],  // $1.48/client
-    150: [205, 170],  // $1.37/client
-    200: [240, 200],  // $1.20/client
-    250: [262, 218],  // $1.05/client
-    300: [280, 233],  // $0.93/client
+    10: [25, 21],     // $2.50/client
+    20: [42, 35],     // $2.10/client
+    50: [85, 71],     // $1.70/client
+    75: [115, 96],    // $1.53/client
+    100: [140, 117],  // $1.40/client
+    125: [165, 137],  // $1.32/client
+    150: [185, 154],  // $1.23/client
+    200: [215, 179],  // $1.08/client
+    250: [240, 200],  // $0.96/client
+    300: [260, 217],  // $0.87/client
 }
 
 // Max plan pricing tiers - higher base price (more features), but better per-client at scale
 const MAX_PRICING: Record<number, [number, number]> = {
-    50: [115, 96],    // $2.30/client
-    75: [155, 129],   // $2.07/client
-    100: [190, 158],  // $1.90/client
-    150: [250, 208],  // $1.67/client
-    200: [300, 250],  // $1.50/client
-    250: [340, 283],  // $1.36/client
-    300: [375, 312],  // $1.25/client
-    350: [400, 333],  // $1.14/client
-    400: [420, 350],  // $1.05/client
-    450: [435, 362],  // $0.97/client
-    500: [450, 375],  // $0.90/client
+    50: [95, 79],     // $1.90/client
+    75: [135, 112],   // $1.80/client
+    100: [170, 142],  // $1.70/client
+    150: [220, 183],  // $1.47/client
+    200: [265, 221],  // $1.33/client
+    250: [305, 254],  // $1.22/client
+    300: [340, 283],  // $1.13/client
+    350: [370, 308],  // $1.06/client
+    400: [395, 329],  // $0.99/client
+    450: [415, 346],  // $0.92/client
+    500: [430, 358],  // $0.86/client
 }
 
 const PRO_CLIENT_OPTIONS = [5, 10, 20, 50, 75, 100, 125, 150, 200, 250, 300]
@@ -156,8 +157,8 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
     const t = useTranslations('pricing')
 
     const [billingInterval, setBillingInterval] = useState<BillingInterval>('annual')
-    const [proClients, setProClients] = useState(50)
-    const [maxClients, setMaxClients] = useState(100)
+    const [proClients, setProClients] = useState(5)
+    const [maxClients, setMaxClients] = useState(50)
     const [aiAnimationData, setAiAnimationData] = useState<object | null>(null)
 
     useEffect(() => {
@@ -195,12 +196,14 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
 
     const getProPrice = () => {
         const pricing = PRO_PRICING[proClients]
-        return pricing ? pricing[0] : 15
+        if (!pricing) return 15
+        return billingInterval === 'annual' ? pricing[1] : pricing[0]
     }
 
     const getMaxPrice = () => {
         const pricing = MAX_PRICING[maxClients]
-        return pricing ? pricing[0] : 95
+        if (!pricing) return 95
+        return billingInterval === 'annual' ? pricing[1] : pricing[0]
     }
 
     const getProPricePerClient = () => {
@@ -214,7 +217,7 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
     }
 
     const getAddonPrice = (addon: AddonConfig) => {
-        return addon.monthlyPrice
+        return billingInterval === 'annual' ? addon.annualPrice : addon.monthlyPrice
     }
 
     return (
@@ -227,31 +230,25 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
                     </div>
                 )}
 
-                {/* Billing Toggle - Tab Bar Style */}
+                {/* Billing Toggle */}
                 <div className="mt-8 flex flex-col items-center gap-2">
-                    <div className="inline-flex items-center rounded-full border bg-muted p-1">
-                        <button
-                            onClick={() => setBillingInterval('monthly')}
-                            className={cn(
-                                'rounded-full px-4 py-2 text-sm font-medium transition-colors',
-                                billingInterval === 'monthly'
-                                    ? 'bg-background text-foreground shadow-sm'
-                                    : 'text-muted-foreground hover:text-foreground'
-                            )}
-                        >
+                    <div className="inline-flex items-center gap-3 rounded-full border bg-muted px-4 py-2">
+                        <span className={cn(
+                            'text-sm font-medium transition-colors',
+                            billingInterval === 'monthly' ? 'text-foreground' : 'text-muted-foreground'
+                        )}>
                             {t('monthly')}
-                        </button>
-                        <button
-                            onClick={() => setBillingInterval('annual')}
-                            className={cn(
-                                'rounded-full px-4 py-2 text-sm font-medium transition-colors',
-                                billingInterval === 'annual'
-                                    ? 'bg-background text-foreground shadow-sm'
-                                    : 'text-muted-foreground hover:text-foreground'
-                            )}
-                        >
+                        </span>
+                        <Switch
+                            checked={billingInterval === 'annual'}
+                            onCheckedChange={(checked) => setBillingInterval(checked ? 'annual' : 'monthly')}
+                        />
+                        <span className={cn(
+                            'text-sm font-medium transition-colors',
+                            billingInterval === 'annual' ? 'text-foreground' : 'text-muted-foreground'
+                        )}>
                             {t('annual')}
-                        </button>
+                        </span>
                     </div>
                     <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                         {t('twoMonthsFree')}
@@ -345,7 +342,8 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
                                             </SelectTrigger>
                                             <SelectContent className="w-[--radix-select-trigger-width]">
                                                 {PRO_CLIENT_OPTIONS.map((num) => {
-                                                    const price = PRO_PRICING[num]?.[0] || 0
+                                                    const pricing = PRO_PRICING[num]
+                                                    const price = pricing ? (billingInterval === 'annual' ? pricing[1] : pricing[0]) : 0
                                                     const perClient = (price / num).toFixed(2)
                                                     return (
                                                         <SelectItem key={num} value={num.toString()}>
@@ -414,7 +412,8 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
                                         </SelectTrigger>
                                         <SelectContent className="w-[--radix-select-trigger-width]">
                                             {MAX_CLIENT_OPTIONS.map((num) => {
-                                                const price = MAX_PRICING[num]?.[0] || 0
+                                                const pricing = MAX_PRICING[num]
+                                                const price = pricing ? (billingInterval === 'annual' ? pricing[1] : pricing[0]) : 0
                                                 const perClient = (price / num).toFixed(2)
                                                 return (
                                                     <SelectItem key={num} value={num.toString()}>

@@ -4,6 +4,20 @@ import { supabaseAuthenticate } from '../../../../middlewares/supabase-auth';
 
 export const coachHabitRouter = Router();
 
+// =============================================================================
+// Folder Routes (must come before :id routes)
+// =============================================================================
+
+coachHabitRouter.get('/folders', supabaseAuthenticate, coachHabitsController.getFolders);
+coachHabitRouter.post('/folders', supabaseAuthenticate, coachHabitsController.createFolder);
+coachHabitRouter.patch('/folders/:id', supabaseAuthenticate, coachHabitsController.updateFolder);
+coachHabitRouter.delete('/folders/:id', supabaseAuthenticate, coachHabitsController.deleteFolder);
+coachHabitRouter.get('/folders/:id/habits', supabaseAuthenticate, coachHabitsController.getHabitsInFolder);
+
+// =============================================================================
+// Habit Routes
+// =============================================================================
+
 /**
  * @swagger
  * /api/v1/coach/habits:
@@ -68,6 +82,41 @@ coachHabitRouter.post('/', supabaseAuthenticate, coachHabitsController.createHab
 
 /**
  * @swagger
+ * /api/v1/coach/habits/{id}/duplicate:
+ *   post:
+ *     summary: Duplicate coach habit
+ *     description: Create a copy of an existing habit with "(Copy)" appended to the name.
+ *     tags: [Coach Habits]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       201:
+ *         description: Coach habit duplicated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         habit:
+ *                           $ref: '#/components/schemas/CoachHabit'
+ */
+coachHabitRouter.post('/:id/duplicate', supabaseAuthenticate, coachHabitsController.duplicateHabit);
+
+coachHabitRouter.patch('/:id/move', supabaseAuthenticate, coachHabitsController.moveHabit);
+
+/**
+ * @swagger
  * /api/v1/coach/habits/{id}:
  *   patch:
  *     summary: Update coach habit
@@ -125,36 +174,3 @@ coachHabitRouter.patch('/:id', supabaseAuthenticate, coachHabitsController.updat
  *         description: Coach habit deleted successfully
  */
 coachHabitRouter.delete('/:id', supabaseAuthenticate, coachHabitsController.deleteHabit);
-
-/**
- * @swagger
- * /api/v1/coach/habits/{id}/duplicate:
- *   post:
- *     summary: Duplicate coach habit
- *     description: Create a copy of an existing habit with "(Copy)" appended to the name.
- *     tags: [Coach Habits]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       201:
- *         description: Coach habit duplicated successfully
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/SuccessResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       type: object
- *                       properties:
- *                         habit:
- *                           $ref: '#/components/schemas/CoachHabit'
- */
-coachHabitRouter.post('/:id/duplicate', supabaseAuthenticate, coachHabitsController.duplicateHabit);

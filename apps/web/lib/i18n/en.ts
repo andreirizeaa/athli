@@ -2350,6 +2350,9 @@ export const enMessages = {
       noTagsFound: 'No tags found',
       removeTag: 'Remove {tag}',
     },
+    assignSuccessSingle: 'Successfully assigned {fileName} to {clientName}',
+    assignSuccessFileMultiClient: 'Successfully assigned {fileName} to {count} clients',
+    assignSuccessMultiFileSingleClient: 'Successfully assigned {count} files to {clientName}',
   },
   habits: {
     title: 'Habits',
@@ -2382,6 +2385,9 @@ export const enMessages = {
     assignToClientsCount: 'Assign to {count} clients',
     habitsToAssign: 'Habits to be assigned',
     noHabitsSelected: 'No habits selected',
+    assignSuccessSingle: 'Successfully assigned {habitName} to {clientName}',
+    assignSuccessHabitMultiClient: 'Successfully assigned {habitName} to {count} clients',
+    assignSuccessMultiHabitSingleClient: 'Successfully assigned {count} habits to {clientName}',
     form: {
       name: 'Habit name',
       namePlaceholder: 'Enter habit name...',
@@ -2797,6 +2803,9 @@ export const enMessages = {
     assignToClientsCount: 'Assign to {count} clients',
     metricsToAssign: 'Metrics to be assigned',
     noMetricsSelected: 'No metrics selected',
+    assignSuccessSingle: 'Successfully assigned {metricName} to {clientName}',
+    assignSuccessMetricMultiClient: 'Successfully assigned {metricName} to {count} clients',
+    assignSuccessMultiMetricSingleClient: 'Successfully assigned {count} metrics to {clientName}',
     searchAthletes: 'Search athletes...',
     noAthletesFound: 'No athletes found.',
     schedule: {
@@ -3149,7 +3158,7 @@ export const enMessages = {
     sectionTitle: 'Pricing that Scales with You',
     sectionSubtitle: 'Start free, upgrade as you grow. Simple plans built for coaches at every stage.',
     getStarted: 'Get Started',
-    popular: 'Recommended',
+    popular: 'Most Popular',
     monthly: 'Monthly',
     annual: 'Annual',
     twoMonthsFree: '2 months free with annual billing',

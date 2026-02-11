@@ -10,6 +10,7 @@ import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/general/utils'
 import { Slider } from '@/components/ui/slider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import Lottie from 'lottie-react'
 
 type Plan = 'free' | 'pro' | 'max'
@@ -37,36 +38,35 @@ const PLANS: Record<Plan, PlanConfig> = {
 }
 
 // Pro plan pricing tiers - price decreases per client as volume increases
-// Capped at $280 for 300 clients
 // Format: { clients: [monthlyPrice, annualPrice] }
 const PRO_PRICING: Record<number, [number, number]> = {
-    5: [15, 12],
-    10: [28, 23],
-    20: [48, 40],
-    50: [95, 79],
-    75: [130, 108],
-    100: [160, 133],
-    125: [185, 154],
-    150: [205, 170],
-    200: [240, 200],
-    250: [262, 218],
-    300: [280, 233],
+    5: [15, 12],      // $3.00/client
+    10: [25, 21],     // $2.50/client
+    20: [42, 35],     // $2.10/client
+    50: [85, 71],     // $1.70/client
+    75: [115, 96],    // $1.53/client
+    100: [140, 117],  // $1.40/client
+    125: [165, 137],  // $1.32/client
+    150: [185, 154],  // $1.23/client
+    200: [215, 179],  // $1.08/client
+    250: [240, 200],  // $0.96/client
+    300: [260, 217],  // $0.87/client
 }
 
 // Max plan pricing tiers - higher base price (more features), but better per-client at scale
 // Format: { clients: [monthlyPrice, annualPrice] }
 const MAX_PRICING: Record<number, [number, number]> = {
-    50: [115, 96],    // $2.30/client
-    75: [155, 129],   // $2.07/client
-    100: [190, 158],  // $1.90/client
-    150: [250, 208],  // $1.67/client
-    200: [300, 250],  // $1.50/client
-    250: [340, 283],  // $1.36/client
-    300: [375, 312],  // $1.25/client
-    350: [400, 333],  // $1.14/client
-    400: [420, 350],  // $1.05/client
-    450: [435, 362],  // $0.97/client
-    500: [450, 375],  // $0.90/client
+    50: [95, 79],     // $1.90/client
+    75: [135, 112],   // $1.80/client
+    100: [170, 142],  // $1.70/client
+    150: [220, 183],  // $1.47/client
+    200: [265, 221],  // $1.33/client
+    250: [305, 254],  // $1.22/client
+    300: [340, 283],  // $1.13/client
+    350: [370, 308],  // $1.06/client
+    400: [395, 329],  // $0.99/client
+    450: [415, 346],  // $0.92/client
+    500: [430, 358],  // $0.86/client
 }
 
 const PRO_CLIENT_OPTIONS = [5, 10, 20, 50, 75, 100, 125, 150, 200, 250, 300]
@@ -275,31 +275,25 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false 
                     </div>
                 )}
 
-                {/* Billing Toggle - Tab Bar Style */}
+                {/* Billing Toggle */}
                 <div className="mt-8 flex flex-col items-center gap-2">
-                    <div className="inline-flex items-center rounded-full border bg-muted p-1">
-                        <button
-                            onClick={() => setBillingInterval('monthly')}
-                            className={cn(
-                                'rounded-full px-4 py-2 text-sm font-medium transition-colors',
-                                billingInterval === 'monthly'
-                                    ? 'bg-background text-foreground shadow-sm'
-                                    : 'text-muted-foreground hover:text-foreground'
-                            )}
-                        >
+                    <div className="inline-flex items-center gap-3 rounded-full border bg-muted px-4 py-2">
+                        <span className={cn(
+                            'text-sm font-medium transition-colors',
+                            billingInterval === 'monthly' ? 'text-foreground' : 'text-muted-foreground'
+                        )}>
                             {t('monthly')}
-                        </button>
-                        <button
-                            onClick={() => setBillingInterval('annual')}
-                            className={cn(
-                                'rounded-full px-4 py-2 text-sm font-medium transition-colors',
-                                billingInterval === 'annual'
-                                    ? 'bg-background text-foreground shadow-sm'
-                                    : 'text-muted-foreground hover:text-foreground'
-                            )}
-                        >
+                        </span>
+                        <Switch
+                            checked={billingInterval === 'annual'}
+                            onCheckedChange={(checked) => setBillingInterval(checked ? 'annual' : 'monthly')}
+                        />
+                        <span className={cn(
+                            'text-sm font-medium transition-colors',
+                            billingInterval === 'annual' ? 'text-foreground' : 'text-muted-foreground'
+                        )}>
                             {t('annual')}
-                        </button>
+                        </span>
                     </div>
                     <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                         {t('twoMonthsFree')}

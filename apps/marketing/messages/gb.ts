@@ -148,8 +148,8 @@ const messages = {
     forms: {
       label: 'Forms',
       headline: 'Fully customizable forms that feed your data',
-      description: 'Build forms tailored to any question you need answered. Responses connect directly to client metrics and progress photos, so every submission automatically updates their profile. You design the questions, and your clients fill them in on schedule.',
-      highlights: ['Connect responses to metrics and progress photos', 'Automated submission schedules', 'Coach review dashboard for all responses'],
+      description: 'Build forms tailored to any question you need answered. Responses connect directly to client metrics and progress photos, so every submission automatically updates their profile.',
+      highlights: ['Data integration', 'Automated submission schedules', 'Coach review dashboard for all responses'],
       pageTitle: 'Forms That Feed Your Coaching Data',
       pageSubtitle: 'Design custom check-in forms, connect responses to metrics and progress photos, and review everything from one dashboard.',
       benefits: [
@@ -162,7 +162,7 @@ const messages = {
       label: 'Inbox',
       headline: 'Message clients with their full profile in view',
       description: 'A built-in inbox with a client power panel right alongside the conversation. See their metrics, progress, and profile without switching screens, so you can give informed, contextual advice without ever leaving the chat.',
-      highlights: ['Client profile panel beside every conversation', 'Metrics and progress at a glance', 'Everything in one window'],
+      highlights: ['Client power panel', 'Metrics and progress at a glance', 'Everything in one window'],
       pageTitle: 'An Inbox Built for Coaching',
       pageSubtitle: "Message your clients with their full profile, metrics, and progress visible right beside the conversation. Context-rich coaching, no tab-switching.",
       benefits: [
@@ -174,7 +174,7 @@ const messages = {
     metrics: {
       label: 'Metrics',
       headline: 'Track any metric that matters to you',
-      description: 'Define and track any metric, from body measurements to sleep quality, energy levels, or anything unique to your coaching method. Every metric is fully customizable, giving you the data you need to make better decisions for your clients.',
+      description: 'Define and track any metric, from body measurements to sleep quality, energy levels, or anything unique to your coaching method. Every metric is fully customizable.',
       highlights: ['Define unlimited custom metrics', 'Track anything relevant to your coaching', 'Clear visualizations over time'],
       pageTitle: 'Metrics Tailored to Your Method',
       pageSubtitle: 'Define and track any metric, body measurements, sleep, energy, or anything unique to your coaching. Fully customizable, beautifully visualized.',
@@ -228,7 +228,7 @@ const messages = {
     sectionTitle: 'Pricing that Scales with You',
     sectionSubtitle: 'Start free, upgrade as you grow. Simple plans built for coaches at every stage.',
     getStarted: 'Get Started',
-    popular: 'Recommended',
+    popular: 'Most Popular',
     monthly: 'Monthly',
     annual: 'Annual',
     twoMonthsFree: '2 months free with annual billing',
