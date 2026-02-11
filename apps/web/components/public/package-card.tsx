@@ -95,13 +95,6 @@ export function PackageCard({
           </Badge>
         </div>
 
-        {/* Initial fee */}
-        {(pkg.initial_fee_cents ?? 0) > 0 && (
-          <p className="text-xs text-muted-foreground mt-1">
-            + {formatAmount(pkg.initial_fee_cents, pkg.currency)} initial fee
-          </p>
-        )}
-
         {/* Badges */}
         <div className="flex flex-wrap gap-2 mt-3">
           {pkg.interval === 'one_time' && (

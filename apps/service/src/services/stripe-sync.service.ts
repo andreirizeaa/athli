@@ -28,7 +28,6 @@ export async function syncPackageToStripe(pkg: {
   interval: string;
   interval_count: number | null;
   free_trial_days: number;
-  initial_fee_cents: number;
   features?: string[];
   image_url?: string | null;
 }): Promise<{ stripe_product_id: string; stripe_price_id: string } | null> {
@@ -195,7 +194,6 @@ export async function syncProductsFromStripe(coachId: string): Promise<{ synced:
         is_visible: true,
         features,
         free_trial_days: 0,
-        initial_fee_cents: 0,
         image_url: product.images?.[0] || null,
       });
     }

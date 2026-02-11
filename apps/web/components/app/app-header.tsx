@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bell, Gift, Headset, Lightbulb, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Bell, Clock, Gift, Headset, Lightbulb, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAIPanel } from '@/lib/providers/ai-panel-provider';
 import Lottie from 'lottie-react';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { SearchComponent } from './search';
 import { UserMenu } from './user-menu';
 import { NotificationSidePanel } from './notification-side-panel';
 import { useCoachNotifications } from '@/hooks/use-coach-notifications';
+import { useAccess } from '@/lib/permissions';
 
 type AppHeaderProps = {
   isThemeMounted: boolean;
@@ -34,7 +35,9 @@ export function AppHeader({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const { unreadCount } = useCoachNotifications();
+  const { status, trialDaysRemaining } = useAccess();
 
+  const isOnTrial = status === 'trial';
   const isAssistantPage = pathname?.startsWith('/assistant');
 
   // Load AI sphere animation
@@ -88,6 +91,23 @@ export function AppHeader({
           <SearchComponent />
         </div>
         <div className="flex items-center gap-2">
+          {isOnTrial && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-600 dark:text-amber-400">
+                  <Clock className="size-3.5" />
+                  <span>
+                    {trialDaysRemaining === 1
+                      ? t('trial.daysLeft.one', { defaultValue: '1 day left' })
+                      : t('trial.daysLeft.other', { count: trialDaysRemaining, defaultValue: `${trialDaysRemaining} days left` })}
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('trial.tooltip', { defaultValue: 'Free trial period' })}
+              </TooltipContent>
+            </Tooltip>
+          )}
           <Button
             variant="outline"
             className="gap-2"

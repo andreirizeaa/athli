@@ -123,6 +123,8 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const [isAppReady, setIsAppReady] = useState(false);
   const [coachLoaded, setCoachLoaded] = useState(false);
+  // Track if we ever had a valid session (to distinguish real sign-out from fresh launch)
+  const hadSessionRef = useRef(false);
   const isAppReadyFromStore = useAppInitStore((state) => state.isAppReady);
   const setCoachProfile = useCoachProfileStore((state) => state.setProfile);
   const setClientProfile = useClientProfileStore((state) => state.setProfile);
@@ -199,6 +201,8 @@ function RootLayoutNav() {
           }
           const authResult = await restoreSession();
           if (authResult && authResult.profile) {
+            // Mark that we have a valid session (for distinguishing real sign-out later)
+            hadSessionRef.current = true;
             if (authResult.profileType === 'coach') {
               setCoachProfile(authResult.profile as CoachProfile);
               setAppView('coach');
@@ -212,8 +216,9 @@ function RootLayoutNav() {
 
         // STEP 4: Load company data and chats if coach profile exists
         const finalCoachProfile = useCoachProfileStore.getState().profile;
-        if (finalCoachProfile) {
-          // Mark coach app as explored (fire-and-forget)
+        const finalSession = useAuthSessionStore.getState().session;
+        if (finalCoachProfile && finalSession) {
+          // Mark coach app as explored (fire-and-forget, only if authenticated)
           apiFetch('/coach/new/checklist', {
             method: 'PATCH',
             body: JSON.stringify({ field: 'coach_app_demo' }),
@@ -267,10 +272,12 @@ function RootLayoutNav() {
           // Don't clear an existing session (could be a race condition after sign-in)
           if (session) {
             useAuthSessionStore.getState().setSession(session);
+            hadSessionRef.current = true;
           }
         } else if (event === 'SIGNED_IN') {
           // User signed in - update session and fetch profile
           useAuthSessionStore.getState().setSession(session);
+          hadSessionRef.current = true;
           const authResult = await restoreSession({ signOutOnFailure: false });
           if (authResult && authResult.profile) {
             if (authResult.profileType === 'coach') {
@@ -299,10 +306,16 @@ function RootLayoutNav() {
             router.replace('/(tabs)');
           }
         } else if (event === 'SIGNED_OUT') {
+          // Only process sign-out if we actually had a session (ignore fresh app launch)
+          if (!hadSessionRef.current) {
+            console.log('[RootLayout] SIGNED_OUT event on fresh launch - ignoring');
+            return;
+          }
           // User signed out or session expired - clear everything
           console.log('[RootLayout] User signed out, clearing state');
-          // Unregister push notifications before clearing session
+          // Unregister push notifications before clearing session (only if we had a session)
           unregisterPushNotifications().catch(console.error);
+          hadSessionRef.current = false;
           useAuthSessionStore.getState().clearSession();
           clearCoachProfile();
           useCoachCompanyStore.getState().clearCompany();

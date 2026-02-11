@@ -53,8 +53,8 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
 
   const tabs = [
     {
-      value: 'summary',
-      label: t('business.tabs.summary'),
+      value: 'activity',
+      label: t('business.tabs.activity'),
     },
     {
       value: 'packages',
@@ -71,7 +71,7 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
   ];
 
   const validTabValues = tabs.map((tab) => tab.value);
-  const activeTab = segments.find((segment) => validTabValues.includes(segment)) || 'summary';
+  const activeTab = segments.find((segment) => validTabValues.includes(segment)) || 'activity';
 
   const shouldShowHeader = segments.length === 1 && validTabValues.includes(segments[0]);
 

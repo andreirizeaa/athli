@@ -214,7 +214,7 @@ const PackagesPage = () => {
             e.stopPropagation();
             setRedemptionsPackage(row);
           }}
-          className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+          className="text-sm text-primary hover:underline"
           data-no-row-link="true"
         >
           {t('business.packages.viewStats')}

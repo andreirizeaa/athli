@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { DollarSign, TrendingUp, CreditCard, Users, Loader2, CalendarIcon, RotateCcw, ChevronDown, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -58,21 +59,30 @@ function getInitials(name: string | null): string {
     .toUpperCase();
 }
 
-// Event type colors and labels
+// Event type colors and labels - each event has a unique color
 const eventTypeConfig: Record<string, { color: string; label: string }> = {
   payment_succeeded: { color: 'bg-emerald-100 text-emerald-800 border-emerald-200', label: 'Payment' },
   payment_failed: { color: 'bg-red-100 text-red-800 border-red-200', label: 'Failed' },
   subscription_created: { color: 'bg-blue-100 text-blue-800 border-blue-200', label: 'New Subscription' },
-  subscription_renewed: { color: 'bg-emerald-100 text-emerald-800 border-emerald-200', label: 'Renewed' },
+  subscription_renewed: { color: 'bg-teal-100 text-teal-800 border-teal-200', label: 'Renewed' },
   subscription_cancelling: { color: 'bg-amber-100 text-amber-800 border-amber-200', label: 'Cancelling' },
-  subscription_cancelled: { color: 'bg-gray-100 text-gray-800 border-gray-200', label: 'Cancelled' },
-  subscription_reactivated: { color: 'bg-blue-100 text-blue-800 border-blue-200', label: 'Reactivated' },
+  subscription_cancelled: { color: 'bg-slate-100 text-slate-800 border-slate-200', label: 'Cancelled' },
+  subscription_reactivated: { color: 'bg-cyan-100 text-cyan-800 border-cyan-200', label: 'Reactivated' },
   subscription_past_due: { color: 'bg-orange-100 text-orange-800 border-orange-200', label: 'Past Due' },
-  refund_issued: { color: 'bg-purple-100 text-purple-800 border-purple-200', label: 'Refund' },
-  dispute_created: { color: 'bg-red-100 text-red-800 border-red-200', label: 'Dispute' },
+  refund_issued: { color: 'bg-violet-100 text-violet-800 border-violet-200', label: 'Refund' },
+  dispute_created: { color: 'bg-rose-100 text-rose-800 border-rose-200', label: 'Dispute' },
+  // Trial events
+  trial_started: { color: 'bg-indigo-100 text-indigo-800 border-indigo-200', label: 'Trial Started' },
+  trial_ending: { color: 'bg-yellow-100 text-yellow-800 border-yellow-200', label: 'Trial Ending' },
+  trial_converted: { color: 'bg-green-100 text-green-800 border-green-200', label: 'Trial Converted' },
+  // Customer portal events
+  customer_updated: { color: 'bg-sky-100 text-sky-800 border-sky-200', label: 'Profile Updated' },
+  payment_method_added: { color: 'bg-lime-100 text-lime-800 border-lime-200', label: 'Card Added' },
+  payment_method_updated: { color: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200', label: 'Card Updated' },
+  payment_method_removed: { color: 'bg-stone-100 text-stone-800 border-stone-200', label: 'Card Removed' },
 };
 
-const SummaryPage = () => {
+const ActivityPage = () => {
   const t = useTranslations();
   const { data: stripeAccount } = useStripeConnection();
   const { startOnboarding, isOnboarding } = useCoachPackages();
@@ -140,60 +150,35 @@ const SummaryPage = () => {
 
   const statCards = [
     {
-      label: t('business.summary.grossRevenue'),
+      label: t('business.activity.grossRevenue'),
       value: analytics ? formatCurrency(analytics.gross_revenue_cents, currency) : '$0',
       icon: DollarSign,
     },
     {
-      label: t('business.summary.thisMonth'),
+      label: t('business.activity.thisMonth'),
       value: analytics ? formatCurrency(analytics.this_month_revenue_cents, currency) : '$0',
       icon: TrendingUp,
       change: changePercent,
     },
     {
-      label: t('business.summary.activeSubscriptions'),
+      label: t('business.activity.activeSubscriptions'),
       value: analytics ? analytics.active_subscriptions_count.toString() : '0',
       icon: CreditCard,
     },
     {
-      label: t('business.summary.payingClients'),
+      label: t('business.activity.payingClients'),
       value: analytics ? analytics.paying_clients_count.toString() : '0',
       icon: Users,
     },
   ];
 
-  // Columns: Event Type, Description, Client, Amount, Date
+  // Columns order: Athlete, Event, Amount, Package, Description, Date
   const columns: ColumnDefinition<PaymentActivityRow>[] = [
     {
-      id: 'event_type',
-      label: t('business.summary.columns.event'),
+      id: 'athlete',
+      label: t('business.activity.columns.athlete'),
       sortable: true,
-      width: { class: 'w-[140px]', pixel: '140px' },
-      getSortValue: (row) => row.event_type,
-      renderCell: (row) => {
-        const config = eventTypeConfig[row.event_type] || { color: 'bg-gray-100 text-gray-800 border-gray-200', label: row.event_type };
-        return (
-          <Badge variant="outline" className={config.color}>
-            {config.label}
-          </Badge>
-        );
-      },
-    },
-    {
-      id: 'description',
-      label: t('business.summary.columns.description'),
-      sortable: false,
-      width: { class: 'flex-1 min-w-[280px]', pixel: '280px' },
-      getSearchValue: (row) => row.description,
-      renderCell: (row) => (
-        <span className="text-sm">{row.description}</span>
-      ),
-    },
-    {
-      id: 'client',
-      label: t('business.summary.columns.client'),
-      sortable: true,
-      width: { class: 'w-[200px]', pixel: '200px' },
+      width: { class: 'w-[180px]', pixel: '180px' },
       getSortValue: (row) => (row.client_name || '').toLowerCase(),
       getSearchValue: (row) => `${row.client_name || ''} ${row.client_email || ''}`,
       renderCell: (row) => (
@@ -209,8 +194,23 @@ const SummaryPage = () => {
       ),
     },
     {
+      id: 'event_type',
+      label: t('business.activity.columns.event'),
+      sortable: true,
+      width: { class: 'w-[140px]', pixel: '140px' },
+      getSortValue: (row) => row.event_type,
+      renderCell: (row) => {
+        const config = eventTypeConfig[row.event_type] || { color: 'bg-gray-100 text-gray-800 border-gray-200', label: row.event_type };
+        return (
+          <Badge variant="outline" className={config.color}>
+            {config.label}
+          </Badge>
+        );
+      },
+    },
+    {
       id: 'amount',
-      label: t('business.summary.columns.amount'),
+      label: t('business.activity.columns.amount'),
       sortable: true,
       width: { class: 'w-[100px]', pixel: '100px' },
       getSortValue: (row) => row.amount_cents,
@@ -221,27 +221,69 @@ const SummaryPage = () => {
       ),
     },
     {
-      id: 'date',
-      label: t('business.summary.columns.date'),
+      id: 'package',
+      label: t('business.activity.columns.package'),
       sortable: true,
-      width: { class: 'w-[140px]', pixel: '140px' },
+      width: { class: 'w-[160px]', pixel: '160px' },
+      getSortValue: (row) => (row.package_name || '').toLowerCase(),
+      getSearchValue: (row) => row.package_name || '',
+      renderCell: (row) => (
+        row.package_id && row.package_name ? (
+          <Link
+            href={`/business/packages?highlight=${row.package_id}`}
+            className="text-sm text-primary hover:underline truncate"
+          >
+            {row.package_name}
+          </Link>
+        ) : (
+          <span className="text-sm text-muted-foreground">-</span>
+        )
+      ),
+    },
+    {
+      id: 'description',
+      label: t('business.activity.columns.description'),
+      sortable: false,
+      width: { class: 'flex-1 min-w-[200px]', pixel: '200px' },
+      getSearchValue: (row) => row.description,
+      renderCell: (row) => (
+        <span className="text-sm truncate">{row.description}</span>
+      ),
+    },
+    {
+      id: 'date',
+      label: t('business.activity.columns.date'),
+      sortable: true,
+      width: { class: 'w-[120px]', pixel: '120px' },
       getSortValue: (row) => row.created_at,
       renderCell: (row) => (
-        <span className="text-sm">{formatDate(row.created_at)}</span>
+        <span className="text-sm text-primary">{formatDate(row.created_at)}</span>
       ),
     },
   ];
 
   const eventTypeOptions = [
+    // Payments
     { value: 'payment_succeeded', label: 'Payment' },
+    { value: 'payment_failed', label: 'Failed' },
+    { value: 'refund_issued', label: 'Refund' },
+    { value: 'dispute_created', label: 'Dispute' },
+    // Subscriptions
     { value: 'subscription_created', label: 'New Subscription' },
     { value: 'subscription_renewed', label: 'Renewed' },
     { value: 'subscription_cancelling', label: 'Cancelling' },
     { value: 'subscription_cancelled', label: 'Cancelled' },
     { value: 'subscription_reactivated', label: 'Reactivated' },
-    { value: 'payment_failed', label: 'Failed' },
-    { value: 'refund_issued', label: 'Refund' },
-    { value: 'dispute_created', label: 'Dispute' },
+    { value: 'subscription_past_due', label: 'Past Due' },
+    // Trials
+    { value: 'trial_started', label: 'Trial Started' },
+    { value: 'trial_ending', label: 'Trial Ending' },
+    { value: 'trial_converted', label: 'Trial Converted' },
+    // Customer portal
+    { value: 'customer_updated', label: 'Profile Updated' },
+    { value: 'payment_method_added', label: 'Card Added' },
+    { value: 'payment_method_updated', label: 'Card Updated' },
+    { value: 'payment_method_removed', label: 'Card Removed' },
   ];
 
   const handleStatusToggle = (value: string) => {
@@ -253,7 +295,7 @@ const SummaryPage = () => {
   const emptyState = !isConnected ? (
     <EmptyGridState
       title={t('business.stripe.connectMessage')}
-      subtitle={t('business.summary.noStripeSubtitle')}
+      subtitle={t('business.activity.noStripeSubtitle')}
       action={
         <button
           onClick={handleConnectStripe}
@@ -271,8 +313,8 @@ const SummaryPage = () => {
     />
   ) : (
     <EmptyGridState
-      title={t('business.summary.noPayments')}
-      subtitle={t('business.summary.noPaymentsSubtitle')}
+      title={t('business.activity.noPayments')}
+      subtitle={t('business.activity.noPaymentsSubtitle')}
     />
   );
 
@@ -280,7 +322,7 @@ const SummaryPage = () => {
     <div className="h-full w-full flex flex-col">
       {/* Stat Cards - only show when connected */}
       {isConnected && (
-        <div className="grid grid-cols-4 gap-4 p-4 flex-shrink-0">
+        <div className="grid grid-cols-4 gap-4 px-4 pt-4 flex-shrink-0">
           {statCards.map((card) => (
             <div
               key={card.label}
@@ -303,7 +345,7 @@ const SummaryPage = () => {
                     }`}
                   >
                     {card.change >= 0 ? '+' : ''}
-                    {card.change}% {t('business.summary.vsLastMonth')}
+                    {card.change}% {t('business.activity.vsLastMonth')}
                   </span>
                 )}
               </div>
@@ -325,11 +367,11 @@ const SummaryPage = () => {
           enableExport={true}
           exportFileName="payment-activity"
           exportDataTransform={(row) => ({
+            Athlete: row.client_name || '-',
             Event: eventTypeConfig[row.event_type]?.label || row.event_type,
-            Description: row.description,
-            Client: row.client_name || '-',
-            Package: row.package_name || '-',
             Amount: row.amount_cents > 0 ? formatCurrencyPrecise(row.amount_cents, row.currency) : '-',
+            Package: row.package_name || '-',
+            Description: row.description,
             Date: formatDate(row.created_at),
           })}
           showPagination={!!isConnected}
@@ -356,7 +398,7 @@ const SummaryPage = () => {
                         format(dateRange.from, 'LLL dd, y')
                       )
                     ) : (
-                      <span>{t('business.summary.allDates')}</span>
+                      <span>{t('business.activity.allDates')}</span>
                     )}
                   </Button>
                 </PopoverTrigger>
@@ -378,7 +420,7 @@ const SummaryPage = () => {
                       }}
                     >
                       <RotateCcw className="size-4" />
-                      {t('business.summary.today')}
+                      {t('business.activity.today')}
                     </Button>
                   </div>
                 </PopoverContent>
@@ -387,7 +429,7 @@ const SummaryPage = () => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="h-9 px-2.5 font-normal">
-                    {t('business.summary.columns.event')}
+                    {t('business.activity.columns.event')}
                     {selectedStatuses.length > 0 && (
                       <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">
                         {selectedStatuses.length}
@@ -422,4 +464,4 @@ const SummaryPage = () => {
   );
 };
 
-export default SummaryPage;
+export default ActivityPage;

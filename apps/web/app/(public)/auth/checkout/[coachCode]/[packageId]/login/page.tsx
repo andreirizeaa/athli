@@ -226,7 +226,7 @@ function LoginFormStep({
           <div className="grid grid-cols-2 gap-3">
             <Button
               variant="outline"
-              className="h-12 rounded-xl transition-all"
+              className="h-12 rounded-xl transition-all bg-background"
               onClick={handleGoogleSignIn}
               disabled={isSigningIn || isGoogleLoading || isAppleLoading}
             >
@@ -247,7 +247,7 @@ function LoginFormStep({
 
             <Button
               variant="outline"
-              className="h-12 rounded-xl transition-all"
+              className="h-12 rounded-xl transition-all bg-background"
               onClick={handleAppleSignIn}
               disabled={isSigningIn || isGoogleLoading || isAppleLoading}
             >
