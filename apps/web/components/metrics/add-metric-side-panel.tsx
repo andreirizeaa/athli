@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Search, Info, Target } from 'lucide-react';
+import { Search, Info, Target, Folder, Check } from 'lucide-react';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/form';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { defaultMetrics, type DefaultMetric } from '@/constants/metrics';
-import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
+import { getAllMetrics, getAllMetricFolders, type Metric, type MetricFolder } from '@/api/coach/coach-metric-service';
 import { type MetricScheduleData, convertMetricScheduleToCron } from '@/api/client/client-metric-service';
 import { ScheduleSelector, type ScheduleFrequency, type MonthlyOption } from '@/components/app/schedule-selector';
 import Link from 'next/link';
@@ -83,10 +83,12 @@ export const AddMetricSidePanel = ({
   const [librarySearchQuery, setLibrarySearchQuery] = useState<string>('');
   const [athliLibrarySearchQuery, setAthliLibrarySearchQuery] = useState<string>('');
   const [coachMetrics, setCoachMetrics] = useState<Metric[]>([]);
+  const [coachFolders, setCoachFolders] = useState<MetricFolder[]>([]);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [selectedCoachMetrics, setSelectedCoachMetrics] = useState<Set<string>>(new Set());
+  const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set());
 
   // Schedule state - optional (add mode uses showSchedule, edit mode uses scheduleEnabled)
   const [showSchedule, setShowSchedule] = useState<boolean>(false);
@@ -188,8 +190,12 @@ export const AddMetricSidePanel = ({
   const fetchCoachMetrics = async () => {
     setIsLoadingMetrics(true);
     try {
-      const metrics = await getAllMetrics();
+      const [metrics, folders] = await Promise.all([
+        getAllMetrics(),
+        getAllMetricFolders(),
+      ]);
       setCoachMetrics(metrics);
+      setCoachFolders(folders);
     } catch (error) {
       console.error('Failed to fetch coach metrics:', error);
     } finally {
@@ -204,6 +210,7 @@ export const AddMetricSidePanel = ({
       setLibrarySearchQuery('');
       setAthliLibrarySearchQuery('');
       setSelectedCoachMetrics(new Set());
+      setSelectedFolders(new Set());
       setShowSchedule(false);
     }
     setScheduleEnabled(false);
@@ -285,6 +292,34 @@ export const AddMetricSidePanel = ({
         setIsSaving(false);
       }
     }
+  };
+
+  const handleFolderToggle = (folderId: string) => {
+    const metricsInFolder = coachMetrics.filter(m => m.folder_id === folderId);
+    const metricIdsInFolder = new Set(metricsInFolder.map(m => m.id));
+    const isCurrentlySelected = selectedFolders.has(folderId);
+
+    setSelectedFolders(prev => {
+      const newSet = new Set(prev);
+      if (isCurrentlySelected) {
+        newSet.delete(folderId);
+      } else {
+        newSet.add(folderId);
+      }
+      return newSet;
+    });
+
+    setSelectedCoachMetrics(prev => {
+      const newSet = new Set(prev);
+      if (isCurrentlySelected) {
+        // Deselect all metrics in folder
+        metricIdsInFolder.forEach(id => newSet.delete(id));
+      } else {
+        // Select all metrics in folder
+        metricIdsInFolder.forEach(id => newSet.add(id));
+      }
+      return newSet;
+    });
   };
 
   const handleDelete = async () => {
@@ -625,9 +660,40 @@ export const AddMetricSidePanel = ({
                 </Alert>
               ) : (
                 <div className="flex flex-col gap-4 flex-1 min-h-0">
+                  {/* Folders Row */}
+                  {coachFolders.length > 0 && (
+                    <div className="flex-shrink-0 overflow-x-auto pb-2 -mx-1 px-1">
+                      <div className="flex gap-2">
+                        {coachFolders.map((folder) => {
+                          const isSelected = selectedFolders.has(folder.id);
+                          const metricsCount = coachMetrics.filter(m => m.folder_id === folder.id).length;
+                          return (
+                            <button
+                              key={folder.id}
+                              onClick={() => handleFolderToggle(folder.id)}
+                              className={cn(
+                                'flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors flex-shrink-0',
+                                isSelected
+                                  ? 'bg-primary/10 border-primary text-primary'
+                                  : 'bg-background border-border hover:bg-accent/50'
+                              )}
+                            >
+                              {isSelected ? (
+                                <Check className="size-4" />
+                              ) : (
+                                <Folder className="size-4 text-muted-foreground" />
+                              )}
+                              <span className="text-sm font-medium whitespace-nowrap">{folder.name}</span>
+                              <span className="text-xs text-muted-foreground">({metricsCount})</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                   <div className="flex-1 min-h-0 h-full [&_.border-t]:border-t-0">
                     <DataGrid
-                      data={coachMetrics}
+                      data={coachMetrics.filter(m => !m.folder_id)}
                       columns={columns}
                       getRowId={(row) => row.id}
                       gridKey="add-metric-library"

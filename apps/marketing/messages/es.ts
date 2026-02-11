@@ -148,8 +148,8 @@ const messages = {
     forms: {
       label: 'Formularios',
       headline: 'Formularios totalmente personalizables que alimentan tus datos',
-      description: 'Crea formularios adaptados a cualquier pregunta que necesites responder. Las respuestas se conectan directamente con las métricas y fotos de progreso del cliente, así que cada envío actualiza automáticamente su perfil. Tú diseñas las preguntas, y tus clientes las completan según el calendario.',
-      highlights: ['Conecta respuestas a métricas y fotos de progreso', 'Calendarios de envío automatizados', 'Panel de revisión para el entrenador con todas las respuestas'],
+      description: 'Crea formularios adaptados a cualquier pregunta que necesites responder. Las respuestas se conectan directamente con las métricas y fotos de progreso del cliente, así que cada envío actualiza automáticamente su perfil.',
+      highlights: ['Integración de datos', 'Calendarios de envío automatizados', 'Panel de revisión para el entrenador con todas las respuestas'],
       pageTitle: 'Formularios que Alimentan tus Datos de Entrenamiento',
       pageSubtitle: 'Diseña formularios de check-in personalizados, conecta las respuestas a métricas y fotos de progreso, y revisa todo desde un solo panel.',
       benefits: [
@@ -162,7 +162,7 @@ const messages = {
       label: 'Bandeja de Entrada',
       headline: 'Envía mensajes a tus clientes con su perfil completo a la vista',
       description: 'Una bandeja de entrada integrada con un panel potente del cliente junto a la conversación. Consulta sus métricas, progreso y perfil sin cambiar de pantalla, para que puedas dar consejos informados y contextuales sin salir del chat.',
-      highlights: ['Panel del perfil del cliente junto a cada conversación', 'Métricas y progreso de un vistazo', 'Todo en una sola ventana'],
+      highlights: ['Panel potente del cliente', 'Métricas y progreso de un vistazo', 'Todo en una sola ventana'],
       pageTitle: 'Una Bandeja de Entrada Diseñada para Entrenar',
       pageSubtitle: 'Envía mensajes a tus clientes con su perfil completo, métricas y progreso visibles junto a la conversación. Entrenamiento con contexto, sin cambiar de pestaña.',
       benefits: [
@@ -174,7 +174,7 @@ const messages = {
     metrics: {
       label: 'Métricas',
       headline: 'Registra cualquier métrica que te importe',
-      description: 'Define y registra cualquier métrica, desde medidas corporales hasta calidad del sueño, niveles de energía o cualquier dato único de tu método de entrenamiento. Cada métrica es totalmente personalizable, dándote los datos que necesitas para tomar mejores decisiones para tus clientes.',
+      description: 'Define y registra cualquier métrica, desde medidas corporales hasta calidad del sueño, niveles de energía o cualquier dato único de tu método de entrenamiento. Cada métrica es totalmente personalizable.',
       highlights: ['Define métricas personalizadas ilimitadas', 'Registra cualquier cosa relevante para tu entrenamiento', 'Visualizaciones claras a lo largo del tiempo'],
       pageTitle: 'Métricas Adaptadas a tu Método',
       pageSubtitle: 'Define y registra cualquier métrica: medidas corporales, sueño, energía o cualquier dato único de tu entrenamiento. Totalmente personalizable, con visualizaciones claras.',
@@ -228,7 +228,7 @@ const messages = {
     sectionTitle: 'Precios que Escalan Contigo',
     sectionSubtitle: 'Empieza gratis, mejora a medida que crezcas. Planes simples pensados para entrenadores en cada etapa.',
     getStarted: 'Comenzar',
-    popular: 'Recomendado',
+    popular: 'Más Popular',
     monthly: 'Mensual',
     annual: 'Anual',
     twoMonthsFree: '2 meses gratis con facturación anual',

@@ -24,6 +24,7 @@ export interface Habit {
   reminderMessage?: string;
   createdAt: number;
   clientId?: string;
+  folderId?: string | null;
 }
 
 export interface HabitLog {
@@ -84,6 +85,32 @@ export interface DBHabit {
   created_at: string;
   updated_at: string;
   client_id: string | null;
+  folder_id: string | null;
+}
+
+// =============================================================================
+// Folder Types
+// =============================================================================
+
+export interface HabitFolder {
+  id: string;
+  coach_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateHabitFolderInput {
+  name: string;
+}
+
+export interface UpdateHabitFolderInput {
+  name?: string;
+}
+
+export interface MoveHabitInput {
+  habitId: string;
+  folderId: string | null;
 }
 
 // =============================================================================

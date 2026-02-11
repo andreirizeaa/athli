@@ -240,58 +240,47 @@ export const clientFilesController = {
             }
         }
 
-        // Deduplication & Renaming
+        // Check for duplicates by file_path (same file already assigned)
         const { data: existingFiles } = await supabase
             .from('client_files')
-            .select('client_id, filename')
+            .select('client_id, file_path, filename')
             .in('client_id', targetClientIds);
 
         const existingSet = new Set(
-            (existingFiles || []).map((f: any) => `${f.client_id}:${f.filename}`)
+            (existingFiles || []).map((f: any) => `${f.client_id}:${f.file_path}`)
         );
 
-        // Process assignments to ensure unique names
+        // Filter out duplicates instead of renaming
+        const newAssignments: any[] = [];
+        const skippedFiles: string[] = [];
+
         for (const assignment of assignments) {
-            let originalName = assignment.filename;
-            let checkName = originalName;
-            let counter = 1;
-
-            // Simple extension handling if needed, but for now just appending to filename
-            // as per "Add 1 after the name"
-            while (existingSet.has(`${assignment.client_id}:${checkName}`)) {
-                // If it has extension, maybe insert before extension? 
-                // User said "just add a 1 after the name". Let's stick to simplest interpretation 
-                // or try to keep extension if present.
-                // Assuming simple append for now to match other entities.
-                // Actually for files, filename usually has extension.
-                // If "foo.pdf" exists, "foo.pdf 1" is weird.
-                // Let's try to split extension.
-                const lastDot = originalName.lastIndexOf('.');
-                if (lastDot !== -1) {
-                    const namePart = originalName.substring(0, lastDot);
-                    const extPart = originalName.substring(lastDot);
-                    checkName = `${namePart} ${counter}${extPart}`;
-                } else {
-                    checkName = `${originalName} ${counter}`;
-                }
-                counter++;
+            const key = `${assignment.client_id}:${assignment.file_path}`;
+            if (existingSet.has(key)) {
+                skippedFiles.push(assignment.filename);
+            } else {
+                newAssignments.push(assignment);
+                existingSet.add(key); // Prevent duplicates within same batch
             }
-
-            assignment.filename = checkName;
-            assignment.display_name = checkName;
-            existingSet.add(`${assignment.client_id}:${checkName}`);
         }
 
-        const { data, error } = await supabase
-            .from('client_files')
-            .insert(assignments)
-            .select();
+        // Only insert non-duplicate assignments
+        if (newAssignments.length > 0) {
+            const { error } = await supabase
+                .from('client_files')
+                .insert(newAssignments);
 
-        if (error) return res.status(500).json({ success: false, message: error.message });
+            if (error) return res.status(500).json({ success: false, message: error.message });
+        }
 
-        created(res, {
-            message: 'Files assigned successfully',
-            data: { assignments: data },
+        // Return summary
+        success(res, {
+            message: 'Files assigned',
+            data: {
+                added: newAssignments.length,
+                skipped: skippedFiles.length,
+                skippedFiles: skippedFiles
+            }
         });
     },
 

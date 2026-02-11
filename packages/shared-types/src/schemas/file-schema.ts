@@ -38,6 +38,32 @@ export interface CoachFile {
   size: number | null;
   created_at: string;
   updated_at: string;
+  folder_id?: string | null;
+}
+
+// =============================================================================
+// Folder Types
+// =============================================================================
+
+export interface FileFolder {
+  id: string;
+  coach_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateFileFolderInput {
+  name: string;
+}
+
+export interface UpdateFileFolderInput {
+  name?: string;
+}
+
+export interface MoveFileInput {
+  fileId: string;
+  folderId: string | null;
 }
 
 export interface FileWithUrl extends CoachFile {

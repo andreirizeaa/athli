@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Plus, Loader2, Check, X } from 'lucide-react';
+import { Plus, Loader2, Check, X, FolderPlus, Move, Folder } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -17,8 +17,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ButtonGroup } from '@/components/ui/button-group';
 import { MoreHorizontal, Edit, Trash2, UserPlus, FileText } from 'lucide-react';
 import { useCoachFiles } from '@/hooks/use-coach-files';
+import { useCoachFileFolders } from '@/hooks/use-coach-file-folders';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { AddFileSidePanel } from '@/components/files/add-file-side-panel';
 import { FilePreviewDialog } from '@/components/files/file-preview-dialog';
@@ -28,22 +30,69 @@ import { Input } from '@/components/ui/input';
 import { FileThumbnail } from '@/components/files/file-thumbnail';
 import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn } from '@/lib/general/utils';
 import { AssignToClientsSidePanel } from '@/components/app/assign-to-clients-side-panel';
 import { addFilesToClients } from '@/api/client/client-file-service';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { FolderCard } from '@/components/app/folder-card';
+import { CreateFolderDialog } from '@/components/app/create-folder-dialog';
+import { MoveToFolderDialog } from '@/components/app/move-to-folder-dialog';
+import { FolderSearchButton } from '@/components/app/folder-search-button';
 import React from 'react';
 
 const FilesPage = () => {
   const t = useTranslations();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { files, isLoading, uploadFile, updateFile, deleteFile: deleteFileMutation, isUploading } = useCoachFiles();
+  const {
+    folders,
+    createFolder,
+    updateFolder,
+    deleteFolder,
+    moveFile,
+  } = useCoachFileFolders();
   const { clients } = useCoachClients();
   const { user } = useUserProfile();
   const searchParams = useSearchParams();
   const [isAddFileOpen, setIsAddFileOpen] = useState<boolean>(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [folderSearch, setFolderSearch] = useState<string>('');
+
+  // Filter files to show only unfiled ones
+  const unfiledFiles = useMemo(() => {
+    return files.filter(f => !f.folder_id);
+  }, [files]);
+
+  // Get item counts for each folder
+  const folderItemCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    files.forEach(f => {
+      if (f.folder_id) {
+        counts[f.folder_id] = (counts[f.folder_id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [files]);
+
+  // Filter folders based on search (folder names and contents)
+  const filteredFolders = useMemo(() => {
+    if (!folderSearch.trim()) return folders;
+    const searchLower = folderSearch.toLowerCase();
+    return folders.filter(f => {
+      // Match folder name
+      if (f.name.toLowerCase().includes(searchLower)) return true;
+      // Match any file inside the folder
+      const folderFiles = files.filter(file => file.folder_id === f.id);
+      return folderFiles.some(file => file.filename.toLowerCase().includes(searchLower));
+    });
+  }, [folders, folderSearch, files]);
+
+  // Folder state
+  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState<boolean>(false);
+  const [editingFolder, setEditingFolder] = useState<{ id: string; name: string } | null>(null);
+  const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
+  const [fileToMove, setFileToMove] = useState<CoachFile | null>(null);
+  const [isBulkMoveOpen, setIsBulkMoveOpen] = useState<boolean>(false);
 
   // Preview dialog state
   const [previewFile, setPreviewFile] = useState<CoachFile | null>(null);
@@ -60,17 +109,15 @@ const FilesPage = () => {
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
   const [isAssignToClientsOpen, setIsAssignToClientsOpen] = useState<boolean>(false);
   const [filesToAssign, setFilesToAssign] = useState<CoachFile[]>([]);
-  const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
+  const [folderToAssign, setFolderToAssign] = useState<{ id: string; name: string } | null>(null);
 
   // Single delete state
   const [fileToDelete, setFileToDelete] = useState<CoachFile | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
 
-  // Auto-open add file panel if ?create=true
   useEffect(() => {
     if (searchParams.get('create') === 'true') {
       handleOpenAddFile();
-      // Clear the query param
       window.history.replaceState({}, '', '/files');
     }
   }, [searchParams]);
@@ -89,14 +136,12 @@ const FilesPage = () => {
   };
 
   const handleFileClick = async (file: CoachFile) => {
-    // Handle external links - open in new tab
     if (isExternalLink(file.file_path)) {
       window.open(file.file_path, '_blank', 'noopener,noreferrer');
       return;
     }
 
     if (isPreviewable(file.mime_type)) {
-      // Open preview dialog
       setPreviewFile(file);
       setIsPreviewOpen(true);
       setIsFetchingPreviewUrl(true);
@@ -110,19 +155,8 @@ const FilesPage = () => {
         setIsFetchingPreviewUrl(false);
       }
     } else {
-      // Download directly
       try {
         await downloadFile(file.id, file.filename);
-      } catch (error) {
-        console.error('Failed to download file:', error);
-      }
-    }
-  };
-
-  const handleDownloadFromPreview = async () => {
-    if (previewFile) {
-      try {
-        await downloadFile(previewFile.id, previewFile.filename);
       } catch (error) {
         console.error('Failed to download file:', error);
       }
@@ -179,11 +213,8 @@ const FilesPage = () => {
   const handleToggleFile = (fileId: string) => {
     setSelectedFiles((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(fileId)) {
-        newSet.delete(fileId);
-      } else {
-        newSet.add(fileId);
-      }
+      if (newSet.has(fileId)) newSet.delete(fileId);
+      else newSet.add(fileId);
       return newSet;
     });
   };
@@ -197,9 +228,7 @@ const FilesPage = () => {
       const idsToDelete = Array.from(selectedFiles);
       const deleteCount = idsToDelete.length;
       await Promise.all(idsToDelete.map((id) => deleteFileMutation({ fileId: id })));
-
       toast.success(t('general.deleteSuccessCount', { count: deleteCount, item: deleteCount === 1 ? 'file' : 'files' }));
-
       setSelectedFiles(new Set());
     } catch (error) {
       console.error('Failed to bulk delete files:', error);
@@ -210,77 +239,120 @@ const FilesPage = () => {
   const handleOpenAssignToClients = () => {
     const selectedFileItems = files.filter((f) => selectedFiles.has(f.id));
     if (selectedFileItems.length === 0) return;
-
     setFilesToAssign(selectedFileItems);
     setIsAssignToClientsOpen(true);
-    setSelectedClientIds(new Set());
   };
 
   const handleRemoveFileFromAssignList = (fileId: string) => {
     setFilesToAssign((prev) => {
       const newList = prev.filter((f) => f.id !== fileId);
-      if (newList.length === 0) {
-        setIsAssignToClientsOpen(false);
-      }
+      if (newList.length === 0) setIsAssignToClientsOpen(false);
       return newList;
     });
   };
 
   const handleAssignFilesToClients = async (clientIds: string[]) => {
-    if (clientIds.length === 0 || filesToAssign.length === 0 || !user?.id) {
-      return;
-    }
+    if (clientIds.length === 0 || filesToAssign.length === 0 || !user?.id) return;
 
     try {
-      await addFilesToClients({
+      const result = await addFilesToClients({
         fileIds: filesToAssign.map(f => f.id),
         clientIds: clientIds,
         coachId: user.id
       });
       setIsAssignToClientsOpen(false);
-      const fileCount = filesToAssign.length;
-      const clientCount = clientIds.length;
+      setFolderToAssign(null);
 
-      // Remove queries to force hard refresh and loading state
       clientIds.forEach(clientId => {
         queryClient.removeQueries({ queryKey: ['client-files', clientId] });
       });
 
-      // Determine toast message
-      if (fileCount === 1 && clientCount === 1) {
-        const fileName = filesToAssign[0].filename;
-        const clientName = clients.find(c => c.id === clientIds[0])?.name || 'Client';
-        toast.success(t('files.assignSuccessSingle', { fileName, clientName }));
-      } else if (fileCount === 1) {
-        const fileName = filesToAssign[0].filename;
-        toast.success(t('files.assignSuccessFileMultiClient', { fileName, count: clientCount }));
-      } else if (clientCount === 1) {
-        const clientName = clients.find(c => c.id === clientIds[0])?.name || 'Client';
-        toast.success(t('files.assignSuccessMultiFileSingleClient', { count: fileCount, clientName }));
-      } else {
-        toast.success(`Successfully assigned ${fileCount} files to ${clientCount} clients`);
+      // Show summary toast based on result
+      if (result.skipped > 0 && result.added > 0) {
+        toast.success(`${result.added} file${result.added !== 1 ? 's' : ''} added, ${result.skipped} skipped (already assigned)`);
+      } else if (result.skipped > 0 && result.added === 0) {
+        toast.info(`All ${result.skipped} file${result.skipped !== 1 ? 's were' : ' was'} already assigned`);
+      } else if (result.added > 0) {
+        const clientCount = clientIds.length;
+        if (result.added === 1 && clientCount === 1) {
+          const fileName = filesToAssign[0].filename;
+          const clientName = clients.find(c => c.id === clientIds[0])?.name || 'Client';
+          toast.success(t('files.assignSuccessSingle', { fileName, clientName }));
+        } else if (clientCount === 1) {
+          const clientName = clients.find(c => c.id === clientIds[0])?.name || 'Client';
+          toast.success(t('files.assignSuccessMultiFileSingleClient', { count: result.added, clientName }));
+        } else {
+          toast.success(`${result.added} file${result.added !== 1 ? 's' : ''} assigned to ${clientCount} client${clientCount !== 1 ? 's' : ''}`);
+        }
       }
 
-      // Clear selection
       setFilesToAssign([]);
       setSelectedFiles(new Set());
     } catch (error) {
       console.error('Failed to assign files to clients:', error);
-      // Optional: add toast notification here
+      toast.error('Failed to assign files');
     }
   };
 
+  // Folder handlers
+  const handleCreateFolder = async (name: string) => {
+    await createFolder({ name });
+  };
 
+  const handleUpdateFolder = async (name: string) => {
+    if (!editingFolder) return;
+    await updateFolder({ id: editingFolder.id, data: { name } });
+    setEditingFolder(null);
+  };
 
-  // Track changes in edit mode
+  const handleDeleteFolder = async () => {
+    if (!folderToDelete) return;
+    try {
+      await deleteFolder(folderToDelete);
+      setFolderToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete folder:', error);
+      toast.error(t('general.deleteError'));
+    }
+  };
+
+  const handleMoveFile = async (folderId: string | null) => {
+    if (!fileToMove) return;
+    await moveFile({ fileId: fileToMove.id, folderId });
+    setFileToMove(null);
+  };
+
+  const handleBulkMove = async (folderId: string | null) => {
+    const idsToMove = Array.from(selectedFiles);
+    await Promise.all(idsToMove.map((id) => moveFile({ fileId: id, folderId })));
+    setSelectedFiles(new Set());
+    setIsBulkMoveOpen(false);
+  };
+
+  const handleFolderClick = (folderId: string) => {
+    router.push(`/files/folder/${folderId}`);
+  };
+
+  const handleAssignFolder = async (folderId: string) => {
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return;
+
+    const folderFiles = files.filter(f => f.folder_id === folderId);
+    if (folderFiles.length === 0) {
+      toast.error('This folder is empty');
+      return;
+    }
+    setFolderToAssign({ id: folder.id, name: folder.name });
+    setFilesToAssign(folderFiles);
+    setIsAssignToClientsOpen(true);
+  };
+
   React.useEffect(() => {
     if (editingFile) {
       const hasChanges = editFileName.trim() !== editingFile.filename;
       setHasEditChanges(hasChanges);
     }
   }, [editingFile, editFileName]);
-
-
 
   const columns: ColumnDefinition<CoachFile>[] = [
     {
@@ -295,10 +367,7 @@ const FilesPage = () => {
       ),
       renderCell: (row, isSelected) => (
         <div className="flex items-center gap-3 h-full w-full">
-          <div
-            className="flex items-center justify-center h-full flex-shrink-0"
-            data-no-row-link="true"
-          >
+          <div className="flex items-center justify-center h-full flex-shrink-0" data-no-row-link="true">
             <Checkbox checked={isSelected} onCheckedChange={() => handleToggleFile(row.id)} />
           </div>
           <div className="flex items-center gap-3 w-full min-w-0">
@@ -313,34 +382,15 @@ const FilesPage = () => {
       label: t('files.columns.type'),
       width: { class: 'w-[150px]', pixel: '150px' },
       renderCell: (row) => {
-        // Check for external link first
         if (isExternalLink(row.file_path)) {
           return <span className="text-sm text-muted-foreground">Link</span>;
         }
         const fileType = getFileTypeFromMime(row.mime_type);
-        const typeLabels: Record<string, string> = {
-          pdf: 'PDF',
-          image: 'Image',
-          video: 'Video',
-          other: 'Other',
-        };
+        const typeLabels: Record<string, string> = { pdf: 'PDF', image: 'Image', video: 'Video', other: 'Other' };
         return <span className="text-sm text-muted-foreground">{typeLabels[fileType]}</span>;
       },
       getSortValue: (row) => isExternalLink(row.file_path) ? 'link' : getFileTypeFromMime(row.mime_type),
       getSearchValue: (row) => isExternalLink(row.file_path) ? 'link' : getFileTypeFromMime(row.mime_type),
-    },
-    {
-      id: 'size',
-      label: t('files.columns.size'),
-      width: { class: 'w-[120px]', pixel: '120px' },
-      renderCell: (row) => {
-        if (!row.size) return <span className="text-sm text-muted-foreground">--</span>;
-        const sizeInKB = row.size / 1024;
-        const sizeInMB = sizeInKB / 1024;
-        const displaySize = sizeInMB > 1 ? `${sizeInMB.toFixed(2)} MB` : `${sizeInKB.toFixed(2)} KB`;
-        return <span className="text-sm text-muted-foreground">{displaySize}</span>;
-      },
-      getSortValue: (row) => row.size || 0,
     },
     {
       id: 'actions',
@@ -350,32 +400,22 @@ const FilesPage = () => {
         <div className="flex items-center justify-end w-full" data-no-row-link="true">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
                 <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEditFile(row);
-                }}
-              >
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditFile(row); }}>
                 <Edit className="size-4 mr-2" />
                 <span>{t('general.edit')}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteFile(row);
-                }}
-                className="text-destructive focus:text-destructive"
-              >
+              {folders.length > 0 && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setFileToMove(row); }}>
+                  <Move className="size-4 mr-2" />
+                  <span>Move to folder</span>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteFile(row); }} className="text-destructive focus:text-destructive">
                 <Trash2 className="size-4 mr-2 text-destructive" />
                 <span>{t('general.delete')}</span>
               </DropdownMenuItem>
@@ -386,7 +426,6 @@ const FilesPage = () => {
     },
   ];
 
-  // Create filter definitions
   const filters: FilterDefinition<CoachFile>[] = [
     {
       id: 'type',
@@ -408,15 +447,48 @@ const FilesPage = () => {
       <PageHeader
         title={t('files.title')}
         action={
-          <Button onClick={handleOpenAddFile} className="gap-2">
-            <Plus className="size-4" />
-            <span>{t('files.addFile')}</span>
-          </Button>
+          <ButtonGroup>
+            <FolderSearchButton
+              value={folderSearch}
+              onChange={setFolderSearch}
+            />
+            <Button variant="ghost" onClick={() => setIsCreateFolderOpen(true)} className="gap-2 border border-primary">
+              <FolderPlus className="size-4" />
+              <span>Create Folder</span>
+            </Button>
+            <Button onClick={handleOpenAddFile} className="gap-2">
+              <Plus className="size-4" />
+              <span>{t('files.addFile')}</span>
+            </Button>
+          </ButtonGroup>
         }
       />
 
+      {/* Folders Section */}
+      {folders.length > 0 && (
+        <div className="px-4 pt-3 pb-1 overflow-x-auto flex-shrink-0">
+          <div className="flex gap-3 min-h-[72px] items-center">
+            {filteredFolders.length > 0 ? (
+              filteredFolders.map((folder) => (
+                <FolderCard
+                  key={folder.id}
+                  name={folder.name}
+                  itemCount={folderItemCounts[folder.id] || 0}
+                  onClick={() => handleFolderClick(folder.id)}
+                  onEdit={() => setEditingFolder({ id: folder.id, name: folder.name })}
+                  onDelete={() => setFolderToDelete(folder.id)}
+                  onAssign={() => handleAssignFolder(folder.id)}
+                />
+              ))
+            ) : (
+              <span className="text-sm text-muted-foreground">No folders match your search</span>
+            )}
+          </div>
+        </div>
+      )}
+
       <DataGrid
-        data={files}
+        data={unfiledFiles}
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="files"
@@ -431,22 +503,17 @@ const FilesPage = () => {
         onSelectionChange={setSelectedFiles}
         onRowClick={(row, event) => {
           const targetElement = event.target as HTMLElement;
-          if (targetElement.closest('[data-no-row-link="true"]')) {
-            return;
-          }
+          if (targetElement.closest('[data-no-row-link="true"]')) return;
           handleFileClick(row);
         }}
         onRowKeyDown={(row, event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             const targetElement = event.target as HTMLElement;
-            if (targetElement.closest('[data-no-row-link="true"]')) {
-              return;
-            }
+            if (targetElement.closest('[data-no-row-link="true"]')) return;
             event.preventDefault();
             handleFileClick(row);
           }
         }}
-
         showPagination={true}
         gridPadding={true}
         compactPagination={true}
@@ -455,165 +522,80 @@ const FilesPage = () => {
           <EmptyGridState
             title={t('files.emptyState.title')}
             subtitle="Upload and organize files to share with your clients - training plans, nutrition guides, and resources"
-            action={
-              <Button onClick={handleOpenAddFile} className="gap-2">
-                <Plus className="size-4" />
-                <span>{t('files.addFile')}</span>
-              </Button>
-            }
+            action={<Button onClick={handleOpenAddFile} className="gap-2"><Plus className="size-4" /><span>{t('files.addFile')}</span></Button>}
           />
         }
         selectionActions={
           selectedFiles.size > 0 ? (
             <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                onClick={handleClearSelected}
-                className="gap-2"
-                aria-label={t('general.clearSelected', { count: selectedFiles.size })}
-              >
-                <X className="size-4" />
-                <span>{t('general.clearSelected', { count: selectedFiles.size })}</span>
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={handleOpenAssignToClients}
-                className="gap-2"
-              >
-                <UserPlus className="size-4" />
-                <span>{t('forms.assignToClients')}</span>
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setIsBulkDeleteOpen(true)}
-                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 className="size-4" />
-                <span>{t('general.delete')}</span>
-              </Button>
+              <Button variant="ghost" onClick={handleClearSelected} className="gap-2"><X className="size-4" /><span>{t('general.clearSelected', { count: selectedFiles.size })}</span></Button>
+              <Button variant="ghost" onClick={handleOpenAssignToClients} className="gap-2"><UserPlus className="size-4" /><span>{t('forms.assignToClients')}</span></Button>
+              {folders.length > 0 && <Button variant="ghost" onClick={() => setIsBulkMoveOpen(true)} className="gap-2"><Move className="size-4" /><span>Move</span></Button>}
+              <Button variant="ghost" onClick={() => setIsBulkDeleteOpen(true)} className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"><Trash2 className="size-4" /><span>{t('general.delete')}</span></Button>
             </div>
           ) : undefined
         }
       />
 
-      {/* Add File Side Panel */}
-      <AddFileSidePanel
-        open={isAddFileOpen}
-        onOpenChange={setIsAddFileOpen}
-        onUpload={handleFileUpload}
-        onLinkCreated={() => queryClient.invalidateQueries({ queryKey: ['coach-files'] })}
-        isUploading={isUploading}
-      />
+      <AddFileSidePanel open={isAddFileOpen} onOpenChange={setIsAddFileOpen} onUpload={handleFileUpload} onLinkCreated={() => queryClient.invalidateQueries({ queryKey: ['coach-files'] })} isUploading={isUploading} />
 
-      {/* Edit File Side Panel */}
-      <SidePanel
-        open={editingFile !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            handleCloseEdit();
-          }
-        }}
-        title={t('files.editFile.title')}
-        footer={
-          <div className="flex w-full justify-end gap-2">
-            <Button type="button" variant="outline" onClick={handleCloseEdit}>
-              {t('general.cancel')}
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSaveEdit}
-              disabled={!hasEditChanges}
-              className="gap-2"
-            >
-              <Check className="size-4" />
-              {t('general.save')}
-            </Button>
-          </div>
-        }
+      <SidePanel open={editingFile !== null} onOpenChange={(open) => { if (!open) handleCloseEdit(); }} title={t('files.editFile.title')}
+        footer={<div className="flex w-full justify-end gap-2"><Button type="button" variant="outline" onClick={handleCloseEdit}>{t('general.cancel')}</Button><Button type="button" onClick={handleSaveEdit} disabled={!hasEditChanges} className="gap-2"><Check className="size-4" />{t('general.save')}</Button></div>}
       >
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
-            <label htmlFor="edit-file-name" className="text-sm font-medium">
-              {t('files.form.fileName')}
-            </label>
-            <Input
-              id="edit-file-name"
-              value={editFileName}
-              onChange={(e) => setEditFileName(e.target.value)}
-              placeholder={t('files.form.fileNamePlaceholder')}
-            />
+            <label htmlFor="edit-file-name" className="text-sm font-medium">{t('files.form.fileName')}</label>
+            <Input id="edit-file-name" value={editFileName} onChange={(e) => setEditFileName(e.target.value)} placeholder={t('files.form.fileNamePlaceholder')} />
           </div>
         </div>
       </SidePanel>
 
-      {/* File Preview Dialog */}
       {isPreviewOpen && (
-        <FilePreviewDialog
-          open={isPreviewOpen}
-          onOpenChange={handleClosePreview}
-          fileUrl={previewUrl}
-          filename={previewFile?.filename || ''}
-          mimeType={previewFile?.mime_type || null}
-          isLoading={isFetchingPreviewUrl}
-        />
+        <FilePreviewDialog open={isPreviewOpen} onOpenChange={handleClosePreview} fileUrl={previewUrl} filename={previewFile?.filename || ''} mimeType={previewFile?.mime_type || null} isLoading={isFetchingPreviewUrl} />
       )}
 
-      <BulkDeleteConfirmationDialog
-        open={isBulkDeleteOpen}
-        onOpenChange={setIsBulkDeleteOpen}
-        onConfirm={handleBulkDelete}
-        count={selectedFiles.size}
-        itemName={t('files.title').toLowerCase()}
-      />
+      <BulkDeleteConfirmationDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen} onConfirm={handleBulkDelete} count={selectedFiles.size} itemName={t('files.title').toLowerCase()} />
+      <ConfirmDeleteDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen} onConfirm={handleConfirmDelete} itemName={fileToDelete?.filename} itemType="file" />
 
-      {/* Single Delete Confirmation Dialog */}
-      <ConfirmDeleteDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        onConfirm={handleConfirmDelete}
-        itemName={fileToDelete?.filename}
-        itemType="file"
-      />
+      {/* Folder dialogs */}
+      <CreateFolderDialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen} onSave={handleCreateFolder} title="Create Folder" />
+      <CreateFolderDialog open={editingFolder !== null} onOpenChange={(open) => !open && setEditingFolder(null)} onSave={handleUpdateFolder} title="Edit Folder" initialName={editingFolder?.name || ''} isEdit={true} />
+      <ConfirmDeleteDialog open={folderToDelete !== null} onOpenChange={(open) => !open && setFolderToDelete(null)} onConfirm={handleDeleteFolder} itemName={folders.find(f => f.id === folderToDelete)?.name} itemType="folder" />
+      <MoveToFolderDialog open={fileToMove !== null} onOpenChange={(open) => !open && setFileToMove(null)} folders={folders} currentFolderId={fileToMove?.folder_id} onMove={handleMoveFile} itemName={fileToMove?.filename} />
+      <MoveToFolderDialog open={isBulkMoveOpen} onOpenChange={setIsBulkMoveOpen} folders={folders} onMove={handleBulkMove} />
 
-      {/* Assign to Clients Side Panel */}
       <AssignToClientsSidePanel
         open={isAssignToClientsOpen}
-        onOpenChange={setIsAssignToClientsOpen}
+        onOpenChange={(open) => {
+          setIsAssignToClientsOpen(open);
+          if (!open) setFolderToAssign(null);
+        }}
         title={t('forms.assignToClientsTitle')}
-        assignButtonLabel={(count) =>
-          count === 1
-            ? t('forms.assignToOneClient')
-            : t('forms.assignToClientsCount', { count })
-        }
+        assignButtonLabel={(count) => count === 1 ? t('forms.assignToOneClient') : t('forms.assignToClientsCount', { count })}
         onAssign={handleAssignFilesToClients}
         previewComponent={
-          filesToAssign.length > 0 ? (
+          folderToAssign ? (
+            <div className="border rounded-lg px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-muted rounded-lg">
+                  <Folder className="size-4 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium">{folderToAssign.name}</span>
+                  <p className="text-xs text-muted-foreground">{filesToAssign.length} {filesToAssign.length === 1 ? 'file' : 'files'}</p>
+                </div>
+              </div>
+            </div>
+          ) : filesToAssign.length > 0 ? (
             <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
               {filesToAssign.map((file) => (
-                <div
-                  key={file.id}
-                  className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <FileThumbnail file={file} />
-                    <span className="text-sm truncate">{file.filename}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveFileFromAssignList(file.id)}
-                    className="ml-2 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                    aria-label={`Remove ${file.filename}`}
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
+                <div key={file.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-3 flex-1 min-w-0"><FileThumbnail file={file} /><span className="text-sm truncate">{file.filename}</span></div>
+                  <button type="button" onClick={() => handleRemoveFileFromAssignList(file.id)} className="ml-2 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="size-4" /></button>
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="text-sm text-muted-foreground py-4 text-center">
-              {t('forms.noFormsSelected')}
-            </div>
-          )
+          ) : <div className="text-sm text-muted-foreground py-4 text-center">{t('forms.noFormsSelected')}</div>
         }
       />
     </div>

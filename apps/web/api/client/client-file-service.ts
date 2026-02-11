@@ -14,23 +14,31 @@ import type {
   DeleteClientFilesData,
 } from '@athli/shared-types';
 
+export type AddFilesResponse = {
+  added: number;
+  skipped: number;
+  skippedFiles: string[];
+};
+
 /**
  * Service method to add files to a client
  */
-export const addFilesToClient = async (data: AddFilesToClientData): Promise<void> => {
-  await apiFetch(`/client/files`, {
+export const addFilesToClient = async (data: AddFilesToClientData): Promise<AddFilesResponse> => {
+  const response = await apiFetch<{ data: AddFilesResponse }>(`/client/files`, {
     method: 'POST',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify({ fileIds: data.fileIds }),
   });
+  return response.data;
 };
 
-export const addFilesToClients = async (data: AddFilesToClientsData): Promise<void> => {
-  await apiFetch(`/client/files`, {
+export const addFilesToClients = async (data: AddFilesToClientsData): Promise<AddFilesResponse> => {
+  const response = await apiFetch<{ data: AddFilesResponse }>(`/client/files`, {
     method: 'POST',
     headers: { 'x-coach-id': data.coachId },
     body: JSON.stringify({ fileIds: data.fileIds, clientIds: data.clientIds }),
   });
+  return response.data;
 };
 
 /**
