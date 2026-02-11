@@ -1,17 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus, Trash2, X, Loader2, FileText, ExternalLink, MoreHorizontal, Share2 } from 'lucide-react';
+import { Plus, X, Loader2, FileText, MoreHorizontal, Share2, Archive, ArchiveRestore } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,8 +18,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { AddPackageSidePanel, type PackageFormData } from '@/components/business/add-package-side-panel';
-import { useStripeConnection, useCoachPackages } from '@/hooks/use-coach-packages';
-import { usePlatformSettings } from '@/hooks/use-platform-settings';
+import { PackageRedemptionsDialog } from '@/components/business/package-redemptions-dialog';
+import { useStripeConnection, useCoachPackages, useAllPackageStats } from '@/hooks/use-coach-packages';
+import { DEFAULT_PACKAGE_IMAGE } from '@/lib/constants/package-presets';
 import type { CoachPackage } from '@athli/shared-types';
 
 function formatAmount(amountCents: number, currency: string): string {
@@ -32,22 +32,18 @@ function formatAmount(amountCents: number, currency: string): string {
 
 const PackagesPage = () => {
   const t = useTranslations();
-  const searchParams = useSearchParams();
-  const { data: stripeAccount, refetch: refetchConnection } = useStripeConnection();
+  const { data: stripeAccount } = useStripeConnection();
   const {
     packages,
     isLoading,
     startOnboarding,
     isOnboarding,
-    getDashboardLink,
-    isGettingDashboardLink,
     createPackage,
     updatePackage,
-    deletePackage,
     togglePackage,
   } = useCoachPackages();
 
-  const { uniqueCode } = usePlatformSettings();
+  const { data: packageStats } = useAllPackageStats();
 
   const isConnected = stripeAccount?.onboarding_complete && stripeAccount?.charges_enabled;
 
@@ -55,38 +51,17 @@ const PackagesPage = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<CoachPackage | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
-  const [packageToDelete, setPackageToDelete] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [redemptionsPackage, setRedemptionsPackage] = useState<CoachPackage | null>(null);
 
-  // Handle Stripe onboarding return
-  useEffect(() => {
-    const onboardingStatus = searchParams.get('stripe_onboarding');
-    if (onboardingStatus === 'complete') {
-      refetchConnection();
-      toast.success('Stripe account connected successfully');
-      window.history.replaceState({}, '', '/business/packages');
-    } else if (onboardingStatus === 'refresh') {
-      refetchConnection();
-      toast.info('Please complete Stripe onboarding');
-      window.history.replaceState({}, '', '/business/packages');
-    }
-  }, [searchParams, refetchConnection]);
+  const filteredPackages = packages.filter((p) => showArchived ? !p.is_active : p.is_active);
 
   const handleConnectStripe = async () => {
     try {
       const url = await startOnboarding();
-      window.location.href = url;
-    } catch {
-      toast.error('Failed to start Stripe onboarding');
-    }
-  };
-
-  const handleOpenDashboard = async () => {
-    try {
-      const url = await getDashboardLink();
       window.open(url, '_blank');
     } catch {
-      toast.error('Failed to open Stripe Dashboard');
+      toast.error('Failed to start Stripe connection');
     }
   };
 
@@ -100,11 +75,6 @@ const PackagesPage = () => {
     }
   };
 
-  const handleDeletePackage = async (id: string) => {
-    await deletePackage(id);
-    toast.success(t('business.packages.toast.deleted'));
-  };
-
   const handleToggle = async (pkg: CoachPackage, field: 'is_active' | 'is_visible', value: boolean) => {
     try {
       await togglePackage({ id: pkg.id, field, value });
@@ -115,25 +85,30 @@ const PackagesPage = () => {
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleArchiveToggle = async (pkg: CoachPackage) => {
     try {
-      await Promise.all(Array.from(selectedIds).map((id) => deletePackage(id)));
-      toast.success(t('general.deleteSuccessCount', { count: selectedIds.size, item: 'packages' }));
-      setSelectedIds(new Set());
+      await togglePackage({ id: pkg.id, field: 'is_active', value: !pkg.is_active });
+      toast.success(pkg.is_active ? 'Package archived' : 'Package unarchived');
     } catch {
-      toast.error(t('general.deleteError'));
+      toast.error('Failed to update package');
     }
   };
 
-  const handleDeleteSingle = async () => {
-    if (!packageToDelete) return;
+  const handleBulkArchiveToggle = async () => {
     try {
-      const pkg = packages.find((p) => p.id === packageToDelete);
-      await deletePackage(packageToDelete);
-      toast.success(pkg ? t('general.deleteSuccessName', { name: pkg.name }) : t('business.packages.toast.deleted'));
-      setPackageToDelete(null);
+      const newIsActive = showArchived; // archived → make active, active → make inactive
+      await Promise.all(
+        Array.from(selectedIds).map((id) =>
+          togglePackage({ id, field: 'is_active', value: newIsActive })
+        )
+      );
+      toast.success(showArchived
+        ? `${selectedIds.size} package${selectedIds.size > 1 ? 's' : ''} unarchived`
+        : `${selectedIds.size} package${selectedIds.size > 1 ? 's' : ''} archived`
+      );
+      setSelectedIds(new Set());
     } catch {
-      toast.error(t('general.deleteError'));
+      toast.error('Failed to update packages');
     }
   };
 
@@ -169,21 +144,81 @@ const PackagesPage = () => {
               }}
             />
           </div>
+          <img
+            src={row.image_url || DEFAULT_PACKAGE_IMAGE}
+            alt=""
+            className="h-8 w-12 rounded object-cover flex-shrink-0"
+          />
           <span className="text-sm font-medium truncate">{row.name}</span>
         </div>
       ),
     },
     {
-      id: 'description',
-      label: t('business.packages.columns.description'),
+      id: 'sales',
+      label: t('business.packages.columns.sales'),
       sortable: true,
-      width: { class: 'w-[250px]', pixel: '250px' },
-      getSortValue: (row) => (row.description || '').toLowerCase(),
-      getSearchValue: (row) => row.description || '',
+      width: { class: 'w-[80px]', pixel: '80px' },
+      getSortValue: (row) => packageStats?.[row.id]?.total_purchases ?? 0,
+      renderCell: (row) => {
+        const value = packageStats?.[row.id]?.total_purchases ?? 0;
+        return <span className="text-sm">{value === 0 ? '--' : value}</span>;
+      },
+    },
+    {
+      id: 'refunds',
+      label: t('business.packages.columns.refunds'),
+      sortable: true,
+      width: { class: 'w-[80px]', pixel: '80px' },
+      getSortValue: (row) => packageStats?.[row.id]?.total_refunds ?? 0,
+      renderCell: (row) => {
+        const value = packageStats?.[row.id]?.total_refunds ?? 0;
+        return <span className="text-sm">{value === 0 ? '--' : value}</span>;
+      },
+    },
+    {
+      id: 'cancellations',
+      label: t('business.packages.columns.cancellations'),
+      sortable: true,
+      width: { class: 'w-[100px]', pixel: '100px' },
+      getSortValue: (row) => packageStats?.[row.id]?.total_cancellations ?? 0,
+      renderCell: (row) => {
+        const value = packageStats?.[row.id]?.total_cancellations ?? 0;
+        return <span className="text-sm">{value === 0 ? '--' : value}</span>;
+      },
+    },
+    {
+      id: 'revenue',
+      label: t('business.packages.columns.revenue'),
+      sortable: true,
+      width: { class: 'w-[120px]', pixel: '120px' },
+      getSortValue: (row) => packageStats?.[row.id]?.total_revenue_cents ?? 0,
+      renderCell: (row) => {
+        const stats = packageStats?.[row.id];
+        if (!stats || stats.total_revenue_cents === 0) return <span className="text-sm">--</span>;
+        return (
+          <span className="text-sm font-medium">
+            {formatAmount(stats.total_revenue_cents, stats.currency || row.currency)}
+          </span>
+        );
+      },
+    },
+    {
+      id: 'redemptions',
+      label: t('business.packages.columns.redemptions'),
+      sortable: false,
+      width: { class: 'w-[110px]', pixel: '110px' },
       renderCell: (row) => (
-        <span className="text-sm truncate block">
-          {row.description || '-'}
-        </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setRedemptionsPackage(row);
+          }}
+          className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+          data-no-row-link="true"
+        >
+          {t('business.packages.viewStats')}
+        </button>
       ),
     },
     {
@@ -205,56 +240,36 @@ const PackagesPage = () => {
       sortable: true,
       width: { class: 'w-[120px]', pixel: '120px' },
       getSortValue: (row) => row.interval,
-      renderCell: (row) => (
-        <Badge variant="outline" className="border-primary text-primary">
-          {t(`business.packages.interval.${row.interval}` as any)}
-        </Badge>
-      ),
+      renderCell: (row) => {
+        const count = row.interval_count ?? 1;
+        const label = count > 1
+          ? `Every ${count} ${row.interval}s`
+          : t(`business.packages.interval.${row.interval}` as any);
+        return (
+          <Badge variant="outline" className="border-primary text-primary">
+            {label}
+          </Badge>
+        );
+      },
     },
     {
-      id: 'duration',
-      label: t('business.packages.columns.duration'),
-      sortable: true,
-      width: { class: 'w-[120px]', pixel: '120px' },
-      getSortValue: (row) => row.duration_months ?? 0,
-      renderCell: (row) => (
-        <span className="text-sm">
-          {row.interval === 'one_time'
-            ? '-'
-            : row.duration_months != null
-              ? row.duration_months === 1
-                ? t('business.packages.form.month', { count: 1 })
-                : t('business.packages.form.months', { count: row.duration_months })
-              : t('business.packages.form.untilCancelled')}
-        </span>
-      ),
-    },
-    {
-      id: 'active',
-      label: t('business.packages.columns.active'),
+      id: 'toggle',
+      label: showArchived ? t('business.packages.columns.archived') : t('business.packages.columns.visible'),
       sortable: false,
       width: { class: 'w-[100px]', pixel: '100px' },
       renderCell: (row) => (
         <div data-no-row-link="true">
-          <Switch
-            checked={row.is_active}
-            onCheckedChange={(checked) => handleToggle(row, 'is_active', checked)}
-            disabled={!isConnected && !row.is_active}
-          />
-        </div>
-      ),
-    },
-    {
-      id: 'visible',
-      label: t('business.packages.columns.visible'),
-      sortable: false,
-      width: { class: 'w-[100px]', pixel: '100px' },
-      renderCell: (row) => (
-        <div data-no-row-link="true">
-          <Switch
-            checked={row.is_visible}
-            onCheckedChange={(checked) => handleToggle(row, 'is_visible', checked)}
-          />
+          {row.is_active ? (
+            <Switch
+              checked={row.is_visible}
+              onCheckedChange={(checked) => handleToggle(row, 'is_visible', checked)}
+            />
+          ) : (
+            <Switch
+              checked={true}
+              onCheckedChange={() => handleArchiveToggle(row)}
+            />
+          )}
         </div>
       ),
     },
@@ -287,12 +302,20 @@ const PackagesPage = () => {
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
-                  setPackageToDelete(row.id);
+                  handleArchiveToggle(row);
                 }}
-                className="text-destructive focus:text-destructive"
               >
-                <Trash2 className="h-4 w-4 mr-2 text-destructive" />
-                {t('general.delete')}
+                {row.is_active ? (
+                  <>
+                    <Archive className="h-4 w-4 mr-2" />
+                    {t('business.packages.actions.archive')}
+                  </>
+                ) : (
+                  <>
+                    <ArchiveRestore className="h-4 w-4 mr-2" />
+                    {t('business.packages.actions.unarchive')}
+                  </>
+                )}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -301,41 +324,47 @@ const PackagesPage = () => {
     },
   ];
 
-  const stripeButton = isConnected ? (
-    <button
-      onClick={handleOpenDashboard}
-      disabled={isGettingDashboardLink}
-      className="flex flex-1 items-center justify-center gap-2 rounded-md border border-[#635BFF] px-3 h-9 text-sm font-medium text-[#635BFF] hover:bg-[#635BFF]/5 transition-colors disabled:opacity-50"
-    >
-      {isGettingDashboardLink ? (
-        <Loader2 className="size-4 animate-spin" />
-      ) : (
-        <img src="/icons/stripe.png" alt="" className="size-5" />
-      )}
-      <span className="inline-flex items-center gap-1.5">
-        <span className="size-2 rounded-full bg-green-500" />
-        {t('business.packages.stripe.dashboard')}
-      </span>
-    </button>
+  const emptyState = showArchived ? (
+    <EmptyGridState
+      title={t('business.packages.noArchivedPackages')}
+      subtitle={t('business.packages.noArchivedPackagesSubtitle')}
+    />
+  ) : !isConnected ? (
+    <EmptyGridState
+      title={t('business.stripe.connectMessage')}
+      subtitle={t('business.packages.noPackagesSubtitle')}
+      action={
+        <button
+          onClick={handleConnectStripe}
+          disabled={isOnboarding}
+          className="flex items-center justify-center gap-2 rounded-md border border-[#635BFF] px-3 h-9 text-sm font-medium text-[#635BFF] hover:bg-[#635BFF]/5 transition-colors disabled:opacity-50"
+        >
+          {isOnboarding ? (
+            <Loader2 className="size-4 animate-spin text-[#635BFF]" />
+          ) : (
+            <img src="/icons/stripe-icon.png" alt="" className="size-5" />
+          )}
+          {stripeAccount ? t('business.packages.stripe.continueSetup') : t('business.packages.stripe.connect')}
+        </button>
+      }
+    />
   ) : (
-    <button
-      onClick={handleConnectStripe}
-      disabled={isOnboarding}
-      className="flex flex-1 items-center justify-center gap-2 rounded-md border border-[#635BFF] px-3 h-9 text-sm font-medium text-[#635BFF] hover:bg-[#635BFF]/5 transition-colors disabled:opacity-50"
-    >
-      {isOnboarding ? (
-        <Loader2 className="size-4 animate-spin text-[#635BFF]" />
-      ) : (
-        <img src="/icons/stripe.png" alt="" className="size-5" />
-      )}
-      {stripeAccount ? t('business.packages.stripe.continueSetup') : t('business.packages.stripe.connect')}
-    </button>
+    <EmptyGridState
+      title={t('business.packages.noPackages')}
+      subtitle={t('business.packages.noPackagesSubtitle')}
+      action={
+        <Button onClick={() => setIsAddOpen(true)} className="gap-2">
+          <Plus className="size-4" />
+          <span>{t('business.packages.addPackage')}</span>
+        </Button>
+      }
+    />
   );
 
   return (
     <div className="h-full w-full flex flex-col">
       <DataGrid
-        data={packages}
+        data={filteredPackages}
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="packages"
@@ -347,40 +376,34 @@ const PackagesPage = () => {
         enableRowSelection={true}
         selectedRowIds={selectedIds}
         onSelectionChange={setSelectedIds}
-        showPagination={true}
+        showPagination={!!isConnected}
         gridPadding={true}
         compactPagination={true}
-        emptyState={
-          <EmptyGridState
-            title={t('business.packages.noPackages')}
-            subtitle={t('business.packages.noPackagesSubtitle')}
-            action={
-              <Button onClick={() => setIsAddOpen(true)} className="gap-2">
-                <Plus className="size-4" />
-                <span>{t('business.packages.addPackage')}</span>
-              </Button>
-            }
-          />
-        }
-        filterBarActions={
-          <div className="flex items-center gap-2">
-            {stripeButton}
-            {uniqueCode && (
-              <Button
-                variant="outline"
-                onClick={() => window.open(`/${uniqueCode}/packages`, '_blank')}
-                className="gap-2"
+        emptyState={emptyState}
+        searchBarExtra={(
+          <Tabs value={showArchived ? 'archived' : 'active'} onValueChange={(v) => { setShowArchived(v === 'archived'); setSelectedIds(new Set()); }}>
+            <TabsList>
+              <TabsTrigger
+                value="active"
+                className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary"
               >
-                <ExternalLink className="size-4" />
-                <span>View Packages</span>
-              </Button>
-            )}
-            <Button onClick={() => setIsAddOpen(true)} className="gap-2">
-              <Plus className="size-4" />
-              <span>{t('business.packages.addPackage')}</span>
-            </Button>
-          </div>
-        }
+                {t('business.packages.filter.active')}
+              </TabsTrigger>
+              <TabsTrigger
+                value="archived"
+                className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary"
+              >
+                {t('business.packages.filter.archived')}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
+        filterBarActions={(
+          <Button onClick={() => setIsAddOpen(true)} className="gap-2" disabled={!isConnected}>
+            <Plus className="size-4" />
+            <span>{t('business.packages.addPackage')}</span>
+          </Button>
+        )}
         selectionActions={
           selectedIds.size > 0 ? (
             <div className="flex items-center gap-1">
@@ -388,13 +411,9 @@ const PackagesPage = () => {
                 <X className="size-4" />
                 <span>{t('general.clearSelected', { count: selectedIds.size })}</span>
               </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setIsBulkDeleteOpen(true)}
-                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 className="size-4" />
-                <span>{t('general.delete')}</span>
+              <Button variant="ghost" onClick={handleBulkArchiveToggle} className="gap-2">
+                {showArchived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
+                <span>{showArchived ? t('business.packages.actions.unarchive') : t('business.packages.actions.archive')}</span>
               </Button>
             </div>
           ) : undefined
@@ -430,25 +449,14 @@ const PackagesPage = () => {
             if (!open) setEditingPackage(null);
           }}
           onSave={handleSavePackage}
-          onDelete={handleDeletePackage}
           package={editingPackage}
         />
       )}
 
-      <ConfirmDeleteDialog
-        open={isBulkDeleteOpen}
-        onOpenChange={setIsBulkDeleteOpen}
-        onConfirm={handleBulkDelete}
-        count={selectedIds.size}
-        itemType="packages"
-      />
-
-      <ConfirmDeleteDialog
-        open={packageToDelete !== null}
-        onOpenChange={(open) => !open && setPackageToDelete(null)}
-        onConfirm={handleDeleteSingle}
-        itemName={packages.find((p) => p.id === packageToDelete)?.name}
-        itemType="package"
+      <PackageRedemptionsDialog
+        open={redemptionsPackage !== null}
+        onOpenChange={(open) => !open && setRedemptionsPackage(null)}
+        package={redemptionsPackage}
       />
     </div>
   );

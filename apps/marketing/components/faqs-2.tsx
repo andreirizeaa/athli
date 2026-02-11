@@ -23,7 +23,7 @@ export default function FAQsTwo({ hideHeader = false }: { hideHeader?: boolean }
                     <Accordion
                         type="single"
                         collapsible
-                        className="bg-card ring-muted w-full rounded-2xl border px-8 py-3 shadow-sm ring-4 dark:ring-0">
+                        className="w-full rounded-2xl border bg-background px-8 py-3">
                         {faqItems.map((item, index) => (
                             <AccordionItem
                                 key={index}

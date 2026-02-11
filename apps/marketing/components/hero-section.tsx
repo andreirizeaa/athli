@@ -5,6 +5,7 @@ import {
   ArrowRight,
   ArrowUpIcon,
   BrainIcon,
+  Check,
   ChevronsUpDownIcon,
   DribbbleIcon,
   GlobeIcon,
@@ -12,22 +13,19 @@ import {
   Paperclip,
   SparklesIcon,
   UserIcon,
+  X,
+  Zap,
 } from 'lucide-react';
 import { CodeIcon } from '@radix-ui/react-icons';
 import Lottie from 'lottie-react';
 import { Button } from '@/components/ui/button';
-import { motion, useScroll, useTransform } from 'motion/react';
+import { motion, useScroll, useTransform, AnimatePresence } from 'motion/react';
 import { TextEffect } from '@/components/ui/text-effect';
 import { AnimatedGroup } from '@/components/ui/animated-group';
 import { HeroHeader } from './header';
 import { cn } from '@/lib/utils';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
 import { useTranslations } from 'next-intl';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
@@ -51,6 +49,126 @@ const suggestionIcons = [BrainIcon, CodeIcon, DribbbleIcon, GlobeIcon] as const;
 const suggestionKeys = ['training', 'analytics', 'nutrition', 'research'] as const;
 
 type IconId = 'chatgpt' | 'whatsapp' | 'excel' | 'zapier' | 'docs' | 'notion';
+
+// Stagger animation variants for benefit items
+const benefitVariants = {
+  hidden: { opacity: 0, x: -10 },
+  visible: (i: number) => ({
+    opacity: 1,
+    x: 0,
+    transition: {
+      delay: 0.1 + i * 0.08,
+      duration: 0.3,
+      ease: 'easeOut' as const,
+    },
+  }),
+};
+
+function IntegrationPopoverContent({
+  iconId,
+  t,
+}: {
+  iconId: IconId;
+  t: ReturnType<typeof useTranslations<'hero'>>;
+}) {
+  const title = t(`iconDialogs.${iconId}.title`);
+  const problem = t(`iconDialogs.${iconId}.problem`);
+  const benefits = t.raw(`iconDialogs.${iconId}.benefits`) as string[];
+  const highlight = t(`iconDialogs.${iconId}.highlight`);
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-start gap-3">
+        <img
+          src={`/icons/${iconId}.png`}
+          alt=""
+          className={cn(
+            'size-10 object-contain shrink-0',
+            (iconId === 'chatgpt' || iconId === 'notion') && 'dark:invert'
+          )}
+        />
+        <div>
+          <h4 className="font-semibold text-foreground leading-tight">{title}</h4>
+          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+            <X className="size-3 text-red-500" />
+            {problem}
+          </p>
+        </div>
+      </div>
+
+      {/* Benefits */}
+      <div className="space-y-2">
+        {benefits.map((benefit, i) => (
+          <motion.div
+            key={benefit}
+            custom={i}
+            initial="hidden"
+            animate="visible"
+            variants={benefitVariants}
+            className="flex items-center gap-2"
+          >
+            <div className="size-5 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center shrink-0">
+              <Check className="size-3 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <span className="text-sm text-foreground">{benefit}</span>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Highlight Badge */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.35, duration: 0.2 }}
+      >
+        <Badge
+          variant="outline"
+          className="w-full justify-center py-1.5 text-xs bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border-purple-500/30 text-purple-700 dark:text-purple-300"
+        >
+          <Zap className="size-3 mr-1" />
+          {highlight}
+        </Badge>
+      </motion.div>
+    </div>
+  );
+}
+
+// Component for each floating icon with popover
+function FloatingIconWithPopover({
+  iconId,
+  className,
+  iconClassName,
+  iconSrc,
+  motionProps,
+  t,
+}: {
+  iconId: IconId;
+  className: string;
+  iconClassName: string;
+  iconSrc: string;
+  motionProps: React.ComponentProps<typeof motion.div>;
+  t: ReturnType<typeof useTranslations<'hero'>>;
+}) {
+  const [open, setOpen] = React.useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <motion.div {...motionProps} className={className}>
+          <img src={iconSrc} alt="" className={iconClassName} />
+        </motion.div>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-80 p-4"
+        sideOffset={12}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <IntegrationPopoverContent iconId={iconId} t={t} />
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 function HeroChatPreview() {
   const [activeCategory, setActiveCategory] = useState('');
@@ -248,7 +366,6 @@ function HeroChatPreview() {
 
 export default function HeroSection() {
   const [entranceDone, setEntranceDone] = React.useState(false);
-  const [activeIcon, setActiveIcon] = React.useState<IconId | null>(null);
   const sectionRef = React.useRef<HTMLDivElement>(null);
   const chatRef = React.useRef<HTMLDivElement>(null);
   const t = useTranslations('hero');
@@ -273,72 +390,92 @@ export default function HeroSection() {
               {/* Floating icon containers */}
               <div className="pointer-events-none absolute inset-0 z-10 hidden lg:block">
                 {/* ChatGPT - top left, larger */}
-                <motion.div
-                  initial={{ opacity: 0, x: -60, scale: 0.8, filter: 'blur(8px)' }}
-                  animate={{ opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' }}
-                  transition={{ type: 'spring', bounce: 0.3, duration: 1.2, delay: 0.5 }}
-                  style={entranceDone ? { x: leftX, opacity: iconOpacity, scale: iconScale } : undefined}
-                  onClick={() => setActiveIcon('chatgpt')}
+                <FloatingIconWithPopover
+                  iconId="chatgpt"
+                  iconSrc="/icons/chatgpt.png"
                   className="absolute top-[12%] left-[6%] pointer-events-auto flex size-24 -rotate-12 cursor-pointer items-center justify-center rounded-[20px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.06)] dark:shadow-[0_0_25px_rgba(255,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
-                >
-                  <img src="/icons/chatgpt.png" alt="" className="size-[68px] object-contain drop-shadow-[0_0_8px_rgba(0,0,0,0.3)] dark:invert dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
-                </motion.div>
+                  iconClassName="size-[68px] object-contain drop-shadow-[0_0_8px_rgba(0,0,0,0.3)] dark:invert dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
+                  motionProps={{
+                    initial: { opacity: 0, x: -60, scale: 0.8, filter: 'blur(8px)' },
+                    animate: { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' },
+                    transition: { type: 'spring', bounce: 0.3, duration: 1.2, delay: 0.5 },
+                    style: entranceDone ? { x: leftX, opacity: iconOpacity, scale: iconScale } : undefined,
+                  }}
+                  t={t}
+                />
                 {/* WhatsApp - top right */}
-                <motion.div
-                  initial={{ opacity: 0, x: 60, scale: 0.8, filter: 'blur(8px)' }}
-                  animate={{ opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' }}
-                  transition={{ type: 'spring', bounce: 0.3, duration: 1.2, delay: 0.65 }}
-                  style={entranceDone ? { x: rightX, opacity: iconOpacity, scale: iconScale } : undefined}
-                  onClick={() => setActiveIcon('whatsapp')}
+                <FloatingIconWithPopover
+                  iconId="whatsapp"
+                  iconSrc="/icons/whatsapp.png"
                   className="absolute top-[22%] right-[8%] pointer-events-auto flex size-20 rotate-12 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(37,211,102,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
-                >
-                  <img src="/icons/whatsapp.png" alt="" className="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(37,211,102,0.35)]" />
-                </motion.div>
+                  iconClassName="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(37,211,102,0.35)]"
+                  motionProps={{
+                    initial: { opacity: 0, x: 60, scale: 0.8, filter: 'blur(8px)' },
+                    animate: { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' },
+                    transition: { type: 'spring', bounce: 0.3, duration: 1.2, delay: 0.65 },
+                    style: entranceDone ? { x: rightX, opacity: iconOpacity, scale: iconScale } : undefined,
+                  }}
+                  t={t}
+                />
                 {/* Excel - mid left */}
-                <motion.div
-                  initial={{ opacity: 0, x: -60, scale: 0.8, filter: 'blur(8px)' }}
-                  animate={{ opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' }}
-                  transition={{ type: 'spring', bounce: 0.3, duration: 1.2, delay: 0.8 }}
-                  style={entranceDone ? { x: leftX, opacity: iconOpacity, scale: iconScale } : undefined}
-                  onClick={() => setActiveIcon('excel')}
+                <FloatingIconWithPopover
+                  iconId="excel"
+                  iconSrc="/icons/excel.png"
                   className="absolute bottom-[30%] left-[5%] pointer-events-auto flex size-20 -rotate-[18deg] cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(33,185,110,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
-                >
-                  <img src="/icons/excel.png" alt="" className="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(33,115,70,0.35)]" />
-                </motion.div>
+                  iconClassName="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(33,115,70,0.35)]"
+                  motionProps={{
+                    initial: { opacity: 0, x: -60, scale: 0.8, filter: 'blur(8px)' },
+                    animate: { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' },
+                    transition: { type: 'spring', bounce: 0.3, duration: 1.2, delay: 0.8 },
+                    style: entranceDone ? { x: leftX, opacity: iconOpacity, scale: iconScale } : undefined,
+                  }}
+                  t={t}
+                />
                 {/* Zapier - mid right, larger */}
-                <motion.div
-                  initial={{ opacity: 0, x: 60, scale: 0.8, filter: 'blur(8px)' }}
-                  animate={{ opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' }}
-                  transition={{ type: 'spring', bounce: 0.3, duration: 1.2, delay: 0.95 }}
-                  style={entranceDone ? { x: rightX, opacity: iconOpacity, scale: iconScale } : undefined}
-                  onClick={() => setActiveIcon('zapier')}
+                <FloatingIconWithPopover
+                  iconId="zapier"
+                  iconSrc="/icons/zapier.png"
                   className="absolute bottom-[22%] right-[12%] pointer-events-auto flex size-24 rotate-6 cursor-pointer items-center justify-center rounded-[20px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(255,159,28,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
-                >
-                  <img src="/icons/zapier.png" alt="" className="size-[68px] object-contain drop-shadow-[0_0_8px_rgba(255,159,28,0.35)]" />
-                </motion.div>
+                  iconClassName="size-[68px] object-contain drop-shadow-[0_0_8px_rgba(255,159,28,0.35)]"
+                  motionProps={{
+                    initial: { opacity: 0, x: 60, scale: 0.8, filter: 'blur(8px)' },
+                    animate: { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' },
+                    transition: { type: 'spring', bounce: 0.3, duration: 1.2, delay: 0.95 },
+                    style: entranceDone ? { x: rightX, opacity: iconOpacity, scale: iconScale } : undefined,
+                  }}
+                  t={t}
+                />
                 {/* Google Docs - right of pill */}
-                <motion.div
-                  initial={{ opacity: 0, x: 60, scale: 0.8, filter: 'blur(8px)' }}
-                  animate={{ opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' }}
-                  transition={{ type: 'spring', bounce: 0.3, duration: 1.2, delay: 1.1 }}
-                  style={entranceDone ? { x: rightX, opacity: iconOpacity, scale: iconScale, boxShadow: '-5px -5px 15px rgba(251,188,4,0.12), 5px -5px 15px rgba(234,67,53,0.1), 5px 5px 15px rgba(66,133,244,0.12), -5px 5px 15px rgba(52,168,83,0.12), inset 0 1px 0 rgba(255,255,255,0.06)' } : { boxShadow: '-5px -5px 15px rgba(251,188,4,0.12), 5px -5px 15px rgba(234,67,53,0.1), 5px 5px 15px rgba(66,133,244,0.12), -5px 5px 15px rgba(52,168,83,0.12), inset 0 1px 0 rgba(255,255,255,0.06)' }}
-                  onClick={() => setActiveIcon('docs')}
+                <FloatingIconWithPopover
+                  iconId="docs"
+                  iconSrc="/icons/drive.png"
                   className="absolute top-[-6%] right-[14%] pointer-events-auto flex size-20 rotate-3 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 hover:scale-110 transition-transform"
-                >
-                  <img src="/icons/drive.png" alt="" className="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(66,133,244,0.3)]" />
-                </motion.div>
+                  iconClassName="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(66,133,244,0.3)]"
+                  motionProps={{
+                    initial: { opacity: 0, x: 60, scale: 0.8, filter: 'blur(8px)' },
+                    animate: { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' },
+                    transition: { type: 'spring', bounce: 0.3, duration: 1.2, delay: 1.1 },
+                    style: entranceDone
+                      ? { x: rightX, opacity: iconOpacity, scale: iconScale, boxShadow: '-5px -5px 15px rgba(251,188,4,0.12), 5px -5px 15px rgba(234,67,53,0.1), 5px 5px 15px rgba(66,133,244,0.12), -5px 5px 15px rgba(52,168,83,0.12), inset 0 1px 0 rgba(255,255,255,0.06)' }
+                      : { boxShadow: '-5px -5px 15px rgba(251,188,4,0.12), 5px -5px 15px rgba(234,67,53,0.1), 5px 5px 15px rgba(66,133,244,0.12), -5px 5px 15px rgba(52,168,83,0.12), inset 0 1px 0 rgba(255,255,255,0.06)' },
+                  }}
+                  t={t}
+                />
                 {/* Notion - left of Grow Today button */}
-                <motion.div
-                  initial={{ opacity: 0, x: -60, scale: 0.8, filter: 'blur(8px)' }}
-                  animate={{ opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' }}
-                  transition={{ type: 'spring', bounce: 0.3, duration: 1.2, delay: 1.25 }}
-                  onAnimationComplete={() => setEntranceDone(true)}
-                  style={entranceDone ? { x: leftX, opacity: iconOpacity, scale: iconScale } : undefined}
-                  onClick={() => setActiveIcon('notion')}
+                <FloatingIconWithPopover
+                  iconId="notion"
+                  iconSrc="/icons/notion.png"
                   className="absolute bottom-[6%] left-[15%] pointer-events-auto flex size-20 -rotate-3 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.06)] dark:shadow-[0_0_25px_rgba(255,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
-                >
-                  <img src="/icons/notion.png" alt="" className="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(0,0,0,0.3)] dark:invert dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
-                </motion.div>
+                  iconClassName="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(0,0,0,0.3)] dark:invert dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
+                  motionProps={{
+                    initial: { opacity: 0, x: -60, scale: 0.8, filter: 'blur(8px)' },
+                    animate: { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' },
+                    transition: { type: 'spring', bounce: 0.3, duration: 1.2, delay: 1.25 },
+                    onAnimationComplete: () => setEntranceDone(true),
+                    style: entranceDone ? { x: leftX, opacity: iconOpacity, scale: iconScale } : undefined,
+                  }}
+                  t={t}
+                />
               </div>
 
               <div className="text-center sm:mx-auto lg:mr-auto lg:mt-0">
@@ -446,27 +583,6 @@ export default function HeroSection() {
           </div>
         </section>
       </main>
-
-      {/* Icon dialogs */}
-      <Dialog open={activeIcon !== null} onOpenChange={(open) => !open && setActiveIcon(null)}>
-        {activeIcon && (
-          <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
-            <DialogHeader>
-              <div className="flex items-center gap-3">
-                <img
-                  src={`/icons/${activeIcon}.png`}
-                  alt=""
-                  className={cn('size-10 object-contain', (activeIcon === 'chatgpt' || activeIcon === 'notion') && 'dark:invert')}
-                />
-                <DialogTitle>{t(`iconDialogs.${activeIcon}.title`)}</DialogTitle>
-              </div>
-            </DialogHeader>
-            <DialogDescription className="text-sm leading-relaxed">
-              {t(`iconDialogs.${activeIcon}.description`)}
-            </DialogDescription>
-          </DialogContent>
-        )}
-      </Dialog>
     </>
   );
 }

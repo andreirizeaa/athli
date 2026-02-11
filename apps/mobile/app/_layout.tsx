@@ -123,7 +123,7 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const [isAppReady, setIsAppReady] = useState(false);
   const [coachLoaded, setCoachLoaded] = useState(false);
-  const isSessionReady = useAuthSessionStore((state) => state.isSessionReady);
+  const isAppReadyFromStore = useAppInitStore((state) => state.isAppReady);
   const setCoachProfile = useCoachProfileStore((state) => state.setProfile);
   const setClientProfile = useClientProfileStore((state) => state.setProfile);
   const clearCoachProfile = useCoachProfileStore((state) => state.clearProfile);
@@ -859,6 +859,13 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="profile/billing"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
             name="modals/calendar/select-date-modal"
             options={{
               presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
@@ -1557,8 +1564,8 @@ function RootLayoutNav() {
         </Stack>
       </ThemeProvider>
 
-      {/* Manual Splash Screen Overlay */}
-      {!isSessionReady && (
+      {/* Manual Splash Screen Overlay - show until app is fully ready (session + profile loaded) */}
+      {!isAppReady && !isAppReadyFromStore && (
         <RNView style={splashStyles.container}>
           <Image
             source={

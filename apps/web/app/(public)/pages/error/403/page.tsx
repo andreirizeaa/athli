@@ -31,11 +31,11 @@ export default function Page() {
           <p className="text-muted-foreground">
             You do not appear to have permission to access this page
           </p>
-        </div>
-        <div className="mt-6 lg:mt-8">
-          <Button asChild size="lg">
-            <Link href="/home">Go to home</Link>
-          </Button>
+          <div className="pt-2">
+            <Button asChild size="lg">
+              <Link href="/home">Go to home</Link>
+            </Button>
+          </div>
         </div>
       </div>
     </div>

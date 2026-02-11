@@ -230,6 +230,21 @@ settingsRouter.post('/client/push-token', supabaseAuthenticate, settingsControll
  */
 settingsRouter.delete('/client/push-token', supabaseAuthenticate, settingsController.deleteClientPushToken);
 
+// Onboarding
+/**
+ * @swagger
+ * /api/v1/settings/coach/complete-onboarding:
+ *   post:
+ *     summary: Mark coach onboarding as complete
+ *     tags: [Settings]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Onboarding completed successfully
+ */
+settingsRouter.post('/coach/complete-onboarding', supabaseAuthenticate, settingsController.completeOnboarding);
+
 // Unique Code
 /**
  * @swagger

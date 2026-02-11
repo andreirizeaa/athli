@@ -69,9 +69,9 @@ export async function apiFetch<T = any>(
             data: body,
             params: params,
             headers: headers,
-            // You can pass custom config to interceptors if needed, 
-            // but for now we rely on the interceptor logic checking for session.
-        });
+            // Pass authenticated flag to interceptor via custom config
+            skipAuth: !authenticated,
+        } as any);
 
         // Backend seems to return { success, message, data: { user: ... } } 
         // Axios wraps this in data, so response.data is the actual payload.

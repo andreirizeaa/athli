@@ -186,6 +186,8 @@ export type DataGridProps<T = any> = {
   gridPadding?: boolean;
   compactPagination?: boolean;
   filterBarActions?: React.ReactNode;
+  /** Content rendered right next to the search bar (left side of toolbar) */
+  searchBarExtra?: React.ReactNode;
   showLastColumnDivider?: boolean;
   enableRowReordering?: boolean;
   isReorderMode?: boolean;
@@ -221,7 +223,7 @@ const isFuzzyMatch = (text: string, query: string): boolean => {
   return queryIndex === normalizedQuery.length;
 };
 
-const CellTextWithTooltip = ({ text }: { text: string }) => {
+export const CellTextWithTooltip = ({ text }: { text: string }) => {
   const [isTruncated, setIsTruncated] = useState(false);
   const textRef = useRef<HTMLSpanElement>(null);
 
@@ -331,7 +333,8 @@ const SortableTableRow = <T extends Record<string, any>>({
       onKeyDown={onRowKeyDown ? (e) => onRowKeyDown(row, e) : undefined}
       className={cn(
         isSelected && '!bg-muted',
-        (onRowClick || selectOnRowClick || hasPinnedColumn) && 'cursor-pointer group',
+        'group',
+        (onRowClick || selectOnRowClick || hasPinnedColumn) && 'cursor-pointer',
         '[&:hover_td]:bg-muted',
         '!transition-none',
         customClassName
@@ -385,6 +388,7 @@ export function DataGrid<T extends Record<string, any>>({
   gridPadding = false,
   compactPagination = false,
   filterBarActions,
+  searchBarExtra,
   showLastColumnDivider = false,
   enableRowReordering = false,
   isReorderMode = false,
@@ -1121,6 +1125,7 @@ export function DataGrid<T extends Record<string, any>>({
                   )}
                 </div>
               )}
+              {searchBarExtra}
             </div>
             <div className="flex items-center gap-2 flex-1 justify-end">
               {filters.map((filter) => {
@@ -1840,7 +1845,8 @@ export function DataGrid<T extends Record<string, any>>({
                                         }}
                                         className={cn(
                                           isSelected && '!bg-muted',
-                                          (onRowClick || selectOnRowClick || hasPinned) && 'cursor-pointer group',
+                                          'group',
+                                          (onRowClick || selectOnRowClick || hasPinned) && 'cursor-pointer',
                                           '[&:hover_td]:bg-muted',
                                           '!transition-none'
                                         )}
@@ -1932,7 +1938,8 @@ export function DataGrid<T extends Record<string, any>>({
                                       onKeyDown={onRowKeyDown ? (e) => onRowKeyDown(row, e) : undefined}
                                       className={cn(
                                         isSelected && '!bg-muted',
-                                        (onRowClick || hasPinned || selectOnRowClick) && 'cursor-pointer group',
+                                        'group',
+                                        (onRowClick || hasPinned || selectOnRowClick) && 'cursor-pointer',
                                         '[&:hover_td]:bg-muted',
                                         '!transition-none',
                                         getRowClassName?.(row)
@@ -2312,7 +2319,8 @@ export function DataGrid<T extends Record<string, any>>({
                               onKeyDown={onRowKeyDown ? (e) => onRowKeyDown(row, e) : undefined}
                               className={cn(
                                 isSelected && '!bg-muted',
-                                (onRowClick || selectOnRowClick || hasPinned) && 'cursor-pointer group',
+                                'group',
+                                (onRowClick || selectOnRowClick || hasPinned) && 'cursor-pointer',
                                 '[&:hover_td]:bg-muted',
                                 '!transition-none',
                                 getRowClassName?.(row)

@@ -46,6 +46,7 @@ function SheetContent({
   children,
   side = 'right',
   onOverlayClick,
+  onInteractOutside,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: 'top' | 'right' | 'bottom' | 'left';
@@ -76,6 +77,7 @@ function SheetContent({
             'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto border-t',
           className
         )}
+        onInteractOutside={onInteractOutside}
         {...props}
       >
         {/* Accessible title for screen readers; can be overridden by providing a SheetTitle elsewhere */}

@@ -235,7 +235,7 @@ export default function ClientInvitePage() {
   };
 
   return (
-    <AuthLayout showHomeButton={false}>
+    <AuthLayout singleColumn>
       <AuthErrorAlert pathname={pathname} />
       {isLoadingCoach ? (
         <div className="flex flex-col items-center justify-center gap-4 py-8">
