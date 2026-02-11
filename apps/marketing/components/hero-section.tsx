@@ -79,7 +79,7 @@ function IntegrationPopoverContent({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-3">
         <img
           src={`/icons/${iconId}.png`}
           alt=""
@@ -88,21 +88,29 @@ function IntegrationPopoverContent({
             (iconId === 'chatgpt' || iconId === 'notion') && 'dark:invert'
           )}
         />
-        <div>
-          <h4 className="font-semibold text-foreground leading-tight">{title}</h4>
-          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-            <X className="size-3 text-red-500" />
-            {problem}
-          </p>
-        </div>
+        <h4 className="font-semibold text-foreground leading-tight">{title}</h4>
       </div>
 
-      {/* Benefits */}
+      {/* Problem & Benefits */}
       <div className="space-y-2">
+        {/* Problem row */}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={benefitVariants}
+          custom={0}
+          className="flex items-center gap-2"
+        >
+          <div className="size-5 rounded-full bg-red-500/10 dark:bg-red-500/20 flex items-center justify-center shrink-0">
+            <X className="size-3 text-red-600 dark:text-red-400" />
+          </div>
+          <span className="text-sm text-foreground">{problem}</span>
+        </motion.div>
+        {/* Benefit rows */}
         {benefits.map((benefit, i) => (
           <motion.div
             key={benefit}
-            custom={i}
+            custom={i + 1}
             initial="hidden"
             animate="visible"
             variants={benefitVariants}
