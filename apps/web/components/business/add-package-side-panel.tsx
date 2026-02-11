@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { CurrencyInput } from '@/components/ui/currency-input';
+import { IntervalInput } from '@/components/ui/interval-input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ImageCropDialog } from '@/components/app/image-crop-dialog';
 import { useCoachSequencesDropdown } from '@/hooks/use-coach-packages';
@@ -24,12 +25,15 @@ import type { CoachPackage } from '@athli/shared-types';
 function toBillingType(interval: string, intervalCount: number | null): string {
   if (interval === 'month' && intervalCount === 3) return 'month_3';
   if (interval === 'month' && intervalCount === 6) return 'month_6';
+  // Check for custom intervals (any count > 1 that's not month_3 or month_6)
+  if (intervalCount && intervalCount > 1) return 'custom';
   return interval;
 }
 
-function fromBillingType(billingType: string): { interval: string; interval_count: number } {
+function fromBillingType(billingType: string, customInterval?: string, customCount?: number): { interval: string; interval_count: number } {
   if (billingType === 'month_3') return { interval: 'month', interval_count: 3 };
   if (billingType === 'month_6') return { interval: 'month', interval_count: 6 };
+  if (billingType === 'custom') return { interval: customInterval || 'day', interval_count: customCount || 2 };
   return { interval: billingType, interval_count: 1 };
 }
 
@@ -69,7 +73,6 @@ export type PackageFormData = {
   interval: string;
   interval_count: number;
   free_trial_days: number;
-  initial_fee_cents: number;
   amount_cents: number;
   sequence_id: string | null;
   image_url: string;
@@ -92,10 +95,10 @@ export const AddPackageSidePanel = ({
   const [newFeature, setNewFeature] = useState('');
   const [currency, setCurrency] = useState('usd');
   const [billingType, setBillingType] = useState('month');
+  const [customInterval, setCustomInterval] = useState('day');
+  const [customCount, setCustomCount] = useState(2);
   const [hasFreeTrial, setHasFreeTrial] = useState(false);
   const [freeTrialDays, setFreeTrialDays] = useState(7);
-  const [hasInitialFee, setHasInitialFee] = useState(false);
-  const [initialFeeDisplay, setInitialFeeDisplay] = useState('');
   const [priceDisplay, setPriceDisplay] = useState('');
   const [sequenceId, setSequenceId] = useState<string>('none');
   const [isSaving, setIsSaving] = useState(false);
@@ -107,7 +110,7 @@ export const AddPackageSidePanel = ({
 
   const isEditing = !!pkg;
   const hasSequences = sequences && sequences.length > 0;
-  const { interval, interval_count } = fromBillingType(billingType);
+  const { interval, interval_count } = fromBillingType(billingType, customInterval, customCount);
   const isRecurring = interval !== 'one_time';
 
   useEffect(() => {
@@ -118,11 +121,15 @@ export const AddPackageSidePanel = ({
         setHasFeatures((pkg.features || []).length > 0);
         setFeatures(pkg.features || []);
         setCurrency(pkg.currency);
-        setBillingType(toBillingType(pkg.interval, pkg.interval_count));
+        const billingTypeValue = toBillingType(pkg.interval, pkg.interval_count);
+        setBillingType(billingTypeValue);
+        // Load custom interval values if it's a custom billing type
+        if (billingTypeValue === 'custom') {
+          setCustomInterval(pkg.interval);
+          setCustomCount(pkg.interval_count || 2);
+        }
         setHasFreeTrial((pkg.free_trial_days || 0) > 0);
         setFreeTrialDays(pkg.free_trial_days || 7);
-        setHasInitialFee((pkg.initial_fee_cents || 0) > 0);
-        setInitialFeeDisplay((pkg.initial_fee_cents || 0) > 0 ? String(pkg.initial_fee_cents / 100) : '');
         setPriceDisplay(String(pkg.amount_cents / 100));
         setSequenceId((pkg as any).sequence_id || 'none');
         setImageUrl(pkg.image_url || '');
@@ -134,10 +141,10 @@ export const AddPackageSidePanel = ({
         setNewFeature('');
         setCurrency('usd');
         setBillingType('month');
+        setCustomInterval('day');
+        setCustomCount(2);
         setHasFreeTrial(false);
         setFreeTrialDays(7);
-        setHasInitialFee(false);
-        setInitialFeeDisplay('');
         setPriceDisplay('');
         setSequenceId('none');
         setImageUrl('');
@@ -188,10 +195,6 @@ export const AddPackageSidePanel = ({
     if (!name.trim() || amountCents < 0 || !imageUrl) return;
     if (isRecurring && hasFreeTrial && freeTrialDays < 1) return;
 
-    const initialFeeCents = isRecurring && hasInitialFee
-      ? Math.round(parseFloat(initialFeeDisplay || '0') * 100)
-      : 0;
-
     // Auto-include any pending feature text that hasn't been explicitly added
     const allFeatures = hasFeatures
       ? [...features, ...(newFeature.trim() ? [newFeature.trim()] : [])]
@@ -207,7 +210,6 @@ export const AddPackageSidePanel = ({
         interval,
         interval_count,
         free_trial_days: isRecurring && hasFreeTrial ? freeTrialDays : 0,
-        initial_fee_cents: initialFeeCents,
         amount_cents: amountCents,
         sequence_id: sequenceId !== 'none' ? sequenceId : null,
         image_url: imageUrl,
@@ -221,9 +223,6 @@ export const AddPackageSidePanel = ({
   };
 
   const amountCents = Math.round(parseFloat(priceDisplay || '0') * 100);
-  const initialFeeCents = isRecurring && hasInitialFee
-    ? Math.round(parseFloat(initialFeeDisplay || '0') * 100)
-    : 0;
 
   const payoutLabel = (() => {
     if (!priceDisplay || amountCents <= 0) return null;
@@ -231,12 +230,9 @@ export const AddPackageSidePanel = ({
       style: 'currency',
       currency: currency.toUpperCase(),
     }).format(amountCents / 100);
-    const feeFormatted = initialFeeCents > 0
-      ? ` + ${new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase() }).format(initialFeeCents / 100)}`
-      : '';
     if (interval === 'one_time') return `${formatted} one time`;
     const intervalLabel = billingType === 'month_3' ? '3 months' : billingType === 'month_6' ? '6 months' : interval;
-    return `${formatted}/${intervalLabel}${feeFormatted}`;
+    return `${formatted}/${intervalLabel}`;
   })();
 
   const canSave =
@@ -245,8 +241,7 @@ export const AddPackageSidePanel = ({
     priceDisplay &&
     parseFloat(priceDisplay) >= 0 &&
     (!hasFeatures || features.length > 0 || newFeature.trim().length > 0) &&
-    (!isRecurring || !hasFreeTrial || freeTrialDays >= 1) &&
-    (!isRecurring || !hasInitialFee || (initialFeeDisplay && parseFloat(initialFeeDisplay) > 0));
+    (!isRecurring || !hasFreeTrial || freeTrialDays >= 1);
 
   // Compute preview values
   const previewFeatures = hasFeatures
@@ -367,14 +362,14 @@ export const AddPackageSidePanel = ({
               setCurrency={setCurrency}
               billingType={billingType}
               setBillingType={setBillingType}
+              customInterval={customInterval}
+              setCustomInterval={setCustomInterval}
+              customCount={customCount}
+              setCustomCount={setCustomCount}
               hasFreeTrial={hasFreeTrial}
               setHasFreeTrial={setHasFreeTrial}
               freeTrialDays={freeTrialDays}
               setFreeTrialDays={setFreeTrialDays}
-              hasInitialFee={hasInitialFee}
-              setHasInitialFee={setHasInitialFee}
-              initialFeeDisplay={initialFeeDisplay}
-              setInitialFeeDisplay={setInitialFeeDisplay}
               priceDisplay={priceDisplay}
               setPriceDisplay={setPriceDisplay}
               isRecurring={isRecurring}
@@ -428,7 +423,6 @@ export const AddPackageSidePanel = ({
               interval={interval}
               intervalCount={interval_count}
               freeTrialDays={isRecurring && hasFreeTrial ? freeTrialDays : 0}
-              initialFeeCents={initialFeeCents}
               features={previewFeatures}
               coachName={coachName}
               coachAvatar={coachAvatar}
@@ -461,7 +455,6 @@ function PackagePreviewCard({
   interval,
   intervalCount,
   freeTrialDays,
-  initialFeeCents,
   features,
   coachName,
   coachAvatar,
@@ -474,7 +467,6 @@ function PackagePreviewCard({
   interval: string;
   intervalCount: number;
   freeTrialDays: number;
-  initialFeeCents: number;
   features: string[];
   coachName: string;
   coachAvatar: string | null;
@@ -546,13 +538,6 @@ function PackagePreviewCard({
           </Badge>
         </div>
 
-        {/* Initial fee */}
-        {initialFeeCents > 0 && (
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            + {formatPreviewAmount(initialFeeCents, currency)} initial fee
-          </p>
-        )}
-
         {/* Badges */}
         <div className="flex flex-wrap gap-1 mt-2">
           {interval === 'one_time' && (
@@ -593,10 +578,10 @@ function PackageDetailsForm({
   features, newFeature, setNewFeature, onAddFeature, onUpdateFeature, onBlurFeature, onRemoveFeature,
   currency, setCurrency,
   billingType, setBillingType,
+  customInterval, setCustomInterval,
+  customCount, setCustomCount,
   hasFreeTrial, setHasFreeTrial,
   freeTrialDays, setFreeTrialDays,
-  hasInitialFee, setHasInitialFee,
-  initialFeeDisplay, setInitialFeeDisplay,
   priceDisplay, setPriceDisplay,
   isRecurring,
 }: {
@@ -607,10 +592,10 @@ function PackageDetailsForm({
   onAddFeature: () => void; onUpdateFeature: (i: number, v: string) => void; onBlurFeature: (i: number) => void; onRemoveFeature: (i: number) => void;
   currency: string; setCurrency: (v: string) => void;
   billingType: string; setBillingType: (v: string) => void;
+  customInterval: string; setCustomInterval: (v: string) => void;
+  customCount: number; setCustomCount: (v: number) => void;
   hasFreeTrial: boolean; setHasFreeTrial: (v: boolean) => void;
   freeTrialDays: number; setFreeTrialDays: (v: number) => void;
-  hasInitialFee: boolean; setHasInitialFee: (v: boolean) => void;
-  initialFeeDisplay: string; setInitialFeeDisplay: (v: string) => void;
   priceDisplay: string; setPriceDisplay: (v: string) => void;
   isRecurring: boolean;
 }) {
@@ -662,14 +647,28 @@ function PackageDetailsForm({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="one_time">{t('business.packages.form.oneTime')}</SelectItem>
             <SelectItem value="day">{t('business.packages.form.daily')}</SelectItem>
             <SelectItem value="week">{t('business.packages.form.weekly')}</SelectItem>
             <SelectItem value="month">{t('business.packages.form.monthly')}</SelectItem>
             <SelectItem value="year">{t('business.packages.form.yearly')}</SelectItem>
             <SelectItem value="month_3">{t('business.packages.form.every3Months')}</SelectItem>
             <SelectItem value="month_6">{t('business.packages.form.every6Months')}</SelectItem>
+            <SelectItem value="custom">{t('business.packages.form.custom')}</SelectItem>
           </SelectContent>
         </Select>
+        {billingType === 'custom' && (
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-sm text-muted-foreground shrink-0">every</span>
+            <IntervalInput
+              interval={customInterval}
+              onIntervalChange={setCustomInterval}
+              count={customCount}
+              onCountChange={setCustomCount}
+              className="flex-1"
+            />
+          </div>
+        )}
       </div>
 
       {/* Features */}
@@ -726,7 +725,6 @@ function PackageDetailsForm({
             <Checkbox
               id="free-trial"
               checked={hasFreeTrial}
-              disabled={hasInitialFee}
               onCheckedChange={(checked) => setHasFreeTrial(checked === true)}
             />
             <Label htmlFor="free-trial" className="cursor-pointer">
@@ -747,38 +745,6 @@ function PackageDetailsForm({
                   <SelectItem value="30">30 {t('business.packages.form.days')}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Initial Fee (recurring only) */}
-      {isRecurring && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="initial-fee"
-              checked={hasInitialFee}
-              disabled={hasFreeTrial}
-              onCheckedChange={(checked) => setHasInitialFee(checked === true)}
-            />
-            <Label htmlFor="initial-fee" className="cursor-pointer">
-              {t('business.packages.form.initialFee')}
-            </Label>
-          </div>
-          {hasInitialFee && (
-            <div className="space-y-2">
-              <Label><span>{t('business.packages.form.initialFeeAmount')}<RequiredAsterisk /></span></Label>
-              <CurrencyInput
-                currency={currency}
-                currencyDisabled
-                value={initialFeeDisplay}
-                onValueChange={(val) => {
-                  if (val.includes('.') && val.split('.')[1]?.length > 2) return;
-                  setInitialFeeDisplay(val);
-                }}
-                placeholder="0.00"
-              />
             </div>
           )}
         </div>

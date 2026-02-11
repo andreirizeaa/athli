@@ -479,7 +479,7 @@ export const esMessages = {
       library: 'Biblioteca',
       referAndEarn: 'Referir y Ganar',
       packages: 'Paquetes',
-      summary: 'Resumen',
+      activity: 'Actividad',
     },
     actions: {
       keepMenuOpen: 'Mantener menú abierto',
@@ -2247,6 +2247,21 @@ export const esMessages = {
       subtitle: 'Actualmente no hay check-ins esperando tu revisión. ¡Buen trabajo!',
     },
   },
+  trial: {
+    daysLeft: {
+      one: '1 día restante',
+      other: '{count} días restantes',
+    },
+    tooltip: 'Período de prueba gratuito',
+  },
+  access: {
+    blocked: {
+      title: 'Tu Prueba Gratuita Ha Terminado',
+      description: 'Tu prueba gratuita de 14 días ha terminado. Suscríbete para continuar usando Athli y hacer crecer tu negocio de coaching.',
+      subscribe: 'Suscribirse Ahora',
+      questions: '¿Preguntas? Contáctanos en support@athli.io',
+    },
+  },
   business: {
     title: 'Negocio',
     stripe: {
@@ -2256,12 +2271,12 @@ export const esMessages = {
       disconnect: 'Desconectar',
     },
     tabs: {
-      summary: 'Resumen',
+      activity: 'Actividad',
       packages: 'Paquetes',
       coupons: 'Cupones',
       sequences: 'Secuencias',
     },
-    summary: {
+    activity: {
       grossRevenue: 'Ingresos Totales',
       thisMonth: 'Este Mes',
       activeSubscriptions: 'Suscripciones Activas',
@@ -2271,6 +2286,7 @@ export const esMessages = {
       columns: {
         date: 'Fecha',
         client: 'Cliente',
+        athlete: 'Atleta',
         package: 'Paquete',
         amount: 'Monto',
         type: 'Tipo',
@@ -2348,17 +2364,20 @@ export const esMessages = {
         addFeature: 'Añadir característica',
         currency: 'Moneda',
         billingType: 'Tipo de Facturación',
+        oneTime: 'Único',
         daily: 'Diario',
         weekly: 'Semanal',
         monthly: 'Mensual',
         yearly: 'Anual',
         every3Months: 'Cada 3 meses',
         every6Months: 'Cada 6 meses',
+        custom: 'Personalizado',
         freeTrial: 'Prueba Gratuita',
         freeTrialDays: 'Días de prueba',
         days: 'días',
-        initialFee: 'Cuota Inicial',
-        initialFeeAmount: 'Monto de Cuota Inicial',
+        weeks: 'semanas',
+        months: 'meses',
+        years: 'años',
         price: 'Precio',
         pricePlaceholder: '0.00',
         stepDetails: 'Detalles',

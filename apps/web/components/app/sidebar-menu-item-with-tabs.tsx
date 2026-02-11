@@ -28,6 +28,7 @@ type SidebarMenuItemWithTabsProps = {
   icon: LucideIcon;
   basePath: string;
   tabs: Tab[];
+  tooltipAlign?: 'start' | 'center' | 'end';
 };
 
 export function SidebarMenuItemWithTabs({
@@ -36,6 +37,7 @@ export function SidebarMenuItemWithTabs({
   icon: Icon,
   basePath,
   tabs,
+  tooltipAlign = 'start',
 }: SidebarMenuItemWithTabsProps) {
   const t = useTranslations();
   const pathname = usePathname();
@@ -74,7 +76,7 @@ export function SidebarMenuItemWithTabs({
         <TooltipTrigger asChild>{menuButton}</TooltipTrigger>
         <TooltipContent
           side="right"
-          align="start"
+          align={tooltipAlign}
           sideOffset={isCollapsed ? 0 : -2}
           className="flex flex-col px-0 py-1.5 min-w-[160px]"
         >

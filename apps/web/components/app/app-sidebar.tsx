@@ -96,7 +96,7 @@ export function AppSidebar() {
 
   const businessNavItems = [
     {
-      href: '/business/summary',
+      href: '/business/activity',
       labelKey: 'sidebar.links.packages',
       icon: CreditCard,
     },
@@ -162,10 +162,16 @@ export function AppSidebar() {
   ];
 
   const businessTabs = [
-    { value: 'summary', labelKey: 'business.tabs.summary' },
+    { value: 'activity', labelKey: 'business.tabs.activity' },
     { value: 'packages', labelKey: 'business.tabs.packages' },
     { value: 'coupons', labelKey: 'business.tabs.coupons' },
     { value: 'sequences', labelKey: 'business.tabs.sequences' },
+  ];
+
+  const settingsTabs = [
+    { value: 'account/profile', labelKey: 'settings.groups.personal' },
+    { value: 'app/customisations', labelKey: 'settings.groups.appSettings' },
+    { value: 'business/company/information', labelKey: 'settings.groups.business' },
   ];
 
   return (
@@ -418,19 +424,14 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="mt-auto pb-3">
         <SidebarMenu className="gap-0.5">
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              isActive={activePath === '/settings' || activePath.startsWith('/settings/')}
-              tooltip={t('sidebar.settings.label') || 'Settings'}
-              className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
-            >
-              <Link href="/settings">
-                <Settings className="shrink-0" />
-                <span>{t('sidebar.settings.label') || 'Settings'}</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          <SidebarMenuItemWithTabs
+            href="/settings/account/profile"
+            labelKey="sidebar.settings.label"
+            icon={Settings}
+            basePath="/settings"
+            tabs={settingsTabs}
+            tooltipAlign="end"
+          />
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>

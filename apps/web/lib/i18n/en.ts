@@ -603,7 +603,7 @@ export const enMessages = {
       referAndEarn: 'Refer and Earn',
       getFreeMonth: 'Get a free month',
       packages: 'Packages',
-      summary: 'Summary',
+      activity: 'Activity',
     },
     actions: {
       keepMenuOpen: 'Keep menu open',
@@ -2881,6 +2881,21 @@ export const enMessages = {
     empty: 'No notifications',
     emptyUnread: 'No unread notifications',
   },
+  trial: {
+    daysLeft: {
+      one: '1 day left',
+      other: '{count} days left',
+    },
+    tooltip: 'Free trial period',
+  },
+  access: {
+    blocked: {
+      title: 'Your Free Trial Has Ended',
+      description: 'Your 14-day free trial has ended. Subscribe to continue using Athli and growing your coaching business.',
+      subscribe: 'Subscribe Now',
+      questions: 'Questions? Contact us at support@athli.io',
+    },
+  },
   business: {
     title: 'Business',
     stripe: {
@@ -2890,12 +2905,12 @@ export const enMessages = {
       disconnect: 'Disconnect',
     },
     tabs: {
-      summary: 'Summary',
+      activity: 'Activity',
       packages: 'Packages',
       coupons: 'Coupons',
       sequences: 'Sequences',
     },
-    summary: {
+    activity: {
       grossRevenue: 'Gross Revenue',
       thisMonth: 'This Month',
       activeSubscriptions: 'Active Subscriptions',
@@ -2905,6 +2920,7 @@ export const enMessages = {
       columns: {
         date: 'Date',
         client: 'Client',
+        athlete: 'Athlete',
         package: 'Package',
         amount: 'Amount',
         type: 'Type',
@@ -2982,17 +2998,20 @@ export const enMessages = {
         addFeature: 'Add feature',
         currency: 'Currency',
         billingType: 'Billing Type',
+        oneTime: 'One-time',
         daily: 'Daily',
         weekly: 'Weekly',
         monthly: 'Monthly',
         yearly: 'Yearly',
         every3Months: 'Every 3 months',
         every6Months: 'Every 6 months',
+        custom: 'Custom',
         freeTrial: 'Free Trial',
         freeTrialDays: 'Trial days',
         days: 'days',
-        initialFee: 'Initial Fee',
-        initialFeeAmount: 'Initial Fee Amount',
+        weeks: 'weeks',
+        months: 'months',
+        years: 'years',
         price: 'Price',
         pricePlaceholder: '0.00',
         stepDetails: 'Details',
