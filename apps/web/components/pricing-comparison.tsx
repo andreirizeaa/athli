@@ -55,32 +55,6 @@ const availability: Record<Tier, FeatureValue[]> = {
     ],
 }
 
-const proColor = 'rgb(192,132,252)'
-
-const proColumnStyle: React.CSSProperties = {
-    borderLeftColor: proColor,
-    borderRightColor: proColor,
-    borderLeftWidth: '2px',
-    borderRightWidth: '2px',
-    borderLeftStyle: 'solid',
-    borderRightStyle: 'solid',
-}
-
-const proColumnTopStyle: React.CSSProperties = {
-    ...proColumnStyle,
-    borderTopColor: proColor,
-    borderTopWidth: '2px',
-    borderTopStyle: 'solid',
-    boxShadow: '0 0 40px rgba(192,132,252,0.16), 0 0 40px rgba(165,180,252,0.16)',
-}
-
-const proColumnBottomStyle: React.CSSProperties = {
-    ...proColumnStyle,
-    borderBottomColor: proColor,
-    borderBottomWidth: '2px',
-    borderBottomStyle: 'solid',
-}
-
 function CheckMark() {
     return (
         <div className="mx-auto flex size-7 items-center justify-center rounded-full bg-emerald-500">
@@ -110,7 +84,7 @@ function FeatureCell({ value }: { value: FeatureValue }) {
     return value ? <CheckMark /> : <CrossMark />
 }
 
-export default function PricingComparison() {
+export default function PricingComparison({ hideHeader = false }: { hideHeader?: boolean }) {
     const t = useTranslations('pricingComparison')
     const pt = useTranslations('pricing')
     const sections = t.raw('sections') as { title: string; features: string[] }[]
@@ -121,10 +95,17 @@ export default function PricingComparison() {
     return (
         <section className="py-8 md:py-16">
             <div className="mx-auto max-w-4xl px-6">
-                <div className="mx-auto mb-12 max-w-2xl space-y-4 text-center">
-                    <h2 className="text-3xl font-semibold lg:text-4xl">{t('title')}</h2>
-                    <p className="text-muted-foreground">{t('subtitle')}</p>
-                </div>
+                {!hideHeader ? (
+                    <div className="mx-auto mb-12 max-w-2xl space-y-4 text-center">
+                        <h2 className="text-3xl font-semibold lg:text-4xl">{t('title')}</h2>
+                        <p className="text-muted-foreground">{t('subtitle')}</p>
+                    </div>
+                ) : (
+                    <div className="mx-auto mb-8 max-w-2xl space-y-2 text-center">
+                        <h2 className="text-2xl font-semibold">{t('title')}</h2>
+                        <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
+                    </div>
+                )}
                 <div className="overflow-x-auto rounded-2xl border bg-background">
                     <table className="w-full border-separate" style={{ borderSpacing: 0 }}>
                         <thead>
@@ -136,7 +117,6 @@ export default function PricingComparison() {
                                     <th
                                         key={tier.key}
                                         className="min-w-[120px] border-b bg-background p-4 text-center"
-                                        style={tier.highlighted ? proColumnTopStyle : undefined}
                                     >
                                         <div className="flex flex-col items-center gap-1">
                                             <span className="text-sm font-semibold">{pt(`${tier.key}.name`)}</span>
@@ -175,13 +155,11 @@ export default function PricingComparison() {
                                             <td
                                                 key={tier.key}
                                                 className="bg-muted/50"
-                                                style={tier.highlighted ? proColumnStyle : undefined}
                                             />
                                         ))}
                                     </tr>
                                     {section.features.map((feature) => {
                                         const idx = featureIndex++
-                                        const isLast = idx === totalFeatures - 1
                                         return (
                                             <tr key={feature}>
                                                 <td className="sticky left-0 z-10 border-b bg-background p-4 text-sm font-medium">
@@ -191,7 +169,6 @@ export default function PricingComparison() {
                                                     <td
                                                         key={tier.key}
                                                         className="border-b p-4 text-center"
-                                                        style={tier.highlighted ? (isLast ? proColumnBottomStyle : proColumnStyle) : undefined}
                                                     >
                                                         <FeatureCell value={availability[tier.key][idx]} />
                                                     </td>

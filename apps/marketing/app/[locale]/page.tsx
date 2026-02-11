@@ -16,7 +16,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       <HeroSection />
       <FeaturesSection />
       <MobileAppsSection />
-      <Pricing />
+      <Pricing hideAddons />
       <FAQsTwo />
       <CallToAction />
       <Footer />

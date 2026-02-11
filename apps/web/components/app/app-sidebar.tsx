@@ -170,6 +170,8 @@ export function AppSidebar() {
 
   const settingsTabs = [
     { value: 'account/profile', labelKey: 'settings.groups.personal' },
+    { value: 'billing', labelKey: 'settings.sections.billingCurrent' },
+    { value: 'billing/plans', labelKey: 'settings.sections.billingPlans' },
     { value: 'app/customisations', labelKey: 'settings.groups.appSettings' },
     { value: 'business/company/information', labelKey: 'settings.groups.business' },
   ];

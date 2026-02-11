@@ -21,10 +21,6 @@ const AccountLayoutContent = ({ children }: AccountLayoutProps) => {
       label: t('settings.sections.accountProfile'),
     },
     {
-      value: 'billing',
-      label: t('settings.sections.billing'),
-    },
-    {
       value: 'security',
       label: t('settings.sections.accountSecurity'),
     },
