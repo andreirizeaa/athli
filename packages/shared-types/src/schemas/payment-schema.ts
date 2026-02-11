@@ -16,6 +16,7 @@ export interface CoachStripeAccount {
   details_submitted: boolean;
   default_currency: string | null;
   country: string | null;
+  account_type: 'express' | 'standard';
   created_at: string;
   updated_at: string;
 }
@@ -37,12 +38,12 @@ export interface CoachPackage {
   interval_count: number | null;
   is_active: boolean;
   is_visible: boolean;
-  benefits: string[];
+  features: string[];
   free_trial_days: number;
-  duration_months: number | null;
   initial_fee_cents: number;
   onboarding_id: string | null;
   sequence_id: string | null;
+  image_url: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -79,6 +80,7 @@ export interface Payment {
   coach_id: string;
   client_id: string;
   package_id: string | null;
+  coupon_id: string | null;
   stripe_checkout_session_id: string | null;
   stripe_payment_intent_id: string | null;
   amount_cents: number;
@@ -91,6 +93,18 @@ export interface Payment {
   // Joined fields
   package?: CoachPackage;
   client_name?: string;
+}
+
+// --- Per-Package Coupon Redemptions ---
+
+export interface PackageCouponRedemption {
+  coupon_id: string;
+  coupon_name: string;
+  coupon_code: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  currency: string;
+  redemption_count: number;
 }
 
 // --- Client Subscriptions ---
@@ -130,6 +144,56 @@ export interface ClientAccessStatus {
   available_packages: CoachPackage[];
 }
 
+// --- Dashboard Summary ---
+
+export interface CoachPaymentDashboard {
+  gross_revenue_cents: number;
+  this_month_revenue_cents: number;
+  last_month_revenue_cents: number;
+  active_subscriptions_count: number;
+  paying_clients_count: number;
+  currency: string;
+}
+
+// Billing activity event types
+export type BillingEventType =
+  | 'payment_succeeded'
+  | 'payment_failed'
+  | 'subscription_created'
+  | 'subscription_renewed'
+  | 'subscription_cancelling'
+  | 'subscription_cancelled'
+  | 'subscription_reactivated'
+  | 'subscription_past_due'
+  | 'refund_issued'
+  | 'dispute_created';
+
+export interface PaymentActivityRow {
+  id: string;
+  client_id: string | null;
+  client_name: string | null;
+  client_email: string | null;
+  client_avatar_url: string | null;
+  package_id: string | null;
+  package_name: string | null;
+  event_type: BillingEventType;
+  description: string;
+  amount_cents: number;
+  currency: string;
+  metadata: Record<string, any>;
+  created_at: string;
+}
+
+// --- Package Payment Stats ---
+
+export interface PackagePaymentStats {
+  total_purchases: number;
+  total_refunds: number;
+  total_cancellations: number;
+  total_revenue_cents: number;
+  currency: string;
+}
+
 // --- Analytics ---
 
 export interface CoachPaymentAnalytics {
@@ -164,9 +228,9 @@ export interface CoachSequence {
   updated_at: string;
 }
 
-// --- Discount Codes ---
+// --- Coupons ---
 
-export interface DiscountCode {
+export interface Coupon {
   id: string;
   coach_id: string;
   stripe_coupon_id: string | null;

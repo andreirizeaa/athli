@@ -1,7 +1,7 @@
 import { Redirect, useRouter } from 'expo-router';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuth } from '@/hooks/useAuth';
-import { useThemePreference, useAuthSessionStore } from '@/stores';
+import { useThemePreference, useAuthSessionStore, useAppInitStore } from '@/stores';
 import { useBiometricStore } from '@/stores/useBiometricStore';
 import { useEffect, useRef } from 'react';
 
@@ -10,13 +10,14 @@ export default function Index() {
   const { colors: themeColors } = useThemePreference();
   const router = useRouter();
   const hasNavigated = useRef(false);
+  const isAppReady = useAppInitStore((state) => state.isAppReady);
 
-  console.log('🔵 [Index] Auth state:', { isAuthenticated, isReady });
+  console.log('🔵 [Index] Auth state:', { isAuthenticated, isReady, isAppReady });
 
   // Use effect to handle navigation after mount
   useEffect(() => {
-    // Wait for auth to be ready (session initialized)
-    if (!isReady || hasNavigated.current) {
+    // Wait for app to be fully ready (session + profile initialized)
+    if (!isAppReady || hasNavigated.current) {
       return;
     }
 
@@ -52,7 +53,7 @@ export default function Index() {
     const timer = setTimeout(checkBiometricAndNavigate, 50);
 
     return () => clearTimeout(timer);
-  }, [isReady, isAuthenticated, router]);
+  }, [isAppReady, isAuthenticated, router]);
 
   // Show loading spinner
   console.log('🔵 [Index] Showing loading spinner');

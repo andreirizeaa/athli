@@ -14,17 +14,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/general/utils';
-import type { DiscountCode } from '@athli/shared-types';
+import type { Coupon } from '@athli/shared-types';
 
-type AddDiscountCodeSidePanelProps = {
+type AddCouponSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: DiscountCodeFormData) => Promise<void>;
+  onSave: (data: CouponFormData) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
-  code?: DiscountCode | null;
+  coupon?: Coupon | null;
 };
 
-export type DiscountCodeFormData = {
+export type CouponFormData = {
   name: string;
   code: string;
   discount_type: 'percentage' | 'fixed';
@@ -35,13 +35,13 @@ export type DiscountCodeFormData = {
   expires_at: string | null;
 };
 
-export const AddDiscountCodeSidePanel = ({
+export const AddCouponSidePanel = ({
   open,
   onOpenChange,
   onSave,
   onDelete,
-  code: discountCode,
-}: AddDiscountCodeSidePanelProps) => {
+  coupon,
+}: AddCouponSidePanelProps) => {
   const t = useTranslations();
 
   const [name, setName] = useState('');
@@ -49,7 +49,8 @@ export const AddDiscountCodeSidePanel = ({
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
   const [discountValue, setDiscountValue] = useState('');
   const [currency, setCurrency] = useState('usd');
-  const [durationMonths, setDurationMonths] = useState<string>('null');
+  const [durationType, setDurationType] = useState<'once' | 'forever' | 'repeating'>('once');
+  const [durationMonths, setDurationMonths] = useState<string>('3');
   const [hasRedemptionLimit, setHasRedemptionLimit] = useState(false);
   const [maxRedemptions, setMaxRedemptions] = useState('');
   const [hasExpiration, setHasExpiration] = useState(false);
@@ -58,28 +59,39 @@ export const AddDiscountCodeSidePanel = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const isEditing = !!discountCode;
+  const isEditing = !!coupon;
 
   useEffect(() => {
     if (open) {
-      if (discountCode) {
-        setName(discountCode.name);
-        setCode(discountCode.code);
-        setDiscountType(discountCode.discount_type);
-        setDiscountValue(String(discountCode.discount_value));
-        setCurrency(discountCode.currency);
-        setDurationMonths(discountCode.duration_months != null ? String(discountCode.duration_months) : 'null');
-        setHasRedemptionLimit(discountCode.max_redemptions != null);
-        setMaxRedemptions(discountCode.max_redemptions != null ? String(discountCode.max_redemptions) : '');
-        setHasExpiration(!!discountCode.expires_at);
-        setExpiresAt(discountCode.expires_at ? new Date(discountCode.expires_at) : undefined);
+      if (coupon) {
+        setName(coupon.name);
+        setCode(coupon.code);
+        setDiscountType(coupon.discount_type);
+        setDiscountValue(String(coupon.discount_value));
+        setCurrency(coupon.currency);
+        // Map duration_months to durationType and durationMonths
+        if (coupon.duration_months === null) {
+          setDurationType('once');
+          setDurationMonths('3');
+        } else if (coupon.duration_months === 0) {
+          setDurationType('forever');
+          setDurationMonths('3');
+        } else {
+          setDurationType('repeating');
+          setDurationMonths(String(coupon.duration_months));
+        }
+        setHasRedemptionLimit(coupon.max_redemptions != null);
+        setMaxRedemptions(coupon.max_redemptions != null ? String(coupon.max_redemptions) : '');
+        setHasExpiration(!!coupon.expires_at);
+        setExpiresAt(coupon.expires_at ? new Date(coupon.expires_at) : undefined);
       } else {
         setName('');
         setCode('');
         setDiscountType('percentage');
         setDiscountValue('');
         setCurrency('usd');
-        setDurationMonths('null');
+        setDurationType('once');
+        setDurationMonths('3');
         setHasRedemptionLimit(false);
         setMaxRedemptions('');
         setHasExpiration(false);
@@ -88,14 +100,24 @@ export const AddDiscountCodeSidePanel = ({
       setIsSaving(false);
       setIsDeleting(false);
     }
-  }, [open, discountCode]);
+  }, [open, coupon]);
 
   const handleSave = async () => {
     const value = parseFloat(discountValue || '0');
     if (!name.trim() || !code.trim() || value <= 0) return;
     if (hasRedemptionLimit && (!maxRedemptions || parseInt(maxRedemptions) < 1)) return;
     if (hasExpiration && !expiresAt) return;
+    if (durationType === 'repeating' && (!durationMonths || parseInt(durationMonths) < 1)) return;
 
+    // Convert durationType to duration_months value
+    let durationMonthsValue: number | null = null;
+    if (durationType === 'once') {
+      durationMonthsValue = null;
+    } else if (durationType === 'forever') {
+      durationMonthsValue = 0;
+    } else {
+      durationMonthsValue = parseInt(durationMonths);
+    }
 
     setIsSaving(true);
     try {
@@ -105,7 +127,7 @@ export const AddDiscountCodeSidePanel = ({
         discount_type: discountType,
         discount_value: value,
         currency,
-        duration_months: durationMonths === 'null' ? null : parseInt(durationMonths),
+        duration_months: durationMonthsValue,
         max_redemptions: hasRedemptionLimit && maxRedemptions ? parseInt(maxRedemptions) : null,
         expires_at: hasExpiration && expiresAt ? expiresAt.toISOString() : null,
       });
@@ -118,10 +140,10 @@ export const AddDiscountCodeSidePanel = ({
   };
 
   const handleDelete = async () => {
-    if (!discountCode || !onDelete) return;
+    if (!coupon || !onDelete) return;
     setIsDeleting(true);
     try {
-      await onDelete(discountCode.id);
+      await onDelete(coupon.id);
       onOpenChange(false);
     } catch {
       // error handled by parent
@@ -136,6 +158,7 @@ export const AddDiscountCodeSidePanel = ({
     code.trim().length > 0 &&
     parsedDiscount > 0 &&
     (discountType !== 'percentage' || parsedDiscount <= 100) &&
+    (durationType !== 'repeating' || (durationMonths && parseInt(durationMonths) >= 1)) &&
     (!hasRedemptionLimit || (maxRedemptions && parseInt(maxRedemptions) >= 1)) &&
     (!hasExpiration || !!expiresAt);
 
@@ -154,7 +177,7 @@ export const AddDiscountCodeSidePanel = ({
     <SidePanel
       open={open}
       onOpenChange={onOpenChange}
-      title={isEditing ? t('business.codes.editCode') : t('business.codes.addCode')}
+      title={isEditing ? t('business.coupons.editCoupon') : t('business.coupons.addCoupon')}
       onSave={handleSave}
       isSaving={isSaving}
       isSaveDisabled={!canSave}
@@ -169,62 +192,82 @@ export const AddDiscountCodeSidePanel = ({
       <div className="space-y-4 py-2">
         {/* Name */}
         <div className="space-y-2">
-          <Label htmlFor="code-name"><span>{t('business.codes.form.name')}<RequiredAsterisk /></span></Label>
+          <Label htmlFor="coupon-name"><span>{t('business.coupons.form.name')}<RequiredAsterisk /></span></Label>
           <Input
-            id="code-name"
+            id="coupon-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={t('business.codes.form.namePlaceholder')}
+            placeholder={t('business.coupons.form.namePlaceholder')}
           />
         </div>
 
         {/* Code */}
         <div className="space-y-2">
-          <Label htmlFor="code-value"><span>{t('business.codes.form.code')}<RequiredAsterisk /></span></Label>
+          <Label htmlFor="coupon-code"><span>{t('business.coupons.form.code')}<RequiredAsterisk /></span></Label>
           <Input
-            id="code-value"
+            id="coupon-code"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-            placeholder={t('business.codes.form.codePlaceholder')}
+            placeholder={t('business.coupons.form.codePlaceholder')}
             className="font-mono"
           />
         </div>
 
-        {/* Discount Type & Duration */}
-        <div className="flex gap-2">
-          <div className="space-y-2 flex-1 min-w-0">
-            <Label><span>{t('business.codes.form.discountType')}<RequiredAsterisk /></span></Label>
-            <Select value={discountType} onValueChange={(v) => setDiscountType(v as 'percentage' | 'fixed')}>
+        {/* Discount Type */}
+        <div className="space-y-2">
+          <Label><span>{t('business.coupons.form.discountType')}<RequiredAsterisk /></span></Label>
+          <Select value={discountType} onValueChange={(v) => setDiscountType(v as 'percentage' | 'fixed')}>
+            <SelectTrigger className="w-full h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="percentage">{t('business.coupons.form.percentage')}</SelectItem>
+              <SelectItem value="fixed">{t('business.coupons.form.fixedAmount')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Duration */}
+        <div className="space-y-2">
+          <Label><span>{t('business.coupons.form.duration')}<RequiredAsterisk /></span></Label>
+          <div className="flex gap-2">
+            <Select value={durationType} onValueChange={(v) => {
+              setDurationType(v as 'once' | 'forever' | 'repeating');
+              if (v === 'repeating' && !durationMonths) {
+                setDurationMonths('3');
+              }
+            }}>
               <SelectTrigger className="w-full h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="percentage">{t('business.codes.form.percentage')}</SelectItem>
-                <SelectItem value="fixed">{t('business.codes.form.fixedAmount')}</SelectItem>
+                <SelectItem value="once">{t('business.coupons.form.once')}</SelectItem>
+                <SelectItem value="forever">{t('business.coupons.form.forever')}</SelectItem>
+                <SelectItem value="repeating">{t('business.coupons.form.repeating')}</SelectItem>
               </SelectContent>
             </Select>
+            {durationType === 'repeating' && (
+              <Input
+                type="number"
+                min={1}
+                max={36}
+                value={durationMonths}
+                onChange={(e) => setDurationMonths(e.target.value)}
+                placeholder="Months"
+                className="w-24"
+              />
+            )}
           </div>
-          <div className="space-y-2 flex-1 min-w-0">
-            <Label><span>{t('business.codes.form.duration')}<RequiredAsterisk /></span></Label>
-            <Select value={durationMonths} onValueChange={setDurationMonths}>
-              <SelectTrigger className="w-full h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="null">{t('business.codes.form.oneTime')}</SelectItem>
-                {[1, 2, 3, 6, 12].map((m) => (
-                  <SelectItem key={m} value={String(m)}>
-                    {m === 1 ? t('business.codes.form.month', { count: 1 }) : t('business.codes.form.months', { count: m })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            {durationType === 'once' && t('business.coupons.form.onceHint')}
+            {durationType === 'forever' && t('business.coupons.form.foreverHint')}
+            {durationType === 'repeating' && t('business.coupons.form.repeatingHint', { months: durationMonths || 0 })}
+          </p>
         </div>
 
         {/* Discount Value */}
         <div className="space-y-2">
-          <Label htmlFor="discount-value"><span>{t('business.codes.form.discountValue')}<RequiredAsterisk /></span></Label>
+          <Label htmlFor="discount-value"><span>{t('business.coupons.form.discountValue')}<RequiredAsterisk /></span></Label>
           {discountType === 'fixed' ? (
             <CurrencyInput
               id="discount-value"
@@ -232,7 +275,7 @@ export const AddDiscountCodeSidePanel = ({
               onCurrencyChange={setCurrency}
               value={discountValue}
               onValueChange={setDiscountValue}
-              placeholder={t('business.codes.form.valuePlaceholder')}
+              placeholder={t('business.coupons.form.valuePlaceholder')}
             />
           ) : (
             <Input
@@ -246,7 +289,7 @@ export const AddDiscountCodeSidePanel = ({
                 if (val > 100) return;
                 setDiscountValue(e.target.value);
               }}
-              placeholder={t('business.codes.form.valuePlaceholder')}
+              placeholder={t('business.coupons.form.valuePlaceholder')}
             />
           )}
         </div>
@@ -260,18 +303,18 @@ export const AddDiscountCodeSidePanel = ({
               onCheckedChange={(checked) => setHasRedemptionLimit(checked === true)}
             />
             <Label htmlFor="redemption-limit" className="cursor-pointer">
-              {t('business.codes.form.limitRedemptions')}
+              {t('business.coupons.form.limitRedemptions')}
             </Label>
           </div>
           {hasRedemptionLimit && (
             <div className="space-y-2">
-              <Label><span>{t('business.codes.form.maxRedemptions')}<RequiredAsterisk /></span></Label>
+              <Label><span>{t('business.coupons.form.maxRedemptions')}<RequiredAsterisk /></span></Label>
               <Input
                 type="number"
                 min={1}
                 value={maxRedemptions}
                 onChange={(e) => setMaxRedemptions(e.target.value)}
-                placeholder={t('business.codes.form.valuePlaceholder')}
+                placeholder={t('business.coupons.form.valuePlaceholder')}
                 className="w-32"
               />
             </div>
@@ -287,7 +330,7 @@ export const AddDiscountCodeSidePanel = ({
               onCheckedChange={(checked) => setHasExpiration(checked === true)}
             />
             <Label htmlFor="expiration-toggle" className="cursor-pointer">
-              {t('business.codes.form.expirationDate')}
+              {t('business.coupons.form.expirationDate')}
             </Label>
           </div>
           {hasExpiration && (
@@ -298,7 +341,7 @@ export const AddDiscountCodeSidePanel = ({
                   className="w-full justify-between font-normal bg-sidebar border-muted-foreground/20 hover:border-primary/50 transition-colors"
                 >
                   <span className={cn('text-sm', !expiresAt && 'text-muted-foreground')}>
-                    {expiresAt ? expiresAt.toLocaleDateString() : t('business.codes.form.selectDate')}
+                    {expiresAt ? expiresAt.toLocaleDateString() : t('business.coupons.form.selectDate')}
                   </span>
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </Button>

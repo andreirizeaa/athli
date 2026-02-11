@@ -3,11 +3,12 @@ import { useSegments, useRouter } from 'expo-router';
 import { useAuthSessionStore } from '@/stores/useAuthSessionStore';
 import { useCoachProfileStore } from '@/stores/useCoachProfileStore';
 import { useClientProfileStore } from '@/stores/useClientProfileStore';
+import { useAppInitStore } from '@/stores/useAppInitStore';
 
 /**
  * Protects routes from unauthenticated access (e.g., deep links).
  *
- * - Waits for session initialization before redirecting
+ * - Waits for app initialization (session + profile) before redirecting
  * - Public segments: index, welcome, auth, biometric-lock, modals/auth
  * - Unauthenticated users on protected routes → /welcome
  * - Authenticated users on /welcome → /(tabs)
@@ -16,13 +17,14 @@ export function useProtectedRoute() {
   const segments = useSegments();
   const router = useRouter();
 
-  const isSessionReady = useAuthSessionStore((s) => s.isSessionReady);
+  const isAppReady = useAppInitStore((s) => s.isAppReady);
   const session = useAuthSessionStore((s) => s.session);
   const coachProfile = useCoachProfileStore((s) => s.profile);
   const clientProfile = useClientProfileStore((s) => s.profile);
 
   useEffect(() => {
-    if (!isSessionReady) return;
+    // Wait for app to be fully initialized before making navigation decisions
+    if (!isAppReady) return;
 
     const firstSegment = segments[0] as string | undefined;
     const isAuthenticated = !!session && !!(coachProfile || clientProfile);
@@ -40,5 +42,5 @@ export function useProtectedRoute() {
     } else if (isAuthenticated && firstSegment === 'welcome') {
       router.replace('/(tabs)');
     }
-  }, [isSessionReady, session, coachProfile, clientProfile, segments, router]);
+  }, [isAppReady, session, coachProfile, clientProfile, segments, router]);
 }

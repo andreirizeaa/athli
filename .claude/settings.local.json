@@ -127,7 +127,18 @@
       "Bash(fi)",
       "Bash(git rm:*)",
       "Bash(do sed -i '' \"s|from ''''@/app/training/|from ''''@/app/\\(app\\)/training/|g; s|from ''''@/app/athletes/|from ''''@/app/\\(app\\)/athletes/|g; s|from ''''@/app/inbox/|from ''''@/app/\\(app\\)/inbox/|g; s|from ''''@/app/settings/|from ''''@/app/\\(app\\)/settings/|g; s|from ''''@/app/home/|from ''''@/app/\\(app\\)/home/|g\" \"$file\")",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "WebFetch(domain:truecoach.co)",
+      "WebFetch(domain:www.mypthub.net)",
+      "WebFetch(domain:hubfit.com)",
+      "WebFetch(domain:www.exercise.com)",
+      "WebFetch(domain:everfit.io)",
+      "WebFetch(domain:www.trainerize.com)",
+      "WebFetch(domain:help.truecoach.co)",
+      "WebFetch(domain:www.softwareadvice.com)",
+      "WebFetch(domain:www.capterra.com)",
+      "WebFetch(domain:www.getapp.com)",
+      "Bash(pnpm add:*)"
     ]
   }
 }

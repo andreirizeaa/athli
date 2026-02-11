@@ -415,6 +415,32 @@ export const settingsController = {
     },
 
     /**
+     * Mark coach onboarding as complete
+     */
+    completeOnboarding: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const supabase = getSupabaseClient();
+        const { error } = await supabase
+            .from('coach_profiles')
+            .update({ onboarding_complete: true })
+            .eq('id', userId);
+
+        if (error) {
+            console.error('[completeOnboarding] Supabase error:', error);
+            return res.status(500).json({ success: false, message: 'Failed to complete onboarding' });
+        }
+
+        success(res, {
+            message: 'Onboarding completed successfully',
+        });
+    },
+
+    /**
      * Get coach unique code
      */
     getUniqueCode: async (req: Request, res: Response) => {
@@ -430,7 +456,8 @@ export const settingsController = {
             .select('code')
             .eq('coach_id', userId)
             .is('onboarding_id', null)
-            .single();
+            .limit(1)
+            .maybeSingle();
 
         if (error && error.code !== 'PGRST116') {
             return res.status(500).json({ success: false, message: 'An unexpected error occurred. Please try again later.' });

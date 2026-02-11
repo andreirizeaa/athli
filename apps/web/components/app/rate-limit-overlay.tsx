@@ -27,8 +27,8 @@ export function RateLimitOverlay() {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background p-4">
-      <div className="w-full max-w-3xl space-y-4 lg:space-y-8">
-        <div className="bg-primary/5 border-primary/10 relative flex h-64 items-center justify-center overflow-hidden rounded-lg border sm:h-80">
+      <div className="w-full max-w-3xl">
+        <div className="bg-primary/5 border-primary/10 relative flex min-h-64 items-center justify-center overflow-hidden rounded-lg border py-12 sm:min-h-80">
           <div className="absolute inset-0 grid grid-cols-10 grid-rows-10 opacity-10">
             {Array.from({ length: 100 }).map((_, i) => (
               <div
@@ -42,28 +42,27 @@ export function RateLimitOverlay() {
           </div>
 
           <div className="relative z-10 text-center">
-            <div className="text-primary mb-4 text-8xl font-black tracking-tighter sm:text-9xl">
+            <div className="text-primary mb-4 text-5xl font-black tracking-tighter sm:text-6xl">
               {t('error.rateLimit.heading')}
             </div>
             <div className="text-foreground text-xl font-medium sm:text-2xl">
               {t('error.rateLimit.message')}
             </div>
+            <div className="mt-6">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => {
+                  setIsVisible(false);
+                  window.location.reload();
+                }}
+              >
+                {t('error.rateLimit.tryAgain')}
+              </Button>
+            </div>
           </div>
 
           <div className="from-background/80 absolute right-0 bottom-0 left-0 h-1/3 bg-gradient-to-t to-transparent" />
-        </div>
-
-        <div className="flex justify-center">
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => {
-              setIsVisible(false);
-              window.location.reload();
-            }}
-          >
-            {t('error.rateLimit.tryAgain')}
-          </Button>
         </div>
       </div>
     </div>

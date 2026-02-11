@@ -15,6 +15,9 @@ interface ImageCropDialogProps {
     onSave: (file: File) => Promise<void>;
     title: string;
     description: string;
+    cropWidth?: number;
+    cropHeight?: number;
+    cropBorderRadius?: number;
 }
 
 export function ImageCropDialog({
@@ -23,6 +26,9 @@ export function ImageCropDialog({
     onSave,
     title,
     description,
+    cropWidth = 246,
+    cropHeight = 246,
+    cropBorderRadius = 125,
 }: ImageCropDialogProps) {
     // We'll use the profile picture dialog translations for the internal UI elements
     // but title and description are passed as props
@@ -112,7 +118,10 @@ export function ImageCropDialog({
 
     return (
         <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="max-w-2xl max-h-[90vh] min-w-[600px] overflow-hidden flex flex-col">
+            <DialogContent
+                className="max-w-2xl max-h-[90vh] min-w-[600px] overflow-hidden flex flex-col z-[60]"
+                overlayClassName="z-[60]"
+            >
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>
@@ -164,10 +173,10 @@ export function ImageCropDialog({
                                 <AvatarEditor
                                     ref={editorRef}
                                     image={previewUrl || ''}
-                                    width={246}
-                                    height={246}
+                                    width={cropWidth}
+                                    height={cropHeight}
                                     border={15}
-                                    borderRadius={125}
+                                    borderRadius={cropBorderRadius}
                                     color={[0, 0, 0, 0.6]}
                                     scale={scale}
                                     rotate={rotate}

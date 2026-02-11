@@ -3,6 +3,7 @@
 import React from 'react'
 import { Check, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { motion } from 'motion/react'
 
 const AthliIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 1024 1024" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className={className}>
@@ -92,6 +93,24 @@ function CrossMark() {
 export default function ComparisonTable() {
     const t = useTranslations('comparison')
     const sections = t.raw('sections') as { title: string; features: { name: string; description: string }[] }[]
+    const borderRef = React.useRef<HTMLDivElement>(null)
+    const containerRef = React.useRef<HTMLDivElement>(null)
+    const [dims, setDims] = React.useState({ w: 0, h: 0, r: 16 })
+
+    React.useEffect(() => {
+        const el = borderRef.current
+        if (!el) return
+        const obs = new ResizeObserver(() => {
+            const rect = el.getBoundingClientRect()
+            const inner = containerRef.current
+            const computedR = inner ? parseFloat(getComputedStyle(inner).borderRadius) || 16 : 16
+            setDims({ w: rect.width, h: rect.height, r: computedR })
+        })
+        obs.observe(el)
+        return () => obs.disconnect()
+    }, [])
+
+    const { w, h, r } = dims
 
     let featureIndex = 0
     const totalFeatures = sections.reduce((sum, s) => sum + s.features.length, 0)
@@ -99,7 +118,50 @@ export default function ComparisonTable() {
     return (
         <section className="py-8 md:py-16">
             <div className="mx-auto max-w-7xl px-6">
-                <div className="overflow-x-auto rounded-2xl border bg-background">
+                <div ref={borderRef} className="relative">
+                    {w > 0 && (
+                        <svg className="pointer-events-none absolute inset-0 z-30" width={w} height={h} fill="none">
+                            <defs>
+                                <linearGradient id="comparison-border-grad" x1="0.5" y1="0" x2="0.5" y2="1">
+                                    <stop offset="0%" stopColor="rgb(192,132,252)" />
+                                    <stop offset="100%" stopColor="rgb(165,180,252)" />
+                                </linearGradient>
+                            </defs>
+                            {/* Trail 1 */}
+                            <motion.rect
+                                x={1.5}
+                                y={1.5}
+                                width={w - 3}
+                                height={h - 3}
+                                rx={r}
+                                ry={r}
+                                pathLength={1}
+                                stroke="url(#comparison-border-grad)"
+                                strokeWidth={3}
+                                strokeLinecap="round"
+                                strokeDasharray="0.15 0.85"
+                                animate={{ strokeDashoffset: [0, -1] }}
+                                transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+                            />
+                            {/* Trail 2 */}
+                            <motion.rect
+                                x={1.5}
+                                y={1.5}
+                                width={w - 3}
+                                height={h - 3}
+                                rx={r}
+                                ry={r}
+                                pathLength={1}
+                                stroke="url(#comparison-border-grad)"
+                                strokeWidth={3}
+                                strokeLinecap="round"
+                                strokeDasharray="0.15 0.85"
+                                animate={{ strokeDashoffset: [-0.5, -1.5] }}
+                                transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+                            />
+                        </svg>
+                    )}
+                    <div ref={containerRef} className="overflow-x-auto rounded-2xl border bg-background" style={{ boxShadow: '0 0 40px rgba(192,132,252,0.16), 0 0 40px rgba(165,180,252,0.16)' }}>
                     <table className="w-full border-separate" style={{ borderSpacing: 0 }}>
                         <thead>
                             <tr>
@@ -175,6 +237,7 @@ export default function ComparisonTable() {
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
         </section>

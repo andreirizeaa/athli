@@ -644,9 +644,10 @@ class DemoDataService {
           training_data: trainingData,
         });
 
-        // Training history
-        if (isPast || isToday) {
-          const status = isMissed ? 'missed' as const : isCompleted ? 'completed' as const : 'not_started' as const;
+        // Training history - only insert for completed or missed workouts
+        // Valid status values: 'in_progress', 'completed', 'missed'
+        if ((isPast || isToday) && (isCompleted || isMissed)) {
+          const status = isMissed ? 'missed' as const : 'completed' as const;
           historyRows.push({
             client_id: clientId,
             coach_id: coachId,

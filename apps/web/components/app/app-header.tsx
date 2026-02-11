@@ -149,7 +149,7 @@ export function AppHeader({
           </Tooltip>
           <Button
             className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90"
-            aria-label={t('sidebar.search.aiAssistantAria')}
+            aria-label="Lyra"
             onClick={() => !isAssistantPage && toggleAIPanel()}
           >
             {aiAnimationData && (
@@ -160,7 +160,7 @@ export function AppHeader({
                 autoplay
               />
             )}
-            {t('sidebar.search.aiAssistant')}
+            Lyra
           </Button>
           <UserMenu
             isThemeMounted={isThemeMounted}

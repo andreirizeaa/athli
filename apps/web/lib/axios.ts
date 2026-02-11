@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { createClient } from '@/supabase/client';
+import { getCachedAccessToken } from '@/supabase/client';
 import { authEvents } from '@/lib/auth-events';
 import { rateLimitEvents } from '@/lib/rate-limit-events';
 
@@ -30,13 +30,16 @@ const axiosInstance = axios.create({
 // Request interceptor to add Auth token
 axiosInstance.interceptors.request.use(
     async (config) => {
-        // Skip if no auth required (custom property check could be added here if we typed config)
-        // For now, we assume most requests need auth, and Supabase client handles the session check efficiently.
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
+        // Skip auth for public endpoints
+        if ((config as any).skipAuth) {
+            return config;
+        }
 
-        if (session?.access_token) {
-            config.headers.Authorization = `Bearer ${session.access_token}`;
+        // Use cached access token to avoid hitting Supabase auth endpoint on every request
+        const accessToken = await getCachedAccessToken();
+
+        if (accessToken) {
+            config.headers.Authorization = `Bearer ${accessToken}`;
         }
 
         return config;

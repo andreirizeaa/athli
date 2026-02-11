@@ -104,17 +104,30 @@ export const coachOnboardingController = {
             return res.status(500).json({ success: false, message: error.message });
         }
 
-        // Auto-create an invite code for this onboarding
-        const { error: codeError } = await supabase
-            .from('coach_unique_codes')
-            .insert({
-                coach_id: userId,
-                code: generateCode(12),
-                onboarding_id: data.id,
-            });
+        // Auto-create an invite code for this onboarding with retry on collision
+        const maxRetries = 5;
+        let codeCreated = false;
+        for (let attempt = 0; attempt < maxRetries && !codeCreated; attempt++) {
+            const { error: codeError } = await supabase
+                .from('coach_unique_codes')
+                .insert({
+                    coach_id: userId,
+                    code: generateCode(12),
+                    onboarding_id: data.id,
+                });
 
-        if (codeError) {
-            console.error('Failed to create invite code for onboarding:', codeError);
+            if (!codeError) {
+                codeCreated = true;
+            } else if (codeError.code !== '23505') {
+                // Not a duplicate key error, log and stop retrying
+                console.error('Failed to create invite code for onboarding:', codeError);
+                break;
+            }
+            // On duplicate key (23505), retry with new code
+        }
+
+        if (!codeCreated) {
+            console.error('Failed to create unique invite code after multiple attempts');
         }
 
         created(res, {
